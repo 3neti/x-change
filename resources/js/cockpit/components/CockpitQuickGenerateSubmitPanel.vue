@@ -90,6 +90,7 @@ type RiderOgPreview = {
 
 type FeedbackChannel = 'email' | 'mobile' | 'webhook';
 type SliceMode = 'whole' | 'fixed' | 'open' | 'named';
+type ClaimOutcomeMode = 'provider_disbursement' | 'account_funding';
 
 type NamedClaimSlice = {
     id: string;
@@ -154,6 +155,7 @@ type QuickGenerateTemplateDefaults = {
     targetAmount: string;
     includeExecutionInstruction: boolean;
     executionDriver: string;
+    claimOutcome: ClaimOutcomeMode;
 };
 
 const voucherInputFieldOptions: VoucherInputFieldOption[] = [
@@ -382,6 +384,7 @@ const quickGenerateTemplateDefaults: Record<
         targetAmount: '',
         includeExecutionInstruction: false,
         executionDriver: 'default',
+        claimOutcome: 'provider_disbursement',
     },
     'ofw-remittance': {
         amount: '500',
@@ -411,6 +414,7 @@ const quickGenerateTemplateDefaults: Record<
         targetAmount: '',
         includeExecutionInstruction: false,
         executionDriver: 'default',
+        claimOutcome: 'provider_disbursement',
     },
     'settlement-envelope': {
         amount: '1000',
@@ -440,6 +444,7 @@ const quickGenerateTemplateDefaults: Record<
         targetAmount: '1000',
         includeExecutionInstruction: true,
         executionDriver: 'settlement_envelope',
+        claimOutcome: 'provider_disbursement',
     },
 };
 
@@ -477,6 +482,17 @@ const voucherInstructionCoverageGroups: VoucherInstructionCoverageGroup[] = [
         key: 'inputs',
         label: 'inputs',
         fields: [{ key: 'inputs.fields', status: 'editable' }],
+    },
+    {
+        key: 'claim',
+        label: 'claim',
+        fields: [
+            { key: 'claim.outcomes', status: 'editable' },
+            { key: 'claim.selection', status: 'defaulted' },
+            { key: 'claim.consumption', status: 'defaulted' },
+            { key: 'claim.default_outcome', status: 'defaulted' },
+            { key: 'claim.claimant', status: 'defaulted' },
+        ],
     },
     {
         key: 'feedback',
@@ -653,6 +669,7 @@ const maxSlices = ref('1');
 const minWithdrawal = ref(String(issuerDefaultMinimumWithdrawal));
 const namedClaimSlices = ref<NamedClaimSlice[]>(defaultWholeNamedClaimSlices());
 const voucherType = ref<'redeemable' | 'payable' | 'settlement'>('redeemable');
+const claimOutcome = ref<ClaimOutcomeMode>('provider_disbursement');
 const targetAmount = ref('');
 const rulesMinPayment = ref('');
 const rulesMaxPayment = ref('');
@@ -721,6 +738,17 @@ watch(slices, (): void => {
     }
 });
 
+watch(claimOutcome, (outcome): void => {
+    if (outcome !== 'account_funding') {
+        return;
+    }
+
+    configureWholeAmountSlices();
+    voucherType.value = 'redeemable';
+    settlementRail.value = '';
+    feeStrategy.value = 'absorb';
+});
+
 function applyTemplateDefaults(templateKey: string): void {
     const defaults = quickGenerateTemplateDefaults[templateKey];
 
@@ -768,6 +796,7 @@ function applyTemplateDefaults(templateKey: string): void {
     targetAmount.value = defaults.targetAmount;
     includeExecutionInstruction.value = defaults.includeExecutionInstruction;
     executionDriver.value = defaults.executionDriver;
+    claimOutcome.value = defaults.claimOutcome;
     executionPipeline.value =
         defaults.executionDriver === 'settlement_envelope'
             ? 'readiness, authorize, execute'
@@ -881,8 +910,22 @@ const canSubmit = computed<boolean>(() => {
         routeUrl.value !== null &&
         allowedMethods.value.includes('POST') &&
         feedbackValid.value &&
-        namedClaimSliceValidationMessage.value === null
+        namedClaimSliceValidationMessage.value === null &&
+        claimRecipientError.value === null &&
+        (!isAccountFundingClaim.value || sliceMode.value === 'whole')
     );
+});
+
+const isAccountFundingClaim = computed<boolean>(
+    () => claimOutcome.value === 'account_funding',
+);
+
+const claimRecipientError = computed<string | null>(() => {
+    if (!isAccountFundingClaim.value || payeeType.value !== 'vendor') {
+        return null;
+    }
+
+    return 'Account Funding recipients must be CASH or a verified Philippine mobile.';
 });
 
 const campaignContextAvailable = computed<boolean>(() => {
@@ -1188,6 +1231,16 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => 
                 : 'Amount is required before issuance.',
         },
         {
+            key: 'claim',
+            label: 'Recipient receives',
+            target: '#quick-generate-claim-outcome',
+            status:
+                claimRecipientError.value === null ? 'ready' : 'needs-review',
+            summary: isAccountFundingClaim.value
+                ? 'Account funds · no provider payout'
+                : 'Cash payout through the configured provider',
+        },
+        {
             key: 'inputs',
             label: 'Claim Inputs',
             target: '#quick-generate-contract-inputs',
@@ -1285,6 +1338,21 @@ const payeeType = computed<'anyone' | 'mobile' | 'vendor'>(() => {
 });
 
 const payeeHelpText = computed<string>(() => {
+    if (isAccountFundingClaim.value && payeeType.value === 'mobile') {
+        return `Restricted to the verified Account for ${normalizedPayee.value}.`;
+    }
+
+    if (isAccountFundingClaim.value && payeeType.value === 'vendor') {
+        return (
+            claimRecipientError.value ??
+            'Account Funding requires an Account recipient.'
+        );
+    }
+
+    if (isAccountFundingClaim.value) {
+        return 'CASH or blank creates a bearer Pay Code. Whoever holds it can add it to their Account.';
+    }
+
     if (payeeType.value === 'mobile') {
         return `Restricted to mobile number: ${normalizedPayee.value}`;
     }
@@ -2516,6 +2584,28 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
         feedback: feedbackSummary.value,
         rider: riderSummary.value,
         validation: structuredValidationSummary.value,
+        claim: {
+            outcomes: [
+                claimOutcome.value === 'account_funding'
+                    ? {
+                          key: 'account_funding',
+                          pricing_profile: 'account-funding-v1',
+                      }
+                    : {
+                          key: 'provider_disbursement',
+                      },
+            ],
+            selection: 'server',
+            consumption: 'one_of',
+            default_outcome: claimOutcome.value,
+            onboarding: {
+                mode: 'if_required',
+            },
+            claimant: {
+                mode: 'unbound',
+            },
+            profile: 'voucher.claim.v1',
+        },
         metadata: {
             ...(campaign === null ? {} : { campaign }),
             ...(sliceMode.value === 'open'
@@ -2544,6 +2634,12 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
                     builder: 'guided-voucher-instruction-builder',
                     contract_summary: contractSummaryItems.value,
                     slice_plan: canonicalSlicePlan.value,
+                    ...(isAccountFundingClaim.value
+                        ? {
+                              recipient_reference:
+                                  recipientReference.value.trim(),
+                          }
+                        : {}),
                     ...(campaign === null
                         ? {}
                         : { campaign_context: 'read-model-prefill' }),
@@ -3082,6 +3178,10 @@ function updateNamedClaimSlice(
 }
 
 function setSliceMode(mode: string): void {
+    if (isAccountFundingClaim.value && mode !== 'whole') {
+        return;
+    }
+
     if (mode === 'whole') {
         configureWholeAmountSlices();
 
@@ -3496,7 +3596,11 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <input
                                 v-model="recipientReference"
                                 type="text"
-                                placeholder="CASH, 0917..., or vendor alias"
+                                :placeholder="
+                                    isAccountFundingClaim
+                                        ? 'CASH or verified 0917...'
+                                        : 'CASH, 0917..., or vendor alias'
+                                "
                                 class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-submit-recipient"
                                 :disabled="processing"
@@ -3508,6 +3612,89 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 {{ payeeHelpText }}
                             </span>
                         </label>
+
+                        <fieldset
+                            id="quick-generate-claim-outcome"
+                            class="grid min-w-0 gap-2 lg:col-span-2"
+                            data-testid="cockpit-quick-generate-claim-outcome"
+                        >
+                            <legend
+                                class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                                Recipient receives
+                            </legend>
+                            <div class="grid gap-2 sm:grid-cols-2">
+                                <label
+                                    class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition"
+                                    :class="
+                                        claimOutcome ===
+                                        'provider_disbursement'
+                                            ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-100 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-950'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                    "
+                                >
+                                    <input
+                                        v-model="claimOutcome"
+                                        type="radio"
+                                        value="provider_disbursement"
+                                        class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
+                                        data-testid="cockpit-quick-generate-claim-outcome-provider"
+                                        :disabled="processing"
+                                    />
+                                    <span>
+                                        <span
+                                            class="block text-sm font-semibold"
+                                        >
+                                            Cash payout
+                                        </span>
+                                        <span
+                                            class="mt-0.5 block text-[11px] leading-4"
+                                        >
+                                            Claim through the configured payout
+                                            provider.
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label
+                                    class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition"
+                                    :class="
+                                        claimOutcome === 'account_funding'
+                                            ? 'border-cyan-400 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-100 dark:border-cyan-500 dark:bg-cyan-950/40 dark:text-cyan-100 dark:ring-cyan-950'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                    "
+                                >
+                                    <input
+                                        v-model="claimOutcome"
+                                        type="radio"
+                                        value="account_funding"
+                                        class="mt-0.5 rounded-full border-slate-300 text-cyan-600"
+                                        data-testid="cockpit-quick-generate-claim-outcome-account"
+                                        :disabled="processing"
+                                    />
+                                    <span>
+                                        <span
+                                            class="block text-sm font-semibold"
+                                        >
+                                            Account funds
+                                        </span>
+                                        <span
+                                            class="mt-0.5 block text-[11px] leading-4"
+                                        >
+                                            Add the whole amount to an Account.
+                                            No bank payout occurs.
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                            <p
+                                v-if="claimRecipientError"
+                                class="text-xs font-medium text-rose-600 dark:text-rose-300"
+                                data-testid="cockpit-quick-generate-claim-recipient-error"
+                            >
+                                {{ claimRecipientError }}
+                            </p>
+                        </fieldset>
 
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -3693,7 +3880,9 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     v-model="settlementRail"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                     data-testid="cockpit-quick-generate-settlement-rail"
-                                    :disabled="processing"
+                                    :disabled="
+                                        processing || isAccountFundingClaim
+                                    "
                                 >
                                     <option value="">Default</option>
                                     <option value="INSTAPAY">INSTAPAY</option>
@@ -3714,7 +3903,9 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     v-model="feeStrategy"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                     data-testid="cockpit-quick-generate-fee-strategy"
-                                    :disabled="processing"
+                                    :disabled="
+                                        processing || isAccountFundingClaim
+                                    "
                                 >
                                     <option value="absorb">
                                         Absorb — issuer pays fee
@@ -5093,7 +5284,11 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         ? 'border-cyan-400 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-100 dark:border-cyan-500 dark:bg-cyan-950/40 dark:text-cyan-100 dark:ring-cyan-950'
                                         : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:bg-cyan-50/50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-900'
                                 "
-                                :disabled="processing"
+                                :disabled="
+                                    processing ||
+                                    (isAccountFundingClaim &&
+                                        option.value !== 'whole')
+                                "
                                 :data-testid="`cockpit-quick-generate-slice-mode-${option.value}`"
                                 @click="setSliceMode(option.value)"
                             >

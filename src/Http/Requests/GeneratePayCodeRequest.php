@@ -145,6 +145,7 @@ class GeneratePayCodeRequest extends FormRequest
             'metadata.custom.cockpit.template_key' => ['nullable', 'string', 'max:80'],
             'metadata.custom.cockpit.source' => ['nullable', 'string', 'max:80'],
             'metadata.custom.cockpit.purpose' => ['nullable', 'string', 'max:255'],
+            'metadata.custom.cockpit.recipient_reference' => ['nullable', 'string', 'max:80'],
             'metadata.custom.settlement' => ['nullable', 'array'],
             'metadata.custom.settlement.destinations' => ['nullable', 'array'],
             'metadata.custom.settlement.destinations.*' => [

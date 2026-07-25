@@ -19,6 +19,7 @@ use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
+use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
 use LBHurtado\XChange\Services\IdempotencyService;
 use Throwable;
 
@@ -34,6 +35,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         CockpitIssuanceDraftCompilerContract $draftCompiler,
         EstimatePayCodeCost $estimatePayCodeCost,
         BuildBalanceOverview $balanceOverview,
+        CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
@@ -50,6 +52,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $this->ensureDraftIsValid($draftValidator->validate($draft));
 
         $payload = array_replace_recursive($validatedPayload, $draftCompiler->compile($draft));
+        $payload = $claimPolicy->handle($payload);
         $payload['_meta'] = [
             'idempotency_key' => $key,
             'correlation_id' => is_string($correlationId) ? $correlationId : null,

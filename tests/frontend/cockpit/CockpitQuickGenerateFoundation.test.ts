@@ -488,6 +488,23 @@ describe('Cockpit Quick Generate foundation', () => {
                 sanitized: true,
             },
         });
+        expect(payload.claim).toEqual({
+            outcomes: [
+                {
+                    key: 'provider_disbursement',
+                },
+            ],
+            selection: 'server',
+            consumption: 'one_of',
+            default_outcome: 'provider_disbursement',
+            onboarding: {
+                mode: 'if_required',
+            },
+            claimant: {
+                mode: 'unbound',
+            },
+            profile: 'voucher.claim.v1',
+        });
         expect(payload.metadata.custom.cockpit).toMatchObject({
             template_key: 'money-changer',
             source: 'cockpit.quick-generate',
@@ -814,6 +831,71 @@ describe('Cockpit Quick Generate foundation', () => {
         vi.unstubAllGlobals();
     });
 
+    it('builds an Account Funding-only claim contract and locks payout-only controls', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-submit-recipient"]')
+            .setValue('CASH');
+        await wrapper
+            .find(
+                '[data-testid="cockpit-quick-generate-claim-outcome-account"]',
+            )
+            .setValue();
+        await wrapper.vm.$nextTick();
+
+        const preview = quickGenerateEngineeringPreview(wrapper);
+
+        expect(preview.claim).toEqual({
+            outcomes: [
+                {
+                    key: 'account_funding',
+                    pricing_profile: 'account-funding-v1',
+                },
+            ],
+            selection: 'server',
+            consumption: 'one_of',
+            default_outcome: 'account_funding',
+            onboarding: {
+                mode: 'if_required',
+            },
+            claimant: {
+                mode: 'unbound',
+            },
+            profile: 'voucher.claim.v1',
+        });
+        expect(
+            preview.metadata.custom.cockpit.recipient_reference,
+        ).toBe('CASH');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-settlement-rail"]',
+                )
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-slice-mode-open"]',
+                )
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(wrapper.text()).toContain(
+            'No bank payout occurs',
+        );
+    });
+
     it('renders server validation errors as a structured correction panel', async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: false,
@@ -912,7 +994,7 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper.findAll(
                 '[data-testid="cockpit-quick-generate-contract-builder-check"]',
             ),
-        ).toHaveLength(7);
+        ).toHaveLength(8);
         expect(
             wrapper
                 .findAll(
@@ -921,6 +1003,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .map((link) => link.attributes('href')),
         ).toEqual([
             '#quick-generate-contract-money',
+            '#quick-generate-claim-outcome',
             '#quick-generate-contract-inputs',
             '#quick-generate-contract-validation',
             '#quick-generate-contract-rider',
