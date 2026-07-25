@@ -158,6 +158,15 @@ function payCodeFundingInspectionVoucher(
                 ],
             ],
             'treasury' => [
+                'account_funding' => [
+                    'status' => 'ready',
+                    'destinations' => $overrides['destinations']
+                        ?? ['provider_payout', 'account_funding'],
+                    'pricing_profile' => 'account-funding-v1',
+                    'provider_cost_minor' => $overrides['provider_cost_minor']
+                        ?? 0,
+                    'provider_calls' => false,
+                ],
                 'pay_code_reservation' => $reservation,
             ],
         ],

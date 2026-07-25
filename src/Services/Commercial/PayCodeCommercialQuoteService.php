@@ -29,7 +29,12 @@ final class PayCodeCommercialQuoteService
             (array) config('x-commerce.catalogs.pay_code', []),
         );
         $policy = CommercialWaterfallPolicyData::fromArray(
-            (array) config('x-change.commercial.pay_code.waterfall', []),
+            (array) config(
+                $this->usesAccountFundingProfile($instructions)
+                    ? 'x-change.commercial.pay_code.account_funding_waterfall'
+                    : 'x-change.commercial.pay_code.waterfall',
+                [],
+            ),
         );
 
         return (new DeterministicCommercialQuoteBuilder(
@@ -116,6 +121,24 @@ final class PayCodeCommercialQuoteService
             'rider.url' => 'cash.amount',
             default => $catalogItemReference,
         };
+    }
+
+    private function usesAccountFundingProfile(
+        VoucherInstructionsData $instructions,
+    ): bool {
+        $destinations = collect((array) data_get(
+            $instructions,
+            'metadata.custom.settlement.destinations',
+            [],
+        ))
+            ->map(static fn (mixed $destination): string => mb_strtolower(trim((string) $destination)))
+            ->all();
+
+        return in_array('account_funding', $destinations, true)
+            && data_get(
+                $instructions,
+                'metadata.custom.settlement.account_funding.pricing_profile',
+            ) === 'account-funding-v1';
     }
 
     /**

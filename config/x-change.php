@@ -771,6 +771,37 @@ return [
                     ],
                 ],
             ],
+            'account_funding_waterfall' => [
+                'reference' => 'pay-code-account-funding-waterfall',
+                'version' => 1,
+                'currency' => 'PHP',
+                'rules' => [
+                    [
+                        'reference' => 'product-revenue',
+                        'sequence' => 20,
+                        'line_type' => 'allocation',
+                        'category' => 'product_revenue',
+                        'recipient_reference' => 'product:pay-code',
+                        'fixed_amount_minor' => 300,
+                    ],
+                    [
+                        'reference' => 'partner-commission',
+                        'sequence' => 30,
+                        'line_type' => 'allocation',
+                        'category' => 'partner_commission',
+                        'recipient_reference' => 'partner:direct',
+                        'fixed_amount_minor' => 100,
+                    ],
+                    [
+                        'reference' => 'commercial-residual',
+                        'sequence' => 40,
+                        'line_type' => 'residual',
+                        'category' => 'commercial_revenue',
+                        'recipient_reference' => 'operator:x-change',
+                        'fixed_amount_minor' => null,
+                    ],
+                ],
+            ],
             'destination_purposes' => [
                 'provider-transfer-cost' => 'provider_cost_payable',
                 'product-revenue' => 'product_revenue',

@@ -82,6 +82,33 @@ it('prices a collectible instruction without treating its target as outbound cas
         ->toBe('flow_type.collectible');
 });
 
+it('uses a no-payout waterfall for Account Funding Pay Codes', function () {
+    $instructions = validVoucherInstructions(100.00, 'INSTAPAY', [
+        'inputs' => ['fields' => []],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+        'metadata' => [
+            'custom' => [
+                'settlement' => [
+                    'destinations' => ['account_funding'],
+                    'account_funding' => [
+                        'pricing_profile' => 'account-funding-v1',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $estimate = app(PricingServiceContract::class)->estimate($instructions);
+
+    expect($estimate['total_minor'])->toBe(1_500)
+        ->and($estimate['waterfall_policy_reference'])
+        ->toBe('pay-code-account-funding-waterfall');
+});
+
 it('prices every Pay Code in a batch with the same catalog quantities', function () {
     $instructions = validVoucherInstructions(100.00, 'INSTAPAY', [
         'count' => 3,

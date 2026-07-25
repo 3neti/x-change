@@ -31,6 +31,7 @@ return new class extends Migration
             $table->dropUnique(['treasury_operation_reference']);
             $table->dropUnique(['account_funding_scope']);
             $table->dropMorphs('claimant');
+            $table->dropIndex(['settlement_mode']);
             $table->dropColumn('settlement_mode');
         });
     }

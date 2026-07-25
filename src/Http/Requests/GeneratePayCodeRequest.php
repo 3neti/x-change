@@ -112,6 +112,18 @@ class GeneratePayCodeRequest extends FormRequest
             'metadata.custom.cockpit.template_key' => ['nullable', 'string', 'max:80'],
             'metadata.custom.cockpit.source' => ['nullable', 'string', 'max:80'],
             'metadata.custom.cockpit.purpose' => ['nullable', 'string', 'max:255'],
+            'metadata.custom.settlement' => ['nullable', 'array'],
+            'metadata.custom.settlement.destinations' => ['nullable', 'array'],
+            'metadata.custom.settlement.destinations.*' => [
+                'string',
+                'in:provider_payout,account_funding',
+            ],
+            'metadata.custom.settlement.account_funding' => ['nullable', 'array'],
+            'metadata.custom.settlement.account_funding.pricing_profile' => [
+                'nullable',
+                'string',
+                'in:account-funding-v1',
+            ],
             'metadata.custom.named_slices' => ['nullable', 'array'],
             'metadata.custom.named_slice_policy' => ['nullable', 'array'],
 

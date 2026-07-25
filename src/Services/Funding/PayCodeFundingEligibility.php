@@ -41,7 +41,7 @@ final readonly class PayCodeFundingEligibility
 
         $destinations = collect((array) data_get(
             $voucher->metadata,
-            'instructions.metadata.custom.settlement.destinations',
+            'treasury.account_funding.destinations',
             [],
         ))
             ->map(static fn (mixed $destination): string => mb_strtolower(trim((string) $destination)))
@@ -59,11 +59,12 @@ final readonly class PayCodeFundingEligibility
 
         $accountFunding = data_get(
             $voucher->metadata,
-            'instructions.metadata.custom.settlement.account_funding',
+            'treasury.account_funding',
         );
 
         if (
             ! is_array($accountFunding)
+            || ($accountFunding['status'] ?? null) !== 'ready'
             || ($accountFunding['pricing_profile'] ?? null) !== 'account-funding-v1'
             || (int) ($accountFunding['provider_cost_minor'] ?? -1) !== 0
             || ($accountFunding['provider_calls'] ?? null) !== false

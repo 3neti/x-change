@@ -80,6 +80,18 @@ class EstimatePayCodeRequest extends FormRequest
             'metadata.slice_policy.selection' => ['nullable', 'string'],
             'metadata.slice_policy.enforced' => ['nullable', 'boolean'],
             'metadata.custom' => ['nullable', 'array'],
+            'metadata.custom.settlement' => ['nullable', 'array'],
+            'metadata.custom.settlement.destinations' => ['nullable', 'array'],
+            'metadata.custom.settlement.destinations.*' => [
+                'string',
+                'in:provider_payout,account_funding',
+            ],
+            'metadata.custom.settlement.account_funding' => ['nullable', 'array'],
+            'metadata.custom.settlement.account_funding.pricing_profile' => [
+                'nullable',
+                'string',
+                'in:account-funding-v1',
+            ],
             'metadata.custom.named_slices' => ['nullable', 'array'],
             'metadata.custom.named_slice_policy' => ['nullable', 'array'],
         ];

@@ -26,6 +26,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\WithdrawalDisbursementExecutionData;
+use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -261,6 +262,7 @@ function enableNetbankTreasuryForTests(): User
     foreach ([
         TreasuryProviderConnectionCatalog::class,
         TreasuryPreflightService::class,
+        TreasuryPayCodeAccountingService::class,
         TreasuryProvisioningService::class,
         TreasuryAccountPortfolioProvisioningContract::class,
         VerifiedTreasuryFundingAllocationContract::class,

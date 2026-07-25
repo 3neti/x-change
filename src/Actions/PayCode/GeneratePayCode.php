@@ -24,6 +24,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
+use LBHurtado\XChange\Services\Funding\PreparePayCodeAccountFundingIssuance;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
@@ -44,6 +45,7 @@ class GeneratePayCode
         protected ?ResumeProviderProvisioningFromOnboarding $onboardingProvisioning = null,
         protected ?ProviderFundingPolicyContract $funding = null,
         protected ?PayCodeCommercialSaleService $commercialSales = null,
+        protected ?PreparePayCodeAccountFundingIssuance $accountFunding = null,
     ) {}
 
     /**
@@ -119,6 +121,13 @@ class GeneratePayCode
             $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
                 ? $this->allocateCommercialRevenue($issuer, $input, $issued, $estimate, $funding)
                 : $this->providerWalletAllocationPlaceholder($funding);
+            $this->prepareAccountFunding(
+                issuer: $issuer,
+                input: $input,
+                issued: $issued,
+                allocation: $allocation,
+                funding: $funding,
+            );
 
             $balanceAfter = $this->wallets->getBalance($wallet);
 
@@ -243,6 +252,55 @@ class GeneratePayCode
     protected function commercialSales(): PayCodeCommercialSaleService
     {
         return $this->commercialSales ??= app(PayCodeCommercialSaleService::class);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @param  array<string, mixed>  $issued
+     * @param  array<string, mixed>  $allocation
+     */
+    protected function prepareAccountFunding(
+        mixed $issuer,
+        array $input,
+        array $issued,
+        array $allocation,
+        FundingDecisionData $funding,
+    ): void {
+        if (
+            ! $issuer instanceof Model
+            || ! in_array(
+                'account_funding',
+                collect((array) data_get(
+                    $input,
+                    'metadata.custom.settlement.destinations',
+                    [],
+                ))
+                    ->map(static fn (mixed $destination): string => mb_strtolower(trim((string) $destination)))
+                    ->all(),
+                true,
+            )
+        ) {
+            return;
+        }
+
+        $this->accountFunding()->handle(
+            issuer: $issuer,
+            input: $input,
+            issued: $issued,
+            commercial: $allocation,
+            provider: (string) data_get(
+                $funding->meta,
+                'provider',
+                data_get($input, 'provider', 'manual'),
+            ),
+        );
+    }
+
+    protected function accountFunding(): PreparePayCodeAccountFundingIssuance
+    {
+        return $this->accountFunding ??= app(
+            PreparePayCodeAccountFundingIssuance::class,
+        );
     }
 
     protected function requiredIssuanceAmount(array $input, PricingEstimateData $estimate): float
