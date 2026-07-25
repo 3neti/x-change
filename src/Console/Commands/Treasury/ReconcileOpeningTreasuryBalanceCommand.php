@@ -78,8 +78,34 @@ final class ReconcileOpeningTreasuryBalanceCommand extends Command
                     $rows,
                 ),
             );
+            $this->writeMissingDisbursementRepairGuidance($rows);
         }
 
         return $result->passes() ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function writeMissingDisbursementRepairGuidance(array $rows): void
+    {
+        foreach ($rows as $row) {
+            if (
+                $row['reason']
+                    !== 'provider-balance-below-internal-attribution'
+            ) {
+                continue;
+            }
+
+            $this->components->warn(
+                'No repair was applied. Inspect whether authoritative settled '
+                .'system disbursements exactly explain this deficit:',
+            );
+            $this->line(sprintf(
+                '  php artisan x-change:treasury:repair-missing-disbursement-postings '
+                .'--connection=%s --json --no-interaction',
+                $row['connection'],
+            ));
+        }
     }
 }

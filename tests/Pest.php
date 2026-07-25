@@ -227,6 +227,8 @@ function enableNetbankTreasuryForTests(): User
     };
 
     config()->set('x-change.treasury.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.treasury.legal_profile', 'treasury-settlement-ph-v1');
+    config()->set('x-change.treasury.legal_profile_version', '2026-07-24.1');
     config()->set('x-change.treasury.connections', [
         'netbank-primary' => [
             'provider' => 'netbank',

@@ -83,6 +83,24 @@ it('fails closed without debiting when the provider is below internal attributio
         ->and(TreasuryPositionOperation::query()->count())->toBe(1);
 });
 
+it('points a provider deficit to the guarded missing-disbursement dry run', function () {
+    [$service, $reader] = openingBalanceReconciliationService(10_000);
+    $service->reconcile(['future-primary']);
+    $reader->amountMinor = 5_500;
+    $reader->evidenceReference = 'future-balance:deficit';
+    app()->instance(TreasuryOpeningBalanceReconciliationService::class, $service);
+
+    $this->artisan('x-change:treasury:reconcile-opening', [
+        '--connection' => ['future-primary'],
+    ])
+        ->expectsOutputToContain('No repair was applied.')
+        ->expectsOutputToContain(
+            'x-change:treasury:repair-missing-disbursement-postings '
+            .'--connection=future-primary --json --no-interaction',
+        )
+        ->assertExitCode(Command::FAILURE);
+});
+
 it('exposes opening reconciliation as an idempotent package command', function () {
     [$service] = openingBalanceReconciliationService(250_000_00);
     app()->instance(TreasuryOpeningBalanceReconciliationService::class, $service);

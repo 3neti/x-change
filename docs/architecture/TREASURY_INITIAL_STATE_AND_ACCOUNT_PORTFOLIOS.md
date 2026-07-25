@@ -365,6 +365,43 @@ The command reports:
 
 `provider_transfer_succeeded=true` with `accounting_status=review_required` means an internal invariant failed or the provider balance is below internal attribution. This is an accounting escalation, not permission to submit another run reference. The durable run is closed specifically to prevent duplicate payment.
 
+### Historical missing-disbursement posting repair
+
+A provider balance can be below internal Treasury attribution when an older, already-settled system-owned disbursement reached the provider but predates the append-only Treasury outflow posting. Opening reconciliation remains fail-closed and never guesses that this is the cause.
+
+First run the dedicated inspection command:
+
+```bash
+php artisan x-change:treasury:repair-missing-disbursement-postings \
+    --connection=netbank-primary \
+    --json \
+    --no-interaction
+```
+
+Inspection is the default and performs no writes. A repair is eligible only when all of these controls agree:
+
+- the provider reports a balance below balanced Inventory and Positions;
+- successful `redeem` reconciliations have unique settled provider evidence, an exact principal amount and currency, and a provider timestamp after opening recognition;
+- each candidate Pay Code belongs to the system principal;
+- no matching Inventory or Position posting already exists;
+- candidate principal totals exactly equal the provider-to-Treasury deficit; and
+- the system's Legacy Unattributed Position can cover that exact principal total.
+
+Review the returned reconciliation IDs, then repeat them explicitly:
+
+```bash
+php artisan x-change:treasury:repair-missing-disbursement-postings \
+    --connection=netbank-primary \
+    --reconciliation=212 \
+    --reconciliation=213 \
+    --reconciliation=214 \
+    --commit \
+    --json \
+    --no-interaction
+```
+
+The committed path reacquires the opening-reconciliation lock, reads the provider again, locks the Treasury control records, and revalidates every fact in one database transaction. It appends one principal-only Inventory adjustment and one Legacy Unattributed derecognition per reconciliation. It never debits Client Funds, never posts a configured fee, never exposes raw provider evidence, and rolls back the complete repair if any write or final control check fails. Deterministic operation references make an exact replay return `already_repaired` without another balance change.
+
 ### Legacy fee-boundary repair
 
 Runs created before the principal-only boundary may have derecognized the beneficiary principal plus the configured rail fee even though NetBank deducted only the principal. Inspect and repair a known durable run by its stored run-record reference:

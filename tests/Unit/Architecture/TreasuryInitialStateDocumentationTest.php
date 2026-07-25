@@ -15,8 +15,11 @@ it('documents the provider-neutral Treasury initial state and operating controls
         ->toContain('x-change:treasury:preflight')
         ->toContain('x-change:treasury:provision')
         ->toContain('x-change:treasury:reconcile-opening')
+        ->toContain('x-change:treasury:repair-missing-disbursement-postings')
         ->toContain('x-change:treasury:migrate-legacy-account')
         ->toContain('x-change:treasury:simulate-deposit')
+        ->toContain('never debits Client Funds')
+        ->toContain('already_repaired')
         ->toContain('No form, command, webhook body, or operator can directly set Internal Balance.')
         ->toContain('max(0, min(Internal Balance, Provider Liquidity) - Outstanding Pay Codes)')
         ->toContain('x-legal remains advisory');
