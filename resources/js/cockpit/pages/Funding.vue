@@ -70,11 +70,7 @@ const activeFundingRequestReview = ref<string | null>(null);
 const fundingRequestAmount = ref('');
 const fundingReviewAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
-type FundingWorkspaceMode =
-    | 'self_top_up'
-    | 'funding_code'
-    | 'funding_intent'
-    | 'simulation';
+type FundingWorkspaceMode = 'self_top_up' | 'funding_code' | 'simulation';
 const activeFundingMode = ref<FundingWorkspaceMode>('self_top_up');
 const fundingWorkspaceModes = computed(() => [
     {
@@ -110,8 +106,20 @@ const availableFundingProviders = computed(() =>
         (provider) => provider.status === 'available',
     ),
 );
+const operationalFundingIntents = computed(() =>
+    props.funding_read_model.intents.filter(
+        (intent) => intent.provider !== 'qrph_simulator',
+    ),
+);
+const staleProviderLiquidity = computed(() =>
+    props.funding_read_model.treasury_portfolio.connections.find(
+        (connection) =>
+            connection.status === 'active' &&
+            connection.provider_liquidity_is_stale,
+    ),
+);
 const hasOpenFundingIntents = computed(() =>
-    props.funding_read_model.intents.some((intent) =>
+    operationalFundingIntents.value.some((intent) =>
         ['awaiting_funds', 'evidence_received', 'verifying'].includes(
             intent.status,
         ),
@@ -330,6 +338,12 @@ function displayLabel(value: string): string {
     return value
         .replaceAll('_', ' ')
         .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function controlStatusLabel(value: string): string {
+    return value === 'reconciled'
+        ? 'Internal positions reconciled'
+        : displayLabel(value);
 }
 
 function displayTime(value?: string | null): string {
@@ -1073,6 +1087,20 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </h2>
                     </div>
                     <p
+                        v-if="staleProviderLiquidity"
+                        class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 sm:text-right dark:bg-amber-950/40 dark:text-amber-300"
+                        data-testid="funding-liquidity-freshness"
+                    >
+                        {{ staleProviderLiquidity.provider_label }} liquidity
+                        stale · checked
+                        {{
+                            displayTime(
+                                staleProviderLiquidity.provider_liquidity_checked_at,
+                            )
+                        }}
+                    </p>
+                    <p
+                        v-else
                         class="text-xs text-slate-500 sm:text-right dark:text-slate-400"
                     >
                         Cached projections only · no provider call on page load
@@ -1212,7 +1240,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         class="mt-0.5 font-semibold text-slate-900 dark:text-white"
                                     >
                                         {{
-                                            displayLabel(
+                                            controlStatusLabel(
                                                 connection.control_status,
                                             )
                                         }}
@@ -1290,25 +1318,17 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     {{ activeFundingModeDetails?.description }}
                 </p>
                 <details
+                    v-if="funding_simulation"
                     class="mx-2 mt-1 mb-1 border-t border-slate-200 pt-2 dark:border-slate-800"
                     data-testid="funding-advanced-paths"
                 >
                     <summary
                         class="cursor-pointer text-xs font-semibold text-slate-500"
                     >
-                        Advanced and testing paths
+                        Testing tools
                     </summary>
                     <div class="flex flex-wrap gap-2 py-2">
                         <button
-                            type="button"
-                            class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
-                            data-testid="funding-mode-funding_intent"
-                            @click="activeFundingMode = 'funding_intent'"
-                        >
-                            Exact provider instructions
-                        </button>
-                        <button
-                            v-if="funding_simulation"
                             type="button"
                             class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
                             data-testid="funding-mode-simulation"
@@ -1365,7 +1385,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                 data-testid="standing-funding-address-scheme"
                             >
-                                {{ standing_funding_address.scheme_label }}
+                                Reusable address
                             </span>
                         </div>
                         <h2 class="mt-1.5 text-lg font-semibold">
@@ -1379,13 +1399,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             payer chooses the amount; payer mobile, amount,
                             timing, and merchant text never decide where the
                             credit goes.
-                        </p>
-                        <p
-                            v-if="standing_funding_address.scheme_warning"
-                            class="mt-2 max-w-4xl text-xs leading-5 text-amber-700 dark:text-amber-300"
-                            data-testid="standing-funding-address-scheme-warning"
-                        >
-                            {{ standing_funding_address.scheme_warning }}
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2 lg:justify-end">
@@ -2175,354 +2188,389 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 </div>
             </section>
 
-            <section
-                v-show="activeFundingMode === 'funding_intent'"
-                id="funding-panel-funding_intent"
-                role="tabpanel"
-                aria-labelledby="funding-mode-funding_intent"
-                class="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+            <details
+                v-show="activeFundingMode === 'self_top_up'"
+                class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="exact-amount-self-top-up"
             >
-                <form
-                    class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-funding-intent-form"
-                    @submit.prevent="submitFundingIntent"
+                <summary
+                    class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden"
                 >
-                    <p
-                        class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
-                    >
-                        Controlled intake
-                    </p>
-                    <h2 class="mt-1 text-lg font-semibold">
-                        Create Funding Intent
-                    </h2>
-                    <p
-                        class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400"
-                    >
-                        {{
-                            simulationIntentSelected
-                                ? 'This creates exact local simulation instructions with zero provider calls.'
-                                : 'This creates exact provider instructions.'
-                        }}
-                        It does not change Client Funds or Issuance Capacity.
-                    </p>
-
-                    <div
-                        class="mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
-                    >
-                        <label class="block">
-                            <span
-                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                >Provider</span
-                            >
-                            <select
-                                v-model="form.provider"
-                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
-                                :disabled="form.processing"
-                                data-testid="cockpit-funding-provider"
-                            >
-                                <option
-                                    v-if="
-                                        availableFundingProviders.length === 0
-                                    "
-                                    disabled
-                                    value=""
-                                >
-                                    No funding provider enabled
-                                </option>
-                                <option
-                                    v-for="provider in funding_read_model.providers"
-                                    :key="provider.code"
-                                    :value="provider.code"
-                                    :disabled="provider.status !== 'available'"
-                                >
-                                    {{ provider.label }} ·
-                                    {{
-                                        displayLabel(
-                                            provider.destination_mode ??
-                                                'shared',
-                                        )
-                                    }}
-                                    {{
-                                        provider.status === 'available'
-                                            ? ''
-                                            : ` (${provider.status})`
-                                    }}
-                                </option>
-                            </select>
-                            <span
-                                v-if="form.errors.provider"
-                                class="mt-1 block text-xs text-rose-600"
-                                >{{ form.errors.provider }}</span
-                            >
-                            <span
-                                v-else-if="simulationIntentSelected"
-                                class="mt-1 block text-xs leading-5 text-emerald-700 dark:text-emerald-300"
-                            >
-                                Local happy path: creates a real Funding Intent
-                                in x-change without contacting a bank or EMI.
-                            </span>
-                            <span
-                                v-else-if="
-                                    availableFundingProviders.length === 0
-                                "
-                                class="mt-1 block text-xs leading-5 text-amber-700 dark:text-amber-300"
-                            >
-                                NetBank and Paynamics are installed, but Funding
-                                Intake stays locked until a provider is
-                                explicitly enabled.
-                            </span>
-                        </label>
-
-                        <label class="block">
-                            <span
-                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                >Exact amount</span
-                            >
-                            <div
-                                class="mt-1.5 flex rounded-lg border border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
-                            >
-                                <span
-                                    class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
-                                    >PHP</span
-                                >
-                                <input
-                                    v-model="amount"
-                                    inputmode="decimal"
-                                    autocomplete="off"
-                                    placeholder="0.00"
-                                    class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
-                                    :disabled="form.processing"
-                                    data-testid="cockpit-funding-amount"
-                                />
-                            </div>
-                            <span
-                                v-if="
-                                    amountError ??
-                                    clientAmountError ??
-                                    form.errors.amount_minor
-                                "
-                                class="mt-1 block text-xs text-rose-600"
-                                >{{
-                                    amountError ??
-                                    clientAmountError ??
-                                    form.errors.amount_minor
-                                }}</span
-                            >
-                        </label>
+                    <div>
+                        <p
+                            class="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400"
+                        >
+                            Optional
+                        </p>
+                        <h2 class="mt-0.5 text-sm font-semibold">
+                            Top up an exact amount
+                        </h2>
+                        <p class="mt-1 text-xs text-slate-500">
+                            Create one-time provider instructions instead of
+                            using the reusable QR.
+                        </p>
                     </div>
-
-                    <div class="mt-5 flex flex-wrap items-center gap-3">
-                        <button
-                            type="submit"
-                            class="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="
-                                form.processing ||
-                                availableFundingProviders.length === 0
-                            "
-                            data-testid="cockpit-funding-submit"
+                    <span
+                        class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                        One-time
+                    </span>
+                </summary>
+                <div
+                    class="grid gap-5 border-t border-slate-200 p-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] dark:border-slate-800"
+                >
+                    <form
+                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+                        data-testid="cockpit-funding-intent-form"
+                        @submit.prevent="submitFundingIntent"
+                    >
+                        <p
+                            class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
+                        >
+                            Exact-amount self top-up
+                        </p>
+                        <h2 class="mt-1 text-lg font-semibold">
+                            Create one-time instructions
+                        </h2>
+                        <p
+                            class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
                             {{
-                                form.processing
-                                    ? 'Creating instructions…'
-                                    : simulationIntentSelected
-                                      ? 'Create simulated funding instructions'
-                                      : 'Create funding instructions'
+                                simulationIntentSelected
+                                    ? 'This creates exact local simulation instructions with zero provider calls.'
+                                    : 'This creates exact provider instructions.'
                             }}
-                        </button>
-                        <p class="text-xs text-slate-500">
-                            No Treasury position changes on submit.
+                            It does not change Client Funds or Issuance
+                            Capacity.
                         </p>
-                    </div>
-                </form>
 
-                <article
-                    class="rounded-xl border p-5 shadow-sm"
-                    :class="
-                        currentInstruction
-                            ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/20'
-                            : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
-                    "
-                    data-testid="cockpit-funding-instruction"
-                >
-                    <div v-if="currentInstruction">
                         <div
-                            class="flex flex-wrap items-start justify-between gap-3"
+                            class="mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
                         >
-                            <div>
-                                <p
-                                    class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
+                            <label class="block">
+                                <span
+                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                    >Provider</span
                                 >
-                                    One-time instructions
-                                </p>
-                                <h2 class="mt-1 text-lg font-semibold">
-                                    Transfer exactly
-                                    {{ currentInstruction.amount }}
-                                </h2>
-                            </div>
-                            <span
-                                class="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 shadow-sm dark:bg-slate-900 dark:text-sky-300"
+                                <select
+                                    v-model="form.provider"
+                                    class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
+                                    :disabled="form.processing"
+                                    data-testid="cockpit-funding-provider"
+                                >
+                                    <option
+                                        v-if="
+                                            availableFundingProviders.length ===
+                                            0
+                                        "
+                                        disabled
+                                        value=""
+                                    >
+                                        No funding provider enabled
+                                    </option>
+                                    <option
+                                        v-for="provider in funding_read_model.providers"
+                                        :key="provider.code"
+                                        :value="provider.code"
+                                        :disabled="
+                                            provider.status !== 'available'
+                                        "
+                                    >
+                                        {{ provider.label }} ·
+                                        {{
+                                            displayLabel(
+                                                provider.destination_mode ??
+                                                    'shared',
+                                            )
+                                        }}
+                                        {{
+                                            provider.status === 'available'
+                                                ? ''
+                                                : ` (${provider.status})`
+                                        }}
+                                    </option>
+                                </select>
+                                <span
+                                    v-if="form.errors.provider"
+                                    class="mt-1 block text-xs text-rose-600"
+                                    >{{ form.errors.provider }}</span
+                                >
+                                <span
+                                    v-else-if="simulationIntentSelected"
+                                    class="mt-1 block text-xs leading-5 text-emerald-700 dark:text-emerald-300"
+                                >
+                                    Local happy path: creates a real Funding
+                                    Intent in x-change without contacting a bank
+                                    or EMI.
+                                </span>
+                                <span
+                                    v-else-if="
+                                        availableFundingProviders.length === 0
+                                    "
+                                    class="mt-1 block text-xs leading-5 text-amber-700 dark:text-amber-300"
+                                >
+                                    NetBank and Paynamics are installed, but
+                                    Funding Intake stays locked until a provider
+                                    is explicitly enabled.
+                                </span>
+                            </label>
+
+                            <label class="block">
+                                <span
+                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                    >Exact amount</span
+                                >
+                                <div
+                                    class="mt-1.5 flex rounded-lg border border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
+                                >
+                                    <span
+                                        class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
+                                        >PHP</span
+                                    >
+                                    <input
+                                        v-model="amount"
+                                        inputmode="decimal"
+                                        autocomplete="off"
+                                        placeholder="0.00"
+                                        class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+                                        :disabled="form.processing"
+                                        data-testid="cockpit-funding-amount"
+                                    />
+                                </div>
+                                <span
+                                    v-if="
+                                        amountError ??
+                                        clientAmountError ??
+                                        form.errors.amount_minor
+                                    "
+                                    class="mt-1 block text-xs text-rose-600"
+                                    >{{
+                                        amountError ??
+                                        clientAmountError ??
+                                        form.errors.amount_minor
+                                    }}</span
+                                >
+                            </label>
+                        </div>
+
+                        <div class="mt-5 flex flex-wrap items-center gap-3">
+                            <button
+                                type="submit"
+                                class="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                :disabled="
+                                    form.processing ||
+                                    availableFundingProviders.length === 0
+                                "
+                                data-testid="cockpit-funding-submit"
                             >
-                                {{ displayLabel(currentInstruction.status) }}
-                            </span>
+                                {{
+                                    form.processing
+                                        ? 'Creating instructions…'
+                                        : simulationIntentSelected
+                                          ? 'Create simulated funding instructions'
+                                          : 'Create funding instructions'
+                                }}
+                            </button>
+                            <p class="text-xs text-slate-500">
+                                No Treasury position changes on submit.
+                            </p>
                         </div>
+                    </form>
 
-                        <div
-                            v-if="currentInstruction.qr_code"
-                            class="mt-4 flex flex-col items-center gap-4 rounded-xl border border-sky-200 bg-white p-4 text-center sm:flex-row sm:text-left dark:border-sky-900 dark:bg-slate-950"
-                            data-testid="cockpit-funding-qr"
-                        >
-                            <img
-                                :src="currentInstruction.qr_code"
-                                :alt="`Exact ${currentInstruction.amount} NetBank QR Ph code`"
-                                class="size-40 shrink-0 rounded-lg bg-white object-contain"
-                            />
-                            <div>
-                                <p class="text-sm font-semibold">
-                                    Scan to pay exactly
-                                    {{ currentInstruction.amount }}
-                                </p>
+                    <article
+                        class="rounded-xl border p-5 shadow-sm"
+                        :class="
+                            currentInstruction
+                                ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/20'
+                                : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+                        "
+                        data-testid="cockpit-funding-instruction"
+                    >
+                        <div v-if="currentInstruction">
+                            <div
+                                class="flex flex-wrap items-start justify-between gap-3"
+                            >
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
+                                    >
+                                        One-time instructions
+                                    </p>
+                                    <h2 class="mt-1 text-lg font-semibold">
+                                        Transfer exactly
+                                        {{ currentInstruction.amount }}
+                                    </h2>
+                                </div>
+                                <span
+                                    class="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 shadow-sm dark:bg-slate-900 dark:text-sky-300"
+                                >
+                                    {{
+                                        displayLabel(currentInstruction.status)
+                                    }}
+                                </span>
+                            </div>
+
+                            <div
+                                v-if="currentInstruction.qr_code"
+                                class="mt-4 flex flex-col items-center gap-4 rounded-xl border border-sky-200 bg-white p-4 text-center sm:flex-row sm:text-left dark:border-sky-900 dark:bg-slate-950"
+                                data-testid="cockpit-funding-qr"
+                            >
+                                <img
+                                    :src="currentInstruction.qr_code"
+                                    :alt="`Exact ${currentInstruction.amount} NetBank QR Ph code`"
+                                    class="size-40 shrink-0 rounded-lg bg-white object-contain"
+                                />
+                                <div>
+                                    <p class="text-sm font-semibold">
+                                        Scan to pay exactly
+                                        {{ currentInstruction.amount }}
+                                    </p>
+                                    <p
+                                        class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                    >
+                                        Dynamic P2M QR · one Funding Intent ·
+                                        one destination. Payment does not credit
+                                        the Account until NetBank transaction
+                                        history confirms settlement.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <dt
+                                        class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                    >
+                                        Provider
+                                    </dt>
+                                    <dd class="mt-1 text-sm font-medium">
+                                        {{
+                                            currentInstruction.institution ??
+                                            displayLabel(
+                                                currentInstruction.provider,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt
+                                        class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                    >
+                                        Expires
+                                    </dt>
+                                    <dd class="mt-1 text-sm font-medium">
+                                        {{
+                                            displayTime(
+                                                currentInstruction.expires_at,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                                <div v-if="currentInstruction.account_name">
+                                    <dt
+                                        class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                    >
+                                        Account name
+                                    </dt>
+                                    <dd class="mt-1 text-sm font-medium">
+                                        {{ currentInstruction.account_name }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt
+                                        class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                    >
+                                        Instruction reference
+                                    </dt>
+                                    <dd class="mt-1 font-mono text-xs">
+                                        {{ currentInstruction.reference }}
+                                    </dd>
+                                </div>
+                            </dl>
+
+                            <div
+                                v-if="currentInstruction.funding_address"
+                                class="mt-4 rounded-lg border border-sky-200 bg-white p-3 dark:border-sky-900 dark:bg-slate-950"
+                            >
                                 <p
-                                    class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
                                 >
-                                    Dynamic P2M QR · one Funding Intent · one
-                                    destination. Payment does not credit the
-                                    Account until NetBank transaction history
-                                    confirms settlement.
+                                    Destination account
                                 </p>
+                                <div
+                                    class="mt-1 flex flex-wrap items-center justify-between gap-3"
+                                >
+                                    <p
+                                        class="font-mono text-sm font-semibold break-all"
+                                    >
+                                        {{ currentInstruction.funding_address }}
+                                    </p>
+                                    <CockpitManualCopyButton
+                                        :value="
+                                            currentInstruction.funding_address
+                                        "
+                                        label="Copy account"
+                                        helper="Browser-local copy only."
+                                    />
+                                </div>
                             </div>
+
+                            <a
+                                v-if="currentInstruction.action_url"
+                                :href="currentInstruction.action_url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="mt-4 inline-flex rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700"
+                            >
+                                Open provider payment page
+                            </a>
+
+                            <p
+                                v-if="currentInstruction.simulation_only"
+                                class="mt-4 text-xs leading-5 text-emerald-700 dark:text-emerald-300"
+                            >
+                                Local simulation only. Do not transfer money to
+                                this address. No bank or EMI was contacted, and
+                                no Client Funds position changed.
+                            </p>
+                            <p
+                                v-else
+                                class="mt-4 text-xs leading-5 text-slate-600 dark:text-slate-400"
+                            >
+                                Sensitive settlement access material. Transfer
+                                the exact amount before expiry. The Account
+                                changes only after independent provider
+                                verification.
+                            </p>
                         </div>
-
-                        <dl class="mt-4 grid gap-3 sm:grid-cols-2">
-                            <div>
-                                <dt
-                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                >
-                                    Provider
-                                </dt>
-                                <dd class="mt-1 text-sm font-medium">
-                                    {{
-                                        currentInstruction.institution ??
-                                        displayLabel(
-                                            currentInstruction.provider,
-                                        )
-                                    }}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt
-                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                >
-                                    Expires
-                                </dt>
-                                <dd class="mt-1 text-sm font-medium">
-                                    {{
-                                        displayTime(
-                                            currentInstruction.expires_at,
-                                        )
-                                    }}
-                                </dd>
-                            </div>
-                            <div v-if="currentInstruction.account_name">
-                                <dt
-                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                >
-                                    Account name
-                                </dt>
-                                <dd class="mt-1 text-sm font-medium">
-                                    {{ currentInstruction.account_name }}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt
-                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                >
-                                    Funding Intent
-                                </dt>
-                                <dd class="mt-1 font-mono text-xs">
-                                    {{ currentInstruction.reference }}
-                                </dd>
-                            </div>
-                        </dl>
-
                         <div
-                            v-if="currentInstruction.funding_address"
-                            class="mt-4 rounded-lg border border-sky-200 bg-white p-3 dark:border-sky-900 dark:bg-slate-950"
+                            v-else
+                            class="flex min-h-52 flex-col items-center justify-center text-center"
                         >
                             <p
-                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                class="text-sm font-semibold text-slate-700 dark:text-slate-200"
                             >
-                                Destination account
+                                Funding instructions will appear here once
                             </p>
-                            <div
-                                class="mt-1 flex flex-wrap items-center justify-between gap-3"
+                            <p
+                                class="mt-1 max-w-md text-xs leading-5 text-slate-500"
                             >
-                                <p
-                                    class="font-mono text-sm font-semibold break-all"
-                                >
-                                    {{ currentInstruction.funding_address }}
-                                </p>
-                                <CockpitManualCopyButton
-                                    :value="currentInstruction.funding_address"
-                                    label="Copy account"
-                                    helper="Browser-local copy only."
-                                />
-                            </div>
+                                Create an intent to receive the exact bank
+                                destination or provider payment link. Refreshing
+                                later will show the sanitized activity record,
+                                not the sensitive instruction payload.
+                            </p>
                         </div>
-
-                        <a
-                            v-if="currentInstruction.action_url"
-                            :href="currentInstruction.action_url"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="mt-4 inline-flex rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700"
-                        >
-                            Open provider payment page
-                        </a>
-
                         <p
-                            v-if="currentInstruction.simulation_only"
-                            class="mt-4 text-xs leading-5 text-emerald-700 dark:text-emerald-300"
+                            v-if="instructionError"
+                            class="mt-3 text-xs font-medium text-rose-700 dark:text-rose-300"
+                            role="alert"
                         >
-                            Local simulation only. Do not transfer money to this
-                            address. No bank or EMI was contacted, and no Client
-                            Funds position changed.
+                            {{ instructionError }}
                         </p>
-                        <p
-                            v-else
-                            class="mt-4 text-xs leading-5 text-slate-600 dark:text-slate-400"
-                        >
-                            Sensitive settlement access material. Transfer the
-                            exact amount before expiry. The Account changes only
-                            after independent provider verification.
-                        </p>
-                    </div>
-                    <div
-                        v-else
-                        class="flex min-h-52 flex-col items-center justify-center text-center"
-                    >
-                        <p
-                            class="text-sm font-semibold text-slate-700 dark:text-slate-200"
-                        >
-                            Funding instructions will appear here once
-                        </p>
-                        <p
-                            class="mt-1 max-w-md text-xs leading-5 text-slate-500"
-                        >
-                            Create an intent to receive the exact bank
-                            destination or provider payment link. Refreshing
-                            later will show the sanitized activity record, not
-                            the sensitive instruction payload.
-                        </p>
-                    </div>
-                    <p
-                        v-if="instructionError"
-                        class="mt-3 text-xs font-medium text-rose-700 dark:text-rose-300"
-                        role="alert"
-                    >
-                        {{ instructionError }}
-                    </p>
-                </article>
-            </section>
+                    </article>
+                </div>
+            </details>
 
             <details
                 class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -2551,6 +2599,15 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 <div
                     class="grid gap-5 border-t border-slate-200 p-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)] dark:border-slate-800"
                 >
+                    <p
+                        v-if="standing_funding_address?.scheme_warning"
+                        class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 xl:col-span-2 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                        data-testid="standing-funding-address-scheme-warning"
+                    >
+                        Address scheme:
+                        {{ standing_funding_address.scheme_label }}.
+                        {{ standing_funding_address.scheme_warning }}
+                    </p>
                     <article
                         class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     >
@@ -2690,7 +2747,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     >
                 </div>
                 <div
-                    v-if="funding_read_model.intents.length"
+                    v-if="operationalFundingIntents.length"
                     class="overflow-x-auto"
                 >
                     <table class="w-full min-w-[56rem] text-left text-sm">
@@ -2716,7 +2773,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="divide-y divide-slate-100 dark:divide-slate-800"
                         >
                             <tr
-                                v-for="intent in funding_read_model.intents"
+                                v-for="intent in operationalFundingIntents"
                                 :key="intent.reference"
                             >
                                 <td
@@ -2794,15 +2851,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                             }}
                                         </button>
                                         <span
-                                            v-else-if="
-                                                intent.provider ===
-                                                'qrph_simulator'
-                                            "
-                                            class="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300"
-                                        >
-                                            Simulation only
-                                        </span>
-                                        <span
                                             v-else
                                             class="text-xs text-slate-400"
                                         >
@@ -2818,18 +2866,17 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <p
                         class="text-sm font-medium text-slate-700 dark:text-slate-200"
                     >
-                        No Funding Intents yet
+                        No exact-amount top-ups yet
                     </p>
                     <p class="mt-1 text-xs text-slate-500">
-                        A request will appear here before any incoming funds can
-                        be recognized.
+                        Reusable QR deposits and one-time instructions will
+                        appear here after provider verification begins.
                     </p>
                 </div>
             </section>
 
             <details
                 class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                :open="hasFundingExceptions"
                 data-testid="funding-exception-controls"
             >
                 <summary

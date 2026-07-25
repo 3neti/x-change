@@ -243,9 +243,43 @@ it('offers the local simulator while live funding providers remain disabled', fu
     ]);
 
     $operator = actingAsTestUser(0);
-    $providers = app(FundingCockpitReadModelProvider::class)
+    $wallet = $operator->wallet()->where('slug', 'platform')->firstOrFail();
+    fundingCockpitIntent(
+        $operator,
+        $wallet,
+        FundingIntentStatus::AwaitingFunds,
+        provider: 'qrph_simulator',
+    );
+    $simulatorSuspenseIntent = fundingCockpitIntent(
+        $operator,
+        $wallet,
+        FundingIntentStatus::Suspense,
+        provider: 'qrph_simulator',
+    );
+    $simulatorSuspenseCase = FundingSuspenseCase::query()->create([
+        'case_key' => hash('sha256', 'simulator-cockpit-suspense'),
+        'funding_intent_id' => $simulatorSuspenseIntent->getKey(),
+        'provider_code' => 'qrph_simulator',
+        'reason_code' => 'simulation_mismatch',
+        'status' => 'open',
+        'details' => [],
+        'opened_at' => now(),
+    ]);
+    FundingReconciliationRequest::query()->create([
+        'request_key' => hash('sha256', 'simulator-cockpit-reconciliation'),
+        'funding_suspense_case_id' => $simulatorSuspenseCase->getKey(),
+        'action' => 'retry_verification',
+        'status' => 'pending_approval',
+        'payload' => [],
+        'requested_by_type' => $operator::class,
+        'requested_by_id' => (string) $operator->getAuthIdentifier(),
+        'requested_at' => now(),
+    ]);
+
+    $readModel = app(FundingCockpitReadModelProvider::class)
         ->forOperator($operator)
-        ->toArray()['providers'];
+        ->toArray();
+    $providers = $readModel['providers'];
 
     expect(collect($providers)->pluck('code')->all())
         ->toBe(['netbank', 'paynamics_constellation', 'qrph_simulator'])
@@ -256,7 +290,13 @@ it('offers the local simulator while live funding providers remain disabled', fu
             'destination_status' => 'simulation_only',
             'destination_reference' => 'Local simulated clearing',
             'simulation_only' => true,
-        ]);
+        ])
+        ->and($readModel['summary']['awaiting_funds'])->toBe(0)
+        ->and($readModel['summary']['open_suspense'])->toBe(0)
+        ->and($readModel['intents'])->toBeEmpty()
+        ->and($readModel['suspense_cases'])->toBeEmpty()
+        ->and($readModel['approval_queue'])->toBeEmpty()
+        ->and(FundingIntent::query()->where('provider_code', 'qrph_simulator')->count())->toBe(2);
 });
 
 function fundingCockpitIntent(
@@ -264,12 +304,13 @@ function fundingCockpitIntent(
     Wallet $wallet,
     FundingIntentStatus $status,
     ?ProviderFundingObservation $observation = null,
+    string $provider = 'netbank',
 ): FundingIntent {
     $idempotency = (string) Str::uuid();
 
     return FundingIntent::query()->create([
         'account_reference' => 'wallet:'.$wallet->uuid,
-        'provider_code' => 'netbank',
+        'provider_code' => $provider,
         'expected_amount_minor' => 25_000,
         'currency' => 'PHP',
         'status' => $status,

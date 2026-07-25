@@ -459,6 +459,11 @@ describe('Cockpit Funding foundation', () => {
         ).toContain('deferred Accounting Wave');
         expect(
             wrapper
+                .get('[data-testid="funding-treasury-provider-breakdown"]')
+                .text(),
+        ).toContain('Internal positions reconciled');
+        expect(
+            wrapper
                 .get('[data-testid="funding-provider-controls"]')
                 .attributes('open'),
         ).toBeUndefined();
@@ -466,11 +471,12 @@ describe('Cockpit Funding foundation', () => {
             wrapper
                 .get('[data-testid="funding-exception-controls"]')
                 .attributes('open'),
-        ).toBe('');
+        ).toBeUndefined();
         expect(
             wrapper.get('[data-testid="cockpit-funding-activity"]').text(),
         ).toContain('Funding Activity');
-        expect(wrapper.text()).toContain('Create Funding Intent');
+        expect(wrapper.text()).toContain('Top up an exact amount');
+        expect(wrapper.text()).toContain('Create one-time instructions');
         expect(wrapper.text()).toContain('Transfer exactly ₱250.00');
         expect(wrapper.text()).toContain('Scan to pay exactly ₱250.00');
         expect(
@@ -481,8 +487,19 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('915001234567890123456');
         expect(wrapper.text()).toContain('Check NetBank');
         expect(wrapper.text()).toContain('Account Funding Address');
-        expect(wrapper.text()).toContain('Verified mobile suffix');
-        expect(wrapper.text()).toContain('production rejects this scheme');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-standing-funding-address"]')
+                .text(),
+        ).toContain('Reusable address');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-standing-funding-address"]')
+                .text(),
+        ).not.toContain('production rejects this scheme');
+        expect(
+            wrapper.get('[data-testid="funding-provider-controls"]').text(),
+        ).toContain('production rejects this scheme');
         expect(wrapper.text()).toContain('Create Account Funding QR');
         expect(wrapper.text()).toContain('Live funding updates');
         expect(wrapper.text()).toContain(
@@ -511,6 +528,43 @@ describe('Cockpit Funding foundation', () => {
         );
     });
 
+    it('explains when stale provider liquidity pauses issuance capacity', () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: {
+                    ...fundingReadModel,
+                    treasury_portfolio: {
+                        ...fundingReadModel.treasury_portfolio,
+                        connections:
+                            fundingReadModel.treasury_portfolio.connections.map(
+                                (connection) =>
+                                    connection.provider === 'netbank'
+                                        ? {
+                                              ...connection,
+                                              provider_liquidity_is_stale: true,
+                                              provider_liquidity_status:
+                                                  'stale',
+                                              provider_liquidity_checked_at:
+                                                  '2026-07-23T18:12:00+08:00',
+                                              issuance_capacity: null,
+                                              issuance_capacity_minor: null,
+                                          }
+                                        : connection,
+                            ),
+                    },
+                },
+                standing_funding_address: standingFundingAvailability,
+            },
+        });
+
+        expect(
+            wrapper.get('[data-testid="funding-liquidity-freshness"]').text(),
+        ).toContain('NetBank liquidity stale');
+        expect(
+            wrapper.get('[data-testid="funding-liquidity-freshness"]').text(),
+        ).toContain('Jul 23, 2026');
+    });
+
     it('keeps two funding paths primary and places provider tooling in advanced controls', async () => {
         const fetch = vi.fn();
         vi.stubGlobal('fetch', fetch);
@@ -533,9 +587,20 @@ describe('Cockpit Funding foundation', () => {
         ).toBe('true');
         expect(
             wrapper
-                .get('[data-testid="cockpit-funding-intent-form"]')
-                .isVisible(),
+                .get('[data-testid="exact-amount-self-top-up"]')
+                .attributes('open'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .find('[data-testid="funding-mode-funding_intent"]')
+                .exists(),
         ).toBe(false);
+        expect(
+            wrapper.get('[data-testid="funding-advanced-paths"]').text(),
+        ).toContain('Lifecycle simulation');
+        expect(
+            wrapper.get('[data-testid="funding-advanced-paths"]').text(),
+        ).not.toContain('Exact provider instructions');
 
         await wrapper
             .get('[data-testid="funding-mode-funding_code"]')
@@ -555,14 +620,6 @@ describe('Cockpit Funding foundation', () => {
             wrapper.get('[data-testid="funding-mode-description"]').text(),
         ).toContain('Request review');
 
-        await wrapper
-            .get('[data-testid="funding-mode-funding_intent"]')
-            .trigger('click');
-        await nextTick();
-
-        expect(
-            wrapper.get('#funding-panel-funding_intent').attributes('style'),
-        ).not.toContain('display: none');
         expect(fetch).not.toHaveBeenCalled();
     });
 
@@ -1147,7 +1204,7 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('No Funding Intents yet');
+        expect(wrapper.text()).toContain('No exact-amount top-ups yet');
         expect(wrapper.text()).toContain('No open funding exceptions.');
         expect(wrapper.text()).toContain(
             'No reconciliation requests are awaiting approval.',
@@ -1260,7 +1317,7 @@ describe('Cockpit Funding foundation', () => {
         ).toBeUndefined();
         expect(
             wrapper.get('[data-testid="cockpit-funding-activity"]').text(),
-        ).toContain('Simulation only');
+        ).toContain('No exact-amount top-ups yet');
         expect(
             wrapper
                 .get('[data-testid="cockpit-funding-activity"]')

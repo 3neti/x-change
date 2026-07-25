@@ -19,6 +19,8 @@ use LBHurtado\XChange\Models\FundingSuspenseCase;
 
 class FundingCockpitReadModelProvider
 {
+    private const string SimulationProvider = 'qrph_simulator';
+
     public function __construct(
         private readonly FundingTreasuryPortfolioReadModel $treasury,
     ) {}
@@ -30,7 +32,9 @@ class FundingCockpitReadModelProvider
         $intentsQuery = FundingIntent::query()
             ->where('created_by_type', $actorType)
             ->where('created_by_id', $actorId);
-        $intentIds = (clone $intentsQuery)->pluck('id');
+        $operationalIntentsQuery = (clone $intentsQuery)
+            ->where('provider_code', '!=', self::SimulationProvider);
+        $intentIds = (clone $operationalIntentsQuery)->pluck('id');
         $settlements = FundingSettlement::query()
             ->whereIn('funding_intent_id', $intentIds)
             ->latest('settled_at')
@@ -49,9 +53,9 @@ class FundingCockpitReadModelProvider
         $treasuryPortfolio = $this->treasury->forOperator($operator);
 
         return new CockpitFundingReadModelData(
-            summary: $this->summary($intentsQuery, $settlements, $openSuspenseCases, $activeRecoveries),
+            summary: $this->summary($operationalIntentsQuery, $settlements, $openSuspenseCases, $activeRecoveries),
             providers: $this->providers($actorType, $actorId),
-            intents: $this->intents($intentsQuery),
+            intents: $this->intents($operationalIntentsQuery),
             suspense_cases: $this->suspenseCases($openSuspenseCases),
             approval_queue: $this->approvalQueue($actorType, $actorId),
             recovery_holds: $this->recoveryHolds($activeRecoveries),
@@ -112,7 +116,7 @@ class FundingCockpitReadModelProvider
             ->filter(fn (mixed $provider): bool => is_array($provider))
             ->map(function (array $provider, string $code) use ($actorType, $actorId): array {
                 $enabled = ($provider['enabled'] ?? false) === true;
-                $simulationOnly = $code === 'qrph_simulator';
+                $simulationOnly = $code === self::SimulationProvider;
                 $preference = FundingDestinationPreference::query()
                     ->with('providerAccountLink')
                     ->where('owner_type', $actorType)
@@ -248,6 +252,11 @@ class FundingCockpitReadModelProvider
     {
         return FundingReconciliationRequest::query()
             ->where('status', 'pending_approval')
+            ->whereHas(
+                'suspenseCase',
+                fn (Builder $query): Builder => $query
+                    ->where('provider_code', '!=', self::SimulationProvider),
+            )
             ->with('suspenseCase')
             ->oldest('requested_at')
             ->limit(50)
