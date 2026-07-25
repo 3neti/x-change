@@ -3,12 +3,12 @@ import { router, useForm, usePoll } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
-import { store as claimAccountFundingCode } from '@/routes/x-change/cockpit/funding/codes/claims';
 import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit/funding/liquidity-refreshes';
 import { store as claimPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-claims';
 import { store as inspectPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-inspections';
 import { store as approveFundingRequest } from '@/routes/x-change/cockpit/funding/requests/approvals';
 import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
+import { store as claimReviewedFundingPayCode } from '@/routes/x-change/cockpit/funding/requests/pay-code-claims';
 import { store as prepareFundingRequest } from '@/routes/x-change/cockpit/funding/requests/reviews';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
 import { store as openStandingFundingAddressRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank';
@@ -64,7 +64,7 @@ const activeFundingRequestReview = ref<string | null>(null);
 const fundingRequestAmount = ref('');
 const fundingReviewAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
-type FundingWorkspaceMode = 'self_top_up' | 'funding_code' | 'simulation';
+type FundingWorkspaceMode = 'self_top_up' | 'pay_code' | 'simulation';
 const activeFundingMode = ref<FundingWorkspaceMode>('self_top_up');
 const fundingQrMerchantProfile = computed(
     () =>
@@ -85,7 +85,7 @@ const fundingWorkspaceModes = computed(() => [
         label: 'Self Top-Up',
     },
     {
-        key: 'funding_code' as const,
+        key: 'pay_code' as const,
         label: 'Pay Code Funding',
     },
 ]);
@@ -188,7 +188,7 @@ const fundingRequestReviewForm = useForm({
     review_notes: '',
 });
 const fundingRequestApprovalForm = useForm({});
-const fundingCodeClaimForm = useForm({});
+const reviewedFundingPayCodeClaimForm = useForm({});
 const payCodeInspectionForm = useForm({
     code: '',
 });
@@ -436,10 +436,13 @@ function approveRequest(reference: string): void {
     });
 }
 
-function claimFundingCode(reference: string): void {
-    fundingCodeClaimForm.post(claimAccountFundingCode(reference), {
-        preserveScroll: true,
-    });
+function claimReviewedPayCode(requestReference: string): void {
+    reviewedFundingPayCodeClaimForm.post(
+        claimReviewedFundingPayCode.url(requestReference),
+        {
+            preserveScroll: true,
+        },
+    );
 }
 
 function inspectPayCodeFunding(): void {
@@ -1717,12 +1720,12 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             </section>
 
             <section
-                v-show="activeFundingMode === 'funding_code'"
-                id="funding-panel-funding_code"
+                v-show="activeFundingMode === 'pay_code'"
+                id="funding-panel-pay_code"
                 role="tabpanel"
-                aria-labelledby="funding-mode-funding_code"
+                aria-labelledby="funding-mode-pay_code"
                 class="space-y-4"
-                data-testid="cockpit-account-funding-code"
+                data-testid="cockpit-pay-code-funding"
             >
                 <article
                     class="overflow-hidden rounded-2xl border border-emerald-300 bg-white shadow-sm dark:border-emerald-900 dark:bg-slate-900"
@@ -1883,7 +1886,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <summary
                         class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold marker:hidden sm:px-5"
                     >
-                        <span>Request an Account Funding Code</span>
+                        <span>Request a Reviewed Funding Pay Code</span>
                         <span
                             class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
                         >
@@ -1898,7 +1901,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="flex flex-wrap items-center justify-between gap-3"
                         >
                             <h2 class="text-base font-semibold">
-                                Account Funding Code review
+                                Reviewed Funding Pay Code
                             </h2>
                             <span
                                 class="rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-semibold text-emerald-700 uppercase dark:bg-emerald-950 dark:text-emerald-200"
@@ -2072,36 +2075,37 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     {{ item.description }}
                                 </p>
                                 <p
-                                    v-if="item.funding_code"
+                                    v-if="item.pay_code"
                                     class="mt-1 text-xs text-emerald-700 dark:text-emerald-300"
                                 >
-                                    Code ending
-                                    {{ item.funding_code.last_four }} ·
-                                    {{ item.funding_code.amount }} ·
-                                    {{ displayLabel(item.funding_code.status) }}
+                                    Pay Code
+                                    <span class="font-mono font-semibold">
+                                        {{ item.pay_code.code }}
+                                    </span>
+                                    · {{ item.pay_code.amount }} ·
+                                    {{ displayLabel(item.pay_code.status) }}
                                 </p>
                             </div>
                             <button
-                                v-if="item.funding_code?.can_claim"
+                                v-if="item.pay_code?.can_claim"
                                 type="button"
                                 class="min-h-10 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                                :disabled="fundingCodeClaimForm.processing"
-                                @click="
-                                    claimFundingCode(
-                                        item.funding_code.reference,
-                                    )
+                                :disabled="
+                                    reviewedFundingPayCodeClaimForm.processing
                                 "
+                                data-testid="claim-reviewed-funding-pay-code"
+                                @click="claimReviewedPayCode(item.reference)"
                             >
                                 {{
-                                    fundingCodeClaimForm.processing
+                                    reviewedFundingPayCodeClaimForm.processing
                                         ? 'Claiming…'
-                                        : 'Claim Funding Code'
+                                        : 'Add Pay Code to Account'
                                 }}
                             </button>
                         </div>
                     </div>
                     <p v-else class="mt-4 text-sm text-slate-500">
-                        No Account Funding Code requests yet.
+                        No reviewed funding requests yet.
                     </p>
                 </article>
 

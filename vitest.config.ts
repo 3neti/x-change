@@ -100,13 +100,14 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/funding-request-review-route.ts',
             ),
+            '@/routes/x-change/cockpit/funding/requests/pay-code-claims':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/reviewed-funding-pay-code-claim-route.ts',
+                ),
             '@/routes/x-change/cockpit/funding/requests': path.resolve(
                 __dirname,
                 'tests/frontend/stubs/funding-request-route.ts',
-            ),
-            '@/routes/x-change/cockpit/funding/codes/claims': path.resolve(
-                __dirname,
-                'tests/frontend/stubs/account-funding-code-claim-route.ts',
             ),
             '@/routes/x-change/cockpit/funding/pay-code-inspections':
                 path.resolve(

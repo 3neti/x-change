@@ -634,8 +634,9 @@ export type CockpitFundingReadModel = {
     redactions: CockpitReadModelRedactions;
 };
 
-export type CockpitAccountFundingCode = {
-    reference: string;
+export type CockpitReviewedFundingPayCode = {
+    request_reference: string;
+    code: string;
     last_four: string;
     status: string;
     amount: string;
@@ -653,7 +654,7 @@ export type CockpitFundingRequest = {
     status: string;
     description: string;
     submitted_at?: string | null;
-    funding_code?: CockpitAccountFundingCode | null;
+    pay_code?: CockpitReviewedFundingPayCode | null;
 };
 
 export type CockpitFundingRequestReviewItem = {

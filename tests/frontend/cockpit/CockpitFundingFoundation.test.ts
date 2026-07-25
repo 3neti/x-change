@@ -372,8 +372,9 @@ const fundingRequestReadModel = {
             status: 'funding_code_issued',
             description: 'Matched corporate bank transfer.',
             submitted_at: '2026-07-25T08:00:00+08:00',
-            funding_code: {
-                reference: '01J-CODE-1',
+            pay_code: {
+                request_reference: '01J-REQUEST-1',
+                code: 'FUNDF9K2',
                 last_four: 'F9K2',
                 status: 'issued',
                 amount: '₱20,000.00',
@@ -445,7 +446,7 @@ describe('Cockpit Funding foundation', () => {
         ).toBe('true');
         expect(
             wrapper
-                .get('[data-testid="funding-mode-funding_code"]')
+                .get('[data-testid="funding-mode-pay_code"]')
                 .attributes('aria-selected'),
         ).toBe('false');
         expect(
@@ -703,18 +704,18 @@ describe('Cockpit Funding foundation', () => {
         ).not.toContain('Exact provider instructions');
 
         await wrapper
-            .get('[data-testid="funding-mode-funding_code"]')
+            .get('[data-testid="funding-mode-pay_code"]')
             .trigger('click');
         await nextTick();
 
         expect(fetch).not.toHaveBeenCalled();
         expect(
             wrapper
-                .get('[data-testid="funding-mode-funding_code"]')
+                .get('[data-testid="funding-mode-pay_code"]')
                 .attributes('aria-selected'),
         ).toBe('true');
         expect(
-            wrapper.get('#funding-panel-funding_code').attributes('style'),
+            wrapper.get('#funding-panel-pay_code').attributes('style'),
         ).not.toContain('display: none');
         expect(
             wrapper.find('[data-testid="funding-mode-description"]').exists(),
@@ -737,13 +738,11 @@ describe('Cockpit Funding foundation', () => {
         });
 
         await wrapper
-            .get('[data-testid="funding-mode-funding_code"]')
+            .get('[data-testid="funding-mode-pay_code"]')
             .trigger('click');
         await nextTick();
 
-        const panel = wrapper.get(
-            '[data-testid="cockpit-account-funding-code"]',
-        );
+        const panel = wrapper.get('[data-testid="cockpit-pay-code-funding"]');
 
         expect(panel.text()).toContain('Fund with Pay Code');
         expect(
@@ -761,15 +760,15 @@ describe('Cockpit Funding foundation', () => {
                 .get('[data-testid="funding-request-form"]')
                 .attributes('open'),
         ).toBeUndefined();
-        expect(panel.text()).toContain('Request an Account Funding Code');
-        expect(panel.text()).toContain('Account Funding Code review');
+        expect(panel.text()).toContain('Request a Reviewed Funding Pay Code');
+        expect(panel.text()).toContain('Reviewed Funding Pay Code');
         expect(panel.text()).toContain('Bank transfer');
         expect(panel.text()).toContain('Gold or precious metal');
         expect(panel.text()).toContain('Verification details');
         expect(panel.text()).toContain('Submit for Review');
         expect(panel.text()).toContain('Reviewed funding requests');
-        expect(panel.text()).toContain('Code ending F9K2');
-        expect(panel.text()).toContain('Claim Funding Code');
+        expect(panel.text()).toContain('Pay Code FUNDF9K2');
+        expect(panel.text()).toContain('Add Pay Code to Account');
         expect(panel.text()).not.toContain('wallet');
         expect(panel.text()).not.toContain('Two different operators');
         expect(panel.text()).not.toContain('1 · Request');
