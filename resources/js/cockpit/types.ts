@@ -696,6 +696,18 @@ export type CockpitFundingRequestReadModel = {
     redactions: Record<string, boolean>;
 };
 
+export type CockpitPayCodeFundingPreview = {
+    eligible: boolean;
+    status: string;
+    message: string;
+    code_hint?: string | null;
+    amount?: string | null;
+    currency?: string | null;
+    expires_at?: string | null;
+    provider_calls: false;
+    inspection_token?: string | null;
+};
+
 export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_read_model: CockpitFundingReadModel;
     funding_requests?: CockpitFundingRequestReadModel;
@@ -710,6 +722,7 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_simulation?: CockpitQrPhFundingSimulation;
     standing_funding_address?: CockpitStandingFundingAddressAvailability;
     funding_qr_merchant_profile?: CockpitFundingQrMerchantProfile;
+    pay_code_funding_preview?: CockpitPayCodeFundingPreview | null;
 };
 
 export type CockpitStandingFundingAddressAvailability = {

@@ -5,6 +5,8 @@ import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cock
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { store as claimAccountFundingCode } from '@/routes/x-change/cockpit/funding/codes/claims';
 import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit/funding/liquidity-refreshes';
+import { store as claimPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-claims';
+import { store as inspectPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-inspections';
 import { store as approveFundingRequest } from '@/routes/x-change/cockpit/funding/requests/approvals';
 import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
 import { store as prepareFundingRequest } from '@/routes/x-change/cockpit/funding/requests/reviews';
@@ -84,7 +86,7 @@ const fundingWorkspaceModes = computed(() => [
     },
     {
         key: 'funding_code' as const,
-        label: 'Account Funding Code',
+        label: 'Pay Code Funding',
     },
 ]);
 const processedFundingEvents = new Set<string>();
@@ -187,6 +189,12 @@ const fundingRequestReviewForm = useForm({
 });
 const fundingRequestApprovalForm = useForm({});
 const fundingCodeClaimForm = useForm({});
+const payCodeInspectionForm = useForm({
+    code: '',
+});
+const payCodeFundingClaimForm = useForm({
+    inspection_token: props.pay_code_funding_preview?.inspection_token ?? '',
+});
 type FundingProjectionChangedPayload = {
     schema: string;
     event_id: string;
@@ -425,6 +433,29 @@ function approveRequest(reference: string): void {
 
 function claimFundingCode(reference: string): void {
     fundingCodeClaimForm.post(claimAccountFundingCode(reference), {
+        preserveScroll: true,
+    });
+}
+
+function inspectPayCodeFunding(): void {
+    payCodeInspectionForm.post(inspectPayCodeFundingRoute(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            payCodeInspectionForm.reset('code');
+        },
+    });
+}
+
+function claimPayCodeFunding(): void {
+    const inspectionToken =
+        props.pay_code_funding_preview?.inspection_token ?? '';
+
+    if (inspectionToken === '') {
+        return;
+    }
+
+    payCodeFundingClaimForm.inspection_token = inspectionToken;
+    payCodeFundingClaimForm.post(claimPayCodeFundingRoute(), {
         preserveScroll: true,
     });
 }
@@ -1689,11 +1720,177 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 data-testid="cockpit-account-funding-code"
             >
                 <article
-                    class="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-950 dark:bg-slate-900"
+                    class="overflow-hidden rounded-2xl border border-emerald-300 bg-white shadow-sm dark:border-emerald-900 dark:bg-slate-900"
+                    data-testid="pay-code-funding-primary"
+                >
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 px-4 py-3 sm:px-5 dark:border-emerald-950"
+                    >
+                        <div>
+                            <h2 class="text-base font-semibold">
+                                Fund with Pay Code
+                            </h2>
+                            <p
+                                class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+                            >
+                                Add an eligible Pay Code directly to Client
+                                Funds.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-semibold text-emerald-700 uppercase dark:bg-emerald-950 dark:text-emerald-200"
+                        >
+                            no provider payout
+                        </span>
+                    </div>
+                    <form
+                        class="grid gap-2 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-5"
+                        data-testid="pay-code-funding-inspection-form"
+                        @submit.prevent="inspectPayCodeFunding"
+                    >
+                        <label class="sr-only" for="pay-code-funding-code">
+                            Pay Code
+                        </label>
+                        <input
+                            id="pay-code-funding-code"
+                            v-model="payCodeInspectionForm.code"
+                            name="code"
+                            autocomplete="off"
+                            autocapitalize="characters"
+                            spellcheck="false"
+                            placeholder="Enter Pay Code"
+                            class="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-semibold tracking-wide uppercase transition outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-emerald-500 dark:focus:ring-emerald-950"
+                        />
+                        <button
+                            type="submit"
+                            class="h-11 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-50 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300"
+                            :disabled="
+                                payCodeInspectionForm.processing ||
+                                payCodeInspectionForm.code.trim() === ''
+                            "
+                        >
+                            {{
+                                payCodeInspectionForm.processing
+                                    ? 'Checking…'
+                                    : 'Check Code'
+                            }}
+                        </button>
+                        <p
+                            v-if="payCodeInspectionForm.errors.code"
+                            class="text-xs font-medium text-rose-600 sm:col-span-2 dark:text-rose-300"
+                            role="alert"
+                        >
+                            {{ payCodeInspectionForm.errors.code }}
+                        </p>
+                    </form>
+                    <div
+                        v-if="pay_code_funding_preview"
+                        class="border-t px-4 py-4 sm:px-5"
+                        :class="
+                            pay_code_funding_preview.eligible
+                                ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
+                                : 'border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20'
+                        "
+                        data-testid="pay-code-funding-preview"
+                    >
+                        <div
+                            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="text-sm font-semibold">
+                                        {{
+                                            pay_code_funding_preview.code_hint ??
+                                            'Pay Code'
+                                        }}
+                                    </p>
+                                    <span
+                                        class="rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase"
+                                        :class="
+                                            pay_code_funding_preview.eligible
+                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
+                                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200'
+                                        "
+                                    >
+                                        {{
+                                            pay_code_funding_preview.eligible
+                                                ? 'Eligible'
+                                                : 'Unavailable'
+                                        }}
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="pay_code_funding_preview.amount"
+                                    class="mt-1 text-xl font-bold text-slate-950 dark:text-white"
+                                >
+                                    {{ pay_code_funding_preview.amount }}
+                                </p>
+                                <p
+                                    class="mt-1 text-xs text-slate-600 dark:text-slate-300"
+                                >
+                                    {{ pay_code_funding_preview.message }}
+                                    <template
+                                        v-if="
+                                            pay_code_funding_preview.expires_at
+                                        "
+                                    >
+                                        · Expires
+                                        {{
+                                            displayTime(
+                                                pay_code_funding_preview.expires_at,
+                                            )
+                                        }}
+                                    </template>
+                                </p>
+                            </div>
+                            <button
+                                v-if="
+                                    pay_code_funding_preview.eligible &&
+                                    pay_code_funding_preview.inspection_token
+                                "
+                                type="button"
+                                class="h-11 shrink-0 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-50"
+                                :disabled="payCodeFundingClaimForm.processing"
+                                data-testid="claim-pay-code-funding"
+                                @click="claimPayCodeFunding"
+                            >
+                                {{
+                                    payCodeFundingClaimForm.processing
+                                        ? 'Adding…'
+                                        : 'Add to Account'
+                                }}
+                            </button>
+                        </div>
+                        <p
+                            v-if="
+                                payCodeFundingClaimForm.errors.pay_code_funding
+                            "
+                            class="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300"
+                            role="alert"
+                        >
+                            {{
+                                payCodeFundingClaimForm.errors.pay_code_funding
+                            }}
+                        </p>
+                    </div>
+                </article>
+
+                <details
+                    class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     data-testid="funding-request-form"
                 >
+                    <summary
+                        class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold marker:hidden sm:px-5"
+                    >
+                        <span>Request an Account Funding Code</span>
+                        <span
+                            class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                        >
+                            optional review
+                        </span>
+                    </summary>
                     <form
-                        class="p-4 sm:p-5"
+                        class="border-t border-slate-200 p-4 sm:p-5 dark:border-slate-800"
                         @submit.prevent="submitFundingRequest"
                     >
                         <div
@@ -1829,7 +2026,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </button>
                         </div>
                     </form>
-                </article>
+                </details>
 
                 <article
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -1840,7 +2037,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     >
                         <div>
                             <h2 class="text-base font-semibold">
-                                Funding Code requests
+                                Reviewed funding requests
                             </h2>
                         </div>
                         <span class="text-sm font-semibold">

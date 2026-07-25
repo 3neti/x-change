@@ -108,6 +108,15 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/account-funding-code-claim-route.ts',
             ),
+            '@/routes/x-change/cockpit/funding/pay-code-inspections':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/pay-code-funding-inspection-route.ts',
+                ),
+            '@/routes/x-change/cockpit/funding/pay-code-claims': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/pay-code-funding-claim-route.ts',
+            ),
             '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks':
                 path.resolve(
                     __dirname,

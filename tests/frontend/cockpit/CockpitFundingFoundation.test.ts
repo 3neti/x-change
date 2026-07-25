@@ -346,6 +346,19 @@ const fundingRealtime = {
     event: '.FundingProjectionChanged' as const,
 };
 
+const payCodeFundingPreview = {
+    eligible: true,
+    status: 'eligible',
+    message: 'This Pay Code can be added to Client Funds.',
+    code_hint: '••••F9K2',
+    amount: '₱20,000.00',
+    currency: 'PHP',
+    expires_at: '2026-08-01T08:00:00+08:00',
+    provider_calls: false as const,
+    inspection_token:
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678901',
+};
+
 const fundingRequestReadModel = {
     schema: 'x-change.cockpit.account-funding-requests.v1',
     requests: [
@@ -710,11 +723,12 @@ describe('Cockpit Funding foundation', () => {
         expect(fetch).not.toHaveBeenCalled();
     });
 
-    it('presents a focused Funding Code request and one-time claim path', async () => {
+    it('makes Pay Code Funding primary and keeps reviewed requests secondary', async () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
                 funding_requests: fundingRequestReadModel,
+                pay_code_funding_preview: payCodeFundingPreview,
                 standing_funding_address: {
                     ...standingFundingAvailability,
                     available: false,
@@ -731,16 +745,32 @@ describe('Cockpit Funding foundation', () => {
             '[data-testid="cockpit-account-funding-code"]',
         );
 
+        expect(panel.text()).toContain('Fund with Pay Code');
+        expect(
+            panel
+                .get('[data-testid="pay-code-funding-inspection-form"] input')
+                .attributes('placeholder'),
+        ).toBe('Enter Pay Code');
+        expect(panel.text()).toContain('Check Code');
+        expect(panel.text()).toContain('••••F9K2');
+        expect(panel.text()).toContain('₱20,000.00');
+        expect(panel.text()).toContain('Add to Account');
+        expect(panel.text()).toContain('no provider payout');
+        expect(
+            panel
+                .get('[data-testid="funding-request-form"]')
+                .attributes('open'),
+        ).toBeUndefined();
+        expect(panel.text()).toContain('Request an Account Funding Code');
         expect(panel.text()).toContain('Account Funding Code review');
         expect(panel.text()).toContain('Bank transfer');
         expect(panel.text()).toContain('Gold or precious metal');
         expect(panel.text()).toContain('Verification details');
         expect(panel.text()).toContain('Submit for Review');
-        expect(panel.text()).toContain('Funding Code requests');
+        expect(panel.text()).toContain('Reviewed funding requests');
         expect(panel.text()).toContain('Code ending F9K2');
         expect(panel.text()).toContain('Claim Funding Code');
         expect(panel.text()).not.toContain('wallet');
-        expect(panel.text()).not.toContain('Request an Account Funding Code');
         expect(panel.text()).not.toContain('Two different operators');
         expect(panel.text()).not.toContain('1 · Request');
         expect(panel.text()).not.toContain('2 · Verify and reserve');
