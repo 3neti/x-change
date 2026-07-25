@@ -14,7 +14,6 @@ import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitFundingPageProps,
@@ -807,8 +806,7 @@ function saveFundingQrMerchantProfile(): void {
         preserveScroll: true,
         onSuccess: () => {
             resetStandingFundingAddress();
-            standingActionNotice.value =
-                'QR presentation saved. Refreshing the reusable QR…';
+            standingActionNotice.value = 'Merchant label saved. Updating QR…';
             void openStandingFundingAddress();
         },
     });
@@ -820,17 +818,6 @@ function resetStandingFundingAddress(): void {
     standingHistoryCheckedAt.value = null;
     standingAddressError.value = null;
     standingActionNotice.value = null;
-}
-
-function formatMinor(value?: number | null, currency = 'PHP'): string {
-    if (value === null || value === undefined) {
-        return 'No limit';
-    }
-
-    return new Intl.NumberFormat('en-PH', {
-        style: 'currency',
-        currency,
-    }).format(value / 100);
 }
 
 function csrfHeader(): Record<string, string> {
@@ -1254,6 +1241,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     </button>
                 </div>
                 <p
+                    v-if="activeFundingMode !== 'self_top_up'"
                     class="px-2 pt-2 pb-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
                     data-testid="funding-mode-description"
                 >
@@ -1292,66 +1280,16 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 data-testid="cockpit-standing-funding-address"
             >
                 <div
-                    class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
+                    class="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
                 >
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
-                            >
-                                Account Funding Address
-                            </p>
-                            <span
-                                class="rounded-full bg-sky-100 px-2 py-1 text-[0.65rem] font-semibold text-sky-800 uppercase dark:bg-sky-950 dark:text-sky-200"
-                            >
-                                {{
-                                    standing_funding_address.recognition_mode.replaceAll(
-                                        '_',
-                                        ' ',
-                                    )
-                                }}
-                            </span>
-                            <span
-                                class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
-                            >
-                                Purpose bound
-                            </span>
-                            <span
-                                v-if="funding_realtime?.enabled"
-                                class="rounded-full bg-emerald-100 px-2 py-1 text-[0.65rem] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                                data-testid="funding-realtime-status"
-                            >
-                                Live funding updates
-                            </span>
-                            <span
-                                class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                                data-testid="standing-funding-address-scheme"
-                            >
-                                Reusable address
-                            </span>
-                        </div>
-                        <h2 class="mt-1.5 text-lg font-semibold">
-                            Stable NetBank QR Ph address
-                        </h2>
-                        <p
-                            class="mt-1 max-w-4xl text-sm leading-6 text-slate-600 dark:text-slate-400"
-                        >
-                            This exact VCA is permanently classified as
-                            <strong>account funding</strong> for this Account. A
-                            payer chooses the amount; payer mobile, amount,
-                            timing, and merchant text never decide where the
-                            credit goes.
-                        </p>
-                    </div>
-                    <div
-                        class="flex flex-wrap items-center gap-2 lg:justify-end"
-                    >
+                    <h2 class="text-sm font-semibold">Account Funding QR Ph</h2>
+                    <div class="flex flex-wrap items-center gap-2">
                         <span
                             v-if="standingAddressLoading"
-                            class="inline-flex h-10 items-center rounded-lg bg-sky-100 px-4 text-sm font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200"
+                            class="inline-flex h-9 items-center rounded-lg bg-sky-100 px-3 text-xs font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200"
                             data-testid="standing-funding-address-loading"
                         >
-                            Preparing reusable QR…
+                            Preparing QR…
                         </span>
                         <button
                             v-else-if="
@@ -1359,7 +1297,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 standing_funding_address.available === true
                             "
                             type="button"
-                            class="h-10 rounded-lg border border-sky-300 bg-white px-4 text-sm font-semibold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
+                            class="h-9 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
                             data-testid="open-standing-funding-address"
                             @click="openStandingFundingAddress"
                         >
@@ -1368,7 +1306,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         <button
                             v-if="standingAddress"
                             type="button"
-                            class="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
+                            class="h-9 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
                             :disabled="
                                 standingHistoryLoading ||
                                 standingHistoryCooldownSeconds > 0
@@ -1399,10 +1337,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
 
                 <div
                     v-if="standingAddress"
-                    class="border-t border-sky-100 bg-sky-50/50 p-5 dark:border-sky-950 dark:bg-sky-950/10"
+                    class="border-t border-sky-100 bg-sky-50/50 p-4 dark:border-sky-950 dark:bg-sky-950/10"
                 >
                     <div
-                        class="grid gap-5 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start xl:grid-cols-[12rem_minmax(0,1fr)_minmax(17rem,0.72fr)]"
+                        class="grid gap-4 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start"
                     >
                         <div
                             class="mx-auto rounded-xl border border-sky-200 bg-white p-2 shadow-sm md:mx-0 dark:border-sky-900"
@@ -1414,101 +1352,17 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 data-testid="standing-funding-address-qr"
                             />
                         </div>
-                        <div class="min-w-0">
-                            <p
-                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                            >
-                                NetBank VCA
-                            </p>
-                            <p
-                                class="mt-1 font-mono text-base font-semibold break-all"
-                                data-testid="standing-funding-address-value"
-                            >
-                                {{ standingAddress.funding_address }}
-                            </p>
-                            <div class="mt-3">
-                                <CockpitManualCopyButton
-                                    :value="standingAddress.funding_address"
-                                    label="Copy receiving address"
-                                    helper="Browser-local copy only."
-                                />
-                            </div>
-                            <dl class="mt-4 grid gap-3 text-xs sm:grid-cols-3">
-                                <div
-                                    class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
-                                >
-                                    <dt class="text-slate-500">Amount</dt>
-                                    <dd class="mt-0.5 font-semibold">
-                                        Payer enters amount
-                                    </dd>
-                                </div>
-                                <div
-                                    class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
-                                >
-                                    <dt class="text-slate-500">Recognition</dt>
-                                    <dd class="mt-0.5 font-semibold">
-                                        {{
-                                            displayLabel(
-                                                standingAddress.recognition_mode,
-                                            )
-                                        }}
-                                    </dd>
-                                </div>
-                                <div
-                                    class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
-                                >
-                                    <dt class="text-slate-500">
-                                        Per-transfer range
-                                    </dt>
-                                    <dd class="mt-0.5 font-semibold">
-                                        {{
-                                            formatMinor(
-                                                standingAddress.minimum_amount_minor,
-                                                standingAddress.currency,
-                                            )
-                                        }}
-                                        –
-                                        {{
-                                            formatMinor(
-                                                standingAddress.maximum_amount_minor,
-                                                standingAddress.currency,
-                                            )
-                                        }}
-                                    </dd>
-                                </div>
-                            </dl>
-                            <p
-                                class="mt-4 text-xs leading-5 text-sky-800 dark:text-sky-200"
-                            >
-                                Scanning the QR does not itself change the
-                                Account. NetBank transaction history is the
-                                authority. Observe-only records a receipt;
-                                supervised mode waits for approval; automatic
-                                mode credits only after every destination,
-                                currency, status, and limit check passes.
-                            </p>
-                        </div>
                         <form
-                            class="rounded-xl border border-sky-200 bg-white p-4 shadow-sm md:col-span-2 xl:col-span-1 dark:border-sky-900 dark:bg-slate-950"
+                            class="rounded-xl border border-sky-200 bg-white p-4 shadow-sm dark:border-sky-900 dark:bg-slate-950"
                             data-testid="funding-qr-merchant-profile"
                             @submit.prevent="saveFundingQrMerchantProfile"
                         >
-                            <p
-                                class="text-xs font-semibold tracking-[0.14em] text-sky-700 uppercase dark:text-sky-300"
-                            >
-                                QR presentation
-                            </p>
-                            <h3 class="mt-1 text-sm font-semibold">
+                            <h3 class="text-sm font-semibold">
                                 Merchant label
                             </h3>
-                            <p
-                                class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                            <div
+                                class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)_auto] xl:items-end"
                             >
-                                These fields label the QR only. They never
-                                choose the Account, authorize funding, or change
-                                settlement.
-                            </p>
-                            <div class="mt-4 grid gap-3">
                                 <label class="grid gap-1.5 text-xs font-medium">
                                     <span>Merchant name</span>
                                     <input
@@ -1541,6 +1395,17 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         {{ merchantProfileForm.errors.city }}
                                     </span>
                                 </label>
+                                <button
+                                    type="submit"
+                                    class="h-10 rounded-lg bg-sky-700 px-4 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-1"
+                                    :disabled="merchantProfileForm.processing"
+                                >
+                                    {{
+                                        merchantProfileForm.processing
+                                            ? 'Updating…'
+                                            : 'Update QR'
+                                    }}
+                                </button>
                             </div>
                             <p
                                 v-if="
@@ -1554,17 +1419,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         .merchant_name_template
                                 }}
                             </p>
-                            <button
-                                type="submit"
-                                class="mt-4 h-10 w-full rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="merchantProfileForm.processing"
-                            >
-                                {{
-                                    merchantProfileForm.processing
-                                        ? 'Saving…'
-                                        : 'Save & regenerate QR'
-                                }}
-                            </button>
                         </form>
                     </div>
 

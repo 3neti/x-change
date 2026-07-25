@@ -512,14 +512,13 @@ describe('Cockpit Funding foundation', () => {
                 .get('[data-testid="standing-funding-address-qr"]')
                 .attributes('src'),
         ).toBe('data:image/png;base64,REUSABLE');
-        expect(wrapper.text()).toContain('915001234567890123456');
         expect(wrapper.text()).toContain('Check NetBank');
-        expect(wrapper.text()).toContain('Account Funding Address');
+        expect(wrapper.text()).toContain('Account Funding QR Ph');
         expect(
             wrapper
                 .get('[data-testid="cockpit-standing-funding-address"]')
                 .text(),
-        ).toContain('Reusable address');
+        ).not.toContain('915001234567890123456');
         expect(
             wrapper
                 .get('[data-testid="cockpit-standing-funding-address"]')
@@ -528,13 +527,23 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.get('[data-testid="funding-provider-controls"]').text(),
         ).toContain('production rejects this scheme');
-        expect(wrapper.text()).toContain('Live funding updates');
-        expect(wrapper.text()).toContain(
-            'payer mobile, amount, timing, and merchant text never decide',
+        expect(wrapper.text()).not.toContain('Purpose bound');
+        expect(wrapper.text()).not.toContain('Reusable address');
+        expect(wrapper.text()).not.toContain('Stable NetBank QR Ph address');
+        expect(wrapper.text()).not.toContain('Payer enters amount');
+        expect(wrapper.text()).not.toContain('Per-transfer range');
+        expect(wrapper.text()).not.toContain(
+            'Scanning the QR does not itself change the Account',
         );
         expect(
             wrapper.get('[data-testid="funding-qr-merchant-profile"]').text(),
-        ).toContain('Save & regenerate QR');
+        ).toContain('Update QR');
+        expect(
+            wrapper.get('[data-testid="funding-qr-merchant-profile"]').text(),
+        ).toContain('Merchant label');
+        expect(
+            wrapper.get('[data-testid="funding-qr-merchant-profile"]').text(),
+        ).not.toContain('QR presentation');
         expect(
             wrapper
                 .get('[data-testid="funding-qr-merchant-profile"]')
@@ -763,9 +772,6 @@ describe('Cockpit Funding foundation', () => {
         });
 
         expect(useEcho).not.toHaveBeenCalled();
-        expect(
-            wrapper.find('[data-testid="funding-realtime-status"]').exists(),
-        ).toBe(false);
     });
 
     it('opens a standing QR, checks sanitized receipts, and approves supervised credit', async () => {
@@ -875,11 +881,11 @@ describe('Cockpit Funding foundation', () => {
         ).toBe('data:image/png;base64,REUSABLE');
         expect(
             wrapper
-                .get('[data-testid="standing-funding-address-value"]')
+                .get('[data-testid="cockpit-standing-funding-address"]')
                 .text(),
-        ).toContain('915001234567890123456');
-        expect(wrapper.text()).toContain('Recognition');
-        expect(wrapper.text()).toContain('Supervised');
+        ).not.toContain('915001234567890123456');
+        expect(wrapper.text()).toContain('Merchant label');
+        expect(wrapper.text()).toContain('Update QR');
 
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')
