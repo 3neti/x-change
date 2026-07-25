@@ -54,6 +54,9 @@ class CockpitFundingPageController extends Controller
             'funding_instruction' => $request->session()->pull('funding_instruction'),
             'funding_notice' => $request->session()->pull('funding_notice')
                 ?? $request->session()->pull('funding_account_notice'),
+            'funding_workspace_mode' => $request->string('mode')->toString() === 'pay_code'
+                ? 'pay_code'
+                : 'self_top_up',
             'pay_code_funding_preview' => $request->session()->pull(
                 'pay_code_funding_preview',
             ),

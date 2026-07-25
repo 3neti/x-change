@@ -171,6 +171,23 @@ owner-only read model displays the complete Pay Code so the intended recipient
 can claim it. General Cockpit projections do not expose claimant references,
 Treasury Position references, evidence, or provider account details.
 
+`/x/cockpit/quick-generate` is the issuance-side entry point. Its prominent
+**Recipient receives** control emits the typed claim instruction:
+
+- **Cash payout** writes `provider_disbursement`;
+- **Account funds** writes an `account_funding`-only policy, forces a whole
+  amount, and disables payout-only rail, fee, and slicing controls.
+
+For a verified mobile recipient, the server replaces the browser value with an
+opaque claimant reference. `CASH` remains an intentionally unbound bearer
+claim. Mixed payout-and-funding issuance remains unavailable until the
+execution-cost reserve exists.
+
+After Account Funding issuance, the result card shows the Pay Code and links to
+`/x/cockpit/funding?mode=pay_code`. The Pay Code is never placed in the URL.
+Funding opens directly on **Pay Code Funding**, where the authenticated claimant
+can inspect and apply it through the existing owner-authorized claim flow.
+
 ## Security boundaries
 
 - Webhooks and uploaded narratives are evidence, not monetary authority.
@@ -240,7 +257,9 @@ The minimum proof is:
 9. one reviewed request issues one real Voucher;
 10. only the bound Account owner can claim it;
 11. the Cockpit exposes Pay Code vocabulary and a compact owner-only action;
-12. focused backend and frontend suites pass.
+12. Quick Generate emits the typed outcome and hands Account Funding issuance
+    to the Funding workspace without exposing the Pay Code in navigation;
+13. focused backend and frontend suites pass.
 
 ### Implemented acceptance — 2026-07-25
 
@@ -259,3 +278,14 @@ The minimum proof is:
 - No stale `Account Funding Code` wording appeared in the rendered page.
 - The application emitted no browser-console error. Observed warnings belonged
   to unrelated Chrome extensions.
+
+### Quick Generate handoff acceptance — 2026-07-26
+
+- Quick Generate rendered the **Recipient receives** selector at the normal
+  desktop viewport and at `390 × 844`.
+- **Account funds** remained selected and disabled payout rail and open-slice
+  controls at both widths.
+- Neither Quick Generate nor Funding produced horizontal overflow.
+- `/x/cockpit/funding?mode=pay_code` opened **Pay Code Funding** directly with
+  its Pay Code input visible; the generated Pay Code was not present in the URL.
+- The application emitted no browser-console error.

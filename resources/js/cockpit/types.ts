@@ -714,6 +714,7 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_requests?: CockpitFundingRequestReadModel;
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
+    funding_workspace_mode?: 'self_top_up' | 'pay_code';
     funding_poll_interval?: number;
     funding_realtime?: {
         enabled: boolean;

@@ -896,6 +896,113 @@ describe('Cockpit Quick Generate foundation', () => {
         );
     });
 
+    it('hands an Account Funding Pay Code to the Funding workspace without exposing it in the URL', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                status: 'issued',
+                result: {
+                    code: 'FUND-UI-001',
+                    amount: 125,
+                    currency: 'PHP',
+                    claim: {
+                        outcome: 'account_funding',
+                        label: 'Account funds',
+                        provider_payout: false,
+                        account_funding: true,
+                    },
+                    links: {
+                        redeem: 'https://example.test/x/claim/FUND-UI-001/experience',
+                        redeem_path: '/x/claim/FUND-UI-001/experience',
+                    },
+                },
+                post_issuance_navigation: {
+                    schema: 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
+                    status: 'available',
+                    auto_redirect: false,
+                    items: [
+                        {
+                            key: 'account_funding',
+                            label: 'Open Account Funding',
+                            href: '/x/cockpit/funding?mode=pay_code',
+                            status: 'available',
+                            enabled: true,
+                            read_only: false,
+                        },
+                    ],
+                },
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetchMock);
+        vi.stubGlobal('crypto', {
+            randomUUID: () => 'cockpit-ui-idempotency-funding',
+        });
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-submit-recipient"]')
+            .setValue('CASH');
+        await wrapper
+            .find(
+                '[data-testid="cockpit-quick-generate-claim-outcome-account"]',
+            )
+            .setValue();
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-submit-panel"]')
+            .trigger('submit');
+        await Promise.resolve();
+        await Promise.resolve();
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-copy-funding-pay-code"]',
+                )
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-open-account-funding"]',
+                )
+                .attributes('href'),
+        ).toBe('/x/cockpit/funding?mode=pay_code');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-primary-claim-link"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('reserved for Account Funding');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('Claim path');
+
+        vi.unstubAllGlobals();
+    });
+
     it('renders server validation errors as a structured correction panel', async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: false,

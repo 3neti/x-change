@@ -95,7 +95,23 @@ it('hands a canonical Account Funding claim policy to Quick Generate issuance', 
         ],
     ])
         ->assertCreated()
-        ->assertJsonPath('result.code', 'FUND-QUICK-001');
+        ->assertJsonPath('result.code', 'FUND-QUICK-001')
+        ->assertJsonPath('result.claim.outcome', 'account_funding')
+        ->assertJsonPath('result.claim.label', 'Account funds')
+        ->assertJsonPath('result.claim.provider_payout', false)
+        ->assertJsonPath('result.claim.account_funding', true)
+        ->assertJsonPath(
+            'post_issuance_navigation.items.4.key',
+            'account_funding',
+        )
+        ->assertJsonPath(
+            'post_issuance_navigation.items.4.href',
+            '/x/cockpit/funding?mode=pay_code',
+        )
+        ->assertJsonPath(
+            'post_issuance_navigation.items.4.enabled',
+            true,
+        );
 
     expect($generator->payloads)->toHaveCount(1)
         ->and(data_get($generator->payloads[0], 'claim'))->toMatchArray([
@@ -112,4 +128,16 @@ it('hands a canonical Account Funding claim policy to Quick Generate issuance', 
             $generator->payloads[0],
             'metadata.custom.cockpit.recipient_reference',
         ))->toBeNull();
+});
+
+it('opens the Funding workspace on the Pay Code tab without placing a code in the URL', function (): void {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.funding.index', [
+            'mode' => 'pay_code',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Funding')
+        ->assertJsonPath('props.funding_workspace_mode', 'pay_code');
 });

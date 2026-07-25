@@ -165,9 +165,13 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'replay_checked' => is_string($key),
                 'replayed' => $replayed,
             ],
-            'result' => $this->redactedResult($result),
+            'result' => $this->redactedResult($result, $payload),
             'campaign_attribution' => $campaignAttribution,
-            'post_issuance_navigation' => $this->postIssuanceNavigation($result, $campaignAttribution),
+            'post_issuance_navigation' => $this->postIssuanceNavigation(
+                $result,
+                $campaignAttribution,
+                $payload,
+            ),
             'redactions' => [
                 'payloads' => 'operator-safe-generated-facts-only',
                 'request_payload' => 'excluded',
@@ -260,12 +264,24 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
     /**
      * @return array<string, mixed>
      */
-    protected function redactedResult(GeneratePayCodeResultData $result): array
-    {
+    protected function redactedResult(
+        GeneratePayCodeResultData $result,
+        array $payload = [],
+    ): array {
+        $claimOutcome = $this->claimOutcome($payload);
+
         return [
             'code' => $result->code,
             'amount' => $result->amount,
             'currency' => $result->currency,
+            'claim' => [
+                'outcome' => $claimOutcome,
+                'label' => $claimOutcome === 'account_funding'
+                    ? 'Account funds'
+                    : 'Cash payout',
+                'provider_payout' => $claimOutcome !== 'account_funding',
+                'account_funding' => $claimOutcome === 'account_funding',
+            ],
             'links' => [
                 'redeem' => $result->links->redeem,
                 'redeem_path' => $result->links->redeem_path,
@@ -343,8 +359,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
      * @param  array<string, mixed>  $campaignAttribution
      * @return array<string, mixed>
      */
-    protected function postIssuanceNavigation(GeneratePayCodeResultData $result, array $campaignAttribution = []): array
-    {
+    protected function postIssuanceNavigation(
+        GeneratePayCodeResultData $result,
+        array $campaignAttribution = [],
+        array $payload = [],
+    ): array {
         $detailHref = Route::has('x-change.cockpit.pay-codes.show')
             ? route('x-change.cockpit.pay-codes.show', ['code' => $result->code], false)
             : null;
@@ -353,6 +372,10 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             : null;
         $campaignExplorerHref = $this->campaignExplorerHref($campaignAttribution, $result);
         $campaignDashboardHref = $this->campaignDashboardHref($campaignAttribution);
+        $fundingHref = $this->claimOutcome($payload) === 'account_funding'
+            && Route::has('x-change.cockpit.funding.index')
+                ? route('x-change.cockpit.funding.index', ['mode' => 'pay_code'], false)
+                : null;
 
         return [
             'schema' => 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
@@ -396,6 +419,15 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     'read_only' => true,
                     'reason' => 'Read-only campaign-aware Dashboard context for the originating campaign.',
                     'metadata' => $this->campaignNavigationMetadata($campaignAttribution),
+                ],
+                [
+                    'key' => 'account_funding',
+                    'label' => 'Open Account Funding',
+                    'href' => $fundingHref,
+                    'status' => $fundingHref === null ? 'unavailable' : 'available',
+                    'enabled' => $fundingHref !== null,
+                    'read_only' => false,
+                    'reason' => 'Authenticated Account Funding workspace; the Pay Code is never placed in the URL.',
                 ],
             ],
             'redactions' => [
@@ -476,6 +508,18 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $normalized = trim((string) $value);
 
         return $normalized === '' ? null : $normalized;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function claimOutcome(array $payload): string
+    {
+        return $this->stringValue(
+            data_get($payload, 'claim.default_outcome'),
+        ) ?? $this->stringValue(
+            data_get($payload, 'claim.outcomes.0.key'),
+        ) ?? 'provider_disbursement';
     }
 
     /**

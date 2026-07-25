@@ -61,8 +61,12 @@ function cockpitWave34cBalanceFake(): BuildBalanceOverview
     {
         public function __construct() {}
 
-        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
-        {
+        public function handle(
+            mixed $owner,
+            ?string $provider = null,
+            bool $syncIfStale = true,
+            bool $forceSync = false,
+        ): array {
             return [
                 'authority' => 'local_ledger',
                 'sync_status' => 'not_required',

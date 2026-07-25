@@ -65,7 +65,9 @@ const fundingRequestAmount = ref('');
 const fundingReviewAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
 type FundingWorkspaceMode = 'self_top_up' | 'pay_code' | 'simulation';
-const activeFundingMode = ref<FundingWorkspaceMode>('self_top_up');
+const activeFundingMode = ref<FundingWorkspaceMode>(
+    props.funding_workspace_mode === 'pay_code' ? 'pay_code' : 'self_top_up',
+);
 const fundingQrMerchantProfile = computed(
     () =>
         props.funding_qr_merchant_profile ?? {
