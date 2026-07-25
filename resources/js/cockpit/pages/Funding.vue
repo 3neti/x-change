@@ -2357,134 +2357,150 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </li>
                         </ol>
                     </article>
-                </div>
-            </details>
-
-            <section
-                class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-funding-activity"
-            >
-                <div
-                    class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800"
-                >
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
-                        >
-                            Settlement and intent history
-                        </p>
-                        <h2 class="mt-1 text-lg font-semibold">
-                            Funding Activity
-                        </h2>
-                    </div>
-                    <span class="text-xs text-slate-500"
-                        >Sanitized operational summary</span
+                    <section
+                        class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-2 dark:border-slate-800 dark:bg-slate-900"
+                        data-testid="cockpit-funding-activity"
                     >
-                </div>
-                <div
-                    v-if="operationalFundingIntents.length"
-                    class="overflow-x-auto"
-                >
-                    <table class="w-full min-w-[56rem] text-left text-sm">
-                        <thead
-                            class="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase dark:bg-slate-950/40 dark:text-slate-400"
+                        <div
+                            class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800"
                         >
-                            <tr>
-                                <th class="px-5 py-3 font-semibold">
-                                    Reference
-                                </th>
-                                <th class="px-5 py-3 font-semibold">
-                                    Provider
-                                </th>
-                                <th class="px-5 py-3 font-semibold">Amount</th>
-                                <th class="px-5 py-3 font-semibold">Status</th>
-                                <th class="px-5 py-3 font-semibold">
-                                    Last checked
-                                </th>
-                                <th class="px-5 py-3 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody
-                            class="divide-y divide-slate-100 dark:divide-slate-800"
-                        >
-                            <tr
-                                v-for="intent in operationalFundingIntents"
-                                :key="intent.reference"
+                            <div>
+                                <p
+                                    class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
+                                >
+                                    Historical provider intake
+                                </p>
+                                <h2 class="mt-1 text-lg font-semibold">
+                                    One-time Funding Intent History
+                                </h2>
+                            </div>
+                            <span class="text-xs text-slate-500"
+                                >Legacy exact-amount funding intents</span
                             >
-                                <td
-                                    class="px-5 py-3 font-mono text-xs text-slate-700 dark:text-slate-300"
+                        </div>
+                        <div
+                            v-if="operationalFundingIntents.length"
+                            class="overflow-x-auto"
+                        >
+                            <table
+                                class="w-full min-w-[56rem] text-left text-sm"
+                            >
+                                <thead
+                                    class="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase dark:bg-slate-950/40 dark:text-slate-400"
                                 >
-                                    {{ intent.reference }}
-                                </td>
-                                <td class="px-5 py-3 font-medium">
-                                    {{ displayLabel(intent.provider) }}
-                                </td>
-                                <td class="px-5 py-3 font-semibold">
-                                    {{ intent.amount }}
-                                </td>
-                                <td class="px-5 py-3">
-                                    <span
-                                        class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                                    >
-                                        {{
-                                            displayLabel(
-                                                intent.verification_status,
-                                            )
-                                        }}
-                                    </span>
-                                </td>
-                                <td
-                                    class="px-5 py-3 text-slate-500 dark:text-slate-400"
+                                    <tr>
+                                        <th class="px-5 py-3 font-semibold">
+                                            Reference
+                                        </th>
+                                        <th class="px-5 py-3 font-semibold">
+                                            Provider
+                                        </th>
+                                        <th class="px-5 py-3 font-semibold">
+                                            Amount
+                                        </th>
+                                        <th class="px-5 py-3 font-semibold">
+                                            Status
+                                        </th>
+                                        <th class="px-5 py-3 font-semibold">
+                                            Last checked
+                                        </th>
+                                        <th class="px-5 py-3 font-semibold">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody
+                                    class="divide-y divide-slate-100 dark:divide-slate-800"
                                 >
-                                    {{ displayTime(intent.last_checked_at) }}
-                                </td>
-                                <td class="px-5 py-3">
-                                    <div
-                                        class="flex min-w-52 flex-wrap items-center gap-2"
+                                    <tr
+                                        v-for="intent in operationalFundingIntents"
+                                        :key="intent.reference"
                                     >
-                                        <button
-                                            v-if="intent.can_check_provider"
-                                            type="button"
-                                            class="h-8 rounded-lg bg-sky-600 px-3 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="
-                                                activeVerificationCheck !== null
-                                            "
-                                            :data-testid="`check-netbank-${intent.reference}`"
-                                            @click="
-                                                checkNetBank(intent.reference)
-                                            "
+                                        <td
+                                            class="px-5 py-3 font-mono text-xs text-slate-700 dark:text-slate-300"
+                                        >
+                                            {{ intent.reference }}
+                                        </td>
+                                        <td class="px-5 py-3 font-medium">
+                                            {{ displayLabel(intent.provider) }}
+                                        </td>
+                                        <td class="px-5 py-3 font-semibold">
+                                            {{ intent.amount }}
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <span
+                                                class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                            >
+                                                {{
+                                                    displayLabel(
+                                                        intent.verification_status,
+                                                    )
+                                                }}
+                                            </span>
+                                        </td>
+                                        <td
+                                            class="px-5 py-3 text-slate-500 dark:text-slate-400"
                                         >
                                             {{
-                                                activeVerificationCheck ===
-                                                intent.reference
-                                                    ? 'Checking…'
-                                                    : 'Check NetBank'
+                                                displayTime(
+                                                    intent.last_checked_at,
+                                                )
                                             }}
-                                        </button>
-                                        <span
-                                            v-else
-                                            class="text-xs text-slate-400"
-                                        >
-                                            —
-                                        </span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <div
+                                                class="flex min-w-52 flex-wrap items-center gap-2"
+                                            >
+                                                <button
+                                                    v-if="
+                                                        intent.can_check_provider
+                                                    "
+                                                    type="button"
+                                                    class="h-8 rounded-lg bg-sky-600 px-3 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    :disabled="
+                                                        activeVerificationCheck !==
+                                                        null
+                                                    "
+                                                    :data-testid="`check-netbank-${intent.reference}`"
+                                                    @click="
+                                                        checkNetBank(
+                                                            intent.reference,
+                                                        )
+                                                    "
+                                                >
+                                                    {{
+                                                        activeVerificationCheck ===
+                                                        intent.reference
+                                                            ? 'Checking…'
+                                                            : 'Check NetBank'
+                                                    }}
+                                                </button>
+                                                <span
+                                                    v-else
+                                                    class="text-xs text-slate-400"
+                                                >
+                                                    —
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="px-5 py-8 text-center">
+                            <p
+                                class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                            >
+                                No one-time funding intents
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                This remains available only for historical
+                                exact-amount provider instructions.
+                            </p>
+                        </div>
+                    </section>
                 </div>
-                <div v-else class="px-5 py-8 text-center">
-                    <p
-                        class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                    >
-                        No funding activity yet
-                    </p>
-                    <p class="mt-1 text-xs text-slate-500">
-                        Reusable QR deposits appear here after provider
-                        verification begins.
-                    </p>
-                </div>
-            </section>
+            </details>
 
             <details
                 v-if="hasFundingExceptions"

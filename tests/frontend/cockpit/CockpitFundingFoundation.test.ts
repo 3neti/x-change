@@ -501,7 +501,12 @@ describe('Cockpit Funding foundation', () => {
         ).toBeUndefined();
         expect(
             wrapper.get('[data-testid="cockpit-funding-activity"]').text(),
-        ).toContain('Funding Activity');
+        ).toContain('One-time Funding Intent History');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-activity"]')
+                .element.closest('[data-testid="funding-provider-controls"]'),
+        ).not.toBeNull();
         expect(
             wrapper
                 .get('[data-testid="standing-funding-address-qr"]')
@@ -1184,7 +1189,7 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('No funding activity yet');
+        expect(wrapper.text()).toContain('No one-time funding intents');
         expect(
             wrapper.find('[data-testid="funding-exception-controls"]').exists(),
         ).toBe(false);
@@ -1258,7 +1263,7 @@ describe('Cockpit Funding foundation', () => {
         ).toContain('QR Ph Simulator');
         expect(
             wrapper.get('[data-testid="cockpit-funding-activity"]').text(),
-        ).toContain('No funding activity yet');
+        ).toContain('No one-time funding intents');
         expect(
             wrapper
                 .get('[data-testid="cockpit-funding-activity"]')
