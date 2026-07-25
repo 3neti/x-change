@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
+use LBHurtado\XChange\Services\Treasury\TreasuryOpeningCapitalizationPolicyResolver;
 
 class InstallXChangeCommand extends Command
 {
@@ -22,23 +23,72 @@ class InstallXChangeCommand extends Command
         {--no-rider : Skip x-rider asset publishing}
         {--no-x-ray : Skip x-ray asset publishing}
         {--no-migrate : Skip database migrations}
-        {--no-treasury : Skip Treasury provider preflight and zero-balance provisioning}';
+        {--no-treasury : Skip Treasury provider preflight and zero-balance provisioning}
+        {--treasury-opening-policy= : unattributed, system-capital, or configured}
+        {--capitalization-authorization-reference= : Stable deployment or control authorization reference}
+        {--confirm-system-ownership : Confirm that opening provider funds belong to the system principal}';
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
 
     public function handle(
         PublishedAssetDriftDetector $publishedAssets,
         TreasuryConfigurationValidator $treasuryConfiguration,
+        TreasuryOpeningCapitalizationPolicyResolver $capitalizationPolicies,
     ): int {
         $this->components->info('Installing X-Change...');
+
+        $capitalizationConnections = [];
+
+        if (
+            (bool) $this->option('no-treasury')
+            && (
+                $this->option('treasury-opening-policy') !== null
+                || $this->option('capitalization-authorization-reference') !== null
+                || (bool) $this->option('confirm-system-ownership')
+            )
+        ) {
+            $this->components->error(
+                'Treasury opening capitalization options cannot be combined with [--no-treasury].',
+            );
+
+            return self::FAILURE;
+        }
 
         if (! $this->option('no-treasury')) {
             try {
                 $treasuryConfiguration->assertConfigured();
+                $capitalizationConnections = $capitalizationPolicies
+                    ->connectionReferences(
+                        $this->option('treasury-opening-policy'),
+                    );
             } catch (TreasuryConfigurationException $exception) {
                 $this->components->error($exception->getMessage());
                 $this->components->warn(
                     'Use [--no-treasury] only when Treasury initialization is intentionally deferred.',
+                );
+
+                return self::FAILURE;
+            }
+
+            if (
+                $capitalizationConnections !== []
+                && trim((string) $this->option(
+                    'capitalization-authorization-reference',
+                )) === ''
+            ) {
+                $this->components->error(
+                    'System-capital opening policy requires [--capitalization-authorization-reference].',
+                );
+
+                return self::FAILURE;
+            }
+
+            if (
+                $capitalizationConnections !== []
+                && ! (bool) $this->option('confirm-system-ownership')
+            ) {
+                $this->components->error(
+                    'System-capital opening policy requires [--confirm-system-ownership].',
                 );
 
                 return self::FAILURE;
@@ -213,6 +263,33 @@ class InstallXChangeCommand extends Command
                 $this->components->error('Treasury opening reconciliation failed; X-Change installation is incomplete.');
 
                 return self::FAILURE;
+            }
+
+            if ($capitalizationConnections !== []) {
+                $exitCode = $this->call(
+                    'x-change:treasury:capitalize-opening',
+                    [
+                        '--connection' => $capitalizationConnections,
+                        '--authorization-reference' => (string) $this->option(
+                            'capitalization-authorization-reference',
+                        ),
+                        '--confirm-system-ownership' => true,
+                        '--commit' => true,
+                        '--no-interaction' => true,
+                    ],
+                );
+
+                if ($exitCode !== self::SUCCESS) {
+                    $this->components->error(
+                        'Treasury opening capitalization failed; X-Change installation is incomplete.',
+                    );
+
+                    return self::FAILURE;
+                }
+            } else {
+                $this->components->warn(
+                    'Opening provider funds remain Legacy Unattributed; no system Account Funding Reserve was capitalized.',
+                );
             }
         }
 

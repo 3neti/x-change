@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Models\Wallet as BavixWallet;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use LBHurtado\EmiCore\Contracts\ProviderBalanceReader;
 use LBHurtado\EmiCore\Contracts\ProviderReadinessProbe;
 use LBHurtado\EmiCore\Contracts\SettlementProvider;
@@ -124,6 +125,55 @@ it('previews capitalizes and replays the exact unattributed opening amount', fun
         ->and($replay->status)->toBe('already_capitalized')
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
         ->and(TreasuryPositionOperation::query()->count())->toBe(2);
+});
+
+it('exposes preview and guarded commit through the opening capitalization command', function () {
+    [$reconciliation, , $catalog, $provisioning] =
+        openingBalanceReconciliationService(250_00);
+    $reconciliation->reconcile(['future-primary']);
+    $capitalization = new TreasuryOpeningCapitalizationService(
+        $catalog,
+        $provisioning,
+        $reconciliation,
+        app(TreasuryInventoryPositionReadModelContract::class),
+        app(TreasuryPositionReadModelContract::class),
+        app(TreasuryPositionOperationContract::class),
+        app(TreasuryOpeningCapitalizationAuthorizationContract::class),
+    );
+    app()->instance(
+        TreasuryOpeningCapitalizationService::class,
+        $capitalization,
+    );
+
+    $previewExit = Artisan::call(
+        'x-change:treasury:capitalize-opening',
+        [
+            '--connection' => ['future-primary'],
+            '--json' => true,
+        ],
+    );
+    $preview = json_decode(Artisan::output(), true);
+    $commitExit = Artisan::call(
+        'x-change:treasury:capitalize-opening',
+        [
+            '--connection' => ['future-primary'],
+            '--authorization-reference' => 'deployment:test:command-001',
+            '--confirm-system-ownership' => true,
+            '--commit' => true,
+            '--json' => true,
+        ],
+    );
+    $committed = json_decode(Artisan::output(), true);
+
+    expect($previewExit)->toBe(Command::SUCCESS)
+        ->and($preview['mode'])->toBe('preview')
+        ->and($preview['connections'][0]['status'])->toBe('preview_ready')
+        ->and($preview['connections'][0]['capitalized_amount_minor'])->toBe(250_00)
+        ->and($commitExit)->toBe(Command::SUCCESS)
+        ->and($committed['mode'])->toBe('commit')
+        ->and($committed['connections'][0]['status'])->toBe('capitalized')
+        ->and($committed['connections'][0]['account_funding_reserve_after_minor'])
+        ->toBe(250_00);
 });
 
 it('refuses capitalization when the provider is below internal attribution', function () {

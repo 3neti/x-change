@@ -69,6 +69,7 @@ use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillStandingFundingPositionsCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\CapitalizeTreasuryOpeningBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\CorrectLegacyPayCodeFeePostingCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\MigrateLegacyAccountBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
@@ -964,6 +965,7 @@ class XChangeServiceProvider extends ServiceProvider
                 EvaluateSettlementEnvelopeCommand::class,
                 RunLifecycleScenarioGroupCommand::class,
                 BackfillStandingFundingPositionsCommand::class,
+                CapitalizeTreasuryOpeningBalanceCommand::class,
                 CorrectLegacyPayCodeFeePostingCommand::class,
                 MigrateLegacyAccountBalanceCommand::class,
                 PreflightTreasuryCommand::class,

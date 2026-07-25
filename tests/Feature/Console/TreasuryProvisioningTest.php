@@ -17,6 +17,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionProvisioningContract;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
+use LBHurtado\XChange\Services\Treasury\TreasuryOpeningCapitalizationPolicyResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -151,7 +152,58 @@ it('registers treasury commands and keeps installation safe when no connection i
     $signature = (new ReflectionClass(InstallXChangeCommand::class))
         ->getDefaultProperties()['signature'];
 
-    expect($signature)->toContain('{--no-treasury');
+    expect($signature)->toContain('{--no-treasury')
+        ->and($signature)->toContain('{--treasury-opening-policy=')
+        ->and($signature)->toContain('{--capitalization-authorization-reference=')
+        ->and($signature)->toContain('{--confirm-system-ownership');
+});
+
+it('resolves global and per-connection opening capitalization policies', function () {
+    $connection = static fn (string $provider): array => [
+        'provider' => $provider,
+        'mode' => 'required',
+        'currency' => 'PHP',
+        'decimal_places' => 2,
+        'inventory_reference' => "inventory:{$provider}:primary:php",
+        'settlement_resource_reference' => "resource:{$provider}:primary:php",
+        'settlement_resource_type' => 'regulated_client_funds',
+        'custody_mode' => 'provider_projection',
+        'required_capabilities' => [],
+    ];
+    $resolver = new TreasuryOpeningCapitalizationPolicyResolver(
+        new TreasuryProviderConnectionCatalog([
+            'netbank-primary' => $connection('netbank'),
+            'paynamics-primary' => $connection('paynamics'),
+        ]),
+    );
+    config()->set(
+        'x-change.treasury.opening_capitalization.connection_policies',
+        [
+            'netbank-primary' => 'system-capital',
+            'paynamics-primary' => 'unattributed',
+        ],
+    );
+
+    expect($resolver->connectionReferences('unattributed'))->toBe([])
+        ->and($resolver->connectionReferences('system-capital'))->toBe([
+            'netbank-primary',
+            'paynamics-primary',
+        ])
+        ->and($resolver->connectionReferences('configured'))->toBe([
+            'netbank-primary',
+        ]);
+});
+
+it('rejects capitalization controls when treasury installation is skipped', function () {
+    $this->artisan('x-change:install', [
+        '--no-treasury' => true,
+        '--treasury-opening-policy' => 'system-capital',
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain(
+            'Treasury opening capitalization options cannot be combined with [--no-treasury].',
+        )
+        ->assertExitCode(Command::FAILURE);
 });
 
 it('fails installation before side effects when treasury identity is missing', function () {
