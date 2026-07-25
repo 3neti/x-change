@@ -18,6 +18,8 @@ it('documents the Account Funding Code control and accounting boundary', functio
         ->toContain('No payout provider is invoked.')
         ->toContain('File uploads are deliberately disabled')
         ->toContain('XCHANGE_FUNDING_REQUEST_REVIEWER_IDS')
+        ->toContain('Implemented acceptance — 2026-07-25')
+        ->toContain('at `390 × 844`')
         ->toContain('workflow rules, routes, read models, UI, tests, and documentation remain in the')
         ->and($funding)->toContain('ACCOUNT_FUNDING_CODE_PROTOCOL.md');
 });

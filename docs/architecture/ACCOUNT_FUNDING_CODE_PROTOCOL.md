@@ -185,3 +185,20 @@ The minimum acceptance proof is:
 7. replaying issuance or claim creates no second movement;
 8. the claim makes zero payout-provider calls;
 9. the Funding page renders the two primary paths at desktop and mobile widths.
+
+### Implemented acceptance — 2026-07-25
+
+The package workflow passed its focused funding, authorization, lifecycle, and
+documentation tests. The Funding page passed its focused component suite and
+the published Cockpit assets matched package source.
+
+Signed-in browser acceptance confirmed:
+
+- `Self Top-Up` and `Account Funding Code` are the only primary funding paths;
+- provider instructions and simulations remain inside the advanced disclosure;
+- the request panel and modal have no horizontal overflow at desktop width;
+- at `390 × 844`, the modal remains inside the viewport and neither the modal
+  nor the page scrolls horizontally;
+- the modal states that a request cannot credit an Account and that files are
+  not yet accepted;
+- no application console errors were produced during the acceptance flow.
