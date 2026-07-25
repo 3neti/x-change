@@ -12,6 +12,13 @@ The governing rule is:
 
 An Account is credited only after x-change has either an exact Funding Intent or an immutable Account Funding Address binding, independently verifies provider settlement, matches the exact destination and applicable amount policy, recognizes Treasury Inventory, and books the Account credit atomically.
 
+For a large transfer or a controlled non-QR funding source, x-change also
+supports a separately controlled Account Funding Code. It does not treat a user
+request or uploaded proof as settlement authority. A maker verifies backing, a
+different checker reserves already-recognized system Client Funds, and the
+recipient claims the exact reserved value once without a provider payout. See
+[`ACCOUNT_FUNDING_CODE_PROTOCOL.md`](ACCOUNT_FUNDING_CODE_PROTOCOL.md).
+
 The long-lived destination design is specified in [Standing Funding Address Protocol](STANDING_FUNDING_ADDRESS_PROTOCOL.md).
 
 ## Canonical Grammar
