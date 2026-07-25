@@ -7,21 +7,18 @@ use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
-use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 
-it('issues and replays one recipient-bound Account Funding Pay Code from system Client Funds', function (): void {
+it('issues and replays one recipient-bound Account Funding Pay Code from the system Account Funding Reserve', function (): void {
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);
     $recipient = actingAsTestUser(0);
 
-    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
-        accountReference: 'wallet:'.$system->wallet->uuid,
-        provider: 'netbank',
-        amountMinor: 500_000,
-        currency: 'PHP',
-        evidenceReference: 'netbank:system-client-funds:utility-1001',
+    fundTestSystemAccountFundingReserve(
+        $system,
+        500_000,
+        'utility-1001',
     );
 
     $request = new IssueSystemAccountFundingPayCodeData(
@@ -52,7 +49,7 @@ it('issues and replays one recipient-bound Account Funding Pay Code from system 
         ->toBe('ready')
         ->and(systemFundingPositionBalance(
             $system,
-            TreasuryPositionPurpose::ClientFunds,
+            TreasuryPositionPurpose::AccountFundingReserve,
         ))->toBe(375_000)
         ->and(systemFundingPositionBalance(
             $system,
@@ -84,12 +81,10 @@ it('rejects reuse of an issuance reference with different economic inputs', func
     fundTestUserWallet($system, 0);
     $recipient = actingAsTestUser(0);
 
-    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
-        accountReference: 'wallet:'.$system->wallet->uuid,
-        provider: 'netbank',
-        amountMinor: 500_000,
-        currency: 'PHP',
-        evidenceReference: 'netbank:system-client-funds:utility-1002',
+    fundTestSystemAccountFundingReserve(
+        $system,
+        500_000,
+        'utility-1002',
     );
     $expiresAt = now()->addDay();
     $action = app(IssueSystemAccountFundingPayCode::class);

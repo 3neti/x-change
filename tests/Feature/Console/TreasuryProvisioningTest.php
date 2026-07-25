@@ -116,12 +116,13 @@ it('provisions an idempotent zero-balance system treasury position', function ()
     $first = $service->provision();
     $second = $service->provision();
 
-    expect($first->positions)->toHaveCount(9)
-        ->and($second->positions)->toHaveCount(9)
+    expect($first->positions)->toHaveCount(10)
+        ->and($second->positions)->toHaveCount(10)
         ->and(collect($first->positions)->pluck('positionReference')->all())
         ->toBe([
             'position:system:future_emi:future-primary:php:clearing',
             'position:system:future_emi:future-primary:php:unattributed',
+            'position:system:future_emi:future-primary:php:account-funding-reserve',
             'position:system:future_emi:future-primary:php:commercial-clearing',
             'position:system:future_emi:future-primary:php:provider-cost-payable',
             'position:system:future_emi:future-primary:php:product-revenue',
@@ -132,7 +133,7 @@ it('provisions an idempotent zero-balance system treasury position', function ()
         ])
         ->and(collect($first->positions)->pluck('balanceMinor')->unique()->all())->toBe([0])
         ->and(collect($second->positions)->pluck('balanceMinor')->unique()->all())->toBe([0])
-        ->and(TreasuryPosition::query()->count())->toBe(9)
+        ->and(TreasuryPosition::query()->count())->toBe(10)
         ->and(Transaction::query()->count())->toBe($transactionsBefore);
 });
 

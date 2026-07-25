@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Date;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
-use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\SystemAccountFundingPayCodeAuthorizationData;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthorization;
@@ -30,12 +29,10 @@ it('previews without mutation then issues and replays one recipient-bound code',
         true,
     );
 
-    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
-        accountReference: 'wallet:'.$system->wallet->uuid,
-        provider: 'netbank',
-        amountMinor: 500_000,
-        currency: 'PHP',
-        evidenceReference: 'netbank:system-command:1001',
+    fundTestSystemAccountFundingReserve(
+        $system,
+        500_000,
+        'system-command-1001',
     );
 
     $arguments = [
@@ -58,9 +55,9 @@ it('previews without mutation then issues and replays one recipient-bound code',
         ->and($preview['status'])->toBe('preview_ready')
         ->and($preview['mode'])->toBe('preview')
         ->and($preview['amount']['minor'])->toBe(125_000)
-        ->and($preview['positions']['before']['client_funds_minor'])
+        ->and($preview['positions']['before']['account_funding_reserve_minor'])
         ->toBe(500_000)
-        ->and($preview['positions']['after']['client_funds_minor'])
+        ->and($preview['positions']['after']['account_funding_reserve_minor'])
         ->toBe(375_000)
         ->and($preview['positions']['after']['pay_code_reserve_minor'])
         ->toBe(125_000)
@@ -82,7 +79,7 @@ it('previews without mutation then issues and replays one recipient-bound code',
             'id' => $recipient->getKey(),
         ])
         ->and($first['pay_code']['code'])->not->toBeEmpty()
-        ->and($first['positions']['after']['client_funds_minor'])
+        ->and($first['positions']['after']['account_funding_reserve_minor'])
         ->toBe(375_000)
         ->and($first['positions']['after']['pay_code_reserve_minor'])
         ->toBe(125_000);
@@ -102,7 +99,7 @@ it('previews without mutation then issues and replays one recipient-bound code',
         ->and(Voucher::query()->count())->toBe(1)
         ->and(systemFundingPositionBalance(
             $system,
-            TreasuryPositionPurpose::ClientFunds,
+            TreasuryPositionPurpose::AccountFundingReserve,
         ))->toBe(375_000)
         ->and(systemFundingPositionBalance(
             $system,
@@ -118,12 +115,10 @@ it('reports insufficient system funds without issuing a code', function (): void
     $recipient = actingAsTestUser(0);
     config()->set('auth.providers.users.model', User::class);
 
-    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
-        accountReference: 'wallet:'.$system->wallet->uuid,
-        provider: 'netbank',
-        amountMinor: 10_000,
-        currency: 'PHP',
-        evidenceReference: 'netbank:system-command:1002',
+    fundTestSystemAccountFundingReserve(
+        $system,
+        10_000,
+        'system-command-1002',
     );
 
     $exitCode = Artisan::call(

@@ -205,8 +205,8 @@ final readonly class IssueSystemAccountFundingPayCode
                     ],
                 ], $data->metadata),
             ], $data->expiresAt);
-            $reservation = $this->accounting->reserve(
-                accountOwner: $system,
+            $reservation = $this->accounting->reserveAccountFunding(
+                systemOwner: $system,
                 voucher: $voucher,
                 connectionReference: $connection->reference,
                 providerPrincipalMinor: $data->amountMinor,

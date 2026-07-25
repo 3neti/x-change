@@ -10,7 +10,6 @@ use LBHurtado\XChange\Actions\Funding\ClaimReviewedFundingPayCode;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Actions\Funding\PrepareFundingRequest;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
-use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
@@ -33,15 +32,12 @@ it('requires independent approval then moves reserved system value to the bound 
         'email' => 'funding-checker@example.test',
         'password' => 'password',
     ]);
-    $systemAccountReference = 'wallet:'.$system->wallet->uuid;
     $requesterAccountReference = 'wallet:'.$requester->wallet->uuid;
 
-    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
-        accountReference: $systemAccountReference,
-        provider: 'netbank',
-        amountMinor: 1_000_000,
-        currency: 'PHP',
-        evidenceReference: 'netbank:system-client-funds:1001',
+    fundTestSystemAccountFundingReserve(
+        $system,
+        1_000_000,
+        'reviewed-funding-1001',
     );
     $request = app(CreateFundingRequest::class)->handle(new CreateFundingRequestData(
         accountReference: $requesterAccountReference,
@@ -96,7 +92,7 @@ it('requires independent approval then moves reserved system value to the bound 
         ->and($request->refresh()->voucher_id)->toBe($voucher->getKey())
         ->and($request->status)->toBe(FundingRequestStatus::PayCodeIssued)
         ->and(FundingRequestNotice::query()->count())->toBe(1)
-        ->and(positionBalance($system, TreasuryPositionPurpose::ClientFunds))->toBe(750_000)
+        ->and(positionBalance($system, TreasuryPositionPurpose::AccountFundingReserve))->toBe(750_000)
         ->and(positionBalance($system, TreasuryPositionPurpose::PayCodeReserve))->toBe(250_000)
         ->and(positionBalance($requester, TreasuryPositionPurpose::ClientFunds))->toBe(0);
 
@@ -114,7 +110,7 @@ it('requires independent approval then moves reserved system value to the bound 
         ->and($claimReplay->is($claimed))->toBeTrue()
         ->and($request->refresh()->status)->toBe(FundingRequestStatus::Completed)
         ->and($voucher->refresh()->redeemed_at)->not->toBeNull()
-        ->and(positionBalance($system, TreasuryPositionPurpose::ClientFunds))->toBe(750_000)
+        ->and(positionBalance($system, TreasuryPositionPurpose::AccountFundingReserve))->toBe(750_000)
         ->and(positionBalance($system, TreasuryPositionPurpose::PayCodeReserve))->toBe(0)
         ->and(positionBalance($requester, TreasuryPositionPurpose::ClientFunds))->toBe(250_000);
 
@@ -141,12 +137,10 @@ it('rejects a claim from another Account owner', function () {
         'email' => 'checker-2@example.test',
         'password' => 'password',
     ]);
-    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
-        accountReference: 'wallet:'.$system->wallet->uuid,
-        provider: 'netbank',
-        amountMinor: 50_000,
-        currency: 'PHP',
-        evidenceReference: 'netbank:system-client-funds:1002',
+    fundTestSystemAccountFundingReserve(
+        $system,
+        50_000,
+        'reviewed-funding-1002',
     );
     $request = app(CreateFundingRequest::class)->handle(new CreateFundingRequestData(
         accountReference: 'wallet:'.$requester->wallet->uuid,

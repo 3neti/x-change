@@ -468,6 +468,41 @@ return [
             'XCHANGE_TREASURY_RECONCILIATION_LOCK_WAIT_SECONDS',
             5,
         ),
+        'opening_capitalization' => [
+            'default_policy' => env(
+                'XCHANGE_TREASURY_OPENING_POLICY',
+                'unattributed',
+            ),
+            'allow_production' => (bool) env(
+                'XCHANGE_TREASURY_OPENING_CAPITALIZATION_ALLOW_PRODUCTION',
+                false,
+            ),
+            'allowed_connections' => array_values(array_filter(array_map(
+                static fn (string $reference): string => trim($reference),
+                explode(',', (string) env(
+                    'XCHANGE_TREASURY_OPENING_CAPITALIZATION_ALLOWED_CONNECTIONS',
+                    '',
+                )),
+            ))),
+            'connection_policies' => [
+                'netbank-primary' => env(
+                    'XCHANGE_TREASURY_NETBANK_OPENING_POLICY',
+                    'unattributed',
+                ),
+                'paynamics-primary' => env(
+                    'XCHANGE_TREASURY_PAYNAMICS_OPENING_POLICY',
+                    'unattributed',
+                ),
+            ],
+            'lock_seconds' => (int) env(
+                'XCHANGE_TREASURY_OPENING_CAPITALIZATION_LOCK_SECONDS',
+                60,
+            ),
+            'lock_wait_seconds' => (int) env(
+                'XCHANGE_TREASURY_OPENING_CAPITALIZATION_LOCK_WAIT_SECONDS',
+                5,
+            ),
+        ],
         'migration_lock_seconds' => (int) env(
             'XCHANGE_TREASURY_MIGRATION_LOCK_SECONDS',
             60,

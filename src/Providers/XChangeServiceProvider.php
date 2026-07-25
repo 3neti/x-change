@@ -145,6 +145,7 @@ use LBHurtado\XChange\Contracts\SettlementFlowPreparationContract;
 use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
 use LBHurtado\XChange\Contracts\SystemAccountFundingPayCodeAuthorizationContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\TreasuryOpeningCapitalizationAuthorizationContract;
 use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryVocabularyReadModelContract;
@@ -279,7 +280,8 @@ use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\Treasury\AdvisoryTreasuryVocabularyReadModel;
 use LBHurtado\XChange\Services\Treasury\BavixTreasuryPositionLedgerResolver;
-use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
+use LBHurtado\XChange\Services\Treasury\ConfigTreasuryOpeningCapitalizationAuthorization;
+use LBHurtado\XChange\Services\Treasury\FederatedTreasuryPrincipalReferenceResolver;
 use LBHurtado\XChange\Services\Treasury\LegacyAccountBalanceMigrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
@@ -372,7 +374,7 @@ class XChangeServiceProvider extends ServiceProvider
         );
         $this->app->singleton(
             TreasuryPrincipalReferenceResolverContract::class,
-            DefaultTreasuryPrincipalReferenceResolver::class,
+            FederatedTreasuryPrincipalReferenceResolver::class,
         );
         $this->app->singleton(
             TreasuryAccountPortfolioProvisioningContract::class,
@@ -1160,6 +1162,18 @@ class XChangeServiceProvider extends ServiceProvider
                     return $app->make(config(
                         'x-change.services.system_account_funding_pay_code_authorization',
                         ConfigSystemAccountFundingPayCodeAuthorization::class,
+                    ));
+                },
+            );
+        }
+
+        if (! $this->app->bound(TreasuryOpeningCapitalizationAuthorizationContract::class)) {
+            $this->app->singleton(
+                TreasuryOpeningCapitalizationAuthorizationContract::class,
+                function ($app) {
+                    return $app->make(config(
+                        'x-change.treasury.opening_capitalization.authorization_service',
+                        ConfigTreasuryOpeningCapitalizationAuthorization::class,
                     ));
                 },
             );

@@ -69,6 +69,7 @@ final readonly class TreasuryProvisioningService
             foreach ([
                 [TreasuryPositionPurpose::TreasuryClearing, 'clearing'],
                 [TreasuryPositionPurpose::LegacyUnattributed, 'unattributed'],
+                [TreasuryPositionPurpose::AccountFundingReserve, 'account-funding-reserve'],
                 [TreasuryPositionPurpose::CommercialClearing, 'commercial-clearing'],
                 [TreasuryPositionPurpose::ProviderCostPayable, 'provider-cost-payable'],
                 [TreasuryPositionPurpose::ProductRevenue, 'product-revenue'],

@@ -90,6 +90,64 @@ final readonly class TreasuryPayCodeAccountingService
         return $reservation;
     }
 
+    public function reserveAccountFunding(
+        Model $systemOwner,
+        Voucher $voucher,
+        string $connectionReference,
+        int $providerPrincipalMinor,
+        string $currency,
+    ): TreasuryPositionReservationData {
+        $connection = $this->connection($connectionReference, $currency);
+        $positions = $this->accountPositions($systemOwner, $connection);
+        $source = $this->position(
+            $positions,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        );
+        $destination = $this->position(
+            $positions,
+            TreasuryPositionPurpose::PayCodeReserve,
+        );
+        $scope = $this->scope(
+            $connection,
+            $voucher,
+            $providerPrincipalMinor,
+        );
+        $reservation = $this->positionOperations->reserveAccountFunding(
+            new TreasuryPositionReservationData(
+                operationReference: 'account-funding-position-reservation:'.$scope,
+                sourcePositionReference: $source->positionReference,
+                destinationPositionReference: $destination->positionReference,
+                amountMinor: $providerPrincipalMinor,
+                currency: $connection->currency,
+                idempotencyKey: 'account-funding-position-reservation-key:'.$scope,
+                externalReference: 'pay-code:'.$voucher->getKey(),
+                metadata: [
+                    'source' => 'x_change_system_account_funding_pay_code_issuance',
+                    'pay_code_id' => (int) $voucher->getKey(),
+                    'pay_code' => (string) $voucher->code,
+                    'provider' => $connection->provider,
+                    'connection_reference' => $connection->reference,
+                    'source_position_purpose' => TreasuryPositionPurpose::AccountFundingReserve->value,
+                ],
+            ),
+        );
+        $metadata = is_array($voucher->metadata)
+            ? $voucher->metadata
+            : [];
+        data_set($metadata, 'treasury.pay_code_reservation', [
+            'status' => 'reserved',
+            'provider' => $connection->provider,
+            'connection_reference' => $connection->reference,
+            'operation_reference' => $reservation->operationReference,
+            'amount_minor' => $providerPrincipalMinor,
+            'currency' => $connection->currency,
+            'source_position_purpose' => TreasuryPositionPurpose::AccountFundingReserve->value,
+        ]);
+        $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+
+        return $reservation;
+    }
+
     public function release(
         Model $accountOwner,
         Voucher $voucher,

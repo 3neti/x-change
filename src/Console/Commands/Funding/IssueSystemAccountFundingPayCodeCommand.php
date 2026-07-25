@@ -108,7 +108,7 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
                 $this->renderPayload(
                     $this->payload(
                         mode: 'preview',
-                        status: $before['client_funds_minor'] >= $amountMinor
+                        status: $before['account_funding_reserve_minor'] >= $amountMinor
                             ? 'preview_ready'
                             : 'insufficient_system_funds',
                         connection: $connection,
@@ -119,14 +119,14 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
                         bearer: $bearer,
                         before: $before,
                         after: [
-                            'client_funds_minor' => $before['client_funds_minor'] - $amountMinor,
+                            'account_funding_reserve_minor' => $before['account_funding_reserve_minor'] - $amountMinor,
                             'pay_code_reserve_minor' => $before['pay_code_reserve_minor'] + $amountMinor,
                         ],
                     ),
                     'System Account Funding Pay Code preview',
                 );
 
-                return $before['client_funds_minor'] >= $amountMinor
+                return $before['account_funding_reserve_minor'] >= $amountMinor
                     ? self::SUCCESS
                     : self::FAILURE;
             }
@@ -300,7 +300,7 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
     }
 
     /**
-     * @return array{client_funds_minor: int, pay_code_reserve_minor: int}
+     * @return array{account_funding_reserve_minor: int, pay_code_reserve_minor: int}
      */
     private function positionBalances(
         TreasuryPositionReadModelContract $positions,
@@ -316,9 +316,9 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         ));
 
         return [
-            'client_funds_minor' => $this->balanceForPurpose(
+            'account_funding_reserve_minor' => $this->balanceForPurpose(
                 $matching,
-                TreasuryPositionPurpose::ClientFunds,
+                TreasuryPositionPurpose::AccountFundingReserve,
             ),
             'pay_code_reserve_minor' => $this->balanceForPurpose(
                 $matching,
@@ -340,8 +340,8 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
     }
 
     /**
-     * @param  array{client_funds_minor: int, pay_code_reserve_minor: int}  $before
-     * @param  array{client_funds_minor: int, pay_code_reserve_minor: int}  $after
+     * @param  array{account_funding_reserve_minor: int, pay_code_reserve_minor: int}  $before
+     * @param  array{account_funding_reserve_minor: int, pay_code_reserve_minor: int}  $after
      * @return array<string, mixed>
      */
     private function payload(
@@ -406,8 +406,8 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
             'provider_calls' => false,
             'inventory_changed' => false,
             'accounting' => $mode === 'preview'
-                ? 'No mutation; proposed Client Funds to Pay Code Reserve transfer.'
-                : 'System Client Funds reserved once in Pay Code Reserve.',
+                ? 'No mutation; proposed Account Funding Reserve to Pay Code Reserve transfer.'
+                : 'System Account Funding Reserve reserved once in Pay Code Reserve.',
         ];
     }
 

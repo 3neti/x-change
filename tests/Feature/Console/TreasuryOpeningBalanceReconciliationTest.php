@@ -26,10 +26,12 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
+use LBHurtado\XChange\Contracts\TreasuryOpeningCapitalizationAuthorizationContract;
 use LBHurtado\XChange\Enums\TreasuryOpeningBalanceStatus;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
+use LBHurtado\XChange\Services\Treasury\TreasuryOpeningCapitalizationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -62,6 +64,95 @@ it('recognizes an authoritative opening balance once into inventory and unattrib
         ->and($clearingLedger->getBalanceIntAttribute())->toBe(0)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
         ->and(TreasuryPositionOperation::query()->count())->toBe(1);
+});
+
+it('previews capitalizes and replays the exact unattributed opening amount', function () {
+    [$reconciliation, , $catalog, $provisioning] =
+        openingBalanceReconciliationService(889_02);
+    $reconciliation->reconcile(['future-primary']);
+    $capitalization = new TreasuryOpeningCapitalizationService(
+        $catalog,
+        $provisioning,
+        $reconciliation,
+        app(TreasuryInventoryPositionReadModelContract::class),
+        app(TreasuryPositionReadModelContract::class),
+        app(TreasuryPositionOperationContract::class),
+        app(TreasuryOpeningCapitalizationAuthorizationContract::class),
+    );
+
+    $preview = $capitalization->capitalize(
+        connectionReferences: ['future-primary'],
+        authorizationReference: '',
+        systemOwnershipConfirmed: false,
+        commit: false,
+    )->connections[0];
+    $committed = $capitalization->capitalize(
+        connectionReferences: ['future-primary'],
+        authorizationReference: 'deployment:test:capitalization-001',
+        systemOwnershipConfirmed: true,
+        commit: true,
+    )->connections[0];
+    $replay = $capitalization->capitalize(
+        connectionReferences: ['future-primary'],
+        authorizationReference: 'deployment:test:capitalization-001',
+        systemOwnershipConfirmed: true,
+        commit: true,
+    )->connections[0];
+    $legacy = TreasuryPosition::query()
+        ->where('purpose', TreasuryPositionPurpose::LegacyUnattributed)
+        ->sole();
+    $reserve = TreasuryPosition::query()
+        ->where('purpose', TreasuryPositionPurpose::AccountFundingReserve)
+        ->sole();
+    $legacyLedger = BavixWallet::query()->findOrFail(
+        $legacy->internal_ledger_id,
+    );
+    $reserveLedger = BavixWallet::query()->findOrFail(
+        $reserve->internal_ledger_id,
+    );
+
+    expect($preview->status)->toBe('preview_ready')
+        ->and($preview->capitalizedAmountMinor)->toBe(889_02)
+        ->and($preview->legacyUnattributedAfterMinor)->toBe(0)
+        ->and($preview->accountFundingReserveAfterMinor)->toBe(889_02)
+        ->and($legacyLedger->getBalanceIntAttribute())->toBe(0)
+        ->and($reserveLedger->getBalanceIntAttribute())->toBe(889_02)
+        ->and($committed->status)->toBe('capitalized')
+        ->and($committed->providerBalanceMinor)->toBe(889_02)
+        ->and($committed->inventoryBalanceMinor)->toBe(889_02)
+        ->and($committed->positionBalanceMinor)->toBe(889_02)
+        ->and($replay->status)->toBe('already_capitalized')
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(TreasuryPositionOperation::query()->count())->toBe(2);
+});
+
+it('refuses capitalization when the provider is below internal attribution', function () {
+    [$reconciliation, $reader, $catalog, $provisioning] =
+        openingBalanceReconciliationService(100_00);
+    $reconciliation->reconcile(['future-primary']);
+    $reader->amountMinor = 99_00;
+    $reader->evidenceReference = 'future-balance:capitalization-deficit';
+    $capitalization = new TreasuryOpeningCapitalizationService(
+        $catalog,
+        $provisioning,
+        $reconciliation,
+        app(TreasuryInventoryPositionReadModelContract::class),
+        app(TreasuryPositionReadModelContract::class),
+        app(TreasuryPositionOperationContract::class),
+        app(TreasuryOpeningCapitalizationAuthorizationContract::class),
+    );
+
+    expect(fn () => $capitalization->capitalize(
+        connectionReferences: ['future-primary'],
+        authorizationReference: 'deployment:test:capitalization-deficit',
+        systemOwnershipConfirmed: true,
+        commit: true,
+    ))->toThrow(
+        RuntimeException::class,
+        'must be authoritatively reconciled',
+    );
+
+    expect(TreasuryPositionOperation::query()->count())->toBe(1);
 });
 
 it('fails closed without debiting when the provider is below internal attribution', function () {
@@ -166,7 +257,9 @@ it('guards the local provider deposit simulation command', function () {
 /**
  * @return array{
  *     TreasuryOpeningBalanceReconciliationService,
- *     ProviderBalanceReader&object
+ *     ProviderBalanceReader&object,
+ *     TreasuryProviderConnectionCatalog,
+ *     TreasuryProvisioningService
  * }
  */
 function openingBalanceReconciliationService(
@@ -290,5 +383,5 @@ function openingBalanceReconciliationService(
         [$reader],
     );
 
-    return [$service, $reader];
+    return [$service, $reader, $catalog, $provisioning];
 }

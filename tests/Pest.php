@@ -21,6 +21,9 @@ use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
@@ -271,6 +274,59 @@ function enableNetbankTreasuryForTests(): User
     }
 
     return $system;
+}
+
+function fundTestSystemAccountFundingReserve(
+    User $system,
+    int $amountMinor,
+    string $reference,
+): void {
+    app(TreasuryProvisioningService::class)->provision([
+        'netbank-primary',
+    ]);
+    $positions = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $system)
+        ->where('provider', 'netbank')
+        ->where('connection_reference', 'netbank-primary')
+        ->get()
+        ->keyBy('purpose');
+    $legacy = $positions->get(
+        TreasuryPositionPurpose::LegacyUnattributed->value,
+    );
+    $reserve = $positions->get(
+        TreasuryPositionPurpose::AccountFundingReserve->value,
+    );
+
+    if (! $legacy instanceof TreasuryPosition) {
+        throw new RuntimeException(
+            'The test system Legacy Unattributed position was not provisioned.',
+        );
+    }
+
+    if (! $reserve instanceof TreasuryPosition) {
+        throw new RuntimeException(
+            'The test system Account Funding Reserve was not provisioned.',
+        );
+    }
+
+    $operations = app(TreasuryPositionOperationContract::class);
+    $operations->recognize(new TreasuryPositionRecognitionData(
+        operationReference: "test-system-funding-recognition:{$reference}",
+        destinationPositionReference: $legacy->position_reference,
+        amountMinor: $amountMinor,
+        currency: 'PHP',
+        idempotencyKey: "test-system-funding-recognition:{$reference}:key",
+        externalReference: "test-provider-observation:{$reference}",
+    ));
+    $operations->allocate(new TreasuryPositionAllocationData(
+        operationReference: "test-system-opening-capitalization:{$reference}",
+        sourcePositionReference: $legacy->position_reference,
+        destinationPositionReference: $reserve->position_reference,
+        amountMinor: $amountMinor,
+        currency: 'PHP',
+        idempotencyKey: "test-system-opening-capitalization:{$reference}:key",
+        externalReference: "test-ownership-authorization:{$reference}",
+    ));
 }
 
 function treasuryClientFundsLedger(User $owner, string $provider = 'netbank'): Bavix\Wallet\Models\Wallet
