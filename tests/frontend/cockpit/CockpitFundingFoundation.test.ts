@@ -935,6 +935,64 @@ describe('Cockpit Funding foundation', () => {
         ).toBe(false);
     });
 
+    it('restores persisted Account Funding Receipts without checking NetBank again', async () => {
+        const fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                schema: 'x-change.cockpit.standing-funding-address.v1',
+                address: standingFundingAddress,
+                persisted_history: {
+                    observations: [
+                        {
+                            reference: 'AF-PERSISTED123',
+                            gross_amount_minor: 5000,
+                            fee_amount_minor: 0,
+                            net_amount_minor: 5000,
+                            gross_amount: '₱50.00',
+                            net_amount: '₱50.00',
+                            currency: 'PHP',
+                            status: 'settled',
+                            provider_status: 'settled',
+                            applied: true,
+                            applied_amount_minor: 5000,
+                            applied_amount: '₱50.00',
+                            applied_at: '2026-07-25T08:55:00+00:00',
+                            provisional: false,
+                            can_approve: false,
+                            approval_reference: null,
+                            occurred_at: '2026-07-25T08:54:00+00:00',
+                            provider_settled_at: '2026-07-25T08:55:00+00:00',
+                        },
+                    ],
+                    last_checked_at: '2026-07-25T08:56:00+00:00',
+                    provider_calls: false,
+                },
+            }),
+        });
+        vi.stubGlobal('fetch', fetch);
+
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: standingFundingAvailability,
+            },
+        });
+
+        await flushPromises();
+
+        expect(wrapper.text()).toContain('AF-PERSISTED123');
+        expect(wrapper.text()).toContain('Yes · ₱50.00');
+        expect(wrapper.text()).toContain('Last synchronized');
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(fetch).toHaveBeenCalledWith(
+            '/x/cockpit/funding/standing-addresses/netbank',
+            expect.objectContaining({
+                method: 'POST',
+            }),
+        );
+    });
+
     it('shows a pending NetBank receipt as applied once without confusing it with final settlement', async () => {
         const automaticAddress = {
             ...standingFundingAvailability,

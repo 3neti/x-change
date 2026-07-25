@@ -100,6 +100,9 @@ it('generates an owner-stable Account Funding Address without creating or credit
         ->assertJsonPath('address.temporary', false)
         ->assertJsonPath('address.funding_intent_created', false)
         ->assertJsonPath('address.automatic_credit_enabled', false)
+        ->assertJsonPath('persisted_history.observations', [])
+        ->assertJsonPath('persisted_history.last_checked_at', null)
+        ->assertJsonPath('persisted_history.provider_calls', false)
         ->assertJsonPath(
             'address.qr_code',
             'data:image/png;base64,'.reusableFundingTestPng(),
@@ -265,6 +268,56 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
         ->not->toContain($fundingAddress);
     expect(FundingIntent::query()->count())->toBe(0)
         ->and((int) $wallet->fresh()->balance)->toBe($balanceBefore);
+
+    $providerRequestCount = collect(Http::recorded())->count();
+
+    $persistedResponse = $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    );
+
+    $persistedResponse
+        ->assertOk()
+        ->assertJsonPath('persisted_history.observations.0.gross_amount_minor', 2500)
+        ->assertJsonPath('persisted_history.observations.0.status', 'awaiting_approval')
+        ->assertJsonPath('persisted_history.observations.0.provider_status', 'settled')
+        ->assertJsonPath('persisted_history.observations.0.can_approve', true)
+        ->assertJsonPath('persisted_history.provider_calls', false);
+
+    expect($persistedResponse->json('persisted_history.last_checked_at'))
+        ->toBeString()
+        ->and(collect(Http::recorded())->count())
+        ->toBe($providerRequestCount);
+
+    $persistedSerialized = $persistedResponse->getContent();
+
+    expect($persistedSerialized)
+        ->not->toContain('provider-transaction-secret')
+        ->not->toContain('Sensitive Payer')
+        ->not->toContain('sensitive-payer-account')
+        ->not->toContain('sensitive-destination-account');
+
+    $otherOperator = actingAsTestUser();
+    $otherOperator->forceFill([
+        'mobile' => '639181234567',
+        'mobile_verified_at' => now(),
+    ])->save();
+
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response([
+            'access_token' => 'access-token',
+        ]),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response([
+            'qr_code' => reusableFundingTestPng(),
+        ]),
+    ]);
+
+    $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertOk()
+        ->assertJsonPath('persisted_history.observations', [])
+        ->assertJsonPath('persisted_history.last_checked_at', null);
 });
 
 it('requires explicit acknowledgement and fails closed while disabled', function () {

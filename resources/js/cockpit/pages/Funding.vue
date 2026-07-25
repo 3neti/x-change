@@ -583,8 +583,18 @@ async function openStandingFundingAddress(): Promise<void> {
         }
 
         standingAddress.value = body.address as CockpitStandingFundingAddress;
-        standingReceipts.value = [];
-        standingHistoryCheckedAt.value = null;
+        const persistedHistory =
+            typeof body.persisted_history === 'object' &&
+            body.persisted_history !== null
+                ? (body.persisted_history as Record<string, unknown>)
+                : {};
+        standingReceipts.value = Array.isArray(persistedHistory.observations)
+            ? (persistedHistory.observations as CockpitStandingFundingReceipt[])
+            : [];
+        standingHistoryCheckedAt.value =
+            typeof persistedHistory.last_checked_at === 'string'
+                ? persistedHistory.last_checked_at
+                : null;
     } catch {
         standingAddressError.value =
             'The Account Funding Address could not reach NetBank.';
@@ -1585,10 +1595,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             <span class="text-xs text-slate-500">
                                 {{
                                     standingHistoryCheckedAt
-                                        ? `Checked ${displayTime(
+                                        ? `Last synchronized ${displayTime(
                                               standingHistoryCheckedAt,
                                           )}`
-                                        : 'Not checked yet'
+                                        : 'Not synchronized yet'
                                 }}
                             </span>
                         </div>
@@ -1728,8 +1738,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             {{
                                 standingHistoryCheckedAt
-                                    ? 'NetBank returned no incoming transactions for this address in the configured lookback window.'
-                                    : 'Check NetBank after a human scans and pays the QR.'
+                                    ? 'No persisted incoming receipts were found during the last NetBank synchronization.'
+                                    : 'Check NetBank after a human scans and pays the QR. Persisted receipts will remain here after refresh.'
                             }}
                         </p>
                     </div>

@@ -9,6 +9,8 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Actions\Funding\GenerateNetbankReusableFundingAddress;
 use LBHurtado\XChange\Actions\Funding\InspectNetbankReusableFundingAddressHistory;
+use LBHurtado\XChange\Actions\Funding\ReadNetbankReusableFundingReceiptHistory;
+use LBHurtado\XChange\Data\Funding\NetbankReusableFundingObservationData;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\AccessCockpitStandingFundingAddressRequest;
 
 final class CockpitNetbankStandingFundingAddressController extends Controller
@@ -16,8 +18,10 @@ final class CockpitNetbankStandingFundingAddressController extends Controller
     public function store(
         AccessCockpitStandingFundingAddressRequest $request,
         GenerateNetbankReusableFundingAddress $generate,
+        ReadNetbankReusableFundingReceiptHistory $receipts,
     ): JsonResponse {
         $address = $generate->handle($request->user());
+        $history = $receipts->handle($request->user(), $address->reference);
 
         return response()->json([
             'schema' => 'x-change.cockpit.standing-funding-address.v1',
@@ -44,6 +48,14 @@ final class CockpitNetbankStandingFundingAddressController extends Controller
                 'maximum_amount_minor' => $address->maximumAmountMinor,
                 'daily_limit_minor' => $address->dailyLimitMinor,
             ],
+            'persisted_history' => [
+                'observations' => array_map(
+                    $this->serializeObservation(...),
+                    $history->observations,
+                ),
+                'last_checked_at' => $history->lastCheckedAt,
+                'provider_calls' => false,
+            ],
         ])->withHeaders($this->sensitiveHeaders());
     }
 
@@ -53,35 +65,7 @@ final class CockpitNetbankStandingFundingAddressController extends Controller
     ): JsonResponse {
         $history = $inspect->handle($request->user());
         $observations = array_map(
-            fn ($observation): array => [
-                'reference' => $observation->reference,
-                'gross_amount_minor' => $observation->grossAmountMinor,
-                'fee_amount_minor' => $observation->feeAmountMinor,
-                'net_amount_minor' => $observation->netAmountMinor,
-                'currency' => $observation->currency,
-                'status' => $observation->recognitionStatus,
-                'provider_status' => $observation->providerStatus,
-                'applied' => $observation->applied,
-                'applied_amount_minor' => $observation->appliedAmountMinor,
-                'applied_amount' => Number::currency(
-                    $observation->appliedAmountMinor / 100,
-                    in: $observation->currency,
-                ),
-                'applied_at' => $observation->appliedAt,
-                'provisional' => $observation->provisional,
-                'occurred_at' => $observation->occurredAt,
-                'provider_settled_at' => $observation->providerSettledAt,
-                'can_approve' => $observation->canApprove,
-                'approval_reference' => $observation->approvalReference,
-                'gross_amount' => Number::currency(
-                    $observation->grossAmountMinor / 100,
-                    in: $observation->currency,
-                ),
-                'net_amount' => Number::currency(
-                    $observation->netAmountMinor / 100,
-                    in: $observation->currency,
-                ),
-            ],
+            $this->serializeObservation(...),
             $history->observations,
         );
 
@@ -99,6 +83,43 @@ final class CockpitNetbankStandingFundingAddressController extends Controller
                 'suspense' => $history->sync->suspense,
             ],
         ])->withHeaders($this->sensitiveHeaders());
+    }
+
+    /**
+     * @return array<string, bool|int|string|null>
+     */
+    private function serializeObservation(
+        NetbankReusableFundingObservationData $observation,
+    ): array {
+        return [
+            'reference' => $observation->reference,
+            'gross_amount_minor' => $observation->grossAmountMinor,
+            'fee_amount_minor' => $observation->feeAmountMinor,
+            'net_amount_minor' => $observation->netAmountMinor,
+            'currency' => $observation->currency,
+            'status' => $observation->recognitionStatus,
+            'provider_status' => $observation->providerStatus,
+            'applied' => $observation->applied,
+            'applied_amount_minor' => $observation->appliedAmountMinor,
+            'applied_amount' => Number::currency(
+                $observation->appliedAmountMinor / 100,
+                in: $observation->currency,
+            ),
+            'applied_at' => $observation->appliedAt,
+            'provisional' => $observation->provisional,
+            'occurred_at' => $observation->occurredAt,
+            'provider_settled_at' => $observation->providerSettledAt,
+            'can_approve' => $observation->canApprove,
+            'approval_reference' => $observation->approvalReference,
+            'gross_amount' => Number::currency(
+                $observation->grossAmountMinor / 100,
+                in: $observation->currency,
+            ),
+            'net_amount' => Number::currency(
+                $observation->netAmountMinor / 100,
+                in: $observation->currency,
+            ),
+        ];
     }
 
     /**
