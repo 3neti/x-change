@@ -348,6 +348,18 @@ php artisan xchange:lifecycle:run \
 
 The run reference is never stored in plaintext. It is HMAC-hashed and bound to the scenario, issuer, provider, amount, and currency. Reusing the same reference returns the durable result and makes no second provider transfer. Reusing it with different money-movement parameters is rejected.
 
+`--run-reference` is intentionally caller-supplied and mandatory for this live-money scenario. If it is absent, the command exits before Pay Code issuance, provider submission, or Treasury mutation. It must not silently generate a reference and continue.
+
+This differs from rollback-only scenarios such as `basic_cash`, where an automatically generated execution identity cannot create an irreversible external payment. For a live provider call, automatic generation would destroy retry safety: the provider could accept a payout while the command times out before recording the response, and a retry could generate a different reference and submit a duplicate payout.
+
+Operationally:
+
+- rerun the exact reference to retrieve the durable result or recheck a pending provider balance;
+- treat a new reference as an explicit authorization for a new real-money transfer; and
+- never create a new reference merely because output was delayed, interrupted, or ambiguous.
+
+Any future reference-generation convenience must be a two-step preparation flow. It may persist and print a reference, but it must exit without contacting the provider. A separate, explicit command using that same reference and `--confirm-live-transfer` may then execute the payment.
+
 The command reports:
 
 - `provider_observation.balance_minor` — the amount returned by the authoritative provider balance reader;

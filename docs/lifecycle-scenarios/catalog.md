@@ -522,6 +522,10 @@ Before issuance, the scenario reserves only the beneficiary principal from the i
 
 The run reference is durable replay protection. Reusing it returns the durable result without another provider transfer. When `accounting_status=provider_sync_pending`, rerunning the same command checks the provider balance again; it never resubmits the payout. Never switch to a new reference merely because the provider balance has not updated yet.
 
+The reference is caller-supplied and mandatory. Omitting `--run-reference` fails before issuance, accounting mutation, or provider submission. The live scenario must never invent a reference and continue: if NetBank accepted a transfer but the local process timed out, a retry with another automatically generated reference could submit the same economic payment twice. This is intentionally stricter than rollback-only `basic_cash`.
+
+A future convenience command may prepare, persist, and print a generated reference only if it exits before any provider call. Live execution must remain a separate, explicit step using the prepared reference together with `--confirm-live-transfer`.
+
 `accounting_status=review_required` is an accounting escalation for a provider shortage or internal Inventory/Position mismatch. It is not permission to submit a new run reference or type a balancing adjustment.
 
 Existing Accounts funded through the standing-address flow must first run the historical funding backfill in dry-run and committed modes. The backfill accepts only exact provider evidence, Inventory recognition, and the original Account credit; it cannot manufacture balance.
