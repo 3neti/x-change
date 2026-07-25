@@ -241,3 +241,21 @@ The minimum proof is:
 10. only the bound Account owner can claim it;
 11. the Cockpit exposes Pay Code vocabulary and a compact owner-only action;
 12. focused backend and frontend suites pass.
+
+### Implemented acceptance — 2026-07-25
+
+- Voucher contract tests passed for serialization, compatibility, and
+  constructor-level invariants.
+- x-change funding, policy, dispatch, authorization, maker-checker,
+  recipient-binding, idempotency, and documentation tests passed.
+- The focused Cockpit Funding component suite passed.
+- Package-owned Cockpit assets matched the published host projection.
+- The production build completed successfully.
+- Signed-in browser acceptance passed at the normal desktop viewport and at
+  `390 × 844`.
+- At both widths, the Pay Code Funding panel, Pay Code input, reviewed-request
+  disclosure, and request list remained inside the viewport with no horizontal
+  overflow.
+- No stale `Account Funding Code` wording appeared in the rendered page.
+- The application emitted no browser-console error. Observed warnings belonged
+  to unrelated Chrome extensions.

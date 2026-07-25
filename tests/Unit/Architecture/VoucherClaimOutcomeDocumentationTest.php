@@ -21,6 +21,10 @@ it('documents Voucher claim outcomes and reviewed funding boundaries', function 
         ->toContain('rejects issuance that combines')
         ->toContain('Account Funding makes zero provider calls')
         ->toContain('XCHANGE_REVIEWED_FUNDING_PAY_CODE_TTL_SECONDS')
+        ->toContain('Implemented acceptance — 2026-07-25')
+        ->toContain('`390 × 844`')
+        ->toContain('no horizontal')
+        ->toContain('application emitted no browser-console error')
         ->toContain('workflow rules, routes, read models, UI, tests, and documentation live in')
         ->and($funding)->toContain('VOUCHER_CLAIM_OUTCOME_PROTOCOL.md');
 });
