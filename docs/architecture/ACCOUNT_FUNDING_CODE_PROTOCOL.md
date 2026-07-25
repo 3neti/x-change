@@ -1,30 +1,81 @@
-# Account Funding Code Protocol
+# Pay Code and Account Funding Code Protocol
 
 ## Purpose
 
-An Account Funding Code is a one-time, recipient-bound instruction for moving
-already-recognized and reserved value into an x-change Account. It is for
-funding sources that cannot safely use the automated QR Ph path, such as a large
-bank transfer, controlled cash handover, precious metal, jewelry, a vehicle, or
-another approved asset.
+The Funding workspace accepts two distinct no-payout instruments:
 
-It is not a payout Pay Code. Claiming it does not call NetBank, Paynamics, or
-another payout provider. It cannot move money out of the provider account.
+1. an eligible **Pay Code** that its issuer explicitly created for Account
+   Funding; and
+2. a reviewed **Account Funding Code** that the system issues after a
+   maker-checker process verifies externally supplied value.
+
+Both instruments move already-recognized and reserved value into an x-change
+Account. Neither is a payout Pay Code. Claiming either one does not call
+NetBank, Paynamics, or another payout provider and cannot move money out of a
+provider account.
 
 ## Cockpit experience
 
 `/x/cockpit/funding` presents two primary paths:
 
-1. **QR Ph Self Top-Up** uses the immutable Account Funding Address and
+1. **Self Top-Up** uses the immutable Account Funding Address and
    provider-authoritative transaction history.
-2. **Account Funding Code** begins a controlled request and ends with a
-   one-time Account allocation.
+2. **Pay Code Funding** accepts an eligible Pay Code, displays a sanitized
+   amount-and-expiry preview, and adds the reserved value to Client Funds after
+   explicit confirmation.
 
-Exact provider Funding Intents and the rollback-only simulation remain available
-as secondary advanced tools. Provider credentials remain in Cockpit Accounts;
-they are never displayed or edited on the Funding page.
+The reviewed request form is secondary inside Pay Code Funding. It is used only
+when the user first needs the system to verify a bank transfer, controlled cash
+handover, precious metal, jewelry, vehicle, or another approved source and
+issue a recipient-bound Account Funding Code.
+
+Exact provider Funding Intents and the rollback-only simulation remain
+available as secondary advanced tools. Provider credentials remain in Cockpit
+Accounts; they are never displayed or edited on the Funding page.
+
+## Eligible Pay Code contract
+
+A general Pay Code is never eligible merely because a caller labels it as
+Account Funding. Issuance must complete all of these controls atomically:
+
+1. the instruction explicitly selects the `account_funding` settlement
+   destination and `account-funding-v1` pricing profile;
+2. x-commerce applies `pay-code-account-funding-waterfall`, which contains no
+   provider-transfer-cost allocation;
+3. x-change moves the exact Pay Code principal from the issuer's Client Funds
+   Position to the issuer's Pay Code Reserve;
+4. x-change writes a server-owned `treasury.account_funding` attestation and a
+   matching reservation descriptor on the voucher.
+
+The browser-supplied instruction is a request, not an eligibility attestation.
+Inspection trusts only the server-owned Treasury metadata. Legacy Pay Codes,
+payout-only Pay Codes, named-slice Pay Codes, codes with provider cost, codes
+without a matching reserve, expired codes, and redeemed codes fail closed.
+
+Inspection uses a short-lived, owner-bound opaque token. The Funding read model
+shows only the code hint, amount, currency, expiry, and safe status. It never
+exposes the full code, Treasury Position references, provider account details,
+commercial allocations, or operation references.
+
+Claiming an eligible Pay Code:
+
+```text
+issuer Client Funds
+        ↓ issue
+issuer Pay Code Reserve
+        ↓ claimant confirms in Funding
+claimant Client Funds
+```
+
+The claim locks the voucher, re-evaluates eligibility, releases the exact
+reserve once, creates one `VoucherClaim` with settlement mode
+`account_funding`, and marks the voucher redeemed. Provider Inventory is
+unchanged and no payout provider is called. A unique claim scope and stable
+Treasury operation reference make replays a no-op.
 
 ## Lifecycle
+
+The optional reviewed Account Funding Code lifecycle is:
 
 ```text
 Account owner submits Funding Request
@@ -55,7 +106,7 @@ submitted
 Terminal request states are `rejected`, `withdrawn`, and `expired`. The code has
 its own `issued`, `claimed`, `expired`, or `revoked` lifecycle.
 
-## Monetary authority
+## Reviewed-code monetary authority
 
 The browser supplies only a requested value. It never supplies credit authority.
 A receipt, screenshot, narrative, appraisal, or transaction reference is
@@ -81,7 +132,7 @@ payout. A future wallet accounting wave may introduce a dedicated
 `account_funding_reserve` purpose without changing the request or claim
 contract.
 
-## Maker-checker and access
+## Reviewed-code maker-checker and access
 
 Funding reviewers are fail-closed. Configure explicit user identifiers:
 
@@ -109,7 +160,7 @@ Reviewer rules:
 - system-user resolution is an accounting identity and does not grant human
   review access.
 
-## Idempotency and accounting
+## Reviewed-code idempotency and accounting
 
 Funding Request creation hashes the owner and client idempotency key and
 fingerprints the request type, Account, requested value, and currency.
@@ -176,15 +227,20 @@ workflow rules, routes, read models, UI, tests, and documentation remain in the
 
 The minimum acceptance proof is:
 
-1. submitting a request does not change any Account;
-2. an unconfigured user cannot see or act on the review queue;
-3. the maker cannot approve their own backing review;
-4. code issuance fails without recognized system Client Funds;
-5. one request produces one code and one reservation;
-6. only the intended Account owner can claim;
-7. replaying issuance or claim creates no second movement;
-8. the claim makes zero payout-provider calls;
-9. the Funding page renders the two primary paths at desktop and mobile widths.
+1. a payout-only or caller-tagged Pay Code fails closed;
+2. eligible Pay Code issuance posts zero provider cost and one exact reserve;
+3. inspection discloses only the sanitized preview;
+4. claiming moves the reserve to claimant Client Funds exactly once;
+5. Pay Code Funding changes neither provider Inventory nor provider liquidity;
+6. submitting a reviewed request does not change any Account;
+7. an unconfigured user cannot see or act on the review queue;
+8. the maker cannot approve their own backing review;
+9. reviewed-code issuance fails without recognized system Client Funds;
+10. one reviewed request produces one code and one reservation;
+11. only the intended Account owner can claim the reviewed code;
+12. replaying either claim creates no second movement;
+13. both claim paths make zero payout-provider calls;
+14. the Funding page renders both primary paths at desktop and mobile widths.
 
 ### Implemented acceptance — 2026-07-25
 
@@ -192,13 +248,25 @@ The package workflow passed its focused funding, authorization, lifecycle, and
 documentation tests. The Funding page passed its focused component suite and
 the published Cockpit assets matched package source.
 
-Signed-in browser acceptance confirmed:
+Earlier signed-in browser acceptance confirmed the reviewed-code foundation:
 
-- `Self Top-Up` and `Account Funding Code` are the only primary funding paths;
+- `Self Top-Up` and the funding-code path are the primary funding paths;
 - provider instructions and simulations remain inside the advanced disclosure;
 - the request panel and modal have no horizontal overflow at desktop width;
 - at `390 × 844`, the modal remains inside the viewport and neither the modal
   nor the page scrolls horizontally;
 - the modal states that a request cannot credit an Account and that files are
   not yet accepted;
+- no application console errors were produced during the acceptance flow.
+
+The Pay Code Funding expansion was accepted on the same date:
+
+- `Pay Code Funding` replaces `Account Funding Code` as the primary tab label;
+- `Fund with Pay Code`, the code input, and `Check Code` appear before the
+  optional reviewed request;
+- an unknown code returns a compact, sanitized unavailable state;
+- the reviewed Account Funding Code form remains collapsed by default;
+- the page has no horizontal overflow at the normal desktop viewport or at
+  `390 × 844`;
+- the mobile input and action remain inside the viewport;
 - no application console errors were produced during the acceptance flow.

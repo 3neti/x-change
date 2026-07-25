@@ -11,7 +11,12 @@ it('documents the Account Funding Code control and accounting boundary', functio
     );
 
     expect($protocol)
-        ->toContain('It is not a payout Pay Code.')
+        ->toContain('Neither is a payout Pay Code.')
+        ->toContain('pay-code-account-funding-waterfall')
+        ->toContain('server-owned `treasury.account_funding` attestation')
+        ->toContain('Provider Inventory')
+        ->toContain('unchanged')
+        ->toContain('replays a no-op')
         ->toContain('browser supplies only a requested value')
         ->toContain('maker cannot approve their own backing review')
         ->toContain('already owns enough recognized Client Funds')
