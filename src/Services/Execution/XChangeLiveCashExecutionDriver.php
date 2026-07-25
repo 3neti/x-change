@@ -117,6 +117,10 @@ final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
             $metadata['mobile'] = $mobile;
         }
 
+        if (($amount = data_get($claim, 'amount')) !== null) {
+            $metadata['amount'] = $amount;
+        }
+
         $bankCode = data_get($claim, 'bank_account.bank_code');
         $accountNumber = data_get($claim, 'bank_account.account_number');
 

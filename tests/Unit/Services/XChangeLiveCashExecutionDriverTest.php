@@ -17,6 +17,7 @@ it('delegates redemption to the voucher default driver and returns reconciled li
         ->withArgs(function (ExecutionContextData $context): bool {
             return $context->meta['mobile'] === '09173011987'
                 && $context->meta['bank_account'] === 'GXCHPHM2XXX:09173011987'
+                && $context->meta['amount'] === 75
                 && $context->meta['inputs'] === [];
         })
         ->andReturn(ExecutionResultData::succeeded('default', [
@@ -52,6 +53,7 @@ it('delegates redemption to the voucher default driver and returns reconciled li
             'operation' => 'claim_transfer',
             'claim' => [
                 'mobile' => '09173011987',
+                'amount' => 75,
                 'bank_account' => [
                     'bank_code' => 'GXCHPHM2XXX',
                     'account_number' => '09173011987',
