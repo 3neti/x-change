@@ -632,8 +632,71 @@ export type CockpitFundingReadModel = {
     redactions: CockpitReadModelRedactions;
 };
 
+export type CockpitAccountFundingCode = {
+    reference: string;
+    last_four: string;
+    status: string;
+    amount: string;
+    can_claim: boolean;
+    expires_at?: string | null;
+};
+
+export type CockpitFundingRequest = {
+    reference: string;
+    type: string;
+    type_label: string;
+    requested_value: string;
+    recognized_value?: string | null;
+    currency: string;
+    status: string;
+    description: string;
+    submitted_at?: string | null;
+    funding_code?: CockpitAccountFundingCode | null;
+};
+
+export type CockpitFundingRequestReviewItem = {
+    reference: string;
+    type: string;
+    type_label: string;
+    requested_value: string;
+    recognized_value?: string | null;
+    requested_value_minor: number;
+    currency: string;
+    status: string;
+    description: string;
+    evidence_reference?: string | null;
+    connection_reference?: string | null;
+    maker_id?: string | null;
+    can_prepare: boolean;
+    can_approve: boolean;
+};
+
+export type CockpitFundingRequestReadModel = {
+    schema: string;
+    requests: CockpitFundingRequest[];
+    notices: Array<{
+        reference: string;
+        type: string;
+        title: string;
+        message: string;
+        action?: Record<string, string> | null;
+        read: boolean;
+        created_at?: string | null;
+    }>;
+    review_queue: CockpitFundingRequestReviewItem[];
+    controls: {
+        attachments_enabled: boolean;
+        evidence_authorizes_credit: boolean;
+        maker_checker_required: boolean;
+        reviewer: boolean;
+        provider_payout_enabled: boolean;
+    };
+    redactions: Record<string, boolean>;
+};
+
 export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_read_model: CockpitFundingReadModel;
+    funding_requests?: CockpitFundingRequestReadModel;
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
     funding_poll_interval?: number;

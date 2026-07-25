@@ -2,6 +2,10 @@
 import { router, useForm, usePoll } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
+import { store as claimAccountFundingCode } from '@/routes/x-change/cockpit/funding/codes/claims';
+import { store as approveFundingRequest } from '@/routes/x-change/cockpit/funding/requests/approvals';
+import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
+import { store as prepareFundingRequest } from '@/routes/x-change/cockpit/funding/requests/reviews';
 import { show as showFundingInstructions } from '@/routes/x-change/cockpit/funding/intents/instructions';
 import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
@@ -22,6 +26,23 @@ import type {
 } from '../types';
 
 const props = defineProps<CockpitFundingPageProps>();
+const fundingRequests = computed(
+    () =>
+        props.funding_requests ?? {
+            schema: 'x-change.cockpit.account-funding-requests.v1',
+            requests: [],
+            notices: [],
+            review_queue: [],
+            controls: {
+                attachments_enabled: false,
+                evidence_authorizes_credit: false,
+                maker_checker_required: true,
+                reviewer: false,
+                provider_payout_enabled: false,
+            },
+            redactions: {},
+        },
+);
 const currentInstruction = ref<CockpitFundingInstruction | null>(
     props.funding_instruction ?? null,
 );
@@ -44,7 +65,16 @@ const standingAddressError = ref<string | null>(null);
 const standingHistoryCheckedAt = ref<string | null>(null);
 const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
-type FundingWorkspaceMode = 'self_top_up' | 'funding_intent' | 'simulation';
+const showFundingRequestModal = ref(false);
+const activeFundingRequestReview = ref<string | null>(null);
+const fundingRequestAmount = ref('');
+const fundingReviewAmount = ref('');
+const fundingRequestAmountError = ref<string | null>(null);
+type FundingWorkspaceMode =
+    | 'self_top_up'
+    | 'funding_code'
+    | 'funding_intent'
+    | 'simulation';
 const activeFundingMode = ref<FundingWorkspaceMode>('self_top_up');
 const fundingWorkspaceModes = computed(() => [
     {
@@ -54,21 +84,11 @@ const fundingWorkspaceModes = computed(() => [
             'Reveal your reusable QR Ph address, then check NetBank for incoming funds.',
     },
     {
-        key: 'funding_intent' as const,
-        label: 'Exact Funding Intent',
+        key: 'funding_code' as const,
+        label: 'Account Funding Code',
         description:
-            'Create one-time provider instructions for an exact amount.',
+            'Request review for a transfer, cash, or another approved source, then claim verified reserved value.',
     },
-    ...(props.funding_simulation
-        ? [
-              {
-                  key: 'simulation' as const,
-                  label: 'Simulation',
-                  description:
-                      'Walk through the local rollback-only funding lifecycle.',
-              },
-          ]
-        : []),
 ]);
 const activeFundingModeDetails = computed(
     () =>
@@ -97,6 +117,19 @@ const hasOpenFundingIntents = computed(() =>
         ),
     ),
 );
+const hasOpenFundingWork = computed(
+    () =>
+        hasOpenFundingIntents.value ||
+        fundingRequests.value.requests.some((request) =>
+            [
+                'submitted',
+                'under_review',
+                'needs_information',
+                'awaiting_approval',
+                'funding_code_issued',
+            ].includes(request.status),
+        ),
+);
 const fundingExceptionCount = computed(
     () =>
         props.funding_read_model.approval_queue.length +
@@ -107,10 +140,10 @@ const hasFundingExceptions = computed(() => fundingExceptionCount.value > 0);
 const { start: startFundingPoll, stop: stopFundingPoll } = usePoll(
     Math.max(1000, props.funding_poll_interval ?? 5000),
     {
-        only: ['funding_read_model', 'funding_notice'],
+        only: ['funding_read_model', 'funding_requests', 'funding_notice'],
     },
     {
-        autoStart: hasOpenFundingIntents.value,
+        autoStart: hasOpenFundingWork.value,
         mode: 'rest',
     },
 );
@@ -133,6 +166,25 @@ const reconciliationForm = useForm({
 });
 const approvalForm = useForm({});
 const verificationForm = useForm({});
+const fundingRequestForm = useForm({
+    funding_type: 'bank_transfer',
+    requested_value_minor: 0,
+    currency: 'PHP',
+    description: '',
+    external_reference: '',
+    occurred_on: '',
+    requester_notes: '',
+    idempotency_key: newIdempotencyKey(),
+});
+const fundingRequestReviewForm = useForm({
+    recognized_value_minor: 0,
+    currency: 'PHP',
+    connection_reference: 'netbank-primary',
+    evidence_reference: '',
+    review_notes: '',
+});
+const fundingRequestApprovalForm = useForm({});
+const fundingCodeClaimForm = useForm({});
 type FundingProjectionChangedPayload = {
     schema: string;
     event_id: string;
@@ -185,8 +237,8 @@ const clientAmountError = computed(() => {
     return 'Enter an amount greater than zero with no more than two decimal places.';
 });
 
-watch(hasOpenFundingIntents, (hasOpenIntents) => {
-    if (hasOpenIntents) {
+watch(hasOpenFundingWork, (hasOpenWork) => {
+    if (hasOpenWork) {
         startFundingPoll();
 
         return;
@@ -342,6 +394,72 @@ function submitFundingIntent(): void {
             form.amount_minor = 0;
             form.idempotency_key = newIdempotencyKey();
         },
+    });
+}
+
+function submitFundingRequest(): void {
+    fundingRequestForm.clearErrors();
+    fundingRequestAmountError.value = null;
+    const amountMinor = amountToMinor(fundingRequestAmount.value);
+
+    if (amountMinor === null) {
+        fundingRequestAmountError.value =
+            'Enter the value you want independently reviewed.';
+
+        return;
+    }
+
+    fundingRequestForm.requested_value_minor = amountMinor;
+    fundingRequestForm.post(storeFundingRequest(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showFundingRequestModal.value = false;
+            fundingRequestAmount.value = '';
+            fundingRequestForm.reset(
+                'description',
+                'external_reference',
+                'occurred_on',
+                'requester_notes',
+            );
+            fundingRequestForm.requested_value_minor = 0;
+            fundingRequestForm.idempotency_key = newIdempotencyKey();
+        },
+    });
+}
+
+function prepareRequest(reference: string): void {
+    const amountMinor = amountToMinor(fundingReviewAmount.value);
+
+    if (amountMinor === null) {
+        fundingRequestAmountError.value =
+            'Enter the independently recognized value.';
+
+        return;
+    }
+
+    activeFundingRequestReview.value = reference;
+    fundingRequestReviewForm.recognized_value_minor = amountMinor;
+    fundingRequestReviewForm.post(prepareFundingRequest(reference), {
+        preserveScroll: true,
+        onFinish: () => {
+            activeFundingRequestReview.value = null;
+        },
+    });
+}
+
+function approveRequest(reference: string): void {
+    activeFundingRequestReview.value = reference;
+    fundingRequestApprovalForm.post(approveFundingRequest(reference), {
+        preserveScroll: true,
+        onFinish: () => {
+            activeFundingRequestReview.value = null;
+        },
+    });
+}
+
+function claimFundingCode(reference: string): void {
+    fundingCodeClaimForm.post(claimAccountFundingCode(reference), {
+        preserveScroll: true,
     });
 }
 
@@ -730,7 +848,11 @@ function refreshFundingProjections(): void {
 
     lastProjectionRefreshAt = refreshedAt;
     router.reload({
-        only: ['cockpit_header_read_model', 'funding_read_model'],
+        only: [
+            'cockpit_header_read_model',
+            'funding_read_model',
+            'funding_requests',
+        ],
         preserveScroll: true,
         preserveState: true,
     });
@@ -1137,7 +1259,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 data-testid="cockpit-funding-mode-switcher"
             >
                 <div
-                    class="grid gap-2 sm:grid-cols-3"
+                    class="grid gap-2 sm:grid-cols-2"
                     role="tablist"
                     aria-label="Funding workspace mode"
                 >
@@ -1167,6 +1289,35 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 >
                     {{ activeFundingModeDetails?.description }}
                 </p>
+                <details
+                    class="mx-2 mt-1 mb-1 border-t border-slate-200 pt-2 dark:border-slate-800"
+                    data-testid="funding-advanced-paths"
+                >
+                    <summary
+                        class="cursor-pointer text-xs font-semibold text-slate-500"
+                    >
+                        Advanced and testing paths
+                    </summary>
+                    <div class="flex flex-wrap gap-2 py-2">
+                        <button
+                            type="button"
+                            class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
+                            data-testid="funding-mode-funding_intent"
+                            @click="activeFundingMode = 'funding_intent'"
+                        >
+                            Exact provider instructions
+                        </button>
+                        <button
+                            v-if="funding_simulation"
+                            type="button"
+                            class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
+                            data-testid="funding-mode-simulation"
+                            @click="activeFundingMode = 'simulation'"
+                        >
+                            Lifecycle simulation
+                        </button>
+                    </div>
+                </details>
             </section>
 
             <section
@@ -1570,6 +1721,259 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             </section>
 
             <section
+                v-show="activeFundingMode === 'funding_code'"
+                id="funding-panel-funding_code"
+                role="tabpanel"
+                aria-labelledby="funding-mode-funding_code"
+                class="space-y-4"
+                data-testid="cockpit-account-funding-code"
+            >
+                <article
+                    class="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-950 dark:bg-slate-900"
+                >
+                    <div
+                        class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+                    >
+                        <div>
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
+                            >
+                                Reviewed Account Funding
+                            </p>
+                            <h2 class="mt-1 text-xl font-semibold">
+                                Request an Account Funding Code
+                            </h2>
+                            <p
+                                class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400"
+                            >
+                                Use this when QR Ph is not suitable—for example,
+                                a large bank transfer, controlled cash handover,
+                                gold, jewelry, or a vehicle. Your request never
+                                changes Client Funds. Two different operators
+                                must verify backing and approve reserved value
+                                before a one-time code becomes claimable.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="min-h-11 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                            data-testid="open-funding-request-modal"
+                            @click="showFundingRequestModal = true"
+                        >
+                            Request Funding Code
+                        </button>
+                    </div>
+                    <div
+                        class="grid gap-px border-t border-emerald-100 bg-emerald-100 sm:grid-cols-3 dark:border-emerald-950 dark:bg-emerald-950"
+                    >
+                        <div class="bg-white p-4 dark:bg-slate-900">
+                            <p class="text-xs font-semibold uppercase">
+                                1 · Request
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                Describe the source and expected value.
+                            </p>
+                        </div>
+                        <div class="bg-white p-4 dark:bg-slate-900">
+                            <p class="text-xs font-semibold uppercase">
+                                2 · Verify and reserve
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                Maker-checker controls verify real backing.
+                            </p>
+                        </div>
+                        <div class="bg-white p-4 dark:bg-slate-900">
+                            <p class="text-xs font-semibold uppercase">
+                                3 · Claim once
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                Reserved value moves to your Account. No payout.
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article
+                    class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="my-funding-requests"
+                >
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-3"
+                    >
+                        <div>
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
+                            >
+                                My requests
+                            </p>
+                            <h2 class="mt-1 text-lg font-semibold">
+                                Review and claim status
+                            </h2>
+                        </div>
+                        <span class="text-sm font-semibold">
+                            {{ fundingRequests.requests.length }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="fundingRequests.requests.length"
+                        class="mt-4 divide-y divide-slate-200 dark:divide-slate-800"
+                    >
+                        <div
+                            v-for="item in fundingRequests.requests"
+                            :key="item.reference"
+                            class="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                        >
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="text-sm font-semibold">
+                                        {{ item.type_label }}
+                                    </span>
+                                    <span
+                                        class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold uppercase dark:bg-slate-800"
+                                    >
+                                        {{ displayLabel(item.status) }}
+                                    </span>
+                                </div>
+                                <p
+                                    class="mt-1 text-sm text-slate-600 dark:text-slate-400"
+                                >
+                                    {{ item.requested_value }} ·
+                                    {{ item.description }}
+                                </p>
+                                <p
+                                    v-if="item.funding_code"
+                                    class="mt-1 text-xs text-emerald-700 dark:text-emerald-300"
+                                >
+                                    Code ending
+                                    {{ item.funding_code.last_four }} ·
+                                    {{ item.funding_code.amount }} ·
+                                    {{ displayLabel(item.funding_code.status) }}
+                                </p>
+                            </div>
+                            <button
+                                v-if="item.funding_code?.can_claim"
+                                type="button"
+                                class="min-h-10 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                :disabled="fundingCodeClaimForm.processing"
+                                @click="
+                                    claimFundingCode(
+                                        item.funding_code.reference,
+                                    )
+                                "
+                            >
+                                {{
+                                    fundingCodeClaimForm.processing
+                                        ? 'Claiming…'
+                                        : 'Claim Funding Code'
+                                }}
+                            </button>
+                        </div>
+                    </div>
+                    <p v-else class="mt-4 text-sm text-slate-500">
+                        No Account Funding Code requests yet.
+                    </p>
+                </article>
+
+                <article
+                    v-if="fundingRequests.controls.reviewer"
+                    class="rounded-2xl border border-amber-200 bg-amber-50/50 p-5 shadow-sm dark:border-amber-950 dark:bg-amber-950/10"
+                    data-testid="funding-request-review-queue"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-amber-700 uppercase dark:text-amber-300"
+                            >
+                                Operator queue
+                            </p>
+                            <h2 class="mt-1 text-lg font-semibold">
+                                Funding Requests requiring control
+                            </h2>
+                        </div>
+                        <span class="font-semibold">
+                            {{ fundingRequests.review_queue.length }}
+                        </span>
+                    </div>
+                    <div class="mt-4 space-y-3">
+                        <div
+                            v-for="item in fundingRequests.review_queue"
+                            :key="item.reference"
+                            class="rounded-xl border border-amber-200 bg-white p-4 dark:border-amber-900 dark:bg-slate-900"
+                        >
+                            <div
+                                class="flex flex-wrap items-start justify-between gap-3"
+                            >
+                                <div>
+                                    <p class="text-sm font-semibold">
+                                        {{ item.type_label }} ·
+                                        {{ item.requested_value }}
+                                    </p>
+                                    <p class="mt-1 text-xs text-slate-500">
+                                        {{ item.description }}
+                                    </p>
+                                </div>
+                                <span
+                                    class="rounded-full bg-amber-100 px-2 py-1 text-[0.65rem] font-semibold uppercase dark:bg-amber-950"
+                                >
+                                    {{ displayLabel(item.status) }}
+                                </span>
+                            </div>
+                            <div
+                                v-if="item.can_prepare"
+                                class="mt-4 grid gap-3 md:grid-cols-2"
+                            >
+                                <label class="text-xs font-semibold">
+                                    Recognized value
+                                    <input
+                                        v-model="fundingReviewAmount"
+                                        inputmode="decimal"
+                                        placeholder="0.00"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                    />
+                                </label>
+                                <label class="text-xs font-semibold">
+                                    Independent evidence reference
+                                    <input
+                                        v-model="
+                                            fundingRequestReviewForm.evidence_reference
+                                        "
+                                        class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                        placeholder="Bank match or custody receipt"
+                                    />
+                                </label>
+                                <button
+                                    type="button"
+                                    class="min-h-10 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 md:col-span-2"
+                                    :disabled="
+                                        activeFundingRequestReview !== null
+                                    "
+                                    @click="prepareRequest(item.reference)"
+                                >
+                                    Record backing and request approval
+                                </button>
+                            </div>
+                            <button
+                                v-else-if="item.can_approve"
+                                type="button"
+                                class="mt-4 min-h-10 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950"
+                                :disabled="activeFundingRequestReview !== null"
+                                @click="approveRequest(item.reference)"
+                            >
+                                Approve reserved value and issue code
+                            </button>
+                            <p
+                                v-else-if="item.status === 'awaiting_approval'"
+                                class="mt-3 text-xs text-amber-700 dark:text-amber-300"
+                            >
+                                The maker cannot approve this request. A
+                                different configured operator must complete it.
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section
                 v-if="funding_simulation"
                 v-show="activeFundingMode === 'simulation'"
                 id="funding-panel-simulation"
@@ -1799,8 +2203,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 ? 'This creates exact local simulation instructions with zero provider calls.'
                                 : 'This creates exact provider instructions.'
                         }}
-                        It does not change Client Funds or Issuance
-                        Capacity.
+                        It does not change Client Funds or Issuance Capacity.
                     </p>
 
                     <div
@@ -2081,8 +2484,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="mt-4 text-xs leading-5 text-emerald-700 dark:text-emerald-300"
                         >
                             Local simulation only. Do not transfer money to this
-                            address. No bank or EMI was contacted, and no
-                            Client Funds position changed.
+                            address. No bank or EMI was contacted, and no Client
+                            Funds position changed.
                         </p>
                         <p
                             v-else
@@ -2709,6 +3112,195 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     </section>
                 </div>
             </details>
+
+            <div
+                v-if="showFundingRequestModal"
+                class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 sm:items-center sm:p-6"
+                role="presentation"
+                @click.self="showFundingRequestModal = false"
+            >
+                <form
+                    class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl dark:bg-slate-900"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="funding-request-title"
+                    data-testid="funding-request-modal"
+                    @submit.prevent="submitFundingRequest"
+                >
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
+                            >
+                                Request only
+                            </p>
+                            <h2
+                                id="funding-request-title"
+                                class="mt-1 text-xl font-semibold"
+                            >
+                                Account Funding Code review
+                            </h2>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">
+                                Tell the control team what should be verified.
+                                This form cannot credit your Account.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            aria-label="Close"
+                            @click="showFundingRequestModal = false"
+                        >
+                            Close
+                        </button>
+                    </div>
+
+                    <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                        <label class="block text-xs font-semibold">
+                            Funding source
+                            <select
+                                v-model="fundingRequestForm.funding_type"
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+                            >
+                                <option value="bank_transfer">
+                                    Bank transfer
+                                </option>
+                                <option value="cash_handover">
+                                    Cash handover
+                                </option>
+                                <option value="precious_metal">
+                                    Gold or precious metal
+                                </option>
+                                <option value="jewelry">Jewelry</option>
+                                <option value="vehicle">Vehicle</option>
+                                <option value="other">
+                                    Other approved asset
+                                </option>
+                            </select>
+                        </label>
+                        <label class="block text-xs font-semibold">
+                            Requested value
+                            <div
+                                class="mt-1.5 flex rounded-lg border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
+                            >
+                                <span
+                                    class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
+                                >
+                                    PHP
+                                </span>
+                                <input
+                                    v-model="fundingRequestAmount"
+                                    inputmode="decimal"
+                                    placeholder="0.00"
+                                    class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+                                />
+                            </div>
+                            <span
+                                v-if="
+                                    fundingRequestAmountError ||
+                                    fundingRequestForm.errors
+                                        .requested_value_minor
+                                "
+                                class="mt-1 block text-xs text-rose-600"
+                            >
+                                {{
+                                    fundingRequestAmountError ??
+                                    fundingRequestForm.errors
+                                        .requested_value_minor
+                                }}
+                            </span>
+                        </label>
+                        <label
+                            class="block text-xs font-semibold sm:col-span-2"
+                        >
+                            What should be verified?
+                            <textarea
+                                v-model="fundingRequestForm.description"
+                                rows="3"
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                placeholder="Describe the transfer, custody handover, or asset and the expected control evidence."
+                            />
+                            <span
+                                v-if="fundingRequestForm.errors.description"
+                                class="mt-1 block text-xs text-rose-600"
+                            >
+                                {{ fundingRequestForm.errors.description }}
+                            </span>
+                        </label>
+                        <label class="block text-xs font-semibold">
+                            Transaction or custody reference
+                            <input
+                                v-model="fundingRequestForm.external_reference"
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                placeholder="Optional reference"
+                            />
+                        </label>
+                        <label class="block text-xs font-semibold">
+                            Date
+                            <input
+                                v-model="fundingRequestForm.occurred_on"
+                                type="date"
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+                            />
+                        </label>
+                        <label
+                            class="block text-xs font-semibold sm:col-span-2"
+                        >
+                            Notes
+                            <textarea
+                                v-model="fundingRequestForm.requester_notes"
+                                rows="2"
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                placeholder="Optional context for the control team"
+                            />
+                        </label>
+                    </div>
+
+                    <div
+                        class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"
+                    >
+                        Screenshots and files are not accepted yet. Secure
+                        attachments stay disabled until private storage,
+                        quarantine, malware scanning, retention, and access
+                        logging are available. A reference or receipt is
+                        supporting evidence only.
+                    </div>
+
+                    <label class="mt-4 flex items-start gap-3 text-xs">
+                        <input
+                            required
+                            type="checkbox"
+                            class="mt-0.5 size-4 rounded border-slate-300"
+                        />
+                        <span>
+                            I understand this request does not change Client
+                            Funds. Only independently verified and reserved
+                            backing can produce a claimable code.
+                        </span>
+                    </label>
+
+                    <div class="mt-5 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold dark:border-slate-700"
+                            @click="showFundingRequestModal = false"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                            :disabled="fundingRequestForm.processing"
+                        >
+                            {{
+                                fundingRequestForm.processing
+                                    ? 'Submitting…'
+                                    : 'Submit for review'
+                            }}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </CockpitLayout>
 </template>

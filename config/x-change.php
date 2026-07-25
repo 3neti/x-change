@@ -528,6 +528,21 @@ return [
     'funding' => [
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
         'api_middleware' => ['auth'],
+        'requests' => [
+            'reviewer_ids' => array_values(array_filter(array_map(
+                static fn (string $id): string => trim($id),
+                explode(',', (string) env('XCHANGE_FUNDING_REQUEST_REVIEWER_IDS', '')),
+            ))),
+            'code_ttl_seconds' => (int) env(
+                'XCHANGE_ACCOUNT_FUNDING_CODE_TTL_SECONDS',
+                604800,
+            ),
+            'create_middleware' => ['throttle:6,1'],
+            'review_middleware' => ['throttle:30,1'],
+            'approval_middleware' => ['throttle:12,1'],
+            'claim_middleware' => ['throttle:12,1'],
+            'attachments_enabled' => false,
+        ],
         'intent_ttl_seconds' => (int) env('XCHANGE_FUNDING_INTENT_TTL_SECONDS', 1800),
         'instruction_lock_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_SECONDS', 30),
         'instruction_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_WAIT_SECONDS', 5),

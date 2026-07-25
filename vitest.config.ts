@@ -86,6 +86,23 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/funding-intent-route.ts',
             ),
+            '@/routes/x-change/cockpit/funding/requests/approvals':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/funding-request-approval-route.ts',
+                ),
+            '@/routes/x-change/cockpit/funding/requests/reviews': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/funding-request-review-route.ts',
+            ),
+            '@/routes/x-change/cockpit/funding/requests': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/funding-request-route.ts',
+            ),
+            '@/routes/x-change/cockpit/funding/codes/claims': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/account-funding-code-claim-route.ts',
+            ),
             '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks':
                 path.resolve(
                     __dirname,

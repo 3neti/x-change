@@ -14,6 +14,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountFundingCodeClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
@@ -25,6 +26,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingQrMerchantProfileController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestReviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
@@ -86,6 +90,26 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             )->name('x-change.cockpit.accounts.funding-qr-merchant-profile.update');
         });
         Route::get('funding', CockpitFundingPageController::class)->name('x-change.cockpit.funding.index');
+        Route::post(
+            'funding/requests',
+            CockpitFundingRequestController::class,
+        )->middleware((array) config('x-change.funding.requests.create_middleware', []))
+            ->name('x-change.cockpit.funding.requests.store');
+        Route::post(
+            'funding/requests/{fundingRequest:reference}/reviews',
+            CockpitFundingRequestReviewController::class,
+        )->middleware((array) config('x-change.funding.requests.review_middleware', []))
+            ->name('x-change.cockpit.funding.requests.reviews.store');
+        Route::post(
+            'funding/requests/{fundingRequest:reference}/approvals',
+            CockpitFundingRequestApprovalController::class,
+        )->middleware((array) config('x-change.funding.requests.approval_middleware', []))
+            ->name('x-change.cockpit.funding.requests.approvals.store');
+        Route::post(
+            'funding/codes/{fundingCode:reference}/claims',
+            CockpitAccountFundingCodeClaimController::class,
+        )->middleware((array) config('x-change.funding.requests.claim_middleware', []))
+            ->name('x-change.cockpit.funding.codes.claims.store');
         Route::post('funding/intents', CockpitFundingIntentController::class)->name('x-change.cockpit.funding.intents.store');
         Route::get(
             'funding/intents/{intent:reference}/instructions',

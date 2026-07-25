@@ -16,6 +16,7 @@ use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
 use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
+use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Services\Funding\Base64PngQrPhFundingSimulationQrRenderer;
 use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
@@ -27,6 +28,7 @@ class CockpitFundingPageController extends Controller
     public function __construct(
         private readonly CockpitReadOnlyPageProps $props,
         private readonly FundingCockpitReadModelProvider $funding,
+        private readonly FundingRequestCockpitReadModel $fundingRequests,
         private readonly Base64PngQrPhFundingSimulationQrRenderer $simulationQr,
         private readonly NetbankStandingAddressProfile $standingAddressProfile,
         private readonly FundingProjectionChannel $fundingChannels,
@@ -46,6 +48,7 @@ class CockpitFundingPageController extends Controller
         return Inertia::render('x-change/cockpit/Funding', [
             ...$this->props->toArray(),
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
+            'funding_requests' => $this->fundingRequests->forOperator($operator),
             'funding_instruction' => $request->session()->pull('funding_instruction'),
             'funding_notice' => $request->session()->pull('funding_notice'),
             'funding_poll_interval' => max(

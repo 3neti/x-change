@@ -308,6 +308,41 @@ const fundingRealtime = {
     event: '.FundingProjectionChanged' as const,
 };
 
+const fundingRequestReadModel = {
+    schema: 'x-change.cockpit.account-funding-requests.v1',
+    requests: [
+        {
+            reference: '01J-REQUEST-1',
+            type: 'bank_transfer',
+            type_label: 'Bank transfer',
+            requested_value: '₱20,000.00',
+            recognized_value: '₱20,000.00',
+            currency: 'PHP',
+            status: 'funding_code_issued',
+            description: 'Matched corporate bank transfer.',
+            submitted_at: '2026-07-25T08:00:00+08:00',
+            funding_code: {
+                reference: '01J-CODE-1',
+                last_four: 'F9K2',
+                status: 'issued',
+                amount: '₱20,000.00',
+                can_claim: true,
+                expires_at: '2026-08-01T08:00:00+08:00',
+            },
+        },
+    ],
+    notices: [],
+    review_queue: [],
+    controls: {
+        attachments_enabled: false,
+        evidence_authorizes_credit: false,
+        maker_checker_required: true,
+        reviewer: false,
+        provider_payout_enabled: false,
+    },
+    redactions: {},
+};
+
 describe('Cockpit Funding foundation', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
@@ -366,7 +401,7 @@ describe('Cockpit Funding foundation', () => {
         ).toBe('true');
         expect(
             wrapper
-                .get('[data-testid="funding-mode-funding_intent"]')
+                .get('[data-testid="funding-mode-funding_code"]')
                 .attributes('aria-selected'),
         ).toBe('false');
         expect(
@@ -463,7 +498,11 @@ describe('Cockpit Funding foundation', () => {
         expect(usePollMock).toHaveBeenCalledWith(
             5000,
             {
-                only: ['funding_read_model', 'funding_notice'],
+                only: [
+                    'funding_read_model',
+                    'funding_requests',
+                    'funding_notice',
+                ],
             },
             {
                 autoStart: true,
@@ -472,7 +511,7 @@ describe('Cockpit Funding foundation', () => {
         );
     });
 
-    it('keeps self top-up primary and changes funding modes without provider activity', async () => {
+    it('keeps two funding paths primary and places provider tooling in advanced controls', async () => {
         const fetch = vi.fn();
         vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Funding, {
@@ -499,37 +538,72 @@ describe('Cockpit Funding foundation', () => {
         ).toBe(false);
 
         await wrapper
+            .get('[data-testid="funding-mode-funding_code"]')
+            .trigger('click');
+        await nextTick();
+
+        expect(fetch).not.toHaveBeenCalled();
+        expect(
+            wrapper
+                .get('[data-testid="funding-mode-funding_code"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+        expect(
+            wrapper.get('#funding-panel-funding_code').attributes('style'),
+        ).not.toContain('display: none');
+        expect(
+            wrapper.get('[data-testid="funding-mode-description"]').text(),
+        ).toContain('Request review');
+
+        await wrapper
             .get('[data-testid="funding-mode-funding_intent"]')
             .trigger('click');
         await nextTick();
 
-        expect(fetch).not.toHaveBeenCalled();
-        expect(
-            wrapper
-                .get('[data-testid="funding-mode-funding_intent"]')
-                .attributes('aria-selected'),
-        ).toBe('true');
         expect(
             wrapper.get('#funding-panel-funding_intent').attributes('style'),
         ).not.toContain('display: none');
-        expect(
-            wrapper.get('[data-testid="funding-mode-description"]').text(),
-        ).toContain('one-time provider instructions');
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('presents a focused Funding Code request and one-time claim path', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_requests: fundingRequestReadModel,
+                standing_funding_address: standingFundingAvailability,
+            },
+        });
 
         await wrapper
-            .get('[data-testid="funding-mode-simulation"]')
+            .get('[data-testid="funding-mode-funding_code"]')
             .trigger('click');
         await nextTick();
 
-        expect(
-            wrapper
-                .get('[data-testid="funding-mode-simulation"]')
-                .attributes('aria-selected'),
-        ).toBe('true');
-        expect(
-            wrapper.get('#funding-panel-simulation').attributes('style'),
-        ).not.toContain('display: none');
-        expect(fetch).not.toHaveBeenCalled();
+        const panel = wrapper.get(
+            '[data-testid="cockpit-account-funding-code"]',
+        );
+
+        expect(panel.text()).toContain('Request an Account Funding Code');
+        expect(panel.text()).toContain('Two different operators');
+        expect(panel.text()).toContain('Bank transfer');
+        expect(panel.text()).toContain('Code ending F9K2');
+        expect(panel.text()).toContain('Claim Funding Code');
+        expect(panel.text()).not.toContain('wallet');
+
+        await wrapper
+            .get('[data-testid="open-funding-request-modal"]')
+            .trigger('click');
+        await nextTick();
+
+        const modal = wrapper.get('[data-testid="funding-request-modal"]');
+
+        expect(modal.text()).toContain('This form cannot credit your Account');
+        expect(modal.text()).toContain('Gold or precious metal');
+        expect(modal.text()).toContain(
+            'Screenshots and files are not accepted',
+        );
+        expect(modal.text()).toContain('independently verified and reserved');
     });
 
     it('refreshes balance projections once for a valid private funding event', async () => {
@@ -558,7 +632,11 @@ describe('Cockpit Funding foundation', () => {
 
         expect(routerReloadMock).toHaveBeenCalledOnce();
         expect(routerReloadMock).toHaveBeenCalledWith({
-            only: ['cockpit_header_read_model', 'funding_read_model'],
+            only: [
+                'cockpit_header_read_model',
+                'funding_read_model',
+                'funding_requests',
+            ],
             preserveScroll: true,
             preserveState: true,
         });
@@ -739,7 +817,11 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('Yes · ₱25.00');
         expect(routerReloadMock).toHaveBeenCalledOnce();
         expect(routerReloadMock).toHaveBeenCalledWith({
-            only: ['cockpit_header_read_model', 'funding_read_model'],
+            only: [
+                'cockpit_header_read_model',
+                'funding_read_model',
+                'funding_requests',
+            ],
             preserveScroll: true,
             preserveState: true,
         });
@@ -878,7 +960,11 @@ describe('Cockpit Funding foundation', () => {
         );
         expect(routerReloadMock).toHaveBeenCalledOnce();
         expect(routerReloadMock).toHaveBeenCalledWith({
-            only: ['cockpit_header_read_model', 'funding_read_model'],
+            only: [
+                'cockpit_header_read_model',
+                'funding_read_model',
+                'funding_requests',
+            ],
             preserveScroll: true,
             preserveState: true,
         });

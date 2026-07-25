@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Http\Requests\Web\Cockpit;
+
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use LBHurtado\XChange\Enums\FundingRequestType;
+
+class CreateCockpitFundingRequestRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user() !== null;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'funding_type' => mb_strtolower(trim((string) $this->input('funding_type'))),
+            'currency' => mb_strtoupper(trim((string) $this->input('currency', 'PHP'))),
+            'description' => trim((string) $this->input('description')),
+            'external_reference' => trim((string) $this->input('external_reference')),
+            'requester_notes' => trim((string) $this->input('requester_notes')),
+            'idempotency_key' => trim((string) $this->input('idempotency_key')),
+        ]);
+    }
+
+    /**
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'funding_type' => [
+                'required',
+                Rule::enum(FundingRequestType::class),
+            ],
+            'requested_value_minor' => ['required', 'integer', 'min:1', 'max:999999999999999'],
+            'currency' => ['required', 'string', 'size:3'],
+            'description' => ['required', 'string', 'min:10', 'max:2000'],
+            'external_reference' => ['nullable', 'string', 'max:191'],
+            'occurred_on' => ['nullable', 'date', 'before_or_equal:today'],
+            'requester_notes' => ['nullable', 'string', 'max:4000'],
+            'idempotency_key' => ['required', 'string', 'max:191'],
+            'approved_value_minor' => ['prohibited'],
+            'recognized_value_minor' => ['prohibited'],
+            'provider_transaction_id' => ['prohibited'],
+            'credit_amount_minor' => ['prohibited'],
+            'provider_payload' => ['prohibited'],
+            'attachment' => ['prohibited'],
+        ];
+    }
+}
