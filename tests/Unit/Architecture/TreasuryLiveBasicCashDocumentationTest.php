@@ -10,6 +10,7 @@ it('documents the position-backed live payout and replay boundary', function () 
     $catalog = file_get_contents(
         $packageRoot.'/docs/lifecycle-scenarios/catalog.md',
     );
+    $agentNotes = file_get_contents($packageRoot.'/AGENTS.md');
 
     expect($architecture)
         ->toContain('Pay Code Reserve Position')
@@ -38,5 +39,15 @@ it('documents the position-backed live payout and replay boundary', function () 
         ->toContain('divisible_open_three_slices_enforced_interval')
         ->toContain('₱75, ₱50, and ₱25')
         ->toContain('treasury_settlement.settlements')
-        ->toContain('not presented as provider cash movement or multiplied by the three claims');
+        ->toContain('not presented as provider cash movement or multiplied by the three claims')
+        ->and($agentNotes)
+        ->toContain('XCHANGE_LIFECYCLE_ALLOW_LIVE_PROVIDER_SCENARIOS=true')
+        ->toContain('--live-provider --confirm-live-transfer')
+        ->toContain('--run-reference=treasury-live-basic-cash-issuer-5-YYYYMMDD-NNN')
+        ->toContain('one ₱150 Pay Code')
+        ->toContain('three provider transfers of ₱75, ₱50, and ₱25')
+        ->toContain('The issuer needs at least ₱165')
+        ->toContain('Reuse the exact same reference')
+        ->toContain('A new reference authorizes a new economic run')
+        ->toContain('provider_transfer_repeated: false');
 });
