@@ -163,7 +163,8 @@ backing.
 
 `x-change:funding:issue-pay-code` is the package-owned operator utility for
 issuing the same recipient-bound Account Funding Pay Code from recognized
-system Client Funds. It is preview-only unless `--commit` is present.
+system Account Funding Reserve. It is preview-only unless `--commit` is
+present.
 
 Preview an issuance:
 
@@ -177,8 +178,8 @@ php artisan x-change:funding:issue-pay-code \
     --json
 ```
 
-After checking the proposed Client Funds and Pay Code Reserve balances, repeat
-the exact command with `--commit`:
+After checking the proposed Account Funding Reserve and Pay Code Reserve
+balances, repeat the exact command with `--commit`:
 
 ```bash
 php artisan x-change:funding:issue-pay-code \
@@ -197,14 +198,17 @@ The command:
 2. selects one explicit active Treasury connection;
 3. parses the exact amount without floating-point input arithmetic;
 4. defaults to a recipient-bound Voucher;
-5. reserves recognized system Client Funds in system Pay Code Reserve;
+5. reserves system Account Funding Reserve in system Pay Code Reserve;
 6. returns the Pay Code and claim URL;
 7. makes no provider call and does not change Provider Inventory; and
 8. returns the same Voucher when the same reference and inputs are replayed.
 
 It does not mint funds, recognize a deposit, or bypass Treasury. Insufficient
-system Client Funds fail closed. `--bearer` is an explicit, separately
-configured exception and is always rejected in production.
+system Account Funding Reserve fails closed. The reserve can only be created
+from authoritatively reconciled opening value through the guarded Treasury
+capitalization workflow; the issuance command cannot create it. `--bearer` is
+an explicit, separately configured exception and is always rejected in
+production.
 
 The production path is disabled twice by default. Enabling it requires both:
 

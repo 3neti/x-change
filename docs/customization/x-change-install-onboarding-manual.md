@@ -230,6 +230,35 @@ php artisan x-change:install --no-migrate
 
 Publish files without running migrations.
 
+For a first deployment where the reconciled provider opening balance is
+confirmed to belong to the system principal:
+
+```bash
+php artisan x-change:install \
+    --force \
+    --treasury-opening-policy=system-capital \
+    --capitalization-authorization-reference=deployment-20260726-001 \
+    --confirm-system-ownership \
+    --no-interaction
+```
+
+This does not accept a balance amount. The installer reads and reconciles each
+selected provider, then moves the exact `Legacy Unattributed` value to the
+system `Account Funding Reserve`. The authorization reference must identify a
+real deployment or control record and must remain stable when retrying the same
+installation.
+
+Use `--treasury-opening-policy=unattributed` (the default) when ownership has
+not been established. Use `--treasury-opening-policy=configured` to apply
+provider-specific settings such as:
+
+```dotenv
+XCHANGE_TREASURY_NETBANK_OPENING_POLICY=system-capital
+XCHANGE_TREASURY_PAYNAMICS_OPENING_POLICY=unattributed
+```
+
+Capitalization options cannot be combined with `--no-treasury`.
+
 ## Runtime Auth Behavior
 
 When mobile-first auth is enabled, x-change configures Fortify at runtime:

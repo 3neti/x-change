@@ -20,6 +20,7 @@ For each enabled provider connection, the system principal owns:
 
 - a **Treasury Clearing Position** for verified value waiting to be attributed; and
 - a **Legacy Unattributed Position** for authoritative opening value whose Account ownership has not yet been established;
+- an **Account Funding Reserve Position** for reconciled opening value that has been explicitly confirmed as system-owned;
 - a **Commercial Clearing Position** for accepted commercial charges waiting to be allocated; and
 - separate provider-cost payable, product revenue, partner commission payable, royalty payable, tax payable, and commercial revenue Positions.
 
@@ -30,11 +31,13 @@ System principal
 ├── netbank-primary / PHP
 │   ├── Treasury Clearing
 │   ├── Legacy Unattributed
+│   ├── Account Funding Reserve
 │   ├── Commercial Clearing
 │   └── Commercial payable and revenue Positions
 └── paynamics-primary / PHP
     ├── Treasury Clearing
     ├── Legacy Unattributed
+    ├── Account Funding Reserve
     ├── Commercial Clearing
     └── Commercial payable and revenue Positions
 
@@ -98,7 +101,7 @@ Then run:
 php artisan x-change:install --no-interaction
 ```
 
-The installer:
+The default installer:
 
 1. validates the durable Treasury identity before any publishing, migration, or provider call;
 2. publishes package assets and migrations;
@@ -107,6 +110,48 @@ The installer:
 5. resolves the system principal;
 6. idempotently provisions zero-balance Treasury Positions; and
 7. reads authoritative provider balances and performs opening reconciliation.
+
+Opening reconciliation deliberately attributes a new provider balance to
+`Legacy Unattributed`. It does not assume that the entire bank or EMI balance
+belongs to the system. To confirm that ownership and make the exact reconciled
+value available for system-issued Account Funding Pay Codes, use the guarded
+opening policy:
+
+```bash
+php artisan x-change:install \
+    --force \
+    --treasury-opening-policy=system-capital \
+    --capitalization-authorization-reference=deployment-20260726-001 \
+    --confirm-system-ownership \
+    --no-interaction
+```
+
+The installer first reconciles the provider, then moves the complete
+`Legacy Unattributed` amount to `Account Funding Reserve`. It accepts no amount
+from the operator. A deterministic operation reference makes retries
+idempotent.
+
+The opening policies are:
+
+- `unattributed` — the safe default; keep opening value unattributed;
+- `system-capital` — capitalize every active provider connection after the
+  explicit ownership confirmation; and
+- `configured` — apply the per-connection policy, allowing NetBank,
+  Paynamics, and future providers to differ.
+
+Equivalent configuration is:
+
+```dotenv
+XCHANGE_TREASURY_OPENING_POLICY=unattributed
+XCHANGE_TREASURY_NETBANK_OPENING_POLICY=unattributed
+XCHANGE_TREASURY_PAYNAMICS_OPENING_POLICY=unattributed
+XCHANGE_TREASURY_OPENING_CAPITALIZATION_ALLOW_PRODUCTION=false
+XCHANGE_TREASURY_OPENING_CAPITALIZATION_ALLOWED_CONNECTIONS=netbank-primary
+```
+
+Production capitalization stays disabled unless
+`XCHANGE_TREASURY_OPENING_CAPITALIZATION_ALLOW_PRODUCTION=true`. Connection
+allowlisting is optional but recommended.
 
 `XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE` must be an explicit, stable identifier for the deployment's legal entity, such as `legal-entity:example-ph`. Do not derive it from `APP_NAME` or silently default it: the reference is persisted with Treasury Position metadata and must remain stable across deployments.
 
@@ -122,9 +167,17 @@ The component commands remain available:
 php artisan x-change:treasury:preflight --no-interaction
 php artisan x-change:treasury:provision --no-interaction
 php artisan x-change:treasury:reconcile-opening --no-interaction
+php artisan x-change:treasury:capitalize-opening \
+    --connection=netbank-primary \
+    --json \
+    --no-interaction
 ```
 
-All accept `--connection=<reference>`; all operational commands support `--json` where machine-readable output is useful.
+The capitalization command is preview-only without `--commit`. A committed
+standalone run additionally requires `--authorization-reference` and
+`--confirm-system-ownership`. All Treasury commands accept
+`--connection=<reference>`; operational commands support `--json` where
+machine-readable output is useful.
 
 ## Opening reconciliation
 
@@ -151,6 +204,35 @@ compare Provider Inventory with total Treasury Positions
 This is deliberately asymmetric. An authoritative increase can be recognized without guessing its owner. A shortage, reversal, or inconsistent internal ledger can never be repaired by silently removing client value.
 
 Provider observation, inventory recognition, and position recognition use stable operation references and database uniqueness constraints. Re-running reconciliation does not recognize the same difference twice.
+
+## Opening system capitalization
+
+Opening capitalization is an attribution change, not a provider deposit and
+not an Inventory change:
+
+```text
+Provider Inventory (unchanged)
+          │
+          └── total Treasury Positions (unchanged)
+                 Legacy Unattributed
+                         │ exact full amount
+                         ▼
+                 Account Funding Reserve
+```
+
+The command re-reads authoritative provider liquidity and requires:
+
+- Provider Inventory equals the provider observation;
+- the sum of active Positions equals Provider Inventory;
+- exactly one Legacy Unattributed Position;
+- exactly one Account Funding Reserve Position; and
+- an empty reserve unless the deterministic capitalization operation already
+  exists.
+
+A shortage, ambiguity, partial amount, changed authorization input, or
+unrecognized reserve balance fails closed. The authorization reference and a
+hash of provider evidence are stored; credentials, raw evidence, and provider
+response bodies are not.
 
 ## Account onboarding
 
