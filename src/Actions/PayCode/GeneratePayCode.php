@@ -268,17 +268,6 @@ class GeneratePayCode
     ): void {
         if (
             ! $issuer instanceof Model
-            || ! in_array(
-                'account_funding',
-                collect((array) data_get(
-                    $input,
-                    'metadata.custom.settlement.destinations',
-                    [],
-                ))
-                    ->map(static fn (mixed $destination): string => mb_strtolower(trim((string) $destination)))
-                    ->all(),
-                true,
-            )
         ) {
             return;
         }

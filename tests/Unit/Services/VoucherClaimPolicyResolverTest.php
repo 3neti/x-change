@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
 
@@ -84,6 +85,75 @@ it('maps current account-funding-also metadata into a legacy dual outcome policy
         ->and($policy->selection)->toBe('claimant')
         ->and($policy->permits('provider_disbursement'))->toBeTrue()
         ->and($policy->permits('account_funding'))->toBeTrue();
+});
+
+it('resolves typed and legacy issuance instructions before a Voucher exists', function () {
+    $typed = app(VoucherClaimPolicyResolver::class)->resolveInstructions(
+        VoucherInstructionsData::from([
+            'cash' => [
+                'amount' => 100,
+                'currency' => 'PHP',
+                'validation' => ['country' => 'PH'],
+            ],
+            'inputs' => ['fields' => []],
+            'feedback' => [
+                'email' => null,
+                'mobile' => null,
+                'webhook' => null,
+            ],
+            'rider' => [
+                'message' => null,
+                'url' => null,
+                'splash' => null,
+            ],
+            'count' => 1,
+            'claim' => [
+                'outcomes' => [[
+                    'key' => 'account_funding',
+                    'pricing_profile' => 'account-funding-v1',
+                ]],
+                'selection' => 'server',
+                'default_outcome' => 'account_funding',
+            ],
+        ]),
+    );
+    $legacy = app(VoucherClaimPolicyResolver::class)->resolveInstructions(
+        VoucherInstructionsData::from([
+            'cash' => [
+                'amount' => 100,
+                'currency' => 'PHP',
+                'validation' => ['country' => 'PH'],
+            ],
+            'inputs' => ['fields' => []],
+            'feedback' => [
+                'email' => null,
+                'mobile' => null,
+                'webhook' => null,
+            ],
+            'rider' => [
+                'message' => null,
+                'url' => null,
+                'splash' => null,
+            ],
+            'count' => 1,
+            'metadata' => [
+                'custom' => [
+                    'settlement' => [
+                        'destinations' => ['account_funding'],
+                        'account_funding' => [
+                            'pricing_profile' => 'account-funding-v1',
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    );
+
+    expect($typed->legacy)->toBeFalse()
+        ->and($typed->permits('account_funding'))->toBeTrue()
+        ->and($typed->outcomes[0]->pricingProfile)->toBe('account-funding-v1')
+        ->and($legacy->legacy)->toBeTrue()
+        ->and($legacy->permits('account_funding'))->toBeTrue();
 });
 
 /**

@@ -8,6 +8,7 @@ use BackedEnum;
 use JsonException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialCatalogData;
 use LBHurtado\XCommerce\Data\CommercialQuoteData;
@@ -18,6 +19,10 @@ use LBHurtado\XCommerce\Services\DeterministicCommercialWaterfallCalculator;
 
 final class PayCodeCommercialQuoteService
 {
+    public function __construct(
+        private readonly VoucherClaimPolicyResolver $claimPolicies,
+    ) {}
+
     /**
      * @throws JsonException
      */
@@ -127,31 +132,27 @@ final class PayCodeCommercialQuoteService
     private function usesAccountFundingProfile(
         VoucherInstructionsData $instructions,
     ): bool {
-        $destinations = collect((array) data_get(
-            $instructions,
-            'metadata.custom.settlement.destinations',
-            [],
-        ))
-            ->map(static fn (mixed $destination): string => mb_strtolower(trim((string) $destination)))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        $policy = $this->claimPolicies->resolveInstructions($instructions);
+        $outcomes = collect($policy->outcomes);
+        $usesAccountFunding = $policy->permits('account_funding');
 
-        if (
-            in_array('account_funding', $destinations, true)
-            && $destinations !== ['account_funding']
-        ) {
+        if ($usesAccountFunding && $outcomes->count() !== 1) {
             throw new PayCodeIssuanceFailed(
                 'Dual-outcome Pay Codes remain disabled until execution-cost reserves are active.',
             );
         }
 
-        return $destinations === ['account_funding']
-            && data_get(
-                $instructions,
-                'metadata.custom.settlement.account_funding.pricing_profile',
-            ) === 'account-funding-v1';
+        if (! $usesAccountFunding) {
+            return false;
+        }
+
+        if ($outcomes->sole()->pricingProfile !== 'account-funding-v1') {
+            throw new PayCodeIssuanceFailed(
+                'Account Funding Pay Codes require the account-funding-v1 pricing profile.',
+            );
+        }
+
+        return true;
     }
 
     /**

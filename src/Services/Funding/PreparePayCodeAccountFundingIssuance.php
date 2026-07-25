@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Funding;
 
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Data\Claim\VoucherClaimPolicyData;
 use LBHurtado\XChange\Enums\PayCodeSettlementDestination;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 
@@ -16,6 +19,7 @@ final readonly class PreparePayCodeAccountFundingIssuance
     public function __construct(
         private TreasuryProviderConnectionCatalog $connections,
         private TreasuryPayCodeAccountingService $accounting,
+        private VoucherClaimPolicyResolver $claimPolicies,
     ) {}
 
     /**
@@ -30,18 +34,29 @@ final readonly class PreparePayCodeAccountFundingIssuance
         array $commercial,
         string $provider,
     ): void {
-        $destinations = $this->destinations($input);
+        $policy = $this->claimPolicies->resolveInstructions(
+            VoucherInstructionsData::from($input),
+        );
 
         if (
-            in_array(PayCodeSettlementDestination::AccountFunding->value, $destinations, true)
-            && $destinations !== [PayCodeSettlementDestination::AccountFunding->value]
+            $policy->permits(PayCodeSettlementDestination::AccountFunding->value)
+            && count($policy->outcomes) !== 1
         ) {
             throw new PayCodeIssuanceFailed(
                 'Dual-outcome Pay Codes remain disabled until execution-cost reserves are active.',
             );
         }
 
-        if (! $this->isRequested($input)) {
+        if (
+            $policy->permits(PayCodeSettlementDestination::AccountFunding->value)
+            && ! $this->isRequested($policy)
+        ) {
+            throw new PayCodeIssuanceFailed(
+                'Account Funding Pay Codes require the account-funding-v1 pricing profile.',
+            );
+        }
+
+        if (! $this->isRequested($policy)) {
             return;
         }
 
@@ -102,31 +117,17 @@ final readonly class PreparePayCodeAccountFundingIssuance
     /**
      * @param  array<string, mixed>  $input
      */
-    private function isRequested(array $input): bool
+    private function isRequested(VoucherClaimPolicyData $policy): bool
     {
-        return $this->destinations($input) === [
-            PayCodeSettlementDestination::AccountFunding->value,
-        ] && data_get(
-            $input,
-            'metadata.custom.settlement.account_funding.pricing_profile',
-        ) === 'account-funding-v1';
-    }
+        if (
+            count($policy->outcomes) !== 1
+            || ! $policy->permits(
+                PayCodeSettlementDestination::AccountFunding->value,
+            )
+        ) {
+            return false;
+        }
 
-    /**
-     * @param  array<string, mixed>  $input
-     * @return list<string>
-     */
-    private function destinations(array $input): array
-    {
-        return collect((array) data_get(
-            $input,
-            'metadata.custom.settlement.destinations',
-            [],
-        ))
-            ->map(static fn (mixed $destination): string => mb_strtolower(trim((string) $destination)))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        return $policy->outcomes[0]->pricingProfile === 'account-funding-v1';
     }
 }

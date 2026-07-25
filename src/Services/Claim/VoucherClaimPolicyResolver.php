@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Claim;
 
 use LBHurtado\Voucher\Data\ClaimOutcomeInstructionData;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Claim\VoucherClaimOutcomeData;
@@ -17,28 +18,54 @@ final readonly class VoucherClaimPolicyResolver
         $instruction = $voucher->instructions->claim;
 
         if ($instruction !== null) {
-            $outcomes = array_map(
-                static fn (ClaimOutcomeInstructionData $outcome): VoucherClaimOutcomeData => new VoucherClaimOutcomeData(
-                    key: $outcome->key,
-                    pricingProfile: $outcome->pricing_profile,
-                    requirements: $outcome->requirements ?? [],
-                ),
-                $instruction->outcomes,
-            );
-
-            return new VoucherClaimPolicyData(
-                profile: $instruction->profile,
-                outcomes: $outcomes,
-                selection: $instruction->selection,
-                consumption: $instruction->consumption,
-                defaultOutcome: $instruction->default_outcome,
-                onboarding: $instruction->onboarding?->toArray(),
-                claimantBinding: $instruction->claimant?->toArray(),
-                legacy: false,
-            );
+            return $this->typedPolicy($voucher->instructions);
         }
 
-        $outcomeKeys = $this->legacyOutcomeKeys($voucher);
+        return $this->legacyPolicy($this->legacyVoucherOutcomeKeys($voucher));
+    }
+
+    public function resolveInstructions(
+        VoucherInstructionsData $instructions,
+    ): VoucherClaimPolicyData {
+        if ($instructions->claim !== null) {
+            return $this->typedPolicy($instructions);
+        }
+
+        return $this->legacyPolicy(
+            $this->legacyIssuanceOutcomeKeys($instructions),
+        );
+    }
+
+    private function typedPolicy(
+        VoucherInstructionsData $instructions,
+    ): VoucherClaimPolicyData {
+        $instruction = $instructions->claim;
+        $outcomes = array_map(
+            static fn (ClaimOutcomeInstructionData $outcome): VoucherClaimOutcomeData => new VoucherClaimOutcomeData(
+                key: $outcome->key,
+                pricingProfile: $outcome->pricing_profile,
+                requirements: $outcome->requirements ?? [],
+            ),
+            $instruction->outcomes,
+        );
+
+        return new VoucherClaimPolicyData(
+            profile: $instruction->profile,
+            outcomes: $outcomes,
+            selection: $instruction->selection,
+            consumption: $instruction->consumption,
+            defaultOutcome: $instruction->default_outcome,
+            onboarding: $instruction->onboarding?->toArray(),
+            claimantBinding: $instruction->claimant?->toArray(),
+            legacy: false,
+        );
+    }
+
+    /**
+     * @param  non-empty-list<string>  $outcomeKeys
+     */
+    private function legacyPolicy(array $outcomeKeys): VoucherClaimPolicyData
+    {
         $outcomes = array_map(
             static fn (string $key): VoucherClaimOutcomeData => new VoucherClaimOutcomeData(
                 key: $key,
@@ -64,7 +91,7 @@ final readonly class VoucherClaimPolicyResolver
     /**
      * @return non-empty-list<string>
      */
-    private function legacyOutcomeKeys(Voucher $voucher): array
+    private function legacyVoucherOutcomeKeys(Voucher $voucher): array
     {
         $type = $voucher->voucher_type ?? $voucher->instructions->voucher_type;
 
@@ -94,5 +121,36 @@ final readonly class VoucherClaimPolicyResolver
             ->all();
 
         return $outcomes === [] ? ['provider_disbursement'] : $outcomes;
+    }
+
+    /**
+     * @return non-empty-list<string>
+     */
+    private function legacyIssuanceOutcomeKeys(
+        VoucherInstructionsData $instructions,
+    ): array {
+        if ($instructions->voucher_type === VoucherType::PAYABLE) {
+            return ['payment'];
+        }
+
+        if ($instructions->voucher_type === VoucherType::SETTLEMENT) {
+            return ['settlement'];
+        }
+
+        $destinations = collect((array) data_get(
+            $instructions,
+            'metadata.custom.settlement.destinations',
+            [],
+        ))
+            ->map(static fn (mixed $destination): string => match (mb_strtolower(trim((string) $destination))) {
+                'provider_payout' => 'provider_disbursement',
+                default => mb_strtolower(trim((string) $destination)),
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return $destinations === [] ? ['provider_disbursement'] : $destinations;
     }
 }

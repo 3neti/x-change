@@ -63,16 +63,19 @@ it('issues an Account Funding Pay Code with a no-payout commercial profile and T
                 'og_source' => null,
             ],
             'provider' => 'netbank',
+            'claim' => [
+                'outcomes' => [[
+                    'key' => 'account_funding',
+                    'pricing_profile' => 'account-funding-v1',
+                ]],
+                'selection' => 'server',
+                'consumption' => 'one_of',
+                'default_outcome' => 'account_funding',
+                'onboarding' => ['mode' => 'if_required'],
+                'claimant' => ['mode' => 'unbound'],
+            ],
             'metadata' => [
                 'issuer_id' => (string) $issuer->getKey(),
-                'custom' => [
-                    'settlement' => [
-                        'destinations' => ['account_funding'],
-                        'account_funding' => [
-                            'pricing_profile' => 'account-funding-v1',
-                        ],
-                    ],
-                ],
             ],
         ],
     ));
