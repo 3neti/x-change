@@ -282,7 +282,9 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
             ),
         );
 
-        return now()->addSeconds($ttlSeconds);
+        return Carbon::parse(
+            now()->addSeconds($ttlSeconds)->toIso8601String(),
+        );
     }
 
     private function findExisting(

@@ -71,7 +71,7 @@ final readonly class ConfigSystemAccountFundingPayCodeAuthorization implements S
 
         if (! (bool) config(
             'x-change.funding.system_pay_codes.enabled',
-            false,
+            ! $this->application->environment('production'),
         )) {
             throw new RuntimeException(
                 'System Account Funding Pay Code issuance is disabled.',

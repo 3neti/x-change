@@ -143,6 +143,7 @@ use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Contracts\SettlementFlowPreparationContract;
 use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
+use LBHurtado\XChange\Contracts\SystemAccountFundingPayCodeAuthorizationContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
@@ -254,6 +255,7 @@ use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
+use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthorization;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -1149,6 +1151,18 @@ class XChangeServiceProvider extends ServiceProvider
             $this->app->singleton(ProviderFundingPolicyContract::class, function ($app) {
                 return $app->make(config('x-change.services.provider_funding_policy', ProviderAwareFundingPolicy::class));
             });
+        }
+
+        if (! $this->app->bound(SystemAccountFundingPayCodeAuthorizationContract::class)) {
+            $this->app->singleton(
+                SystemAccountFundingPayCodeAuthorizationContract::class,
+                function ($app) {
+                    return $app->make(config(
+                        'x-change.services.system_account_funding_pay_code_authorization',
+                        ConfigSystemAccountFundingPayCodeAuthorization::class,
+                    ));
+                },
+            );
         }
     }
 

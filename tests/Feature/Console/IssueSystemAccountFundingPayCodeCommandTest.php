@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Date;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
@@ -13,7 +15,12 @@ use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthorization;
 use LBHurtado\XChange\Tests\Fakes\User;
 
+afterEach(function (): void {
+    Date::useDefault();
+});
+
 it('previews without mutation then issues and replays one recipient-bound code', function (): void {
+    Date::useClass(CarbonImmutable::class);
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);
     $recipient = actingAsTestUser(0);
