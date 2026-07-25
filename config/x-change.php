@@ -543,6 +543,14 @@ return [
             'claim_middleware' => ['throttle:12,1'],
             'attachments_enabled' => false,
         ],
+        'pay_code_claims' => [
+            'inspection_ttl_seconds' => (int) env(
+                'XCHANGE_PAY_CODE_FUNDING_INSPECTION_TTL_SECONDS',
+                600,
+            ),
+            'inspect_middleware' => ['throttle:12,1'],
+            'claim_middleware' => ['throttle:12,1'],
+        ],
         'intent_ttl_seconds' => (int) env('XCHANGE_FUNDING_INTENT_TTL_SECONDS', 1800),
         'instruction_lock_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_SECONDS', 30),
         'instruction_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_WAIT_SECONDS', 5),

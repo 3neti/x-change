@@ -54,6 +54,9 @@ class CockpitFundingPageController extends Controller
             'funding_instruction' => $request->session()->pull('funding_instruction'),
             'funding_notice' => $request->session()->pull('funding_notice')
                 ?? $request->session()->pull('funding_account_notice'),
+            'pay_code_funding_preview' => $request->session()->pull(
+                'pay_code_funding_preview',
+            ),
             'funding_poll_interval' => max(
                 1000,
                 (int) config('x-change.funding.ui_refresh_interval_milliseconds', 5000),
