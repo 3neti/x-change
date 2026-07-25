@@ -81,7 +81,7 @@ const fundingWorkspaceModes = computed(() => [
         key: 'self_top_up' as const,
         label: 'Self Top-Up',
         description:
-            'Reveal your reusable QR Ph address, then check NetBank for incoming funds.',
+            'Scan your reusable QR Ph address, then check NetBank for incoming funds.',
     },
     {
         key: 'funding_code' as const,

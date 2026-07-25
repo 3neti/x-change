@@ -537,6 +537,9 @@ describe('Cockpit Funding foundation', () => {
                 .map((input) => (input.element as HTMLInputElement).value),
         ).toEqual(['Treasury Desk', 'Manila']);
         expect(wrapper.text()).not.toContain('Reveal Account Funding QR');
+        expect(wrapper.text()).not.toContain(
+            'Reveal your reusable QR Ph address',
+        );
         expect(wrapper.text()).not.toContain('Hide sensitive QR');
         expect(wrapper.text()).not.toContain('Top up an exact amount');
         expect(wrapper.text()).not.toContain('Create one-time instructions');
