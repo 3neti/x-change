@@ -21,6 +21,7 @@ use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningManagerContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
+use LBHurtado\XChange\Contracts\SystemAccountFundingPayCodeAuthorizationContract;
 use LBHurtado\XChange\Contracts\SystemWalletResolverContract;
 use LBHurtado\XChange\Contracts\TerminologyServiceContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
@@ -78,6 +79,7 @@ use LBHurtado\XChange\Services\Execution\XFeedbackExecutionResultFeedbackHandoff
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
+use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthorization;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\LedgerPooledProviderTopology;
 use LBHurtado\XChange\Services\ManualProviderTopology;
@@ -344,6 +346,7 @@ return [
         'issuance' => PayCodeIssuanceService::class,
         'wallet_access' => WalletAccessService::class,
         'funding_account_credit' => BavixFundingAccountCredit::class,
+        'system_account_funding_pay_code_authorization' => ConfigSystemAccountFundingPayCodeAuthorization::class,
         'funding_destination_resolver' => DefaultFundingDestinationResolver::class,
         'idempotency_store' => CacheIdempotencyStore::class,
         'issuer_onboarding' => DefaultIssuerOnboardingService::class,
@@ -385,6 +388,7 @@ return [
         WalletAccessContract::class => 'wallet_access',
         FundingAccountCreditContract::class => 'funding_account_credit',
         FundingAccountRecoveryContract::class => 'funding_account_credit',
+        SystemAccountFundingPayCodeAuthorizationContract::class => 'system_account_funding_pay_code_authorization',
         FundingDestinationResolverContract::class => 'funding_destination_resolver',
         IdempotencyStoreContract::class => 'idempotency_store',
         IssuerOnboardingContract::class => 'issuer_onboarding',
@@ -528,6 +532,35 @@ return [
     'funding' => [
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
         'api_middleware' => ['auth'],
+        'system_pay_codes' => [
+            'enabled' => (bool) env(
+                'XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
+            'allow_production' => (bool) env(
+                'XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_ALLOW_PRODUCTION',
+                false,
+            ),
+            'bearer_enabled' => (bool) env(
+                'XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_BEARER_ENABLED',
+                false,
+            ),
+            'maximum_amount_minor' => (int) env(
+                'XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_MAXIMUM_AMOUNT_MINOR',
+                5_000_000,
+            ),
+            'default_ttl_seconds' => (int) env(
+                'XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_TTL_SECONDS',
+                604800,
+            ),
+            'allowed_connections' => array_values(array_filter(array_map(
+                static fn (string $reference): string => trim($reference),
+                explode(',', (string) env(
+                    'XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_ALLOWED_CONNECTIONS',
+                    '',
+                )),
+            ))),
+        ],
         'requests' => [
             'reviewer_ids' => array_values(array_filter(array_map(
                 static fn (string $id): string => trim($id),
