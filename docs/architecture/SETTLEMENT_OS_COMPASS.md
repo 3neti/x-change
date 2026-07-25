@@ -2058,6 +2058,7 @@ Recommended actions:
 1. Continue Wave 6 production hardening without changing current UI behavior.
 2. Keep durable activity production default disabled.
 3. Preserve Quick Generate behavior, wallet behavior, voucher behavior, redaction behavior, and money movement semantics.
+4. Keep the queued `Quick Generate Treasury Movement Preview / Result Explanation` in the Cockpit Compass aligned with the Treasury accounting boundary: projected and realized facts must remain distinct, Inventory must reconcile to active Positions, and Cockpit must consume sanitized read models rather than post accounting operations.
 
 ## x-journal Initial Intent
 

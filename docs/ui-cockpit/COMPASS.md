@@ -2592,6 +2592,33 @@ Purpose:
 - keep durable activity production default disabled
 - preserve Quick Generate behavior, wallet behavior, voucher behavior, redaction behavior, and money movement semantics
 
+Queued Cockpit slice:
+
+```text
+Quick Generate Treasury Movement Preview / Result Explanation
+```
+
+Intent:
+
+- Before submission, show a compact, explicitly projected movement preview using dynamic pricing, funding, and Treasury read-model facts.
+- After generation, replace or pair the projection with realized issuance facts.
+- Keep the claim row visibly pending until authoritative claim and provider reconciliation facts exist; after claim, refresh it from the durable lifecycle/Treasury read model.
+- Use the operator-friendly three-stage explanation: `Before issuance`, `After issuance`, and `After claim`.
+- Show `Provider / Inventory`, the Account's `Client Funds` and `Pay Code Reserve` Positions, and the system allocation Positions in one scan-friendly table.
+- Explain the issuance total as beneficiary principal plus the accepted commercial waterfall, including provider cost, product revenue, partner commission, commercial revenue, royalty, and tax when non-zero.
+- State the conservation control: Provider Inventory must equal the sum of active Positions after each realized stage.
+- Keep projection and realized facts visually distinct; never present an estimate as an accounting event or provider observation.
+- Derive every amount from package-owned pricing, commercial-waterfall, Pay Code, Treasury, and provider read models. Never hardcode the example amounts from a lifecycle run.
+- Prefer `Client Funds`, `Reserve`, `Provider Inventory`, and `System allocations` in operator UI; do not introduce `wallet` as new presentation vocabulary.
+- Keep the primary Quick Generate result concise. The full movement table may use a compact disclosure on small screens, but the beneficiary principal, total charge, and realized status should remain immediately scannable.
+
+Safety boundary:
+
+- Cockpit explains and projects existing backend-authorized behavior; it does not post Treasury operations, call providers, claim Pay Codes, or become accounting truth.
+- A provider/Inventory mismatch must render as `sync pending` or `review required`, not as a balanced combined value.
+- Redact provider evidence, internal operation identifiers, account numbers, raw payloads, and credentials.
+- This is a queued Compass TODO only. No Quick Generate runtime or UI behavior is authorized by this entry.
+
 Completed host integration boundary:
 
 Current boundary:
