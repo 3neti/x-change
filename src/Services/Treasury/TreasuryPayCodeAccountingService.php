@@ -22,6 +22,7 @@ use LBHurtado\XChange\Data\Treasury\TreasuryPayCodeSettlementData;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\VoucherClaim;
 
 final readonly class TreasuryPayCodeAccountingService
 {
@@ -124,6 +125,7 @@ final readonly class TreasuryPayCodeAccountingService
         Voucher $voucher,
         DisbursementReconciliation $reconciliation,
         string $connectionReference,
+        ?int $reservedPrincipalMinor = null,
     ): TreasuryPayCodeSettlementData {
         $currency = mb_strtoupper((string) $reconciliation->currency);
         $connection = $this->connection($connectionReference, $currency);
@@ -137,7 +139,7 @@ final readonly class TreasuryPayCodeAccountingService
         $reservationScope = $this->scope(
             $connection,
             $voucher,
-            $providerPrincipalMinor,
+            $reservedPrincipalMinor ?? $providerPrincipalMinor,
         );
         $settlementScope = hash('sha256', implode('|', [
             $connection->provider,
@@ -229,24 +231,38 @@ final readonly class TreasuryPayCodeAccountingService
         $beneficiaryAmountMinor = (int) round(
             ((float) $reconciliation->amount) * 100,
         );
-        $voucherAmountMinor = (int) round(
-            ((float) data_get(
-                $voucher->metadata,
-                'disbursement.amount',
-                -1,
-            )) * 100,
+        $sliceNumber = filter_var(
+            data_get($reconciliation->meta, 'slice_number'),
+            FILTER_VALIDATE_INT,
+            FILTER_NULL_ON_FAILURE,
         );
+        $voucherClaim = $sliceNumber === null
+            ? null
+            : VoucherClaim::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->where('claim_number', $sliceNumber)
+                ->whereIn('status', ['succeeded', 'withdrawn'])
+                ->first();
+        $evidenceAmountMinor = $sliceNumber === null
+            ? (int) round(
+                ((float) data_get(
+                    $voucher->metadata,
+                    'disbursement.amount',
+                    -1,
+                )) * 100,
+            )
+            : (int) ($voucherClaim?->disbursed_amount_minor ?? -1);
         $configuredRailFeeMinor = (int) data_get(
             $voucher->metadata,
             'disbursement.fee_amount',
-            -1,
+            0,
         );
         $valid = (int) $reconciliation->voucher_id === (int) $voucher->getKey()
             && $reconciliation->provider === $connection->provider
             && $reconciliation->status === 'succeeded'
             && filled($reconciliation->provider_transaction_id)
             && $beneficiaryAmountMinor > 0
-            && $voucherAmountMinor === $beneficiaryAmountMinor
+            && $evidenceAmountMinor === $beneficiaryAmountMinor
             && $configuredRailFeeMinor >= 0;
 
         if (! $valid) {

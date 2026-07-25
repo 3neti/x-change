@@ -8,7 +8,9 @@ use LBHurtado\Voucher\Contracts\ExecutionDriverContract;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use Throwable;
 
 final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
@@ -16,6 +18,7 @@ final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
     public function __construct(
         private readonly DefaultExecutionDriver $defaultDriver,
         private readonly ExecutionCashDisbursementPollerContract $poller,
+        private readonly SubmitPayCodeClaim $submitPayCodeClaim,
     ) {}
 
     public function key(): string
@@ -29,7 +32,9 @@ final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
         $normalized = $this->normalizeContext($context);
 
         try {
-            $result = $this->defaultDriver->execute($normalized);
+            $result = data_get($context->meta, 'claim.amount') === null
+                ? $this->defaultDriver->execute($normalized)
+                : $this->executeAmountClaim($context);
         } catch (Throwable $exception) {
             return ExecutionResultData::failed(
                 driver: $this->key(),
@@ -86,6 +91,46 @@ final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
                 'settlement_rail' => $disbursement['settlement_rail'] ?? null,
                 'destination_account' => $disbursement['destination_account'] ?? null,
             ],
+        );
+    }
+
+    private function executeAmountClaim(
+        ExecutionContextData $context,
+    ): ExecutionResultData {
+        if ($context->voucher === null) {
+            return ExecutionResultData::failed(
+                driver: $this->key(),
+                failure: 'missing_voucher',
+            );
+        }
+
+        $result = $this->submitPayCodeClaim->handle(
+            $context->voucher,
+            (array) data_get($context->meta, 'claim', []),
+        );
+
+        if (! $result instanceof SubmitPayCodeClaimResultData) {
+            return ExecutionResultData::failed(
+                driver: $this->key(),
+                failure: 'claim_approval_required',
+            );
+        }
+
+        if (! $result->claimed || ! in_array(
+            $result->status,
+            ['succeeded', 'withdrawn'],
+            true,
+        )) {
+            return ExecutionResultData::failed(
+                driver: $this->key(),
+                failure: 'claim_'.$result->status,
+                metadata: $result->toArray(),
+            );
+        }
+
+        return ExecutionResultData::succeeded(
+            driver: $this->key(),
+            metadata: $result->toArray(),
         );
     }
 

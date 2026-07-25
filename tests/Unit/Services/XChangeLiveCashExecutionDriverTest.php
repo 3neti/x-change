@@ -5,24 +5,37 @@ declare(strict_types=1);
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 
-it('delegates redemption to the voucher default driver and returns reconciled live cash execution metadata', function () {
+it('uses the canonical claim pipeline for an amount slice and returns reconciled live cash execution metadata', function () {
     $default = Mockery::mock(DefaultExecutionDriver::class);
-    $default
-        ->shouldReceive('execute')
+    $default->shouldNotReceive('execute');
+    $claims = Mockery::mock(SubmitPayCodeClaim::class);
+    $claims
+        ->shouldReceive('handle')
         ->once()
-        ->withArgs(function (ExecutionContextData $context): bool {
-            return $context->meta['mobile'] === '09173011987'
-                && $context->meta['bank_account'] === 'GXCHPHM2XXX:09173011987'
-                && $context->meta['amount'] === 75
-                && $context->meta['inputs'] === [];
+        ->withArgs(function (mixed $voucher, array $claim): bool {
+            return $voucher instanceof Voucher
+                && $claim['mobile'] === '09173011987'
+                && $claim['bank_account']['account_number'] === '09173011987'
+                && $claim['amount'] === 75
+                && $claim['inputs'] === [];
         })
-        ->andReturn(ExecutionResultData::succeeded('default', [
-            'voucher_code' => 'TEST-LIVE',
-        ]));
+        ->andReturn(new SubmitPayCodeClaimResultData(
+            voucher_code: 'TEST-LIVE',
+            claim_type: 'withdraw',
+            claimed: true,
+            status: 'succeeded',
+            requested_amount: 75,
+            disbursed_amount: 75,
+            currency: 'PHP',
+            remaining_balance: 75,
+        ));
 
     $poller = Mockery::mock(ExecutionCashDisbursementPollerContract::class);
     $poller
@@ -46,7 +59,8 @@ it('delegates redemption to the voucher default driver and returns reconciled li
             ],
         ]);
 
-    $result = (new XChangeLiveCashExecutionDriver($default, $poller))->execute(new ExecutionContextData(
+    $voucher = new Voucher;
+    $result = (new XChangeLiveCashExecutionDriver($default, $poller, $claims))->execute(new ExecutionContextData(
         contact: new Contact(['mobile' => '09173011987']),
         voucherCode: 'TEST-LIVE',
         meta: [
@@ -65,6 +79,7 @@ it('delegates redemption to the voucher default driver and returns reconciled li
                 'poll' => 1,
             ],
         ],
+        voucher: $voucher,
     ));
 
     expect($result->successful)->toBeTrue()
@@ -91,8 +106,10 @@ it('fails when the voucher default driver rejects redemption before polling', fu
 
     $poller = Mockery::mock(ExecutionCashDisbursementPollerContract::class);
     $poller->shouldNotReceive('poll');
+    $claims = Mockery::mock(SubmitPayCodeClaim::class);
+    $claims->shouldNotReceive('handle');
 
-    $result = (new XChangeLiveCashExecutionDriver($default, $poller))->execute(new ExecutionContextData(
+    $result = (new XChangeLiveCashExecutionDriver($default, $poller, $claims))->execute(new ExecutionContextData(
         contact: new Contact(['mobile' => '09173011987']),
         voucherCode: 'TEST-LIVE',
     ));

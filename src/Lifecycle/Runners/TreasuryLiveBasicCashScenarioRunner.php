@@ -11,11 +11,13 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryOpeningBalanceConnectionData;
+use LBHurtado\XChange\Data\Treasury\TreasuryPayCodeSettlementData;
 use LBHurtado\XChange\Enums\TreasuryOpeningBalanceStatus;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleMoneyRunStore;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\LifecycleMoneyRun;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Treasury\TreasuryLifecycleAccountingSnapshot;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
@@ -215,31 +217,93 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 attempts: 5,
             );
             $afterIssuance = $this->accounting->capture($context->issuer);
-            $execution = $this->execution->run(new ScenarioRunContext(
-                output: $context->output,
-                scenarioKey: $context->scenarioKey,
-                scenario: $context->scenario,
-                issuer: $bootstrap->issuer,
-                generated: $bootstrap->generated,
-                voucher: $bootstrap->voucher,
-                attempts: $context->attempts,
-                baseClaimMobile: $bootstrap->baseClaimMobile,
-                estimate: $bootstrap->estimate,
-                idempotencyKey: $bootstrap->idempotencyKey,
-                readiness: $context->readiness,
-            ));
-            $transferSucceeded = data_get($execution->payload, 'success') === true;
-            $reconciliation = $this->successfulReconciliation(
-                (int) $bootstrap->voucher->getKey(),
-            );
-            $settlement = $transferSucceeded && $reconciliation !== null
-                ? $this->payCodeAccounting->settle(
-                    accountOwner: $context->issuer,
+            $claims = [];
+            $settlements = [];
+            $afterClaims = [];
+
+            foreach ($this->sliceOperations($context) as $index => $slice) {
+                $waitBeforeSeconds = $this->waitBeforeSeconds(
+                    $context,
+                    $slice,
+                    $index,
+                );
+
+                if ($waitBeforeSeconds > 0) {
+                    sleep($waitBeforeSeconds);
+                }
+
+                $execution = $this->execution->run(new ScenarioRunContext(
+                    output: $context->output,
+                    scenarioKey: $context->scenarioKey,
+                    scenario: $this->scenarioForOperation(
+                        $context->scenario,
+                        $slice['operation'],
+                    ),
+                    issuer: $bootstrap->issuer,
+                    generated: $bootstrap->generated,
                     voucher: $bootstrap->voucher->refresh(),
-                    reconciliation: $reconciliation,
-                    connectionReference: $connectionReference,
-                )
-                : null;
+                    attempts: $context->attempts,
+                    baseClaimMobile: $bootstrap->baseClaimMobile,
+                    estimate: $bootstrap->estimate,
+                    idempotencyKey: $bootstrap->idempotencyKey,
+                    readiness: $context->readiness,
+                ));
+                $safeExecution = $this->safeExecution($execution->payload);
+                $reconciliation = $this->successfulReconciliation(
+                    (int) $bootstrap->voucher->getKey(),
+                    (string) data_get(
+                        $safeExecution,
+                        'reconciliation.provider_transaction_id',
+                    ),
+                );
+                $settlement = data_get($execution->payload, 'success') === true
+                    && $reconciliation !== null
+                    ? $this->payCodeAccounting->settle(
+                        accountOwner: $context->issuer,
+                        voucher: $bootstrap->voucher->refresh(),
+                        reconciliation: $reconciliation,
+                        connectionReference: $connectionReference,
+                        reservedPrincipalMinor: $providerPrincipalMinor,
+                    )
+                    : null;
+                $voucherClaim = $this->claimForSlice(
+                    (int) $bootstrap->voucher->getKey(),
+                    $index + 1,
+                    $slice['key'],
+                    $waitBeforeSeconds,
+                );
+                $afterSlice = $this->accounting->capture($context->issuer);
+                $afterClaims[] = $afterSlice;
+                $claims[] = [
+                    'key' => $slice['key'],
+                    'number' => $index + 1,
+                    'wait_before_seconds' => $waitBeforeSeconds,
+                    'requested_amount_minor' => (int) round(
+                        ((float) data_get(
+                            $slice,
+                            'operation.claim.amount',
+                            0,
+                        )) * 100,
+                    ),
+                    'execution' => $safeExecution,
+                    'claim_ledger' => $voucherClaim === null
+                        ? null
+                        : $this->safeClaim($voucherClaim),
+                    'treasury_settlement' => $settlement === null
+                        ? null
+                        : $this->settlementPayload($settlement),
+                    'accounting_after_claim' => $afterSlice,
+                ];
+
+                if ($settlement === null) {
+                    break;
+                }
+
+                $settlements[] = $settlement;
+            }
+
+            $expectedSliceCount = count($this->sliceOperations($context));
+            $transferSucceeded = count($settlements) === $expectedSliceCount;
             $postTransfer = $this->openingBalances->observe([$connectionReference]);
             $afterClaim = $this->accounting->capture(
                 $context->issuer,
@@ -249,18 +313,26 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 $postTransfer->connections,
             );
             $success = $transferSucceeded
-                && $settlement !== null
                 && $accountingStatus === 'reconciled';
+            $senderSystemChargeMinor = (int) round(
+                ((float) data_get(
+                    $bootstrap->estimate,
+                    'total',
+                    0,
+                )) * 100,
+            );
             $result = $this->payload($context, [
                 'success' => $success,
                 'message' => $success
-                    ? 'The live Pay Code transfer completed and the provider balance was reconciled.'
+                    ? 'The three live Pay Code slices completed and the provider balance was reconciled.'
                     : ($transferSucceeded
                         ? ($accountingStatus === 'provider_sync_pending'
-                            ? 'The transfer and Treasury posting completed; the provider balance update is still pending.'
-                            : 'The transfer completed, but provider liquidity now requires accounting review.')
-                        : 'The Pay Code claim did not complete successfully. The run is closed to prevent a duplicate transfer.'),
+                            ? 'All three transfers and Treasury postings completed; the provider balance update is still pending.'
+                            : 'All three transfers completed, but provider liquidity now requires accounting review.')
+                        : 'The sliced Pay Code lifecycle did not complete. The run is closed to prevent any transfer from being repeated.'),
                 'provider_transfer_succeeded' => $transferSucceeded,
+                'provider_transfers_completed' => count($settlements),
+                'provider_transfers_expected' => $expectedSliceCount,
                 'accounting_status' => $accountingStatus,
                 'pay_code' => [
                     'id' => (int) $bootstrap->voucher->getKey(),
@@ -269,29 +341,54 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                     'issued' => true,
                     'claimed' => $bootstrap->voucher->refresh()->isRedeemed(),
                 ],
-                'execution' => $this->safeExecution($execution->payload),
-                'treasury_settlement' => $settlement === null
-                    ? null
-                    : [
-                        'reservation_operation_reference' => $reservation->operationReference,
-                        'derecognition_operation_reference' => $settlement->derecognitionOperationReference,
-                        'inventory_adjustment_operation_reference' => $settlement->inventoryAdjustmentOperationReference,
-                        'beneficiary_amount_minor' => $settlement->beneficiaryAmountMinor,
-                        'provider_inventory_outflow_minor' => $settlement->providerInventoryOutflowMinor,
-                        'configured_rail_fee_minor' => $settlement->configuredRailFeeMinor,
-                        'sender_system_charge_minor' => (int) round(
-                            ((float) data_get(
-                                $bootstrap->estimate,
-                                'total',
-                                0,
-                            )) * 100,
+                'execution' => data_get($claims, '0.execution'),
+                'executions' => array_values(array_filter(array_map(
+                    static fn (array $claim): mixed => $claim['execution'],
+                    $claims,
+                ))),
+                'claims' => $claims,
+                'treasury_settlement' => [
+                    'reservation_operation_reference' => $reservation->operationReference,
+                    'beneficiary_amount_minor' => array_sum(array_map(
+                        static fn (TreasuryPayCodeSettlementData $settlement): int => $settlement->beneficiaryAmountMinor,
+                        $settlements,
+                    )),
+                    'provider_inventory_outflow_minor' => array_sum(array_map(
+                        static fn (TreasuryPayCodeSettlementData $settlement): int => $settlement->providerInventoryOutflowMinor,
+                        $settlements,
+                    )),
+                    'configured_rail_fee_minor' => array_sum(array_map(
+                        static fn (TreasuryPayCodeSettlementData $settlement): int => $settlement->configuredRailFeeMinor,
+                        $settlements,
+                    )),
+                    'sender_system_charge_minor' => $senderSystemChargeMinor,
+                    'sender_system_charge_status' => 'legacy_compatibility_ledger',
+                    'currency' => $currency,
+                    'settlements' => array_map(
+                        fn (TreasuryPayCodeSettlementData $settlement): array => $this->settlementPayload(
+                            $settlement,
                         ),
-                        'sender_system_charge_status' => 'legacy_compatibility_ledger',
-                        'currency' => $settlement->currency,
-                    ],
+                        $settlements,
+                    ),
+                ],
+                'slice_accounting' => [
+                    'schema' => 'x-change.lifecycle.treasury-slice-accounting.v1',
+                    'mode' => 'open',
+                    'configured_slice_count' => $expectedSliceCount,
+                    'completed_slice_count' => count($settlements),
+                    'enforced_interval_seconds' => (int) data_get(
+                        $context->scenario,
+                        'sequential.wait_between_claims_seconds',
+                        0,
+                    ),
+                    'provider_principal_minor' => $providerPrincipalMinor,
+                    'currency' => $currency,
+                    'claims' => $claims,
+                ],
                 'accounting' => [
                     'before_issuance' => $beforeIssuance,
                     'after_issuance' => $afterIssuance,
+                    'after_claims' => $afterClaims,
                     'after_claim' => $afterClaim,
                 ],
                 'idempotency' => $this->idempotency($run, false),
@@ -356,10 +453,10 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 ...$run->result_summary,
                 'success' => $success,
                 'message' => $success
-                    ? 'The live Pay Code transfer completed and the provider balance was reconciled.'
+                    ? 'The three live Pay Code slices completed and the provider balance was reconciled.'
                     : ($accountingStatus === 'provider_sync_pending'
-                        ? 'The transfer and Treasury posting completed; the provider balance update is still pending.'
-                        : 'The transfer completed, but provider liquidity now requires accounting review.'),
+                        ? 'All three transfers and Treasury postings completed; the provider balance update is still pending.'
+                        : 'All three transfers completed, but provider liquidity now requires accounting review.'),
                 'accounting_status' => $accountingStatus,
                 'accounting' => [
                     ...((array) data_get($run->result_summary, 'accounting', [])),
@@ -414,12 +511,170 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
         }
     }
 
+    /**
+     * @return list<array{key: string, operation: array<string, mixed>}>
+     */
+    private function sliceOperations(ScenarioRunContext $context): array
+    {
+        $baseOperation = (array) data_get(
+            $context->scenario,
+            'execution_runtime.operation',
+            ['operation' => 'claim_transfer'],
+        );
+        $claims = (array) data_get($context->scenario, 'claims', []);
+
+        if ($claims === []) {
+            return [[
+                'key' => 'claim_1_withdraw',
+                'operation' => $baseOperation,
+            ]];
+        }
+
+        $operations = [];
+
+        foreach ($claims as $key => $claim) {
+            if (! is_array($claim)) {
+                continue;
+            }
+
+            $operation = $baseOperation;
+            $operation['claim'] = [
+                ...(array) data_get($baseOperation, 'claim', []),
+                ...(array) data_get($claim, 'claim', []),
+            ];
+            $operations[] = [
+                'key' => (string) $key,
+                'operation' => $operation,
+            ];
+        }
+
+        return $operations;
+    }
+
+    /**
+     * @param  array{key: string, operation: array<string, mixed>}  $slice
+     */
+    private function waitBeforeSeconds(
+        ScenarioRunContext $context,
+        array $slice,
+        int $index,
+    ): int {
+        if ($index === 0) {
+            return 0;
+        }
+
+        $runtimeOverride = data_get(
+            $context->scenario,
+            '_runtime.sequential_wait_between_claims_seconds',
+        );
+
+        if (app()->environment('testing') && $runtimeOverride !== null) {
+            return max(0, (int) $runtimeOverride);
+        }
+
+        $explicit = data_get(
+            $context->scenario,
+            "claims.{$slice['key']}.wait_before_seconds",
+        );
+
+        return max(0, (int) ($explicit ?? data_get(
+            $context->scenario,
+            'sequential.wait_between_claims_seconds',
+            0,
+        )));
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $operation
+     * @return array<string, mixed>
+     */
+    private function scenarioForOperation(
+        array $scenario,
+        array $operation,
+    ): array {
+        $scenario['execution_runtime']['operation'] = $operation;
+        unset($scenario['execution_runtime']['sequence']);
+
+        return $scenario;
+    }
+
+    private function claimForSlice(
+        int $voucherId,
+        int $claimNumber,
+        string $claimKey,
+        int $waitBeforeSeconds,
+    ): ?VoucherClaim {
+        $claim = VoucherClaim::query()
+            ->where('voucher_id', $voucherId)
+            ->where('claim_number', $claimNumber)
+            ->first();
+
+        if ($claim === null) {
+            return null;
+        }
+
+        $claim->forceFill([
+            'meta' => [
+                ...(array) $claim->meta,
+                'lifecycle_claim_key' => $claimKey,
+                'wait_before_seconds' => $waitBeforeSeconds,
+            ],
+        ])->save();
+
+        return $claim->refresh();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function safeClaim(VoucherClaim $claim): array
+    {
+        return [
+            'number' => (int) $claim->claim_number,
+            'type' => $claim->claim_type,
+            'status' => $claim->status,
+            'requested_amount_minor' => $claim->requested_amount_minor,
+            'disbursed_amount_minor' => $claim->disbursed_amount_minor,
+            'remaining_balance_minor' => $claim->remaining_balance_minor,
+            'currency' => $claim->currency,
+            'wait_before_seconds' => (int) data_get(
+                $claim->meta,
+                'wait_before_seconds',
+                0,
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function settlementPayload(
+        TreasuryPayCodeSettlementData $settlement,
+    ): array {
+        return [
+            'reservation_operation_reference' => $settlement->reservationOperationReference,
+            'derecognition_operation_reference' => $settlement->derecognitionOperationReference,
+            'inventory_adjustment_operation_reference' => $settlement->inventoryAdjustmentOperationReference,
+            'beneficiary_amount_minor' => $settlement->beneficiaryAmountMinor,
+            'provider_inventory_outflow_minor' => $settlement->providerInventoryOutflowMinor,
+            'configured_rail_fee_minor' => $settlement->configuredRailFeeMinor,
+            'currency' => $settlement->currency,
+        ];
+    }
+
     private function successfulReconciliation(
         int $voucherId,
+        string $providerTransactionId,
     ): ?DisbursementReconciliation {
+        if (trim($providerTransactionId) === '') {
+            return null;
+        }
+
         return DisbursementReconciliation::query()
             ->where('voucher_id', $voucherId)
             ->where('status', 'succeeded')
+            ->where('provider_transaction_id', $providerTransactionId)
             ->latest('id')
             ->first();
     }
@@ -492,7 +747,15 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
             'driver' => $execution['driver'] ?? null,
             'events' => $execution['events'] ?? [],
             'failure' => $execution['failure'] ?? null,
-            'provider_references' => $execution['provider_references'] ?? [],
+            'provider_references' => collect(
+                (array) ($execution['provider_references'] ?? []),
+            )
+                ->filter(
+                    static fn (mixed $reference): bool => is_array($reference)
+                        && ($reference['type'] ?? null) !== 'provider_reference',
+                )
+                ->values()
+                ->all(),
             'reconciliation' => [
                 'provider' => data_get($execution, 'reconciliation.provider'),
                 'current_status' => data_get(

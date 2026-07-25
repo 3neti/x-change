@@ -14,7 +14,9 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Lifecycle\Runners\TreasuryLiveBasicCashScenarioRunner;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\LifecycleMoneyRun;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Treasury\TreasuryLifecycleAccountingSnapshot;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
@@ -33,6 +35,7 @@ beforeEach(function () {
             'testing',
         ],
         'x-change.provider_runtime.lifecycle.allow_live_provider_scenarios' => true,
+        'x-change.withdrawal.open_slice_min_interval_seconds' => 0,
         'x-change.settlement.default_driver' => 'philhealth-bst',
         'x-change.settlement.drivers_path' => settlementEnvelopeDriversPath(),
         'queue.default' => 'sync',
@@ -41,6 +44,19 @@ beforeEach(function () {
     Artisan::call('xchange:lifecycle:prepare', [
         '--seed' => true,
     ]);
+
+    $scenario = config('x-change.lifecycle.scenarios.treasury_live_basic_cash');
+    $scenario['_runtime']['sequential_wait_between_claims_seconds'] = 0;
+    $scenario['execution_runtime']['operation']['poll'] = [
+        'timeout' => 1,
+        'poll' => 1,
+        'max_polls' => 1,
+        'accept_pending' => false,
+    ];
+    config()->set(
+        'x-change.lifecycle.scenarios.treasury_live_basic_cash',
+        $scenario,
+    );
 });
 
 it('fails closed with a concise scenario-specific response before provider access', function () {
@@ -58,11 +74,25 @@ it('fails closed with a concise scenario-specific response before provider acces
         ->and(LifecycleMoneyRun::query()->count())->toBe(0);
 });
 
+it('defines the live Treasury lifecycle as three enforced open slices', function () {
+    $scenario = require dirname(__DIR__, 3).'/config/lifecycle-scenarios.php';
+    $scenario = data_get($scenario, 'scenarios.treasury_live_basic_cash');
+
+    expect(data_get($scenario, 'amount'))->toBe(150)
+        ->and(data_get($scenario, 'cash.slice_mode'))->toBe('open')
+        ->and(data_get($scenario, 'cash.max_slices'))->toBe(3)
+        ->and(data_get($scenario, 'cash.min_withdrawal'))->toBe(25)
+        ->and(data_get($scenario, 'sequential.wait_between_claims_seconds'))
+        ->toBe(10)
+        ->and(collect(data_get($scenario, 'claims'))->pluck('claim.amount')->all())
+        ->toBe([75, 50, 25])
+        ->and(collect(data_get($scenario, 'claims'))->pluck('wait_before_seconds')->all())
+        ->toBe([0, 10, 10]);
+});
+
 it('posts provider principal separately from the sender system charge and never repeats its transfer', function () {
-    $reader = configureLiveNetbankAccounting([1_000_000_00, 999_987_50]);
+    $reader = configureLiveNetbankAccounting([1_000_000_00, 999_850_00]);
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(
-        transactionId: 'TXN-TREASURY-LIVE-1',
-        uuid: 'uuid-treasury-live-1',
         provider: 'netbank',
     );
     $issuer = FakeLifecycleUser::query()
@@ -78,7 +108,8 @@ it('posts provider principal separately from the sender system charge and never 
     ];
 
     $firstExitCode = Artisan::call('xchange:lifecycle:run', $arguments);
-    $first = LifecycleMoneyRun::query()->sole()->result_summary;
+    $firstOutput = json_decode(Artisan::output(), true);
+    $first = LifecycleMoneyRun::query()->sole()->result_summary ?? $firstOutput;
     $secondExitCode = Artisan::call('xchange:lifecycle:run', $arguments);
     $second = json_decode(Artisan::output(), true);
     $netbankBefore = collect(data_get(
@@ -91,15 +122,32 @@ it('posts provider principal separately from the sender system charge and never 
         'accounting.before_issuance.connections',
         [],
     ))->firstWhere('reference', 'paynamics-primary');
+    $claimRows = VoucherClaim::query()
+        ->where('voucher_id', data_get($first, 'pay_code.id'))
+        ->orderBy('claim_number')
+        ->get();
+    $reconciliations = DisbursementReconciliation::query()
+        ->where('voucher_id', data_get($first, 'pay_code.id'))
+        ->orderBy('id')
+        ->get();
+    $settlements = data_get($first, 'treasury_settlement.settlements', []);
     $encoded = json_encode($first, JSON_THROW_ON_ERROR);
+
     expect($firstExitCode)->toBe(Command::SUCCESS)
         ->and($first['schema'])->toBe('x-change.lifecycle.treasury-live-basic-cash.v1')
         ->and($first['provider_transfer_succeeded'])->toBeTrue()
+        ->and($first['provider_transfers_completed'])->toBe(3)
+        ->and($first['provider_transfers_expected'])->toBe(3)
         ->and($first['accounting_status'])->toBe('reconciled')
         ->and(data_get($first, 'pay_code.issued'))->toBeTrue()
         ->and(data_get($first, 'pay_code.claimed'))->toBeTrue()
-        ->and(data_get($first, 'execution.reconciliation.provider_transaction_id'))
-        ->toBe('TXN-TREASURY-LIVE-1')
+        ->and(data_get($first, 'slice_accounting.mode'))->toBe('open')
+        ->and(data_get($first, 'slice_accounting.configured_slice_count'))->toBe(3)
+        ->and(data_get($first, 'slice_accounting.enforced_interval_seconds'))->toBe(10)
+        ->and(collect(data_get($first, 'claims'))->pluck('requested_amount_minor')->all())
+        ->toBe([7_500, 5_000, 2_500])
+        ->and(collect(data_get($first, 'claims'))->pluck('wait_before_seconds')->all())
+        ->toBe([0, 0, 0])
         ->and(data_get($netbankBefore, 'provider_observation.balance_minor'))
         ->toBe(1_000_000_00)
         ->and(data_get($netbankBefore, 'inventory.balance_minor'))
@@ -107,14 +155,14 @@ it('posts provider principal separately from the sender system charge and never 
         ->and(data_get(
             $netbankBefore,
             'system_positions.by_purpose.legacy_unattributed',
-        ))->toBe(999_900_00)
+        ))->toBe(999_700_00)
         ->and(data_get($netbankBefore, 'account_positions.status'))
         ->toBe('provisioned')
-        ->and(data_get($netbankBefore, 'account_positions.balance_minor'))->toBe(10_000)
+        ->and(data_get($netbankBefore, 'account_positions.balance_minor'))->toBe(30_000)
         ->and(data_get(
             $netbankBefore,
             'account_positions.by_purpose.client_funds',
-        ))->toBe(10_000)
+        ))->toBe(30_000)
         ->and(data_get(
             $netbankBefore,
             'account_positions.by_purpose.pay_code_reserve',
@@ -124,7 +172,7 @@ it('posts provider principal separately from the sender system charge and never 
         ->and(data_get(
             $first,
             'accounting.after_issuance.account.liability.outstanding_liability_minor',
-        ))->toBe(1250)
+        ))->toBe(15_000)
         ->and(data_get(
             $first,
             'accounting.after_claim.account.liability.outstanding_liability_minor',
@@ -132,15 +180,27 @@ it('posts provider principal separately from the sender system charge and never 
         ->and(data_get(
             $first,
             'accounting.after_issuance.connections.0.account_positions.by_purpose.client_funds',
-        ))->toBe(8_750)
+        ))->toBe(15_000)
         ->and(data_get(
             $first,
             'accounting.after_issuance.connections.0.account_positions.by_purpose.pay_code_reserve',
-        ))->toBe(1_250)
+        ))->toBe(15_000)
+        ->and(collect(data_get($first, 'accounting.after_claims'))->map(
+            fn (array $snapshot): mixed => data_get(
+                $snapshot,
+                'connections.0.account_positions.by_purpose.pay_code_reserve',
+            ),
+        )->all())->toBe([7_500, 2_500, 0])
+        ->and(collect(data_get($first, 'accounting.after_claims'))->map(
+            fn (array $snapshot): mixed => data_get(
+                $snapshot,
+                'connections.0.inventory.balance_minor',
+            ),
+        )->all())->toBe([999_925_00, 999_875_00, 999_850_00])
         ->and(data_get(
             $first,
             'accounting.after_claim.connections.0.account_positions.by_purpose.client_funds',
-        ))->toBe(8_750)
+        ))->toBe(15_000)
         ->and(data_get(
             $first,
             'accounting.after_claim.connections.0.account_positions.by_purpose.pay_code_reserve',
@@ -148,19 +208,19 @@ it('posts provider principal separately from the sender system charge and never 
         ->and(data_get(
             $first,
             'accounting.after_claim.connections.0.inventory.balance_minor',
-        ))->toBe(999_987_50)
+        ))->toBe(999_850_00)
         ->and(data_get(
             $first,
             'treasury_settlement.beneficiary_amount_minor',
-        ))->toBe(1_250)
+        ))->toBe(15_000)
         ->and(data_get(
             $first,
             'treasury_settlement.provider_inventory_outflow_minor',
-        ))->toBe(1_250)
+        ))->toBe(15_000)
         ->and(data_get(
             $first,
             'treasury_settlement.configured_rail_fee_minor',
-        ))->toBe(1_000)
+        ))->toBe(0)
         ->and(data_get(
             $first,
             'treasury_settlement.sender_system_charge_minor',
@@ -177,6 +237,17 @@ it('posts provider principal separately from the sender system charge and never 
             $first,
             'accounting_boundary.sender_system_charge',
         ))->toBe('legacy_compatibility_ledger')
+        ->and($claimRows)->toHaveCount(3)
+        ->and($claimRows->pluck('requested_amount_minor')->all())
+        ->toBe([7_500, 5_000, 2_500])
+        ->and($claimRows->pluck('remaining_balance_minor')->all())
+        ->toBe([7_500, 2_500, 0])
+        ->and($reconciliations)->toHaveCount(3)
+        ->and($reconciliations->pluck('provider_transaction_id')->unique())
+        ->toHaveCount(3)
+        ->and($settlements)->toHaveCount(3)
+        ->and(collect($settlements)->pluck('reservation_operation_reference')->unique())
+        ->toHaveCount(1)
         ->and($encoded)->not->toContain('09173011987')
         ->and($encoded)->not->toContain('raw_request')
         ->and($encoded)->not->toContain('raw_response')
@@ -187,18 +258,18 @@ it('posts provider principal separately from the sender system charge and never 
         ->and(Voucher::query()->whereKey(data_get($first, 'pay_code.id'))->count())->toBe(1)
         ->and($reader->callCount)->toBe(2);
 
-    $provider->assertDisburseCalledTimes(1);
+    expect(collect($provider->requests)->pluck('amount')->all())
+        ->toBe([75.0, 50.0, 25.0]);
+    $provider->assertDisburseCalledTimes(3);
 });
 
 it('rechecks a lagging provider balance without repeating its transfer', function () {
     $reader = configureLiveNetbankAccounting([
         1_000_000_00,
         1_000_000_00,
-        999_987_50,
+        999_850_00,
     ]);
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(
-        transactionId: 'TXN-TREASURY-LIVE-REVIEW',
-        uuid: 'uuid-treasury-live-review',
         provider: 'netbank',
     );
     $issuer = FakeLifecycleUser::query()
@@ -235,7 +306,7 @@ it('rechecks a lagging provider balance without repeating its transfer', functio
         ->and(data_get($second, 'idempotency.provider_transfer_repeated'))->toBeFalse()
         ->and($reader->callCount)->toBe(3);
 
-    $provider->assertDisburseCalledTimes(1);
+    $provider->assertDisburseCalledTimes(3);
 });
 
 /**
@@ -325,7 +396,7 @@ function configureLiveNetbankAccounting(array $balances): object
             operationReference: 'funding-recognition:netbank:test-funded-issuer',
             inventoryReference: 'inventory:netbank:vca-cash',
             settlementResourceReference: 'resource:netbank:corporate-vca',
-            amountMinor: 10_000,
+            amountMinor: 30_000,
             currency: 'PHP',
             status: 'requested',
             idempotencyKey: 'funding-recognition-key:netbank:test-funded-issuer',
@@ -335,7 +406,7 @@ function configureLiveNetbankAccounting(array $balances): object
     app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
         accountReference: 'wallet:'.$account->uuid,
         provider: 'netbank',
-        amountMinor: 10_000,
+        amountMinor: 30_000,
         currency: 'PHP',
         evidenceReference: 'netbank:test-funded-issuer',
         metadata: ['source' => 'treasury_live_basic_cash_test_fixture'],

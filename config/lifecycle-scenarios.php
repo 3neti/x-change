@@ -481,15 +481,26 @@ return [
 
         'treasury_live_basic_cash' => [
             'label' => 'Treasury Live Basic Cash',
-            'description' => 'Synchronizes authoritative provider liquidity, exposes system and Account positions, issues one basic_cash Pay Code, and claims it through the live payout provider under a replay-safe run reference.',
+            'description' => 'Synchronizes authoritative provider liquidity, exposes system and Account positions, issues one open-slice Pay Code, and claims it in three live provider transfers under a replay-safe run reference.',
             'category' => 'live-provider',
-            'tags' => ['treasury', 'accounting', 'basic_cash', 'live-provider', 'netbank'],
+            'tags' => ['treasury', 'accounting', 'basic_cash', 'open-slice', 'live-provider', 'netbank'],
             'mode' => 'treasury_live_basic_cash',
-            'amount' => 12.50,
+            'sequential' => [
+                'wait_between_claims_seconds' => 10,
+            ],
+            'metadata' => [
+                'flow_type' => 'disbursable',
+            ],
+            'amount' => 150,
             'currency' => 'PHP',
             'cash' => [
+                'amount' => 150,
+                'currency' => 'PHP',
                 'settlement_rail' => 'INSTAPAY',
                 'fee_strategy' => 'absorb',
+                'slice_mode' => 'open',
+                'max_slices' => 3,
+                'min_withdrawal' => 25,
                 'validation' => [
                     'country' => 'PH',
                 ],
@@ -527,6 +538,38 @@ return [
                         'timeout' => 180,
                         'poll' => 10,
                         'accept_pending' => false,
+                    ],
+                ],
+            ],
+            'claims' => [
+                'claim_1_withdraw' => [
+                    'wait_before_seconds' => 0,
+                    'claim' => [
+                        'amount' => 75,
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                        'claim_type' => 'withdraw',
+                    ],
+                ],
+                'claim_2_withdraw' => [
+                    'wait_before_seconds' => 10,
+                    'claim' => [
+                        'amount' => 50,
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                        'claim_type' => 'withdraw',
+                    ],
+                ],
+                'claim_3_withdraw' => [
+                    'wait_before_seconds' => 10,
+                    'claim' => [
+                        'amount' => 25,
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                        'claim_type' => 'withdraw',
                     ],
                 ],
             ],
