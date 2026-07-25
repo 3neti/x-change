@@ -58,7 +58,6 @@ const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
 const liquidityRefreshRunning = ref(false);
 const liquidityRefreshError = ref<string | null>(null);
-const showFundingRequestModal = ref(false);
 const activeFundingRequestReview = ref<string | null>(null);
 const fundingRequestAmount = ref('');
 const fundingReviewAmount = ref('');
@@ -82,22 +81,12 @@ const fundingWorkspaceModes = computed(() => [
     {
         key: 'self_top_up' as const,
         label: 'Self Top-Up',
-        description:
-            'Scan your reusable QR Ph address, then check NetBank for incoming funds.',
     },
     {
         key: 'funding_code' as const,
         label: 'Account Funding Code',
-        description:
-            'Request review for a transfer, cash, or another approved source, then claim verified reserved value.',
     },
 ]);
-const activeFundingModeDetails = computed(
-    () =>
-        fundingWorkspaceModes.value.find(
-            (mode) => mode.key === activeFundingMode.value,
-        ) ?? fundingWorkspaceModes.value[0],
-);
 const processedFundingEvents = new Set<string>();
 let realtimeRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 let standingHistoryCooldownTimer: ReturnType<typeof setInterval> | null = null;
@@ -391,7 +380,6 @@ function submitFundingRequest(): void {
     fundingRequestForm.post(storeFundingRequest(), {
         preserveScroll: true,
         onSuccess: () => {
-            showFundingRequestModal.value = false;
             fundingRequestAmount.value = '';
             fundingRequestForm.reset(
                 'description',
@@ -1323,13 +1311,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         {{ mode.label }}
                     </button>
                 </div>
-                <p
-                    v-if="activeFundingMode !== 'self_top_up'"
-                    class="px-2 pt-2 pb-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
-                    data-testid="funding-mode-description"
-                >
-                    {{ activeFundingModeDetails?.description }}
-                </p>
                 <details
                     v-if="funding_simulation"
                     class="mx-2 mt-1 mb-1 border-t border-slate-200 pt-2 dark:border-slate-800"
@@ -1709,84 +1690,157 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             >
                 <article
                     class="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-950 dark:bg-slate-900"
+                    data-testid="funding-request-form"
                 >
-                    <div
-                        class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+                    <form
+                        class="p-4 sm:p-5"
+                        @submit.prevent="submitFundingRequest"
                     >
-                        <div>
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
-                            >
-                                Reviewed Account Funding
-                            </p>
-                            <h2 class="mt-1 text-xl font-semibold">
-                                Request an Account Funding Code
-                            </h2>
-                            <p
-                                class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400"
-                            >
-                                Use this when QR Ph is not suitable—for example,
-                                a large bank transfer, controlled cash handover,
-                                gold, jewelry, or a vehicle. Your request never
-                                changes Client Funds. Two different operators
-                                must verify backing and approve reserved value
-                                before a one-time code becomes claimable.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            class="min-h-11 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-                            data-testid="open-funding-request-modal"
-                            @click="showFundingRequestModal = true"
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-3"
                         >
-                            Request Funding Code
-                        </button>
-                    </div>
-                    <div
-                        class="grid gap-px border-t border-emerald-100 bg-emerald-100 sm:grid-cols-3 dark:border-emerald-950 dark:bg-emerald-950"
-                    >
-                        <div class="bg-white p-4 dark:bg-slate-900">
-                            <p class="text-xs font-semibold uppercase">
-                                1 · Request
-                            </p>
-                            <p class="mt-1 text-xs text-slate-500">
-                                Describe the source and expected value.
-                            </p>
+                            <h2 class="text-base font-semibold">
+                                Account Funding Code review
+                            </h2>
+                            <span
+                                class="rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-semibold text-emerald-700 uppercase dark:bg-emerald-950 dark:text-emerald-200"
+                            >
+                                review only
+                            </span>
                         </div>
-                        <div class="bg-white p-4 dark:bg-slate-900">
-                            <p class="text-xs font-semibold uppercase">
-                                2 · Verify and reserve
-                            </p>
-                            <p class="mt-1 text-xs text-slate-500">
-                                Maker-checker controls verify real backing.
-                            </p>
+
+                        <div
+                            class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                        >
+                            <label class="block text-xs font-semibold">
+                                Funding source
+                                <select
+                                    v-model="fundingRequestForm.funding_type"
+                                    class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                >
+                                    <option value="bank_transfer">
+                                        Bank transfer
+                                    </option>
+                                    <option value="cash_handover">
+                                        Cash handover
+                                    </option>
+                                    <option value="precious_metal">
+                                        Gold or precious metal
+                                    </option>
+                                    <option value="jewelry">Jewelry</option>
+                                    <option value="vehicle">Vehicle</option>
+                                    <option value="other">
+                                        Other approved asset
+                                    </option>
+                                </select>
+                            </label>
+                            <label class="block text-xs font-semibold">
+                                Requested value
+                                <div
+                                    class="mt-1.5 flex h-10 rounded-lg border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
+                                >
+                                    <span
+                                        class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
+                                    >
+                                        PHP
+                                    </span>
+                                    <input
+                                        v-model="fundingRequestAmount"
+                                        inputmode="decimal"
+                                        placeholder="0.00"
+                                        class="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
+                                    />
+                                </div>
+                                <span
+                                    v-if="
+                                        fundingRequestAmountError ||
+                                        fundingRequestForm.errors
+                                            .requested_value_minor
+                                    "
+                                    class="mt-1 block text-xs text-rose-600"
+                                >
+                                    {{
+                                        fundingRequestAmountError ??
+                                        fundingRequestForm.errors
+                                            .requested_value_minor
+                                    }}
+                                </span>
+                            </label>
+                            <label class="block text-xs font-semibold">
+                                Reference
+                                <input
+                                    v-model="
+                                        fundingRequestForm.external_reference
+                                    "
+                                    class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                    placeholder="Optional"
+                                />
+                            </label>
+                            <label class="block text-xs font-semibold">
+                                Date
+                                <input
+                                    v-model="fundingRequestForm.occurred_on"
+                                    type="date"
+                                    class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                />
+                            </label>
+                            <label
+                                class="block text-xs font-semibold sm:col-span-2"
+                            >
+                                Verification details
+                                <textarea
+                                    v-model="fundingRequestForm.description"
+                                    rows="2"
+                                    class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                    placeholder="Transfer or asset details"
+                                />
+                                <span
+                                    v-if="fundingRequestForm.errors.description"
+                                    class="mt-1 block text-xs text-rose-600"
+                                >
+                                    {{ fundingRequestForm.errors.description }}
+                                </span>
+                            </label>
+                            <label
+                                class="block text-xs font-semibold sm:col-span-2"
+                            >
+                                Notes
+                                <textarea
+                                    v-model="fundingRequestForm.requester_notes"
+                                    rows="2"
+                                    class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                    placeholder="Optional"
+                                />
+                            </label>
                         </div>
-                        <div class="bg-white p-4 dark:bg-slate-900">
-                            <p class="text-xs font-semibold uppercase">
-                                3 · Claim once
-                            </p>
-                            <p class="mt-1 text-xs text-slate-500">
-                                Reserved value moves to your Account. No payout.
-                            </p>
+
+                        <div class="mt-4 flex justify-end">
+                            <button
+                                type="submit"
+                                class="h-10 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                                :disabled="fundingRequestForm.processing"
+                                data-testid="submit-funding-request"
+                            >
+                                {{
+                                    fundingRequestForm.processing
+                                        ? 'Submitting…'
+                                        : 'Submit for Review'
+                                }}
+                            </button>
                         </div>
-                    </div>
+                    </form>
                 </article>
 
                 <article
-                    class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     data-testid="my-funding-requests"
                 >
                     <div
                         class="flex flex-wrap items-center justify-between gap-3"
                     >
                         <div>
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
-                            >
-                                My requests
-                            </p>
-                            <h2 class="mt-1 text-lg font-semibold">
-                                Review and claim status
+                            <h2 class="text-base font-semibold">
+                                Funding Code requests
                             </h2>
                         </div>
                         <span class="text-sm font-semibold">
@@ -2727,195 +2781,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     </section>
                 </div>
             </details>
-
-            <div
-                v-if="showFundingRequestModal"
-                class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 sm:items-center sm:p-6"
-                role="presentation"
-                @click.self="showFundingRequestModal = false"
-            >
-                <form
-                    class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl dark:bg-slate-900"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="funding-request-title"
-                    data-testid="funding-request-modal"
-                    @submit.prevent="submitFundingRequest"
-                >
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
-                            >
-                                Request only
-                            </p>
-                            <h2
-                                id="funding-request-title"
-                                class="mt-1 text-xl font-semibold"
-                            >
-                                Account Funding Code review
-                            </h2>
-                            <p class="mt-1 text-sm leading-6 text-slate-500">
-                                Tell the control team what should be verified.
-                                This form cannot credit your Account.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                            aria-label="Close"
-                            @click="showFundingRequestModal = false"
-                        >
-                            Close
-                        </button>
-                    </div>
-
-                    <div class="mt-5 grid gap-4 sm:grid-cols-2">
-                        <label class="block text-xs font-semibold">
-                            Funding source
-                            <select
-                                v-model="fundingRequestForm.funding_type"
-                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
-                            >
-                                <option value="bank_transfer">
-                                    Bank transfer
-                                </option>
-                                <option value="cash_handover">
-                                    Cash handover
-                                </option>
-                                <option value="precious_metal">
-                                    Gold or precious metal
-                                </option>
-                                <option value="jewelry">Jewelry</option>
-                                <option value="vehicle">Vehicle</option>
-                                <option value="other">
-                                    Other approved asset
-                                </option>
-                            </select>
-                        </label>
-                        <label class="block text-xs font-semibold">
-                            Requested value
-                            <div
-                                class="mt-1.5 flex rounded-lg border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
-                            >
-                                <span
-                                    class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
-                                >
-                                    PHP
-                                </span>
-                                <input
-                                    v-model="fundingRequestAmount"
-                                    inputmode="decimal"
-                                    placeholder="0.00"
-                                    class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
-                                />
-                            </div>
-                            <span
-                                v-if="
-                                    fundingRequestAmountError ||
-                                    fundingRequestForm.errors
-                                        .requested_value_minor
-                                "
-                                class="mt-1 block text-xs text-rose-600"
-                            >
-                                {{
-                                    fundingRequestAmountError ??
-                                    fundingRequestForm.errors
-                                        .requested_value_minor
-                                }}
-                            </span>
-                        </label>
-                        <label
-                            class="block text-xs font-semibold sm:col-span-2"
-                        >
-                            What should be verified?
-                            <textarea
-                                v-model="fundingRequestForm.description"
-                                rows="3"
-                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                placeholder="Describe the transfer, custody handover, or asset and the expected control evidence."
-                            />
-                            <span
-                                v-if="fundingRequestForm.errors.description"
-                                class="mt-1 block text-xs text-rose-600"
-                            >
-                                {{ fundingRequestForm.errors.description }}
-                            </span>
-                        </label>
-                        <label class="block text-xs font-semibold">
-                            Transaction or custody reference
-                            <input
-                                v-model="fundingRequestForm.external_reference"
-                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                placeholder="Optional reference"
-                            />
-                        </label>
-                        <label class="block text-xs font-semibold">
-                            Date
-                            <input
-                                v-model="fundingRequestForm.occurred_on"
-                                type="date"
-                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
-                            />
-                        </label>
-                        <label
-                            class="block text-xs font-semibold sm:col-span-2"
-                        >
-                            Notes
-                            <textarea
-                                v-model="fundingRequestForm.requester_notes"
-                                rows="2"
-                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                placeholder="Optional context for the control team"
-                            />
-                        </label>
-                    </div>
-
-                    <div
-                        class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"
-                    >
-                        Screenshots and files are not accepted yet. Secure
-                        attachments stay disabled until private storage,
-                        quarantine, malware scanning, retention, and access
-                        logging are available. A reference or receipt is
-                        supporting evidence only.
-                    </div>
-
-                    <label class="mt-4 flex items-start gap-3 text-xs">
-                        <input
-                            required
-                            type="checkbox"
-                            class="mt-0.5 size-4 rounded border-slate-300"
-                        />
-                        <span>
-                            I understand this request does not change Client
-                            Funds. Only independently verified and reserved
-                            backing can produce a claimable code.
-                        </span>
-                    </label>
-
-                    <div class="mt-5 flex justify-end gap-3">
-                        <button
-                            type="button"
-                            class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold dark:border-slate-700"
-                            @click="showFundingRequestModal = false"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-                            :disabled="fundingRequestForm.processing"
-                        >
-                            {{
-                                fundingRequestForm.processing
-                                    ? 'Submitting…'
-                                    : 'Submit for review'
-                            }}
-                        </button>
-                    </div>
-                </form>
-            </div>
         </div>
     </CockpitLayout>
 </template>

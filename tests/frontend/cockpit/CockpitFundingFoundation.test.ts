@@ -704,8 +704,8 @@ describe('Cockpit Funding foundation', () => {
             wrapper.get('#funding-panel-funding_code').attributes('style'),
         ).not.toContain('display: none');
         expect(
-            wrapper.get('[data-testid="funding-mode-description"]').text(),
-        ).toContain('Request review');
+            wrapper.find('[data-testid="funding-mode-description"]').exists(),
+        ).toBe(false);
 
         expect(fetch).not.toHaveBeenCalled();
     });
@@ -731,26 +731,26 @@ describe('Cockpit Funding foundation', () => {
             '[data-testid="cockpit-account-funding-code"]',
         );
 
-        expect(panel.text()).toContain('Request an Account Funding Code');
-        expect(panel.text()).toContain('Two different operators');
+        expect(panel.text()).toContain('Account Funding Code review');
         expect(panel.text()).toContain('Bank transfer');
+        expect(panel.text()).toContain('Gold or precious metal');
+        expect(panel.text()).toContain('Verification details');
+        expect(panel.text()).toContain('Submit for Review');
+        expect(panel.text()).toContain('Funding Code requests');
         expect(panel.text()).toContain('Code ending F9K2');
         expect(panel.text()).toContain('Claim Funding Code');
         expect(panel.text()).not.toContain('wallet');
-
-        await wrapper
-            .get('[data-testid="open-funding-request-modal"]')
-            .trigger('click');
-        await nextTick();
-
-        const modal = wrapper.get('[data-testid="funding-request-modal"]');
-
-        expect(modal.text()).toContain('This form cannot credit your Account');
-        expect(modal.text()).toContain('Gold or precious metal');
-        expect(modal.text()).toContain(
-            'Screenshots and files are not accepted',
-        );
-        expect(modal.text()).toContain('independently verified and reserved');
+        expect(panel.text()).not.toContain('Request an Account Funding Code');
+        expect(panel.text()).not.toContain('Two different operators');
+        expect(panel.text()).not.toContain('1 · Request');
+        expect(panel.text()).not.toContain('2 · Verify and reserve');
+        expect(panel.text()).not.toContain('3 · Claim once');
+        expect(
+            wrapper.find('[data-testid="open-funding-request-modal"]').exists(),
+        ).toBe(false);
+        expect(
+            wrapper.find('[data-testid="funding-request-modal"]').exists(),
+        ).toBe(false);
     });
 
     it('refreshes balance projections once for a valid private funding event', async () => {
