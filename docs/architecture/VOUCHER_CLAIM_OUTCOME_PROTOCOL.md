@@ -159,6 +159,81 @@ and its typed instructions without minting a second Cash entity or debiting the
 system compatibility wallet. The Treasury reservation is the sole monetary
 backing.
 
+## System Account Funding Pay Code utility
+
+`x-change:funding:issue-pay-code` is the package-owned operator utility for
+issuing the same recipient-bound Account Funding Pay Code from recognized
+system Client Funds. It is preview-only unless `--commit` is present.
+
+Preview an issuance:
+
+```bash
+php artisan x-change:funding:issue-pay-code \
+    --amount=1000.00 \
+    --recipient-id=5 \
+    --connection=netbank-primary \
+    --reference=manual-account-funding-user-5-20260726-001 \
+    --evidence-reference=treasury-evidence-20260726-001 \
+    --json
+```
+
+After checking the proposed Client Funds and Pay Code Reserve balances, repeat
+the exact command with `--commit`:
+
+```bash
+php artisan x-change:funding:issue-pay-code \
+    --amount=1000.00 \
+    --recipient-id=5 \
+    --connection=netbank-primary \
+    --reference=manual-account-funding-user-5-20260726-001 \
+    --evidence-reference=treasury-evidence-20260726-001 \
+    --commit \
+    --json
+```
+
+The command:
+
+1. resolves the federated system principal from `3neti/wallet`;
+2. selects one explicit active Treasury connection;
+3. parses the exact amount without floating-point input arithmetic;
+4. defaults to a recipient-bound Voucher;
+5. reserves recognized system Client Funds in system Pay Code Reserve;
+6. returns the Pay Code and claim URL;
+7. makes no provider call and does not change Provider Inventory; and
+8. returns the same Voucher when the same reference and inputs are replayed.
+
+It does not mint funds, recognize a deposit, or bypass Treasury. Insufficient
+system Client Funds fail closed. `--bearer` is an explicit, separately
+configured exception and is always rejected in production.
+
+The production path is disabled twice by default. Enabling it requires both:
+
+```dotenv
+XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_ENABLED=true
+XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_ALLOW_PRODUCTION=true
+```
+
+A production commit additionally requires a recipient, `--confirm-production`,
+`--evidence-reference`, and `--authorization-reference`. The default
+authorization service validates these command and configuration controls.
+Deployments that require maker-checker or an external approval system must bind
+`SystemAccountFundingPayCodeAuthorizationContract` to their approval-aware
+implementation before enabling production issuance.
+
+Related controls:
+
+```dotenv
+XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_BEARER_ENABLED=false
+XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_MAXIMUM_AMOUNT_MINOR=5000000
+XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_TTL_SECONDS=604800
+XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_ALLOWED_CONNECTIONS=netbank-primary
+```
+
+`MAXIMUM_AMOUNT_MINOR` is expressed in the connection currency's minor unit.
+For PHP, the default `5000000` is ₱50,000. The command reference is an
+idempotency key: keep it stable for retries and use a new reference only for a
+genuinely new issuance.
+
 ## Cockpit
 
 `/x/cockpit/funding` presents:
