@@ -14,7 +14,7 @@ class PrepareCockpitFundingRequestRequest extends FormRequest
     {
         $actor = $this->user();
 
-        return $actor !== null && app(FundingRequestAccess::class)->isReviewer($actor);
+        return $actor !== null && app(FundingRequestAccess::class)->isMaker($actor);
     }
 
     protected function prepareForValidation(): void

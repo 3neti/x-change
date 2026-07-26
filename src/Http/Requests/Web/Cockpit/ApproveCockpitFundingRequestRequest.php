@@ -13,7 +13,7 @@ class ApproveCockpitFundingRequestRequest extends FormRequest
     {
         $actor = $this->user();
 
-        return $actor !== null && app(FundingRequestAccess::class)->isReviewer($actor);
+        return $actor !== null && app(FundingRequestAccess::class)->isChecker($actor);
     }
 
     /**

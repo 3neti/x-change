@@ -6,9 +6,7 @@ import { approve as approveReconciliation } from '@/routes/x-change/cockpit/fund
 import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit/funding/liquidity-refreshes';
 import { store as claimPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-claims';
 import { store as inspectPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-inspections';
-import { store as approveFundingRequest } from '@/routes/x-change/cockpit/funding/requests/approvals';
 import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
-import { store as prepareFundingRequest } from '@/routes/x-change/cockpit/funding/requests/reviews';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
 import { store as openStandingFundingAddressRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank';
 import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks';
@@ -59,9 +57,7 @@ const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
 const liquidityRefreshRunning = ref(false);
 const liquidityRefreshError = ref<string | null>(null);
-const activeFundingRequestReview = ref<string | null>(null);
 const fundingRequestAmount = ref('');
-const fundingReviewAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
 const copiedFundingRequest = ref<string | null>(null);
 const dismissedFundingRequestResult = ref(false);
@@ -188,14 +184,6 @@ const fundingRequestForm = useForm({
     evidence_document: null as File | null,
     idempotency_key: newIdempotencyKey(),
 });
-const fundingRequestReviewForm = useForm({
-    recognized_value_minor: 0,
-    currency: 'PHP',
-    connection_reference: 'netbank-primary',
-    evidence_reference: '',
-    review_notes: '',
-});
-const fundingRequestApprovalForm = useForm({});
 const payCodeInspectionForm = useForm({
     code: '',
 });
@@ -509,36 +497,6 @@ function selectFundingRequestEvidence(event: Event): void {
     const input = event.target as HTMLInputElement;
 
     fundingRequestForm.evidence_document = input.files?.[0] ?? null;
-}
-
-function prepareRequest(reference: string): void {
-    const amountMinor = amountToMinor(fundingReviewAmount.value);
-
-    if (amountMinor === null) {
-        fundingRequestAmountError.value =
-            'Enter the independently recognized value.';
-
-        return;
-    }
-
-    activeFundingRequestReview.value = reference;
-    fundingRequestReviewForm.recognized_value_minor = amountMinor;
-    fundingRequestReviewForm.post(prepareFundingRequest(reference), {
-        preserveScroll: true,
-        onFinish: () => {
-            activeFundingRequestReview.value = null;
-        },
-    });
-}
-
-function approveRequest(reference: string): void {
-    activeFundingRequestReview.value = reference;
-    fundingRequestApprovalForm.post(approveFundingRequest(reference), {
-        preserveScroll: true,
-        onFinish: () => {
-            activeFundingRequestReview.value = null;
-        },
-    });
 }
 
 function inspectPayCodeFunding(): void {
@@ -2446,118 +2404,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <p v-else class="mt-4 text-sm text-slate-500">
                         No Account Funding requests yet.
                     </p>
-                </article>
-
-                <article
-                    v-if="fundingRequests.controls.reviewer"
-                    class="rounded-2xl border border-amber-200 bg-amber-50/50 p-5 shadow-sm dark:border-amber-950 dark:bg-amber-950/10"
-                    data-testid="funding-request-review-queue"
-                >
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-amber-700 uppercase dark:text-amber-300"
-                            >
-                                Operator queue
-                            </p>
-                            <h2 class="mt-1 text-lg font-semibold">
-                                Funding Requests requiring control
-                            </h2>
-                        </div>
-                        <span class="font-semibold">
-                            {{ fundingRequests.review_queue.length }}
-                        </span>
-                    </div>
-                    <div class="mt-4 space-y-3">
-                        <div
-                            v-for="item in fundingRequests.review_queue"
-                            :key="item.reference"
-                            class="rounded-xl border border-amber-200 bg-white p-4 dark:border-amber-900 dark:bg-slate-900"
-                        >
-                            <div
-                                class="flex flex-wrap items-start justify-between gap-3"
-                            >
-                                <div>
-                                    <p class="text-sm font-semibold">
-                                        {{ item.type_label }} ·
-                                        {{ item.requested_value }}
-                                    </p>
-                                    <p class="mt-1 text-xs text-slate-500">
-                                        {{ item.description }}
-                                    </p>
-                                </div>
-                                <span
-                                    class="rounded-full bg-amber-100 px-2 py-1 text-[0.65rem] font-semibold uppercase dark:bg-amber-950"
-                                >
-                                    {{ displayLabel(item.status) }}
-                                </span>
-                            </div>
-                            <div
-                                v-if="item.evidence?.documents.length"
-                                class="mt-3 flex flex-wrap gap-2"
-                            >
-                                <a
-                                    v-for="document in item.evidence.documents"
-                                    :key="document.id"
-                                    :href="document.url"
-                                    class="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
-                                >
-                                    {{ document.filename }} ·
-                                    {{ displayLabel(document.review_status) }}
-                                </a>
-                            </div>
-                            <div
-                                v-if="item.can_prepare"
-                                class="mt-4 grid gap-3 md:grid-cols-2"
-                            >
-                                <label class="text-xs font-semibold">
-                                    Recognized value
-                                    <input
-                                        v-model="fundingReviewAmount"
-                                        inputmode="decimal"
-                                        placeholder="0.00"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                    />
-                                </label>
-                                <label class="text-xs font-semibold">
-                                    Independent evidence reference
-                                    <input
-                                        v-model="
-                                            fundingRequestReviewForm.evidence_reference
-                                        "
-                                        class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                        placeholder="Bank match or custody receipt"
-                                    />
-                                </label>
-                                <button
-                                    type="button"
-                                    class="min-h-10 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 md:col-span-2"
-                                    :disabled="
-                                        activeFundingRequestReview !== null
-                                    "
-                                    @click="prepareRequest(item.reference)"
-                                >
-                                    Record backing and request approval
-                                </button>
-                            </div>
-                            <button
-                                v-else-if="item.can_approve"
-                                type="button"
-                                class="mt-4 min-h-10 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950"
-                                :disabled="activeFundingRequestReview !== null"
-                                @click="approveRequest(item.reference)"
-                            >
-                                Approve and fund Account
-                            </button>
-                            <p
-                                v-else-if="item.status === 'awaiting_approval'"
-                                class="mt-3 text-xs text-amber-700 dark:text-amber-300"
-                            >
-                                The maker cannot approve this request. A
-                                different configured operator must complete it.
-                            </p>
-                        </div>
-                    </div>
                 </article>
             </section>
 

@@ -9,14 +9,9 @@ use Illuminate\Support\Number;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\FundingRequestNotice;
-use LBHurtado\XChange\Services\Funding\FundingRequestAccess;
 
 final readonly class FundingRequestCockpitReadModel
 {
-    public function __construct(
-        private FundingRequestAccess $access,
-    ) {}
-
     /**
      * @return array<string, mixed>
      */
@@ -24,7 +19,6 @@ final readonly class FundingRequestCockpitReadModel
     {
         $actorType = $operator::class;
         $actorId = (string) $operator->getAuthIdentifier();
-        $isReviewer = $this->access->isReviewer($operator);
         $requests = FundingRequest::query()
             ->where('requester_type', $actorType)
             ->where('requester_id', $actorId)
@@ -127,63 +121,7 @@ final readonly class FundingRequestCockpitReadModel
                 'read' => $notice->read_at !== null,
                 'created_at' => $notice->created_at?->toIso8601String(),
             ])->all(),
-            'review_queue' => $isReviewer
-                ? FundingRequest::query()
-                    ->whereIn('status', [
-                        FundingRequestStatus::Submitted,
-                        FundingRequestStatus::NeedsInformation,
-                        FundingRequestStatus::AwaitingApproval,
-                    ])
-                    ->with('voucher.envelope.attachments')
-                    ->latest('submitted_at')
-                    ->limit(50)
-                    ->get()
-                    ->map(fn (FundingRequest $request): array => [
-                        'reference' => $request->reference,
-                        'type' => $request->funding_type->value,
-                        'type_label' => $request->funding_type->label(),
-                        'requested_value' => $this->money(
-                            $request->requested_value_minor,
-                            $request->currency,
-                        ),
-                        'recognized_value' => $request->approved_value_minor === null
-                            ? null
-                            : $this->money(
-                                $request->approved_value_minor,
-                                $request->currency,
-                            ),
-                        'requested_value_minor' => $request->requested_value_minor,
-                        'currency' => $request->currency,
-                        'status' => $request->status->value,
-                        'description' => $request->description,
-                        'evidence_reference' => $request->evidence_reference,
-                        'connection_reference' => $request->connection_reference,
-                        'maker_id' => $request->reviewed_by_id,
-                        'evidence' => [
-                            'attachment_count' => $request->voucher?->envelope?->attachments->count() ?? 0,
-                            'documents' => $request->voucher?->envelope?->attachments
-                                ->map(fn ($attachment): array => [
-                                    'id' => (int) $attachment->getKey(),
-                                    'type' => $attachment->doc_type,
-                                    'filename' => $attachment->original_filename,
-                                    'mime_type' => $attachment->mime_type,
-                                    'size' => (int) $attachment->size,
-                                    'review_status' => $attachment->review_status,
-                                    'url' => route(
-                                        'x-change.cockpit.funding.requests.evidence.show',
-                                        [$request, $attachment],
-                                    ),
-                                ])->values()->all() ?? [],
-                        ],
-                        'can_prepare' => in_array($request->status, [
-                            FundingRequestStatus::Submitted,
-                            FundingRequestStatus::NeedsInformation,
-                        ], true),
-                        'can_approve' => $request->status
-                            === FundingRequestStatus::AwaitingApproval
-                            && $request->reviewed_by_id !== $actorId,
-                    ])->all()
-                : [],
+            'review_queue' => [],
             'controls' => [
                 'attachments_enabled' => (bool) config(
                     'x-change.funding.requests.attachments_enabled',
@@ -191,7 +129,7 @@ final readonly class FundingRequestCockpitReadModel
                 ),
                 'evidence_authorizes_credit' => false,
                 'maker_checker_required' => true,
-                'reviewer' => $isReviewer,
+                'reviewer' => false,
                 'provider_payout_enabled' => false,
             ],
             'redactions' => [

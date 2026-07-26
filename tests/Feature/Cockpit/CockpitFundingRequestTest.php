@@ -154,7 +154,7 @@ it('lets an Account owner submit a request without accepting monetary authority'
     expect(FundingRequest::query()->count())->toBe(1);
 });
 
-it('keeps the review queue fail closed and scoped to configured reviewers', function () {
+it('keeps privileged funding controls out of the requester workspace', function () {
     $requester = actingAsTestUser();
     $request = app(CreateFundingRequest::class)->handle(new CreateFundingRequestData(
         accountReference: 'wallet:'.$requester->wallet->uuid,
@@ -184,22 +184,18 @@ it('keeps the review queue fail closed and scoped to configured reviewers', func
         'evidence_reference' => 'custody:1001',
     ])->assertForbidden();
 
-    config()->set('x-change.funding.requests.reviewer_ids', [
+    config()->set('x-change.funding.requests.maker_ids', [
+        (string) $unrelated->getKey(),
+    ]);
+    config()->set('x-change.funding.requests.checker_ids', [
         (string) $unrelated->getKey(),
     ]);
 
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.funding.index'))
         ->assertOk()
-        ->assertJsonCount(1, 'props.funding_requests.review_queue')
-        ->assertJsonPath(
-            'props.funding_requests.review_queue.0.reference',
-            $request->reference,
-        )
-        ->assertJsonPath('props.funding_requests.controls.reviewer', true)
-        ->assertJsonMissingPath(
-            'props.funding_requests.review_queue.0.account_reference',
-        );
+        ->assertJsonCount(0, 'props.funding_requests.review_queue')
+        ->assertJsonPath('props.funding_requests.controls.reviewer', false);
 });
 
 it('binds Reviewed Funding Pay Code claims to the intended Account owner', function () {

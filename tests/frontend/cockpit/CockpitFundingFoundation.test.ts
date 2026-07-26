@@ -846,7 +846,7 @@ describe('Cockpit Funding foundation', () => {
         ).toBe(false);
     });
 
-    it('describes checker acceptance as Account funding', async () => {
+    it('keeps privileged maker-checker controls out of the requester workspace', async () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
@@ -886,13 +886,14 @@ describe('Cockpit Funding foundation', () => {
             .get('[data-testid="funding-mode-pay_code"]')
             .trigger('click');
 
-        const reviewQueue = wrapper.get(
-            '[data-testid="funding-request-review-queue"]',
-        );
-
-        expect(reviewQueue.text()).toContain('Approve and fund Account');
-        expect(reviewQueue.text()).not.toContain(
-            'Approve reserve and await Treasury payment',
+        expect(
+            wrapper
+                .find('[data-testid="funding-request-review-queue"]')
+                .exists(),
+        ).toBe(false);
+        expect(wrapper.text()).not.toContain('Approve and fund Account');
+        expect(wrapper.text()).not.toContain(
+            'Record backing and request approval',
         );
     });
 
