@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -111,6 +112,11 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         (string) $maker->getKey(),
         (string) $checker->getKey(),
     ]);
+    Cache::put(
+        'envelope_driver:account-funding-review:1.0.0',
+        'stale serialized driver',
+        3600,
+    );
     Queue::fake();
     $approvalResponse = $this->actingAs($checker)->post(route(
         'x-change.cockpit.funding.requests.approvals.store',
