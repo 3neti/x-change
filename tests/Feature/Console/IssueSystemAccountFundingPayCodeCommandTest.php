@@ -279,6 +279,83 @@ it('rejects monetary and recipient overrides in positional reviewed Pay Code mod
         ->and($payload['message'])->toContain('--recipient-id');
 });
 
+it('directs reviewed Pay Codes through maker then checker control', function (): void {
+    enableNetbankTreasuryForTests();
+    $requester = actingAsTestUser(0);
+    $maker = User::query()->create([
+        'name' => 'Command Guidance Maker',
+        'email' => 'command-guidance-maker@example.test',
+        'password' => 'password',
+    ]);
+    config()->set('auth.providers.users.model', User::class);
+    config()->set('x-change.onboarding.issuer_model', User::class);
+    config()->set('x-change.funding.requests.maker_ids', [
+        (string) $maker->getKey(),
+    ]);
+    $request = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$requester->wallet->uuid,
+            requesterType: $requester::class,
+            requesterId: (string) $requester->getKey(),
+            fundingType: FundingRequestType::Unspecified,
+            requestedValueMinor: 2_200,
+            currency: 'PHP',
+            description: 'Reviewed funding control guidance.',
+            idempotencyKey: 'reviewed-funding-command-guidance-1001',
+        ),
+    );
+    $voucher = $request->voucher;
+
+    $submittedExit = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            'pay-code' => $voucher->code,
+            '--commit' => true,
+            '--json' => true,
+        ],
+    );
+    $submittedOutput = Artisan::output();
+    $submitted = json_decode($submittedOutput, true);
+
+    expect($submittedExit)->toBe(Command::FAILURE, $submittedOutput)
+        ->and($submitted['message'])->toContain(
+            'x-change:funding:maker:verify '.$voucher->code,
+        )
+        ->and($submitted['message'])->not->toContain(
+            'Unknown or disabled Treasury connections',
+        );
+
+    app(PrepareFundingRequest::class)->handle(
+        $request,
+        new PrepareFundingRequestData(
+            recognizedValueMinor: 2_200,
+            currency: 'PHP',
+            connectionReference: 'netbank-primary',
+            evidenceReference: 'bank-transfer-proof:command-guidance-1001',
+            reviewerType: $maker::class,
+            reviewerId: (string) $maker->getKey(),
+        ),
+    );
+
+    $awaitingApprovalExit = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            'pay-code' => $voucher->code,
+            '--commit' => true,
+            '--json' => true,
+        ],
+    );
+    $awaitingApprovalOutput = Artisan::output();
+    $awaitingApproval = json_decode($awaitingApprovalOutput, true);
+
+    expect($awaitingApprovalExit)->toBe(
+        Command::FAILURE,
+        $awaitingApprovalOutput,
+    )->and($awaitingApproval['message'])->toContain(
+        'x-change:funding:checker:approve '.$voucher->code,
+    );
+});
+
 it('reports insufficient system funds without issuing a code', function (): void {
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);

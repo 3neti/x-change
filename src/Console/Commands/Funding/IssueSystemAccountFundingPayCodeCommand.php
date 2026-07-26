@@ -237,6 +237,10 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         $request = FundingRequest::query()
             ->where('voucher_id', $voucher->getKey())
             ->sole();
+        $this->assertReviewedFundingRequestReadyForPayment(
+            $request,
+            $voucher,
+        );
         $connection = collect($connections->active([
             (string) $request->connection_reference,
         ]))->sole();
@@ -331,6 +335,46 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         );
 
         return self::SUCCESS;
+    }
+
+    private function assertReviewedFundingRequestReadyForPayment(
+        FundingRequest $request,
+        Voucher $voucher,
+    ): void {
+        if (in_array($request->status, [
+            FundingRequestStatus::PayCodeIssued,
+            FundingRequestStatus::Completed,
+        ], true)) {
+            return;
+        }
+
+        $command = match ($request->status) {
+            FundingRequestStatus::Submitted,
+            FundingRequestStatus::UnderReview,
+            FundingRequestStatus::NeedsInformation => sprintf(
+                'php artisan x-change:funding:maker:verify %s',
+                $voucher->code,
+            ),
+            FundingRequestStatus::AwaitingApproval => sprintf(
+                'php artisan x-change:funding:checker:approve %s',
+                $voucher->code,
+            ),
+            default => null,
+        };
+
+        if ($command !== null) {
+            throw new RuntimeException(sprintf(
+                'Pay Code %s is not ready for system payment. Next: %s',
+                $voucher->code,
+                $command,
+            ));
+        }
+
+        throw new RuntimeException(sprintf(
+            'Pay Code %s cannot be paid because its Funding Request is %s.',
+            $voucher->code,
+            $request->status->value,
+        ));
     }
 
     private function rejectReviewedFundingOverrides(): void
