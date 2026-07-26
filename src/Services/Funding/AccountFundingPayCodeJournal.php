@@ -14,6 +14,8 @@ use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionMoneyData;
 use LBHurtado\XJournal\Data\ExecutionReferenceData;
 use LBHurtado\XJournal\Data\ExecutionSubjectData;
+use LBHurtado\XJournal\Data\JournalTimestampPrecisionProofData;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
 final readonly class AccountFundingPayCodeJournal
@@ -192,6 +194,72 @@ final readonly class AccountFundingPayCodeJournal
                 minorAmount: $claim->disbursed_amount_minor,
             ),
             metadata: $this->metadata('voucher_claim'),
+        ));
+    }
+
+    public function recordTimestampPrecisionAttestation(
+        ExecutionJournalEntry $original,
+        JournalTimestampPrecisionProofData $proof,
+        string $authorizationReference,
+    ): ExecutionJournalEntry {
+        $originalHash = (string) data_get(
+            $original->integrity,
+            'hash',
+        );
+
+        return $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'account_funding.pay_code.integrity_exception_attested',
+            occurredAt: CarbonImmutable::now(),
+            actor: new ExecutionActorData(
+                id: null,
+                type: 'system_control',
+            ),
+            subject: new ExecutionSubjectData(
+                id: (string) data_get($original->subject, 'id'),
+                type: 'voucher',
+                display: 'Account Funding Pay Code',
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'account-funding-integrity-attestation:'
+                    .$original->getKey(),
+                causationId: (string) $original->reference_number,
+                executionId: (string) data_get(
+                    $original->references,
+                    'execution_id',
+                ),
+                externalReference: $originalHash,
+                metadata: [
+                    'original_entry_id' => (string) $original->getKey(),
+                    'original_reference_number' => (string) $original->reference_number,
+                    'authorization_reference' => $authorizationReference,
+                ],
+            ),
+            idempotencyKey: 'x-change:account-funding-pay-code:integrity-exception:'
+                .hash(
+                    'sha256',
+                    $original->reference_number.':'.$originalHash,
+                ),
+            payload: [
+                'status' => 'attested_legacy_exception',
+                'classification' => 'timestamp_precision_loss',
+                'issue_code' => 'hash_mismatch',
+                'persisted_occurred_at' => $original->occurred_at->toJSON(),
+                'recovered_hash_basis_occurred_at' => $proof->recoveredOccurredAt,
+                'recovered_microseconds' => $proof->recoveredMicroseconds,
+                'candidate_count' => $proof->candidateCount,
+                'integrity_hash_reproduced' => true,
+                'idempotency_fingerprint_reproduced' => $proof->idempotencyFingerprintMatched,
+                'original_integrity_hash' => $originalHash,
+                'original_idempotency_fingerprint' => $original->idempotency_fingerprint,
+                'persisted_expected_hash' => $proof->persistedExpectedHash,
+                'original_entry_unchanged' => true,
+                'base_verifier_status' => 'unverified',
+            ],
+            metadata: [
+                'schema' => 'x-change.account-funding-pay-code-integrity-attestation.v1',
+                'domain' => 'account_funding',
+                'source' => 'guarded_journal_integrity_attestation',
+            ],
         ));
     }
 
