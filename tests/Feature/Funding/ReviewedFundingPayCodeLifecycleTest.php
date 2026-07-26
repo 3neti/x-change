@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
@@ -152,6 +153,20 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         $prepared,
         $checker::class,
         (string) $checker->getKey(),
+    );
+    $unconfiguredChecker = User::query()->create([
+        'name' => 'Unconfigured Checker',
+        'email' => 'unconfigured-checker@example.test',
+        'password' => 'password',
+    ]);
+
+    expect(fn () => app(ApproveFundingRequestAndIssueCode::class)->handle(
+        $prepared,
+        $unconfiguredChecker::class,
+        (string) $unconfiguredChecker->getKey(),
+    ))->toThrow(
+        AuthorizationException::class,
+        'checker access is not configured',
     );
 
     expect($voucher->is($request->voucher))->toBeTrue()

@@ -17,20 +17,22 @@ final class FundingRequestAccess
 
     public function isMaker(Authenticatable $actor): bool
     {
-        return in_array(
-            (string) $actor->getAuthIdentifier(),
-            $this->makerIds(),
-            true,
-        );
+        return $this->isConfiguredOperatorModel($actor)
+            && in_array(
+                (string) $actor->getAuthIdentifier(),
+                $this->makerIds(),
+                true,
+            );
     }
 
     public function isChecker(Authenticatable $actor): bool
     {
-        return in_array(
-            (string) $actor->getAuthIdentifier(),
-            $this->checkerIds(),
-            true,
-        );
+        return $this->isConfiguredOperatorModel($actor)
+            && in_array(
+                (string) $actor->getAuthIdentifier(),
+                $this->checkerIds(),
+                true,
+            );
     }
 
     /**
@@ -120,5 +122,15 @@ final class FundingRequestAccess
             static fn (mixed $id): string => trim((string) $id),
             (array) config('x-change.funding.requests.reviewer_ids', []),
         ))));
+    }
+
+    private function isConfiguredOperatorModel(Authenticatable $actor): bool
+    {
+        $modelClass = config('x-change.onboarding.issuer_model')
+            ?: config('auth.providers.users.model');
+
+        return is_string($modelClass)
+            && $modelClass !== ''
+            && is_a($actor, $modelClass);
     }
 }

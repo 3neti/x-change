@@ -46,21 +46,7 @@ final readonly class ApproveFundingRequestAndIssueCode
                 ->lockForUpdate()
                 ->findOrFail($fundingRequest->getKey());
 
-            if (
-                in_array($locked->status, [
-                    FundingRequestStatus::PayCodeIssued,
-                    FundingRequestStatus::Completed,
-                ], true)
-                && $locked->voucher instanceof Voucher
-            ) {
-                return $locked->voucher;
-            }
-
-            if ($locked->status !== FundingRequestStatus::AwaitingApproval) {
-                throw new RuntimeException(
-                    'This Funding Request is not awaiting approval.',
-                );
-            }
+            $approver = $this->actor($approverType, $approverId);
 
             if (
                 $locked->reviewed_by_type === $approverType
@@ -77,6 +63,30 @@ final readonly class ApproveFundingRequestAndIssueCode
             ) {
                 throw new RuntimeException(
                     'The requester cannot approve their own Funding Request.',
+                );
+            }
+
+            if (! $approver instanceof Authenticatable) {
+                throw new RuntimeException(
+                    'The Funding Request checker must be an authenticatable operator.',
+                );
+            }
+
+            $this->access->authorizeChecker($approver);
+
+            if (
+                in_array($locked->status, [
+                    FundingRequestStatus::PayCodeIssued,
+                    FundingRequestStatus::Completed,
+                ], true)
+                && $locked->voucher instanceof Voucher
+            ) {
+                return $locked->voucher;
+            }
+
+            if ($locked->status !== FundingRequestStatus::AwaitingApproval) {
+                throw new RuntimeException(
+                    'This Funding Request is not awaiting approval.',
                 );
             }
 
@@ -102,15 +112,6 @@ final readonly class ApproveFundingRequestAndIssueCode
             }
 
             $system = $this->systemUsers->resolve();
-            $approver = $this->actor($approverType, $approverId);
-
-            if (! $approver instanceof Authenticatable) {
-                throw new RuntimeException(
-                    'The Funding Request checker must be an authenticatable operator.',
-                );
-            }
-
-            $this->access->authorizeChecker($approver);
 
             if (! $system instanceof Model) {
                 throw new RuntimeException(
