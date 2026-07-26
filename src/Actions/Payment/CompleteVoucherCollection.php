@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Payment;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Enums\VoucherState;
+use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
@@ -57,8 +58,16 @@ final readonly class CompleteVoucherCollection
             }
 
             $this->guard->ensureCanCollect($locked);
+            $usesTypedCollectionLifecycle = in_array(
+                $locked->voucher_type,
+                [VoucherType::PAYABLE, VoucherType::SETTLEMENT],
+                true,
+            );
 
-            if (! $locked->canAcceptPayment()) {
+            if (
+                $usesTypedCollectionLifecycle
+                && ! $locked->canAcceptPayment()
+            ) {
                 throw new RuntimeException(
                     'The Pay Code is not active for collection.',
                 );
@@ -90,7 +99,8 @@ final readonly class CompleteVoucherCollection
             );
 
             if (
-                ! $allowOverpayment
+                $usesTypedCollectionLifecycle
+                && ! $allowOverpayment
                 && $data->amountMinor > $progress->remaining_to_collect_minor
             ) {
                 throw new RuntimeException(
@@ -124,6 +134,19 @@ final readonly class CompleteVoucherCollection
                 'attempted_at' => now(),
                 'completed_at' => now(),
                 'meta' => [
+                    'payload' => data_get(
+                        $data->metadata,
+                        'confirmed_payload',
+                        [],
+                    ),
+                    'result' => [
+                        'status' => 'collected',
+                        'amount' => $data->amountMinor / 100,
+                        'currency' => $currency,
+                        'provider' => $data->provider,
+                        'provider_reference' => $data->providerReference,
+                        'provider_transaction_id' => $data->providerTransactionId,
+                    ],
                     'authority' => [
                         'type' => $data->authority,
                         'reference' => $data->authorityReference,
