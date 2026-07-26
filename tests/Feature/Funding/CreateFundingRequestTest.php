@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Date;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
@@ -90,4 +92,30 @@ it('replays the same Funding Request idempotently and rejects changed instructio
         description: $data->description,
         idempotencyKey: $data->idempotencyKey,
     )))->toThrow(RuntimeException::class);
+});
+
+it('creates its locked Pay Code when the host uses immutable dates', function () {
+    $requester = actingAsTestUser();
+    Date::useClass(CarbonImmutable::class);
+
+    try {
+        $request = app(CreateFundingRequest::class)->handle(
+            new CreateFundingRequestData(
+                accountReference: 'wallet:'.$requester->wallet->uuid,
+                requesterType: $requester::class,
+                requesterId: (string) $requester->getKey(),
+                fundingType: FundingRequestType::Unspecified,
+                requestedValueMinor: 1_700,
+                currency: 'PHP',
+                description: 'Browser lifecycle acceptance.',
+                idempotencyKey: 'funding-request-immutable-date-1003',
+            ),
+        );
+    } finally {
+        Date::useDefault();
+    }
+
+    expect($request->voucher)->not->toBeNull()
+        ->and($request->voucher->state)->toBe(VoucherState::LOCKED)
+        ->and($request->voucher->expires_at)->not->toBeNull();
 });

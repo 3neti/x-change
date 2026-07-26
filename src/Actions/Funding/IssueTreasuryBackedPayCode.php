@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use DateTimeInterface;
 use FrittenKeeZ\Vouchers\Facades\Vouchers;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
@@ -23,7 +24,7 @@ final class IssueTreasuryBackedPayCode
     public function handle(
         Authenticatable&Model $issuer,
         array $instructions,
-        Carbon $expiresAt,
+        DateTimeInterface $expiresAt,
         VoucherState $initialState = VoucherState::ACTIVE,
     ): Voucher {
         $data = VoucherInstructionsData::createFromAttribs($instructions);
@@ -31,7 +32,7 @@ final class IssueTreasuryBackedPayCode
             ->withMask($data->mask ?? '****')
             ->withMetadata(['instructions' => $data->toCleanArray()])
             ->withOwner($issuer)
-            ->withExpireTime($expiresAt)
+            ->withExpireTime(Carbon::instance($expiresAt))
             ->create(1);
         $voucher = Collection::wrap($created)->sole();
 
