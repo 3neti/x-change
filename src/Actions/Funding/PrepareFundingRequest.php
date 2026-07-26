@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
@@ -11,6 +12,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Services\Funding\FundingRequestAccess;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
 
@@ -18,6 +20,7 @@ final readonly class PrepareFundingRequest
 {
     public function __construct(
         private EnvelopeService $envelopes,
+        private FundingRequestAccess $access,
         private FundingRequestWorkflowPublisher $workflows,
     ) {}
 
@@ -54,6 +57,29 @@ final readonly class PrepareFundingRequest
             $fromStatus = $locked->status;
             $nextVersion = $locked->version + 1;
             $reviewer = $this->actor($data->reviewerType, $data->reviewerId);
+
+            if (
+                $locked->requester_type === $data->reviewerType
+                && $locked->requester_id === $data->reviewerId
+            ) {
+                throw new RuntimeException(
+                    'The requester cannot verify backing for their own Funding Request.',
+                );
+            }
+
+            if (! $reviewer instanceof Authenticatable) {
+                throw new RuntimeException(
+                    'The Funding Request maker must be an authenticatable operator.',
+                );
+            }
+
+            $this->access->authorizeMaker($reviewer);
+
+            if ($data->recognizedValueMinor !== $locked->requested_value_minor) {
+                throw new RuntimeException(
+                    'Recognized backing must exactly match the requested Pay Code target.',
+                );
+            }
 
             if (
                 ! $locked->voucher instanceof Voucher

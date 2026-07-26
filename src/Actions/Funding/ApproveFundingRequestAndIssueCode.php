@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\SettlementEnvelope\Enums\EnvelopeStatus;
@@ -14,6 +15,7 @@ use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Services\Funding\FundingRequestAccess;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use RuntimeException;
@@ -25,6 +27,7 @@ final readonly class ApproveFundingRequestAndIssueCode
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryPayCodeAccountingService $accounting,
         private EnvelopeService $envelopes,
+        private FundingRequestAccess $access,
         private FundingRequestWorkflowPublisher $workflows,
     ) {}
 
@@ -69,6 +72,15 @@ final readonly class ApproveFundingRequestAndIssueCode
             }
 
             if (
+                $locked->requester_type === $approverType
+                && $locked->requester_id === $approverId
+            ) {
+                throw new RuntimeException(
+                    'The requester cannot approve their own Funding Request.',
+                );
+            }
+
+            if (
                 ! $locked->voucher instanceof Voucher
                 || $locked->voucher->envelope === null
             ) {
@@ -91,6 +103,14 @@ final readonly class ApproveFundingRequestAndIssueCode
 
             $system = $this->systemUsers->resolve();
             $approver = $this->actor($approverType, $approverId);
+
+            if (! $approver instanceof Authenticatable) {
+                throw new RuntimeException(
+                    'The Funding Request checker must be an authenticatable operator.',
+                );
+            }
+
+            $this->access->authorizeChecker($approver);
 
             if (! $system instanceof Model) {
                 throw new RuntimeException(

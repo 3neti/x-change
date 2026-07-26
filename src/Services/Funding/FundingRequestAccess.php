@@ -12,13 +12,65 @@ final class FundingRequestAccess
 {
     public function isReviewer(Authenticatable $actor): bool
     {
-        $reviewerIds = array_values(array_filter(array_map(
-            static fn (mixed $id): string => trim((string) $id),
-            (array) config('x-change.funding.requests.reviewer_ids', []),
-        )));
+        return $this->isMaker($actor) || $this->isChecker($actor);
+    }
 
-        return $reviewerIds !== []
-            && in_array((string) $actor->getAuthIdentifier(), $reviewerIds, true);
+    public function isMaker(Authenticatable $actor): bool
+    {
+        return in_array(
+            (string) $actor->getAuthIdentifier(),
+            $this->makerIds(),
+            true,
+        );
+    }
+
+    public function isChecker(Authenticatable $actor): bool
+    {
+        return in_array(
+            (string) $actor->getAuthIdentifier(),
+            $this->checkerIds(),
+            true,
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function makerIds(): array
+    {
+        return $this->configuredIds('maker_ids');
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function checkerIds(): array
+    {
+        return $this->configuredIds('checker_ids');
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function authorizeMaker(Authenticatable $actor): void
+    {
+        if (! $this->isMaker($actor)) {
+            throw new AuthorizationException(
+                'Funding Request maker access is not configured for this operator.',
+            );
+        }
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function authorizeChecker(Authenticatable $actor): void
+    {
+        if (! $this->isChecker($actor)) {
+            throw new AuthorizationException(
+                'Funding Request checker access is not configured for this operator.',
+            );
+        }
     }
 
     /**
@@ -48,5 +100,25 @@ final class FundingRequestAccess
                 'Funding Request review access is not configured for this operator.',
             );
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function configuredIds(string $key): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map(
+            static fn (mixed $id): string => trim((string) $id),
+            (array) config("x-change.funding.requests.{$key}", []),
+        ))));
+
+        if ($ids !== []) {
+            return $ids;
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn (mixed $id): string => trim((string) $id),
+            (array) config('x-change.funding.requests.reviewer_ids', []),
+        ))));
     }
 }

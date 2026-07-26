@@ -51,6 +51,12 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         'email' => 'funding-checker@example.test',
         'password' => 'password',
     ]);
+    config()->set('x-change.funding.requests.maker_ids', [
+        (string) $maker->getKey(),
+    ]);
+    config()->set('x-change.funding.requests.checker_ids', [
+        (string) $checker->getKey(),
+    ]);
 
     fundTestSystemAccountFundingReserve(
         $system,
@@ -261,6 +267,80 @@ it('does not allow system Treasury payment before maker-checker approval', funct
         $requester,
         TreasuryPositionPurpose::ClientFunds,
     ))->toBe(0);
+});
+
+it('keeps requester, maker, and checker controls independent', function () {
+    enableNetbankTreasuryForTests();
+    $requester = actingAsTestUser(0);
+    $maker = User::query()->create([
+        'name' => 'Independent Maker',
+        'email' => 'independent-maker@example.test',
+        'password' => 'password',
+    ]);
+    config()->set('x-change.funding.requests.maker_ids', [
+        (string) $requester->getKey(),
+        (string) $maker->getKey(),
+    ]);
+    config()->set('x-change.funding.requests.checker_ids', [
+        (string) $requester->getKey(),
+    ]);
+    $request = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$requester->wallet->uuid,
+            requesterType: $requester::class,
+            requesterId: (string) $requester->getKey(),
+            fundingType: FundingRequestType::BankTransfer,
+            requestedValueMinor: 22_00,
+            currency: 'PHP',
+            description: 'Independent operator control test.',
+            idempotencyKey: 'reviewed-funding-independent-controls',
+        ),
+    );
+    $requesterReview = new PrepareFundingRequestData(
+        recognizedValueMinor: 22_00,
+        currency: 'PHP',
+        connectionReference: 'netbank-primary',
+        evidenceReference: 'evidence:independent-controls',
+        reviewerType: $requester::class,
+        reviewerId: (string) $requester->getKey(),
+    );
+
+    expect(fn () => app(PrepareFundingRequest::class)->handle(
+        $request,
+        $requesterReview,
+    ))->toThrow(RuntimeException::class, 'requester cannot verify backing');
+
+    expect(fn () => app(PrepareFundingRequest::class)->handle(
+        $request,
+        new PrepareFundingRequestData(
+            recognizedValueMinor: 21_00,
+            currency: 'PHP',
+            connectionReference: 'netbank-primary',
+            evidenceReference: 'evidence:wrong-amount',
+            reviewerType: $maker::class,
+            reviewerId: (string) $maker->getKey(),
+        ),
+    ))->toThrow(RuntimeException::class, 'must exactly match');
+
+    $prepared = app(PrepareFundingRequest::class)->handle(
+        $request,
+        new PrepareFundingRequestData(
+            recognizedValueMinor: 22_00,
+            currency: 'PHP',
+            connectionReference: 'netbank-primary',
+            evidenceReference: 'evidence:independent-controls',
+            reviewerType: $maker::class,
+            reviewerId: (string) $maker->getKey(),
+        ),
+    );
+
+    expect(fn () => app(ApproveFundingRequestAndIssueCode::class)->handle(
+        $prepared,
+        $requester::class,
+        (string) $requester->getKey(),
+    ))->toThrow(RuntimeException::class, 'requester cannot approve')
+        ->and($request->refresh()->status)
+        ->toBe(FundingRequestStatus::AwaitingApproval);
 });
 
 function positionBalance(User $owner, TreasuryPositionPurpose $purpose): int

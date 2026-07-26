@@ -637,6 +637,20 @@ return [
                 static fn (string $id): string => trim($id),
                 explode(',', (string) env('XCHANGE_FUNDING_REQUEST_REVIEWER_IDS', '')),
             ))),
+            'maker_ids' => array_values(array_filter(array_map(
+                static fn (string $id): string => trim($id),
+                explode(',', (string) env(
+                    'XCHANGE_FUNDING_REQUEST_MAKER_IDS',
+                    env('XCHANGE_FUNDING_REQUEST_REVIEWER_IDS', ''),
+                )),
+            ))),
+            'checker_ids' => array_values(array_filter(array_map(
+                static fn (string $id): string => trim($id),
+                explode(',', (string) env(
+                    'XCHANGE_FUNDING_REQUEST_CHECKER_IDS',
+                    env('XCHANGE_FUNDING_REQUEST_REVIEWER_IDS', ''),
+                )),
+            ))),
             'code_ttl_seconds' => (int) env(
                 'XCHANGE_REVIEWED_FUNDING_PAY_CODE_TTL_SECONDS',
                 env('XCHANGE_ACCOUNT_FUNDING_CODE_TTL_SECONDS', 604800),
