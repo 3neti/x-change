@@ -22,7 +22,7 @@ it('lets an Account owner submit a request without accepting monetary authority'
 
     $this->post(route('x-change.cockpit.funding.requests.store'), [
         'funding_type' => 'BANK_TRANSFER',
-        'requested_value_minor' => 2_000_000,
+        'requested_value_minor' => '2000000',
         'currency' => 'php',
         'description' => 'Large corporate transfer awaiting an authoritative bank match.',
         'external_reference' => 'BANK-2026-1001',

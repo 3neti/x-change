@@ -21,7 +21,7 @@ class CockpitFundingRequestReviewController extends Controller
         $actor = $request->user();
         $validated = $request->validated();
         $prepare->handle($fundingRequest, new PrepareFundingRequestData(
-            recognizedValueMinor: $validated['recognized_value_minor'],
+            recognizedValueMinor: (int) $validated['recognized_value_minor'],
             currency: $validated['currency'],
             connectionReference: $validated['connection_reference'],
             evidenceReference: $validated['evidence_reference'],

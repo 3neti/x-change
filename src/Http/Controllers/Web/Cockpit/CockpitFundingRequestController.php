@@ -40,7 +40,7 @@ class CockpitFundingRequestController extends Controller
                 requesterType: $actor::class,
                 requesterId: (string) $actor->getAuthIdentifier(),
                 fundingType: FundingRequestType::from($validated['funding_type']),
-                requestedValueMinor: $validated['requested_value_minor'],
+                requestedValueMinor: (int) $validated['requested_value_minor'],
                 currency: $validated['currency'],
                 description: $validated['description'],
                 idempotencyKey: $validated['idempotency_key'],
