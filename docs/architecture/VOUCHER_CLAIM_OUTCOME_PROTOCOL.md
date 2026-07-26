@@ -133,6 +133,7 @@ precious metal, jewelry, vehicle, or another approved source:
 Account owner submits Funding Request
         ↓
 requester-owned PAYABLE is created LOCKED
+and its Pay Code is returned as the request reference
         ↓
 maker verifies custody, settlement, and recognized value
         ↓
@@ -147,11 +148,13 @@ system Treasury pays the exact target once
 collection execution credits the owner's Client Funds
 ```
 
-The browser supplies a requested value and supporting description only. It
-may also upload one PDF, JPEG, or PNG to the Voucher Settlement Envelope. None
-of those inputs authorizes credit. Approval succeeds only when the system
-Account already owns enough recognized Account Funding Reserve on the selected
-provider connection.
+The browser requires only the requested PHP value. A message, source,
+transaction reference, date, verification detail, and one PDF, JPEG, or PNG
+Settlement Envelope attachment are optional. The server supplies neutral
+defaults for omitted classification and narrative fields. None of those inputs,
+the generated Pay Code, or sharing that Pay Code authorizes credit. Approval
+succeeds only when the system Account already owns enough recognized Account
+Funding Reserve on the selected provider connection.
 
 The funding request stores a unique `voucher_id`. The former
 `x_change_account_funding_codes` table is retired by a guarded forward
@@ -176,6 +179,15 @@ sanitized x-journal entry, and publishes an owner-scoped Funding projection
 event after commit. Database uniqueness and stable idempotency references make
 replays non-monetary.
 
+Checker acceptance dispatches one unique, non-overlapping
+`PayApprovedFundingRequestJob`. The job invokes the same idempotent collection
+boundary used by the operator command. A synchronous queue completes the credit
+within the acceptance request; an asynchronous queue exposes the intermediate
+**Adding funds** state until a worker completes it. Exhausted retries do not
+invent credit or release the reservation: the request remains retryable, a
+sanitized failure event and notice are recorded, and no exception message,
+credential, provider account, or evidence content is broadcast.
+
 ## System Account Funding Pay Code utility
 
 `x-change:funding:issue-pay-code` has two deliberately separate modes.
@@ -184,8 +196,10 @@ With no positional Pay Code it remains the package-owned utility for issuing a
 recipient-bound, redeemable Account Funding Pay Code from recognized system
 Account Funding Reserve. It is preview-only unless `--commit` is present.
 
-With a positional Pay Code it operates an already reviewed requester-owned
-PAYABLE:
+With a positional Pay Code it previews or retries an already reviewed
+requester-owned PAYABLE. Normal Cockpit checker acceptance queues this payment
+automatically; positional mode is the explicit operator recovery and
+diagnostic surface:
 
 ```bash
 php artisan x-change:funding:issue-pay-code FUND-XXXX
@@ -328,15 +342,29 @@ ledger transfers remain the accounting authority.
 `/x/cockpit/funding` presents:
 
 1. **Self Top-Up** for the reusable provider-authoritative QR address;
-2. **Pay Code Funding** for inspecting and adding any eligible Pay Code.
+2. **Pay Code Funding** for applying an eligible Pay Code or requesting reviewed
+   Account Funding.
 
-The reviewed request is secondary inside Pay Code Funding. Its form accepts an
-optional private evidence document. When approved, the owner-only read model
-displays the complete PAYABLE code and marks it as awaiting system Treasury;
-the Account owner is not offered a claim action. Reviewers can download
-sanitized evidence through an authenticated `no-store` endpoint. General
-Cockpit projections do not expose storage paths, claimant references, Treasury
-Position references, raw evidence, or provider account details.
+The reviewed request surface starts with one required Amount field and an
+optional Message. Proof and transfer details stay in a secondary disclosure.
+Submission immediately shows the request amount and locked Pay Code, with local
+copy controls for the code and a concise follow-up message. The durable request
+history shows Pay Code, amount, status, requested time, funded time, and the
+currently available control. It survives refresh because the table is a
+database-backed read model rather than browser-local state.
+
+The complete code remains owner-visible only while it is actionable; terminal
+history masks it. **Pending review** means no value moved. **Ready for
+acceptance** means maker evidence was recorded. **Adding funds** means the
+checker reserved value and the unique System Treasury payment is queued.
+**Funded** means one collection and one Account credit completed. Realtime
+owner-scoped events refresh the history and Funding position after each
+transition, with existing polling as a fallback.
+
+Reviewers can download sanitized evidence through an authenticated `no-store`
+endpoint. General Cockpit projections and broadcasts do not expose storage
+paths, claimant references, Treasury Position references, raw evidence,
+messages, Pay Codes, or provider account details.
 
 `/x/cockpit/quick-generate` is the issuance-side entry point. Its prominent
 **Recipient receives** control emits the typed claim instruction:
@@ -439,7 +467,11 @@ The minimum proof is:
 13. private evidence is hash-addressed and owner/reviewer scoped;
 14. collection, journal, Treasury posting, and Echo effects occur once on
     replay;
-15. focused backend and frontend suites pass.
+15. checker acceptance queues one unique System Treasury payment and exposes an
+    honest intermediate state while an asynchronous worker is pending;
+16. exhausted retries preserve the reservation and record only sanitized
+    retry-required evidence;
+17. focused backend and frontend suites pass.
 
 ### Implemented acceptance — 2026-07-25
 

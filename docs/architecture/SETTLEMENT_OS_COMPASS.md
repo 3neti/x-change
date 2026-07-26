@@ -68,16 +68,23 @@ Last updated: 2026-07-26
   Voucher kind.
 - Added Settlement Envelope evidence intake with private storage,
   maker-attributed acceptance, and authenticated `no-store` downloads.
+- Added amount-first request intake that immediately returns a locked Pay Code;
+  optional proof and transfer details remain secondary.
 - Added maker-checker activation backed by system Account Funding Reserve and
   Pay Code Reserve.
+- Checker acceptance now queues one unique, idempotent System Treasury payment;
+  realtime history distinguishes pending review, ready for acceptance, adding
+  funds, funded, and retry-required states.
 - Converged reviewed Account Funding and provider-confirmed payments on
   `CompleteVoucherCollection` with one collection, one accounting posting, one
   journal entry, and one owner-scoped Funding projection event.
 - Added positional operator syntax:
   `php artisan x-change:funding:issue-pay-code FUND-XXXX`; preview is the
   default and `--commit` performs the idempotent system Treasury payment.
-- Removed the reviewed-request owner claim action from Cockpit and presents the
-  code as awaiting system Treasury payment.
+- Removed the reviewed-request owner claim action from Cockpit. The owner may
+  copy the Pay Code as a follow-up reference, but it cannot authorize credit.
+- Kept positional Pay Code execution as an operator recovery/diagnostic path;
+  normal Cockpit checker acceptance dispatches payment automatically.
 - Architecture:
   [VOUCHER_CLAIM_OUTCOME_PROTOCOL.md](VOUCHER_CLAIM_OUTCOME_PROTOCOL.md) and
   [FUNDING_ACCOUNT_MANAGEMENT.md](FUNDING_ACCOUNT_MANAGEMENT.md).
