@@ -24,6 +24,7 @@ final class IssueTreasuryBackedPayCode
         Authenticatable&Model $issuer,
         array $instructions,
         Carbon $expiresAt,
+        VoucherState $initialState = VoucherState::ACTIVE,
     ): Voucher {
         $data = VoucherInstructionsData::createFromAttribs($instructions);
         $created = Vouchers::withPrefix($data->prefix ?? 'FUND')
@@ -39,8 +40,8 @@ final class IssueTreasuryBackedPayCode
         }
 
         $voucher->forceFill([
-            'voucher_type' => VoucherType::REDEEMABLE,
-            'state' => VoucherState::ACTIVE,
+            'voucher_type' => $data->voucher_type ?? VoucherType::REDEEMABLE,
+            'state' => $initialState,
             'processed_on' => now(),
         ])->save();
 
