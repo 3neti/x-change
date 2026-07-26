@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Enums;
 
 enum FundingRequestType: string
 {
+    case Unspecified = 'unspecified';
     case BankTransfer = 'bank_transfer';
     case CashHandover = 'cash_handover';
     case PreciousMetal = 'precious_metal';
@@ -16,6 +17,7 @@ enum FundingRequestType: string
     public function label(): string
     {
         return match ($this) {
+            self::Unspecified => 'To be verified',
             self::BankTransfer => 'Bank transfer',
             self::CashHandover => 'Cash handover',
             self::PreciousMetal => 'Gold or precious metal',

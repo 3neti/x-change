@@ -19,9 +19,15 @@ class CreateCockpitFundingRequestRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'funding_type' => mb_strtolower(trim((string) $this->input('funding_type'))),
+            'funding_type' => mb_strtolower(trim((string) $this->input(
+                'funding_type',
+                FundingRequestType::Unspecified->value,
+            ))),
             'currency' => mb_strtoupper(trim((string) $this->input('currency', 'PHP'))),
-            'description' => trim((string) $this->input('description')),
+            'description' => trim((string) $this->input(
+                'description',
+                'Account funding requested by the Account holder.',
+            )),
             'external_reference' => trim((string) $this->input('external_reference')),
             'requester_notes' => trim((string) $this->input('requester_notes')),
             'idempotency_key' => trim((string) $this->input('idempotency_key')),

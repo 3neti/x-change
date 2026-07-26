@@ -15,6 +15,43 @@ use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Tests\Fakes\User;
 
+it('creates a locked requester-owned Pay Code from an amount-only request', function () {
+    $requester = actingAsTestUser(0);
+
+    $this->post(route('x-change.cockpit.funding.requests.store'), [
+        'requested_value_minor' => '1750',
+        'requester_notes' => 'Cash was handed to the system owner.',
+        'idempotency_key' => 'cockpit-amount-only-funding-request-1001',
+    ])->assertRedirect(route('x-change.cockpit.funding.index'))
+        ->assertSessionHas(
+            'funding_notice',
+            fn (string $notice): bool => str_contains($notice, 'Funding Request'),
+        );
+
+    $request = FundingRequest::query()
+        ->with('voucher.envelope')
+        ->sole();
+
+    expect($request->funding_type)->toBe(FundingRequestType::Unspecified)
+        ->and($request->requested_value_minor)->toBe(1_750)
+        ->and($request->currency)->toBe('PHP')
+        ->and($request->description)->toBe(
+            'Account funding requested by the Account holder.',
+        )
+        ->and($request->requester_notes_ciphertext)->toBe(
+            'Cash was handed to the system owner.',
+        )
+        ->and($request->status)->toBe(FundingRequestStatus::Submitted)
+        ->and($request->voucher)->not->toBeNull()
+        ->and($request->voucher->owner->is($requester))->toBeTrue()
+        ->and($request->voucher->state->value)->toBe('locked')
+        ->and(data_get(
+            $request->voucher->metadata,
+            'instructions.target_amount',
+        ))->toBe(17.5)
+        ->and($request->voucher->envelope)->not->toBeNull();
+});
+
 it('lets an Account owner submit a request without accepting monetary authority', function () {
     Storage::fake('local');
     $requester = actingAsTestUser(25_000);
