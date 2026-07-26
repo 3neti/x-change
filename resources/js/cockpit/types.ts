@@ -637,12 +637,14 @@ export type CockpitFundingReadModel = {
 export type CockpitReviewedFundingPayCode = {
     request_reference: string;
     code: string;
+    display_code: string;
     last_four: string;
     status: string;
     amount: string;
     voucher_type: string;
     collection_mode: 'system_treasury' | 'recipient_claim';
     can_claim: boolean;
+    can_copy: boolean;
     expires_at?: string | null;
 };
 
@@ -672,8 +674,11 @@ export type CockpitFundingRequest = {
     recognized_value?: string | null;
     currency: string;
     status: string;
+    receipt_status: string;
+    receipt_status_label: string;
     description: string;
     submitted_at?: string | null;
+    completed_at?: string | null;
     evidence?: CockpitFundingEvidenceSummary;
     pay_code?: CockpitReviewedFundingPayCode | null;
 };
@@ -736,12 +741,14 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_requests?: CockpitFundingRequestReadModel;
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
+    funding_request_submitted_reference?: string | null;
     funding_workspace_mode?: 'self_top_up' | 'pay_code';
     funding_poll_interval?: number;
     funding_realtime?: {
         enabled: boolean;
         channel: string;
         event: '.FundingProjectionChanged';
+        workflow_event: '.FundingRequestChanged';
     };
     funding_simulation?: CockpitQrPhFundingSimulation;
     standing_funding_address?: CockpitStandingFundingAddressAvailability;

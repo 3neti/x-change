@@ -4,18 +4,26 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Funding from '../../../resources/js/cockpit/pages/Funding.vue';
 
-const { echoCallback, routerPostMock, routerReloadMock, usePollMock } =
-    vi.hoisted(() => ({
-        echoCallback: {
-            current: null as null | ((payload: Record<string, string>) => void),
-        },
-        routerPostMock: vi.fn(),
-        routerReloadMock: vi.fn(),
-        usePollMock: vi.fn(() => ({
-            start: vi.fn(),
-            stop: vi.fn(),
-        })),
-    }));
+const {
+    echoCallback,
+    workflowEchoCallback,
+    routerPostMock,
+    routerReloadMock,
+    usePollMock,
+} = vi.hoisted(() => ({
+    echoCallback: {
+        current: null as null | ((payload: Record<string, string>) => void),
+    },
+    workflowEchoCallback: {
+        current: null as null | ((payload: Record<string, string>) => void),
+    },
+    routerPostMock: vi.fn(),
+    routerReloadMock: vi.fn(),
+    usePollMock: vi.fn(() => ({
+        start: vi.fn(),
+        stop: vi.fn(),
+    })),
+}));
 
 vi.mock('@laravel/echo-vue', () => ({
     useEcho: vi.fn(
@@ -24,7 +32,11 @@ vi.mock('@laravel/echo-vue', () => ({
             _event: string,
             callback: (payload: Record<string, string>) => void,
         ) => {
-            echoCallback.current = callback;
+            if (_event === '.FundingRequestChanged') {
+                workflowEchoCallback.current = callback;
+            } else {
+                echoCallback.current = callback;
+            }
 
             return {
                 leaveChannel: vi.fn(),
@@ -344,6 +356,7 @@ const fundingRealtime = {
     enabled: true,
     channel: 'x-change.funding.opaque-owner-token',
     event: '.FundingProjectionChanged' as const,
+    workflow_event: '.FundingRequestChanged' as const,
 };
 
 const payCodeFundingPreview = {
@@ -370,8 +383,11 @@ const fundingRequestReadModel = {
             recognized_value: '₱20,000.00',
             currency: 'PHP',
             status: 'pay_code_issued',
+            receipt_status: 'funding',
+            receipt_status_label: 'Adding funds',
             description: 'Matched corporate bank transfer.',
             submitted_at: '2026-07-25T08:00:00+08:00',
+            completed_at: null,
             evidence: {
                 attachment_count: 1,
                 pending_count: 0,
@@ -392,12 +408,14 @@ const fundingRequestReadModel = {
             pay_code: {
                 request_reference: '01J-REQUEST-1',
                 code: 'FUNDF9K2',
+                display_code: 'FUNDF9K2',
                 last_four: 'F9K2',
                 status: 'awaiting_system_treasury',
                 amount: '₱20,000.00',
                 voucher_type: 'payable',
                 collection_mode: 'system_treasury',
                 can_claim: false,
+                can_copy: true,
                 expires_at: '2026-08-01T08:00:00+08:00',
             },
         },
@@ -422,6 +440,7 @@ describe('Cockpit Funding foundation', () => {
         usePollMock.mockClear();
         vi.mocked(useEcho).mockClear();
         echoCallback.current = null;
+        workflowEchoCallback.current = null;
     });
 
     it('renders provider-verified funding posture and opens the reusable QR immediately', async () => {
@@ -785,25 +804,29 @@ describe('Cockpit Funding foundation', () => {
                 .get('[data-testid="funding-request-form"]')
                 .attributes('open'),
         ).toBeUndefined();
-        expect(panel.text()).toContain('Request a Reviewed Funding Pay Code');
-        expect(panel.text()).toContain('Reviewed Funding Pay Code');
-        expect(panel.text()).toContain('Bank transfer');
-        expect(panel.text()).toContain('Gold or precious metal');
-        expect(panel.text()).toContain('Verification details');
+        expect(panel.text()).toContain('Request Account Funding');
+        expect(panel.text()).toContain('Message');
+        expect(panel.text()).toContain('(optional)');
+        expect(panel.text()).toContain('Add proof or transfer details');
         expect(panel.text()).toContain('Evidence document');
         expect(
             panel
                 .get('[data-testid="funding-request-evidence"]')
                 .attributes('accept'),
         ).toContain('application/pdf');
-        expect(panel.text()).toContain('Submit for Review');
-        expect(panel.text()).toContain('Reviewed funding requests');
-        expect(panel.text()).toContain('Pay Code FUNDF9K2');
-        expect(panel.text()).toContain('Awaiting System Treasury');
-        expect(panel.text()).toContain(
-            'System Treasury pays this code after independent approval.',
-        );
+        expect(panel.text()).toContain('Request Account Funding');
+        expect(panel.text()).toContain('Account Funding Requests');
+        expect(panel.text()).toContain('Pay Code');
+        expect(panel.text()).toContain('Amount');
+        expect(panel.text()).toContain('Status');
+        expect(panel.text()).toContain('Requested');
+        expect(panel.text()).toContain('Funded');
+        expect(panel.text()).toContain('Control');
+        expect(panel.text()).toContain('FUNDF9K2');
+        expect(panel.text()).toContain('Adding funds');
         expect(panel.text()).toContain('bank-transfer-proof.pdf');
+        expect(panel.text()).not.toContain('Verification details');
+        expect(panel.text()).not.toContain('Submit for Review');
         expect(
             panel
                 .find('[data-testid="claim-reviewed-funding-pay-code"]')
@@ -820,6 +843,61 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.find('[data-testid="funding-request-modal"]').exists(),
         ).toBe(false);
+    });
+
+    it('shows and copies the newly requested Pay Code and follow-up message', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        vi.stubGlobal('navigator', {
+            clipboard: { writeText },
+        });
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_requests: {
+                    ...fundingRequestReadModel,
+                    requests: [
+                        {
+                            ...fundingRequestReadModel.requests[0],
+                            status: 'submitted',
+                            receipt_status: 'pending',
+                            receipt_status_label: 'Pending',
+                            pay_code: {
+                                ...fundingRequestReadModel.requests[0].pay_code,
+                                code: 'FUNDABCD',
+                                display_code: 'FUNDABCD',
+                                status: 'locked_pending_review',
+                            },
+                        },
+                    ],
+                },
+                funding_request_submitted_reference: '01J-REQUEST-1',
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="funding-mode-pay_code"]')
+            .trigger('click');
+        const result = wrapper.get('[data-testid="funding-request-result"]');
+        const buttons = result.findAll('button');
+
+        expect(result.text()).toContain('Funding requested');
+        expect(result.text()).toContain('₱20,000.00');
+        expect(result.text()).toContain('FUNDABCD');
+        expect(result.text()).toContain('Pending');
+
+        await buttons[0].trigger('click');
+        await flushPromises();
+        expect(writeText).toHaveBeenCalledWith('FUNDABCD');
+
+        await buttons[1].trigger('click');
+        await flushPromises();
+        expect(writeText).toHaveBeenCalledWith(
+            'Please process my ₱20,000.00 Account Funding request. Pay Code: FUNDABCD.',
+        );
     });
 
     it('refreshes balance projections once for a valid private funding event', async () => {
@@ -878,6 +956,30 @@ describe('Cockpit Funding foundation', () => {
         });
 
         expect(useEcho).not.toHaveBeenCalled();
+    });
+
+    it('refreshes request history for a valid private workflow event', () => {
+        mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+                funding_realtime: fundingRealtime,
+            },
+        });
+
+        workflowEchoCallback.current?.({
+            schema: 'x-change.funding-request-changed.v1',
+            event_id: 'request-event-1',
+            reason: 'funding_request_changed',
+            request_reference: '01J-REQUEST-1',
+            status: 'submitted',
+            occurred_at: '2026-07-25T08:00:00+08:00',
+        });
+
+        expect(routerReloadMock).toHaveBeenCalledOnce();
     });
 
     it('opens a standing QR, checks sanitized receipts, and approves supervised credit', async () => {

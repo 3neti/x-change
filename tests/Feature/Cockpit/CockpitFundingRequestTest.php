@@ -37,8 +37,9 @@ it('creates a locked requester-owned Pay Code from an amount-only request', func
     ])->assertRedirect(route('x-change.cockpit.funding.index'))
         ->assertSessionHas(
             'funding_notice',
-            fn (string $notice): bool => str_contains($notice, 'Funding Request'),
-        );
+            'Funding requested. Share the Pay Code if you want to follow up.',
+        )
+        ->assertSessionHas('funding_request_submitted_reference');
 
     $request = FundingRequest::query()
         ->with('voucher.envelope')

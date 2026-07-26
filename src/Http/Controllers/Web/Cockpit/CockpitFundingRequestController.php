@@ -67,8 +67,12 @@ class CockpitFundingRequestController extends Controller
         return redirect()
             ->route('x-change.cockpit.funding.index')
             ->with(
+                'funding_request_submitted_reference',
+                $fundingRequest->reference,
+            )
+            ->with(
                 'funding_notice',
-                "Funding Request {$fundingRequest->reference} was submitted for independent review.",
+                'Funding requested. Share the Pay Code if you want to follow up.',
             );
     }
 

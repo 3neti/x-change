@@ -63,6 +63,8 @@ const activeFundingRequestReview = ref<string | null>(null);
 const fundingRequestAmount = ref('');
 const fundingReviewAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
+const copiedFundingRequest = ref<string | null>(null);
+const dismissedFundingRequestResult = ref(false);
 type FundingWorkspaceMode = 'self_top_up' | 'pay_code' | 'simulation';
 const activeFundingMode = ref<FundingWorkspaceMode>(
     props.funding_workspace_mode === 'pay_code' ? 'pay_code' : 'self_top_up',
@@ -172,14 +174,12 @@ const reconciliationForm = useForm({
 const approvalForm = useForm({});
 const verificationForm = useForm({});
 const fundingRequestForm = useForm({
-    funding_type: 'bank_transfer',
+    funding_type: 'unspecified',
     requested_value_minor: 0,
-    currency: 'PHP',
-    description: '',
     external_reference: '',
     occurred_on: '',
     requester_notes: '',
-    evidence_document_type: 'bank_transfer_proof',
+    evidence_document_type: 'supporting_document',
     evidence_document: null as File | null,
     idempotency_key: newIdempotencyKey(),
 });
@@ -207,10 +207,43 @@ const payCodeFundingActionLabel = computed(() => {
 
     return amount ? `Add ${amount} to my Account` : 'Add to my Account';
 });
+const submittedFundingRequest = computed(() => {
+    if (dismissedFundingRequestResult.value) {
+        return null;
+    }
+
+    const reference = props.funding_request_submitted_reference;
+
+    return reference
+        ? (fundingRequests.value.requests.find(
+              (request) => request.reference === reference,
+          ) ?? null)
+        : null;
+});
+const fundingRequestButtonLabel = computed(() => {
+    const amountMinor = amountToMinor(fundingRequestAmount.value);
+
+    if (amountMinor === null) {
+        return 'Request Account Funding';
+    }
+
+    return `Request ${new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+    }).format(amountMinor / 100)}`;
+});
 type FundingProjectionChangedPayload = {
     schema: string;
     event_id: string;
     reason: string;
+    occurred_at: string;
+};
+type FundingRequestChangedPayload = {
+    schema: string;
+    event_id: string;
+    reason: string;
+    request_reference: string;
+    status: string;
     occurred_at: string;
 };
 
@@ -237,6 +270,22 @@ if (props.funding_realtime?.enabled === true) {
                 refreshFundingProjections();
                 realtimeRefreshTimer = null;
             }, 150);
+        },
+    );
+    useEcho<FundingRequestChangedPayload>(
+        props.funding_realtime.channel,
+        props.funding_realtime.workflow_event,
+        (event) => {
+            if (
+                event.schema !== 'x-change.funding-request-changed.v1' ||
+                event.reason !== 'funding_request_changed' ||
+                processedFundingEvents.has(event.event_id)
+            ) {
+                return;
+            }
+
+            processedFundingEvents.add(event.event_id);
+            refreshFundingProjections();
         },
     );
 }
@@ -391,7 +440,7 @@ function submitFundingRequest(): void {
 
     if (amountMinor === null) {
         fundingRequestAmountError.value =
-            'Enter the value you want independently reviewed.';
+            'Enter the amount you are requesting.';
 
         return;
     }
@@ -403,7 +452,6 @@ function submitFundingRequest(): void {
         onSuccess: () => {
             fundingRequestAmount.value = '';
             fundingRequestForm.reset(
-                'description',
                 'external_reference',
                 'occurred_on',
                 'requester_notes',
@@ -413,6 +461,43 @@ function submitFundingRequest(): void {
             fundingRequestForm.idempotency_key = newIdempotencyKey();
         },
     });
+}
+
+async function copyFundingRequest(
+    reference: string,
+    value: string,
+): Promise<void> {
+    if (!navigator.clipboard?.writeText) {
+        return;
+    }
+
+    await navigator.clipboard.writeText(value);
+    copiedFundingRequest.value = reference;
+}
+
+function fundingRequestMessage(amount: string, code: string): string {
+    return `Please process my ${amount} Account Funding request. Pay Code: ${code}.`;
+}
+
+function fundingRequestStatusTone(status: string): string {
+    return (
+        {
+            funded: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200',
+            funding:
+                'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200',
+            action_needed:
+                'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-200',
+            not_funded:
+                'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-200',
+            cancelled:
+                'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+            expired:
+                'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+            pending:
+                'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-200',
+        }[status] ??
+        'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+    );
 }
 
 function selectFundingRequestEvidence(event: Event): void {
@@ -1923,14 +2008,110 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <summary
                         class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold marker:hidden sm:px-5"
                     >
-                        <span>Request a Reviewed Funding Pay Code</span>
-                        <span
-                            class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
-                        >
-                            optional review
-                        </span>
+                        <span>Request Account Funding</span>
                     </summary>
+                    <div
+                        v-if="submittedFundingRequest"
+                        class="border-t border-emerald-200 bg-emerald-50/70 p-4 sm:p-5 dark:border-emerald-900 dark:bg-emerald-950/20"
+                        data-testid="funding-request-result"
+                    >
+                        <div
+                            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div>
+                                <p
+                                    class="text-xs font-semibold tracking-[0.14em] text-emerald-700 uppercase dark:text-emerald-300"
+                                >
+                                    Funding requested
+                                </p>
+                                <p class="mt-1 text-2xl font-bold">
+                                    {{
+                                        submittedFundingRequest.requested_value
+                                    }}
+                                </p>
+                                <div
+                                    v-if="submittedFundingRequest.pay_code"
+                                    class="mt-2 flex flex-wrap items-center gap-2"
+                                >
+                                    <code
+                                        class="rounded-lg bg-white px-3 py-1.5 text-base font-bold tracking-wider text-slate-950 shadow-sm dark:bg-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            submittedFundingRequest.pay_code
+                                                .display_code
+                                        }}
+                                    </code>
+                                    <span
+                                        class="rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase"
+                                        :class="
+                                            fundingRequestStatusTone(
+                                                submittedFundingRequest.receipt_status,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            submittedFundingRequest.receipt_status_label
+                                        }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                v-if="submittedFundingRequest.pay_code"
+                                class="flex flex-wrap gap-2"
+                            >
+                                <button
+                                    type="button"
+                                    class="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white dark:bg-white dark:text-slate-950"
+                                    @click="
+                                        copyFundingRequest(
+                                            `${submittedFundingRequest.reference}:code`,
+                                            submittedFundingRequest.pay_code
+                                                .code,
+                                        )
+                                    "
+                                >
+                                    {{
+                                        copiedFundingRequest ===
+                                        `${submittedFundingRequest.reference}:code`
+                                            ? 'Copied'
+                                            : 'Copy Pay Code'
+                                    }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="h-10 rounded-lg border border-slate-300 px-4 text-sm font-semibold dark:border-slate-700"
+                                    @click="
+                                        copyFundingRequest(
+                                            `${submittedFundingRequest.reference}:message`,
+                                            fundingRequestMessage(
+                                                submittedFundingRequest.requested_value,
+                                                submittedFundingRequest.pay_code
+                                                    .code,
+                                            ),
+                                        )
+                                    "
+                                >
+                                    {{
+                                        copiedFundingRequest ===
+                                        `${submittedFundingRequest.reference}:message`
+                                            ? 'Message copied'
+                                            : 'Copy request message'
+                                    }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="h-10 px-2 text-sm font-semibold text-slate-600 dark:text-slate-300"
+                                    @click="
+                                        dismissedFundingRequestResult = true
+                                    "
+                                >
+                                    Request another
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <form
+                        v-else
                         class="border-t border-slate-200 p-4 sm:p-5 dark:border-slate-800"
                         @submit.prevent="submitFundingRequest"
                     >
@@ -1938,42 +2119,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="flex flex-wrap items-center justify-between gap-3"
                         >
                             <h2 class="text-base font-semibold">
-                                Reviewed Funding Pay Code
+                                Request Account Funding
                             </h2>
-                            <span
-                                class="rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-semibold text-emerald-700 uppercase dark:bg-emerald-950 dark:text-emerald-200"
-                            >
-                                review only
-                            </span>
                         </div>
 
-                        <div
-                            class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-                        >
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
                             <label class="block text-xs font-semibold">
-                                Funding source
-                                <select
-                                    v-model="fundingRequestForm.funding_type"
-                                    class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                >
-                                    <option value="bank_transfer">
-                                        Bank transfer
-                                    </option>
-                                    <option value="cash_handover">
-                                        Cash handover
-                                    </option>
-                                    <option value="precious_metal">
-                                        Gold or precious metal
-                                    </option>
-                                    <option value="jewelry">Jewelry</option>
-                                    <option value="vehicle">Vehicle</option>
-                                    <option value="other">
-                                        Other approved asset
-                                    </option>
-                                </select>
-                            </label>
-                            <label class="block text-xs font-semibold">
-                                Requested value
+                                Amount
                                 <div
                                     class="mt-1.5 flex h-10 rounded-lg border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
                                 >
@@ -2005,103 +2157,138 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 </span>
                             </label>
                             <label class="block text-xs font-semibold">
-                                Reference
-                                <input
-                                    v-model="
-                                        fundingRequestForm.external_reference
-                                    "
-                                    class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                    placeholder="Optional"
-                                />
-                            </label>
-                            <label class="block text-xs font-semibold">
-                                Date
-                                <input
-                                    v-model="fundingRequestForm.occurred_on"
-                                    type="date"
-                                    class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                />
-                            </label>
-                            <label
-                                class="block text-xs font-semibold sm:col-span-2"
-                            >
-                                Verification details
-                                <textarea
-                                    v-model="fundingRequestForm.description"
-                                    rows="2"
-                                    class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                    placeholder="Transfer or asset details"
-                                />
-                                <span
-                                    v-if="fundingRequestForm.errors.description"
-                                    class="mt-1 block text-xs text-rose-600"
-                                >
-                                    {{ fundingRequestForm.errors.description }}
+                                Message
+                                <span class="font-normal text-slate-500">
+                                    (optional)
                                 </span>
-                            </label>
-                            <label
-                                class="block text-xs font-semibold sm:col-span-2"
-                            >
-                                Notes
                                 <textarea
                                     v-model="fundingRequestForm.requester_notes"
                                     rows="2"
                                     class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                    placeholder="Optional"
+                                    placeholder="Bank transfer sent, cash provided…"
                                 />
                             </label>
-                            <label class="block text-xs font-semibold">
-                                Evidence type
-                                <select
-                                    v-model="
-                                        fundingRequestForm.evidence_document_type
-                                    "
-                                    class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                >
-                                    <option value="bank_transfer_proof">
-                                        Bank transfer proof
-                                    </option>
-                                    <option value="custody_receipt">
-                                        Custody receipt
-                                    </option>
-                                    <option value="asset_photo">
-                                        Asset photo
-                                    </option>
-                                    <option value="ownership_document">
-                                        Ownership document
-                                    </option>
-                                    <option value="valuation_document">
-                                        Valuation document
-                                    </option>
-                                    <option value="supporting_document">
-                                        Supporting document
-                                    </option>
-                                </select>
-                            </label>
-                            <label
-                                class="block text-xs font-semibold sm:col-span-2 xl:col-span-3"
+                            <details
+                                class="rounded-xl border border-slate-200 sm:col-span-2 dark:border-slate-800"
                             >
-                                Evidence document
-                                <input
-                                    type="file"
-                                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                    class="mt-1.5 block min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-xs file:font-semibold dark:border-slate-700 dark:bg-slate-950 dark:file:bg-slate-800"
-                                    data-testid="funding-request-evidence"
-                                    @change="selectFundingRequestEvidence"
-                                />
-                                <span
-                                    v-if="
-                                        fundingRequestForm.errors
-                                            .evidence_document
-                                    "
-                                    class="mt-1 block text-xs text-rose-600"
+                                <summary
+                                    class="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold marker:hidden"
                                 >
-                                    {{
-                                        fundingRequestForm.errors
-                                            .evidence_document
-                                    }}
-                                </span>
-                            </label>
+                                    Add proof or transfer details
+                                    <span class="font-normal text-slate-500">
+                                        (optional)
+                                    </span>
+                                </summary>
+                                <div
+                                    class="grid gap-3 border-t border-slate-200 p-3 sm:grid-cols-3 dark:border-slate-800"
+                                >
+                                    <label class="text-xs font-semibold">
+                                        Source
+                                        <select
+                                            v-model="
+                                                fundingRequestForm.funding_type
+                                            "
+                                            class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                        >
+                                            <option value="unspecified">
+                                                Not specified
+                                            </option>
+                                            <option value="bank_transfer">
+                                                Bank transfer
+                                            </option>
+                                            <option value="cash_handover">
+                                                Cash handover
+                                            </option>
+                                            <option value="precious_metal">
+                                                Gold or precious metal
+                                            </option>
+                                            <option value="jewelry">
+                                                Jewelry
+                                            </option>
+                                            <option value="vehicle">
+                                                Vehicle
+                                            </option>
+                                            <option value="other">
+                                                Other accepted value
+                                            </option>
+                                        </select>
+                                    </label>
+                                    <label class="text-xs font-semibold">
+                                        Reference
+                                        <input
+                                            v-model="
+                                                fundingRequestForm.external_reference
+                                            "
+                                            class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                            placeholder="Optional"
+                                        />
+                                    </label>
+                                    <label class="text-xs font-semibold">
+                                        Date
+                                        <input
+                                            v-model="
+                                                fundingRequestForm.occurred_on
+                                            "
+                                            type="date"
+                                            class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                        />
+                                    </label>
+                                    <label class="text-xs font-semibold">
+                                        Evidence type
+                                        <select
+                                            v-model="
+                                                fundingRequestForm.evidence_document_type
+                                            "
+                                            class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                        >
+                                            <option value="supporting_document">
+                                                Supporting document
+                                            </option>
+                                            <option value="bank_transfer_proof">
+                                                Bank transfer proof
+                                            </option>
+                                            <option value="custody_receipt">
+                                                Custody receipt
+                                            </option>
+                                            <option value="asset_photo">
+                                                Asset photo
+                                            </option>
+                                            <option value="ownership_document">
+                                                Ownership document
+                                            </option>
+                                            <option value="valuation_document">
+                                                Valuation document
+                                            </option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        class="text-xs font-semibold sm:col-span-2"
+                                    >
+                                        Evidence document
+                                        <input
+                                            type="file"
+                                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                            class="mt-1.5 block min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-xs file:font-semibold dark:border-slate-700 dark:bg-slate-950 dark:file:bg-slate-800"
+                                            data-testid="funding-request-evidence"
+                                            @change="
+                                                selectFundingRequestEvidence
+                                            "
+                                        />
+                                        <span
+                                            v-if="
+                                                fundingRequestForm.errors
+                                                    .evidence_document
+                                            "
+                                            class="mt-1 block text-xs text-rose-600"
+                                        >
+                                            {{
+                                                fundingRequestForm.errors
+                                                    .evidence_document
+                                            }}
+                                        </span>
+                                    </label>
+                                </div>
+                            </details>
                         </div>
 
                         <div class="mt-4 flex justify-end">
@@ -2113,8 +2300,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             >
                                 {{
                                     fundingRequestForm.processing
-                                        ? 'Submitting…'
-                                        : 'Submit for Review'
+                                        ? 'Requesting…'
+                                        : fundingRequestButtonLabel
                                 }}
                             </button>
                         </div>
@@ -2130,7 +2317,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     >
                         <div>
                             <h2 class="text-base font-semibold">
-                                Reviewed funding requests
+                                Account Funding Requests
                             </h2>
                         </div>
                         <span class="text-sm font-semibold">
@@ -2139,70 +2326,120 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     </div>
                     <div
                         v-if="fundingRequests.requests.length"
-                        class="mt-4 divide-y divide-slate-200 dark:divide-slate-800"
+                        class="mt-4 overflow-x-auto"
                     >
-                        <div
-                            v-for="item in fundingRequests.requests"
-                            :key="item.reference"
-                            class="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                        <table
+                            class="w-full min-w-[52rem] border-separate border-spacing-0 text-left text-sm"
                         >
-                            <div>
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="text-sm font-semibold">
-                                        {{ item.type_label }}
-                                    </span>
-                                    <span
-                                        class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold uppercase dark:bg-slate-800"
+                            <thead>
+                                <tr
+                                    class="text-xs font-semibold text-slate-500"
+                                >
+                                    <th class="border-b px-3 py-2">Pay Code</th>
+                                    <th class="border-b px-3 py-2">Amount</th>
+                                    <th class="border-b px-3 py-2">Status</th>
+                                    <th class="border-b px-3 py-2">
+                                        Requested
+                                    </th>
+                                    <th class="border-b px-3 py-2">Funded</th>
+                                    <th class="border-b px-3 py-2 text-right">
+                                        Control
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="item in fundingRequests.requests"
+                                    :key="item.reference"
+                                    class="align-top"
+                                >
+                                    <td
+                                        class="border-b border-slate-100 px-3 py-3 dark:border-slate-800"
                                     >
-                                        {{ displayLabel(item.status) }}
-                                    </span>
-                                </div>
-                                <p
-                                    class="mt-1 text-sm text-slate-600 dark:text-slate-400"
-                                >
-                                    {{ item.requested_value }} ·
-                                    {{ item.description }}
-                                </p>
-                                <p
-                                    v-if="item.pay_code"
-                                    class="mt-1 text-xs text-emerald-700 dark:text-emerald-300"
-                                >
-                                    Pay Code
-                                    <span class="font-mono font-semibold">
-                                        {{ item.pay_code.code }}
-                                    </span>
-                                    · {{ item.pay_code.amount }} ·
-                                    {{ displayLabel(item.pay_code.status) }}
-                                </p>
-                                <p
-                                    v-if="
-                                        item.pay_code?.collection_mode ===
-                                        'system_treasury'
-                                    "
-                                    class="mt-1 text-xs text-slate-500 dark:text-slate-400"
-                                >
-                                    System Treasury pays this code after
-                                    independent approval. You do not claim it.
-                                </p>
-                                <div
-                                    v-if="item.evidence?.documents.length"
-                                    class="mt-2 flex flex-wrap gap-2"
-                                >
-                                    <a
-                                        v-for="document in item.evidence
-                                            .documents"
-                                        :key="document.id"
-                                        :href="document.url"
-                                        class="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                        <code
+                                            v-if="item.pay_code"
+                                            class="font-semibold tracking-wide"
+                                        >
+                                            {{ item.pay_code.display_code }}
+                                        </code>
+                                        <span v-else>—</span>
+                                        <div
+                                            v-if="
+                                                item.evidence?.documents.length
+                                            "
+                                            class="mt-1 flex flex-wrap gap-1"
+                                        >
+                                            <a
+                                                v-for="document in item.evidence
+                                                    .documents"
+                                                :key="document.id"
+                                                :href="document.url"
+                                                class="text-xs font-medium text-sky-700 hover:underline dark:text-sky-300"
+                                            >
+                                                {{ document.filename }}
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td
+                                        class="border-b border-slate-100 px-3 py-3 font-semibold dark:border-slate-800"
                                     >
-                                        {{ document.filename }}
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                                        {{ item.requested_value }}
+                                    </td>
+                                    <td
+                                        class="border-b border-slate-100 px-3 py-3 dark:border-slate-800"
+                                    >
+                                        <span
+                                            class="rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase"
+                                            :class="
+                                                fundingRequestStatusTone(
+                                                    item.receipt_status,
+                                                )
+                                            "
+                                        >
+                                            {{ item.receipt_status_label }}
+                                        </span>
+                                    </td>
+                                    <td
+                                        class="border-b border-slate-100 px-3 py-3 text-slate-600 dark:border-slate-800 dark:text-slate-300"
+                                    >
+                                        {{ displayTime(item.submitted_at) }}
+                                    </td>
+                                    <td
+                                        class="border-b border-slate-100 px-3 py-3 text-slate-600 dark:border-slate-800 dark:text-slate-300"
+                                    >
+                                        {{ displayTime(item.completed_at) }}
+                                    </td>
+                                    <td
+                                        class="border-b border-slate-100 px-3 py-3 text-right dark:border-slate-800"
+                                    >
+                                        <button
+                                            v-if="
+                                                item.pay_code?.can_copy === true
+                                            "
+                                            type="button"
+                                            class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
+                                            @click="
+                                                copyFundingRequest(
+                                                    `${item.reference}:code`,
+                                                    item.pay_code.code,
+                                                )
+                                            "
+                                        >
+                                            {{
+                                                copiedFundingRequest ===
+                                                `${item.reference}:code`
+                                                    ? 'Copied'
+                                                    : 'Copy'
+                                            }}
+                                        </button>
+                                        <span v-else>—</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                     <p v-else class="mt-4 text-sm text-slate-500">
-                        No reviewed funding requests yet.
+                        No Account Funding requests yet.
                     </p>
                 </article>
 

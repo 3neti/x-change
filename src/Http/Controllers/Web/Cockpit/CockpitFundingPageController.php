@@ -54,6 +54,9 @@ class CockpitFundingPageController extends Controller
             'funding_instruction' => $request->session()->pull('funding_instruction'),
             'funding_notice' => $request->session()->pull('funding_notice')
                 ?? $request->session()->pull('funding_account_notice'),
+            'funding_request_submitted_reference' => $request->session()->pull(
+                'funding_request_submitted_reference',
+            ),
             'funding_workspace_mode' => $request->string('mode')->toString() === 'pay_code'
                 ? 'pay_code'
                 : 'self_top_up',
@@ -68,6 +71,7 @@ class CockpitFundingPageController extends Controller
                 'enabled' => (bool) config('x-change.funding.broadcast_enabled', false),
                 'channel' => $this->fundingChannels->nameForOwner($operator),
                 'event' => '.FundingProjectionChanged',
+                'workflow_event' => '.FundingRequestChanged',
             ],
             'standing_funding_address' => $this->standingFundingAddressAvailability($operator),
             'funding_qr_merchant_profile' => $this->merchantProfiles->forOwner($operator),
