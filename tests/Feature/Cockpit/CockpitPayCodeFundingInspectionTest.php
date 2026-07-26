@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingInspectionStore;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('fails closed for legacy payout-only Pay Codes', function () {
     $issuer = actingAsTestUser();
@@ -72,7 +73,22 @@ it('returns a sanitized short-lived preview for an eligible Pay Code', function 
         ->and(app(PayCodeFundingInspectionStore::class)->resolve(
             $token,
             $claimant,
-        )?->is($voucher))->toBeTrue();
+        )?->is($voucher))->toBeTrue()
+        ->and(ExecutionJournalEntry::query()->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()->sole()->event_type)
+        ->toBe('account_funding.pay_code.inspected')
+        ->and(ExecutionJournalEntry::query()->sole()->subject_id)
+        ->toBe((string) $voucher->getKey())
+        ->and(ExecutionJournalEntry::query()->sole()->payload)->toBe([
+            'status' => 'eligible',
+            'inspection_token_persisted' => false,
+            'raw_pay_code_persisted' => false,
+        ])
+        ->and(json_encode(
+            ExecutionJournalEntry::query()->sole()->toArray(),
+            JSON_THROW_ON_ERROR,
+        ))->not->toContain($voucher->code)
+        ->not->toContain($token);
 });
 
 it('rejects expired and commercially incompatible Pay Codes without issuing a token', function (

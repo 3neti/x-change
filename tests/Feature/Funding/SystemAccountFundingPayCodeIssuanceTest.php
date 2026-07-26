@@ -9,6 +9,7 @@ use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('issues and replays one recipient-bound Account Funding Pay Code from the system Account Funding Reserve', function (): void {
     $system = enableNetbankTreasuryForTests();
@@ -71,7 +72,20 @@ it('issues and replays one recipient-bound Account Funding Pay Code from the sys
         ->and(systemFundingPositionBalance(
             $recipient,
             TreasuryPositionPurpose::ClientFunds,
-        ))->toBe(125_000);
+        ))->toBe(125_000)
+        ->and(ExecutionJournalEntry::query()
+            ->orderBy('id')
+            ->pluck('event_type')
+            ->all())->toBe([
+                'account_funding.pay_code.issued',
+                'account_funding.pay_code.outcome_selected',
+                'account_funding.pay_code.applied',
+            ])
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'account_funding.pay_code.applied')
+            ->sole()
+            ->references['metadata']['treasury_operation_reference'])
+        ->toBe($claim->treasury_operation_reference);
 
     fakePayoutProvider()->assertNoDisbursementAttempted();
 });

@@ -9,10 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Exceptions\VoucherClaimOutcomeConflict;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherClaimOutcomeSelection;
 use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
 use LBHurtado\XChange\Services\Claim\VoucherClaimOutcomeRegistry;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
+use LBHurtado\XChange\Services\Funding\AccountFundingPayCodeJournal;
 
 final readonly class DispatchVoucherClaimOutcome
 {
@@ -20,6 +22,7 @@ final readonly class DispatchVoucherClaimOutcome
         private VoucherClaimPolicyResolver $policies,
         private VoucherClaimOutcomeRegistry $registry,
         private VoucherClaimantReference $claimantReferences,
+        private AccountFundingPayCodeJournal $journal,
     ) {}
 
     /**
@@ -31,7 +34,7 @@ final readonly class DispatchVoucherClaimOutcome
         array $payload,
         ?Authenticatable $claimant = null,
     ): mixed {
-        return DB::transaction(function () use (
+        $result = DB::transaction(function () use (
             $voucher,
             $requestedOutcome,
             $payload,
@@ -100,6 +103,22 @@ final readonly class DispatchVoucherClaimOutcome
                 ->handler($outcome)
                 ->execute($locked, $payload, $claimant);
         }, attempts: 5);
+
+        if (
+            $result instanceof VoucherClaim
+            && $result->settlement_mode === 'account_funding'
+        ) {
+            $selection = VoucherClaimOutcomeSelection::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->firstOrFail();
+
+            DB::afterCommit(function () use ($result, $selection): void {
+                $this->journal->recordOutcomeSelected($selection);
+                $this->journal->recordApplied($result);
+            });
+        }
+
+        return $result;
     }
 
     /**

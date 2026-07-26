@@ -13,6 +13,7 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
+use LBHurtado\XChange\Services\Funding\AccountFundingPayCodeJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
@@ -26,6 +27,7 @@ final readonly class IssueSystemAccountFundingPayCode
         private IssueTreasuryBackedPayCode $payCodes,
         private TreasuryPayCodeAccountingService $accounting,
         private VoucherClaimantReference $claimantReferences,
+        private AccountFundingPayCodeJournal $journal,
     ) {}
 
     public function handle(
@@ -89,7 +91,7 @@ final readonly class IssueSystemAccountFundingPayCode
             $recipient,
         );
 
-        return DB::transaction(function () use (
+        $issuance = DB::transaction(function () use (
             $claimantReference,
             $connection,
             $data,
@@ -237,6 +239,10 @@ final readonly class IssueSystemAccountFundingPayCode
 
             return $issuance->refresh()->load('voucher');
         }, attempts: 5);
+
+        DB::afterCommit(fn () => $this->journal->recordIssued($issuance));
+
+        return $issuance;
     }
 
     private function requiredReference(

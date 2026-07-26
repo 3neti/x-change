@@ -17,6 +17,7 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingEligibility;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingInspectionStore;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('issues an Account Funding Pay Code with a no-payout commercial profile and Treasury reserve', function () {
     $issuer = actingAsTestUser();
@@ -157,7 +158,14 @@ it('moves a reserved Pay Code into claimant Client Funds exactly once without pr
         ->and(VoucherClaim::query()->count())->toBe(1)
         ->and(VoucherClaim::query()->sole()->settlement_mode)->toBe('account_funding')
         ->and(VoucherClaim::query()->sole()->meta['provider_calls'])->toBeFalse()
-        ->and($voucher->refresh()->redeemed_at)->not->toBeNull();
+        ->and($voucher->refresh()->redeemed_at)->not->toBeNull()
+        ->and(ExecutionJournalEntry::query()
+            ->orderBy('id')
+            ->pluck('event_type')
+            ->all())->toBe([
+                'account_funding.pay_code.outcome_selected',
+                'account_funding.pay_code.applied',
+            ]);
 
     $replayToken = app(PayCodeFundingInspectionStore::class)->issue(
         $voucher,
@@ -169,7 +177,13 @@ it('moves a reserved Pay Code into claimant Client Funds exactly once without pr
         ])
         ->assertRedirect(route('x-change.cockpit.funding.index'));
 
-    expect(VoucherClaim::query()->count())->toBe(1);
+    expect(VoucherClaim::query()->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'account_funding.pay_code.applied')
+            ->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'account_funding.pay_code.outcome_selected')
+            ->count())->toBe(1);
 });
 
 function payCodeAccountFundingVoucher(User $issuer): Voucher

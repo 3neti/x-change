@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Number;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\InspectCockpitPayCodeFundingRequest;
+use LBHurtado\XChange\Services\Funding\AccountFundingPayCodeJournal;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingEligibility;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingInspectionStore;
 
@@ -18,6 +19,7 @@ final class CockpitPayCodeFundingInspectionController extends Controller
         InspectCockpitPayCodeFundingRequest $request,
         PayCodeFundingEligibility $eligibility,
         PayCodeFundingInspectionStore $inspections,
+        AccountFundingPayCodeJournal $journal,
     ): RedirectResponse {
         $voucher = Voucher::query()
             ->where('code', $request->validated('code'))
@@ -50,9 +52,15 @@ final class CockpitPayCodeFundingInspectionController extends Controller
         ];
 
         if ($decision->eligible) {
-            $preview['inspection_token'] = $inspections->issue(
+            $inspectionToken = $inspections->issue(
                 $voucher,
                 $request->user(),
+            );
+            $preview['inspection_token'] = $inspectionToken;
+            $journal->recordInspected(
+                $voucher->getKey(),
+                $request->user(),
+                $inspectionToken,
             );
         }
 
