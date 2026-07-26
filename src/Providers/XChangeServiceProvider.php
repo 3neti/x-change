@@ -272,6 +272,8 @@ use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
+use LBHurtado\XChange\Services\Payment\AccountFundingCollectionPosting;
+use LBHurtado\XChange\Services\Payment\VoucherCollectionPostingRegistry;
 use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
 use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PayoutProviderResolver;
@@ -323,6 +325,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->alignWalletDefaults();
         $this->alignVoucherDefaults();
         $this->alignAccountSystemUser();
+        $this->alignSettlementEnvelopeDefaults();
 
         $this->app->singleton(QrPhSimulatorFundingProviderAdapter::class);
         $this->app->tag(
@@ -837,6 +840,18 @@ class XChangeServiceProvider extends ServiceProvider
             DefaultVoucherCollectionWalletResolver::class,
         );
 
+        $this->app->singleton(AccountFundingCollectionPosting::class);
+        $this->app->tag(
+            AccountFundingCollectionPosting::class,
+            'x-change.voucher-collection-postings',
+        );
+        $this->app->singleton(
+            VoucherCollectionPostingRegistry::class,
+            fn ($app): VoucherCollectionPostingRegistry => new VoucherCollectionPostingRegistry(
+                $app->tagged('x-change.voucher-collection-postings'),
+            ),
+        );
+
         $this->app->bind(
             VoucherPaymentProviderContract::class,
             ManualVoucherPaymentProvider::class,
@@ -1267,6 +1282,34 @@ class XChangeServiceProvider extends ServiceProvider
         }
     }
 
+    protected function alignSettlementEnvelopeDefaults(): void
+    {
+        $publishedDrivers = config_path('envelope-drivers');
+        $driverRoot = is_dir($publishedDrivers)
+            ? $publishedDrivers
+            : $this->packagePath('config/envelope-drivers');
+
+        if (config('filesystems.disks.envelope-drivers') === null) {
+            config()->set('filesystems.disks.envelope-drivers', [
+                'driver' => 'local',
+                'root' => $driverRoot,
+                'throw' => true,
+            ]);
+        }
+
+        config()->set(
+            'settlement-envelope.driver_disk',
+            'envelope-drivers',
+        );
+        config()->set(
+            'settlement-envelope.storage_disk',
+            (string) config(
+                'x-change.funding.requests.evidence_disk',
+                'local',
+            ),
+        );
+    }
+
     protected function bootConfig(): void
     {
         $this->publishes([
@@ -1276,6 +1319,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->publishes([
             $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml') => config_path('form-flow-drivers/voucher-redemption.yaml'),
         ], 'x-change-form-flow-drivers');
+
+        $this->publishes([
+            $this->packagePath('config/envelope-drivers/account-funding-review.yaml') => config_path('envelope-drivers/account-funding-review.yaml'),
+        ], 'x-change-envelope-drivers');
 
         $this->publishes([
             $this->packagePath('stubs/scripts/test-netbank-lifecycle.sh.stub') => base_path('scripts/test-netbank-lifecycle.sh'),

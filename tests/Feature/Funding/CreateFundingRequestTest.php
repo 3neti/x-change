@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Enums\VoucherState;
+use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
@@ -31,8 +33,25 @@ it('records a user assertion without changing Client Funds', function () {
     expect($request->status)->toBe(FundingRequestStatus::Submitted)
         ->and($request->requested_value_minor)->toBe(2_000_000)
         ->and($request->approved_value_minor)->toBeNull()
+        ->and($request->voucher)->not->toBeNull()
+        ->and($request->voucher->owner->is($requester))->toBeTrue()
+        ->and($request->voucher->voucher_type)->toBe(VoucherType::PAYABLE)
+        ->and($request->voucher->state)->toBe(VoucherState::LOCKED)
+        ->and($request->voucher->instructions->cash->amount)->toBe(0.0)
+        ->and($request->voucher->instructions->target_amount)->toBe(20_000.0)
+        ->and($request->voucher->instructions->execution?->driver)
+        ->toBe('x_change_account_funding')
+        ->and($request->voucher->envelope)->not->toBeNull()
+        ->and($request->voucher->envelope->driver_id)
+        ->toBe('account-funding-review')
+        ->and($request->voucher->envelope->payload)
+        ->toMatchArray([
+            'request_reference' => $request->reference,
+            'requested_value_minor' => 2_000_000,
+            'currency' => 'PHP',
+        ])
         ->and($request->metadata)->toMatchArray([
-            'attachments_enabled' => false,
+            'attachments_enabled' => true,
             'monetary_authority' => 'independent_backing_verification_only',
         ])
         ->and($request->events)->toHaveCount(1)
@@ -58,7 +77,8 @@ it('replays the same Funding Request idempotently and rejects changed instructio
     $replay = $create->handle($data);
 
     expect($replay->is($first))->toBeTrue()
-        ->and(FundingRequest::query()->count())->toBe(1);
+        ->and(FundingRequest::query()->count())->toBe(1)
+        ->and($replay->voucher_id)->toBe($first->voucher_id);
 
     expect(fn () => $create->handle(new CreateFundingRequestData(
         accountReference: $data->accountReference,

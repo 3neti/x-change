@@ -645,7 +645,18 @@ return [
             'review_middleware' => ['throttle:30,1'],
             'approval_middleware' => ['throttle:12,1'],
             'claim_middleware' => ['throttle:12,1'],
-            'attachments_enabled' => false,
+            'attachments_enabled' => (bool) env(
+                'XCHANGE_FUNDING_REQUEST_ATTACHMENTS_ENABLED',
+                true,
+            ),
+            'evidence_disk' => env(
+                'XCHANGE_FUNDING_REQUEST_EVIDENCE_DISK',
+                'local',
+            ),
+            'envelope_driver' => env(
+                'XCHANGE_FUNDING_REQUEST_ENVELOPE_DRIVER',
+                'account-funding-review',
+            ),
         ],
         'pay_code_claims' => [
             'inspection_ttl_seconds' => (int) env(

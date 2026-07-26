@@ -1,0 +1,136 @@
+driver:
+  id: "account-funding-review"
+  version: "1.0.0"
+  title: "Account Funding Review"
+  description: "Evidence and dual-control gate for reviewed Account Funding"
+  domain: "account-funding"
+
+payload:
+  schema:
+    id: "x-change.account-funding-review.v1"
+    format: "json_schema"
+    inline:
+      type: "object"
+      properties:
+        request_reference:
+          type: "string"
+        account_reference:
+          type: "string"
+        funding_type:
+          type: "string"
+        requested_value_minor:
+          type: "integer"
+          minimum: 1
+        currency:
+          type: "string"
+          minLength: 3
+          maxLength: 3
+        description:
+          type: "string"
+      required:
+        - "request_reference"
+        - "account_reference"
+        - "funding_type"
+        - "requested_value_minor"
+        - "currency"
+        - "description"
+  storage:
+    mode: "versioned"
+    patch_strategy: "merge"
+
+documents:
+  registry:
+    - type: "BANK_TRANSFER_PROOF"
+      title: "Bank transfer proof"
+      allowed_mimes: ["application/pdf", "image/jpeg", "image/png"]
+      max_size_mb: 10
+      multiple: true
+    - type: "CUSTODY_RECEIPT"
+      title: "Custody receipt"
+      allowed_mimes: ["application/pdf", "image/jpeg", "image/png"]
+      max_size_mb: 10
+      multiple: true
+    - type: "ASSET_PHOTO"
+      title: "Asset photo"
+      allowed_mimes: ["image/jpeg", "image/png"]
+      max_size_mb: 10
+      multiple: true
+    - type: "OWNERSHIP_DOCUMENT"
+      title: "Ownership document"
+      allowed_mimes: ["application/pdf", "image/jpeg", "image/png"]
+      max_size_mb: 10
+      multiple: true
+    - type: "VALUATION_DOCUMENT"
+      title: "Valuation document"
+      allowed_mimes: ["application/pdf", "image/jpeg", "image/png"]
+      max_size_mb: 10
+      multiple: true
+    - type: "SUPPORTING_DOCUMENT"
+      title: "Supporting document"
+      allowed_mimes: ["application/pdf", "image/jpeg", "image/png"]
+      max_size_mb: 10
+      multiple: true
+
+checklist:
+  template:
+    - key: "request_present"
+      label: "Funding request recorded"
+      kind: "payload_field"
+      payload_pointer: "/request_reference"
+      required: true
+      review: "none"
+    - key: "backing_verified"
+      label: "Backing independently verified"
+      kind: "signal"
+      signal_key: "backing_verified"
+      required: true
+      review: "none"
+    - key: "checker_approved"
+      label: "Independent checker approved"
+      kind: "signal"
+      signal_key: "checker_approved"
+      required: true
+      review: "none"
+
+signals:
+  definitions:
+    - key: "backing_verified"
+      type: "boolean"
+      source: "host"
+      default: false
+      required: true
+      signal_category: "decision"
+      system_settable: false
+    - key: "checker_approved"
+      type: "boolean"
+      source: "host"
+      default: false
+      required: true
+      signal_category: "decision"
+      system_settable: false
+
+gates:
+  definitions:
+    - key: "payload_valid"
+      rule: "payload.valid == true"
+    - key: "checklist_complete"
+      rule: "checklist.required_accepted == true"
+    - key: "settleable"
+      rule: "gate.payload_valid && gate.checklist_complete && signal.backing_verified && signal.checker_approved"
+
+audit:
+  enabled: true
+  capture:
+    - "payload_patch"
+    - "attachment_upload"
+    - "attachment_review"
+    - "signal_set"
+    - "gate_change"
+    - "status_change"
+
+manifest:
+  enabled: true
+  includes:
+    payload_hash: true
+    attachments_hashes: true
+    envelope_fingerprint: true

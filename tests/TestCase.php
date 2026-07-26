@@ -86,6 +86,7 @@ abstract class TestCase extends Orchestra
             $this->optionalProvider('LBHurtado\\XAction\\XActionServiceProvider'),
             $this->optionalProvider('LBHurtado\\XFeedback\\XFeedbackServiceProvider'),
             $this->optionalProvider('LBHurtado\\XCampaign\\XCampaignServiceProvider'),
+            $this->optionalProvider('LBHurtado\\SettlementEnvelope\\SettlementEnvelopeServiceProvider'),
             XCommerceServiceProvider::class,
             XChangeServiceProvider::class,
             PurifierServiceProvider::class,
@@ -213,6 +214,7 @@ abstract class TestCase extends Orchestra
 
         // Optional Settlement OS read-only integration package migrations.
         $this->loadOptionalCockpitIntegrationMigrations();
+        $this->loadSettlementEnvelopeMigrations();
 
         // Extra voucher-support tables used by voucher package tests/flows.
         $this->runVoucherSupportMigrations();
@@ -290,6 +292,19 @@ abstract class TestCase extends Orchestra
 
             $this->runMigrationFilesFromCandidates($this->packageMigrationPaths($providerClass));
         }
+    }
+
+    protected function loadSettlementEnvelopeMigrations(): void
+    {
+        $provider = 'LBHurtado\\SettlementEnvelope\\SettlementEnvelopeServiceProvider';
+
+        if (! class_exists($provider)) {
+            return;
+        }
+
+        $this->runMigrationFilesFromCandidates(
+            $this->packageMigrationPaths($provider),
+        );
     }
 
     protected function optionalProvider(string $providerClass): ?string

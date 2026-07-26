@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use LBHurtado\Voucher\Enums\VoucherState;
+use LBHurtado\Voucher\Enums\VoucherType;
+use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
@@ -14,6 +19,11 @@ use RuntimeException;
 
 final class CreateFundingRequest
 {
+    public function __construct(
+        private readonly FundingAccountCreditContract $accounts,
+        private readonly IssueTreasuryBackedPayCode $payCodes,
+    ) {}
+
     public function handle(CreateFundingRequestData $data): FundingRequest
     {
         if ($data->requestedValueMinor <= 0) {
@@ -73,7 +83,111 @@ final class CreateFundingRequest
                     'occurred_at' => now(),
                 ]);
 
-                return $request->load('events');
+                $requester = data_get(
+                    $this->accounts->resolve($request->account_reference),
+                    'holder',
+                );
+
+                if (
+                    ! $requester instanceof Model
+                    || ! $requester instanceof Authenticatable
+                    || $requester::class !== $request->requester_type
+                    || (string) $requester->getKey() !== $request->requester_id
+                ) {
+                    throw new RuntimeException(
+                        'Funding Request principal binding is invalid.',
+                    );
+                }
+
+                $expiresAt = now()->addSeconds((int) config(
+                    'x-change.funding.requests.code_ttl_seconds',
+                    604800,
+                ));
+                $voucher = $this->payCodes->handle(
+                    issuer: $requester,
+                    instructions: [
+                        'cash' => [
+                            'amount' => 0,
+                            'currency' => $currency,
+                            'validation' => ['country' => 'PH'],
+                        ],
+                        'inputs' => ['fields' => []],
+                        'feedback' => [],
+                        'rider' => [],
+                        'count' => 1,
+                        'prefix' => 'FUND',
+                        'mask' => '****',
+                        'expires_at' => $expiresAt,
+                        'voucher_type' => VoucherType::PAYABLE->value,
+                        'target_amount' => $data->requestedValueMinor / 100,
+                        'rules' => [
+                            'min_payment' => $data->requestedValueMinor / 100,
+                            'max_payment' => $data->requestedValueMinor / 100,
+                            'allow_overpayment' => false,
+                            'auto_close_on_full_payment' => true,
+                            'allowed_payer' => 'system_principal',
+                        ],
+                        'execution' => [
+                            'driver' => 'x_change_account_funding',
+                            'mode' => 'collection',
+                            'metadata' => [
+                                'funding_request_reference' => $request->reference,
+                            ],
+                        ],
+                        'metadata' => [
+                            'flow_type' => 'collectible',
+                            'issuer_id' => (string) $requester->getAuthIdentifier(),
+                            'settlement_driver' => (string) config(
+                                'x-change.funding.requests.envelope_driver',
+                                'account-funding-review',
+                            ),
+                            'requires_envelope' => true,
+                            'custom' => [
+                                'account_funding_request' => [
+                                    'reference' => $request->reference,
+                                    'account_reference' => $request->account_reference,
+                                ],
+                            ],
+                        ],
+                    ],
+                    expiresAt: $expiresAt,
+                    initialState: VoucherState::LOCKED,
+                );
+                $envelope = $voucher->createEnvelope(
+                    driverId: (string) config(
+                        'x-change.funding.requests.envelope_driver',
+                        'account-funding-review',
+                    ),
+                    initialPayload: array_filter([
+                        'request_reference' => $request->reference,
+                        'account_reference' => $request->account_reference,
+                        'funding_type' => $request->funding_type->value,
+                        'requested_value_minor' => $request->requested_value_minor,
+                        'currency' => $request->currency,
+                        'description' => $request->description,
+                        'external_reference' => $data->externalReference,
+                        'occurred_on' => $data->occurredOn?->format('Y-m-d'),
+                    ], static fn (mixed $value): bool => $value !== null),
+                    context: [
+                        'funding_request_reference' => $request->reference,
+                        'sensitive_evidence' => true,
+                        'monetary_authority' => 'independent_backing_verification_only',
+                    ],
+                    actor: $requester,
+                );
+                $request->forceFill([
+                    'voucher_id' => $voucher->getKey(),
+                    'metadata' => [
+                        'attachments_enabled' => (bool) config(
+                            'x-change.funding.requests.attachments_enabled',
+                            true,
+                        ),
+                        'monetary_authority' => 'independent_backing_verification_only',
+                        'settlement_envelope_id' => $envelope->getKey(),
+                    ],
+                ])->saveQuietly();
+
+                return $request->refresh()->load(['events', 'voucher.envelope']);
             }, 3);
         } catch (UniqueConstraintViolationException $exception) {
             $existing = FundingRequest::query()

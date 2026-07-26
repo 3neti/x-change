@@ -4,14 +4,21 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
 use RuntimeException;
 
-final class PrepareFundingRequest
+final readonly class PrepareFundingRequest
 {
+    public function __construct(
+        private EnvelopeService $envelopes,
+    ) {}
+
     public function handle(
         FundingRequest $fundingRequest,
         PrepareFundingRequestData $data,
@@ -26,6 +33,7 @@ final class PrepareFundingRequest
 
         return DB::transaction(function () use ($fundingRequest, $data): FundingRequest {
             $locked = FundingRequest::query()
+                ->with('voucher.envelope')
                 ->lockForUpdate()
                 ->findOrFail($fundingRequest->getKey());
 
@@ -43,6 +51,23 @@ final class PrepareFundingRequest
 
             $fromStatus = $locked->status;
             $nextVersion = $locked->version + 1;
+            $reviewer = $this->actor($data->reviewerType, $data->reviewerId);
+
+            if (
+                ! $locked->voucher instanceof Voucher
+                || $locked->voucher->envelope === null
+            ) {
+                throw new RuntimeException(
+                    'Reviewed Account Funding requires its Settlement Envelope.',
+                );
+            }
+
+            $this->envelopes->setSignal(
+                $locked->voucher->envelope,
+                'backing_verified',
+                true,
+                $reviewer,
+            );
             $locked->forceFill([
                 'approved_value_minor' => $data->recognizedValueMinor,
                 'status' => FundingRequestStatus::AwaitingApproval,
@@ -73,5 +98,20 @@ final class PrepareFundingRequest
 
             return $locked->refresh()->load('events');
         }, 3);
+    }
+
+    private function actor(string $type, string $id): Model
+    {
+        if (! is_subclass_of($type, Model::class)) {
+            throw new RuntimeException('Funding Request reviewer type is invalid.');
+        }
+
+        $actor = $type::query()->find($id);
+
+        if (! $actor instanceof Model) {
+            throw new RuntimeException('Funding Request reviewer was not found.');
+        }
+
+        return $actor;
     }
 }

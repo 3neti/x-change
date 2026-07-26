@@ -15,6 +15,7 @@ class VoucherCollection extends Model
     protected $casts = [
         'requested_amount_minor' => 'integer',
         'collected_amount_minor' => 'integer',
+        'wallet_transaction_id' => 'integer',
         'attempted_at' => 'datetime',
         'completed_at' => 'datetime',
         'meta' => 'array',
