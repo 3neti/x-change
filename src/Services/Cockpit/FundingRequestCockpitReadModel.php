@@ -54,8 +54,13 @@ final readonly class FundingRequestCockpitReadModel
                     : $this->money($request->approved_value_minor, $request->currency),
                 'currency' => $request->currency,
                 'status' => $this->status($request->status),
+                'receipt_status' => $this->receiptStatus($request->status),
+                'receipt_status_label' => $this->receiptStatusLabel(
+                    $request->status,
+                ),
                 'description' => $request->description,
                 'submitted_at' => $request->submitted_at?->toIso8601String(),
+                'completed_at' => $request->completed_at?->toIso8601String(),
                 'evidence' => [
                     'attachment_count' => $request->voucher?->envelope?->attachments->count() ?? 0,
                     'pending_count' => $request->voucher?->envelope?->attachments
@@ -82,6 +87,7 @@ final readonly class FundingRequestCockpitReadModel
                 'pay_code' => $request->voucher === null ? null : [
                     'request_reference' => $request->reference,
                     'code' => $request->voucher->code,
+                    'display_code' => $this->displayCode($request),
                     'last_four' => mb_substr($request->voucher->code, -4),
                     'status' => match (true) {
                         $request->status === FundingRequestStatus::Completed => 'account_funded',
@@ -89,7 +95,7 @@ final readonly class FundingRequestCockpitReadModel
                         $request->voucher->voucher_type->value === 'payable'
                             && $request->status === FundingRequestStatus::PayCodeIssued => 'awaiting_system_treasury',
                         $request->voucher->redeemed_at !== null => 'claimed',
-                        default => 'issued',
+                        default => 'locked_pending_review',
                     },
                     'amount' => $this->money(
                         $request->approved_value_minor
@@ -103,6 +109,12 @@ final readonly class FundingRequestCockpitReadModel
                     'can_claim' => $request->voucher->voucher_type->value !== 'payable'
                         && $request->status === FundingRequestStatus::PayCodeIssued
                         && $request->voucher->canRedeem(),
+                    'can_copy' => ! in_array($request->status, [
+                        FundingRequestStatus::Completed,
+                        FundingRequestStatus::Rejected,
+                        FundingRequestStatus::Withdrawn,
+                        FundingRequestStatus::Expired,
+                    ], true),
                     'expires_at' => $request->voucher->expires_at?->toIso8601String(),
                 ],
             ])->all(),
@@ -202,5 +214,49 @@ final readonly class FundingRequestCockpitReadModel
         return $status === FundingRequestStatus::PayCodeIssued
             ? 'pay_code_issued'
             : $status->value;
+    }
+
+    private function receiptStatus(FundingRequestStatus $status): string
+    {
+        return match ($status) {
+            FundingRequestStatus::Submitted,
+            FundingRequestStatus::UnderReview,
+            FundingRequestStatus::AwaitingApproval => 'pending',
+            FundingRequestStatus::NeedsInformation => 'action_needed',
+            FundingRequestStatus::PayCodeIssued => 'funding',
+            FundingRequestStatus::Completed => 'funded',
+            FundingRequestStatus::Rejected => 'not_funded',
+            FundingRequestStatus::Withdrawn => 'cancelled',
+            FundingRequestStatus::Expired => 'expired',
+        };
+    }
+
+    private function receiptStatusLabel(FundingRequestStatus $status): string
+    {
+        return match ($this->receiptStatus($status)) {
+            'pending' => 'Pending',
+            'action_needed' => 'Action needed',
+            'funding' => 'Adding funds',
+            'funded' => 'Funded',
+            'not_funded' => 'Not funded',
+            'cancelled' => 'Cancelled',
+            'expired' => 'Expired',
+        };
+    }
+
+    private function displayCode(FundingRequest $fundingRequest): string
+    {
+        if (
+            ! in_array($fundingRequest->status, [
+                FundingRequestStatus::Completed,
+                FundingRequestStatus::Rejected,
+                FundingRequestStatus::Withdrawn,
+                FundingRequestStatus::Expired,
+            ], true)
+        ) {
+            return (string) $fundingRequest->voucher?->code;
+        }
+
+        return '••••'.mb_substr((string) $fundingRequest->voucher?->code, -4);
     }
 }

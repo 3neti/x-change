@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\SettlementEnvelope\Models\EnvelopeAttachment;
 use LBHurtado\Voucher\Models\Voucher;
@@ -10,13 +11,24 @@ use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
+use LBHurtado\XChange\Events\FundingRequestChanged;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Models\FundingRequestNotice;
 use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('creates a locked requester-owned Pay Code from an amount-only request', function () {
     $requester = actingAsTestUser(0);
+    $reviewer = User::query()->create([
+        'name' => 'Funding Reviewer',
+        'email' => 'funding-reviewer@example.test',
+        'password' => 'password',
+    ]);
+    config()->set('x-change.funding.requests.reviewer_ids', [
+        (string) $reviewer->getKey(),
+    ]);
+    Event::fake([FundingRequestChanged::class]);
 
     $this->post(route('x-change.cockpit.funding.requests.store'), [
         'requested_value_minor' => '1750',
@@ -31,6 +43,8 @@ it('creates a locked requester-owned Pay Code from an amount-only request', func
     $request = FundingRequest::query()
         ->with('voucher.envelope')
         ->sole();
+    $readModel = app(FundingRequestCockpitReadModel::class)
+        ->forOperator($requester);
 
     expect($request->funding_type)->toBe(FundingRequestType::Unspecified)
         ->and($request->requested_value_minor)->toBe(1_750)
@@ -49,7 +63,34 @@ it('creates a locked requester-owned Pay Code from an amount-only request', func
             $request->voucher->metadata,
             'instructions.target_amount',
         ))->toBe(17.5)
-        ->and($request->voucher->envelope)->not->toBeNull();
+        ->and($request->voucher->envelope)->not->toBeNull()
+        ->and(data_get($readModel, 'requests.0.receipt_status'))->toBe('pending')
+        ->and(data_get($readModel, 'requests.0.receipt_status_label'))->toBe('Pending')
+        ->and(data_get($readModel, 'requests.0.pay_code.status'))
+        ->toBe('locked_pending_review')
+        ->and(data_get($readModel, 'requests.0.pay_code.code'))
+        ->toBe($request->voucher->code)
+        ->and(data_get($readModel, 'requests.0.pay_code.can_copy'))->toBeTrue()
+        ->and(FundingRequestNotice::query()
+            ->where('recipient_id', (string) $reviewer->getKey())
+            ->where('notice_type', 'funding_request_submitted')
+            ->count())->toBe(1);
+
+    Event::assertDispatched(
+        FundingRequestChanged::class,
+        function (FundingRequestChanged $event) use ($request): bool {
+            $payload = $event->broadcastWith();
+
+            return $payload['request_reference'] === $request->reference
+                && $payload['status'] === 'submitted'
+                && ! str_contains(
+                    json_encode($payload, JSON_THROW_ON_ERROR),
+                    $request->voucher->code,
+                )
+                && ! array_key_exists('message', $payload)
+                && ! array_key_exists('account_reference', $payload);
+        },
+    );
 });
 
 it('lets an Account owner submit a request without accepting monetary authority', function () {

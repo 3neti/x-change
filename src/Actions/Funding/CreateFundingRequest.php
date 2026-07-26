@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
 
 final class CreateFundingRequest
@@ -22,6 +23,7 @@ final class CreateFundingRequest
     public function __construct(
         private readonly FundingAccountCreditContract $accounts,
         private readonly IssueTreasuryBackedPayCode $payCodes,
+        private readonly FundingRequestWorkflowPublisher $workflow,
     ) {}
 
     public function handle(CreateFundingRequestData $data): FundingRequest
@@ -186,6 +188,7 @@ final class CreateFundingRequest
                         'settlement_envelope_id' => $envelope->getKey(),
                     ],
                 ])->saveQuietly();
+                $this->workflow->submitted($request->refresh());
 
                 return $request->refresh()->load(['events', 'voucher.envelope']);
             }, 3);
