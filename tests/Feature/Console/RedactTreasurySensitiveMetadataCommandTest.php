@@ -28,6 +28,7 @@ it('guardedly redacts legacy Treasury secrets without changing money or request 
             expiresAt: now()->addDay(),
             recipient: $recipient,
             evidenceReference: 'evidence:treasury-sensitive-redaction',
+            authorizationReference: 'authorization:treasury-sensitive-redaction',
         ),
     );
     $operation = TreasuryPositionOperation::query()

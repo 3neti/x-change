@@ -29,6 +29,7 @@ final class SystemAccountFundingPayCodeIssuance extends Model
         'amount_minor',
         'currency',
         'evidence_reference',
+        'authorization_reference',
         'voucher_id',
         'reservation_operation_reference',
         'status',

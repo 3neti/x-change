@@ -125,6 +125,7 @@ it('rejects an unclaimed voucher without changing its journal or Treasury', func
             expiresAt: now()->addDay(),
             recipient: $recipient,
             evidenceReference: 'evidence:journal-backfill-unclaimed',
+            authorizationReference: 'authorization:journal-backfill-unclaimed',
         ),
     );
     $journalCount = ExecutionJournalEntry::query()->count();
@@ -172,6 +173,7 @@ function claimedSystemAccountFundingPayCodeForJournalBackfill(): array
             expiresAt: now()->addDay(),
             recipient: $recipient,
             evidenceReference: 'evidence:journal-backfill-claimed',
+            authorizationReference: 'authorization:journal-backfill-claimed',
         ),
     );
     $claim = app(DispatchVoucherClaimOutcome::class)->handle(

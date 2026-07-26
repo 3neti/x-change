@@ -160,6 +160,7 @@ function legacyTimestampPrecisionLossInspection(): array
             expiresAt: now()->addDay(),
             recipient: $recipient,
             evidenceReference: 'evidence:journal-integrity-attestation',
+            authorizationReference: 'authorization:journal-integrity-attestation',
         ),
     );
     app(AccountFundingPayCodeJournal::class)->recordInspected(

@@ -59,9 +59,13 @@ final readonly class IssueSystemAccountFundingPayCode
             trim($data->connectionReference),
         ]))->sole();
         $idempotencyReference = trim($data->idempotencyReference);
-        $evidenceReference = $this->optionalReference(
-            $data->evidenceReference,
+        $evidenceReference = $this->requiredReference(
+            (string) $data->evidenceReference,
             'evidence reference',
+        );
+        $authorizationReference = $this->requiredReference(
+            (string) $data->authorizationReference,
+            'authorization reference',
         );
         $source = $this->requiredReference($data->source, 'issuance source', 64);
 
@@ -95,6 +99,7 @@ final readonly class IssueSystemAccountFundingPayCode
             $claimantReference,
             $connection,
             $data,
+            $authorizationReference,
             $evidenceReference,
             $fingerprint,
             $idempotencyReferenceHash,
@@ -143,6 +148,7 @@ final readonly class IssueSystemAccountFundingPayCode
                 'amount_minor' => $data->amountMinor,
                 'currency' => $connection->currency,
                 'evidence_reference' => $evidenceReference,
+                'authorization_reference' => $authorizationReference,
                 'status' => 'preparing',
                 'expires_at' => $data->expiresAt,
                 'metadata' => $data->metadata,
@@ -261,17 +267,6 @@ final readonly class IssueSystemAccountFundingPayCode
         return $value;
     }
 
-    private function optionalReference(
-        ?string $value,
-        string $label,
-    ): ?string {
-        if ($value === null || trim($value) === '') {
-            return null;
-        }
-
-        return $this->requiredReference($value, $label);
-    }
-
     private function fingerprint(
         IssueSystemAccountFundingPayCodeData $data,
         string $provider,
@@ -289,6 +284,9 @@ final readonly class IssueSystemAccountFundingPayCode
                 ? 'bearer'
                 : $recipient->getMorphClass().':'.$recipient->getKey(),
             'evidence_reference' => trim((string) $data->evidenceReference),
+            'authorization_reference' => trim(
+                (string) $data->authorizationReference,
+            ),
             'source' => trim($data->source),
             'expires_at' => $data->expiresAt->toIso8601String(),
             'metadata' => $data->metadata,

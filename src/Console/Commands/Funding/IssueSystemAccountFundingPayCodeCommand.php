@@ -146,14 +146,8 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
                     expiresAt: $expiresAt,
                     recipient: $recipient,
                     evidenceReference: $evidenceReference,
+                    authorizationReference: $authorizationReference,
                     source: 'system_utility',
-                    metadata: [
-                        'custom' => [
-                            'system_account_funding' => [
-                                'authorization_reference' => $authorizationReference,
-                            ],
-                        ],
-                    ],
                 ),
             );
             $after = $this->positionBalances(

@@ -29,6 +29,7 @@ it('issues and replays one recipient-bound Account Funding Pay Code from the sys
         expiresAt: now()->addDay(),
         recipient: $recipient,
         evidenceReference: 'test-evidence:utility-1001',
+        authorizationReference: 'test-authorization:utility-1001',
     );
     $issuance = app(IssueSystemAccountFundingPayCode::class)->handle($request);
     $replay = app(IssueSystemAccountFundingPayCode::class)->handle($request);
@@ -39,6 +40,8 @@ it('issues and replays one recipient-bound Account Funding Pay Code from the sys
         ->and($issuance->amount_minor)->toBe(125_000)
         ->and($issuance->connection_reference)->toBe('netbank-primary')
         ->and($issuance->reservation_operation_reference)->not->toBeNull()
+        ->and($issuance->authorization_reference)
+        ->toBe('test-authorization:utility-1001')
         ->and($replay->is($issuance))->toBeTrue()
         ->and($replay->voucher?->is($voucher))->toBeTrue()
         ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(1)
@@ -109,6 +112,8 @@ it('rejects reuse of an issuance reference with different economic inputs', func
         idempotencyReference: 'system-account-funding-utility-1002',
         expiresAt: $expiresAt,
         recipient: $recipient,
+        evidenceReference: 'test-evidence:utility-1002',
+        authorizationReference: 'test-authorization:utility-1002',
     ));
 
     expect(fn () => $action->handle(
@@ -118,6 +123,23 @@ it('rejects reuse of an issuance reference with different economic inputs', func
             idempotencyReference: 'system-account-funding-utility-1002',
             expiresAt: $expiresAt,
             recipient: $recipient,
+            evidenceReference: 'test-evidence:utility-1002',
+            authorizationReference: 'test-authorization:utility-1002',
+        ),
+    ))->toThrow(
+        RuntimeException::class,
+        'already used with different inputs',
+    );
+
+    expect(fn () => $action->handle(
+        new IssueSystemAccountFundingPayCodeData(
+            amountMinor: 100_000,
+            connectionReference: 'netbank-primary',
+            idempotencyReference: 'system-account-funding-utility-1002',
+            expiresAt: $expiresAt,
+            recipient: $recipient,
+            evidenceReference: 'test-evidence:utility-1002',
+            authorizationReference: 'different-authorization:utility-1002',
         ),
     ))->toThrow(
         RuntimeException::class,
@@ -125,6 +147,33 @@ it('rejects reuse of an issuance reference with different economic inputs', func
     );
 
     expect(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(1);
+});
+
+it('rejects direct issuance without evidence and authorization references', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    $recipient = actingAsTestUser(0);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        50_000,
+        'utility-missing-controls',
+    );
+
+    expect(fn () => app(IssueSystemAccountFundingPayCode::class)
+        ->handle(new IssueSystemAccountFundingPayCodeData(
+            amountMinor: 1_000,
+            connectionReference: 'netbank-primary',
+            idempotencyReference: 'utility-missing-controls',
+            expiresAt: now()->addDay(),
+            recipient: $recipient,
+            evidenceReference: 'test-evidence:missing-controls',
+        )))->toThrow(
+            RuntimeException::class,
+            'authorization reference is invalid',
+        );
+
+    expect(SystemAccountFundingPayCodeIssuance::query()->count())
+        ->toBe(0);
 });
 
 function systemFundingPositionBalance(

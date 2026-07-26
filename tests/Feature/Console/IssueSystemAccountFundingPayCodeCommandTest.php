@@ -314,10 +314,8 @@ it('guides an interactive issuance with safe defaults and a generated reference'
         )
         ->and($issuance->evidence_reference)
         ->toBe('evidence:interactive:1001')
-        ->and(data_get(
-            $issuance->metadata,
-            'custom.system_account_funding.authorization_reference',
-        ))->toBe('authorization:interactive:1001')
+        ->and($issuance->authorization_reference)
+        ->toBe('authorization:interactive:1001')
         ->and($issuance->status)->toBe('issued')
         ->and($issuance->voucher)->toBeInstanceOf(Voucher::class);
 });

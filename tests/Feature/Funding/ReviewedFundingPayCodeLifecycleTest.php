@@ -15,6 +15,7 @@ use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Models\FundingRequestNotice;
+use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -92,6 +93,16 @@ it('requires independent approval then moves reserved system value to the bound 
         ->and($request->refresh()->voucher_id)->toBe($voucher->getKey())
         ->and($request->status)->toBe(FundingRequestStatus::PayCodeIssued)
         ->and(FundingRequestNotice::query()->count())->toBe(1)
+        ->and(SystemAccountFundingPayCodeIssuance::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->sole()
+            ->authorization_reference)
+        ->toBe(implode(':', [
+            'funding-request-approval',
+            $request->reference,
+            $checker::class,
+            (string) $checker->getKey(),
+        ]))
         ->and(positionBalance($system, TreasuryPositionPurpose::AccountFundingReserve))->toBe(750_000)
         ->and(positionBalance($system, TreasuryPositionPurpose::PayCodeReserve))->toBe(250_000)
         ->and(positionBalance($requester, TreasuryPositionPurpose::ClientFunds))->toBe(0);

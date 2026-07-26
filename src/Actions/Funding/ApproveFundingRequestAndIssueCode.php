@@ -86,6 +86,12 @@ final readonly class ApproveFundingRequestAndIssueCode
                     expiresAt: $expiresAt,
                     recipient: $recipient,
                     evidenceReference: (string) $locked->evidence_reference,
+                    authorizationReference: implode(':', [
+                        'funding-request-approval',
+                        (string) $locked->reference,
+                        $approverType,
+                        $approverId,
+                    ]),
                     source: 'reviewed_funding',
                     metadata: [
                         'custom' => [

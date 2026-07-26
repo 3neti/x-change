@@ -20,6 +20,7 @@ final class IssueSystemAccountFundingPayCodeData extends Data
         public readonly Carbon $expiresAt,
         public readonly ?Model $recipient = null,
         public readonly ?string $evidenceReference = null,
+        public readonly ?string $authorizationReference = null,
         public readonly string $source = 'system_utility',
         public readonly array $metadata = [],
     ) {}

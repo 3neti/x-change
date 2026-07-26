@@ -51,6 +51,7 @@ final readonly class AccountFundingPayCodeJournal
                 metadata: [
                     'issuance_reference' => $issuance->reference,
                     'reservation_operation_reference' => $issuance->reservation_operation_reference,
+                    'authorization_reference' => $issuance->authorization_reference,
                 ],
             ),
             idempotencyKey: 'x-change:account-funding-pay-code:issued:'.$issuance->reference,
