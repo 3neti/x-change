@@ -57,6 +57,7 @@ use LBHurtado\XChange\Console\Commands\Funding\AttestAccountFundingPayCodeJourna
 use LBHurtado\XChange\Console\Commands\Funding\BackfillAccountFundingPayCodeJournalCommand;
 use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Funding\SyncStandingFundingAddressesCommand;
+use LBHurtado\XChange\Console\Commands\Funding\VerifyFundingRequestBackingCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
@@ -986,6 +987,7 @@ class XChangeServiceProvider extends ServiceProvider
                 AttestAccountFundingPayCodeJournalIntegrityCommand::class,
                 BackfillAccountFundingPayCodeJournalCommand::class,
                 IssueSystemAccountFundingPayCodeCommand::class,
+                VerifyFundingRequestBackingCommand::class,
                 VerifyOpenFundingIntentsCommand::class,
                 VerifyOpenPaymentAttemptsCommand::class,
                 SyncStandingFundingAddressesCommand::class,
