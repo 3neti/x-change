@@ -36,6 +36,7 @@ final class ClaimWalkthroughRecorder
                 'XCHANGE_CLAIM_WALKTHROUGH_BANK_CODE' => (string) ($options['bank_code'] ?? ''),
                 'XCHANGE_CLAIM_WALKTHROUGH_ACCOUNT_NUMBER' => (string) ($options['account_number'] ?? ''),
                 'XCHANGE_CLAIM_WALKTHROUGH_SUBMIT_CLAIM' => ($options['submit_claim'] ?? false) ? '1' : '0',
+                'XCHANGE_CLAIM_WALKTHROUGH_OG_PREVIEW' => json_encode(data_get($scenario, 'fixture.og_preview', []), JSON_UNESCAPED_SLASHES) ?: '{}',
             ])
             ->run(['node', $script]);
 

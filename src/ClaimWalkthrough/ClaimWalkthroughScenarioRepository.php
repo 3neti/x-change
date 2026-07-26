@@ -22,6 +22,31 @@ final class ClaimWalkthroughScenarioRepository
         );
         $defaultRiderRedirectTimeout = config('x-change.claim_preview.rider.redirect_timeout', 4);
         $defaultRiderSplashTimeout = config('x-change.claim_preview.rider.splash_timeout');
+        $defaultRiderOgSource = config('x-change.claim_preview.rider.og_source');
+        $riderPreviewFixture = [
+            'amount' => '15.00',
+            'money_movement' => false,
+            'form_flow_default_splash' => true,
+            'handlers' => [
+                'kyc' => false,
+                'location' => false,
+                'otp' => false,
+                'selfie' => false,
+                'signature' => false,
+            ],
+            'rider_splash' => true,
+            'rider_redirect' => true,
+            'rider' => [
+                'message' => $defaultRiderMessage,
+                'url' => $defaultRiderUrl,
+                'redirect_timeout' => $defaultRiderRedirectTimeout,
+                'splash' => $defaultRiderSplash,
+                'splash_timeout' => $defaultRiderSplashTimeout,
+                'og_source' => $defaultRiderOgSource,
+            ],
+            'feedback' => false,
+        ];
+        $riderPreviewFixture['og_preview'] = (new RiderOgPreviewPayloadFactory)->make($riderPreviewFixture);
 
         return [
             'claim_basic_15_no_inputs_no_riders_no_feedbacks' => [
@@ -74,29 +99,16 @@ final class ClaimWalkthroughScenarioRepository
                 'key' => 'claim_basic_15_preview_with_rider',
                 'label' => 'Basic ₱15 claim preview with rider',
                 'description' => 'No-money issuer preview showing the redeemer journey with rider splash, rider message, and rider redirect.',
-                'fixture' => [
-                    'amount' => '15.00',
-                    'money_movement' => false,
-                    'form_flow_default_splash' => true,
-                    'handlers' => [
-                        'kyc' => false,
-                        'location' => false,
-                        'otp' => false,
-                        'selfie' => false,
-                        'signature' => false,
-                    ],
-                    'rider_splash' => true,
-                    'rider_redirect' => true,
-                    'rider' => [
-                        'message' => $defaultRiderMessage,
-                        'url' => $defaultRiderUrl,
-                        'redirect_timeout' => $defaultRiderRedirectTimeout,
-                        'splash' => $defaultRiderSplash,
-                        'splash_timeout' => $defaultRiderSplashTimeout,
-                    ],
-                    'feedback' => false,
-                ],
+                'fixture' => $riderPreviewFixture,
                 'checkpoints' => [
+                    [
+                        'key' => 'og-social-preview',
+                        'title' => 'Social / OG preview',
+                        'route' => 'og-meta://pay-code/{code}',
+                        'actor' => 'issuer',
+                        'expected' => 'Issuer sees the local Open Graph preview that can later map to the generated social card.',
+                        'screenshot' => 'screenshots/00-og-social-preview.png',
+                    ],
                     [
                         'key' => 'claim-entry-empty',
                         'title' => 'Claim entry',

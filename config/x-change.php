@@ -1641,6 +1641,7 @@ return [
                 $defaultClaimPreviewRiderSplashHtml,
             ),
             'splash_timeout' => env('XCHANGE_CLAIM_PREVIEW_RIDER_SPLASH_TIMEOUT'),
+            'og_source' => env('XCHANGE_CLAIM_PREVIEW_RIDER_OG_SOURCE'),
         ],
     ],
 

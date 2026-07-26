@@ -15,6 +15,15 @@ import type {
     CockpitQuickGenerateRuntimePricingPreflight,
     CockpitQuickGenerateTemplate,
 } from '../types';
+import {
+    buildRiderOgPreviewDocument,
+    buildRiderSplashContent,
+    buildSandboxedPreviewDocument,
+    escapeHtml,
+    looksLikeHtml,
+    resolveRiderOgPreview,
+} from '../riderOgPreview';
+import type { RiderOgPreview } from '../riderOgPreview';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
 
@@ -78,14 +87,6 @@ type RiderUrlPreset = {
     label: string;
     url: string;
     helper: string;
-};
-
-type RiderOgPreview = {
-    source: 'default' | 'message' | 'url' | 'splash';
-    label: string;
-    title: string;
-    description: string;
-    reference: string;
 };
 
 type FeedbackChannel = 'email' | 'mobile' | 'webhook';
@@ -983,7 +984,8 @@ const beneficiaryClaimUrl = computed<string | null>(() => {
 });
 
 const beneficiaryClaimRouteLabel = computed<string>(() => {
-    const value = beneficiaryClaimUrl.value ?? beneficiaryRedeemPath.value ?? '';
+    const value =
+        beneficiaryClaimUrl.value ?? beneficiaryRedeemPath.value ?? '';
 
     if (value.includes('/x/claim/') && value.includes('/experience')) {
         return 'Claim experience URL';
@@ -1202,8 +1204,7 @@ const postIssuanceNavigationItems = computed<
 const fundingWorkspaceUrl = computed<string | null>(() => {
     const item = postIssuanceNavigationItems.value.find(
         (candidate) =>
-            candidate.key === 'account_funding' &&
-            candidate.enabled === true,
+            candidate.key === 'account_funding' && candidate.enabled === true,
     );
 
     return stringValue(item?.href);
@@ -1235,112 +1236,120 @@ const selectedTemplateName = computed<string>(() => {
     );
 });
 
-const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => {
-    const amountValue = Number(amount.value);
-    const hasMoney = Number.isFinite(amountValue) && amountValue > 0;
-    const validationKeys = Object.keys(validationSummary.value);
-    const feedbackChannels = [
-        feedbackEmail.value.trim() === '' ? null : 'email',
-        normalizedFeedbackMobile.value === '' ? null : 'mobile',
-        feedbackWebhook.value.trim() === '' ? null : 'webhook',
-    ].filter((channel): channel is string => channel !== null);
+const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
+    () => {
+        const amountValue = Number(amount.value);
+        const hasMoney = Number.isFinite(amountValue) && amountValue > 0;
+        const validationKeys = Object.keys(validationSummary.value);
+        const feedbackChannels = [
+            feedbackEmail.value.trim() === '' ? null : 'email',
+            normalizedFeedbackMobile.value === '' ? null : 'mobile',
+            feedbackWebhook.value.trim() === '' ? null : 'webhook',
+        ].filter((channel): channel is string => channel !== null);
 
-    return [
-        {
-            key: 'money',
-            label: 'Money',
-            target: '#quick-generate-contract-money',
-            status: hasMoney ? 'ready' : 'needs-review',
-            summary: hasMoney
-                ? `${currency.value || 'PHP'} ${amount.value || '0'} × ${count.value || '1'}`
-                : 'Amount is required before issuance.',
-        },
-        {
-            key: 'claim',
-            label: 'Recipient receives',
-            target: '#quick-generate-claim-outcome',
-            status:
-                claimRecipientError.value === null ? 'ready' : 'needs-review',
-            summary: isAccountFundingClaim.value
-                ? 'Account funds · no provider payout'
-                : 'Cash payout through the configured provider',
-        },
-        {
-            key: 'inputs',
-            label: 'Claim Inputs',
-            target: '#quick-generate-contract-inputs',
-            status:
-                selectedInputFields.value.length > 0 ? 'ready' : 'needs-review',
-            summary:
-                selectedInputFields.value.length > 0
-                    ? selectedInputFields.value.join(', ')
-                    : 'No beneficiary inputs selected.',
-        },
-        {
-            key: 'validation',
-            label: 'Validation',
-            target: '#quick-generate-contract-validation',
-            status: validationKeys.length > 0 ? 'ready' : 'optional',
-            summary:
-                validationKeys.length > 0
-                    ? validationKeys.join(', ')
-                    : 'No cash validation rules selected.',
-        },
-        {
-            key: 'rider',
-            label: 'Rider',
-            target: '#quick-generate-contract-rider',
-            status:
-                purpose.value.trim() !== '' ||
-                riderUrl.value.trim() !== '' ||
-                riderSplash.value.trim() !== ''
+        return [
+            {
+                key: 'money',
+                label: 'Money',
+                target: '#quick-generate-contract-money',
+                status: hasMoney ? 'ready' : 'needs-review',
+                summary: hasMoney
+                    ? `${currency.value || 'PHP'} ${amount.value || '0'} × ${count.value || '1'}`
+                    : 'Amount is required before issuance.',
+            },
+            {
+                key: 'claim',
+                label: 'Recipient receives',
+                target: '#quick-generate-claim-outcome',
+                status:
+                    claimRecipientError.value === null
+                        ? 'ready'
+                        : 'needs-review',
+                summary: isAccountFundingClaim.value
+                    ? 'Account funds · no provider payout'
+                    : 'Cash payout through the configured provider',
+            },
+            {
+                key: 'inputs',
+                label: 'Claim Inputs',
+                target: '#quick-generate-contract-inputs',
+                status:
+                    selectedInputFields.value.length > 0
+                        ? 'ready'
+                        : 'needs-review',
+                summary:
+                    selectedInputFields.value.length > 0
+                        ? selectedInputFields.value.join(', ')
+                        : 'No beneficiary inputs selected.',
+            },
+            {
+                key: 'validation',
+                label: 'Validation',
+                target: '#quick-generate-contract-validation',
+                status: validationKeys.length > 0 ? 'ready' : 'optional',
+                summary:
+                    validationKeys.length > 0
+                        ? validationKeys.join(', ')
+                        : 'No cash validation rules selected.',
+            },
+            {
+                key: 'rider',
+                label: 'Rider',
+                target: '#quick-generate-contract-rider',
+                status:
+                    purpose.value.trim() !== '' ||
+                    riderUrl.value.trim() !== '' ||
+                    riderSplash.value.trim() !== ''
+                        ? 'ready'
+                        : 'optional',
+                summary:
+                    purpose.value.trim() !== '' ||
+                    riderUrl.value.trim() !== '' ||
+                    riderSplash.value.trim() !== ''
+                        ? 'Beneficiary experience configured.'
+                        : 'No CTA or splash content configured.',
+            },
+            {
+                key: 'feedback',
+                label: 'Feedback',
+                target: '#quick-generate-contract-feedback',
+                status: feedbackValid.value
+                    ? feedbackChannels.length > 0
+                        ? 'ready'
+                        : 'optional'
+                    : 'needs-review',
+                summary: !feedbackValid.value
+                    ? feedbackValidationErrors.value.join(' ')
+                    : feedbackChannels.length > 0
+                      ? feedbackChannels.join(', ')
+                      : 'No feedback channels selected.',
+            },
+            {
+                key: 'slices',
+                label: 'Slices',
+                target: '#quick-generate-contract-slices',
+                status:
+                    namedClaimSliceValidationMessage.value === null
+                        ? 'ready'
+                        : 'needs-review',
+                summary:
+                    namedClaimSliceValidationMessage.value ??
+                    `${sliceSummary.value.mode ?? sliceMode.value}`,
+            },
+            {
+                key: 'execution',
+                label: 'Execution',
+                target: '#quick-generate-contract-execution',
+                status: includeExecutionInstruction.value
                     ? 'ready'
                     : 'optional',
-            summary:
-                purpose.value.trim() !== '' ||
-                riderUrl.value.trim() !== '' ||
-                riderSplash.value.trim() !== ''
-                    ? 'Beneficiary experience configured.'
-                    : 'No CTA or splash content configured.',
-        },
-        {
-            key: 'feedback',
-            label: 'Feedback',
-            target: '#quick-generate-contract-feedback',
-            status: feedbackValid.value
-                ? feedbackChannels.length > 0
-                    ? 'ready'
-                    : 'optional'
-                : 'needs-review',
-            summary: !feedbackValid.value
-                ? feedbackValidationErrors.value.join(' ')
-                : feedbackChannels.length > 0
-                  ? feedbackChannels.join(', ')
-                  : 'No feedback channels selected.',
-        },
-        {
-            key: 'slices',
-            label: 'Slices',
-            target: '#quick-generate-contract-slices',
-            status:
-                namedClaimSliceValidationMessage.value === null
-                    ? 'ready'
-                    : 'needs-review',
-            summary:
-                namedClaimSliceValidationMessage.value ??
-                `${sliceSummary.value.mode ?? sliceMode.value}`,
-        },
-        {
-            key: 'execution',
-            label: 'Execution',
-            target: '#quick-generate-contract-execution',
-            status: includeExecutionInstruction.value ? 'ready' : 'optional',
-            summary: includeExecutionInstruction.value
-                ? `${executionDriver.value || 'default'} · ${executionSchema.value || 'voucher.execution.v1'}`
-                : 'Implicit default execution.',
-        },
-    ];
-});
+                summary: includeExecutionInstruction.value
+                    ? `${executionDriver.value || 'default'} · ${executionSchema.value || 'voucher.execution.v1'}`
+                    : 'Implicit default execution.',
+            },
+        ];
+    },
+);
 
 const normalizedPayee = computed<string>(() => {
     const normalized = recipientReference.value.trim();
@@ -1737,115 +1746,17 @@ function applyRiderUrlPreset(): void {
     riderUrl.value = selectedRiderUrlPreset.value.url;
 }
 
-function escapeHtml(value: string): string {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-}
-
-function looksLikeHtml(value: string): boolean {
-    return /<\/?[a-z][\s\S]*>/i.test(value);
-}
-
 const riderSplashContent = computed<string>(() => {
-    const headline = riderSplashHeadline.value.trim();
-    const body = riderSplash.value.trim();
-    const cta = riderSplashCtaText.value.trim();
-
-    if (headline === '' && cta === '') {
-        return body;
-    }
-
-    return [
-        headline === '' ? null : `<h1>${escapeHtml(headline)}</h1>`,
-        body === ''
-            ? null
-            : looksLikeHtml(body)
-              ? body
-              : `<p>${escapeHtml(body)}</p>`,
-        cta === '' ? null : `<p><strong>${escapeHtml(cta)}</strong></p>`,
-    ]
-        .filter((item): item is string => item !== null)
-        .join('\n');
+    return buildRiderSplashContent({
+        headline: riderSplashHeadline.value,
+        body: riderSplash.value,
+        cta: riderSplashCtaText.value,
+    });
 });
 
 const riderSplashPreviewIsHtml = computed<boolean>(() => {
     return looksLikeHtml(riderSplash.value.trim());
 });
-
-function buildSandboxedPreviewDocument(content: string): string {
-    const body = content.trim() === '' ? '<p>No splash body yet.</p>' : content;
-
-    return `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src data:; base-uri 'none'; form-action 'none';" />
-<style>
-* { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; background: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-body { padding: 0; }
-img { max-width: 100%; height: auto; }
-.text-center { text-align: center; }
-.mx-auto { margin-left: auto; margin-right: auto; }
-.relative { position: relative; }
-.absolute { position: absolute; }
-.inset-0 { inset: 0; }
-.pointer-events-none { pointer-events: none; }
-.flex { display: flex; }
-.items-center { align-items: center; }
-.justify-end { justify-content: flex-end; }
-.overflow-hidden { overflow: hidden; }
-.rounded-lg { border-radius: 0.5rem; }
-.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,.3), 0 4px 6px -4px rgba(0,0,0,.3); }
-.bg-black { background: #000; }
-.text-white { color: #fff; }
-.font-serif { font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif; }
-.font-normal { font-weight: 400; }
-.italic { font-style: italic; }
-.tracking-wide { letter-spacing: .025em; }
-.tracking-widest { letter-spacing: .1em; }
-.text-xs { font-size: .75rem; line-height: 1rem; }
-.text-sm { font-size: .875rem; line-height: 1.25rem; }
-.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-.text-2xl { font-size: 1.5rem; line-height: 2rem; }
-.mb-3 { margin-bottom: .75rem; }
-.mb-8 { margin-bottom: 2rem; }
-h1, h2, h3, p { margin-top: 0; }
-body > p:last-child strong {
-    position: fixed;
-    right: 1rem;
-    bottom: 1rem;
-    z-index: 9999;
-    display: inline-flex;
-    max-width: calc(100% - 2rem);
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    background: rgba(249, 115, 22, .94);
-    color: #fff;
-    padding: .55rem .9rem;
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,.35), 0 4px 6px -4px rgba(0,0,0,.35);
-    font-size: .8125rem;
-    line-height: 1.25rem;
-    text-align: center;
-}
-@media (min-width: 640px) {
-    .sm\\:text-sm { font-size: .875rem; line-height: 1.25rem; }
-    .sm\\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
-    .sm\\:text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
-}
-</style>
-</head>
-<body>
-${body}
-</body>
-</html>`;
-}
 
 const riderSplashPreviewDocument = computed<string>(() => {
     const body = riderSplashPreviewIsHtml.value
@@ -1856,88 +1767,20 @@ const riderSplashPreviewDocument = computed<string>(() => {
 });
 
 const riderOgPreview = computed<RiderOgPreview>(() => {
-    const source =
-        riderOgSource.value === 'message' ||
-        riderOgSource.value === 'url' ||
-        riderOgSource.value === 'splash'
-            ? riderOgSource.value
-            : 'default';
-    const message = purpose.value.trim();
-    const url = riderUrl.value.trim();
-    const splashHeadline = riderSplashHeadline.value.trim();
-    const splashBody = riderSplash.value.trim();
-    const splashCta = riderSplashCtaText.value.trim();
-
-    if (source === 'message') {
-        return {
-            source,
-            label: 'Message preview',
-            title: message === '' ? 'No message yet' : message,
-            description:
-                'Beneficiary preview is based on the rider message/purpose.',
-            reference: 'rider.message',
-        };
-    }
-
-    if (source === 'url') {
-        return {
-            source,
-            label: 'CTA URL preview',
-            title: url === '' ? 'No CTA URL yet' : url,
-            description:
-                'Beneficiary preview is based on the selected CTA destination.',
-            reference: 'rider.url',
-        };
-    }
-
-    if (source === 'splash') {
-        return {
-            source,
-            label: 'Splash preview',
-            title:
-                splashHeadline === ''
-                    ? splashBody || 'No splash content yet'
-                    : splashHeadline,
-            description:
-                splashCta === ''
-                    ? splashBody || 'Splash body is empty.'
-                    : `${splashBody || 'Splash body is empty.'} · ${splashCta}`,
-            reference: 'rider.splash',
-        };
-    }
-
-    return {
-        source,
-        label: 'Default preview',
-        title:
-            splashHeadline ||
-            message ||
-            (url === '' ? 'Default beneficiary preview' : url),
-        description:
-            splashBody ||
-            message ||
-            'Cockpit will submit only operator-safe rider fields.',
-        reference: 'rider.og_source: default',
-    };
-});
-
-const riderOgPreviewSource = computed<RiderOgPreview['source']>(() => {
-    return riderOgPreview.value.source;
-});
-
-const riderOgPreviewUsesSplashRender = computed<boolean>(() => {
-    return (
-        (riderOgPreviewSource.value === 'default' ||
-            riderOgPreviewSource.value === 'splash') &&
-        riderSplashContent.value.trim() !== ''
-    );
+    return resolveRiderOgPreview({
+        source: riderOgSource.value,
+        message: purpose.value,
+        url: riderUrl.value,
+        splashHeadline: riderSplashHeadline.value,
+        splashBody: riderSplash.value,
+        splashCta: riderSplashCtaText.value,
+    });
 });
 
 const riderOgPreviewDocument = computed<string>(() => {
-    return buildSandboxedPreviewDocument(
-        riderOgPreviewUsesSplashRender.value
-            ? riderSplashContent.value
-            : `<h1>${escapeHtml(riderOgPreview.value.title)}</h1><p>${escapeHtml(riderOgPreview.value.description)}</p>`,
+    return buildRiderOgPreviewDocument(
+        riderOgPreview.value,
+        riderSplashContent.value,
     );
 });
 
@@ -2420,8 +2263,8 @@ async function submit(): Promise<void> {
             lastMessage.value =
                 normalizedErrors.length > 0
                     ? 'Quick Generate needs a few fields corrected before issuance.'
-                    : stringValue(body.message) ??
-                      'Quick Generate submission failed.';
+                    : (stringValue(body.message) ??
+                      'Quick Generate submission failed.');
             submissionErrors.value =
                 normalizedErrors.length > 0
                     ? normalizedErrors
@@ -3400,9 +3243,10 @@ function dataGet(source: unknown, path: string[]): unknown {
                         Review the instruction contract before generation
                     </h4>
                     <p class="mt-1 max-w-3xl leading-5">
-                        This checklist summarizes the current builder state only.
-                        It does not validate against providers, reserve funds,
-                        deliver feedback, execute actions, or run voucher drivers.
+                        This checklist summarizes the current builder state
+                        only. It does not validate against providers, reserve
+                        funds, deliver feedback, execute actions, or run voucher
+                        drivers.
                     </p>
                 </div>
                 <span
@@ -3463,7 +3307,9 @@ function dataGet(source: unknown, path: string[]): unknown {
             >
                 VoucherInstruction DTO coverage
             </summary>
-            <p class="mt-2 max-w-3xl leading-5 text-slate-500 dark:text-slate-400">
+            <p
+                class="mt-2 max-w-3xl leading-5 text-slate-500 dark:text-slate-400"
+            >
                 Engineering map of voucher-owned DTO fields represented by this
                 page. Open this only when checking contract coverage.
             </p>
@@ -3652,8 +3498,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition"
                                     :class="
-                                        claimOutcome ===
-                                        'provider_disbursement'
+                                        claimOutcome === 'provider_disbursement'
                                             ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-100 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-950'
                                             : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
                                     "
@@ -6187,7 +6032,9 @@ function dataGet(source: unknown, path: string[]): unknown {
                 class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/70 dark:bg-emerald-950/30"
                 data-testid="cockpit-quick-generate-productized-result-card"
             >
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div
+                    class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+                >
                     <div>
                         <p
                             class="text-xs font-semibold tracking-[0.22em] text-emerald-700 uppercase dark:text-emerald-300"
@@ -6205,15 +6052,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <template v-if="isAccountFundingResult">
                                 This Pay Code is reserved for Account Funding.
                                 Claiming it adds the whole amount to one
-                                authenticated Account without a provider
-                                payout.
+                                authenticated Account without a provider payout.
                             </template>
                             <template v-else>
-                                Generated through the existing x-change
-                                issuance handoff. Cockpit presents the result,
-                                claim URL, preflight summaries, and activity
-                                status without sending feedback or executing
-                                the claim from this UI.
+                                Generated through the existing x-change issuance
+                                handoff. Cockpit presents the result, claim URL,
+                                preflight summaries, and activity status without
+                                sending feedback or executing the claim from
+                                this UI.
                             </template>
                         </p>
                     </div>
@@ -6249,7 +6095,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </dl>
 
                 <div
-                    class="mt-4 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/70 dark:bg-slate-950/60 lg:flex-row lg:items-center lg:justify-between"
+                    class="mt-4 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-white/80 p-3 lg:flex-row lg:items-center lg:justify-between dark:border-emerald-900/70 dark:bg-slate-950/60"
                     data-testid="cockpit-quick-generate-primary-next-actions"
                 >
                     <div class="min-w-0">
@@ -6269,8 +6115,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </p>
                         <p
                             v-if="
-                                !isAccountFundingResult &&
-                                beneficiaryClaimUrl
+                                !isAccountFundingResult && beneficiaryClaimUrl
                             "
                             class="mt-1 font-mono text-[11px] break-all text-emerald-800 dark:text-emerald-200"
                         >
@@ -6297,9 +6142,7 @@ function dataGet(source: unknown, path: string[]): unknown {
 
                     <div class="flex flex-wrap gap-2">
                         <CockpitManualCopyButton
-                            v-if="
-                                isAccountFundingResult && resultCode !== null
-                            "
+                            v-if="isAccountFundingResult && resultCode !== null"
                             :value="resultCode"
                             label="Copy Pay Code"
                             data-testid="cockpit-quick-generate-copy-funding-pay-code"
@@ -6317,8 +6160,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </a>
                         <CockpitManualCopyButton
                             v-if="
-                                !isAccountFundingResult &&
-                                beneficiaryClaimUrl
+                                !isAccountFundingResult && beneficiaryClaimUrl
                             "
                             :value="beneficiaryClaimUrl"
                             label="Copy claim URL"
@@ -6326,8 +6168,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         />
                         <a
                             v-if="
-                                !isAccountFundingResult &&
-                                beneficiaryClaimUrl
+                                !isAccountFundingResult && beneficiaryClaimUrl
                             "
                             :href="beneficiaryClaimUrl"
                             target="_blank"
@@ -6393,7 +6234,11 @@ function dataGet(source: unknown, path: string[]): unknown {
                             Base fee:
                             {{ displayValue(pricingPreflight.base_fee, '0') }} ·
                             Blocking:
-                            {{ pricingPreflight.blocking === true ? 'yes' : 'no' }}
+                            {{
+                                pricingPreflight.blocking === true
+                                    ? 'yes'
+                                    : 'no'
+                            }}
                         </p>
                     </section>
 
@@ -6449,7 +6294,9 @@ function dataGet(source: unknown, path: string[]): unknown {
                     class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/70 dark:bg-slate-950/60"
                     data-testid="cockpit-quick-generate-primary-handoff-status"
                 >
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div
+                        class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+                    >
                         <div>
                             <p
                                 class="text-[11px] font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
@@ -6509,555 +6356,631 @@ function dataGet(source: unknown, path: string[]): unknown {
                 >
                     Supporting result details
                 </summary>
-                <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                <p
+                    class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                >
                     Additional generated Pay Code links, campaign return
                     navigation, runtime metadata, and preflight details remain
                     available for inspection. The primary card above is the
                     operator workflow surface.
                 </p>
 
-            <div class="mt-3 flex flex-wrap gap-2">
-                <a
-                    v-if="cockpitDetailUrl"
-                    :href="cockpitDetailUrl"
-                    class="rounded-lg bg-slate-950 px-3 py-2 font-semibold text-white dark:bg-slate-100 dark:text-slate-950"
-                    data-testid="cockpit-quick-generate-result-link"
-                >
-                    Open Cockpit detail
-                </a>
-                <button
-                    type="button"
-                    class="rounded-lg border border-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:text-slate-200"
-                    data-testid="cockpit-quick-generate-refresh-button"
-                    :disabled="!canRefreshReadModel"
-                    @click="refreshReadModel"
-                >
-                    Refresh read model
-                </button>
-            </div>
-            <p class="mt-3 leading-5 text-slate-500 dark:text-slate-400">
-                No automatic redirect is performed. The operator chooses whether
-                to refresh Cockpit data, open the generated Pay Code detail, or
-                copy the beneficiary URL for an approved external distribution
-                workflow.
-            </p>
-
-            <section
-                v-if="beneficiaryClaimUrl || beneficiaryRedeemPath"
-                class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/70 dark:bg-emerald-950/30"
-                data-testid="cockpit-quick-generate-beneficiary-url-panel"
-            >
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p
-                            class="font-semibold text-emerald-950 dark:text-emerald-50"
-                        >
-                            Beneficiary Pay Code URL
-                        </p>
-                        <p
-                            class="mt-1 text-[11px] leading-4 text-emerald-800 dark:text-emerald-200"
-                        >
-                            Operator-safe full URL from the existing issuance
-                            result. Showing this link does not send SMS, email,
-                            webhook, or campaign delivery.
-                        </p>
-                    </div>
-                    <span
-                        class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800"
-                    >
-                        read-only
-                    </span>
-                </div>
-                <dl class="mt-3 grid gap-2">
-                    <div v-if="beneficiaryClaimUrl">
-                        <dt
-                            class="text-[11px] font-medium tracking-[0.18em] text-emerald-700/80 uppercase dark:text-emerald-200/80"
-                        >
-                            Full URL
-                        </dt>
-                        <dd
-                            class="mt-1 font-mono text-[12px] font-semibold break-all text-emerald-950 dark:text-emerald-50"
-                        >
-                            <a
-                                :href="beneficiaryClaimUrl"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="underline decoration-emerald-400 underline-offset-4"
-                                data-testid="cockpit-quick-generate-beneficiary-url-link"
-                            >
-                                {{ beneficiaryClaimUrl }}
-                            </a>
-                        </dd>
-                    </div>
-                    <div v-if="beneficiaryRedeemPath">
-                        <dt
-                            class="text-[11px] font-medium tracking-[0.18em] text-emerald-700/80 uppercase dark:text-emerald-200/80"
-                        >
-                            Path
-                        </dt>
-                        <dd
-                            class="mt-1 font-mono text-[12px] font-semibold break-all text-emerald-950 dark:text-emerald-50"
-                        >
-                            {{ beneficiaryRedeemPath }}
-                        </dd>
-                    </div>
-                </dl>
-                <div class="mt-3">
-                    <CockpitManualCopyButton
-                        :value="beneficiaryClaimUrl"
-                        label="Copy beneficiary URL"
-                    />
-                </div>
-            </section>
-
-            <section
-                v-if="campaignAttributionAvailable"
-                class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/30"
-                data-testid="cockpit-quick-generate-campaign-attribution-panel"
-            >
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            Campaign attribution
-                        </p>
-                        <p
-                            class="mt-1 text-[11px] leading-4 text-amber-800 dark:text-amber-200"
-                        >
-                            This result keeps campaign context for read-only
-                            navigation only. Campaign state is not mutated here.
-                        </p>
-                    </div>
-                    <span
-                        class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800"
-                    >
-                        read-only
-                    </span>
-                </div>
-                <dl class="mt-3 grid gap-2 sm:grid-cols-2">
-                    <div>
-                        <dt class="text-amber-700/80 dark:text-amber-200/80">
-                            Planning key
-                        </dt>
-                        <dd
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            {{
-                                displayValue(campaignAttribution?.planning_key)
-                            }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-amber-700/80 dark:text-amber-200/80">
-                            Execution
-                        </dt>
-                        <dd
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            {{
-                                displayValue(campaignAttribution?.execution_id)
-                            }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-amber-700/80 dark:text-amber-200/80">
-                            Campaign
-                        </dt>
-                        <dd
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            {{ displayValue(campaignAttribution?.campaign_id) }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-amber-700/80 dark:text-amber-200/80">
-                            Generated Pay Code
-                        </dt>
-                        <dd
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            {{
-                                displayValue(
-                                    campaignAttribution?.generated_code,
-                                )
-                            }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-amber-700/80 dark:text-amber-200/80">
-                            Recipient
-                        </dt>
-                        <dd
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            {{
-                                displayValue(campaignAttribution?.recipient_id)
-                            }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-amber-700/80 dark:text-amber-200/80">
-                            Recipient reference
-                        </dt>
-                        <dd
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            {{
-                                displayValue(
-                                    campaignAttribution?.recipient_reference,
-                                )
-                            }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-amber-700/80 dark:text-amber-200/80">
-                            Template
-                        </dt>
-                        <dd
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            {{
-                                displayValue(campaignAttribution?.template_key)
-                            }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-amber-700/80 dark:text-amber-200/80">
-                            Amount
-                        </dt>
-                        <dd
-                            class="font-semibold text-amber-950 dark:text-amber-50"
-                        >
-                            {{ displayValue(campaignAttribution?.currency) }}
-                            {{ displayValue(campaignAttribution?.amount) }}
-                        </dd>
-                    </div>
-                </dl>
-            </section>
-
-            <section
-                v-if="campaignReturnNavigationItems.length > 0"
-                class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/30"
-                data-testid="cockpit-quick-generate-campaign-return-navigation-panel"
-            >
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="font-semibold text-amber-950 dark:text-amber-50">
-                            Campaign return navigation
-                        </p>
-                        <p class="mt-1 text-[11px] leading-4 text-amber-800 dark:text-amber-200">
-                            Return to campaign-filtered Cockpit views after generation. These links are read-only and do not update campaign state.
-                        </p>
-                    </div>
-                    <span class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
-                        Read-only
-                    </span>
-                </div>
-
-                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                <div class="mt-3 flex flex-wrap gap-2">
                     <a
-                        v-for="item in campaignReturnNavigationItems"
-                        :key="String(item.key ?? item.label ?? 'campaign-return')"
-                        :href="item.enabled === true && item.href ? item.href : undefined"
-                        class="rounded-lg border border-amber-200 bg-white px-3 py-3 font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900/40"
-                        :aria-disabled="item.enabled === true && item.href ? undefined : 'true'"
-                        :data-testid="`cockpit-quick-generate-campaign-return-link-${item.key}`"
+                        v-if="cockpitDetailUrl"
+                        :href="cockpitDetailUrl"
+                        class="rounded-lg bg-slate-950 px-3 py-2 font-semibold text-white dark:bg-slate-100 dark:text-slate-950"
+                        data-testid="cockpit-quick-generate-result-link"
                     >
-                        <span class="block">{{ item.label }}</span>
-                        <span class="mt-1 block text-[11px] font-medium text-amber-700 dark:text-amber-200">
-                            Campaign context preserved · {{ item.status }}
-                        </span>
+                        Open Cockpit detail
                     </a>
-                </div>
-            </section>
-
-            <section
-                v-if="postIssuanceNavigationItems.length > 0"
-                class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-quick-generate-post-issuance-navigation-panel"
-            >
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p
-                            class="font-semibold text-slate-950 dark:text-slate-50"
-                        >
-                            Post-issuance handoff
-                        </p>
-                        <p
-                            class="mt-1 text-[11px] leading-4 text-slate-500 dark:text-slate-400"
-                        >
-                            Read-only destinations for the generated Pay Code.
-                            Automatic redirect:
-                            {{
-                                postIssuanceNavigation?.auto_redirect === true
-                                    ? 'enabled'
-                                    : 'disabled'
-                            }}.
-                        </p>
-                    </div>
-                    <span
-                        class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
+                    <button
+                        type="button"
+                        class="rounded-lg border border-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:text-slate-200"
+                        data-testid="cockpit-quick-generate-refresh-button"
+                        :disabled="!canRefreshReadModel"
+                        @click="refreshReadModel"
                     >
-                        {{ displayValue(postIssuanceNavigation?.status) }}
-                    </span>
+                        Refresh read model
+                    </button>
                 </div>
+                <p class="mt-3 leading-5 text-slate-500 dark:text-slate-400">
+                    No automatic redirect is performed. The operator chooses
+                    whether to refresh Cockpit data, open the generated Pay Code
+                    detail, or copy the beneficiary URL for an approved external
+                    distribution workflow.
+                </p>
 
-                <div class="mt-3 grid gap-2">
-                    <a
-                        v-for="item in postIssuanceNavigationItems"
-                        :key="String(item.key ?? item.label ?? 'post-issuance')"
-                        :href="
-                            item.enabled === true && item.href
-                                ? item.href
-                                : undefined
-                        "
-                        class="rounded-lg border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-emerald-900 dark:hover:text-emerald-300"
-                        :aria-disabled="
-                            item.enabled === true && item.href
-                                ? undefined
-                                : 'true'
-                        "
-                        :data-testid="`cockpit-quick-generate-post-issuance-link-${item.key}`"
+                <section
+                    v-if="beneficiaryClaimUrl || beneficiaryRedeemPath"
+                    class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/70 dark:bg-emerald-950/30"
+                    data-testid="cockpit-quick-generate-beneficiary-url-panel"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p
+                                class="font-semibold text-emerald-950 dark:text-emerald-50"
+                            >
+                                Beneficiary Pay Code URL
+                            </p>
+                            <p
+                                class="mt-1 text-[11px] leading-4 text-emerald-800 dark:text-emerald-200"
+                            >
+                                Operator-safe full URL from the existing
+                                issuance result. Showing this link does not send
+                                SMS, email, webhook, or campaign delivery.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800"
+                        >
+                            read-only
+                        </span>
+                    </div>
+                    <dl class="mt-3 grid gap-2">
+                        <div v-if="beneficiaryClaimUrl">
+                            <dt
+                                class="text-[11px] font-medium tracking-[0.18em] text-emerald-700/80 uppercase dark:text-emerald-200/80"
+                            >
+                                Full URL
+                            </dt>
+                            <dd
+                                class="mt-1 font-mono text-[12px] font-semibold break-all text-emerald-950 dark:text-emerald-50"
+                            >
+                                <a
+                                    :href="beneficiaryClaimUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="underline decoration-emerald-400 underline-offset-4"
+                                    data-testid="cockpit-quick-generate-beneficiary-url-link"
+                                >
+                                    {{ beneficiaryClaimUrl }}
+                                </a>
+                            </dd>
+                        </div>
+                        <div v-if="beneficiaryRedeemPath">
+                            <dt
+                                class="text-[11px] font-medium tracking-[0.18em] text-emerald-700/80 uppercase dark:text-emerald-200/80"
+                            >
+                                Path
+                            </dt>
+                            <dd
+                                class="mt-1 font-mono text-[12px] font-semibold break-all text-emerald-950 dark:text-emerald-50"
+                            >
+                                {{ beneficiaryRedeemPath }}
+                            </dd>
+                        </div>
+                    </dl>
+                    <div class="mt-3">
+                        <CockpitManualCopyButton
+                            :value="beneficiaryClaimUrl"
+                            label="Copy beneficiary URL"
+                        />
+                    </div>
+                </section>
+
+                <section
+                    v-if="campaignAttributionAvailable"
+                    class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/30"
+                    data-testid="cockpit-quick-generate-campaign-attribution-panel"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                Campaign attribution
+                            </p>
+                            <p
+                                class="mt-1 text-[11px] leading-4 text-amber-800 dark:text-amber-200"
+                            >
+                                This result keeps campaign context for read-only
+                                navigation only. Campaign state is not mutated
+                                here.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800"
+                        >
+                            read-only
+                        </span>
+                    </div>
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div>
+                            <dt
+                                class="text-amber-700/80 dark:text-amber-200/80"
+                            >
+                                Planning key
+                            </dt>
+                            <dd
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                {{
+                                    displayValue(
+                                        campaignAttribution?.planning_key,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt
+                                class="text-amber-700/80 dark:text-amber-200/80"
+                            >
+                                Execution
+                            </dt>
+                            <dd
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                {{
+                                    displayValue(
+                                        campaignAttribution?.execution_id,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt
+                                class="text-amber-700/80 dark:text-amber-200/80"
+                            >
+                                Campaign
+                            </dt>
+                            <dd
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                {{
+                                    displayValue(
+                                        campaignAttribution?.campaign_id,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt
+                                class="text-amber-700/80 dark:text-amber-200/80"
+                            >
+                                Generated Pay Code
+                            </dt>
+                            <dd
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                {{
+                                    displayValue(
+                                        campaignAttribution?.generated_code,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt
+                                class="text-amber-700/80 dark:text-amber-200/80"
+                            >
+                                Recipient
+                            </dt>
+                            <dd
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                {{
+                                    displayValue(
+                                        campaignAttribution?.recipient_id,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt
+                                class="text-amber-700/80 dark:text-amber-200/80"
+                            >
+                                Recipient reference
+                            </dt>
+                            <dd
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                {{
+                                    displayValue(
+                                        campaignAttribution?.recipient_reference,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt
+                                class="text-amber-700/80 dark:text-amber-200/80"
+                            >
+                                Template
+                            </dt>
+                            <dd
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                {{
+                                    displayValue(
+                                        campaignAttribution?.template_key,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt
+                                class="text-amber-700/80 dark:text-amber-200/80"
+                            >
+                                Amount
+                            </dt>
+                            <dd
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                {{
+                                    displayValue(campaignAttribution?.currency)
+                                }}
+                                {{ displayValue(campaignAttribution?.amount) }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section
+                    v-if="campaignReturnNavigationItems.length > 0"
+                    class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/30"
+                    data-testid="cockpit-quick-generate-campaign-return-navigation-panel"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p
+                                class="font-semibold text-amber-950 dark:text-amber-50"
+                            >
+                                Campaign return navigation
+                            </p>
+                            <p
+                                class="mt-1 text-[11px] leading-4 text-amber-800 dark:text-amber-200"
+                            >
+                                Return to campaign-filtered Cockpit views after
+                                generation. These links are read-only and do not
+                                update campaign state.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800"
+                        >
+                            Read-only
+                        </span>
+                    </div>
+
+                    <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                        <a
+                            v-for="item in campaignReturnNavigationItems"
+                            :key="
+                                String(
+                                    item.key ?? item.label ?? 'campaign-return',
+                                )
+                            "
+                            :href="
+                                item.enabled === true && item.href
+                                    ? item.href
+                                    : undefined
+                            "
+                            class="rounded-lg border border-amber-200 bg-white px-3 py-3 font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900/40"
+                            :aria-disabled="
+                                item.enabled === true && item.href
+                                    ? undefined
+                                    : 'true'
+                            "
+                            :data-testid="`cockpit-quick-generate-campaign-return-link-${item.key}`"
+                        >
+                            <span class="block">{{ item.label }}</span>
+                            <span
+                                class="mt-1 block text-[11px] font-medium text-amber-700 dark:text-amber-200"
+                            >
+                                Campaign context preserved · {{ item.status }}
+                            </span>
+                        </a>
+                    </div>
+                </section>
+
+                <section
+                    v-if="postIssuanceNavigationItems.length > 0"
+                    class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-quick-generate-post-issuance-navigation-panel"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p
+                                class="font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                Post-issuance handoff
+                            </p>
+                            <p
+                                class="mt-1 text-[11px] leading-4 text-slate-500 dark:text-slate-400"
+                            >
+                                Read-only destinations for the generated Pay
+                                Code. Automatic redirect:
+                                {{
+                                    postIssuanceNavigation?.auto_redirect ===
+                                    true
+                                        ? 'enabled'
+                                        : 'disabled'
+                                }}.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
+                        >
+                            {{ displayValue(postIssuanceNavigation?.status) }}
+                        </span>
+                    </div>
+
+                    <div class="mt-3 grid gap-2">
+                        <a
+                            v-for="item in postIssuanceNavigationItems"
+                            :key="
+                                String(
+                                    item.key ?? item.label ?? 'post-issuance',
+                                )
+                            "
+                            :href="
+                                item.enabled === true && item.href
+                                    ? item.href
+                                    : undefined
+                            "
+                            class="rounded-lg border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-emerald-900 dark:hover:text-emerald-300"
+                            :aria-disabled="
+                                item.enabled === true && item.href
+                                    ? undefined
+                                    : 'true'
+                            "
+                            :data-testid="`cockpit-quick-generate-post-issuance-link-${item.key}`"
+                        >
+                            {{ item.label }}
+                            <span
+                                class="ml-2 text-[11px] font-medium text-slate-500 dark:text-slate-400"
+                            >
+                                {{ item.status }} ·
+                                {{
+                                    item.read_only === true
+                                        ? 'read-only'
+                                        : 'mutation'
+                                }}
+                            </span>
+                        </a>
+                    </div>
+                </section>
+
+                <div
+                    v-if="draftRuntime || activityRuntime"
+                    class="mt-4 grid gap-3 md:grid-cols-2"
+                    data-testid="cockpit-quick-generate-runtime-metadata-panel"
+                >
+                    <section
+                        v-if="draftRuntime"
+                        class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                        data-testid="cockpit-quick-generate-draft-runtime-card"
                     >
-                        {{ item.label }}
-                        <span
-                            class="ml-2 text-[11px] font-medium text-slate-500 dark:text-slate-400"
-                        >
-                            {{ item.status }} ·
-                            {{
-                                item.read_only === true
-                                    ? 'read-only'
-                                    : 'mutation'
-                            }}
-                        </span>
-                    </a>
+                        <div class="flex items-center justify-between gap-3">
+                            <p
+                                class="font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                Draft runtime
+                            </p>
+                            <span
+                                class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
+                            >
+                                {{ displayValue(draftRuntime.status) }}
+                            </span>
+                        </div>
+                        <dl class="mt-3 grid gap-2">
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Factory
+                                </dt>
+                                <dd
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ displayValue(draftRuntime.factory) }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Compiler
+                                </dt>
+                                <dd
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ displayValue(draftRuntime.compiler) }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <section
+                        v-if="activityRuntime"
+                        class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                        data-testid="cockpit-quick-generate-activity-runtime-card"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <p
+                                class="font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                Activity runtime
+                            </p>
+                            <span
+                                class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
+                            >
+                                {{ displayValue(activityRuntime.status) }}
+                            </span>
+                        </div>
+                        <dl class="mt-3 grid gap-2">
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Schema
+                                </dt>
+                                <dd
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ displayValue(activityRuntime.schema) }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Presentation only
+                                </dt>
+                                <dd
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    {{
+                                        activityRuntime.presentation_only ===
+                                        true
+                                            ? 'yes'
+                                            : 'no'
+                                    }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </section>
                 </div>
-            </section>
 
-            <div
-                v-if="draftRuntime || activityRuntime"
-                class="mt-4 grid gap-3 md:grid-cols-2"
-                data-testid="cockpit-quick-generate-runtime-metadata-panel"
-            >
-                <section
-                    v-if="draftRuntime"
-                    class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-quick-generate-draft-runtime-card"
+                <div
+                    v-if="pricingPreflight || fundingPreflight"
+                    class="mt-4 grid gap-3 md:grid-cols-2"
+                    data-testid="cockpit-quick-generate-runtime-preflight-panel"
                 >
-                    <div class="flex items-center justify-between gap-3">
-                        <p
-                            class="font-semibold text-slate-950 dark:text-slate-50"
-                        >
-                            Draft runtime
-                        </p>
-                        <span
-                            class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
-                        >
-                            {{ displayValue(draftRuntime.status) }}
-                        </span>
-                    </div>
-                    <dl class="mt-3 grid gap-2">
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Factory
-                            </dt>
-                            <dd
-                                class="font-medium text-slate-700 dark:text-slate-200"
+                    <section
+                        v-if="pricingPreflight"
+                        class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                        data-testid="cockpit-quick-generate-pricing-preflight-card"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <p
+                                class="font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                {{ displayValue(draftRuntime.factory) }}
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Compiler
-                            </dt>
-                            <dd
-                                class="font-medium text-slate-700 dark:text-slate-200"
+                                Pricing preflight
+                            </p>
+                            <span
+                                class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
                             >
-                                {{ displayValue(draftRuntime.compiler) }}
-                            </dd>
+                                {{ displayValue(pricingPreflight.status) }}
+                            </span>
                         </div>
-                    </dl>
-                </section>
+                        <dl class="mt-3 grid gap-2">
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Total
+                                </dt>
+                                <dd
+                                    class="font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                    {{
+                                        displayValue(
+                                            pricingPreflight.currency,
+                                            'PHP',
+                                        )
+                                    }}
+                                    {{
+                                        displayValue(
+                                            pricingPreflight.total,
+                                            '0',
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Base fee
+                                </dt>
+                                <dd
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    {{
+                                        displayValue(
+                                            pricingPreflight.base_fee,
+                                            '0',
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Blocking
+                                </dt>
+                                <dd
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    {{
+                                        pricingPreflight.blocking === true
+                                            ? 'yes'
+                                            : 'no'
+                                    }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </section>
 
-                <section
-                    v-if="activityRuntime"
-                    class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-quick-generate-activity-runtime-card"
-                >
-                    <div class="flex items-center justify-between gap-3">
-                        <p
-                            class="font-semibold text-slate-950 dark:text-slate-50"
-                        >
-                            Activity runtime
-                        </p>
-                        <span
-                            class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
-                        >
-                            {{ displayValue(activityRuntime.status) }}
-                        </span>
-                    </div>
-                    <dl class="mt-3 grid gap-2">
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Schema
-                            </dt>
-                            <dd
-                                class="font-medium text-slate-700 dark:text-slate-200"
+                    <section
+                        v-if="fundingPreflight"
+                        class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                        data-testid="cockpit-quick-generate-funding-preflight-card"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <p
+                                class="font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                {{ displayValue(activityRuntime.schema) }}
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Presentation only
-                            </dt>
-                            <dd
-                                class="font-medium text-slate-700 dark:text-slate-200"
+                                Funding preflight
+                            </p>
+                            <span
+                                class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
                             >
-                                {{
-                                    activityRuntime.presentation_only === true
-                                        ? 'yes'
-                                        : 'no'
-                                }}
-                            </dd>
+                                {{ displayValue(fundingPreflight.status) }}
+                            </span>
                         </div>
-                    </dl>
-                </section>
-            </div>
-
-            <div
-                v-if="pricingPreflight || fundingPreflight"
-                class="mt-4 grid gap-3 md:grid-cols-2"
-                data-testid="cockpit-quick-generate-runtime-preflight-panel"
-            >
-                <section
-                    v-if="pricingPreflight"
-                    class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-quick-generate-pricing-preflight-card"
-                >
-                    <div class="flex items-center justify-between gap-3">
-                        <p
-                            class="font-semibold text-slate-950 dark:text-slate-50"
-                        >
-                            Pricing preflight
-                        </p>
-                        <span
-                            class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
-                        >
-                            {{ displayValue(pricingPreflight.status) }}
-                        </span>
-                    </div>
-                    <dl class="mt-3 grid gap-2">
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Total
-                            </dt>
-                            <dd
-                                class="font-semibold text-slate-900 dark:text-slate-100"
-                            >
-                                {{
-                                    displayValue(
-                                        pricingPreflight.currency,
-                                        'PHP',
-                                    )
-                                }}
-                                {{ displayValue(pricingPreflight.total, '0') }}
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Base fee
-                            </dt>
-                            <dd
-                                class="font-medium text-slate-700 dark:text-slate-200"
-                            >
-                                {{
-                                    displayValue(pricingPreflight.base_fee, '0')
-                                }}
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Blocking
-                            </dt>
-                            <dd
-                                class="font-medium text-slate-700 dark:text-slate-200"
-                            >
-                                {{
-                                    pricingPreflight.blocking === true
-                                        ? 'yes'
-                                        : 'no'
-                                }}
-                            </dd>
-                        </div>
-                    </dl>
-                </section>
-
-                <section
-                    v-if="fundingPreflight"
-                    class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-quick-generate-funding-preflight-card"
-                >
-                    <div class="flex items-center justify-between gap-3">
-                        <p
-                            class="font-semibold text-slate-950 dark:text-slate-50"
-                        >
-                            Funding preflight
-                        </p>
-                        <span
-                            class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"
-                        >
-                            {{ displayValue(fundingPreflight.status) }}
-                        </span>
-                    </div>
-                    <dl class="mt-3 grid gap-2">
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Authority
-                            </dt>
-                            <dd
-                                class="font-semibold text-slate-900 dark:text-slate-100"
-                            >
-                                {{ displayValue(fundingPreflight.authority) }}
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Available Funds
-                            </dt>
-                            <dd
-                                class="font-medium text-slate-700 dark:text-slate-200"
-                            >
-                                {{
-                                    displayValue(
-                                        fundingPreflight.authoritative
-                                            ?.currency,
-                                        'PHP',
-                                    )
-                                }}
-                                {{
-                                    displayValue(
-                                        fundingPreflight.authoritative?.balance,
-                                        'not available',
-                                    )
-                                }}
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">
-                                Sync
-                            </dt>
-                            <dd
-                                class="font-medium text-slate-700 dark:text-slate-200"
-                            >
-                                {{ displayValue(fundingPreflight.sync_status) }}
-                            </dd>
-                        </div>
-                    </dl>
-                </section>
-            </div>
+                        <dl class="mt-3 grid gap-2">
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Authority
+                                </dt>
+                                <dd
+                                    class="font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                    {{
+                                        displayValue(fundingPreflight.authority)
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Available Funds
+                                </dt>
+                                <dd
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    {{
+                                        displayValue(
+                                            fundingPreflight.authoritative
+                                                ?.currency,
+                                            'PHP',
+                                        )
+                                    }}
+                                    {{
+                                        displayValue(
+                                            fundingPreflight.authoritative
+                                                ?.balance,
+                                            'not available',
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    Sync
+                                </dt>
+                                <dd
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    {{
+                                        displayValue(
+                                            fundingPreflight.sync_status,
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </section>
+                </div>
             </details>
         </div>
     </form>

@@ -277,7 +277,7 @@ final class ClaimWalkthroughCommand extends Command
                     'sanitized' => true,
                     'html_profile' => 'rider_splash',
                 ],
-                'og_source' => null,
+                'og_source' => data_get($fixture, 'rider.og_source'),
             ],
             'count' => 1,
             'prefix' => 'QA',

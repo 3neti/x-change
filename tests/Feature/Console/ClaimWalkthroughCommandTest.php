@@ -183,6 +183,9 @@ it('scaffolds the default rider preview fixture into the artifact contract', fun
         ->and($storyboard['scenario']['fixture']['rider_redirect'])->toBeTrue()
         ->and($storyboard['scenario']['fixture']['rider']['url'])->toBe('https://open.spotify.com/track/6kyxQuFD38mo4S3urD2Wkw?si=6yq6W4oRQ76HGpbDCG-74w&utm_source=copy-link&rowId=35e1bf6b4faf0da8')
         ->and($storyboard['scenario']['fixture']['rider']['splash'])->toContain('planetary-rose.PNG')
+        ->and($storyboard['scenario']['fixture']['og_preview']['source'])->toBe('default')
+        ->and($storyboard['scenario']['fixture']['og_preview']['og_meta']['headline'])->toBe('{code}')
+        ->and(collect($storyboard['checkpoints'])->pluck('key')->first())->toBe('og-social-preview')
         ->and(data_get($artifact?->metadata, 'fingerprint_payload.fixture.rider.message'))->toBe('The quick brown fox jumps over the lazy dog.');
 });
 
@@ -191,6 +194,7 @@ it('allows claim preview rider defaults to be overridden through config', functi
     config()->set('x-change.claim_preview.rider.url', 'https://example.test/configured-rider');
     config()->set('x-change.claim_preview.rider.splash_html', '<section>Configured rider splash</section>');
     config()->set('x-change.claim_preview.rider.redirect_timeout', 9);
+    config()->set('x-change.claim_preview.rider.og_source', 'message');
 
     $exitCode = Artisan::call('xchange:claim-walkthrough', [
         'scenario' => 'claim_basic_15_preview_with_rider',
@@ -210,7 +214,10 @@ it('allows claim preview rider defaults to be overridden through config', functi
     expect($storyboard['scenario']['fixture']['rider']['message'])->toBe('Configured rider message.')
         ->and($storyboard['scenario']['fixture']['rider']['url'])->toBe('https://example.test/configured-rider')
         ->and($storyboard['scenario']['fixture']['rider']['splash'])->toBe('<section>Configured rider splash</section>')
-        ->and($storyboard['scenario']['fixture']['rider']['redirect_timeout'])->toBe(9);
+        ->and($storyboard['scenario']['fixture']['rider']['redirect_timeout'])->toBe(9)
+        ->and($storyboard['scenario']['fixture']['rider']['og_source'])->toBe('message')
+        ->and($storyboard['scenario']['fixture']['og_preview']['source'])->toBe('message')
+        ->and($storyboard['scenario']['fixture']['og_preview']['reference'])->toBe('rider.message');
 });
 
 it('does not cache money movement claim walkthroughs as preview artifacts', function (): void {
