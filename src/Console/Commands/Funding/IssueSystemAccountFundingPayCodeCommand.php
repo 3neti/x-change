@@ -296,13 +296,13 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         }
 
         if ((bool) $this->option('commit')) {
-            $this->promptOptionalOption(
+            $this->promptRequiredOption(
                 'evidence-reference',
-                'Backing evidence reference (optional)',
+                'Backing evidence reference',
             );
-            $this->promptOptionalOption(
+            $this->promptRequiredOption(
                 'authorization-reference',
-                'Authorization reference (optional)',
+                'Authorization reference',
             );
         }
 

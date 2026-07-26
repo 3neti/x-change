@@ -78,6 +78,15 @@ final readonly class ConfigSystemAccountFundingPayCodeAuthorization implements S
             );
         }
 
+        if (
+            trim((string) $request->evidenceReference) === ''
+            || trim((string) $request->authorizationReference) === ''
+        ) {
+            throw new RuntimeException(
+                'Committed issuance requires evidence and authorization references.',
+            );
+        }
+
         if (! $this->application->environment('production')) {
             return;
         }
@@ -103,13 +112,5 @@ final readonly class ConfigSystemAccountFundingPayCodeAuthorization implements S
             );
         }
 
-        if (
-            trim((string) $request->evidenceReference) === ''
-            || trim((string) $request->authorizationReference) === ''
-        ) {
-            throw new RuntimeException(
-                'Production issuance requires evidence and authorization references.',
-            );
-        }
     }
 }

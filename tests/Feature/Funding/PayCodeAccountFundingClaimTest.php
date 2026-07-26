@@ -9,6 +9,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
@@ -91,6 +92,17 @@ it('issues an Account Funding Pay Code with a no-payout commercial profile and T
         ->toBe('ready')
         ->and(data_get($voucher->metadata, 'treasury.pay_code_reservation.amount_minor'))
         ->toBe(12_500)
+        ->and(TreasuryPositionOperation::query()
+            ->where(
+                'operation_reference',
+                data_get(
+                    $voucher->metadata,
+                    'treasury.pay_code_reservation.operation_reference',
+                ),
+            )
+            ->sole()
+            ->metadata)
+        ->not->toHaveKey('pay_code')
         ->and($eligibility->status)->toBe('eligible')
         ->and($eligibility->eligible)->toBeTrue()
         ->and(treasuryClientFundsLedger($issuer)->getBalanceIntAttribute())

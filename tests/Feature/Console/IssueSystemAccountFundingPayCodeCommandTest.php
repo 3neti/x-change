@@ -48,6 +48,7 @@ it('previews without mutation then issues and replays one recipient-bound code',
         '--connection' => 'netbank-primary',
         '--reference' => 'system-command-account-funding-1001',
         '--evidence-reference' => 'evidence:system-command:1001',
+        '--authorization-reference' => 'authorization:system-command:1001',
         '--json' => true,
     ];
 
@@ -291,12 +292,12 @@ it('guides an interactive issuance with safe defaults and a generated reference'
             'yes',
         )
         ->expectsQuestion(
-            'Backing evidence reference (optional)',
+            'Backing evidence reference',
             'evidence:interactive:1001',
         )
         ->expectsQuestion(
-            'Authorization reference (optional)',
-            null,
+            'Authorization reference',
+            'authorization:interactive:1001',
         )
         ->expectsOutputToContain(
             'reference: account-funding-user-'
@@ -313,8 +314,51 @@ it('guides an interactive issuance with safe defaults and a generated reference'
         )
         ->and($issuance->evidence_reference)
         ->toBe('evidence:interactive:1001')
+        ->and(data_get(
+            $issuance->metadata,
+            'custom.system_account_funding.authorization_reference',
+        ))->toBe('authorization:interactive:1001')
         ->and($issuance->status)->toBe('issued')
         ->and($issuance->voucher)->toBeInstanceOf(Voucher::class);
+});
+
+it('requires evidence and authorization references for every committed issuance', function (): void {
+    config()->set(
+        'x-change.funding.system_pay_codes.enabled',
+        true,
+    );
+    $application = Mockery::mock(Application::class);
+    $application->shouldReceive('environment')
+        ->with('production')
+        ->andReturnFalse();
+    $authorization = new ConfigSystemAccountFundingPayCodeAuthorization(
+        $application,
+    );
+    $base = [
+        'amountMinor' => 100_000,
+        'connectionReference' => 'netbank-primary',
+        'bearer' => false,
+        'commit' => true,
+        'productionConfirmed' => false,
+        'idempotencyReference' => 'local-account-funding-1001',
+        'evidenceReference' => 'evidence:local:1001',
+        'authorizationReference' => 'approval:local:1001',
+    ];
+
+    expect(fn () => $authorization->authorize(
+        new SystemAccountFundingPayCodeAuthorizationData(
+            ...array_replace($base, ['evidenceReference' => null]),
+        ),
+    ))->toThrow(
+        RuntimeException::class,
+        'Committed issuance requires evidence and authorization references.',
+    );
+
+    $authorization->authorize(
+        new SystemAccountFundingPayCodeAuthorizationData(...$base),
+    );
+
+    expect(true)->toBeTrue();
 });
 
 it('requires every production control before authorizing a commit', function (): void {
@@ -380,7 +424,7 @@ it('requires every production control before authorizing a commit', function ():
         ),
     ))->toThrow(
         RuntimeException::class,
-        'requires evidence and authorization references',
+        'Committed issuance requires evidence and authorization references.',
     );
 
     $authorization->authorize(
