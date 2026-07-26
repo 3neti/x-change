@@ -10,9 +10,17 @@ use Illuminate\Support\Facades\Date;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Actions\Funding\ApproveFundingRequestAndIssueCode;
+use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
+use LBHurtado\XChange\Actions\Funding\PrepareFundingRequest;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
+use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
 use LBHurtado\XChange\Data\Funding\SystemAccountFundingPayCodeAuthorizationData;
+use LBHurtado\XChange\Enums\FundingRequestStatus;
+use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthorization;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -117,6 +125,150 @@ it('previews without mutation then issues and replays one recipient-bound code',
         ))->toBe(125_000);
 
     fakePayoutProvider()->assertNoDisbursementAttempted();
+});
+
+it('previews and idempotently pays an approved requester-owned PAYABLE by positional code', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    $requester = actingAsTestUser(0);
+    $maker = User::query()->create([
+        'name' => 'Reviewed Funding Maker',
+        'email' => 'reviewed-funding-maker-command@example.test',
+        'password' => 'password',
+    ]);
+    $checker = User::query()->create([
+        'name' => 'Reviewed Funding Checker',
+        'email' => 'reviewed-funding-checker-command@example.test',
+        'password' => 'password',
+    ]);
+    config()->set(
+        'x-change.funding.system_pay_codes.enabled',
+        true,
+    );
+    fundTestSystemAccountFundingReserve(
+        $system,
+        100_000,
+        'reviewed-funding-command-1001',
+    );
+    $request = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$requester->wallet->uuid,
+            requesterType: $requester::class,
+            requesterId: (string) $requester->getKey(),
+            fundingType: FundingRequestType::BankTransfer,
+            requestedValueMinor: 30_00,
+            currency: 'PHP',
+            description: 'Reviewed bank transfer.',
+            idempotencyKey: 'reviewed-funding-command-create-1001',
+        ),
+    );
+    app(PrepareFundingRequest::class)->handle(
+        $request,
+        new PrepareFundingRequestData(
+            recognizedValueMinor: 30_00,
+            currency: 'PHP',
+            connectionReference: 'netbank-primary',
+            evidenceReference: 'bank-transfer-proof:command-1001',
+            reviewerType: $maker::class,
+            reviewerId: (string) $maker->getKey(),
+        ),
+    );
+    $voucher = app(ApproveFundingRequestAndIssueCode::class)->handle(
+        $request,
+        $checker::class,
+        (string) $checker->getKey(),
+    );
+
+    $previewExit = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            'pay-code' => $voucher->code,
+            '--json' => true,
+        ],
+    );
+    $previewOutput = Artisan::output();
+    $preview = json_decode($previewOutput, true);
+
+    expect($previewExit)->toBe(Command::SUCCESS, $previewOutput)
+        ->and($preview['schema'])
+        ->toBe('x-change.reviewed-account-funding-pay-code-command.v1')
+        ->and($preview['status'])->toBe('preview_ready')
+        ->and($preview['amount']['minor'])->toBe(30_00)
+        ->and($preview['recipient'])->toMatchArray([
+            'mode' => 'requester',
+            'id' => (string) $requester->getKey(),
+        ])
+        ->and(VoucherCollection::query()->count())->toBe(0);
+
+    $paidExit = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            'pay-code' => $voucher->code,
+            '--commit' => true,
+            '--json' => true,
+        ],
+    );
+    $paidOutput = Artisan::output();
+    $paid = json_decode($paidOutput, true);
+
+    expect($paidExit)->toBe(Command::SUCCESS, $paidOutput)
+        ->and($paid['status'])->toBe('paid')
+        ->and($paid['funding_request']['status'])
+        ->toBe(FundingRequestStatus::Completed->value)
+        ->and($paid['collection']['treasury_operation_reference'])
+        ->not->toBeNull()
+        ->and($paid['provider_calls'])->toBeFalse()
+        ->and($paid['inventory_changed'])->toBeFalse()
+        ->and(VoucherCollection::query()->count())->toBe(1);
+
+    $replayExit = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            'pay-code' => $voucher->code,
+            '--commit' => true,
+            '--json' => true,
+        ],
+    );
+    $replayOutput = Artisan::output();
+    $replay = json_decode($replayOutput, true);
+
+    expect($replayExit)->toBe(Command::SUCCESS, $replayOutput)
+        ->and($replay['status'])->toBe('replayed')
+        ->and($replay['collection']['id'])
+        ->toBe($paid['collection']['id'])
+        ->and(VoucherCollection::query()->count())->toBe(1)
+        ->and(commandSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(0);
+
+    fakePayoutProvider()->assertNoDisbursementAttempted();
+});
+
+it('rejects monetary and recipient overrides in positional reviewed Pay Code mode', function (): void {
+    $requester = actingAsTestUser(0);
+    $voucher = issueVoucher();
+    $voucher->forceFill([
+        'code' => 'FUND-LOCK',
+        'voucher_type' => 'payable',
+    ])->saveQuietly();
+
+    $exitCode = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            'pay-code' => $voucher->code,
+            '--amount' => '999.00',
+            '--recipient-id' => (string) $requester->getKey(),
+            '--json' => true,
+        ],
+    );
+    $output = Artisan::output();
+    $payload = json_decode($output, true);
+
+    expect($exitCode)->toBe(Command::FAILURE, $output)
+        ->and($payload['status'])->toBe('rejected')
+        ->and($payload['message'])->toContain('--amount')
+        ->and($payload['message'])->toContain('--recipient-id');
 });
 
 it('reports insufficient system funds without issuing a code', function (): void {

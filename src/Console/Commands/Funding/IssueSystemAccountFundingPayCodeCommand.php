@@ -11,19 +11,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
+use LBHurtado\XChange\Actions\Funding\PayApprovedFundingRequest;
 use LBHurtado\XChange\Console\Concerns\InteractsWithJsonOutput;
 use LBHurtado\XChange\Contracts\SystemAccountFundingPayCodeAuthorizationContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Data\Funding\SystemAccountFundingPayCodeAuthorizationData;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
+use LBHurtado\XChange\Enums\FundingRequestStatus;
+use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
@@ -34,6 +39,7 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
     use InteractsWithJsonOutput;
 
     protected $signature = 'x-change:funding:issue-pay-code
+        {pay-code? : Existing reviewed Account Funding Pay Code}
         {--amount= : Exact amount in the provider currency, such as 1000.00}
         {--recipient-mobile= : Verified Account owner mobile; preferred for recipient-bound issuance}
         {--recipient-id= : Account owner allowed to claim the Pay Code}
@@ -57,8 +63,23 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         TreasuryPositionReadModelContract $positions,
         SystemAccountFundingPayCodeAuthorizationContract $authorization,
         IssueSystemAccountFundingPayCode $issue,
+        PayApprovedFundingRequest $payApprovedFundingRequest,
     ): int {
         try {
+            $payCode = trim((string) $this->argument('pay-code'));
+
+            if ($payCode !== '') {
+                return $this->handleReviewedFundingPayCode(
+                    payCode: $payCode,
+                    systemUsers: $systemUsers,
+                    principalReferences: $principalReferences,
+                    positions: $positions,
+                    connections: $connections,
+                    authorization: $authorization,
+                    pay: $payApprovedFundingRequest,
+                );
+            }
+
             $this->prepareInteractiveDestination($connections);
             $recipient = $this->resolveRecipient();
             $this->prepareInteractiveIssuanceInput($recipient);
@@ -188,6 +209,227 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
 
             return self::FAILURE;
         }
+    }
+
+    private function handleReviewedFundingPayCode(
+        string $payCode,
+        SystemUserResolverContract $systemUsers,
+        TreasuryPrincipalReferenceResolverContract $principalReferences,
+        TreasuryPositionReadModelContract $positions,
+        TreasuryProviderConnectionCatalog $connections,
+        SystemAccountFundingPayCodeAuthorizationContract $authorization,
+        PayApprovedFundingRequest $pay,
+    ): int {
+        $this->rejectReviewedFundingOverrides();
+        $voucher = Voucher::query()
+            ->where('code', mb_strtoupper($payCode))
+            ->first();
+
+        if (
+            ! $voucher instanceof Voucher
+            || $voucher->voucher_type !== VoucherType::PAYABLE
+        ) {
+            throw new RuntimeException(
+                'The reviewed Account Funding PAYABLE Pay Code was not found.',
+            );
+        }
+
+        $request = FundingRequest::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->sole();
+        $connection = collect($connections->active([
+            (string) $request->connection_reference,
+        ]))->sole();
+        $amountMinor = (int) (
+            $request->approved_value_minor
+            ?? $request->requested_value_minor
+        );
+        $commit = (bool) $this->option('commit');
+        $system = $systemUsers->resolve();
+
+        if (
+            ! $system instanceof Model
+            || ! $system instanceof Authenticatable
+        ) {
+            throw new RuntimeException(
+                'The configured system principal is not an authenticatable model.',
+            );
+        }
+
+        $authorizationReference = implode(':', [
+            'funding-request-approval',
+            (string) $request->reference,
+            (string) $request->approved_by_type,
+            (string) $request->approved_by_id,
+        ]);
+        $authorization->authorize(
+            new SystemAccountFundingPayCodeAuthorizationData(
+                amountMinor: $amountMinor,
+                connectionReference: $connection->reference,
+                bearer: false,
+                commit: $commit,
+                productionConfirmed: (bool) $this->option(
+                    'confirm-production',
+                ),
+                idempotencyReference: 'reviewed-funding-system-payment:'
+                    .$request->reference,
+                evidenceReference: $request->evidence_reference,
+                authorizationReference: $authorizationReference,
+            ),
+        );
+        $before = $this->positionBalances(
+            $positions,
+            $principalReferences->resolve($system),
+            $connection,
+        );
+
+        if (! $commit) {
+            $this->renderPayload(
+                $this->reviewedFundingPayload(
+                    mode: 'preview',
+                    status: $request->status === FundingRequestStatus::PayCodeIssued
+                        ? 'preview_ready'
+                        : 'awaiting_review',
+                    voucher: $voucher,
+                    request: $request,
+                    connection: $connection,
+                    amountMinor: $amountMinor,
+                    before: $before,
+                    after: $before,
+                ),
+                'Reviewed Account Funding Pay Code preview',
+            );
+
+            return $request->status === FundingRequestStatus::PayCodeIssued
+                ? self::SUCCESS
+                : self::FAILURE;
+        }
+
+        $wasCompleted = $request->status === FundingRequestStatus::Completed;
+        $collection = $pay->handle($voucher);
+        $after = $this->positionBalances(
+            $positions,
+            $principalReferences->resolve($system),
+            $connection,
+        );
+
+        $this->renderPayload(
+            $this->reviewedFundingPayload(
+                mode: 'commit',
+                status: $wasCompleted ? 'replayed' : 'paid',
+                voucher: $voucher->refresh(),
+                request: $request->refresh(),
+                connection: $connection,
+                amountMinor: $amountMinor,
+                before: $before,
+                after: $after,
+                collection: $collection,
+            ),
+            $wasCompleted
+                ? 'Reviewed Account Funding payment replayed'
+                : 'Reviewed Account Funding paid',
+        );
+
+        return self::SUCCESS;
+    }
+
+    private function rejectReviewedFundingOverrides(): void
+    {
+        $conflicts = collect([
+            'amount',
+            'recipient-mobile',
+            'recipient-id',
+            'connection',
+            'reference',
+            'expires-at',
+            'evidence-reference',
+            'authorization-reference',
+        ])->filter(
+            fn (string $option): bool => $this->optionalOption($option) !== null,
+        )->values()->all();
+
+        if ((bool) $this->option('bearer')) {
+            $conflicts[] = 'bearer';
+        }
+
+        if ($conflicts !== []) {
+            throw new RuntimeException(
+                'Reviewed Pay Code mode derives its controls from the request; remove: --'
+                .implode(', --', $conflicts).'.',
+            );
+        }
+    }
+
+    /**
+     * @param  array{account_funding_reserve_minor: int, pay_code_reserve_minor: int}  $before
+     * @param  array{account_funding_reserve_minor: int, pay_code_reserve_minor: int}  $after
+     * @return array<string, mixed>
+     */
+    private function reviewedFundingPayload(
+        string $mode,
+        string $status,
+        Voucher $voucher,
+        FundingRequest $request,
+        TreasuryProviderConnectionData $connection,
+        int $amountMinor,
+        array $before,
+        array $after,
+        ?VoucherCollection $collection = null,
+    ): array {
+        return [
+            'schema' => 'x-change.reviewed-account-funding-pay-code-command.v1',
+            'success' => ! in_array(
+                $status,
+                ['awaiting_review', 'rejected'],
+                true,
+            ),
+            'mode' => $mode,
+            'status' => $status,
+            'pay_code' => [
+                'voucher_id' => $voucher->getKey(),
+                'code' => $voucher->code,
+                'voucher_type' => $voucher->voucher_type->value,
+                'state' => $voucher->state?->value,
+            ],
+            'funding_request' => [
+                'reference' => $request->reference,
+                'status' => $request->status->value,
+                'evidence_reference' => $request->evidence_reference,
+            ],
+            'connection' => [
+                'reference' => $connection->reference,
+                'provider' => $connection->provider,
+                'currency' => $connection->currency,
+            ],
+            'amount' => [
+                'minor' => $amountMinor,
+                'formatted' => $this->formatAmount(
+                    $amountMinor,
+                    $connection->decimalPlaces,
+                ),
+            ],
+            'recipient' => [
+                'mode' => 'requester',
+                'type' => $request->requester_type,
+                'id' => $request->requester_id,
+            ],
+            'positions' => [
+                'before' => $before,
+                'after' => $after,
+            ],
+            'collection' => $collection === null
+                ? null
+                : [
+                    'id' => $collection->getKey(),
+                    'status' => $collection->status,
+                    'treasury_operation_reference' => $collection->treasury_operation_reference,
+                ],
+            'provider_calls' => false,
+            'inventory_changed' => false,
+            'accounting' => $mode === 'preview'
+                ? 'No mutation; reviewed system Treasury payment preview only.'
+                : 'Reserved system value moved once from Pay Code Reserve to requester Client Funds.',
+        ];
     }
 
     private function prepareInteractiveDestination(
