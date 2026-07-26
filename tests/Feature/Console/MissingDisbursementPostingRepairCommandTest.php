@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
@@ -9,6 +10,7 @@ use LBHurtado\EmiCore\Contracts\ProviderBalanceReader;
 use LBHurtado\EmiCore\Data\Providers\ProviderBalanceObservationData;
 use LBHurtado\EmiCore\Data\Providers\ProviderBalanceRequestData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
@@ -18,12 +20,15 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryReclassificationData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryOperationReversalData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionDerecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryInventoryOperationType;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionOperationType;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Services\Treasury\MissingDisbursementPostingRepairService;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
@@ -174,6 +179,127 @@ it('ignores a fully posted disbursement owned by a non-system principal', functi
         ->and($result['reconciliation_ids'])->toBe($fixture['reconciliation_ids'])
         ->and(TreasuryInventoryOperation::query()->count())->toBe(2)
         ->and(TreasuryPositionOperation::query()->count())->toBe(2);
+});
+
+it('ignores a pre-opening disbursement synchronized after the opening baseline', function () {
+    $fixture = missingDisbursementPostingRepairFixture();
+    addPreOpeningSynchronizedDisbursement();
+    $baseline = TreasuryInventoryOperation::query()
+        ->where('metadata->source', 'provider_balance_reconciliation')
+        ->latest('id')
+        ->firstOrFail();
+    $preOpening = DisbursementReconciliation::query()
+        ->where(
+            'provider_transaction_id',
+            'pre-opening-provider-transaction',
+        )
+        ->firstOrFail();
+
+    expect(CarbonImmutable::parse($preOpening->raw_response['date']))
+        ->toBeLessThan(CarbonImmutable::instance($baseline->created_at));
+
+    $exitCode = Artisan::call(
+        'x-change:treasury:repair-missing-disbursement-postings',
+        [
+            '--connection' => 'netbank-primary',
+            '--json' => true,
+        ],
+    );
+    $output = Artisan::output();
+    $result = json_decode($output, true);
+
+    expect($exitCode)->toBe(Command::SUCCESS, $output)
+        ->and($result['status'])->toBe('dry_run')
+        ->and($result['deficit_minor'])->toBe(4_500)
+        ->and($result['principal_amount_minor'])->toBe(4_500)
+        ->and($result['reconciliation_ids'])->toBe($fixture['reconciliation_ids']);
+});
+
+it('repairs from Account Funding Reserve after opening capital is allocated', function () {
+    $fixture = missingDisbursementPostingRepairFixture();
+    capitalizeRepairFixture();
+    $arguments = [
+        '--connection' => 'netbank-primary',
+        '--json' => true,
+    ];
+
+    $dryRunExit = Artisan::call(
+        'x-change:treasury:repair-missing-disbursement-postings',
+        $arguments,
+    );
+    $dryRunOutput = Artisan::output();
+    $dryRun = json_decode($dryRunOutput, true);
+
+    expect($dryRunExit)->toBe(Command::SUCCESS, $dryRunOutput)
+        ->and($dryRun['status'])->toBe('dry_run')
+        ->and($dryRun['principal_amount_minor'])->toBe(4_500);
+
+    $commitExit = Artisan::call(
+        'x-change:treasury:repair-missing-disbursement-postings',
+        [
+            ...$arguments,
+            '--reconciliation' => $fixture['reconciliation_ids'],
+            '--commit' => true,
+        ],
+    );
+    $commitOutput = Artisan::output();
+    $committed = json_decode($commitOutput, true);
+    $reserve = collect(
+        app(TreasuryPositionReadModelContract::class)
+            ->forPrincipal('principal:system'),
+    )->sole(
+        fn ($position): bool => $position->purpose
+            === TreasuryPositionPurpose::AccountFundingReserve,
+    );
+    $reserveId = TreasuryPosition::query()
+        ->where('position_reference', $reserve->positionReference)
+        ->value('id');
+    $payCodeReserve = collect(
+        app(TreasuryPositionReadModelContract::class)
+            ->forPrincipal('principal:system'),
+    )->sole(
+        fn ($position): bool => $position->purpose
+            === TreasuryPositionPurpose::PayCodeReserve,
+    );
+    $payCodeReserveId = TreasuryPosition::query()
+        ->where('position_reference', $payCodeReserve->positionReference)
+        ->value('id');
+
+    expect($commitExit)->toBe(Command::SUCCESS, $commitOutput)
+        ->and($committed['status'])->toBe('repaired')
+        ->and($reserve->balanceMinor)->toBe(5_500)
+        ->and($payCodeReserve->balanceMinor)->toBe(0)
+        ->and(TreasuryPositionOperation::query()
+            ->where('operation_type', TreasuryPositionOperationType::Reservation)
+            ->where('source_position_id', $reserveId)
+            ->where('destination_position_id', $payCodeReserveId)
+            ->count())->toBe(3)
+        ->and(TreasuryPositionOperation::query()
+            ->where('operation_type', TreasuryPositionOperationType::Derecognition)
+            ->where('source_position_id', $payCodeReserveId)
+            ->count())->toBe(3);
+
+    $replayExit = Artisan::call(
+        'x-change:treasury:repair-missing-disbursement-postings',
+        [
+            ...$arguments,
+            '--reconciliation' => $fixture['reconciliation_ids'],
+            '--commit' => true,
+        ],
+    );
+    $replayOutput = Artisan::output();
+    $replayed = json_decode($replayOutput, true);
+
+    expect($replayExit)->toBe(Command::SUCCESS, $replayOutput)
+        ->and($replayed['status'])->toBe('already_repaired')
+        ->and(TreasuryPositionOperation::query()
+            ->where('operation_type', TreasuryPositionOperationType::Reservation)
+            ->where('source_position_id', $reserveId)
+            ->count())->toBe(3)
+        ->and(TreasuryPositionOperation::query()
+            ->where('operation_type', TreasuryPositionOperationType::Derecognition)
+            ->where('source_position_id', $payCodeReserveId)
+            ->count())->toBe(3);
 });
 
 it('rolls back the position debit when the inventory posting fails', function () {
@@ -440,4 +566,88 @@ function addPreviouslyPostedDisbursement(
         ),
     );
     $reader->amountMinor = 4_250;
+}
+
+function addPreOpeningSynchronizedDisbursement(): void
+{
+    $system = app(SystemUserResolverContract::class)->resolve();
+    $providerObservedAt = new DateTimeImmutable(
+        '2026-07-24T23:55:00+08:00',
+    );
+    $synchronizedAt = new DateTimeImmutable(
+        '2026-07-25T08:10:00+08:00',
+    );
+    $transactionId = 'pre-opening-provider-transaction';
+    $voucher = new Voucher([
+        'code' => 'PRE-OPENING-'.str()->upper(str()->random(6)),
+        'metadata' => [
+            'disbursement' => [
+                'amount' => 12.50,
+                'currency' => 'PHP',
+                'gateway' => 'netbank',
+                'transaction_id' => $transactionId,
+            ],
+        ],
+    ]);
+    $voucher->owner()->associate($system);
+    $voucher->save();
+
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_code' => $voucher->code,
+        'claim_type' => 'redeem',
+        'provider' => 'netbank',
+        'provider_reference' => 'pre-opening-provider-reference',
+        'provider_transaction_id' => $transactionId,
+        'status' => 'succeeded',
+        'internal_status' => 'recorded',
+        'amount' => 12.50,
+        'currency' => 'PHP',
+        'needs_review' => false,
+        'attempted_at' => $providerObservedAt,
+        'completed_at' => $synchronizedAt,
+        'last_checked_at' => $synchronizedAt,
+        'raw_response' => [
+            'transaction_id' => $transactionId,
+            'status' => 'Settled',
+            'amount' => [
+                'cur' => 'PHP',
+                'num' => 1_250,
+            ],
+            'date' => $providerObservedAt->format(DATE_RFC3339),
+        ],
+    ]);
+}
+
+function capitalizeRepairFixture(): void
+{
+    $system = app(SystemUserResolverContract::class)->resolve();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $system,
+        ['netbank-primary'],
+    );
+    $positions = collect(
+        app(TreasuryPositionReadModelContract::class)
+            ->forPrincipal('principal:system'),
+    );
+    $legacy = $positions->sole(
+        fn ($position): bool => $position->purpose
+            === TreasuryPositionPurpose::LegacyUnattributed,
+    );
+    $reserve = $positions->sole(
+        fn ($position): bool => $position->purpose
+            === TreasuryPositionPurpose::AccountFundingReserve,
+    );
+
+    app(TreasuryPositionOperationContract::class)->allocate(
+        new TreasuryPositionAllocationData(
+            operationReference: 'test-opening-capitalization',
+            sourcePositionReference: $legacy->positionReference,
+            destinationPositionReference: $reserve->positionReference,
+            amountMinor: 10_000,
+            currency: 'PHP',
+            idempotencyKey: 'test-opening-capitalization:key',
+            externalReference: 'test-opening-capitalization:authorization',
+        ),
+    );
 }

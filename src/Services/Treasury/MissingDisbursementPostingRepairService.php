@@ -18,6 +18,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryAdjustmentData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionDerecognitionData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryInventoryOperationType;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionOperationType;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
@@ -136,19 +137,28 @@ final readonly class MissingDisbursementPostingRepairService
                         $plan->inventoryBalanceMinor,
                         $plan->positionBalanceMinor,
                     );
-                    $unattributed = $this->unattributedPosition($connection);
-
-                    if ($unattributed->balanceMinor < $plan->principalAmountMinor) {
-                        throw new TreasuryConfigurationException(
-                            'Legacy Unattributed funds cannot cover the exact repair amount.',
-                        );
-                    }
+                    $source = $this->repairSourcePosition(
+                        $connection,
+                        $plan->principalAmountMinor,
+                    );
+                    $settlementSource = $source->purpose
+                        === TreasuryPositionPurpose::AccountFundingReserve
+                        ? $this->systemPosition(
+                            $connection,
+                            TreasuryPositionPurpose::PayCodeReserve,
+                        )
+                        : $source;
 
                     $inventoryReferences = [];
                     $positionReferences = [];
 
                     foreach ($reconciliations as $reconciliation) {
-                        [$inventoryReference, $positionReference, $scope] =
+                        [
+                            $inventoryReference,
+                            $positionReference,
+                            $scope,
+                            $reservationReference,
+                        ] =
                             $this->operationReferences(
                                 $reconciliation,
                                 $connection,
@@ -163,10 +173,29 @@ final readonly class MissingDisbursementPostingRepairService
                             $amountMinor,
                             $scope,
                         );
+
+                        if (
+                            $source->purpose
+                            === TreasuryPositionPurpose::AccountFundingReserve
+                        ) {
+                            $this->positionOperations->reserveAccountFunding(
+                                new TreasuryPositionReservationData(
+                                    operationReference: $reservationReference,
+                                    sourcePositionReference: $source->positionReference,
+                                    destinationPositionReference: $settlementSource->positionReference,
+                                    amountMinor: $amountMinor,
+                                    currency: $connection->currency,
+                                    idempotencyKey: 'missing-disbursement-position-reservation-key:'.$scope,
+                                    externalReference: $connection->provider.':'.$reconciliation->provider_transaction_id,
+                                    metadata: $metadata,
+                                ),
+                            );
+                        }
+
                         $positionOperation = $this->positionOperations
                             ->derecognize(new TreasuryPositionDerecognitionData(
                                 operationReference: $positionReference,
-                                sourcePositionReference: $unattributed->positionReference,
+                                sourcePositionReference: $settlementSource->positionReference,
                                 amountMinor: $amountMinor,
                                 currency: $connection->currency,
                                 idempotencyKey: 'missing-disbursement-position-derecognition-key:'.$scope,
@@ -329,17 +358,11 @@ final readonly class MissingDisbursementPostingRepairService
 
         if ($principalAmountMinor !== $deficitMinor) {
             throw new TreasuryConfigurationException(
-                'Missing disbursement principal does not exactly match the provider-to-Treasury deficit.',
+                "Missing disbursement principal [{$principalAmountMinor}] does not exactly match the provider-to-Treasury deficit [{$deficitMinor}].",
             );
         }
 
-        $unattributed = $this->unattributedPosition($connection);
-
-        if ($unattributed->balanceMinor < $principalAmountMinor) {
-            throw new TreasuryConfigurationException(
-                'Legacy Unattributed funds cannot cover the exact repair amount.',
-            );
-        }
+        $this->repairSourcePosition($connection, $principalAmountMinor);
 
         return $this->result(
             status: 'dry_run',
@@ -434,7 +457,29 @@ final readonly class MissingDisbursementPostingRepairService
             ->whereNotNull('completed_at')
             ->where('completed_at', '>=', $baseline->created_at)
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->filter(
+                fn (DisbursementReconciliation $reconciliation): bool => $this
+                    ->hasPostBaselineProviderEvidence(
+                        $reconciliation,
+                        $baseline,
+                    ),
+            )
+            ->values();
+    }
+
+    private function hasPostBaselineProviderEvidence(
+        DisbursementReconciliation $reconciliation,
+        TreasuryInventoryOperation $baseline,
+    ): bool {
+        try {
+            return $this->providerObservedAt($reconciliation->raw_response)
+                ->greaterThanOrEqualTo(
+                    CarbonImmutable::instance($baseline->created_at),
+                );
+        } catch (TreasuryConfigurationException) {
+            return false;
+        }
     }
 
     /**
@@ -631,7 +676,7 @@ final readonly class MissingDisbursementPostingRepairService
     }
 
     /**
-     * @return array{string, string, string}
+     * @return array{string, string, string, string}
      */
     private function operationReferences(
         DisbursementReconciliation $reconciliation,
@@ -649,11 +694,13 @@ final readonly class MissingDisbursementPostingRepairService
             'missing-disbursement-inventory-adjustment:'.$scope,
             'missing-disbursement-position-derecognition:'.$scope,
             $scope,
+            'missing-disbursement-position-reservation:'.$scope,
         ];
     }
 
-    private function unattributedPosition(
+    private function repairSourcePosition(
         TreasuryProviderConnectionData $connection,
+        int $requiredAmountMinor,
     ): TreasuryPositionData {
         $matches = array_values(array_filter(
             $this->positions->forConnection(
@@ -662,7 +709,46 @@ final readonly class MissingDisbursementPostingRepairService
                 $connection->currency,
             ),
             static fn (TreasuryPositionData $position): bool => $position->status === 'active'
-                && $position->purpose === TreasuryPositionPurpose::LegacyUnattributed
+                && $position->principalReference === trim((string) config(
+                    'x-change.treasury.principal_reference',
+                ))
+                && in_array($position->purpose, [
+                    TreasuryPositionPurpose::LegacyUnattributed,
+                    TreasuryPositionPurpose::AccountFundingReserve,
+                ], true),
+        ));
+
+        foreach ([
+            TreasuryPositionPurpose::LegacyUnattributed,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ] as $purpose) {
+            $position = collect($matches)->first(
+                static fn (TreasuryPositionData $position): bool => $position->purpose === $purpose
+                    && $position->balanceMinor >= $requiredAmountMinor,
+            );
+
+            if ($position instanceof TreasuryPositionData) {
+                return $position;
+            }
+        }
+
+        throw new TreasuryConfigurationException(
+            'No eligible system Treasury position can cover the exact repair amount.',
+        );
+    }
+
+    private function systemPosition(
+        TreasuryProviderConnectionData $connection,
+        TreasuryPositionPurpose $purpose,
+    ): TreasuryPositionData {
+        $matches = array_values(array_filter(
+            $this->positions->forConnection(
+                $connection->provider,
+                $connection->reference,
+                $connection->currency,
+            ),
+            static fn (TreasuryPositionData $position): bool => $position->status === 'active'
+                && $position->purpose === $purpose
                 && $position->principalReference === trim((string) config(
                     'x-change.treasury.principal_reference',
                 )),
@@ -670,7 +756,7 @@ final readonly class MissingDisbursementPostingRepairService
 
         if (count($matches) !== 1) {
             throw new TreasuryConfigurationException(
-                'Missing disbursement repair requires one system Legacy Unattributed Position.',
+                "Missing disbursement repair requires one system {$purpose->value} Position.",
             );
         }
 
