@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 use LBHurtado\SettlementEnvelope\Enums\EnvelopeStatus;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Enums\VoucherType;
@@ -10,6 +12,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingRequestAndIssueCode;
+use LBHurtado\XChange\Actions\Funding\AttachFundingRequestEvidence;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Actions\Funding\PayApprovedFundingRequest;
 use LBHurtado\XChange\Actions\Funding\PrepareFundingRequest;
@@ -26,6 +29,7 @@ use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('requires independent approval then pays the requester-owned PAYABLE once from system Treasury', function () {
     Event::fake([FundingProjectionChanged::class]);
+    Storage::fake('local');
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);
     $requester = actingAsTestUser(0);
@@ -62,6 +66,16 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         ->and($request->voucher->owner->is($requester))->toBeTrue()
         ->and($request->voucher->voucher_type)->toBe(VoucherType::PAYABLE)
         ->and($request->voucher->state)->toBe(VoucherState::LOCKED);
+    $attachment = app(AttachFundingRequestEvidence::class)->handle(
+        fundingRequest: $request,
+        file: UploadedFile::fake()->create(
+            'custody-receipt.pdf',
+            100,
+            'application/pdf',
+        ),
+        documentType: 'CUSTODY_RECEIPT',
+        actor: $requester,
+    );
 
     $prepared = app(PrepareFundingRequest::class)->handle(
         $request,
@@ -77,7 +91,9 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
     );
 
     expect($request->voucher->envelope->refresh()->getSignalBool('backing_verified'))
-        ->toBeTrue();
+        ->toBeTrue()
+        ->and($attachment->refresh()->review_status)->toBe('accepted')
+        ->and($attachment->reviewer_id)->toBe($maker->getKey());
     expect(fn () => app(ApproveFundingRequestAndIssueCode::class)->handle(
         $prepared,
         $maker::class,

@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use LBHurtado\SettlementEnvelope\Models\EnvelopeAttachment;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
@@ -13,6 +16,7 @@ use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('lets an Account owner submit a request without accepting monetary authority', function () {
+    Storage::fake('local');
     $requester = actingAsTestUser(25_000);
     $balanceBefore = (int) $requester->wallet->balance;
 
@@ -25,6 +29,12 @@ it('lets an Account owner submit a request without accepting monetary authority'
         'occurred_on' => '2026-07-25',
         'requester_notes' => 'Please verify against the configured corporate account.',
         'idempotency_key' => 'cockpit-funding-request-1001',
+        'evidence_document_type' => 'BANK_TRANSFER_PROOF',
+        'evidence_document' => UploadedFile::fake()->image(
+            'transfer-proof.jpg',
+            1200,
+            900,
+        ),
     ])->assertRedirect(route('x-change.cockpit.funding.index'))
         ->assertSessionHas('funding_notice');
 
@@ -32,7 +42,21 @@ it('lets an Account owner submit a request without accepting monetary authority'
 
     expect($request->status)->toBe(FundingRequestStatus::Submitted)
         ->and($request->approved_value_minor)->toBeNull()
+        ->and($request->voucher?->envelope?->attachments()->count())->toBe(1)
         ->and((int) $requester->wallet->fresh()->balance)->toBe($balanceBefore);
+
+    $attachment = EnvelopeAttachment::query()->sole();
+
+    expect($attachment->disk)->toBe('local')
+        ->and($attachment->doc_type)->toBe('BANK_TRANSFER_PROOF')
+        ->and($attachment->hash)->toHaveLength(64)
+        ->and($attachment->review_status)->toBe('pending');
+    Storage::disk('local')->assertExists($attachment->file_path);
+    $this->get(route(
+        'x-change.cockpit.funding.requests.evidence.show',
+        [$request, $attachment],
+    ))->assertOk()
+        ->assertHeader('Cache-Control', 'no-store, private');
 
     $this->post(route('x-change.cockpit.funding.requests.store'), [
         'funding_type' => 'bank_transfer',

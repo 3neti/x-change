@@ -28,6 +28,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationA
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestEvidenceController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestReviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
@@ -103,6 +104,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             CockpitFundingRequestController::class,
         )->middleware((array) config('x-change.funding.requests.create_middleware', []))
             ->name('x-change.cockpit.funding.requests.store');
+        Route::get(
+            'funding/requests/{fundingRequest:reference}/evidence/{attachment}',
+            CockpitFundingRequestEvidenceController::class,
+        )->middleware((array) config('x-change.funding.requests.review_middleware', []))
+            ->name('x-change.cockpit.funding.requests.evidence.show');
         Route::post(
             'funding/requests/{fundingRequest:reference}/reviews',
             CockpitFundingRequestReviewController::class,

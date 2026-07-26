@@ -68,6 +68,17 @@ final readonly class PrepareFundingRequest
                 true,
                 $reviewer,
             );
+            foreach (
+                $locked->voucher->envelope->attachments()
+                    ->where('review_status', 'pending')
+                    ->get() as $attachment
+            ) {
+                $this->envelopes->reviewAttachment(
+                    $attachment,
+                    'accepted',
+                    $reviewer,
+                );
+            }
             $locked->forceFill([
                 'approved_value_minor' => $data->recognizedValueMinor,
                 'status' => FundingRequestStatus::AwaitingApproval,

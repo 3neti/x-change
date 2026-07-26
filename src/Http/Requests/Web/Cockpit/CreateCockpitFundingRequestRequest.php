@@ -25,6 +25,12 @@ class CreateCockpitFundingRequestRequest extends FormRequest
             'external_reference' => trim((string) $this->input('external_reference')),
             'requester_notes' => trim((string) $this->input('requester_notes')),
             'idempotency_key' => trim((string) $this->input('idempotency_key')),
+            'evidence_document_type' => mb_strtoupper(trim(
+                (string) $this->input(
+                    'evidence_document_type',
+                    'SUPPORTING_DOCUMENT',
+                ),
+            )),
         ]);
     }
 
@@ -50,6 +56,25 @@ class CreateCockpitFundingRequestRequest extends FormRequest
             'provider_transaction_id' => ['prohibited'],
             'credit_amount_minor' => ['prohibited'],
             'provider_payload' => ['prohibited'],
+            'evidence_document_type' => [
+                'nullable',
+                'required_with:evidence_document',
+                Rule::in([
+                    'BANK_TRANSFER_PROOF',
+                    'CUSTODY_RECEIPT',
+                    'ASSET_PHOTO',
+                    'OWNERSHIP_DOCUMENT',
+                    'VALUATION_DOCUMENT',
+                    'SUPPORTING_DOCUMENT',
+                ]),
+            ],
+            'evidence_document' => [
+                'nullable',
+                'file',
+                'mimes:pdf,jpg,jpeg,png',
+                'mimetypes:application/pdf,image/jpeg,image/png',
+                'max:10240',
+            ],
             'attachment' => ['prohibited'],
         ];
     }

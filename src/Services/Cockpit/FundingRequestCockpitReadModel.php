@@ -28,7 +28,7 @@ final readonly class FundingRequestCockpitReadModel
         $requests = FundingRequest::query()
             ->where('requester_type', $actorType)
             ->where('requester_id', $actorId)
-            ->with('voucher')
+            ->with('voucher.envelope.attachments')
             ->latest('submitted_at')
             ->limit(20)
             ->get();
@@ -56,6 +56,25 @@ final readonly class FundingRequestCockpitReadModel
                 'status' => $this->status($request->status),
                 'description' => $request->description,
                 'submitted_at' => $request->submitted_at?->toIso8601String(),
+                'evidence' => [
+                    'attachment_count' => $request->voucher?->envelope?->attachments->count() ?? 0,
+                    'pending_count' => $request->voucher?->envelope?->attachments
+                        ->where('review_status', 'pending')
+                        ->count() ?? 0,
+                    'accepted_count' => $request->voucher?->envelope?->attachments
+                        ->where('review_status', 'accepted')
+                        ->count() ?? 0,
+                    'envelope_status' => $request->voucher?->envelope?->status->value,
+                    'documents' => $request->voucher?->envelope?->attachments
+                        ->map(static fn ($attachment): array => [
+                            'id' => (int) $attachment->getKey(),
+                            'type' => $attachment->doc_type,
+                            'filename' => $attachment->original_filename,
+                            'mime_type' => $attachment->mime_type,
+                            'size' => (int) $attachment->size,
+                            'review_status' => $attachment->review_status,
+                        ])->values()->all() ?? [],
+                ],
                 'pay_code' => $request->voucher === null ? null : [
                     'request_reference' => $request->reference,
                     'code' => $request->voucher->code,
@@ -90,6 +109,7 @@ final readonly class FundingRequestCockpitReadModel
                         FundingRequestStatus::NeedsInformation,
                         FundingRequestStatus::AwaitingApproval,
                     ])
+                    ->with('voucher.envelope.attachments')
                     ->latest('submitted_at')
                     ->limit(50)
                     ->get()
@@ -114,6 +134,18 @@ final readonly class FundingRequestCockpitReadModel
                         'evidence_reference' => $request->evidence_reference,
                         'connection_reference' => $request->connection_reference,
                         'maker_id' => $request->reviewed_by_id,
+                        'evidence' => [
+                            'attachment_count' => $request->voucher?->envelope?->attachments->count() ?? 0,
+                            'documents' => $request->voucher?->envelope?->attachments
+                                ->map(static fn ($attachment): array => [
+                                    'id' => (int) $attachment->getKey(),
+                                    'type' => $attachment->doc_type,
+                                    'filename' => $attachment->original_filename,
+                                    'mime_type' => $attachment->mime_type,
+                                    'size' => (int) $attachment->size,
+                                    'review_status' => $attachment->review_status,
+                                ])->values()->all() ?? [],
+                        ],
                         'can_prepare' => in_array($request->status, [
                             FundingRequestStatus::Submitted,
                             FundingRequestStatus::NeedsInformation,
@@ -124,7 +156,10 @@ final readonly class FundingRequestCockpitReadModel
                     ])->all()
                 : [],
             'controls' => [
-                'attachments_enabled' => false,
+                'attachments_enabled' => (bool) config(
+                    'x-change.funding.requests.attachments_enabled',
+                    true,
+                ),
                 'evidence_authorizes_credit' => false,
                 'maker_checker_required' => true,
                 'reviewer' => $isReviewer,
