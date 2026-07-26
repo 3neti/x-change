@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Event;
 use LBHurtado\SettlementEnvelope\Enums\EnvelopeStatus;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Enums\VoucherType;
@@ -17,11 +18,14 @@ use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
+use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\FundingRequestNotice;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('requires independent approval then pays the requester-owned PAYABLE once from system Treasury', function () {
+    Event::fake([FundingProjectionChanged::class]);
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);
     $requester = actingAsTestUser(0);
@@ -116,6 +120,9 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         ->and($collection->execution_driver)->toBe('x_change_account_funding')
         ->and($collection->treasury_operation_reference)->not->toBeNull()
         ->and(VoucherCollection::query()->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'account_funding.pay_code.paid')
+            ->count())->toBe(1)
         ->and($request->refresh()->status)->toBe(FundingRequestStatus::Completed)
         ->and($voucher->refresh()->state)->toBe(VoucherState::CLOSED)
         ->and($voucher->envelope->refresh()->status)->toBe(EnvelopeStatus::SETTLED)
@@ -127,6 +134,7 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         ->toBe(250_000);
 
     fakePayoutProvider()->assertNoDisbursementAttempted();
+    Event::assertDispatchedTimes(FundingProjectionChanged::class, 1);
 });
 
 it('does not allow system Treasury payment before maker-checker approval', function () {

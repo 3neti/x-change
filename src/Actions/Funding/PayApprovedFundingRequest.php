@@ -11,6 +11,7 @@ use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Actions\Payment\CompleteVoucherCollection;
+use LBHurtado\XChange\Contracts\FundingProjectionPublisherContract;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
@@ -23,11 +24,16 @@ final readonly class PayApprovedFundingRequest
         private SystemUserResolverContract $systemUsers,
         private CompleteVoucherCollection $collections,
         private EnvelopeService $envelopes,
+        private FundingProjectionPublisherContract $projections,
     ) {}
 
     public function handle(Voucher $voucher): VoucherCollection
     {
-        return DB::transaction(function () use ($voucher): VoucherCollection {
+        $projection = null;
+        $collection = DB::transaction(function () use (
+            $voucher,
+            &$projection,
+        ): VoucherCollection {
             $request = FundingRequest::query()
                 ->with('voucher.envelope')
                 ->where('voucher_id', $voucher->getKey())
@@ -113,8 +119,25 @@ final readonly class PayApprovedFundingRequest
                 ],
                 'occurred_at' => now(),
             ]);
+            $projection = [
+                'owner_type' => $request->requester_type,
+                'owner_id' => $request->requester_id,
+                'reference' => 'voucher-collection:'.$collection->getKey(),
+                'occurred_at' => (string) $collection->completed_at?->toIso8601String(),
+            ];
 
             return $collection;
         }, 5);
+
+        if (is_array($projection)) {
+            $this->projections->publish(
+                ownerType: $projection['owner_type'],
+                ownerId: $projection['owner_id'],
+                reference: $projection['reference'],
+                occurredAt: $projection['occurred_at'],
+            );
+        }
+
+        return $collection;
     }
 }

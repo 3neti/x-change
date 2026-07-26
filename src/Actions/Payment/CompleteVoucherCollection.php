@@ -12,6 +12,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Payment\VoucherCollectionJournal;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionPostingRegistry;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
@@ -25,6 +26,7 @@ final readonly class CompleteVoucherCollection
         private SettlementCollectionGate $settlementCollectionGate,
         private VoucherCollectionProgressService $progress,
         private VoucherCollectionPostingRegistry $postings,
+        private VoucherCollectionJournal $journal,
     ) {}
 
     public function handle(
@@ -155,6 +157,9 @@ final readonly class CompleteVoucherCollection
                     'collection' => $data->metadata,
                 ],
             ]);
+            DB::afterCommit(
+                fn () => $this->journal->record($collection->fresh()),
+            );
             $updatedProgress = $this->progress->persistSummary($locked);
 
             if (

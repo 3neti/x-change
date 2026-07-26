@@ -128,6 +128,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
+use LBHurtado\XChange\Contracts\FundingProjectionPublisherContract;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\MoneyMovementLifecycleTriggerMatrixContract;
@@ -261,6 +262,7 @@ use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
+use LBHurtado\XChange\Services\Funding\BroadcastFundingProjectionPublisher;
 use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthorization;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
@@ -400,6 +402,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             AccountBalanceReadModelContract::class,
             TreasuryAccountBalanceReadModel::class,
+        );
+        $this->app->singleton(
+            FundingProjectionPublisherContract::class,
+            BroadcastFundingProjectionPublisher::class,
         );
 
         $this->registerServices();
