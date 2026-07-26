@@ -77,6 +77,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\MigrateLegacyAccountBalanceComma
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ReconcileOpeningTreasuryBalanceCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\RedactTreasurySensitiveMetadataCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\RepairMissingDisbursementPostingsCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
@@ -973,6 +974,7 @@ class XChangeServiceProvider extends ServiceProvider
                 CorrectLegacyPayCodeFeePostingCommand::class,
                 MigrateLegacyAccountBalanceCommand::class,
                 PreflightTreasuryCommand::class,
+                RedactTreasurySensitiveMetadataCommand::class,
                 ProvisionTreasuryCommand::class,
                 ReconcileOpeningTreasuryBalanceCommand::class,
                 RepairMissingDisbursementPostingsCommand::class,
