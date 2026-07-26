@@ -36,7 +36,9 @@ final class PayApprovedFundingRequestJob implements ShouldBeUnique, ShouldQueue
 
     public function __construct(
         public readonly string $fundingRequestReference,
-    ) {}
+    ) {
+        $this->onQueue('x-change-funding');
+    }
 
     /**
      * @return list<object>

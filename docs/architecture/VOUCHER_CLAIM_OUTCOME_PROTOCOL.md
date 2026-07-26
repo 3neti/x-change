@@ -188,6 +188,14 @@ invent credit or release the reservation: the request remains retryable, a
 sanitized failure event and notice are recorded, and no exception message,
 credential, provider account, or evidence content is broadcast.
 
+The job always uses the package-owned `x-change-funding` queue so Account
+Funding cannot sit behind broadcasting or unrelated application jobs. An
+asynchronous deployment must supervise that queue explicitly:
+
+```bash
+php artisan queue:work --queue=x-change-funding
+```
+
 ## System Account Funding Pay Code utility
 
 `x-change:funding:issue-pay-code` has two deliberately separate modes.

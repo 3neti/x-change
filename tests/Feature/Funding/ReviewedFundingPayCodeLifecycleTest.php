@@ -128,6 +128,10 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         fn (PayApprovedFundingRequestJob $job): bool => $job->fundingRequestReference
             === $prepared->reference,
     );
+    Queue::assertPushedOn(
+        'x-change-funding',
+        PayApprovedFundingRequestJob::class,
+    );
 
     $voucher = $request->voucher->refresh();
     $approvalReplay = app(ApproveFundingRequestAndIssueCode::class)->handle(
