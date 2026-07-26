@@ -34,7 +34,9 @@ it('creates a locked requester-owned Pay Code from an amount-only request', func
         'requested_value_minor' => '1750',
         'requester_notes' => 'Cash was handed to the system owner.',
         'idempotency_key' => 'cockpit-amount-only-funding-request-1001',
-    ])->assertRedirect(route('x-change.cockpit.funding.index'))
+    ])->assertRedirect(route('x-change.cockpit.funding.index', [
+        'mode' => 'pay_code',
+    ]))
         ->assertSessionHas(
             'funding_notice',
             'Funding requested. Share the Pay Code if you want to follow up.',
@@ -114,7 +116,9 @@ it('lets an Account owner submit a request without accepting monetary authority'
             1200,
             900,
         ),
-    ])->assertRedirect(route('x-change.cockpit.funding.index'))
+    ])->assertRedirect(route('x-change.cockpit.funding.index', [
+        'mode' => 'pay_code',
+    ]))
         ->assertSessionHas('funding_notice');
 
     $request = FundingRequest::query()->sole();

@@ -153,7 +153,12 @@ const hasFundingExceptions = computed(() => fundingExceptionCount.value > 0);
 const { start: startFundingPoll, stop: stopFundingPoll } = usePoll(
     Math.max(1000, props.funding_poll_interval ?? 5000),
     {
-        only: ['funding_read_model', 'funding_requests', 'funding_notice'],
+        only: [
+            'cockpit_header_read_model',
+            'funding_read_model',
+            'funding_requests',
+            'funding_notice',
+        ],
     },
     {
         autoStart: hasOpenFundingWork.value,
@@ -2542,7 +2547,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 :disabled="activeFundingRequestReview !== null"
                                 @click="approveRequest(item.reference)"
                             >
-                                Approve reserve and await Treasury payment
+                                Approve and fund Account
                             </button>
                             <p
                                 v-else-if="item.status === 'awaiting_approval'"

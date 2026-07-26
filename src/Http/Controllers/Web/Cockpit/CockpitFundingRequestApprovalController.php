@@ -28,7 +28,7 @@ class CockpitFundingRequestApprovalController extends Controller
             ->afterCommit();
 
         return redirect()
-            ->route('x-change.cockpit.funding.index')
+            ->route('x-change.cockpit.funding.index', ['mode' => 'pay_code'])
             ->with(
                 'funding_notice',
                 'Account Funding accepted. System Treasury payment was queued.',

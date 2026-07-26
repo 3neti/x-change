@@ -124,7 +124,9 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
     ));
 
     $approvalResponse
-        ->assertRedirect(route('x-change.cockpit.funding.index'))
+        ->assertRedirect(route('x-change.cockpit.funding.index', [
+            'mode' => 'pay_code',
+        ]))
         ->assertSessionHas(
             'funding_notice',
             'Account Funding accepted. System Treasury payment was queued.',

@@ -623,6 +623,7 @@ describe('Cockpit Funding foundation', () => {
             5000,
             {
                 only: [
+                    'cockpit_header_read_model',
                     'funding_read_model',
                     'funding_requests',
                     'funding_notice',
@@ -843,6 +844,56 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.find('[data-testid="funding-request-modal"]').exists(),
         ).toBe(false);
+    });
+
+    it('describes checker acceptance as Account funding', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_requests: {
+                    ...fundingRequestReadModel,
+                    review_queue: [
+                        {
+                            reference: '01J-REQUEST-1',
+                            type: 'bank_transfer',
+                            type_label: 'Bank transfer',
+                            requested_value: '₱20,000.00',
+                            recognized_value: '₱20,000.00',
+                            requested_value_minor: 2_000_000,
+                            currency: 'PHP',
+                            status: 'awaiting_approval',
+                            description: 'Matched corporate bank transfer.',
+                            evidence_reference: 'bank-match:1001',
+                            connection_reference: 'netbank-primary',
+                            maker_id: '41',
+                            can_prepare: false,
+                            can_approve: true,
+                        },
+                    ],
+                    controls: {
+                        ...fundingRequestReadModel.controls,
+                        reviewer: true,
+                    },
+                },
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="funding-mode-pay_code"]')
+            .trigger('click');
+
+        const reviewQueue = wrapper.get(
+            '[data-testid="funding-request-review-queue"]',
+        );
+
+        expect(reviewQueue.text()).toContain('Approve and fund Account');
+        expect(reviewQueue.text()).not.toContain(
+            'Approve reserve and await Treasury payment',
+        );
     });
 
     it('shows and copies the newly requested Pay Code and follow-up message', async () => {

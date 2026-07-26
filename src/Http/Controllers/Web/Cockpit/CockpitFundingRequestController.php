@@ -65,7 +65,7 @@ class CockpitFundingRequestController extends Controller
         }, 3);
 
         return redirect()
-            ->route('x-change.cockpit.funding.index')
+            ->route('x-change.cockpit.funding.index', ['mode' => 'pay_code'])
             ->with(
                 'funding_request_submitted_reference',
                 $fundingRequest->reference,

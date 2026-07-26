@@ -31,7 +31,7 @@ class CockpitFundingRequestReviewController extends Controller
         ));
 
         return redirect()
-            ->route('x-change.cockpit.funding.index')
+            ->route('x-change.cockpit.funding.index', ['mode' => 'pay_code'])
             ->with('funding_notice', 'Backing review recorded. Independent approval is now required.');
     }
 }
