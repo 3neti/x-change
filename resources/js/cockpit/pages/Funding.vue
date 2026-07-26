@@ -202,6 +202,11 @@ const payCodeFundingClaimError = computed(
         (payCodeFundingClaimForm.errors as Record<string, string | undefined>)
             .pay_code_funding ?? null,
 );
+const payCodeFundingActionLabel = computed(() => {
+    const amount = props.pay_code_funding_preview?.amount;
+
+    return amount ? `Add ${amount} to my Account` : 'Add to my Account';
+});
 type FundingProjectionChangedPayload = {
     schema: string;
     event_id: string;
@@ -1743,8 +1748,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             <p
                                 class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Add an eligible Pay Code directly to Client
-                                Funds.
+                                Check the code, review the amount, then confirm
+                                the one-time addition.
                             </p>
                         </div>
                         <span
@@ -1758,6 +1763,16 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         data-testid="pay-code-funding-inspection-form"
                         @submit.prevent="inspectPayCodeFunding"
                     >
+                        <p
+                            class="flex items-center gap-2 text-xs font-semibold text-slate-600 sm:col-span-2 dark:text-slate-300"
+                        >
+                            <span
+                                class="grid size-5 place-items-center rounded-full bg-slate-950 text-[0.65rem] text-white dark:bg-emerald-400 dark:text-slate-950"
+                            >
+                                1
+                            </span>
+                            Check the code
+                        </p>
                         <label class="sr-only" for="pay-code-funding-code">
                             Pay Code
                         </label>
@@ -1807,6 +1822,16 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                         >
                             <div>
+                                <p
+                                    class="mb-2 flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-200"
+                                >
+                                    <span
+                                        class="grid size-5 place-items-center rounded-full bg-emerald-600 text-[0.65rem] text-white"
+                                    >
+                                        2
+                                    </span>
+                                    Confirm Account funding
+                                </p>
                                 <div class="flex flex-wrap items-center gap-2">
                                     <p class="text-sm font-semibold">
                                         {{
@@ -1824,7 +1849,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     >
                                         {{
                                             pay_code_funding_preview.eligible
-                                                ? 'Eligible'
+                                                ? 'Ready to add'
                                                 : 'Unavailable'
                                         }}
                                     </span>
@@ -1838,6 +1863,17 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 <p
                                     class="mt-1 text-xs text-slate-600 dark:text-slate-300"
                                 >
+                                    <span
+                                        v-if="pay_code_funding_preview.eligible"
+                                        class="font-semibold text-slate-800 dark:text-slate-100"
+                                    >
+                                        Code checked. No funds have moved yet.
+                                    </span>
+                                    <span
+                                        v-if="pay_code_funding_preview.eligible"
+                                    >
+                                        ·
+                                    </span>
                                     {{ pay_code_funding_preview.message }}
                                     <template
                                         v-if="
@@ -1859,15 +1895,15 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     pay_code_funding_preview.inspection_token
                                 "
                                 type="button"
-                                class="h-11 shrink-0 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-50"
+                                class="min-h-11 w-full shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-50 sm:w-auto"
                                 :disabled="payCodeFundingClaimForm.processing"
                                 data-testid="claim-pay-code-funding"
                                 @click="claimPayCodeFunding"
                             >
                                 {{
                                     payCodeFundingClaimForm.processing
-                                        ? 'Adding…'
-                                        : 'Add to Account'
+                                        ? 'Adding to Account…'
+                                        : payCodeFundingActionLabel
                                 }}
                             </button>
                         </div>

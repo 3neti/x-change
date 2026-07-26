@@ -750,10 +750,16 @@ describe('Cockpit Funding foundation', () => {
                 .get('[data-testid="pay-code-funding-inspection-form"] input')
                 .attributes('placeholder'),
         ).toBe('Enter Pay Code');
+        expect(panel.text()).toContain('Check the code');
         expect(panel.text()).toContain('Check Code');
         expect(panel.text()).toContain('••••F9K2');
         expect(panel.text()).toContain('₱20,000.00');
-        expect(panel.text()).toContain('Add to Account');
+        expect(panel.text()).toContain('Confirm Account funding');
+        expect(panel.text()).toContain('Ready to add');
+        expect(panel.text()).toContain(
+            'Code checked. No funds have moved yet.',
+        );
+        expect(panel.text()).toContain('Add ₱20,000.00 to my Account');
         expect(panel.text()).toContain('no provider payout');
         expect(
             panel
