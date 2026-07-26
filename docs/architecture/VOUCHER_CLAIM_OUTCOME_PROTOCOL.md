@@ -196,6 +196,49 @@ asynchronous deployment must supervise that queue explicitly:
 php artisan queue:work --queue=x-change-funding
 ```
 
+### Privileged maker-checker commands
+
+The Account owner only creates and monitors the request. The requester Funding
+workspace never receives the global control queue and never renders maker or
+checker actions. Until the dedicated operator workspace exists, two
+package-owned commands provide the privileged control surface:
+
+```bash
+php artisan x-change:funding:maker:verify FUND-XXXX
+php artisan x-change:funding:checker:approve FUND-XXXX
+```
+
+Both commands are interactive by default and propose safe defaults. Maker
+verification asks for the operator, exact independently recognized value,
+active Treasury connection, evidence reference, notes, and confirmation.
+Checker approval asks for a different configured operator and confirmation.
+The requester cannot act as maker or checker, and the maker cannot act as
+checker.
+
+Machine-driven use supplies every economic input explicitly:
+
+```bash
+php artisan x-change:funding:maker:verify FUND-XXXX \
+    --operator=15 \
+    --recognized-value=19.00 \
+    --connection=netbank-primary \
+    --evidence-reference=bank-match:example \
+    --commit \
+    --json \
+    --no-interaction
+
+php artisan x-change:funding:checker:approve FUND-XXXX \
+    --operator=16 \
+    --commit \
+    --json \
+    --no-interaction
+```
+
+Maker verification moves no funds and calls no provider. Checker approval
+reserves the exact approved value and dispatches the unique system-Treasury
+payment. Replaying either command returns the existing state and never queues or
+posts another payment.
+
 ## System Account Funding Pay Code utility
 
 `x-change:funding:issue-pay-code` has two deliberately separate modes.
@@ -227,7 +270,9 @@ php artisan x-change:funding:issue-pay-code FUND-XXXX \
 The positional mode rejects a code that is not a reviewed Account Funding
 PAYABLE, is not maker-checker approved, names a different allowed payer, or
 conflicts with direct-issuance options. Repeating the committed command returns
-the existing collection and never posts a second credit.
+the existing collection and never posts a second credit. Before approval, it
+fails with the exact maker or checker command required for the next lifecycle
+stage.
 
 For a guided local flow, run the command without options:
 
@@ -435,7 +480,11 @@ dual outcome prevents under-reserved provider payouts.
 ## Runtime configuration
 
 ```dotenv
-# Comma-separated authenticated reviewer IDs. Empty is fail-closed.
+# Comma-separated authenticated operators. Both lists are fail-closed.
+XCHANGE_FUNDING_REQUEST_MAKER_IDS=
+XCHANGE_FUNDING_REQUEST_CHECKER_IDS=
+
+# Deprecated compatibility fallback for one release window.
 XCHANGE_FUNDING_REQUEST_REVIEWER_IDS=
 
 # Seven days by default.
@@ -510,30 +559,29 @@ The minimum proof is:
   its Pay Code input visible; the generated Pay Code was not present in the URL.
 - The application emitted no browser-console error.
 
-### Reviewed funding browser lifecycle acceptance — 2026-07-27
+### Privileged CLI and browser lifecycle acceptance — 2026-07-27
 
-- An authenticated Account owner requested exactly `PHP 17.00` from the
-  **Pay Code Funding** workspace. The browser immediately displayed one pending
-  reviewed request and its masked Pay Code (`••••VCVB` after completion).
-- A distinct maker recognized the backing against `netbank-primary`; the
-  authenticated checker then selected **Approve and fund Account**.
+- An authenticated Account owner requested exactly `PHP 19.00` from the
+  **Pay Code Funding** workspace. The browser immediately displayed pending Pay
+  Code `FUND-9TC5`; the ordinary requester workspace exposed no operator queue.
+- Maker `15` recognized the exact backing against `netbank-primary`; different
+  checker `16` approved it through the privileged package commands.
 - The request advanced through `submitted → awaiting_approval →
   funding_code_issued → completed`. While the asynchronous payment was queued,
   the owner saw the honest intermediate state **Adding funds**.
 - One worker consumed the dedicated `x-change-funding` queue and invoked the
   normal Account Funding collection handler. The Voucher closed with exactly
-  one `PHP 17.00` collection and no provider payout or provider API call.
-- Client Funds moved from `PHP 159.00` to `PHP 176.00`. System Account Funding
-  Reserve moved from `PHP 505.02` to `PHP 488.02`, and system Pay Code Reserve
-  returned to zero.
-- A fresh browser visit retained **Funded**, the masked terminal code, and the
-  refreshed `PHP 176.00` header. Polling supplied the fallback update while
-  Reverb was not running.
-- Replaying the completed payment job left the collection count at one and all
-  Treasury positions unchanged.
-- The Funding Request event stream contains one event for each transition. The
-  x-journal contains one sanitized `account_funding.pay_code.paid` entry and
-  does not persist the raw Pay Code.
+  one `PHP 19.00` collection and no provider payout or provider API call.
+- Polling updated Client Funds from `PHP 176.00` to `PHP 195.00`, changed the
+  row to **Funded**, and masked the terminal code as `••••9TC5`.
+- Replaying checker approval returned `already_approved`, queued no payment,
+  and left the collection count at one.
+- The Funding Request event stream contains exactly the four lifecycle
+  transitions with requester `5`, maker `15`, checker `16`, and system
+  principal `1`. x-journal contains one sanitized
+  `account_funding.pay_code.paid` entry.
+- The application emitted no browser-console errors. Observed warnings belonged
+  to unrelated Chrome extensions.
 - Production deployments using an asynchronous queue must keep an
   `x-change-funding` worker active. With the synchronous queue driver, checker
   acceptance completes the same idempotent payment inline.
