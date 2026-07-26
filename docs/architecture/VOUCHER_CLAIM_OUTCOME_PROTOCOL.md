@@ -509,3 +509,31 @@ The minimum proof is:
 - `/x/cockpit/funding?mode=pay_code` opened **Pay Code Funding** directly with
   its Pay Code input visible; the generated Pay Code was not present in the URL.
 - The application emitted no browser-console error.
+
+### Reviewed funding browser lifecycle acceptance — 2026-07-27
+
+- An authenticated Account owner requested exactly `PHP 17.00` from the
+  **Pay Code Funding** workspace. The browser immediately displayed one pending
+  reviewed request and its masked Pay Code (`••••VCVB` after completion).
+- A distinct maker recognized the backing against `netbank-primary`; the
+  authenticated checker then selected **Approve and fund Account**.
+- The request advanced through `submitted → awaiting_approval →
+  funding_code_issued → completed`. While the asynchronous payment was queued,
+  the owner saw the honest intermediate state **Adding funds**.
+- One worker consumed the dedicated `x-change-funding` queue and invoked the
+  normal Account Funding collection handler. The Voucher closed with exactly
+  one `PHP 17.00` collection and no provider payout or provider API call.
+- Client Funds moved from `PHP 159.00` to `PHP 176.00`. System Account Funding
+  Reserve moved from `PHP 505.02` to `PHP 488.02`, and system Pay Code Reserve
+  returned to zero.
+- A fresh browser visit retained **Funded**, the masked terminal code, and the
+  refreshed `PHP 176.00` header. Polling supplied the fallback update while
+  Reverb was not running.
+- Replaying the completed payment job left the collection count at one and all
+  Treasury positions unchanged.
+- The Funding Request event stream contains one event for each transition. The
+  x-journal contains one sanitized `account_funding.pay_code.paid` entry and
+  does not persist the raw Pay Code.
+- Production deployments using an asynchronous queue must keep an
+  `x-change-funding` worker active. With the synchronous queue driver, checker
+  acceptance completes the same idempotent payment inline.
