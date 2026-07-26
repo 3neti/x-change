@@ -8,7 +8,6 @@ import { store as claimPayCodeFundingRoute } from '@/routes/x-change/cockpit/fun
 import { store as inspectPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-inspections';
 import { store as approveFundingRequest } from '@/routes/x-change/cockpit/funding/requests/approvals';
 import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
-import { store as claimReviewedFundingPayCode } from '@/routes/x-change/cockpit/funding/requests/pay-code-claims';
 import { store as prepareFundingRequest } from '@/routes/x-change/cockpit/funding/requests/reviews';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
 import { store as openStandingFundingAddressRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank';
@@ -180,6 +179,8 @@ const fundingRequestForm = useForm({
     external_reference: '',
     occurred_on: '',
     requester_notes: '',
+    evidence_document_type: 'bank_transfer_proof',
+    evidence_document: null as File | null,
     idempotency_key: newIdempotencyKey(),
 });
 const fundingRequestReviewForm = useForm({
@@ -190,7 +191,6 @@ const fundingRequestReviewForm = useForm({
     review_notes: '',
 });
 const fundingRequestApprovalForm = useForm({});
-const reviewedFundingPayCodeClaimForm = useForm({});
 const payCodeInspectionForm = useForm({
     code: '',
 });
@@ -398,6 +398,7 @@ function submitFundingRequest(): void {
 
     fundingRequestForm.requested_value_minor = amountMinor;
     fundingRequestForm.post(storeFundingRequest(), {
+        forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
             fundingRequestAmount.value = '';
@@ -406,11 +407,18 @@ function submitFundingRequest(): void {
                 'external_reference',
                 'occurred_on',
                 'requester_notes',
+                'evidence_document',
             );
             fundingRequestForm.requested_value_minor = 0;
             fundingRequestForm.idempotency_key = newIdempotencyKey();
         },
     });
+}
+
+function selectFundingRequestEvidence(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    fundingRequestForm.evidence_document = input.files?.[0] ?? null;
 }
 
 function prepareRequest(reference: string): void {
@@ -441,15 +449,6 @@ function approveRequest(reference: string): void {
             activeFundingRequestReview.value = null;
         },
     });
-}
-
-function claimReviewedPayCode(requestReference: string): void {
-    reviewedFundingPayCodeClaimForm.post(
-        claimReviewedFundingPayCode.url(requestReference),
-        {
-            preserveScroll: true,
-        },
-    );
 }
 
 function inspectPayCodeFunding(): void {
@@ -2051,6 +2050,58 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     placeholder="Optional"
                                 />
                             </label>
+                            <label class="block text-xs font-semibold">
+                                Evidence type
+                                <select
+                                    v-model="
+                                        fundingRequestForm.evidence_document_type
+                                    "
+                                    class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                >
+                                    <option value="bank_transfer_proof">
+                                        Bank transfer proof
+                                    </option>
+                                    <option value="custody_receipt">
+                                        Custody receipt
+                                    </option>
+                                    <option value="asset_photo">
+                                        Asset photo
+                                    </option>
+                                    <option value="ownership_document">
+                                        Ownership document
+                                    </option>
+                                    <option value="valuation_document">
+                                        Valuation document
+                                    </option>
+                                    <option value="supporting_document">
+                                        Supporting document
+                                    </option>
+                                </select>
+                            </label>
+                            <label
+                                class="block text-xs font-semibold sm:col-span-2 xl:col-span-3"
+                            >
+                                Evidence document
+                                <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    class="mt-1.5 block min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-xs file:font-semibold dark:border-slate-700 dark:bg-slate-950 dark:file:bg-slate-800"
+                                    data-testid="funding-request-evidence"
+                                    @change="selectFundingRequestEvidence"
+                                />
+                                <span
+                                    v-if="
+                                        fundingRequestForm.errors
+                                            .evidence_document
+                                    "
+                                    class="mt-1 block text-xs text-rose-600"
+                                >
+                                    {{
+                                        fundingRequestForm.errors
+                                            .evidence_document
+                                    }}
+                                </span>
+                            </label>
                         </div>
 
                         <div class="mt-4 flex justify-end">
@@ -2123,23 +2174,31 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     · {{ item.pay_code.amount }} ·
                                     {{ displayLabel(item.pay_code.status) }}
                                 </p>
+                                <p
+                                    v-if="
+                                        item.pay_code?.collection_mode ===
+                                        'system_treasury'
+                                    "
+                                    class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                                >
+                                    System Treasury pays this code after
+                                    independent approval. You do not claim it.
+                                </p>
+                                <div
+                                    v-if="item.evidence?.documents.length"
+                                    class="mt-2 flex flex-wrap gap-2"
+                                >
+                                    <a
+                                        v-for="document in item.evidence
+                                            .documents"
+                                        :key="document.id"
+                                        :href="document.url"
+                                        class="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                    >
+                                        {{ document.filename }}
+                                    </a>
+                                </div>
                             </div>
-                            <button
-                                v-if="item.pay_code?.can_claim"
-                                type="button"
-                                class="min-h-10 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                                :disabled="
-                                    reviewedFundingPayCodeClaimForm.processing
-                                "
-                                data-testid="claim-reviewed-funding-pay-code"
-                                @click="claimReviewedPayCode(item.reference)"
-                            >
-                                {{
-                                    reviewedFundingPayCodeClaimForm.processing
-                                        ? 'Claiming…'
-                                        : 'Add Pay Code to Account'
-                                }}
-                            </button>
                         </div>
                     </div>
                     <p v-else class="mt-4 text-sm text-slate-500">
@@ -2192,6 +2251,20 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 </span>
                             </div>
                             <div
+                                v-if="item.evidence?.documents.length"
+                                class="mt-3 flex flex-wrap gap-2"
+                            >
+                                <a
+                                    v-for="document in item.evidence.documents"
+                                    :key="document.id"
+                                    :href="document.url"
+                                    class="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                                >
+                                    {{ document.filename }} ·
+                                    {{ displayLabel(document.review_status) }}
+                                </a>
+                            </div>
+                            <div
                                 v-if="item.can_prepare"
                                 class="mt-4 grid gap-3 md:grid-cols-2"
                             >
@@ -2232,7 +2305,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 :disabled="activeFundingRequestReview !== null"
                                 @click="approveRequest(item.reference)"
                             >
-                                Approve reserved value and issue code
+                                Approve reserve and await Treasury payment
                             </button>
                             <p
                                 v-else-if="item.status === 'awaiting_approval'"

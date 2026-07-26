@@ -372,13 +372,32 @@ const fundingRequestReadModel = {
             status: 'pay_code_issued',
             description: 'Matched corporate bank transfer.',
             submitted_at: '2026-07-25T08:00:00+08:00',
+            evidence: {
+                attachment_count: 1,
+                pending_count: 0,
+                accepted_count: 1,
+                envelope_status: 'locked',
+                documents: [
+                    {
+                        id: 81,
+                        type: 'BANK_TRANSFER_PROOF',
+                        filename: 'bank-transfer-proof.pdf',
+                        mime_type: 'application/pdf',
+                        size: 24000,
+                        review_status: 'accepted',
+                        url: '/x/cockpit/funding/requests/01J-REQUEST-1/evidence/81',
+                    },
+                ],
+            },
             pay_code: {
                 request_reference: '01J-REQUEST-1',
                 code: 'FUNDF9K2',
                 last_four: 'F9K2',
-                status: 'issued',
+                status: 'awaiting_system_treasury',
                 amount: '₱20,000.00',
-                can_claim: true,
+                voucher_type: 'payable',
+                collection_mode: 'system_treasury',
+                can_claim: false,
                 expires_at: '2026-08-01T08:00:00+08:00',
             },
         },
@@ -386,7 +405,7 @@ const fundingRequestReadModel = {
     notices: [],
     review_queue: [],
     controls: {
-        attachments_enabled: false,
+        attachments_enabled: true,
         evidence_authorizes_credit: false,
         maker_checker_required: true,
         reviewer: false,
@@ -771,10 +790,25 @@ describe('Cockpit Funding foundation', () => {
         expect(panel.text()).toContain('Bank transfer');
         expect(panel.text()).toContain('Gold or precious metal');
         expect(panel.text()).toContain('Verification details');
+        expect(panel.text()).toContain('Evidence document');
+        expect(
+            panel
+                .get('[data-testid="funding-request-evidence"]')
+                .attributes('accept'),
+        ).toContain('application/pdf');
         expect(panel.text()).toContain('Submit for Review');
         expect(panel.text()).toContain('Reviewed funding requests');
         expect(panel.text()).toContain('Pay Code FUNDF9K2');
-        expect(panel.text()).toContain('Add Pay Code to Account');
+        expect(panel.text()).toContain('Awaiting System Treasury');
+        expect(panel.text()).toContain(
+            'System Treasury pays this code after independent approval.',
+        );
+        expect(panel.text()).toContain('bank-transfer-proof.pdf');
+        expect(
+            panel
+                .find('[data-testid="claim-reviewed-funding-pay-code"]')
+                .exists(),
+        ).toBe(false);
         expect(panel.text()).not.toContain('wallet');
         expect(panel.text()).not.toContain('Two different operators');
         expect(panel.text()).not.toContain('1 · Request');

@@ -640,8 +640,28 @@ export type CockpitReviewedFundingPayCode = {
     last_four: string;
     status: string;
     amount: string;
+    voucher_type: string;
+    collection_mode: 'system_treasury' | 'recipient_claim';
     can_claim: boolean;
     expires_at?: string | null;
+};
+
+export type CockpitFundingEvidenceDocument = {
+    id: number;
+    type: string;
+    filename: string;
+    mime_type: string;
+    size: number;
+    review_status: string;
+    url?: string;
+};
+
+export type CockpitFundingEvidenceSummary = {
+    attachment_count: number;
+    pending_count?: number;
+    accepted_count?: number;
+    envelope_status?: string | null;
+    documents: CockpitFundingEvidenceDocument[];
 };
 
 export type CockpitFundingRequest = {
@@ -654,6 +674,7 @@ export type CockpitFundingRequest = {
     status: string;
     description: string;
     submitted_at?: string | null;
+    evidence?: CockpitFundingEvidenceSummary;
     pay_code?: CockpitReviewedFundingPayCode | null;
 };
 
@@ -670,6 +691,7 @@ export type CockpitFundingRequestReviewItem = {
     evidence_reference?: string | null;
     connection_reference?: string | null;
     maker_id?: string | null;
+    evidence?: CockpitFundingEvidenceSummary;
     can_prepare: boolean;
     can_approve: boolean;
 };

@@ -24,6 +24,7 @@ use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\FundingRequestNotice;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -127,6 +128,20 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         ->toBe(250_000)
         ->and(positionBalance($requester, TreasuryPositionPurpose::ClientFunds))
         ->toBe(0);
+
+    $cockpitReadModel = app(FundingRequestCockpitReadModel::class)
+        ->forOperator($requester);
+
+    expect(data_get($cockpitReadModel, 'requests.0.pay_code.amount'))
+        ->toBe('₱2,500.00')
+        ->and(data_get($cockpitReadModel, 'requests.0.pay_code.status'))
+        ->toBe('awaiting_system_treasury')
+        ->and(data_get($cockpitReadModel, 'requests.0.pay_code.voucher_type'))
+        ->toBe('payable')
+        ->and(data_get($cockpitReadModel, 'requests.0.pay_code.collection_mode'))
+        ->toBe('system_treasury')
+        ->and(data_get($cockpitReadModel, 'requests.0.pay_code.can_claim'))
+        ->toBeFalse();
 
     $collection = app(PayApprovedFundingRequest::class)->handle($voucher);
     $paymentReplay = app(PayApprovedFundingRequest::class)->handle($voucher);

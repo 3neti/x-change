@@ -66,29 +66,42 @@ final readonly class FundingRequestCockpitReadModel
                         ->count() ?? 0,
                     'envelope_status' => $request->voucher?->envelope?->status->value,
                     'documents' => $request->voucher?->envelope?->attachments
-                        ->map(static fn ($attachment): array => [
+                        ->map(fn ($attachment): array => [
                             'id' => (int) $attachment->getKey(),
                             'type' => $attachment->doc_type,
                             'filename' => $attachment->original_filename,
                             'mime_type' => $attachment->mime_type,
                             'size' => (int) $attachment->size,
                             'review_status' => $attachment->review_status,
+                            'url' => route(
+                                'x-change.cockpit.funding.requests.evidence.show',
+                                [$request, $attachment],
+                            ),
                         ])->values()->all() ?? [],
                 ],
                 'pay_code' => $request->voucher === null ? null : [
                     'request_reference' => $request->reference,
                     'code' => $request->voucher->code,
                     'last_four' => mb_substr($request->voucher->code, -4),
-                    'status' => $request->voucher->redeemed_at !== null
-                        ? 'claimed'
-                        : ($request->voucher->isExpired() ? 'expired' : 'issued'),
+                    'status' => match (true) {
+                        $request->status === FundingRequestStatus::Completed => 'account_funded',
+                        $request->voucher->isExpired() => 'expired',
+                        $request->voucher->voucher_type->value === 'payable'
+                            && $request->status === FundingRequestStatus::PayCodeIssued => 'awaiting_system_treasury',
+                        $request->voucher->redeemed_at !== null => 'claimed',
+                        default => 'issued',
+                    },
                     'amount' => $this->money(
-                        (int) round(
-                            (float) $request->voucher->instructions->cash->amount * 100,
-                        ),
-                        $request->voucher->instructions->cash->currency,
+                        $request->approved_value_minor
+                            ?? $request->requested_value_minor,
+                        $request->currency,
                     ),
-                    'can_claim' => $request->status === FundingRequestStatus::PayCodeIssued
+                    'voucher_type' => $request->voucher->voucher_type->value,
+                    'collection_mode' => $request->voucher->voucher_type->value === 'payable'
+                        ? 'system_treasury'
+                        : 'recipient_claim',
+                    'can_claim' => $request->voucher->voucher_type->value !== 'payable'
+                        && $request->status === FundingRequestStatus::PayCodeIssued
                         && $request->voucher->canRedeem(),
                     'expires_at' => $request->voucher->expires_at?->toIso8601String(),
                 ],
@@ -137,13 +150,17 @@ final readonly class FundingRequestCockpitReadModel
                         'evidence' => [
                             'attachment_count' => $request->voucher?->envelope?->attachments->count() ?? 0,
                             'documents' => $request->voucher?->envelope?->attachments
-                                ->map(static fn ($attachment): array => [
+                                ->map(fn ($attachment): array => [
                                     'id' => (int) $attachment->getKey(),
                                     'type' => $attachment->doc_type,
                                     'filename' => $attachment->original_filename,
                                     'mime_type' => $attachment->mime_type,
                                     'size' => (int) $attachment->size,
                                     'review_status' => $attachment->review_status,
+                                    'url' => route(
+                                        'x-change.cockpit.funding.requests.evidence.show',
+                                        [$request, $attachment],
+                                    ),
                                 ])->values()->all() ?? [],
                         ],
                         'can_prepare' => in_array($request->status, [
