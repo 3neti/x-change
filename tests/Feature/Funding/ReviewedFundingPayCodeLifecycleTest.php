@@ -26,6 +26,7 @@ use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Events\FundingRequestChanged;
+use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Jobs\Funding\PayApprovedFundingRequestJob;
 use LBHurtado\XChange\Models\FundingRequestNotice;
 use LBHurtado\XChange\Models\VoucherCollection;
@@ -336,6 +337,21 @@ it('keeps requester, maker, and checker controls independent', function () {
             reviewerId: (string) $maker->getKey(),
         ),
     ))->toThrow(RuntimeException::class, 'must exactly match');
+
+    expect(fn () => app(PrepareFundingRequest::class)->handle(
+        $request,
+        new PrepareFundingRequestData(
+            recognizedValueMinor: 22_00,
+            currency: 'PHP',
+            connectionReference: 'missing-connection',
+            evidenceReference: 'evidence:missing-connection',
+            reviewerType: $maker::class,
+            reviewerId: (string) $maker->getKey(),
+        ),
+    ))->toThrow(
+        TreasuryConfigurationException::class,
+        'Unknown or disabled Treasury connections: missing-connection',
+    );
 
     $prepared = app(PrepareFundingRequest::class)->handle(
         $request,

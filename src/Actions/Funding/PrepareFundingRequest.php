@@ -14,6 +14,7 @@ use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Services\Funding\FundingRequestAccess;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
 
 final readonly class PrepareFundingRequest
@@ -22,6 +23,7 @@ final readonly class PrepareFundingRequest
         private EnvelopeService $envelopes,
         private FundingRequestAccess $access,
         private FundingRequestWorkflowPublisher $workflows,
+        private TreasuryProviderConnectionCatalog $connections,
     ) {}
 
     public function handle(
@@ -52,6 +54,16 @@ final readonly class PrepareFundingRequest
 
             if (mb_strtoupper(trim($data->currency)) !== $locked->currency) {
                 throw new RuntimeException('Recognized backing currency must match the request.');
+            }
+
+            $connection = collect($this->connections->active([
+                trim($data->connectionReference),
+            ]))->sole();
+
+            if ($connection->currency !== $locked->currency) {
+                throw new RuntimeException(
+                    'Treasury connection currency must match the Funding Request.',
+                );
             }
 
             $fromStatus = $locked->status;
