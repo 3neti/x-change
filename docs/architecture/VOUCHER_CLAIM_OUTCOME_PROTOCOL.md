@@ -17,9 +17,13 @@ Onboarding         never | if_required | required
 ```
 
 `account_funding` is therefore a claim outcome, not a second code model and not
-a Voucher kind. x-change does not maintain an `AccountFundingCode`. Reviewed
-funding requests issue ordinary `LBHurtado\Voucher\Models\Voucher` records with
-a recipient-bound, server-selected `account_funding` outcome.
+a Voucher kind. x-change does not maintain an `AccountFundingCode`.
+
+Reviewed funding requests use the complementary collection direction: the
+requester owns an ordinary `PAYABLE` Voucher and system Treasury is the allowed
+payer. Its `x_change_account_funding` execution driver posts the completed
+collection into the requester's Client Funds. Both paths remain normal Voucher
+flows.
 
 ## Typed instruction contract
 
@@ -128,22 +132,26 @@ precious metal, jewelry, vehicle, or another approved source:
 ```text
 Account owner submits Funding Request
         ↓
+requester-owned PAYABLE is created LOCKED
+        ↓
 maker verifies custody, settlement, and recognized value
         ↓
 different checker approves
         ↓
-system Client Funds move to Pay Code Reserve
+system Account Funding Reserve moves to Pay Code Reserve
         ↓
-recipient-bound Voucher is issued
+PAYABLE becomes ACTIVE
         ↓
-Account owner claims the account_funding outcome once
+system Treasury pays the exact target once
         ↓
-reserved value moves to the owner's Client Funds
+collection execution credits the owner's Client Funds
 ```
 
 The browser supplies a requested value and supporting description only. It
-cannot authorize credit. Approval succeeds only when the system Account already
-owns enough recognized Client Funds on the selected provider connection.
+may also upload one PDF, JPEG, or PNG to the Voucher Settlement Envelope. None
+of those inputs authorizes credit. Approval succeeds only when the system
+Account already owns enough recognized Account Funding Reserve on the selected
+provider connection.
 
 The funding request stores a unique `voucher_id`. The former
 `x_change_account_funding_codes` table is retired by a guarded forward
@@ -154,17 +162,50 @@ For database compatibility, the enum-backed stored status remains
 `funding_code_issued`; package read models expose the canonical
 `pay_code_issued` status.
 
-Reviewed Vouchers use a Treasury-backed issuance path. It creates the Voucher
-and its typed instructions without minting a second Cash entity or debiting the
-system compatibility wallet. The Treasury reservation is the sole monetary
-backing.
+Reviewed Vouchers use the existing `VoucherInstructionsData` extension points:
+`voucher_type=payable`, an exact `target_amount`, exact-payment `rules`, and an
+`execution` instruction using `x_change_account_funding`. The request creates
+that Voucher immediately in `LOCKED`; maker-checker approval activates it after
+reserving system Treasury value.
+
+`CompleteVoucherCollection` is the shared finalization boundary for reviewed
+Account Funding and provider-confirmed Voucher collections. It locks the
+Voucher, enforces remaining-target rules, writes one `VoucherCollection`,
+invokes the selected accounting posting, closes the Voucher, records a
+sanitized x-journal entry, and publishes an owner-scoped Funding projection
+event after commit. Database uniqueness and stable idempotency references make
+replays non-monetary.
 
 ## System Account Funding Pay Code utility
 
-`x-change:funding:issue-pay-code` is the package-owned operator utility for
-issuing the same recipient-bound Account Funding Pay Code from recognized
-system Account Funding Reserve. It is preview-only unless `--commit` is
-present.
+`x-change:funding:issue-pay-code` has two deliberately separate modes.
+
+With no positional Pay Code it remains the package-owned utility for issuing a
+recipient-bound, redeemable Account Funding Pay Code from recognized system
+Account Funding Reserve. It is preview-only unless `--commit` is present.
+
+With a positional Pay Code it operates an already reviewed requester-owned
+PAYABLE:
+
+```bash
+php artisan x-change:funding:issue-pay-code FUND-XXXX
+```
+
+That command is a preview. It displays the immutable request, target, owner,
+connection, current collection state, and proposed Treasury posting. It accepts
+no amount or recipient override. To execute the one system Treasury payment:
+
+```bash
+php artisan x-change:funding:issue-pay-code FUND-XXXX \
+    --commit \
+    --json \
+    --no-interaction
+```
+
+The positional mode rejects a code that is not a reviewed Account Funding
+PAYABLE, is not maker-checker approved, names a different allowed payer, or
+conflicts with direct-issuance options. Repeating the committed command returns
+the existing collection and never posts a second credit.
 
 For a guided local flow, run the command without options:
 
@@ -172,8 +213,8 @@ For a guided local flow, run the command without options:
 php artisan x-change:funding:issue-pay-code
 ```
 
-The command prompts for the Treasury connection, recipient mode, recipient,
-exact amount, expiry, and issuance confirmation. It generates a unique
+The direct-issuance command prompts for the Treasury connection, recipient mode,
+recipient, exact amount, expiry, and issuance confirmation. It generates a unique
 idempotency reference and presents it as the default. Accepting the default
 issuance confirmation produces a preview only; explicitly answer yes to reserve
 system funds and issue the Pay Code. Evidence and authorization references are
@@ -272,6 +313,8 @@ entries after the corresponding database transaction commits:
 - `account_funding.pay_code.inspected`
 - `account_funding.pay_code.outcome_selected`
 - `account_funding.pay_code.applied`
+- `account_funding.pay_code.paid`
+- `voucher.collection.completed`
 
 These entries reference the canonical Voucher, claim, issuance, and Treasury
 operation identifiers. They do not duplicate Treasury balances and never store
@@ -287,10 +330,13 @@ ledger transfers remain the accounting authority.
 1. **Self Top-Up** for the reusable provider-authoritative QR address;
 2. **Pay Code Funding** for inspecting and adding any eligible Pay Code.
 
-The reviewed request is secondary inside Pay Code Funding. When approved, the
-owner-only read model displays the complete Pay Code so the intended recipient
-can claim it. General Cockpit projections do not expose claimant references,
-Treasury Position references, evidence, or provider account details.
+The reviewed request is secondary inside Pay Code Funding. Its form accepts an
+optional private evidence document. When approved, the owner-only read model
+displays the complete PAYABLE code and marks it as awaiting system Treasury;
+the Account owner is not offered a claim action. Reviewers can download
+sanitized evidence through an authenticated `no-store` endpoint. General
+Cockpit projections do not expose storage paths, claimant references, Treasury
+Position references, raw evidence, or provider account details.
 
 `/x/cockpit/quick-generate` is the issuance-side entry point. Its prominent
 **Recipient receives** control emits the typed claim instruction:
@@ -316,11 +362,16 @@ can inspect and apply it through the existing owner-authorized claim flow.
 - Reviewer access is fail-closed and configured explicitly.
 - Recipient-bound claims compare opaque, server-derived claimant references.
 - Claim requests accept no amount, currency, destination, account, or recipient.
+- Positional PAYABLE execution accepts no amount, recipient, Account, or
+  connection override.
 - Account Funding makes zero provider calls.
 - Provider disbursement remains subject to its existing validation and approval
   controls.
-- File attachments remain disabled until private storage, validation, malware
-  quarantine, access logging, retention, and legal-hold controls exist.
+- Funding Request attachments use a private configured disk, strict
+  PDF/JPEG/PNG MIME and size validation, SHA-256 hashes, authenticated
+  owner/reviewer access, and `no-store` delivery. The Settlement Envelope
+  scanner extension remains the quarantine boundary when a malware scanner is
+  configured.
 
 ## Mixed outcomes and execution-cost reserve
 
@@ -353,6 +404,11 @@ XCHANGE_FUNDING_REQUEST_REVIEWER_IDS=
 
 # Seven days by default.
 XCHANGE_REVIEWED_FUNDING_PAY_CODE_TTL_SECONDS=604800
+
+# Private evidence intake.
+XCHANGE_FUNDING_REQUEST_ATTACHMENTS_ENABLED=true
+XCHANGE_FUNDING_REQUEST_EVIDENCE_DISK=local
+XCHANGE_FUNDING_REQUEST_ENVELOPE_DRIVER=account-funding-review
 ```
 
 `XCHANGE_ACCOUNT_FUNDING_CODE_TTL_SECONDS` remains a deprecated fallback for
@@ -374,13 +430,16 @@ The minimum proof is:
 6. unsupported and mixed unpriced outcomes fail closed;
 7. eligible Account Funding moves one exact reserve with no provider call;
 8. reviewed approval requires maker-checker separation and recognized system
-   Client Funds;
+   Account Funding Reserve;
 9. one reviewed request issues one real Voucher;
-10. only the bound Account owner can claim it;
-11. the Cockpit exposes Pay Code vocabulary and a compact owner-only action;
+10. only system Treasury can pay the approved requester-owned PAYABLE;
+11. the Cockpit exposes Pay Code vocabulary without an owner claim action;
 12. Quick Generate emits the typed outcome and hands Account Funding issuance
     to the Funding workspace without exposing the Pay Code in navigation;
-13. focused backend and frontend suites pass.
+13. private evidence is hash-addressed and owner/reviewer scoped;
+14. collection, journal, Treasury posting, and Echo effects occur once on
+    replay;
+15. focused backend and frontend suites pass.
 
 ### Implemented acceptance — 2026-07-25
 

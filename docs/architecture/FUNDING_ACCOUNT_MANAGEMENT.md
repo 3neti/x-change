@@ -12,14 +12,18 @@ The governing rule is:
 
 An Account is credited only after x-change has either an exact Funding Intent or an immutable Account Funding Address binding, independently verifies provider settlement, matches the exact destination and applicable amount policy, recognizes Treasury Inventory, and books the Account credit atomically.
 
-An issuer may also create an explicitly eligible Pay Code whose reserved
-principal can be added to another user's Client Funds without a provider
-payout. For a large transfer or controlled non-QR funding source, a reviewed
-Funding Request issues a recipient-bound Voucher with an `account_funding`
-claim outcome. It does not treat a user request or uploaded proof as settlement
-authority. A maker verifies backing, a different checker reserves
-already-recognized system Client Funds, and the recipient claims the exact
-reserved value once. See
+An issuer may also create an explicitly eligible redeemable Pay Code whose
+reserved principal can be added to another user's Client Funds without a
+provider payout. That is the ordinary Account Funding claim-outcome path.
+
+For a large transfer or controlled non-QR funding source, a reviewed Funding
+Request instead creates a requester-owned `PAYABLE` Voucher with an exact target
+and the `x_change_account_funding` execution driver. The request, description,
+and private attachment are evidence inputs only. A maker verifies the backing,
+a different checker reserves already-recognized system Account Funding Reserve,
+and system Treasury pays the PAYABLE once. The collection execution posts the
+same value to the requester's Client Funds. The requester never claims their own
+reviewed code. See
 [`VOUCHER_CLAIM_OUTCOME_PROTOCOL.md`](VOUCHER_CLAIM_OUTCOME_PROTOCOL.md).
 
 The long-lived destination design is specified in [Standing Funding Address Protocol](STANDING_FUNDING_ADDRESS_PROTOCOL.md).
@@ -62,6 +66,59 @@ Use an expiring, one-time, exact-amount instruction when amount correlation and 
 Use a stable, open-amount QR only when the exact provider destination is immutably registered with purpose `account_funding` and one Account. Provider history remains the authority. Recognition defaults to `observe_only`, with explicit `supervised` and `automatic` policies available.
 
 The same address cannot serve `account_funding`, `funding_intent`, and `payment`. Payer mobile, amount, timing, and merchant text never choose the purpose.
+
+## Reviewed Non-QR Funding
+
+The reviewed path exists for sources that cannot be confirmed through the
+provider-address flow: a large bank transfer, controlled cash handover,
+precious metal, jewelry, a vehicle, or another approved asset.
+
+```text
+requester-owned PAYABLE is created LOCKED
+        ↓
+requester may attach one private PDF/JPEG/PNG
+        ↓
+maker records independent backing evidence and recognized value
+        ↓
+different checker approves and reserves system value
+        ↓
+PAYABLE becomes ACTIVE
+        ↓
+system Treasury pays the exact target through the shared collection engine
+        ↓
+requester Client Funds increase; PAYABLE and Settlement Envelope close
+```
+
+The typed Voucher instruction fields are the extension point:
+
+- `voucher_type=payable`;
+- `target_amount` is the requested exact value;
+- `rules` require exact payment, reject overpayment, and close on full payment;
+- `execution.driver=x_change_account_funding`;
+- `execution.config.funding_request_reference` binds the collection to the
+  reviewed request.
+
+This is not a new Voucher type and it does not introduce an
+`AccountFundingCode` model. `VoucherInstructionsData` already carries the
+Voucher kind, target, rules, and execution contract required by the flow.
+
+Attachments are stored on the Voucher Settlement Envelope using private
+storage. Cockpit read models expose only sanitized document metadata and an
+authenticated, owner-or-reviewer download URL. They never expose the storage
+path. Downloads are `no-store`; accepted backing evidence is hash-addressed and
+maker-attributed.
+
+All payment triggers converge on `CompleteVoucherCollection`. The execution
+driver selects an accounting posting implementation:
+
+- reviewed Account Funding releases system Pay Code Reserve and credits the
+  requester's Client Funds;
+- provider-confirmed collection uses the provider collection posting;
+- a replay returns the one existing `VoucherCollection`.
+
+The successful first posting writes one sanitized x-journal collection entry
+and publishes one owner-scoped `FundingProjectionChanged` event after commit.
+No event or accounting entry is duplicated on replay.
 
 ## Trust and Money Flow
 
