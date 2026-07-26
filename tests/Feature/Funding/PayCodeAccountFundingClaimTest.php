@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Facades\Event;
+use Illuminate\Broadcasting\Broadcasters\NullBroadcaster;
+use Illuminate\Broadcasting\BroadcastException;
+use Illuminate\Support\Facades\Broadcast;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
@@ -12,7 +14,6 @@ use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
-use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingEligibility;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingInspectionStore;
@@ -145,7 +146,27 @@ it('moves a reserved Pay Code into claimant Client Funds exactly once without pr
         $voucher,
         $claimant,
     );
-    Event::fake([FundingProjectionChanged::class]);
+    config()->set('broadcasting.default', 'unavailable');
+    config()->set('broadcasting.connections.unavailable', [
+        'driver' => 'unavailable',
+    ]);
+    Broadcast::extend(
+        'unavailable',
+        static fn (): NullBroadcaster => new class extends NullBroadcaster
+        {
+            public function broadcast(
+                array $channels,
+                $event,
+                array $payload = [],
+            ): void {
+                if ($event === 'FundingProjectionChanged') {
+                    throw new BroadcastException(
+                        'The real-time funding broadcaster is unavailable.',
+                    );
+                }
+            }
+        },
+    );
 
     $response = $this->actingAs($claimant)
         ->post(route('x-change.cockpit.funding.pay-code-claims.store'), [
