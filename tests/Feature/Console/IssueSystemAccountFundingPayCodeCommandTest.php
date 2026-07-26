@@ -141,6 +141,14 @@ it('previews and idempotently pays an approved requester-owned PAYABLE by positi
         'email' => 'reviewed-funding-checker-command@example.test',
         'password' => 'password',
     ]);
+    config()->set('auth.providers.users.model', User::class);
+    config()->set('x-change.onboarding.issuer_model', User::class);
+    config()->set('x-change.funding.requests.maker_ids', [
+        (string) $maker->getKey(),
+    ]);
+    config()->set('x-change.funding.requests.checker_ids', [
+        (string) $checker->getKey(),
+    ]);
     config()->set(
         'x-change.funding.system_pay_codes.enabled',
         true,

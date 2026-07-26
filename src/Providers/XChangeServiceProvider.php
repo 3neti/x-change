@@ -53,6 +53,7 @@ use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityComm
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ApproveFundingRequestCommand;
 use LBHurtado\XChange\Console\Commands\Funding\AttestAccountFundingPayCodeJournalIntegrityCommand;
 use LBHurtado\XChange\Console\Commands\Funding\BackfillAccountFundingPayCodeJournalCommand;
 use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeCommand;
@@ -985,6 +986,7 @@ class XChangeServiceProvider extends ServiceProvider
                 SubmitPayCodeClaimCommand::class,
                 CheckDisbursementStatusCommand::class,
                 AttestAccountFundingPayCodeJournalIntegrityCommand::class,
+                ApproveFundingRequestCommand::class,
                 BackfillAccountFundingPayCodeJournalCommand::class,
                 IssueSystemAccountFundingPayCodeCommand::class,
                 VerifyFundingRequestBackingCommand::class,

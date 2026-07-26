@@ -13,6 +13,7 @@ use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Data\Funding\ApproveFundingRequestResult;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Services\Funding\FundingRequestAccess;
@@ -36,11 +37,23 @@ final readonly class ApproveFundingRequestAndIssueCode
         string $approverType,
         string $approverId,
     ): Voucher {
-        $voucher = DB::transaction(function () use (
+        return $this->approve(
             $fundingRequest,
             $approverType,
             $approverId,
-        ): Voucher {
+        )->voucher;
+    }
+
+    public function approve(
+        FundingRequest $fundingRequest,
+        string $approverType,
+        string $approverId,
+    ): ApproveFundingRequestResult {
+        $result = DB::transaction(function () use (
+            $fundingRequest,
+            $approverType,
+            $approverId,
+        ): ApproveFundingRequestResult {
             $locked = FundingRequest::query()
                 ->with('voucher.envelope')
                 ->lockForUpdate()
@@ -81,7 +94,10 @@ final readonly class ApproveFundingRequestAndIssueCode
                 ], true)
                 && $locked->voucher instanceof Voucher
             ) {
-                return $locked->voucher;
+                return new ApproveFundingRequestResult(
+                    voucher: $locked->voucher,
+                    newlyApproved: false,
+                );
             }
 
             if ($locked->status !== FundingRequestStatus::AwaitingApproval) {
@@ -200,12 +216,15 @@ final readonly class ApproveFundingRequestAndIssueCode
                 ],
             ]);
 
-            return $locked->voucher->refresh();
+            return new ApproveFundingRequestResult(
+                voucher: $locked->voucher->refresh(),
+                newlyApproved: true,
+            );
         }, 5);
 
         $this->workflows->publish($fundingRequest->refresh());
 
-        return $voucher;
+        return $result;
     }
 
     private function actor(string $type, string $id): Model

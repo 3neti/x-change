@@ -19,13 +19,16 @@ class CockpitFundingRequestApprovalController extends Controller
         ApproveFundingRequestAndIssueCode $approve,
     ): RedirectResponse {
         $actor = $request->user();
-        $approve->handle(
+        $result = $approve->approve(
             $fundingRequest,
             $actor::class,
             (string) $actor->getAuthIdentifier(),
         );
-        PayApprovedFundingRequestJob::dispatch($fundingRequest->reference)
-            ->afterCommit();
+
+        if ($result->newlyApproved) {
+            PayApprovedFundingRequestJob::dispatch($fundingRequest->reference)
+                ->afterCommit();
+        }
 
         return redirect()
             ->route('x-change.cockpit.funding.index', ['mode' => 'pay_code'])
