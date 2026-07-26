@@ -25,6 +25,7 @@ use LBHurtado\XChange\Data\Funding\SystemAccountFundingPayCodeAuthorizationData;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
 use Throwable;
 
@@ -34,6 +35,7 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
 
     protected $signature = 'x-change:funding:issue-pay-code
         {--amount= : Exact amount in the provider currency, such as 1000.00}
+        {--recipient-mobile= : Verified Account owner mobile; preferred for recipient-bound issuance}
         {--recipient-id= : Account owner allowed to claim the Pay Code}
         {--bearer : Explicitly issue an unbound Pay Code when enabled}
         {--connection= : Treasury connection reference}
@@ -57,7 +59,9 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         IssueSystemAccountFundingPayCode $issue,
     ): int {
         try {
-            $this->prepareInteractiveInput($connections);
+            $this->prepareInteractiveDestination($connections);
+            $recipient = $this->resolveRecipient();
+            $this->prepareInteractiveIssuanceInput($recipient);
 
             $connection = $this->resolveConnection($connections);
             $reference = $this->requiredOption('reference');
@@ -65,7 +69,6 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
                 $this->requiredOption('amount'),
                 $connection->decimalPlaces,
             );
-            $recipient = $this->resolveRecipient();
             $bearer = (bool) $this->option('bearer');
             $commit = (bool) $this->option('commit');
             $evidenceReference = $this->optionalOption(
@@ -193,7 +196,7 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         }
     }
 
-    private function prepareInteractiveInput(
+    private function prepareInteractiveDestination(
         TreasuryProviderConnectionCatalog $connections,
     ): void {
         if (
@@ -231,6 +234,7 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
 
         if (
             ! (bool) $this->option('bearer')
+            && $this->optionalOption('recipient-mobile') === null
             && $this->optionalOption('recipient-id') === null
         ) {
             $recipientMode = $this->choice(
@@ -243,10 +247,21 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
                 $this->input->setOption('bearer', true);
             } else {
                 $this->promptRequiredOption(
-                    'recipient-id',
-                    'Recipient user ID',
+                    'recipient-mobile',
+                    'Recipient verified mobile',
                 );
             }
+        }
+    }
+
+    private function prepareInteractiveIssuanceInput(
+        ?Model $recipient,
+    ): void {
+        if (
+            ! $this->input->isInteractive()
+            || $this->shouldOutputJson()
+        ) {
+            return;
         }
 
         $this->promptRequiredOption(
@@ -260,7 +275,7 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         $this->promptRequiredOption(
             'reference',
             'Idempotency reference',
-            $this->generatedReference(),
+            $this->generatedReference($recipient),
         );
         $this->promptRequiredOption(
             'expires-at',
@@ -329,11 +344,21 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
     private function resolveRecipient(): ?Model
     {
         $bearer = (bool) $this->option('bearer');
+        $recipientMobile = $this->optionalOption('recipient-mobile');
         $recipientId = $this->optionalOption('recipient-id');
 
-        if ($bearer && $recipientId !== null) {
+        if (
+            $bearer
+            && ($recipientMobile !== null || $recipientId !== null)
+        ) {
             throw new RuntimeException(
-                'Use either --recipient-id or --bearer, not both.',
+                'Use either one recipient selector or --bearer, not both.',
+            );
+        }
+
+        if ($recipientMobile !== null && $recipientId !== null) {
+            throw new RuntimeException(
+                'Use either --recipient-mobile or --recipient-id, not both.',
             );
         }
 
@@ -341,24 +366,65 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
             return null;
         }
 
-        if ($recipientId === null) {
+        if ($recipientMobile === null && $recipientId === null) {
             throw new RuntimeException(
-                'Recipient-bound issuance requires --recipient-id.',
+                'Recipient-bound issuance requires --recipient-mobile or --recipient-id.',
             );
         }
 
-        $modelClass = (string) config(
-            'auth.providers.users.model',
-            '',
-        );
+        $modelClass = config('x-change.onboarding.issuer_model')
+            ?: config('auth.providers.users.model');
 
         if (
-            $modelClass === ''
+            ! is_string($modelClass)
+            || $modelClass === ''
             || ! is_subclass_of($modelClass, Model::class)
         ) {
             throw new RuntimeException(
                 'The configured Account owner model is invalid.',
             );
+        }
+
+        if ($recipientMobile !== null) {
+            $mobile = MobileNumber::normalize($recipientMobile);
+
+            if (
+                ! is_string($mobile)
+                || preg_match('/\A639\d{9}\z/', $mobile) !== 1
+            ) {
+                throw new RuntimeException(
+                    'The Account Funding recipient mobile is invalid.',
+                );
+            }
+
+            $candidates = array_values(array_unique([
+                ...MobileNumber::candidates($mobile),
+                '+'.$mobile,
+            ]));
+            $matches = $modelClass::query()
+                ->whereIn('mobile', $candidates)
+                ->limit(2)
+                ->get();
+
+            if ($matches->count() !== 1) {
+                throw new RuntimeException(
+                    'The verified Account Funding recipient could not be resolved uniquely.',
+                );
+            }
+
+            $recipient = $matches->sole();
+
+            if (
+                ! $recipient instanceof Model
+                || ! $recipient instanceof Authenticatable
+                || $recipient->getAttribute('mobile_verified_at') === null
+            ) {
+                throw new RuntimeException(
+                    'The Account Funding recipient mobile must be verified before issuance.',
+                );
+            }
+
+            return $recipient;
         }
 
         $recipient = $modelClass::query()->find($recipientId);
@@ -627,11 +693,11 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         }
     }
 
-    private function generatedReference(): string
+    private function generatedReference(?Model $recipient): string
     {
         $recipient = (bool) $this->option('bearer')
             ? 'bearer'
-            : 'user-'.$this->requiredOption('recipient-id');
+            : 'user-'.$recipient?->getKey();
 
         return sprintf(
             'account-funding-%s-%s-%s',

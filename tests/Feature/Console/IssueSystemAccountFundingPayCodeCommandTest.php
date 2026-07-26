@@ -8,7 +8,9 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Date;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\SystemAccountFundingPayCodeAuthorizationData;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthorization;
@@ -24,6 +26,10 @@ it('previews without mutation then issues and replays one recipient-bound code',
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);
     $recipient = actingAsTestUser(0);
+    $recipient->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => now(),
+    ])->save();
     config()->set('auth.providers.users.model', User::class);
     config()->set(
         'x-change.funding.system_pay_codes.enabled',
@@ -38,7 +44,7 @@ it('previews without mutation then issues and replays one recipient-bound code',
 
     $arguments = [
         '--amount' => '1250.00',
-        '--recipient-id' => (string) $recipient->getKey(),
+        '--recipient-mobile' => '0917 301 1987',
         '--connection' => 'netbank-primary',
         '--reference' => 'system-command-account-funding-1001',
         '--evidence-reference' => 'evidence:system-command:1001',
@@ -79,6 +85,8 @@ it('previews without mutation then issues and replays one recipient-bound code',
             'mode' => 'bound',
             'id' => $recipient->getKey(),
         ])
+        ->and($firstOutput)->not->toContain('0917 301 1987')
+        ->and($firstOutput)->not->toContain('639173011987')
         ->and($first['pay_code']['code'])->not->toBeEmpty()
         ->and($first['positions']['after']['account_funding_reserve_minor'])
         ->toBe(375_000)
@@ -98,11 +106,11 @@ it('previews without mutation then issues and replays one recipient-bound code',
         ->toBe($first['pay_code']['code'])
         ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(1)
         ->and(Voucher::query()->count())->toBe(1)
-        ->and(systemFundingPositionBalance(
+        ->and(commandSystemFundingPositionBalance(
             $system,
             TreasuryPositionPurpose::AccountFundingReserve,
         ))->toBe(375_000)
-        ->and(systemFundingPositionBalance(
+        ->and(commandSystemFundingPositionBalance(
             $system,
             TreasuryPositionPurpose::PayCodeReserve,
         ))->toBe(125_000);
@@ -142,12 +150,117 @@ it('reports insufficient system funds without issuing a code', function (): void
         ->and(Voucher::query()->count())->toBe(0);
 });
 
+it('fails closed for an unverified or ambiguous mobile recipient', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    $unverified = actingAsTestUser(0);
+    $unverified->forceFill([
+        'mobile' => '639171111111',
+        'mobile_verified_at' => null,
+    ])->save();
+    config()->set('auth.providers.users.model', User::class);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        50_000,
+        'system-command-mobile-guards',
+    );
+    $base = [
+        '--amount' => '100.00',
+        '--connection' => 'netbank-primary',
+        '--reference' => 'system-command-mobile-guards',
+        '--json' => true,
+    ];
+
+    $unverifiedExit = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            ...$base,
+            '--recipient-mobile' => '0917 111 1111',
+        ],
+    );
+    $unverifiedOutput = Artisan::output();
+    $unverifiedPayload = json_decode($unverifiedOutput, true);
+
+    expect($unverifiedExit)->toBe(Command::FAILURE, $unverifiedOutput)
+        ->and($unverifiedPayload['status'])->toBe('rejected')
+        ->and($unverifiedPayload['message'])
+        ->toBe(
+            'The Account Funding recipient mobile must be verified before issuance.',
+        )
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(0);
+
+    foreach (['639172222222', '09172222222'] as $index => $mobile) {
+        $recipient = User::query()->create([
+            'name' => 'Ambiguous Mobile Recipient '.$index,
+            'email' => 'ambiguous-mobile-'.$index.'@example.test',
+            'password' => 'password',
+        ]);
+        $recipient->forceFill([
+            'mobile' => $mobile,
+            'mobile_verified_at' => now(),
+        ])->save();
+    }
+
+    $ambiguousExit = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            ...$base,
+            '--recipient-mobile' => '+63 917 222 2222',
+        ],
+    );
+    $ambiguousOutput = Artisan::output();
+    $ambiguousPayload = json_decode($ambiguousOutput, true);
+
+    expect($ambiguousExit)->toBe(Command::FAILURE, $ambiguousOutput)
+        ->and($ambiguousPayload['status'])->toBe('rejected')
+        ->and($ambiguousPayload['message'])
+        ->toBe(
+            'The verified Account Funding recipient could not be resolved uniquely.',
+        )
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(0);
+});
+
+it('rejects conflicting recipient selectors without exposing the mobile', function (): void {
+    $recipient = actingAsTestUser(0);
+    $recipient->forceFill([
+        'mobile' => '639173333333',
+        'mobile_verified_at' => now(),
+    ])->save();
+    config()->set('auth.providers.users.model', User::class);
+
+    $exitCode = Artisan::call(
+        'x-change:funding:issue-pay-code',
+        [
+            '--amount' => '100.00',
+            '--recipient-mobile' => '0917 333 3333',
+            '--recipient-id' => (string) $recipient->getKey(),
+            '--connection' => 'netbank-primary',
+            '--reference' => 'system-command-selector-conflict',
+            '--json' => true,
+        ],
+    );
+    $output = Artisan::output();
+    $payload = json_decode($output, true);
+
+    expect($exitCode)->toBe(Command::FAILURE, $output)
+        ->and($payload['status'])->toBe('rejected')
+        ->and($payload['message'])
+        ->toBe('Use either --recipient-mobile or --recipient-id, not both.')
+        ->and($output)->not->toContain('0917 333 3333')
+        ->and($output)->not->toContain('639173333333')
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(0);
+});
+
 it('guides an interactive issuance with safe defaults and a generated reference', function (): void {
     Date::useClass(CarbonImmutable::class);
     Date::setTestNow('2026-07-26 10:15:30');
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);
     $recipient = actingAsTestUser(0);
+    $recipient->forceFill([
+        'mobile' => '639174444444',
+        'mobile_verified_at' => now(),
+    ])->save();
     config()->set('auth.providers.users.model', User::class);
     config()->set(
         'x-change.funding.system_pay_codes.enabled',
@@ -167,8 +280,8 @@ it('guides an interactive issuance with safe defaults and a generated reference'
         )
         ->expectsQuestion('Recipient mode', 'Recipient-bound')
         ->expectsQuestion(
-            'Recipient user ID',
-            (string) $recipient->getKey(),
+            'Recipient verified mobile',
+            '+63 917 444 4444',
         )
         ->expectsQuestion('Exact amount', null)
         ->expectsQuestion('Idempotency reference', null)
@@ -276,3 +389,18 @@ it('requires every production control before authorizing a commit', function ():
 
     expect(true)->toBeTrue();
 });
+
+function commandSystemFundingPositionBalance(
+    object $owner,
+    TreasuryPositionPurpose $purpose,
+): int {
+    $principal = app(
+        TreasuryPrincipalReferenceResolverContract::class,
+    )->resolve($owner);
+
+    return collect(
+        app(TreasuryPositionReadModelContract::class)->forPrincipal($principal),
+    )->first(
+        static fn ($position): bool => $position->purpose === $purpose,
+    )?->balanceMinor ?? 0;
+}
