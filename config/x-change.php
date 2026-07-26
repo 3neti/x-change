@@ -588,6 +588,10 @@ return [
                 'XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_TTL_SECONDS',
                 604800,
             ),
+            'interactive_default_amount' => env(
+                'XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_INTERACTIVE_DEFAULT_AMOUNT',
+                '100.00',
+            ),
             'allowed_connections' => array_values(array_filter(array_map(
                 static fn (string $reference): string => trim($reference),
                 explode(',', (string) env(

@@ -15,6 +15,7 @@ use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthoriz
 use LBHurtado\XChange\Tests\Fakes\User;
 
 afterEach(function (): void {
+    Date::setTestNow();
     Date::useDefault();
 });
 
@@ -139,6 +140,68 @@ it('reports insufficient system funds without issuing a code', function (): void
         ->and($payload['success'])->toBeFalse()
         ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(0)
         ->and(Voucher::query()->count())->toBe(0);
+});
+
+it('guides an interactive issuance with safe defaults and a generated reference', function (): void {
+    Date::useClass(CarbonImmutable::class);
+    Date::setTestNow('2026-07-26 10:15:30');
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    $recipient = actingAsTestUser(0);
+    config()->set('auth.providers.users.model', User::class);
+    config()->set(
+        'x-change.funding.system_pay_codes.enabled',
+        true,
+    );
+
+    fundTestSystemAccountFundingReserve(
+        $system,
+        50_000,
+        'system-command-interactive-1001',
+    );
+
+    $this->artisan('x-change:funding:issue-pay-code')
+        ->expectsQuestion(
+            'Treasury connection',
+            'netbank-primary',
+        )
+        ->expectsQuestion('Recipient mode', 'Recipient-bound')
+        ->expectsQuestion(
+            'Recipient user ID',
+            (string) $recipient->getKey(),
+        )
+        ->expectsQuestion('Exact amount', null)
+        ->expectsQuestion('Idempotency reference', null)
+        ->expectsQuestion('Expiry (ISO-8601)', null)
+        ->expectsConfirmation(
+            'Reserve system funds and issue now?',
+            'yes',
+        )
+        ->expectsQuestion(
+            'Backing evidence reference (optional)',
+            'evidence:interactive:1001',
+        )
+        ->expectsQuestion(
+            'Authorization reference (optional)',
+            null,
+        )
+        ->expectsOutputToContain(
+            'reference: account-funding-user-'
+            .$recipient->getKey()
+            .'-20260726-101530-',
+        )
+        ->assertSuccessful();
+
+    $issuance = SystemAccountFundingPayCodeIssuance::query()->sole();
+
+    expect($issuance->amount_minor)->toBe(10_000)
+        ->and($issuance->recipient_id)->toBe(
+            (string) $recipient->getKey(),
+        )
+        ->and($issuance->evidence_reference)
+        ->toBe('evidence:interactive:1001')
+        ->and($issuance->status)->toBe('issued')
+        ->and($issuance->voucher)->toBeInstanceOf(Voucher::class);
 });
 
 it('requires every production control before authorizing a commit', function (): void {

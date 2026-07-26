@@ -166,6 +166,24 @@ issuing the same recipient-bound Account Funding Pay Code from recognized
 system Account Funding Reserve. It is preview-only unless `--commit` is
 present.
 
+For a guided local flow, run the command without options:
+
+```bash
+php artisan x-change:funding:issue-pay-code
+```
+
+The command prompts for the Treasury connection, recipient mode, recipient,
+exact amount, expiry, and issuance confirmation. It generates a unique
+idempotency reference and presents it as the default. Accepting the default
+issuance confirmation produces a preview only; explicitly answer yes to reserve
+system funds and issue the Pay Code. Evidence and authorization references are
+requested only for a committed issuance. Production still requires all
+production controls described below.
+
+Interactive prompting is disabled for `--json` and `--no-interaction`. Those
+automation paths retain the explicit option contract and never invent missing
+economic inputs.
+
 Preview an issuance:
 
 ```bash
@@ -203,6 +221,13 @@ The command:
 7. makes no provider call and does not change Provider Inventory; and
 8. returns the same Voucher when the same reference and inputs are replayed.
 
+The default interactive amount can be adjusted without changing the explicit
+`--amount` option:
+
+```dotenv
+XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_INTERACTIVE_DEFAULT_AMOUNT=100.00
+```
+
 It does not mint funds, recognize a deposit, or bypass Treasury. Insufficient
 system Account Funding Reserve fails closed. The reserve can only be created
 from authoritatively reconciled opening value through the guarded Treasury
@@ -237,6 +262,23 @@ XCHANGE_SYSTEM_ACCOUNT_FUNDING_PAY_CODES_ALLOWED_CONNECTIONS=netbank-primary
 For PHP, the default `5000000` is ₱50,000. The command reference is an
 idempotency key: keep it stable for retries and use a new reference only for a
 genuinely new issuance.
+
+## Account Funding Pay Code audit trail
+
+The Account Funding Pay Code lifecycle records sanitized, append-only x-journal
+entries after the corresponding database transaction commits:
+
+- `account_funding.pay_code.issued`
+- `account_funding.pay_code.inspected`
+- `account_funding.pay_code.outcome_selected`
+- `account_funding.pay_code.applied`
+
+These entries reference the canonical Voucher, claim, issuance, and Treasury
+operation identifiers. They do not duplicate Treasury balances and never store
+the raw Pay Code or inspection token. Fixed idempotency keys ensure an issuance
+or claim replay resolves to the existing journal entry instead of creating
+duplicate audit evidence. The Treasury Position operations and their underlying
+ledger transfers remain the accounting authority.
 
 ## Cockpit
 

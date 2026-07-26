@@ -10,6 +10,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
@@ -56,6 +57,8 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         IssueSystemAccountFundingPayCode $issue,
     ): int {
         try {
+            $this->prepareInteractiveInput($connections);
+
             $connection = $this->resolveConnection($connections);
             $reference = $this->requiredOption('reference');
             $amountMinor = $this->parseAmount(
@@ -187,6 +190,119 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
             ]);
 
             return self::FAILURE;
+        }
+    }
+
+    private function prepareInteractiveInput(
+        TreasuryProviderConnectionCatalog $connections,
+    ): void {
+        if (
+            ! $this->input->isInteractive()
+            || $this->shouldOutputJson()
+        ) {
+            return;
+        }
+
+        if ($this->optionalOption('connection') === null) {
+            $activeConnections = $connections->active();
+
+            if ($activeConnections === []) {
+                throw new RuntimeException(
+                    'No active Treasury connection is available.',
+                );
+            }
+
+            $references = array_map(
+                static fn (
+                    TreasuryProviderConnectionData $connection,
+                ): string => $connection->reference,
+                $activeConnections,
+            );
+            $selectedConnection = $this->choice(
+                'Treasury connection',
+                $references,
+                0,
+            );
+            $this->input->setOption(
+                'connection',
+                (string) $selectedConnection,
+            );
+        }
+
+        if (
+            ! (bool) $this->option('bearer')
+            && $this->optionalOption('recipient-id') === null
+        ) {
+            $recipientMode = $this->choice(
+                'Recipient mode',
+                ['Recipient-bound', 'Bearer'],
+                0,
+            );
+
+            if ($recipientMode === 'Bearer') {
+                $this->input->setOption('bearer', true);
+            } else {
+                $this->promptRequiredOption(
+                    'recipient-id',
+                    'Recipient user ID',
+                );
+            }
+        }
+
+        $this->promptRequiredOption(
+            'amount',
+            'Exact amount',
+            (string) config(
+                'x-change.funding.system_pay_codes.interactive_default_amount',
+                '100.00',
+            ),
+        );
+        $this->promptRequiredOption(
+            'reference',
+            'Idempotency reference',
+            $this->generatedReference(),
+        );
+        $this->promptRequiredOption(
+            'expires-at',
+            'Expiry (ISO-8601)',
+            $this->resolveExpiry(
+                $this->requiredOption('reference'),
+            )->toIso8601String(),
+        );
+
+        if (! (bool) $this->option('commit')) {
+            $this->input->setOption(
+                'commit',
+                $this->confirm(
+                    'Reserve system funds and issue now?',
+                    false,
+                ),
+            );
+        }
+
+        if ((bool) $this->option('commit')) {
+            $this->promptOptionalOption(
+                'evidence-reference',
+                'Backing evidence reference (optional)',
+            );
+            $this->promptOptionalOption(
+                'authorization-reference',
+                'Authorization reference (optional)',
+            );
+        }
+
+        if (
+            $this->laravel->environment('production')
+            && (bool) $this->option('commit')
+            && ! (bool) $this->option('confirm-production')
+        ) {
+            $this->input->setOption(
+                'confirm-production',
+                $this->confirm(
+                    'This is a production issuance. Continue?',
+                    false,
+                ),
+            );
         }
     }
 
@@ -477,5 +593,51 @@ final class IssueSystemAccountFundingPayCodeCommand extends Command
         $value = trim((string) $this->option($name));
 
         return $value === '' ? null : $value;
+    }
+
+    private function promptRequiredOption(
+        string $name,
+        string $question,
+        ?string $default = null,
+    ): void {
+        if ($this->optionalOption($name) !== null) {
+            return;
+        }
+
+        $answer = trim((string) $this->ask($question, $default));
+        $value = $answer !== '' ? $answer : trim((string) $default);
+
+        if ($value !== '') {
+            $this->input->setOption($name, $value);
+        }
+    }
+
+    private function promptOptionalOption(
+        string $name,
+        string $question,
+    ): void {
+        if ($this->optionalOption($name) !== null) {
+            return;
+        }
+
+        $answer = trim((string) $this->ask($question));
+
+        if ($answer !== '') {
+            $this->input->setOption($name, $answer);
+        }
+    }
+
+    private function generatedReference(): string
+    {
+        $recipient = (bool) $this->option('bearer')
+            ? 'bearer'
+            : 'user-'.$this->requiredOption('recipient-id');
+
+        return sprintf(
+            'account-funding-%s-%s-%s',
+            $recipient,
+            now()->format('Ymd-His'),
+            Str::lower((string) Str::ulid()),
+        );
     }
 }
