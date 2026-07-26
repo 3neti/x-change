@@ -14,6 +14,7 @@ use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use RuntimeException;
 
@@ -24,6 +25,7 @@ final readonly class ApproveFundingRequestAndIssueCode
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryPayCodeAccountingService $accounting,
         private EnvelopeService $envelopes,
+        private FundingRequestWorkflowPublisher $workflows,
     ) {}
 
     public function handle(
@@ -31,7 +33,7 @@ final readonly class ApproveFundingRequestAndIssueCode
         string $approverType,
         string $approverId,
     ): Voucher {
-        return DB::transaction(function () use (
+        $voucher = DB::transaction(function () use (
             $fundingRequest,
             $approverType,
             $approverId,
@@ -42,7 +44,10 @@ final readonly class ApproveFundingRequestAndIssueCode
                 ->findOrFail($fundingRequest->getKey());
 
             if (
-                $locked->status === FundingRequestStatus::PayCodeIssued
+                in_array($locked->status, [
+                    FundingRequestStatus::PayCodeIssued,
+                    FundingRequestStatus::Completed,
+                ], true)
                 && $locked->voucher instanceof Voucher
             ) {
                 return $locked->voucher;
@@ -176,6 +181,10 @@ final readonly class ApproveFundingRequestAndIssueCode
 
             return $locked->voucher->refresh();
         }, 5);
+
+        $this->workflows->publish($fundingRequest->refresh());
+
+        return $voucher;
     }
 
     private function actor(string $type, string $id): Model

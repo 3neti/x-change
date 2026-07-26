@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\SettlementEnvelope\Enums\EnvelopeStatus;
 use LBHurtado\Voucher\Enums\VoucherState;
@@ -22,6 +23,8 @@ use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
+use LBHurtado\XChange\Events\FundingRequestChanged;
+use LBHurtado\XChange\Jobs\Funding\PayApprovedFundingRequestJob;
 use LBHurtado\XChange\Models\FundingRequestNotice;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
@@ -29,7 +32,10 @@ use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('requires independent approval then pays the requester-owned PAYABLE once from system Treasury', function () {
-    Event::fake([FundingProjectionChanged::class]);
+    Event::fake([
+        FundingProjectionChanged::class,
+        FundingRequestChanged::class,
+    ]);
     Storage::fake('local');
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);
@@ -101,11 +107,29 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         (string) $maker->getKey(),
     ))->toThrow(RuntimeException::class, 'backing reviewer cannot approve');
 
-    $voucher = app(ApproveFundingRequestAndIssueCode::class)->handle(
-        $prepared,
-        $checker::class,
+    config()->set('x-change.funding.requests.reviewer_ids', [
+        (string) $maker->getKey(),
         (string) $checker->getKey(),
+    ]);
+    Queue::fake();
+    $approvalResponse = $this->actingAs($checker)->post(route(
+        'x-change.cockpit.funding.requests.approvals.store',
+        ['fundingRequest' => $prepared->reference],
+    ));
+
+    $approvalResponse
+        ->assertRedirect(route('x-change.cockpit.funding.index'))
+        ->assertSessionHas(
+            'funding_notice',
+            'Account Funding accepted. System Treasury payment was queued.',
+        );
+    Queue::assertPushed(
+        PayApprovedFundingRequestJob::class,
+        fn (PayApprovedFundingRequestJob $job): bool => $job->fundingRequestReference
+            === $prepared->reference,
     );
+
+    $voucher = $request->voucher->refresh();
     $approvalReplay = app(ApproveFundingRequestAndIssueCode::class)->handle(
         $prepared,
         $checker::class,
@@ -143,11 +167,34 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         ->and(data_get($cockpitReadModel, 'requests.0.pay_code.can_claim'))
         ->toBeFalse();
 
-    $collection = app(PayApprovedFundingRequest::class)->handle($voucher);
+    $job = new PayApprovedFundingRequestJob($prepared->reference);
+    $job->failed(new RuntimeException(
+        'provider account 123456 and credential must remain private',
+    ));
+    $failureEvent = $request->events()
+        ->where('event_type', 'reviewed_funding_payment_failed')
+        ->sole();
+
+    expect($request->refresh()->status)->toBe(FundingRequestStatus::PayCodeIssued)
+        ->and($failureEvent->metadata)->toMatchArray([
+            'retryable' => true,
+            'failure_class' => RuntimeException::class,
+        ])
+        ->and(json_encode($failureEvent->metadata))->not->toContain('123456')
+        ->and(FundingRequestNotice::query()
+            ->where('notice_type', 'reviewed_funding_payment_retry_required')
+            ->count())->toBe(1);
+
+    $job->handle(app(PayApprovedFundingRequest::class));
+    $job->handle(app(PayApprovedFundingRequest::class));
+    $collection = VoucherCollection::query()->sole();
     $paymentReplay = app(PayApprovedFundingRequest::class)->handle($voucher);
 
     expect($collection)->toBeInstanceOf(VoucherCollection::class)
         ->and($paymentReplay->is($collection))->toBeTrue()
+        ->and($job->uniqueId())->toBe(
+            'reviewed-funding-payment:'.$prepared->reference,
+        )
         ->and($collection->execution_driver)->toBe('x_change_account_funding')
         ->and($collection->treasury_operation_reference)->not->toBeNull()
         ->and(VoucherCollection::query()->count())->toBe(1)

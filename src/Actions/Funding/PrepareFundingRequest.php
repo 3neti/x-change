@@ -11,12 +11,14 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
 
 final readonly class PrepareFundingRequest
 {
     public function __construct(
         private EnvelopeService $envelopes,
+        private FundingRequestWorkflowPublisher $workflows,
     ) {}
 
     public function handle(
@@ -31,7 +33,7 @@ final readonly class PrepareFundingRequest
             throw new RuntimeException('Independent backing evidence is required.');
         }
 
-        return DB::transaction(function () use ($fundingRequest, $data): FundingRequest {
+        $prepared = DB::transaction(function () use ($fundingRequest, $data): FundingRequest {
             $locked = FundingRequest::query()
                 ->with('voucher.envelope')
                 ->lockForUpdate()
@@ -109,6 +111,10 @@ final readonly class PrepareFundingRequest
 
             return $locked->refresh()->load('events');
         }, 3);
+
+        $this->workflows->publish($prepared);
+
+        return $prepared;
     }
 
     private function actor(string $type, string $id): Model

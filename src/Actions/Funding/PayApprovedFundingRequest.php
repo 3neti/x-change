@@ -16,6 +16,7 @@ use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
 
 final readonly class PayApprovedFundingRequest
@@ -25,14 +26,17 @@ final readonly class PayApprovedFundingRequest
         private CompleteVoucherCollection $collections,
         private EnvelopeService $envelopes,
         private FundingProjectionPublisherContract $projections,
+        private FundingRequestWorkflowPublisher $workflows,
     ) {}
 
     public function handle(Voucher $voucher): VoucherCollection
     {
         $projection = null;
+        $workflowRequest = null;
         $collection = DB::transaction(function () use (
             $voucher,
             &$projection,
+            &$workflowRequest,
         ): VoucherCollection {
             $request = FundingRequest::query()
                 ->with('voucher.envelope')
@@ -125,6 +129,7 @@ final readonly class PayApprovedFundingRequest
                 'reference' => 'voucher-collection:'.$collection->getKey(),
                 'occurred_at' => (string) $collection->completed_at?->toIso8601String(),
             ];
+            $workflowRequest = $request->refresh();
 
             return $collection;
         }, 5);
@@ -136,6 +141,9 @@ final readonly class PayApprovedFundingRequest
                 reference: $projection['reference'],
                 occurredAt: $projection['occurred_at'],
             );
+        }
+        if ($workflowRequest instanceof FundingRequest) {
+            $this->workflows->publish($workflowRequest);
         }
 
         return $collection;
