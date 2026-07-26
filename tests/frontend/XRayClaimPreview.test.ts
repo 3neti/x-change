@@ -63,4 +63,27 @@ describe('XRayClaimPreview', () => {
 
         expect(wrapper.text()).toContain('Unable to inspect this Pay Code.');
     });
+
+    it('summarizes html preview stages as readable text', () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    stages: [
+                        {
+                            type: 'splash',
+                            payload: {
+                                content_type: 'html',
+                                content: '<h1>Claim walkthrough</h1><p>This splash confirms the Pay Code.</p>',
+                            },
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Claim walkthrough This splash confirms the Pay Code.');
+        expect(wrapper.text()).not.toContain('<h1>');
+    });
 });

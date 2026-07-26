@@ -45,6 +45,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
+use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
@@ -950,6 +951,7 @@ class XChangeServiceProvider extends ServiceProvider
                 GetWalletBalanceCommand::class,
                 EstimatePayCodeCostCommand::class,
                 GeneratePayCodeCommand::class,
+                ClaimWalkthroughCommand::class,
                 PreparePayCodeRedemptionFlowCommand::class,
                 LoadPayCodeRedemptionCompletionContextCommand::class,
                 SubmitPayCodeClaimCommand::class,

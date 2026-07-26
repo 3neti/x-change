@@ -65,7 +65,7 @@ it('compiles a rider-first claim experience when rider splash exists', function 
 
     $formFlow = $phases->firstWhere('key', 'form_flow');
 
-    expect($formFlow['owner'])->toBe('claim-widget')
+    expect($formFlow['owner'])->toBe('form-flow')
         ->and($formFlow['source'])->toBe('voucher-redemption.yaml')
         ->and($formFlow['skip_stages'])->toContain('splash');
 });

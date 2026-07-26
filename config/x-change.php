@@ -123,6 +123,38 @@ use LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver;
 
 // use LBHurtado\XChange\Support\Resolvers\NullUserResolver;
 
+$defaultClaimPreviewRiderSplashHtml = <<<'HTML'
+<div class="text-center mx-auto" style="max-width: 1200px;">
+  <div class="relative rounded-lg shadow-lg overflow-hidden bg-black">
+    <img
+      src="https://github.com/lbhurtado/failure-of-simultaneity/blob/main/planetary-rose.PNG?raw=true"
+      alt="i carry your heart with me"
+      style="display:block; width:100%; height:auto;"
+    />
+    <div
+      class="absolute inset-0 pointer-events-none"
+      style="background: linear-gradient(to right, rgba(0,0,0,.15), rgba(0,0,0,.05), rgba(0,0,0,.25));"
+    ></div>
+    <div class="absolute inset-0 flex items-center justify-end" style="padding-right: 0.5%;">
+      <div class="text-white" style="text-align: right; transform: translateX(2%);">
+        <h2 class="text-2xl sm:text-4xl font-serif font-normal tracking-wide mb-3">
+          i carry your heart with me
+        </h2>
+        <p class="text-lg sm:text-2xl italic font-serif mb-8" style="color: rgba(255,255,255,.85);">
+          (i carry it in my heart)
+        </p>
+        <p class="text-lg sm:text-2xl tracking-widest mb-8" style="color: rgba(255,255,255,.85);">
+          🤝 &nbsp; ❤️ &nbsp; ✌️ &nbsp; 🔫 &nbsp; ✈️ &nbsp; ⭐
+        </p>
+        <p class="text-xs sm:text-sm tracking-widest" style="color: rgba(255,255,255,.65); margin-top: 0.75rem;">
+          — e.e. cummings
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+HTML;
+
 return [
 
     'product' => [
@@ -1580,6 +1612,25 @@ return [
         ],
         'submission_lock_seconds' => 30,
         'submission_lock_wait_seconds' => 3,
+    ],
+
+    'claim_preview' => [
+        'rider' => [
+            'message' => env(
+                'XCHANGE_CLAIM_PREVIEW_RIDER_MESSAGE',
+                'The quick brown fox jumps over the lazy dog.',
+            ),
+            'url' => env(
+                'XCHANGE_CLAIM_PREVIEW_RIDER_URL',
+                'https://open.spotify.com/track/6kyxQuFD38mo4S3urD2Wkw?si=6yq6W4oRQ76HGpbDCG-74w&utm_source=copy-link&rowId=35e1bf6b4faf0da8',
+            ),
+            'redirect_timeout' => (int) env('XCHANGE_CLAIM_PREVIEW_RIDER_REDIRECT_TIMEOUT', 4),
+            'splash_html' => env(
+                'XCHANGE_CLAIM_PREVIEW_RIDER_SPLASH_HTML',
+                $defaultClaimPreviewRiderSplashHtml,
+            ),
+            'splash_timeout' => env('XCHANGE_CLAIM_PREVIEW_RIDER_SPLASH_TIMEOUT'),
+        ],
     ],
 
     'payment_qr' => [

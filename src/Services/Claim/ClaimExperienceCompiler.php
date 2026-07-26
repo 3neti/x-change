@@ -60,11 +60,14 @@ class ClaimExperienceCompiler
             action_url: '/x/claim',
         );
 
+        $formFlowFields = $this->formFlowFields($voucher);
+        $formFlowOwner = $formFlowFields === [] ? 'form-flow' : 'claim-widget';
+
         $phases[] = new ClaimPhaseData(
             key: 'form_flow',
-            owner: 'claim-widget',
+            owner: $formFlowOwner,
             source: 'voucher-redemption.yaml',
-            fields: $this->formFlowFields($voucher),
+            fields: $formFlowFields,
             skip_stages: $hasRiderSplash ? ['splash'] : [],
         );
 
@@ -127,7 +130,7 @@ class ClaimExperienceCompiler
                 consumed: [
                     'splash' => $hasRiderSplash,
                 ],
-                form_flow_owner: 'claim-widget',
+                form_flow_owner: $formFlowOwner,
             ),
         );
     }

@@ -35,6 +35,8 @@ describe('claim widget legacy rider stage resolution', () => {
                     splash_timeout: 3,
                     splash_meta: {
                         source: 'instruction',
+                        sanitized: true,
+                        html_profile: 'rider_splash',
                     },
                 },
             },
@@ -55,10 +57,14 @@ describe('claim widget legacy rider stage resolution', () => {
                 presentation: 'fullscreen',
                 meta: {
                     source: 'instruction',
+                    sanitized: true,
+                    html_profile: 'rider_splash',
                 },
             },
             meta: {
                 source: 'instruction',
+                sanitized: true,
+                html_profile: 'rider_splash',
             },
         });
     });

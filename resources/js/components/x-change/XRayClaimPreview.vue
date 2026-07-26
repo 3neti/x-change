@@ -67,8 +67,7 @@ const badgeVariant = computed(() => {
 
 function stageText(stage: XRayStage): string {
     const payload = stage.payload ?? {};
-
-    return String(
+    const raw = String(
         payload.message ??
             payload.body ??
             payload.content ??
@@ -77,6 +76,17 @@ function stageText(stage: XRayStage): string {
             stage.title ??
             'Issuer-provided preview content is available.',
     );
+
+    if (String(payload.content_type ?? '').toLowerCase() === 'html') {
+        return raw
+            .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    return raw;
 }
 </script>
 

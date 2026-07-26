@@ -30,14 +30,14 @@ function formFlowOwnershipPhase(array $experience): ?array
     return is_array($phase) ? $phase : null;
 }
 
-it('emits form flow phase as claim widget owned', function () {
+it('emits form flow phase as form flow owned when no compiled fields exist', function () {
     $experience = resolveFormFlowOwnershipExperience(
         formFlowOwnershipVoucher(),
     );
 
     expect(formFlowOwnershipPhase($experience))->toMatchArray([
         'key' => 'form_flow',
-        'owner' => 'claim-widget',
+        'owner' => 'form-flow',
         'status' => 'active',
     ]);
 });
@@ -48,7 +48,7 @@ it('emits form flow ownership diagnostics', function () {
     );
 
     expect(data_get($experience, 'diagnostics.form_flow_owner'))
-        ->toBe('claim-widget');
+        ->toBe('form-flow');
 });
 
 it('keeps form flow phase active alongside rider success and redirect phases', function () {
