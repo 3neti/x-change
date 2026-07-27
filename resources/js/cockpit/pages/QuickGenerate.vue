@@ -1150,7 +1150,9 @@ function stringValue(value: unknown): string | null {
                         class="flex items-center gap-1.5 text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400"
                         data-testid="cockpit-quick-generate-header-progress"
                     >
-                        <span class="text-emerald-700 dark:text-emerald-300">Create</span>
+                        <span class="text-emerald-700 dark:text-emerald-300"
+                            >Create</span
+                        >
                         <span aria-hidden="true">→</span>
                         <span>Design</span>
                         <span aria-hidden="true">→</span>
@@ -1190,79 +1192,6 @@ function stringValue(value: unknown): string | null {
                     :feedback-defaults="props.feedback_defaults"
                     :templates="templates"
                 />
-                <CockpitGenerateActionPanel
-                    :enabled="false"
-                    :runtime-enabled="true"
-                />
-                <CockpitDiagnosticsDisclosure
-                    compact
-                    title="Engineering diagnostics"
-                    summary="A compact readiness summary is shown first. Open the full architecture history only when debugging gate provenance or old slice decisions."
-                    eyebrow="Optional diagnostics"
-                    action-label="Show diagnostics"
-                    data-testid="cockpit-quick-generate-engineering-diagnostics"
-                >
-                    <CockpitQuickGenerateDiagnosticsSummary
-                        :mutation-contract="mutationContract"
-                        :pricing-gate="pricingGate"
-                        :funding-gate="fundingGate"
-                        :idempotency-gate="idempotencyGate"
-                        :validation-redaction-gate="validationRedactionGate"
-                        :mutation-handoff-plan="mutationHandoffPlan"
-                        :mutation-preconditions-review="
-                            mutationPreconditionsReview
-                        "
-                        :mutation-authorization-decision="
-                            mutationAuthorizationDecision
-                        "
-                        :authorization="authorization"
-                    />
-
-                    <CockpitDiagnosticsDisclosure
-                        compact
-                        title="Full architecture history"
-                        summary="These older panels are retained as engineering evidence. They should not be used as the primary operator workflow."
-                        eyebrow="Detailed history"
-                        action-label="Show full history"
-                        data-testid="cockpit-quick-generate-full-history"
-                    >
-                        <CockpitPricingFundingSummary
-                            :summaries="pricingSummaries"
-                        />
-                        <CockpitQuickGeneratePricingGatePanel
-                            :pricing-gate="pricingGate"
-                        />
-                        <CockpitQuickGenerateFundingGatePanel
-                            :funding-gate="fundingGate"
-                        />
-                        <CockpitQuickGenerateIdempotencyGatePanel
-                            :idempotency-gate="idempotencyGate"
-                        />
-                        <CockpitQuickGenerateValidationRedactionGatePanel
-                            :validation-redaction-gate="validationRedactionGate"
-                        />
-                        <CockpitQuickGenerateMutationHandoffPlanPanel
-                            :mutation-handoff-plan="mutationHandoffPlan"
-                        />
-                        <CockpitQuickGenerateMutationPreconditionsReviewPanel
-                            :mutation-preconditions-review="
-                                mutationPreconditionsReview
-                            "
-                        />
-                        <CockpitQuickGenerateMutationAuthorizationDecisionPanel
-                            :mutation-authorization-decision="
-                                mutationAuthorizationDecision
-                            "
-                        />
-                        <CockpitQuickGenerateAuthorizationGatePanel
-                            :authorization="authorization"
-                        />
-                        <CockpitQuickGenerateDraftContractPanel
-                            :draft-contract="draftContract"
-                        />
-                        <CockpitIssuanceBoundaryPanel />
-                    </CockpitDiagnosticsDisclosure>
-                </CockpitDiagnosticsDisclosure>
             </div>
         </section>
     </CockpitLayout>

@@ -51,7 +51,7 @@ const quickGenerateReadModel = {
 };
 
 describe('Cockpit Quick Generate hydration', () => {
-    it('hydrates template, runtime, and pricing panels from sanitized read model props', () => {
+    it('hydrates template and runtime references from sanitized read model props', () => {
         const wrapper = mount(QuickGenerate, {
             props: {
                 quick_generate_read_model: quickGenerateReadModel,
@@ -61,7 +61,9 @@ describe('Cockpit Quick Generate hydration', () => {
         expect(wrapper.text()).toContain('Institutional Cash');
         expect(wrapper.text()).toContain('Sanitized operator-facing template.');
         expect(wrapper.text()).toContain('Pending amount');
-        expect(wrapper.text()).toContain('Existing pricing preflight returned.');
+        expect(wrapper.text()).not.toContain(
+            'Existing pricing preflight returned.',
+        );
     });
 
     it('does not render unsafe quick generate payload fields or enable generation from read model props', () => {
@@ -72,11 +74,15 @@ describe('Cockpit Quick Generate hydration', () => {
         });
 
         const text = wrapper.text();
-        const submitButton = wrapper.find('[data-testid="cockpit-quick-generate-submit-button"]');
+        const submitButton = wrapper.find(
+            '[data-testid="cockpit-quick-generate-submit-button"]',
+        );
 
         expect(text).not.toContain('must-not-render');
         expect(text).not.toContain('funding_source');
-        expect(wrapper.find('[data-testid="cockpit-generate-button"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="cockpit-generate-button"]').exists(),
+        ).toBe(false);
         expect(submitButton.attributes('disabled')).toBeUndefined();
     });
 
@@ -99,7 +105,7 @@ describe('Cockpit Quick Generate hydration', () => {
 
         expect(wrapper.text()).toContain('Money Changer');
         expect(wrapper.text()).toContain('Use the Quick Generate form');
-        expect(wrapper.text()).toContain('Shown after submit');
+        expect(wrapper.text()).toContain('Ready to issue');
     });
 
     it('forwards route adapter props into the cockpit quick generate page', () => {

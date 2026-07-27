@@ -10,7 +10,7 @@ import { computed, ref } from 'vue';
 
 const props = withDefaults(
     defineProps<{
-        amount: string;
+        amount: string | number;
         currency: string;
         recipient?: string;
         purpose?: string;

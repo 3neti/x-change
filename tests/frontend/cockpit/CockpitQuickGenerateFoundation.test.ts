@@ -588,7 +588,14 @@ describe('Cockpit Quick Generate foundation', () => {
                     '[data-testid="cockpit-quick-generate-productized-result-card"]',
                 )
                 .text(),
-        ).toContain('Pay Code PC-UI-001');
+        ).toContain('Pay Code issued');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('PC-UI-001');
         expect(
             wrapper
                 .find(
@@ -1094,13 +1101,13 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(errors.exists()).toBe(true);
-        expect(errors.text()).toContain('Fix these fields before generating');
+        expect(errors.text()).toContain('Fix these fields before issuing');
         expect(errors.text()).toContain('Cash Amount');
         expect(errors.text()).toContain('The amount must be at least 1.');
         expect(errors.text()).toContain('Feedback Email');
         expect(errors.text()).toContain('Enter a valid email address.');
         expect(wrapper.text()).toContain(
-            'Quick Generate needs a few fields corrected before issuance.',
+            'Your Pay Code needs a few corrections before it can be issued.',
         );
         expect(wrapper.emitted('submitError')).toHaveLength(1);
         expect(
@@ -2338,67 +2345,17 @@ describe('Cockpit Quick Generate foundation', () => {
         const workflowStack = wrapper.find(
             '[data-testid="cockpit-quick-generate-primary-workflow-stack"]',
         );
-        const engineeringDiagnostics = wrapper.find(
-            '[data-testid="cockpit-quick-generate-engineering-diagnostics"]',
-        );
-        const fullHistory = wrapper.find(
-            '[data-testid="cockpit-quick-generate-full-history"]',
-        );
-
         expect(workflowStack.classes()).toContain('space-y-3');
-        expect(engineeringDiagnostics.classes()).toContain('py-3');
-        expect(engineeringDiagnostics.attributes('open')).toBeUndefined();
-        expect(fullHistory.classes()).toContain('py-3');
-        expect(fullHistory.attributes('open')).toBeUndefined();
         expect(wrapper.text()).toContain('Template Selector');
         expect(wrapper.text()).toContain('Runtime Inputs');
-        expect(wrapper.text()).toContain('Pricing and Funding');
-        expect(wrapper.text()).toContain('Issuance handoff status');
+        expect(wrapper.text()).not.toContain('Engineering diagnostics');
+        expect(wrapper.text()).not.toContain('Full architecture history');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
             'Create Pay Code',
         );
-        expect(wrapper.text()).toContain('GeneratePayCode action');
-        expect(wrapper.text()).toContain('Issuance Boundary Plan');
-        expect(wrapper.text()).toContain(
-            'current Quick Generate uses the approved handoff route.',
-        );
-        expect(wrapper.text()).toContain('Request Draft Contract');
-        expect(wrapper.text()).toContain(
-            'Drafts are local and read-only in Slice 18.',
-        );
-        expect(wrapper.text()).toContain('Authorization Runtime Diagnostics');
-        expect(wrapper.text()).toContain(
-            'Provider and money movement authority remain separately gated outside the Cockpit shell.',
-        );
-        expect(wrapper.text()).toContain('Pricing Runtime Diagnostics');
-        expect(wrapper.text()).toContain(
-            'Cockpit still does not expose raw pricing payloads.',
-        );
-        expect(wrapper.text()).toContain('Funding Runtime Diagnostics');
-        expect(wrapper.text()).toContain(
-            'Cockpit still does not expose raw wallet or provider funding payloads.',
-        );
-        expect(wrapper.text()).toContain('Idempotency Gate Baseline');
-        expect(wrapper.text()).toContain(
-            'Idempotency gates are read-only facts in Slice 22.',
-        );
-        expect(wrapper.text()).toContain(
-            'Validation and Redaction Diagnostics',
-        );
-        expect(wrapper.text()).toContain(
-            'These diagnostics do not expose request payloads',
-        );
-        expect(wrapper.text()).toContain('Mutation Handoff Diagnostics');
-        expect(wrapper.text()).toContain(
-            'Handoff diagnostics remain operator-safe',
-        );
-        expect(wrapper.text()).toContain('Handoff Preconditions Diagnostics');
-        expect(wrapper.text()).toContain(
-            'Provider, journal, action, feedback, and campaign mutations are not implied',
-        );
-        expect(wrapper.text()).toContain('Mutation Authorization Diagnostics');
-        expect(wrapper.text()).toContain(
-            'Provider, journal, action, feedback, and campaign mutations remain separately gated.',
-        );
+        expect(wrapper.text()).toContain('Review your Pay Code');
+        expect(wrapper.text()).toContain('Issue Pay Code');
+        expect(wrapper.text()).toContain('Instructions and safeguards');
+        expect(wrapper.text()).toContain('Ready to issue');
     });
 });

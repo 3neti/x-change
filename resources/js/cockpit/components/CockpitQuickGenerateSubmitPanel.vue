@@ -690,9 +690,7 @@ const metadataIssuerId = ref('');
 const metadataCollectionWalletId = ref('');
 const processing = ref(false);
 const lastStatus = ref('ready');
-const lastMessage = ref(
-    'Submit will call the existing x-change issuance handoff route.',
-);
+const lastMessage = ref('Ready to issue when the design is complete.');
 const lastResponse = ref<Record<string, unknown> | null>(null);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 
@@ -2305,9 +2303,9 @@ async function submit(): Promise<void> {
             lastStatus.value = 'failed';
             lastMessage.value =
                 normalizedErrors.length > 0
-                    ? 'Quick Generate needs a few fields corrected before issuance.'
+                    ? 'Your Pay Code needs a few corrections before it can be issued.'
                     : (stringValue(body.message) ??
-                      'Quick Generate submission failed.');
+                      'The Pay Code could not be issued.');
             submissionErrors.value =
                 normalizedErrors.length > 0
                     ? normalizedErrors
@@ -2316,7 +2314,7 @@ async function submit(): Promise<void> {
                               field: 'Submission',
                               message:
                                   stringValue(body.message) ??
-                                  'Quick Generate submission failed.',
+                                  'The Pay Code could not be issued.',
                           },
                       ];
             emit('submitError', body);
@@ -2337,7 +2335,7 @@ async function submit(): Promise<void> {
             message:
                 error instanceof Error
                     ? error.message
-                    : 'Quick Generate submission failed.',
+                    : 'The Pay Code could not be issued.',
         };
 
         lastStatus.value = 'failed';
@@ -3352,12 +3350,24 @@ function dataGet(source: unknown, path: string[]): unknown {
             </dl>
         </section>
 
-        <section
-            class="mt-5 rounded-2xl border border-emerald-200 bg-white/85 p-4 text-xs text-slate-700 shadow-sm dark:border-emerald-900/70 dark:bg-slate-950/80 dark:text-slate-300"
+        <details
+            class="mt-5 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300"
             data-testid="cockpit-quick-generate-contract-builder-checklist"
         >
+            <summary
+                class="cursor-pointer text-sm font-semibold text-slate-950 dark:text-slate-50"
+            >
+                Design status ·
+                {{
+                    contractBuilderChecklist.filter(
+                        (item) => item.status === 'needs-review',
+                    ).length === 0
+                        ? 'Ready to review'
+                        : 'Needs attention'
+                }}
+            </summary>
             <div
-                class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+                class="mt-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
             >
                 <div>
                     <p
@@ -3424,7 +3434,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                     </dd>
                 </div>
             </dl>
-        </section>
+        </details>
 
         <details
             class="mt-5 rounded-2xl border border-slate-200 bg-white/80 p-4 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300"
@@ -3494,11 +3504,31 @@ function dataGet(source: unknown, path: string[]): unknown {
             </div>
         </details>
 
-        <div
-            class="mt-5 grid gap-4"
+        <details
+            class="mt-5 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70"
             data-testid="cockpit-voucher-instruction-builder"
         >
-            <div class="grid gap-4">
+            <summary
+                class="cursor-pointer list-none text-sm font-semibold text-slate-950 dark:text-slate-50"
+            >
+                <span class="flex items-center justify-between gap-3">
+                    <span>
+                        Instructions and safeguards
+                        <span
+                            class="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400"
+                        >
+                            Optional claim rules, verification, feedback, and
+                            advanced controls
+                        </span>
+                    </span>
+                    <span
+                        class="rounded-full bg-slate-100 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                    >
+                        Customize
+                    </span>
+                </span>
+            </summary>
+            <div class="mt-4 grid gap-4">
                 <section
                     id="quick-generate-contract-money"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
@@ -6050,7 +6080,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                     </div>
                 </section>
             </div>
-        </div>
+        </details>
 
         <section
             class="mt-5 rounded-2xl border border-slate-200 bg-slate-950 p-4 text-xs text-slate-300 shadow-sm dark:border-slate-800"
@@ -6063,21 +6093,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                     <p
                         class="font-semibold tracking-[0.22em] text-emerald-300 uppercase"
                     >
-                        Pay Code contract summary
+                        Review your Pay Code
                     </p>
                     <p class="mt-2 leading-5 text-slate-400">
-                        Operator preview of the payload sent to the existing
-                        issuance handoff.
+                        Confirm what the recipient receives and how the Pay Code
+                        may be claimed.
                     </p>
                 </div>
-                <div
-                    class="rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 md:max-w-sm"
+                <span
+                    class="w-fit rounded-full bg-emerald-400/10 px-3 py-1 font-semibold text-emerald-200 ring-1 ring-emerald-400/20"
                 >
-                    <p class="font-semibold text-emerald-200">Handoff route</p>
-                    <p class="mt-1 break-all text-slate-300">
-                        {{ routeName }} · {{ routeUrl ?? 'not available' }}
-                    </p>
-                </div>
+                    Ready for confirmation
+                </span>
             </div>
             <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div
@@ -6125,7 +6152,7 @@ function dataGet(source: unknown, path: string[]): unknown {
             data-testid="cockpit-quick-generate-submit-button"
             :disabled="!canSubmit || processing"
         >
-            {{ processing ? 'Submitting…' : 'Generate Pay Code' }}
+            {{ processing ? 'Issuing Pay Code…' : 'Issue Pay Code' }}
         </button>
 
         <p class="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-300">
@@ -6137,7 +6164,7 @@ function dataGet(source: unknown, path: string[]): unknown {
             class="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100"
             data-testid="cockpit-quick-generate-submission-errors"
         >
-            <p class="font-semibold">Fix these fields before generating</p>
+            <p class="font-semibold">Fix these fields before issuing</p>
             <ul class="mt-2 space-y-1">
                 <li
                     v-for="error in submissionErrors"
@@ -6172,7 +6199,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         <h3
                             class="mt-2 text-2xl font-semibold tracking-tight text-emerald-950 dark:text-emerald-50"
                         >
-                            Pay Code {{ resultCode ?? 'issued' }}
+                            Pay Code issued
                         </h3>
                         <p
                             class="mt-2 max-w-2xl text-sm leading-6 text-emerald-800 dark:text-emerald-200"
@@ -6194,7 +6221,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                     <span
                         class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800"
                     >
-                        operator result
+                        {{ resultCode ?? 'issued' }}
                     </span>
                 </div>
 
