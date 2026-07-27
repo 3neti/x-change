@@ -122,6 +122,14 @@ const liquidityRefreshError = ref<string | null>(null);
 const fundingRequestAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
 const bankTransferAmountInput = ref<HTMLInputElement | null>(null);
+const bankTransferQuickAmountsMinor = [
+    10_000, 50_000, 100_000, 500_000, 1_000_000,
+] as const;
+const bankTransferQuickAmountFormatter = new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    maximumFractionDigits: 0,
+});
 const copiedFundingRequest = ref<string | null>(null);
 const activeTransferCheck = ref<string | null>(null);
 const bankTransferInstructionsOpen = ref(false);
@@ -590,6 +598,18 @@ function focusBankTransferAmount(): void {
         return;
     }
 
+    bankTransferAmountInput.value?.focus();
+    bankTransferAmountInput.value?.select();
+}
+
+async function selectBankTransferQuickAmount(
+    amountMinor: number,
+): Promise<void> {
+    fundingRequestAmount.value = (amountMinor / 100).toFixed(2);
+    fundingRequestAmountError.value = null;
+    fundingRequestForm.clearErrors('requested_value_minor');
+
+    await nextTick();
     bankTransferAmountInput.value?.focus();
     bankTransferAmountInput.value?.select();
 }
@@ -1927,7 +1947,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     </template>
 
                     <form
-                        class="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-5"
+                        class="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-5"
                         data-testid="bank-transfer-funding-form"
                         @submit.prevent="submitBankTransferRequest"
                     >
@@ -1965,9 +1985,42 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 }}
                             </span>
                         </label>
+                        <fieldset
+                            class="grid grid-cols-3 gap-2 sm:col-start-1 sm:row-start-2 sm:flex sm:flex-wrap"
+                            data-testid="bank-transfer-quick-amounts"
+                        >
+                            <legend class="sr-only">Quick amounts</legend>
+                            <button
+                                v-for="amountMinor in bankTransferQuickAmountsMinor"
+                                :key="amountMinor"
+                                type="button"
+                                class="min-h-9 rounded-lg border px-2.5 py-1.5 text-xs font-semibold tabular-nums transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-20"
+                                :class="
+                                    amountToMinor(fundingRequestAmount) ===
+                                    amountMinor
+                                        ? 'border-sky-700 bg-sky-700 text-white dark:border-sky-300 dark:bg-sky-300 dark:text-slate-950'
+                                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-sky-300 hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:bg-sky-950'
+                                "
+                                :aria-pressed="
+                                    amountToMinor(fundingRequestAmount) ===
+                                    amountMinor
+                                "
+                                :disabled="fundingRequestForm.processing"
+                                :data-testid="`bank-transfer-quick-amount-${amountMinor}`"
+                                @click="
+                                    selectBankTransferQuickAmount(amountMinor)
+                                "
+                            >
+                                {{
+                                    bankTransferQuickAmountFormatter.format(
+                                        amountMinor / 100,
+                                    )
+                                }}
+                            </button>
+                        </fieldset>
                         <button
                             type="submit"
-                            class="min-h-11 rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950"
+                            class="min-h-11 rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 sm:col-start-2 sm:row-start-1 sm:self-end dark:bg-sky-400 dark:text-slate-950"
                             :disabled="
                                 fundingRequestForm.processing ||
                                 !bankTransferInstructions.enabled

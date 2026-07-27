@@ -1382,6 +1382,45 @@ describe('Cockpit Funding foundation', () => {
         wrapper.unmount();
     });
 
+    it('selects and focuses a common bank transfer amount', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_requests: fundingRequestReadModel,
+                funding_workspace_mode: 'bank_transfer',
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+            attachTo: document.body,
+        });
+        const amount = wrapper.get<HTMLInputElement>(
+            '[data-testid="bank-transfer-amount"]',
+        );
+        const select = vi.spyOn(amount.element, 'select');
+        const quickAmounts = wrapper.get(
+            '[data-testid="bank-transfer-quick-amounts"]',
+        );
+
+        expect(
+            quickAmounts.findAll('button').map((button) => button.text()),
+        ).toEqual(['₱100', '₱500', '₱1,000', '₱5,000', '₱10,000']);
+
+        const quickAmount = wrapper.get(
+            '[data-testid="bank-transfer-quick-amount-100000"]',
+        );
+        await quickAmount.trigger('click');
+        await nextTick();
+
+        expect(amount.element.value).toBe('1000.00');
+        expect(quickAmount.attributes('aria-pressed')).toBe('true');
+        expect(document.activeElement).toBe(amount.element);
+        expect(select).toHaveBeenCalledOnce();
+
+        wrapper.unmount();
+    });
+
     it('refreshes balance projections once for a valid private funding event', async () => {
         vi.useFakeTimers();
         mount(Funding, {
