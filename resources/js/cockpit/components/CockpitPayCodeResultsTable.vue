@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Eye, MoreHorizontal, Share2 } from 'lucide-vue-next';
+import {
+    ChevronLeft,
+    ChevronRight,
+    Eye,
+    MoreHorizontal,
+    Share2,
+} from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import type {
     CockpitPayCodeExplorerRecord,
@@ -77,24 +83,6 @@ function goToNextPage(): void {
     }
 }
 
-const scanFields = [
-    {
-        label: 'Identify',
-        value: 'Pay Code',
-        helper: 'Open the detail page before taking external action.',
-    },
-    {
-        label: 'Assess',
-        value: 'Status and amount',
-        helper: 'Use sanitized list facts only.',
-    },
-    {
-        label: 'Navigate',
-        value: 'Detail or distribution',
-        helper: 'Links only; no delivery or lifecycle mutation.',
-    },
-];
-
 function rowActions(
     record: CockpitPayCodeExplorerRecord,
     fallbackActions: CockpitPayCodeRowAction[],
@@ -125,28 +113,6 @@ function disabledActions(
 ): CockpitPayCodeRowAction[] {
     return rowActions(record, props.actions).filter(
         (action) => !isEnabledAction(action),
-    );
-}
-
-function enabledActionCount(record: CockpitPayCodeExplorerRecord): number {
-    return enabledActions(record).length;
-}
-
-function disabledActionCount(record: CockpitPayCodeExplorerRecord): number {
-    return disabledActions(record).length;
-}
-
-function totalEnabledActionCount(): number {
-    return props.records.reduce(
-        (count, record) => count + enabledActionCount(record),
-        0,
-    );
-}
-
-function totalDisabledActionCount(): number {
-    return props.records.reduce(
-        (count, record) => count + disabledActionCount(record),
-        0,
     );
 }
 
@@ -217,129 +183,27 @@ function actionIcon(
                         Pay Code results
                     </h3>
                 </div>
-                <dl
-                    class="grid w-full grid-cols-2 gap-1.5 rounded-full bg-slate-50 p-1.5 text-center sm:w-[30rem] sm:grid-cols-4 dark:bg-slate-950"
+                <div
+                    class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center"
                     data-testid="cockpit-pay-code-results-density-summary"
                 >
-                    <div
-                        class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                    <p
+                        class="text-sm font-medium text-slate-600 dark:text-slate-300"
                     >
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        <span
+                            class="font-semibold text-slate-950 tabular-nums dark:text-slate-50"
                         >
-                            Showing
-                        </dt>
-                        <dd
-                            class="mt-1 font-mono text-sm font-semibold whitespace-nowrap text-slate-950 tabular-nums dark:text-slate-50"
-                        >
+                            {{ records.length }}
+                        </span>
+                        Pay Codes
+                        <span aria-hidden="true">·</span>
+                        Showing
+                        <span class="font-mono tabular-nums">
                             {{ firstVisibleRecordNumber }}–{{
                                 lastVisibleRecordNumber
                             }}
                             of {{ records.length }}
-                        </dd>
-                    </div>
-                    <div
-                        class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
-                    >
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            Total Rows
-                        </dt>
-                        <dd
-                            class="mt-1 font-mono text-sm font-semibold whitespace-nowrap text-slate-950 tabular-nums dark:text-slate-50"
-                        >
-                            {{ records.length }}
-                        </dd>
-                    </div>
-                    <div
-                        class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
-                    >
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            Links
-                        </dt>
-                        <dd
-                            class="mt-1 font-mono text-sm font-semibold whitespace-nowrap text-slate-950 tabular-nums dark:text-slate-50"
-                        >
-                            {{ totalEnabledActionCount() }}
-                        </dd>
-                    </div>
-                    <div
-                        class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
-                    >
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            Disabled
-                        </dt>
-                        <dd
-                            class="mt-1 font-mono text-sm font-semibold whitespace-nowrap text-slate-950 tabular-nums dark:text-slate-50"
-                        >
-                            {{ totalDisabledActionCount() }}
-                        </dd>
-                    </div>
-                </dl>
-            </div>
-
-            <details
-                class="mt-4 rounded-xl bg-slate-50 p-3 dark:bg-slate-950"
-                data-testid="cockpit-pay-code-results-scan-guide"
-            >
-                <summary
-                    class="cursor-pointer text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
-                >
-                    How to scan these rows
-                </summary>
-                <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                    <article
-                        v-for="field in scanFields"
-                        :key="field.label"
-                        class="rounded-lg bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
-                    >
-                        <p
-                            class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            {{ field.label }}
-                        </p>
-                        <p
-                            class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50"
-                        >
-                            {{ field.value }}
-                        </p>
-                        <p
-                            class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300"
-                        >
-                            {{ field.helper }}
-                        </p>
-                    </article>
-                </div>
-            </details>
-
-            <div
-                v-if="isResultLimited"
-                class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300"
-                data-testid="cockpit-pay-code-result-limit-notice"
-            >
-                Showing {{ firstVisibleRecordNumber }}–{{
-                    lastVisibleRecordNumber
-                }}
-                of {{ records.length }} Pay Codes. Use search or status filters
-                to narrow the list; pagination changes only the browser view.
-            </div>
-
-            <nav
-                v-if="isResultLimited"
-                aria-label="Pay Code result pages"
-                class="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-2.5 lg:flex-row lg:items-center lg:justify-between dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-pay-code-result-pagination"
-            >
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <p
-                        class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                    >
-                        Page {{ currentPage }} of {{ totalPages }}
+                        </span>
                     </p>
                     <label
                         class="flex items-center gap-2 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
@@ -362,27 +226,7 @@ function actionIcon(
                         </select>
                     </label>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        :disabled="!hasPreviousPage"
-                        type="button"
-                        class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
-                        data-testid="cockpit-pay-code-result-pagination-previous"
-                        @click="goToPreviousPage"
-                    >
-                        Previous
-                    </button>
-                    <button
-                        :disabled="!hasNextPage"
-                        type="button"
-                        class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
-                        data-testid="cockpit-pay-code-result-pagination-next"
-                        @click="goToNextPage"
-                    >
-                        Next
-                    </button>
-                </div>
-            </nav>
+            </div>
         </div>
 
         <div
@@ -725,26 +569,29 @@ function actionIcon(
                 Showing {{ firstVisibleRecordNumber }}–{{
                     lastVisibleRecordNumber
                 }}
-                of {{ records.length }}
+                of {{ records.length }} · Page {{ currentPage }} of
+                {{ totalPages }}
             </p>
             <div class="flex flex-wrap gap-2">
                 <button
                     :disabled="!hasPreviousPage"
                     type="button"
-                    class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                    class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
                     data-testid="cockpit-pay-code-result-pagination-footer-previous"
                     @click="goToPreviousPage"
                 >
+                    <ChevronLeft aria-hidden="true" class="size-4" />
                     Previous
                 </button>
                 <button
                     :disabled="!hasNextPage"
                     type="button"
-                    class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                    class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
                     data-testid="cockpit-pay-code-result-pagination-footer-next"
                     @click="goToNextPage"
                 >
                     Next
+                    <ChevronRight aria-hidden="true" class="size-4" />
                 </button>
             </div>
         </nav>
