@@ -305,6 +305,10 @@ final readonly class FundingRequestCockpitReadModel
      */
     private function bankTransferInstructions(): array
     {
+        $minimumRequestedAmountMinor = max(1, (int) config(
+            'x-change.funding.requests.bank_transfer.minimum_requested_amount_minor',
+            10_000,
+        ));
         $automaticCreditWindowMinutes = max(1, (int) config(
             'x-change.funding.requests.bank_transfer.automatic_credit_window_minutes',
             10,
@@ -345,6 +349,11 @@ final readonly class FundingRequestCockpitReadModel
                 '',
             ),
             'currency' => 'PHP',
+            'minimum_requested_amount_minor' => $minimumRequestedAmountMinor,
+            'minimum_requested_amount' => $this->money(
+                $minimumRequestedAmountMinor,
+                'PHP',
+            ),
             'reserved_exact_amounts_enabled' => $reservedAmountsEnabled,
             'minimum_adjustment' => $this->money(
                 $minimumAdjustmentMinor,

@@ -654,6 +654,13 @@ return [
                     'XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER_HISTORY_ENABLED',
                     true,
                 ),
+                'minimum_requested_amount_minor' => max(
+                    1,
+                    (int) env(
+                        'XCHANGE_FUNDING_BANK_TRANSFER_MINIMUM_REQUESTED_AMOUNT_MINOR',
+                        10000,
+                    ),
+                ),
                 'automatic_credit_window_minutes' => max(
                     1,
                     (int) env(

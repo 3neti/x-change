@@ -743,6 +743,8 @@ export type CockpitFundingRequestReadModel = {
         account_name: string;
         account_number: string;
         currency: string;
+        minimum_requested_amount_minor: number;
+        minimum_requested_amount: string;
         reserved_exact_amounts_enabled: boolean;
         minimum_adjustment: string;
         maximum_adjustment: string;

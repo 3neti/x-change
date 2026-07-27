@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Requests\Web\Cockpit;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Number;
 use Illuminate\Validation\Rule;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Enums\FundingTransferWindow;
@@ -50,12 +51,27 @@ class CreateCockpitFundingRequestRequest extends FormRequest
      */
     public function rules(): array
     {
+        $minimumRequestedAmountMinor = max(1, (int) config(
+            'x-change.funding.requests.bank_transfer.minimum_requested_amount_minor',
+            10_000,
+        ));
+
         return [
             'funding_type' => [
                 'required',
                 Rule::enum(FundingRequestType::class),
             ],
-            'requested_value_minor' => ['required', 'integer', 'min:1', 'max:999999999999999'],
+            'requested_value_minor' => [
+                'required',
+                'integer',
+                Rule::when(
+                    $this->input('funding_type')
+                        === FundingRequestType::BankTransfer->value,
+                    ['min:'.$minimumRequestedAmountMinor],
+                    ['min:1'],
+                ),
+                'max:999999999999999',
+            ],
             'currency' => ['required', 'string', 'size:3'],
             'description' => ['required', 'string', 'min:10', 'max:2000'],
             'external_reference' => ['nullable', 'string', 'max:191'],
@@ -95,6 +111,28 @@ class CreateCockpitFundingRequestRequest extends FormRequest
                 'max:10240',
             ],
             'attachment' => ['prohibited'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        $minimumRequestedAmountMinor = max(1, (int) config(
+            'x-change.funding.requests.bank_transfer.minimum_requested_amount_minor',
+            10_000,
+        ));
+
+        return [
+            'requested_value_minor.min' => sprintf(
+                'The minimum bank transfer amount is %s.',
+                Number::currency(
+                    $minimumRequestedAmountMinor / 100,
+                    in: 'PHP',
+                    locale: 'en_PH',
+                ),
+            ),
         ];
     }
 }

@@ -8,6 +8,38 @@ use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 
+it('enforces and presents the configured minimum bank transfer amount', function () {
+    enableNetbankTreasuryForTests();
+    $requester = actingAsTestUser(0);
+    config()->set(
+        'x-change.funding.requests.bank_transfer.minimum_requested_amount_minor',
+        10_000,
+    );
+
+    $this->post(route('x-change.cockpit.funding.requests.store'), [
+        'funding_type' => 'bank_transfer',
+        'requested_value_minor' => 9_999,
+        'currency' => 'PHP',
+        'description' => 'Attempt a bank transfer below the configured minimum.',
+        'transfer_window' => 'recent',
+        'idempotency_key' => 'cockpit-bank-transfer-below-minimum',
+    ])->assertSessionHasErrors([
+        'requested_value_minor' => 'The minimum bank transfer amount is ₱100.00.',
+    ]);
+
+    $readModel = app(FundingRequestCockpitReadModel::class)
+        ->forOperator($requester);
+
+    expect(data_get(
+        $readModel,
+        'bank_transfer.minimum_requested_amount_minor',
+    ))->toBe(10_000)
+        ->and(data_get(
+            $readModel,
+            'bank_transfer.minimum_requested_amount',
+        ))->toBe('₱100.00');
+});
+
 it('lets only the request owner check an InstaPay reference without crediting sender evidence', function () {
     enableNetbankTreasuryForTests();
     $requester = actingAsTestUser(0);

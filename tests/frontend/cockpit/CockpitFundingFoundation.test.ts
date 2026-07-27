@@ -446,6 +446,8 @@ const fundingRequestReadModel = {
         account_name: 'X-Change Sandbox',
         account_number: '113-001-00001-9',
         currency: 'PHP',
+        minimum_requested_amount_minor: 10_000,
+        minimum_requested_amount: '₱100.00',
         reserved_exact_amounts_enabled: true,
         minimum_adjustment: '₱3.17',
         maximum_adjustment: '₱5.37',
@@ -1041,6 +1043,38 @@ describe('Cockpit Funding foundation', () => {
                 preserveScroll: true,
             }),
         );
+    });
+
+    it('selects a bank transfer amount below the configured minimum', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_requests: fundingRequestReadModel,
+                funding_workspace_mode: 'bank_transfer',
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+            attachTo: document.body,
+        });
+        const amount = wrapper.get<HTMLInputElement>(
+            '[data-testid="bank-transfer-amount"]',
+        );
+        const select = vi.spyOn(amount.element, 'select');
+
+        await amount.setValue('99.99');
+        await wrapper
+            .get('[data-testid="bank-transfer-funding-form"]')
+            .trigger('submit');
+
+        expect(
+            wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
+        ).toContain('Minimum bank transfer amount is ₱100.00.');
+        expect(document.activeElement).toBe(amount.element);
+        expect(select).toHaveBeenCalledOnce();
+
+        wrapper.unmount();
     });
 
     it('refreshes balance projections once for a valid private funding event', async () => {

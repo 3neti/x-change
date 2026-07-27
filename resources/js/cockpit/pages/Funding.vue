@@ -38,6 +38,8 @@ const fundingRequests = computed(
                 account_name: '',
                 account_number: '',
                 currency: 'PHP',
+                minimum_requested_amount_minor: 10_000,
+                minimum_requested_amount: '₱100.00',
                 reserved_exact_amounts_enabled: false,
                 minimum_adjustment: '₱3.17',
                 maximum_adjustment: '₱5.37',
@@ -92,6 +94,7 @@ const liquidityRefreshRunning = ref(false);
 const liquidityRefreshError = ref<string | null>(null);
 const fundingRequestAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
+const bankTransferAmountInput = ref<HTMLInputElement | null>(null);
 const copiedFundingRequest = ref<string | null>(null);
 const activeTransferCheck = ref<string | null>(null);
 const dismissedFundingRequestResult = ref(false);
@@ -478,7 +481,16 @@ function amountToMinor(value: string): number | null {
         : null;
 }
 
-function submitFundingRequest(): void {
+function focusBankTransferAmount(): void {
+    if (fundingRequestForm.funding_type !== 'bank_transfer') {
+        return;
+    }
+
+    bankTransferAmountInput.value?.focus();
+    bankTransferAmountInput.value?.select();
+}
+
+function submitFundingRequest(minimumAmountMinor = 1): void {
     fundingRequestForm.clearErrors();
     fundingRequestAmountError.value = null;
     const amountMinor = amountToMinor(fundingRequestAmount.value);
@@ -486,6 +498,14 @@ function submitFundingRequest(): void {
     if (amountMinor === null) {
         fundingRequestAmountError.value =
             'Enter the amount you are requesting.';
+        focusBankTransferAmount();
+
+        return;
+    }
+
+    if (amountMinor < minimumAmountMinor) {
+        fundingRequestAmountError.value = `Minimum bank transfer amount is ${bankTransferInstructions.value.minimum_requested_amount}.`;
+        focusBankTransferAmount();
 
         return;
     }
@@ -505,12 +525,19 @@ function submitFundingRequest(): void {
             fundingRequestForm.requested_value_minor = 0;
             fundingRequestForm.idempotency_key = newIdempotencyKey();
         },
+        onError: (errors) => {
+            if (errors.requested_value_minor) {
+                focusBankTransferAmount();
+            }
+        },
     });
 }
 
 function submitBankTransferRequest(): void {
     fundingRequestForm.funding_type = 'bank_transfer';
-    submitFundingRequest();
+    submitFundingRequest(
+        bankTransferInstructions.value.minimum_requested_amount_minor,
+    );
 }
 
 function checkTransfer(reference: string): void {
@@ -1908,9 +1935,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     PHP
                                 </span>
                                 <input
+                                    ref="bankTransferAmountInput"
                                     v-model="fundingRequestAmount"
                                     inputmode="decimal"
-                                    placeholder="0.00"
+                                    :placeholder="`Minimum ${bankTransferInstructions.minimum_requested_amount}`"
                                     class="min-w-0 flex-1 bg-transparent px-3 text-base font-semibold outline-none"
                                     data-testid="bank-transfer-amount"
                                 />
