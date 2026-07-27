@@ -808,6 +808,15 @@ describe('Cockpit Funding foundation', () => {
                 .attributes('open'),
         ).toBeUndefined();
         expect(
+            wrapper.get('[data-testid="funding-provider-controls"]').text(),
+        ).toContain('Treasury controls');
+        expect(
+            wrapper.get('[data-testid="funding-provider-controls"]').text(),
+        ).toContain('Provider diagnostics');
+        expect(
+            wrapper.get('[data-testid="funding-provider-controls"]').text(),
+        ).not.toContain('Secondary controls');
+        expect(
             wrapper
                 .get('[data-testid="funding-exception-controls"]')
                 .attributes('open'),
@@ -928,6 +937,13 @@ describe('Cockpit Funding foundation', () => {
                 .find('[data-testid="funding-settlement-safeguards"]')
                 .exists(),
         ).toBe(false);
+        expect(
+            wrapper.find('[data-testid="funding-provider-controls"]').exists(),
+        ).toBe(false);
+        expect(wrapper.text()).not.toContain('Treasury controls');
+        expect(wrapper.text()).not.toContain('Provider diagnostics');
+        expect(wrapper.text()).not.toContain('One-time Funding Intent History');
+        expect(wrapper.text()).not.toContain('Available providers');
         expect(wrapper.text()).toContain('Operating as: Account holder');
         expect(
             wrapper.get('[data-testid="cockpit-funding-header"]').text(),

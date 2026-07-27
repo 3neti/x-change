@@ -3026,6 +3026,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             </section>
 
             <details
+                v-if="canViewTreasuryControls"
                 class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="funding-provider-controls"
             >
@@ -3036,10 +3037,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         <p
                             class="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400"
                         >
-                            Secondary controls
+                            Treasury controls
                         </p>
                         <h2 class="mt-0.5 text-sm font-semibold">
-                            Providers & safeguards
+                            Provider diagnostics
                         </h2>
                     </div>
                     <span
