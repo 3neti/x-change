@@ -358,6 +358,82 @@ async function chooseBankIfPossible() {
     await page.waitForTimeout(250);
 }
 
+async function chooseFirstNamedSliceIfPossible() {
+    const checkbox = page
+        .locator('input[name="slice_ids[]"], input[name="slice_ids"]')
+        .first();
+    const roleCheckbox = page
+        .locator(
+            '[data-testid="slice-selector-field-renderer"] [role="checkbox"]',
+        )
+        .first();
+    const sliceRow = page
+        .locator('[data-testid="slice-selector-field-renderer"] label')
+        .first();
+
+    if (
+        (await checkbox.count()) === 0 &&
+        (await roleCheckbox.count()) === 0 &&
+        (await sliceRow.count()) === 0
+    ) {
+        return false;
+    }
+
+    if ((await checkbox.count()) > 0) {
+        await checkbox.scrollIntoViewIfNeeded().catch(() => {});
+
+        if (await checkbox.isChecked().catch(() => false)) {
+            return true;
+        }
+
+        await checkbox.click({ force: true, timeout: 5000 });
+    } else if ((await roleCheckbox.count()) > 0) {
+        await roleCheckbox.scrollIntoViewIfNeeded().catch(() => {});
+        await roleCheckbox.click({ force: true, timeout: 5000 });
+    } else {
+        await sliceRow.scrollIntoViewIfNeeded().catch(() => {});
+        await sliceRow.click({ force: true, timeout: 5000 });
+    }
+
+    await page.waitForTimeout(500);
+
+    return true;
+}
+
+async function dismissVisibleDialogIfPossible() {
+    const dialog = page.locator('[role="dialog"]').last();
+
+    if (!(await isVisible(dialog))) {
+        return false;
+    }
+
+    const continueButton = dialog
+        .getByRole('button', {
+            name: /Continue Now|Continue|Close|Dismiss|Skip/i,
+        })
+        .last();
+
+    if ((await continueButton.count()) > 0) {
+        await continueButton.click({ force: true, timeout: 5000 });
+        await page.waitForTimeout(500);
+
+        return true;
+    }
+
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(500);
+
+    return true;
+}
+
+async function drainVisibleDialogs(limit = 3) {
+    for (let attempt = 0; attempt < limit; attempt += 1) {
+        if (!(await dismissVisibleDialogIfPossible())) {
+            return;
+        }
+    }
+}
+
 async function renderStoryboard(storyboard, artifacts) {
     const viewOptions = artifactViewOptions(artifacts);
     const featureLabels = {
@@ -607,6 +683,19 @@ try {
             /Start Claim/i,
         ]);
         await page.waitForTimeout(700);
+        await drainVisibleDialogs();
+    }
+
+    if (await chooseFirstNamedSliceIfPossible()) {
+        await capture(
+            'named-slice-selection',
+            'Named slice selected',
+            'Redeemer selects the first available named slice before starting the claim.',
+            {
+                feature: 'named_slices',
+                phase: 'pre_claim',
+            },
+        );
     }
 
     await clickVisibleButton([/Start Claim/i, /^Claim$/i, /Continue/i]);

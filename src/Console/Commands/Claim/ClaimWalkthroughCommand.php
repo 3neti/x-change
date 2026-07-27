@@ -285,6 +285,7 @@ final class ClaimWalkthroughCommand extends Command
             'ttl' => null,
             'metadata' => [
                 'issuer_id' => $issuer,
+                'slices' => data_get($fixture, 'slices'),
                 'created_at' => now()->toIso8601String(),
                 'issued_at' => now()->toIso8601String(),
                 'walkthrough' => [

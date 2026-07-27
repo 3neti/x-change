@@ -13,6 +13,7 @@ it('lists available claim walkthrough scenarios', function (): void {
         ->expectsOutputToContain('claim_basic_no_rider')
         ->expectsOutputToContain('claim_basic_15_no_inputs_no_riders_no_feedbacks')
         ->expectsOutputToContain('claim_basic_15_preview_with_rider')
+        ->expectsOutputToContain('claim_named_three_slices_preview')
         ->expectsOutputToContain('claim_paynamics_approval_walkthrough')
         ->assertSuccessful();
 });
@@ -39,6 +40,34 @@ it('scaffolds the basic fifteen peso no extras walkthrough', function (): void {
         ->and($storyboard['scenario']['fixture']['feedback'])->toBeFalse()
         ->and($storyboard['scenario']['fixture']['handlers']['otp'])->toBeFalse()
         ->and($storyboard['checkpoint_count'] ?? count($storyboard['checkpoints']))->toBe(3);
+});
+
+it('scaffolds a no money named three slices walkthrough', function (): void {
+    $runId = 'claim-named-slices-test-'.strtolower(str()->random(8));
+
+    $exitCode = Artisan::call('xchange:claim-walkthrough', [
+        'scenario' => 'claim_named_three_slices_preview',
+        '--dry-run' => true,
+        '--json' => true,
+        '--base-url' => 'http://x-change-sandbox.test',
+        '--run-id' => $runId,
+    ]);
+
+    expect($exitCode)->toBe(0);
+
+    $payload = json_decode(Artisan::output(), true);
+    $storyboard = json_decode(file_get_contents($payload['artifacts']['storyboard_json']), true);
+    $slices = data_get($storyboard, 'scenario.fixture.slices');
+
+    expect($payload['scenario'])->toBe('claim_named_three_slices_preview')
+        ->and(data_get($storyboard, 'scenario.fixture.amount'))->toBe('150.00')
+        ->and($slices)->toHaveCount(3)
+        ->and(collect($slices)->pluck('description')->all())->toBe([
+            'Breakfast allowance',
+            'Transport fare',
+            'Snack budget',
+        ])
+        ->and(collect($slices)->sum(fn (array $slice): float => (float) $slice['amount']))->toBe(150.0);
 });
 
 it('creates non money movement walkthrough fixtures without funding allocation', function (): void {
