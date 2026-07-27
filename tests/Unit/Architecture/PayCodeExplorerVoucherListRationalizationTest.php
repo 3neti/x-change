@@ -26,6 +26,14 @@ it('documents pay code explorer voucher list rationalization slice 1', function 
         ->and($search)->toContain('Search by code, recipient, amount, campaign, or status...')
         ->and($frontendTest)->toContain('renders the explorer shell header as a compact page intro')
         ->and($guide)->toContain('one clear command surface')
+        ->and($guide)->toContain('For the Account Holder or Operator')
+        ->and($guide)->toContain('For Developers')
+        ->and($guide)->toContain('For AI Agents')
+        ->and($guide)->toContain('changing **Status** applies immediately')
+        ->and($guide)->toContain('all supported lifecycle states, including **Locked**')
+        ->and($guide)->toContain('allowlisted-operational-badges-only')
+        ->and($guide)->toContain('masked-contact-summary-only')
+        ->and($guide)->toContain('six-column scan hierarchy')
         ->and($guide)->toContain('Technical details')
         ->and($guide)->toContain('System Treasury');
 });

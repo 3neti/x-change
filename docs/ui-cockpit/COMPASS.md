@@ -5,13 +5,18 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer product alignment
-Status: Implemented / final regression and browser acceptance in progress
+Status: Implemented / accepted
 Last updated: 2026-07-27
 
 ## Completed
 
 - Tightened `/x/cockpit/pay-codes` into one scan-first command surface:
   - combined the title, lifecycle facts, search, filters, and Quick Generate;
+  - made lifecycle status selection immediately reactive while keeping
+    free-text search explicit;
+  - exposed every supported lifecycle state, including Locked and terminal
+    states;
+  - added capability, allowlisted instruction, and masked-party summaries;
   - kept campaign and activity context compact and conditional;
   - moved records directly below the working controls;
   - reduced result chrome to count, visible range, density, and footer paging;
