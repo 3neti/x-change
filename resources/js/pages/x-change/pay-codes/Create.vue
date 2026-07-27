@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
 } from '../../../components/x-change/provisioningRequirement';
 import type { BalanceOverview } from '../../../components/x-change/BalanceOverviewCards.vue';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
+import { usePayCodeCostEstimate } from '@/composables/usePayCodeCostEstimate';
 import { AlertCircle, ArrowLeft, Loader2, PlusCircle } from 'lucide-vue-next';
 
 defineOptions({
@@ -106,13 +107,6 @@ const provisioningRequirement = ref<ProvisioningRequirement | null>(
 const hasProvisioningRequirement = computed(
     () => provisioningRequirement.value !== null,
 );
-
-const estimate = ref<Record<string, any> | null>(null);
-const estimating = ref(false);
-const estimateError = ref<string | null>(null);
-let estimateTimer: ReturnType<typeof setTimeout> | null = null;
-let estimateRequestId = 0;
-let estimateAbortController: AbortController | null = null;
 
 const form = ref<PayCodeGenerationForm>({
     amount: '',
@@ -407,6 +401,10 @@ const requestPayload = computed(() => {
 const canEstimate = computed(() => {
     return normalizedAmount.value > 0 && normalizedQuantity.value > 0;
 });
+const { estimate, estimating, estimateError } = usePayCodeCostEstimate(
+    requestPayload,
+    canEstimate,
+);
 
 function requestPayloadWithProvisioningReference(): Record<string, unknown> {
     const payload = {
@@ -429,105 +427,6 @@ function requestPayloadWithProvisioningReference(): Record<string, unknown> {
 
     return payload;
 }
-
-function scheduleEstimate(): void {
-    if (estimateTimer) {
-        clearTimeout(estimateTimer);
-    }
-
-    if (!canEstimate.value) {
-        estimate.value = null;
-        estimateError.value = null;
-        estimating.value = false;
-
-        return;
-    }
-
-    estimateTimer = setTimeout(() => {
-        void fetchEstimate();
-    }, 500);
-}
-
-async function fetchEstimate(): Promise<void> {
-    const requestId = ++estimateRequestId;
-
-    estimateAbortController?.abort();
-    estimateAbortController = new AbortController();
-
-    estimating.value = true;
-    estimateError.value = null;
-
-    try {
-        const response = await fetch(routes.api.estimatePayCode, {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify(requestPayload.value),
-            signal: estimateAbortController.signal,
-        });
-
-        const payload = await response.json().catch(() => ({}));
-
-        if (requestId !== estimateRequestId) {
-            return;
-        }
-
-        if (!response.ok || payload?.success === false) {
-            const firstValidationError = payload?.errors
-                ? Object.values(payload.errors).flat().join(' ')
-                : null;
-
-            throw new Error(
-                firstValidationError ||
-                    payload?.message ||
-                    payload?.error ||
-                    `Unable to estimate Pay Code cost: ${response.status}`,
-            );
-        }
-
-        estimate.value = payload?.data ?? payload;
-    } catch (error) {
-        if ((error as any)?.name === 'AbortError') {
-            return;
-        }
-
-        if (requestId !== estimateRequestId) {
-            return;
-        }
-
-        // Keep the last good estimate to avoid flicker.
-        estimateError.value =
-            error instanceof Error
-                ? error.message
-                : 'Unable to estimate Pay Code cost.';
-    } finally {
-        if (requestId === estimateRequestId) {
-            estimating.value = false;
-        }
-    }
-}
-
-watch(
-    requestPayload,
-    () => {
-        scheduleEstimate();
-    },
-    {
-        deep: true,
-        immediate: true,
-    },
-);
-
-onUnmounted(() => {
-    if (estimateTimer) {
-        clearTimeout(estimateTimer);
-    }
-
-    estimateAbortController?.abort();
-});
 
 function goBack(): void {
     router.visit(routes.payCodes.index());

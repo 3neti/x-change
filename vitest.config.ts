@@ -77,6 +77,11 @@ export default defineConfig({
                     __dirname,
                     'tests/frontend/stubs/cockpit-pay-code-explorer-route.ts',
                 ),
+            '@/actions/LBHurtado/XChange/Http/Controllers/PayCode/EstimatePayCodeController':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/estimate-pay-code-route.ts',
+                ),
             '@/routes/x-change/cockpit/funding/intents/instructions':
                 path.resolve(
                     __dirname,
