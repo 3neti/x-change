@@ -7,9 +7,9 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
+use LBHurtado\XChange\Http\Requests\Web\Cockpit\RefreshCockpitFundingLiquidityRequest;
 
 final class CockpitFundingLiquidityRefreshController extends Controller
 {
@@ -17,7 +17,7 @@ final class CockpitFundingLiquidityRefreshController extends Controller
      * @throws AuthenticationException
      */
     public function __invoke(
-        Request $request,
+        RefreshCockpitFundingLiquidityRequest $request,
         RefreshFundingLiquidity $refresh,
     ): RedirectResponse {
         $operator = $request->user();

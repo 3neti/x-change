@@ -27,6 +27,11 @@ final readonly class SystemPrincipalCockpitTreasuryAccess implements CockpitTrea
         return $this->isSystemPrincipal($actor);
     }
 
+    public function canManageTreasuryReconciliation(Authenticatable $actor): bool
+    {
+        return $this->isSystemPrincipal($actor);
+    }
+
     /**
      * @throws AuthorizationException
      */
@@ -35,6 +40,18 @@ final readonly class SystemPrincipalCockpitTreasuryAccess implements CockpitTrea
         if (! $this->canRefreshProviderLiquidity($actor)) {
             throw new AuthorizationException(
                 'Provider liquidity controls are restricted to System Treasury.',
+            );
+        }
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function authorizeTreasuryReconciliation(Authenticatable $actor): void
+    {
+        if (! $this->canManageTreasuryReconciliation($actor)) {
+            throw new AuthorizationException(
+                'Treasury reconciliation controls are restricted to System Treasury.',
             );
         }
     }

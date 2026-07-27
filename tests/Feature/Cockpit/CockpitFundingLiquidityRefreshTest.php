@@ -20,8 +20,8 @@ beforeEach(function () {
 });
 
 it('refreshes provider liquidity without accepting financial facts or posting money', function () {
-    enableNetbankTreasuryForTests();
-    $operator = actingAsTestUser(0);
+    $operator = enableNetbankTreasuryForTests();
+    $this->actingAs($operator);
     $audit = fakeAuditLogger()->reset();
     $positionCount = TreasuryPosition::query()->count();
     $inventoryCount = TreasuryInventory::query()->count();
@@ -44,11 +44,8 @@ it('refreshes provider liquidity without accepting financial facts or posting mo
         ]);
     app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
 
-    $this->post(route('x-change.cockpit.funding.liquidity-refreshes.store'), [
-        'amount_minor' => 999_999_999,
-        'account_number' => 'forged-account',
-        'provider' => 'forged-provider',
-    ])->assertRedirect(route('x-change.cockpit.funding.index'))
+    $this->post(route('x-change.cockpit.funding.liquidity-refreshes.store'))
+        ->assertRedirect(route('x-change.cockpit.funding.index'))
         ->assertSessionHas(
             'funding_notice',
             'Provider liquidity refreshed. Issuance Capacity was recalculated.',
@@ -81,8 +78,8 @@ it('refreshes provider liquidity without accepting financial facts or posting mo
 });
 
 it('retains the last good snapshot and returns a sanitized failure', function () {
-    enableNetbankTreasuryForTests();
-    actingAsTestUser(0);
+    $system = enableNetbankTreasuryForTests();
+    $this->actingAs($system);
     app(ProviderBalanceSnapshotStore::class)->recordSuccess(
         'netbank',
         'netbank_source_account',
@@ -131,8 +128,8 @@ it('requires an authenticated Cockpit operator', function () {
 });
 
 it('does not overlap refreshes for the same Treasury connection', function () {
-    enableNetbankTreasuryForTests();
-    actingAsTestUser(0);
+    $system = enableNetbankTreasuryForTests();
+    $this->actingAs($system);
 
     $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
     $readiness->shouldNotReceive('handle');
@@ -155,4 +152,43 @@ it('does not overlap refreshes for the same Treasury connection', function () {
     } finally {
         $lock->release();
     }
+});
+
+it('forbids ordinary Account holders before calling the provider', function () {
+    enableNetbankTreasuryForTests();
+    actingAsTestUser(0);
+
+    $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $readiness->shouldNotReceive('handle');
+    app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
+
+    $this->post(route(
+        'x-change.cockpit.funding.liquidity-refreshes.store',
+    ))->assertForbidden();
+
+    expect(ProviderBalanceSnapshot::query()->count())->toBe(0);
+});
+
+it('rejects operator supplied liquidity facts', function () {
+    $system = enableNetbankTreasuryForTests();
+    $this->actingAs($system);
+
+    $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $readiness->shouldNotReceive('handle');
+    app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
+
+    $this->from(route('x-change.cockpit.funding.index'))
+        ->post(route('x-change.cockpit.funding.liquidity-refreshes.store'), [
+            'amount_minor' => 999_999_999,
+            'account_number' => 'forged-account',
+            'provider' => 'forged-provider',
+        ])
+        ->assertRedirect(route('x-change.cockpit.funding.index'))
+        ->assertSessionHasErrors([
+            'amount_minor',
+            'account_number',
+            'provider',
+        ]);
+
+    expect(ProviderBalanceSnapshot::query()->count())->toBe(0);
 });

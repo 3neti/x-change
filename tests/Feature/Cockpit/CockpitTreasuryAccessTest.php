@@ -16,8 +16,10 @@ it('binds Treasury Cockpit access to the resolved system principal', function ()
     expect($access)
         ->canViewTreasuryControls($system)->toBeTrue()
         ->canRefreshProviderLiquidity($system)->toBeTrue()
+        ->canManageTreasuryReconciliation($system)->toBeTrue()
         ->canViewTreasuryControls($accountHolder)->toBeFalse()
-        ->canRefreshProviderLiquidity($accountHolder)->toBeFalse();
+        ->canRefreshProviderLiquidity($accountHolder)->toBeFalse()
+        ->canManageTreasuryReconciliation($accountHolder)->toBeFalse();
 });
 
 it('compares the complete principal identity instead of an identifier alone', function () {
@@ -53,11 +55,18 @@ it('fails closed when the system principal cannot be resolved', function () {
 
     expect($access)
         ->canViewTreasuryControls($accountHolder)->toBeFalse()
-        ->canRefreshProviderLiquidity($accountHolder)->toBeFalse();
+        ->canRefreshProviderLiquidity($accountHolder)->toBeFalse()
+        ->canManageTreasuryReconciliation($accountHolder)->toBeFalse();
 
     expect(fn () => $access->authorizeProviderLiquidityRefresh($accountHolder))
         ->toThrow(
             AuthorizationException::class,
             'Provider liquidity controls are restricted to System Treasury.',
+        );
+
+    expect(fn () => $access->authorizeTreasuryReconciliation($accountHolder))
+        ->toThrow(
+            AuthorizationException::class,
+            'Treasury reconciliation controls are restricted to System Treasury.',
         );
 });

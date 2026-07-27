@@ -6,12 +6,16 @@ namespace LBHurtado\XChange\Http\Requests\Web\Cockpit;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 
 class ApproveCockpitFundingReconciliationRequest extends FormRequest
 {
-    public function authorize(): bool
+    public function authorize(CockpitTreasuryAccessContract $access): bool
     {
-        return $this->user() !== null;
+        $actor = $this->user();
+
+        return $actor !== null
+            && $access->canManageTreasuryReconciliation($actor);
     }
 
     /**

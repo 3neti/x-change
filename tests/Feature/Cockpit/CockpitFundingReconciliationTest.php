@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
+use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingReconciliationRequest;
@@ -15,6 +17,7 @@ use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('requires distinct maker and checker operators before compensating a verified posting', function () {
+    allowTreasuryTestOperators();
     enableNetbankTreasuryForTests();
 
     $maker = actingAsTestUser(0);
@@ -77,6 +80,7 @@ it('requires distinct maker and checker operators before compensating a verified
 });
 
 it('prohibits operator supplied amounts and provider evidence identifiers', function () {
+    allowTreasuryTestOperators();
     $maker = actingAsTestUser(0);
     $wallet = $maker->wallet()->where('slug', 'platform')->firstOrFail();
     $case = cockpitVerifiedPostingCase($maker, $wallet);
@@ -96,6 +100,50 @@ it('prohibits operator supplied amounts and provider evidence identifiers', func
         ->and(FundingSettlement::query()->count())->toBe(0)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0);
 });
+
+it('forbids ordinary Account holders from Treasury reconciliation controls', function () {
+    enableNetbankTreasuryForTests();
+    $accountHolder = actingAsTestUser(0);
+    $wallet = $accountHolder->wallet()->where('slug', 'platform')->firstOrFail();
+    $case = cockpitVerifiedPostingCase($accountHolder, $wallet);
+
+    $this->post(route('x-change.cockpit.funding.suspense.reconciliation-requests.store', [
+        'case' => $case->reference,
+    ]), [
+        'action' => 'compensate_verified_posting',
+    ])->assertForbidden();
+
+    expect(FundingReconciliationRequest::query()->count())->toBe(0)
+        ->and(FundingSettlement::query()->count())->toBe(0);
+});
+
+function allowTreasuryTestOperators(): void
+{
+    app()->instance(
+        CockpitTreasuryAccessContract::class,
+        new class implements CockpitTreasuryAccessContract
+        {
+            public function canViewTreasuryControls(Authenticatable $actor): bool
+            {
+                return true;
+            }
+
+            public function canRefreshProviderLiquidity(Authenticatable $actor): bool
+            {
+                return true;
+            }
+
+            public function canManageTreasuryReconciliation(Authenticatable $actor): bool
+            {
+                return true;
+            }
+
+            public function authorizeProviderLiquidityRefresh(Authenticatable $actor): void {}
+
+            public function authorizeTreasuryReconciliation(Authenticatable $actor): void {}
+        },
+    );
+}
 
 function cockpitVerifiedPostingCase(User $operator, Wallet $wallet): FundingSuspenseCase
 {

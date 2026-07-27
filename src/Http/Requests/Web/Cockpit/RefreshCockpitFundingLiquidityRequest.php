@@ -6,25 +6,16 @@ namespace LBHurtado\XChange\Http\Requests\Web\Cockpit;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
-use LBHurtado\XChange\Enums\FundingReconciliationAction;
 
-class RequestCockpitFundingReconciliationRequest extends FormRequest
+final class RefreshCockpitFundingLiquidityRequest extends FormRequest
 {
     public function authorize(CockpitTreasuryAccessContract $access): bool
     {
         $actor = $this->user();
 
         return $actor !== null
-            && $access->canManageTreasuryReconciliation($actor);
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'action' => strtolower(trim((string) $this->input('action'))),
-        ]);
+            && $access->canRefreshProviderLiquidity($actor);
     }
 
     /**
@@ -33,11 +24,10 @@ class RequestCockpitFundingReconciliationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => ['required', Rule::enum(FundingReconciliationAction::class)],
             'amount' => ['prohibited'],
             'amount_minor' => ['prohibited'],
-            'provider_observation_id' => ['prohibited'],
-            'provider_transaction_id' => ['prohibited'],
+            'account_number' => ['prohibited'],
+            'provider' => ['prohibited'],
         ];
     }
 }

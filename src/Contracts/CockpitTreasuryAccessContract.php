@@ -12,5 +12,9 @@ interface CockpitTreasuryAccessContract
 
     public function canRefreshProviderLiquidity(Authenticatable $actor): bool;
 
+    public function canManageTreasuryReconciliation(Authenticatable $actor): bool;
+
     public function authorizeProviderLiquidityRefresh(Authenticatable $actor): void;
+
+    public function authorizeTreasuryReconciliation(Authenticatable $actor): void;
 }
