@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\Event;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\Voucher\Enums\VoucherState;
+use LBHurtado\XChange\Actions\Funding\ApproveFundingRequestAndIssueCode;
 use LBHurtado\XChange\Actions\Funding\CheckFundingRequestTransfer;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
+use LBHurtado\XChange\Actions\Funding\PayApprovedFundingRequest;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
@@ -16,6 +18,7 @@ use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Events\FundingRequestChanged;
 use LBHurtado\XChange\Models\FundingRequestTransferMatch;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 it('credits one recent exact amount and time match without trusting the sender reference', function () {
     $this->travelTo(new DateTimeImmutable('2026-07-27T21:15:00+08:00'));
@@ -98,10 +101,18 @@ it('credits one recent exact amount and time match without trusting the sender r
     $this->travelBack();
 });
 
-it('reserves an older exact transfer for approval without crediting the Account', function () {
+it('reserves an older exact transfer and credits it only after checker approval', function () {
     $this->travelTo(new DateTimeImmutable('2026-07-27T21:30:00+08:00'));
     enableNetbankTreasuryForTests();
     $requester = actingAsTestUser(0);
+    $checker = User::query()->create([
+        'name' => 'Provider Transfer Checker',
+        'email' => 'provider-transfer-checker@example.test',
+        'password' => 'password',
+    ]);
+    config()->set('x-change.funding.requests.checker_ids', [
+        (string) $checker->getKey(),
+    ]);
     config()->set(
         'x-change.funding.standing_addresses.creditable_provider_statuses',
         ['settled'],
@@ -158,6 +169,35 @@ it('reserves an older exact transfer for approval without crediting the Account'
         ->toBe('awaiting_approval')
         ->and(VoucherCollection::query()->count())->toBe(0)
         ->and((int) $requester->wallet->fresh()->balance)->toBe(0);
+
+    $approval = app(ApproveFundingRequestAndIssueCode::class)->approve(
+        $request->refresh(),
+        $checker::class,
+        (string) $checker->getKey(),
+    );
+
+    expect($approval->newlyApproved)->toBeTrue()
+        ->and($request->refresh()->status)
+        ->toBe(FundingRequestStatus::PayCodeIssued)
+        ->and($request->voucher->refresh()->state)->toBe(VoucherState::ACTIVE);
+
+    $collection = app(PayApprovedFundingRequest::class)->handle(
+        $request->voucher->refresh(),
+    );
+    $replayed = app(PayApprovedFundingRequest::class)->handle(
+        $request->voucher->refresh(),
+    );
+
+    expect($collection->execution_driver)->toBe('x_change_provider_funding')
+        ->and($collection->provider_transaction_id)
+        ->toBe('NETBANK-INBOUND-300-OLDER')
+        ->and($replayed->is($collection))->toBeTrue()
+        ->and($request->refresh()->status)->toBe(FundingRequestStatus::Completed)
+        ->and(FundingRequestTransferMatch::query()->sole()->status)
+        ->toBe('credited')
+        ->and(VoucherCollection::query()->count())->toBe(1)
+        ->and((int) treasuryClientFundsLedger($requester)->balance)
+        ->toBe(30_000);
 
     $this->travelBack();
 });

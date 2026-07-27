@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\Funding;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\SettlementEnvelope\Enums\EnvelopeStatus;
 use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
@@ -15,6 +16,7 @@ use LBHurtado\XChange\Contracts\FundingProjectionPublisherContract;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Models\FundingRequestTransferMatch;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
@@ -39,11 +41,17 @@ final readonly class PayApprovedFundingRequest
             &$workflowRequest,
         ): VoucherCollection {
             $request = FundingRequest::query()
-                ->with('voucher.envelope')
+                ->with([
+                    'voucher.envelope',
+                    'transferMatch.providerFundingObservation',
+                ])
                 ->where('voucher_id', $voucher->getKey())
                 ->lockForUpdate()
                 ->sole();
-            $idempotencyKey = 'reviewed-funding-system-payment:'.$request->reference;
+            $providerTransferMatch = $request->transferMatch;
+            $idempotencyKey = $providerTransferMatch instanceof FundingRequestTransferMatch
+                ? 'provider-funding-request:'.$request->reference
+                : 'reviewed-funding-system-payment:'.$request->reference;
 
             if ($request->status === FundingRequestStatus::Completed) {
                 return VoucherCollection::query()
@@ -79,23 +87,60 @@ final readonly class PayApprovedFundingRequest
                 );
             }
 
-            $collection = $this->collections->handle(
-                $request->voucher,
-                new ConfirmedVoucherCollectionData(
-                    amountMinor: (int) $request->approved_value_minor,
-                    currency: $request->currency,
-                    executionDriver: 'x_change_account_funding',
-                    authority: 'system_treasury',
-                    authorityReference: 'funding-request-approval:'.$request->reference,
-                    idempotencyKey: $idempotencyKey,
-                    payerName: (string) $system->getAttribute('name'),
-                    metadata: [
-                        'funding_request_reference' => $request->reference,
-                        'evidence_reference' => $request->evidence_reference,
-                        'settlement_envelope_id' => $request->voucher->envelope->getKey(),
-                    ],
-                ),
-            );
+            if ($providerTransferMatch instanceof FundingRequestTransferMatch) {
+                $observation = $providerTransferMatch
+                    ->providerFundingObservation;
+
+                if (! $observation instanceof ProviderFundingObservation) {
+                    throw new RuntimeException(
+                        'The approved provider transfer evidence is unavailable.',
+                    );
+                }
+
+                $collection = $this->collections->handle(
+                    $request->voucher,
+                    new ConfirmedVoucherCollectionData(
+                        amountMinor: (int) $request->approved_value_minor,
+                        currency: $request->currency,
+                        executionDriver: 'x_change_provider_funding',
+                        authority: 'provider_transaction_history_with_checker_approval',
+                        authorityReference: $providerTransferMatch->provider_code
+                            .':'.$observation->provider_transaction_id,
+                        idempotencyKey: $idempotencyKey,
+                        provider: $providerTransferMatch->provider_code,
+                        providerReference: $observation->provider_operation_id,
+                        providerTransactionId: $observation->provider_transaction_id,
+                        metadata: [
+                            'funding_request_reference' => $request->reference,
+                            'provider_funding_observation_id' => $observation->getKey(),
+                            'transfer_match_id' => $providerTransferMatch->getKey(),
+                            'settlement_envelope_id' => $request->voucher->envelope->getKey(),
+                        ],
+                    ),
+                );
+                $providerTransferMatch->forceFill([
+                    'status' => 'credited',
+                    'credited_at' => now(),
+                ])->saveQuietly();
+            } else {
+                $collection = $this->collections->handle(
+                    $request->voucher,
+                    new ConfirmedVoucherCollectionData(
+                        amountMinor: (int) $request->approved_value_minor,
+                        currency: $request->currency,
+                        executionDriver: 'x_change_account_funding',
+                        authority: 'system_treasury',
+                        authorityReference: 'funding-request-approval:'.$request->reference,
+                        idempotencyKey: $idempotencyKey,
+                        payerName: (string) $system->getAttribute('name'),
+                        metadata: [
+                            'funding_request_reference' => $request->reference,
+                            'evidence_reference' => $request->evidence_reference,
+                            'settlement_envelope_id' => $request->voucher->envelope->getKey(),
+                        ],
+                    ),
+                );
+            }
             $this->envelopes->settle(
                 $request->voucher->envelope->refresh(),
                 $system,
@@ -108,7 +153,9 @@ final readonly class PayApprovedFundingRequest
             ])->saveQuietly();
             $request->events()->create([
                 'sequence' => $nextVersion,
-                'event_type' => 'reviewed_funding_pay_code_paid',
+                'event_type' => $providerTransferMatch instanceof FundingRequestTransferMatch
+                    ? 'provider_transfer_credited_after_approval'
+                    : 'reviewed_funding_pay_code_paid',
                 'from_status' => FundingRequestStatus::PayCodeIssued,
                 'to_status' => FundingRequestStatus::Completed,
                 'actor_type' => $system::class,
@@ -118,8 +165,11 @@ final readonly class PayApprovedFundingRequest
                     'pay_code_id' => (int) $request->voucher->getKey(),
                     'voucher_collection_id' => (int) $collection->getKey(),
                     'treasury_operation_reference' => $collection->treasury_operation_reference,
-                    'provider_calls' => false,
-                    'provider_inventory_changed' => false,
+                    'provider_calls' => $providerTransferMatch
+                        instanceof FundingRequestTransferMatch,
+                    'provider_inventory_changed' => $providerTransferMatch
+                        instanceof FundingRequestTransferMatch,
+                    'provider_transfer_match_id' => $providerTransferMatch?->getKey(),
                 ],
                 'occurred_at' => now(),
             ]);

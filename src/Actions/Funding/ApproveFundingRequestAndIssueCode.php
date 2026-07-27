@@ -16,6 +16,7 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Data\Funding\ApproveFundingRequestResult;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Models\FundingRequestTransferMatch;
 use LBHurtado\XChange\Services\Funding\FundingRequestAccess;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
@@ -55,7 +56,10 @@ final readonly class ApproveFundingRequestAndIssueCode
             $approverId,
         ): ApproveFundingRequestResult {
             $locked = FundingRequest::query()
-                ->with('voucher.envelope')
+                ->with([
+                    'voucher.envelope',
+                    'transferMatch.providerFundingObservation',
+                ])
                 ->lockForUpdate()
                 ->findOrFail($fundingRequest->getKey());
 
@@ -135,6 +139,28 @@ final readonly class ApproveFundingRequestAndIssueCode
                 );
             }
 
+            $providerTransferMatch = $locked->transferMatch;
+
+            if ($providerTransferMatch instanceof FundingRequestTransferMatch) {
+                if (
+                    $providerTransferMatch->status !== 'awaiting_approval'
+                    || $providerTransferMatch->amount_minor !== $amountMinor
+                    || $providerTransferMatch->currency !== $locked->currency
+                    || $providerTransferMatch->providerFundingObservation === null
+                ) {
+                    throw new RuntimeException(
+                        'The matched provider transfer is not ready for approval.',
+                    );
+                }
+
+                $this->envelopes->setSignal(
+                    $locked->voucher->envelope,
+                    'backing_verified',
+                    true,
+                    $system,
+                );
+            }
+
             $this->envelopes->setSignal(
                 $locked->voucher->envelope,
                 'checker_approved',
@@ -153,28 +179,42 @@ final readonly class ApproveFundingRequestAndIssueCode
             }
 
             $envelope = $this->envelopes->lock($envelope, $approver);
-            $this->portfolios->provision(
-                $system,
-                [(string) $locked->connection_reference],
-            );
-            $reservation = $this->accounting->reserveAccountFunding(
-                systemOwner: $system,
-                voucher: $locked->voucher,
-                connectionReference: (string) $locked->connection_reference,
-                providerPrincipalMinor: $amountMinor,
-                currency: $locked->currency,
-            );
             $voucherMetadata = is_array($locked->voucher->metadata)
                 ? $locked->voucher->metadata
                 : [];
-            data_set($voucherMetadata, 'treasury.account_funding', [
-                'status' => 'ready_for_system_payment',
-                'provider_calls' => false,
-                'provider_inventory_changed' => false,
-                'funding_request_reference' => $locked->reference,
-                'reservation_operation_reference' => $reservation->operationReference,
-                'settlement_envelope_id' => $envelope->getKey(),
-            ]);
+            $reservationOperationReference = null;
+
+            if ($providerTransferMatch instanceof FundingRequestTransferMatch) {
+                data_set($voucherMetadata, 'treasury.provider_funding', [
+                    'status' => 'ready_for_provider_posting',
+                    'provider_calls' => false,
+                    'provider_inventory_changed' => false,
+                    'funding_request_reference' => $locked->reference,
+                    'provider_transfer_match_id' => $providerTransferMatch->getKey(),
+                    'settlement_envelope_id' => $envelope->getKey(),
+                ]);
+            } else {
+                $this->portfolios->provision(
+                    $system,
+                    [(string) $locked->connection_reference],
+                );
+                $reservation = $this->accounting->reserveAccountFunding(
+                    systemOwner: $system,
+                    voucher: $locked->voucher,
+                    connectionReference: (string) $locked->connection_reference,
+                    providerPrincipalMinor: $amountMinor,
+                    currency: $locked->currency,
+                );
+                $reservationOperationReference = $reservation->operationReference;
+                data_set($voucherMetadata, 'treasury.account_funding', [
+                    'status' => 'ready_for_system_payment',
+                    'provider_calls' => false,
+                    'provider_inventory_changed' => false,
+                    'funding_request_reference' => $locked->reference,
+                    'reservation_operation_reference' => $reservationOperationReference,
+                    'settlement_envelope_id' => $envelope->getKey(),
+                ]);
+            }
             $locked->voucher->forceFill([
                 'metadata' => $voucherMetadata,
                 'state' => VoucherState::ACTIVE,
@@ -190,7 +230,9 @@ final readonly class ApproveFundingRequestAndIssueCode
             ])->saveQuietly();
             $locked->events()->create([
                 'sequence' => $nextVersion,
-                'event_type' => 'reviewed_funding_pay_code_approved',
+                'event_type' => $providerTransferMatch instanceof FundingRequestTransferMatch
+                    ? 'provider_transfer_approved'
+                    : 'reviewed_funding_pay_code_approved',
                 'from_status' => FundingRequestStatus::AwaitingApproval,
                 'to_status' => FundingRequestStatus::PayCodeIssued,
                 'actor_type' => $approverType,
@@ -198,7 +240,8 @@ final readonly class ApproveFundingRequestAndIssueCode
                 'evidence_reference' => $locked->evidence_reference,
                 'metadata' => [
                     'pay_code_id' => (int) $locked->voucher->getKey(),
-                    'reservation_operation_reference' => $reservation->operationReference,
+                    'reservation_operation_reference' => $reservationOperationReference,
+                    'provider_transfer_match_id' => $providerTransferMatch?->getKey(),
                     'settlement_envelope_id' => $envelope->getKey(),
                     'provider_calls' => false,
                 ],
@@ -207,9 +250,13 @@ final readonly class ApproveFundingRequestAndIssueCode
             $locked->notices()->create([
                 'recipient_type' => $locked->requester_type,
                 'recipient_id' => $locked->requester_id,
-                'notice_type' => 'reviewed_funding_pay_code_approved',
+                'notice_type' => $providerTransferMatch instanceof FundingRequestTransferMatch
+                    ? 'provider_transfer_approved'
+                    : 'reviewed_funding_pay_code_approved',
                 'title' => 'Account Funding approved',
-                'message' => 'Verified value is reserved for one system Treasury payment.',
+                'message' => $providerTransferMatch instanceof FundingRequestTransferMatch
+                    ? 'The matched provider transfer was approved for one Account credit.'
+                    : 'Verified value is reserved for one system Treasury payment.',
                 'action' => [
                     'type' => 'view_reviewed_funding_pay_code',
                     'funding_request_reference' => $locked->reference,
