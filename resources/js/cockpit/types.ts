@@ -1599,6 +1599,7 @@ export type CockpitPayCodeExplorerReadModel = {
 };
 
 export type CockpitPayCodeExplorerPageProps = CockpitHeaderPageProps & {
+    can?: CockpitPageAuthorization;
     pay_codes_read_model?: CockpitPayCodeExplorerReadModel;
     campaign_navigation_context?: CockpitCampaignNavigationContext;
     activity_navigation_context?: CockpitActivityNavigationContext;

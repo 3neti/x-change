@@ -22,9 +22,11 @@ class CockpitReadOnlyPageProps
     /**
      * @return array<string, mixed>
      */
-    public function toArray(?string $code = null): array
-    {
-        return [
+    public function toArray(
+        ?string $code = null,
+        bool $includeReadModel = true,
+    ): array {
+        $props = [
             'can' => [
                 'view_cockpit' => true,
                 'mutate_vouchers' => false,
@@ -55,11 +57,16 @@ class CockpitReadOnlyPageProps
             'context' => [
                 'code' => $code,
             ],
-            'read_model' => $this->readModels->forVoucher(new CockpitReadModelQueryData(
+        ];
+
+        if ($includeReadModel) {
+            $props['read_model'] = $this->readModels->forVoucher(new CockpitReadModelQueryData(
                 code: $code,
                 include: ['voucher', 'execution', 'journal', 'actions', 'feedback'],
-            ))->toArray(),
-        ];
+            ))->toArray();
+        }
+
+        return $props;
     }
 
     /**
@@ -102,9 +109,15 @@ class CockpitReadOnlyPageProps
         ?string $activitySource = null,
         ?string $search = null,
         ?string $status = null,
+        bool $canViewTechnicalDetails = false,
     ): array {
+        $baseProps = $this->toArray(
+            includeReadModel: $canViewTechnicalDetails,
+        );
+        $baseProps['can']['view_technical_details'] = $canViewTechnicalDetails;
+
         return [
-            ...$this->toArray(),
+            ...$baseProps,
             'pay_codes_read_model' => $this->readModels->forPayCodeList(new CockpitReadModelQueryData(
                 code: $this->normalizeCode($activityCode),
                 payCodeSearch: $this->optionalString($search),

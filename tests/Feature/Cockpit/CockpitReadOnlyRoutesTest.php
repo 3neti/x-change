@@ -213,10 +213,29 @@ it('hydrates the pay code explorer with a sanitized list read model prop', funct
         ->assertJsonPath('props.pay_codes_read_model.query', null)
         ->assertJsonPath('props.pay_codes_read_model.records', [])
         ->assertJsonPath('props.pay_codes_read_model.redactions.payloads', 'sanitized-list-summary-only')
+        ->assertJsonPath('props.can.view_technical_details', false)
+        ->assertJsonMissingPath('props.read_model')
         ->assertJsonMissingPath('props.pay_codes_read_model.provider_payload')
         ->assertJsonMissingPath('props.pay_codes_read_model.raw_payload')
         ->assertJsonMissingPath('props.pay_codes_read_model.wallet')
         ->assertJsonMissingPath('props.pay_codes_read_model.provider');
+});
+
+it('hydrates Pay Code Explorer technical details only for System Treasury', function () {
+    $system = enableNetbankTreasuryForTests();
+
+    $this->actingAs($system)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/PayCodeExplorer')
+        ->assertJsonPath('props.can.view_technical_details', true)
+        ->assertJsonPath('props.read_model.journal.status', 'available')
+        ->assertJsonPath('props.read_model.actions.status', 'available')
+        ->assertJsonPath('props.read_model.feedback.status', 'available')
+        ->assertJsonMissingPath('props.read_model.provider_payload')
+        ->assertJsonMissingPath('props.read_model.raw_payload')
+        ->assertJsonMissingPath('props.read_model.wallet');
 });
 
 it('passes optional campaign navigation context to the pay code explorer without registering campaign routes', function () {

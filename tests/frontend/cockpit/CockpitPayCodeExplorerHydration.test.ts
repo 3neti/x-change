@@ -240,7 +240,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             'Explorer details',
         );
         expect(pageDetails.text()).toContain(
-            'Filter metadata, read-model boundaries, and technical context.',
+            'Filter metadata and read-model boundaries.',
         );
         expect(pageDetails.text()).toContain(
             'The main scan path stays focused on search and results.',
@@ -258,14 +258,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         ).toBe(true);
         expect(
             pageDetails
-                .find('[data-testid="cockpit-pay-code-integration-badges"]')
+                .find('[data-testid="cockpit-pay-code-technical-details"]')
                 .exists(),
-        ).toBe(true);
-        expect(
-            pageDetails
-                .find('[data-testid="cockpit-pay-code-integration-readiness"]')
-                .exists(),
-        ).toBe(true);
+        ).toBe(false);
         expect(
             pageDetails
                 .find('[data-testid="cockpit-pay-code-filter-builder"]')
@@ -1111,6 +1106,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
     it('renders read-only integration status badges from the read model bundle', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
+                can: {
+                    view_technical_details: true,
+                },
                 pay_codes_read_model: payCodesReadModel,
                 read_model: {
                     journal: {
@@ -1142,7 +1140,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Connected service badges');
+        expect(wrapper.text()).toContain('Technical details');
         expect(wrapper.text()).toContain('Connected services');
         expect(wrapper.text()).toContain('Journal: available');
         expect(wrapper.text()).toContain('Actions: available');
@@ -1159,6 +1157,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
     it('keeps explorer integration badges authorization and redaction safe', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
+                can: {
+                    view_technical_details: true,
+                },
                 pay_codes_read_model: payCodesReadModel,
                 read_model: {
                     journal: {
@@ -1212,7 +1213,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Connected service badges');
+        expect(wrapper.text()).toContain('Technical details');
         expect(wrapper.text()).toContain('journal-evidence-summary-only');
         expect(wrapper.text()).toContain('safe-action-host-summary-only');
         expect(wrapper.text()).toContain('communication-delivery-summary-only');
@@ -1223,7 +1224,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).not.toContain('+639170000000');
     });
 
-    it('renders operator-readable integration readiness cards', () => {
+    it('omits technical integration details without explicit authorization', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
                 pay_codes_read_model: payCodesReadModel,
@@ -1257,35 +1258,18 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const readiness = wrapper.find(
-            '[data-testid="cockpit-pay-code-integration-readiness"]',
-        );
-        const cards = readiness.findAll(
-            '[data-testid="cockpit-pay-code-integration-readiness-card"]',
-        );
-
-        expect(readiness.exists()).toBe(true);
-        expect(readiness.element.tagName.toLowerCase()).toBe('details');
-        expect(readiness.text()).toContain('Connected service details');
-        expect(readiness.text()).toContain('Connected service readiness');
-        expect(readiness.text()).toContain('Journal');
-        expect(readiness.text()).toContain('journal-evidence-summary-only');
-        expect(readiness.text()).toContain(
-            'Journal evidence remains read-only audit context',
-        );
-        expect(readiness.text()).toContain('Actions');
-        expect(readiness.text()).toContain('safe-action-host-summary-only');
-        expect(readiness.text()).toContain('presentation-only');
-        expect(readiness.text()).toContain('Feedback');
-        expect(readiness.text()).toContain(
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-technical-details"]')
+                .exists(),
+        ).toBe(false);
+        expect(wrapper.text()).not.toContain('Connected services');
+        expect(wrapper.text()).not.toContain('journal-evidence-summary-only');
+        expect(wrapper.text()).not.toContain('safe-action-host-summary-only');
+        expect(wrapper.text()).not.toContain(
             'communication-delivery-summary-only',
         );
-        expect(readiness.text()).toContain(
-            'communication status, not lifecycle truth',
-        );
-        expect(readiness.text()).toContain('do not write journal entries');
-        expect(cards).toHaveLength(3);
-        expect(readiness.text()).not.toContain('must-not-render');
+        expect(wrapper.text()).not.toContain('must-not-render');
     });
 
     it('hydrates read-only operator activity navigation context on the Pay Code Explorer', () => {
