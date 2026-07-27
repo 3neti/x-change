@@ -72,19 +72,17 @@ describe('Cockpit campaign explorer navigation boundary', () => {
         });
 
         expect(wrapper.text()).toContain('Campaign Context');
-        expect(wrapper.text()).toContain('Showing Pay Codes from a campaign view');
-        expect(wrapper.text()).toContain('Read-only context');
+        expect(wrapper.text()).toContain('Campaign filter active');
+        expect(wrapper.text()).toContain('read-only context');
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).toContain('campaign-1');
         expect(wrapper.text()).toContain('recipient-1');
         expect(wrapper.text()).toContain('Pay Code Explorer');
-        expect(wrapper.text()).toContain('Campaign changes are disabled');
         expect(wrapper.text()).toContain('Campaign filter details');
-        expect(wrapper.text()).toContain('Use this view for inspection and navigation only');
         expect(wrapper.text()).not.toContain('campaign-navigation-read-only');
         expect(wrapper.text()).toContain('navigation-context-only');
         expect(wrapper.find('[data-testid="cockpit-campaign-navigation-context"]').exists()).toBe(true);
-        expect(wrapper.findAll('[data-testid="cockpit-campaign-navigation-primary-context-item"]')).toHaveLength(4);
+        expect(wrapper.find('[data-testid="cockpit-campaign-navigation-dashboard-link"]').text()).toContain('Return to campaign');
         expect(wrapper.find('[data-testid="cockpit-campaign-navigation-context-details"]').element.tagName.toLowerCase()).toBe('details');
         expect(wrapper.findAll('[data-testid="cockpit-campaign-navigation-context-item"]')).toHaveLength(8);
         expect(wrapper.find('[data-testid="cockpit-campaign-navigation-mutation-button"]').exists()).toBe(false);
@@ -138,7 +136,6 @@ describe('Cockpit campaign explorer navigation boundary', () => {
             ['campaign_recipient_id', 'recipient-1'],
         ]);
         expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-clear-link"]').attributes('href')).toContain('campaign_recipient_id=recipient-1');
         expect(filterSummary.text()).toContain('Context');
         expect(filterSummary.text()).toContain('6');
         expect(filterCards.some((card) => card.text().includes('Campaign Planning Key'))).toBe(true);
@@ -190,7 +187,7 @@ describe('Cockpit campaign explorer navigation boundary', () => {
         });
 
         expect(wrapper.text()).toContain('Campaign Context');
-        expect(wrapper.text()).toContain('Showing Pay Codes from a campaign view');
+        expect(wrapper.text()).toContain('Campaign filter active');
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).not.toContain('must-not-render');
     });

@@ -14,15 +14,15 @@ it('documents pay code explorer compact operations table slice 1', function (): 
         ->toContain('Pay Code Explorer Compact Operations Table — Slice 1')
         ->toContain('slim status pills')
         ->toContain('Presentation-only Pay Code Explorer compactness slice')
-        ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-status-pills"')
-        ->and($page)->toContain('Search, filter, and open read-only Pay Code workspaces.')
+        ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-command-card"')
+        ->and($page)->toContain('Search, filter, and open read-only Pay Code')
         ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-current-search-disclosure"')
         ->and($page)->not->toContain('Focus the list by lifecycle state')
         ->and($search)->toContain('Search Pay Codes')
         ->and($search)->toContain('h-9')
         ->and($search)->not->toContain('Search and filters only change this list.')
         ->and($frontendTest)->toContain('renders the operator list summary as a compact scan strip')
-        ->and($frontendTest)->toContain('cockpit-pay-code-explorer-status-pills');
+        ->and($frontendTest)->toContain('cockpit-pay-code-explorer-primary-summary');
 });
 
 it('documents pay code explorer compact operations table slice 2', function (): void {
@@ -63,8 +63,8 @@ it('documents pay code explorer compact operations table slice 3 closure', funct
         ->toContain('Pay Code Explorer Compact Operations Table — Slice 3 / Closure')
         ->toContain('Published package-owned Cockpit assets')
         ->toContain('Closed / pending human browser inspection')
-        ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-status-pills"')
-        ->and($hostPage)->toContain('data-testid="cockpit-pay-code-explorer-status-pills"')
+        ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-command-card"')
+        ->and($hostPage)->toContain('data-testid="cockpit-pay-code-explorer-command-card"')
         ->and($search)->toContain('Search Pay Codes')
         ->and($hostSearch)->toContain('Search Pay Codes')
         ->and($hostSearch)->toContain('h-9')

@@ -13,10 +13,9 @@ it('documents pay code explorer results header compression slice 1', function ()
         ->toContain('Pay Code Explorer Results Header Compression — Slice 1')
         ->toContain('Converted the results density summary into a tighter pill-style metric strip')
         ->toContain('Presentation-only results header compression')
-        ->and($component)->toContain('sm:w-[30rem]')
-        ->and($component)->toContain('rounded-full bg-slate-50 p-1.5')
-        ->and($component)->toContain('data-testid="cockpit-pay-code-result-limit-notice"')
-        ->and($component)->toContain('data-testid="cockpit-pay-code-result-pagination"')
+        ->and($component)->toContain('data-testid="cockpit-pay-code-results-density-summary"')
+        ->and($component)->toContain('data-testid="cockpit-pay-code-result-page-size"')
+        ->and($component)->toContain('data-testid="cockpit-pay-code-result-pagination-footer"')
         ->and($frontendTest)->toContain('renders the results header as a compact pagination toolbar');
 });
 
@@ -34,10 +33,9 @@ it('documents pay code explorer results header compression slice 2 closure', fun
         ->toContain('Pay Code Explorer Results Header Compression — Slice 2 / Closure')
         ->toContain('Published Cockpit package assets')
         ->toContain('Closed / pending human browser inspection')
-        ->and($component)->toContain('sm:w-[30rem]')
-        ->and($hostComponent)->toContain('sm:w-[30rem]')
-        ->and($hostComponent)->toContain('rounded-full bg-slate-50 p-1.5')
-        ->and($hostComponent)->toContain('data-testid="cockpit-pay-code-result-pagination"')
+        ->and($component)->toContain('data-testid="cockpit-pay-code-results-density-summary"')
+        ->and($hostComponent)->toContain('data-testid="cockpit-pay-code-results-density-summary"')
+        ->and($hostComponent)->toContain('data-testid="cockpit-pay-code-result-pagination-footer"')
         ->and($compass)->toContain('Completed Pay Code Explorer Results Header Compression Slice 2 / Closure')
         ->and($settlementCompass)->toContain('Pay Code Explorer Results Header Compression — Slice 2');
 });

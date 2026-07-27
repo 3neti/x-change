@@ -10,12 +10,13 @@ it('documents pay code explorer voucher list rationalization slice 1', function 
     $table = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPayCodeResultsTable.vue');
     $search = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPayCodeSearchBar.vue');
     $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitPayCodeExplorerHydration.test.ts');
+    $guide = file_get_contents($packageRoot.'/docs/ui-cockpit/PAY_CODE_EXPLORER_UI_UX.md');
 
     expect($report)
         ->toContain('Pay Code Explorer Voucher List Rationalization — Slice 1')
         ->toContain('voucher lifecycle summary cards')
         ->toContain('Presentation-only Explorer rationalization')
-        ->and($page)->toContain('cockpit-pay-code-explorer-status-pills')
+        ->and($page)->toContain('cockpit-pay-code-explorer-primary-summary')
         ->and($page)->not->toContain('Focus the list by lifecycle state')
         ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-current-search-disclosure"')
         ->and($table)->toContain('data-testid="cockpit-pay-code-row-identity"')
@@ -23,7 +24,10 @@ it('documents pay code explorer voucher list rationalization slice 1', function 
         ->and($table)->toContain('Expires')
         ->and($table)->toContain('data-testid="cockpit-pay-code-row-secondary-facts"')
         ->and($search)->toContain('Search by code, recipient, amount, campaign, or status...')
-        ->and($frontendTest)->toContain('renders the explorer shell header as a compact page intro');
+        ->and($frontendTest)->toContain('renders the explorer shell header as a compact page intro')
+        ->and($guide)->toContain('one clear command surface')
+        ->and($guide)->toContain('Technical details')
+        ->and($guide)->toContain('System Treasury');
 });
 
 it('documents pay code explorer voucher list rationalization slice 2 closure', function (): void {
@@ -44,8 +48,8 @@ it('documents pay code explorer voucher list rationalization slice 2 closure', f
         ->toContain('Pay Code Explorer Voucher List Rationalization — Slice 2 / Closure')
         ->toContain('Published Cockpit package assets')
         ->toContain('Closed / pending human browser inspection')
-        ->and($page)->toContain('cockpit-pay-code-explorer-status-pills')
-        ->and($hostPage)->toContain('cockpit-pay-code-explorer-status-pills')
+        ->and($page)->toContain('cockpit-pay-code-explorer-primary-summary')
+        ->and($hostPage)->toContain('cockpit-pay-code-explorer-primary-summary')
         ->and($hostPage)->not->toContain('Focus the list by lifecycle state')
         ->and($table)->toContain('data-testid="cockpit-pay-code-row-identity"')
         ->and($hostTable)->toContain('data-testid="cockpit-pay-code-row-identity"')

@@ -14,7 +14,7 @@ it('documents pay code explorer primary summary compression slice 1', function (
         ->toContain('Moved detailed Current Search facts behind a disclosure')
         ->toContain('Presentation-only primary summary compression')
         ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-current-search-disclosure"')
-        ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-status-pills"')
+        ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-primary-summary"')
         ->and($page)->not->toContain('Focus the list by lifecycle state')
         ->and($frontendTest)->toContain('renders the operator list summary as a compact scan strip')
         ->and($frontendTest)->toContain('cockpit-pay-code-explorer-current-search-disclosure');
@@ -36,7 +36,7 @@ it('documents pay code explorer primary summary compression slice 2 closure', fu
         ->toContain('Closed / pending human browser inspection')
         ->and($page)->toContain('data-testid="cockpit-pay-code-explorer-current-search-disclosure"')
         ->and($hostPage)->toContain('data-testid="cockpit-pay-code-explorer-current-search-disclosure"')
-        ->and($hostPage)->toContain('data-testid="cockpit-pay-code-explorer-status-pills"')
+        ->and($hostPage)->toContain('data-testid="cockpit-pay-code-explorer-primary-summary"')
         ->and($hostPage)->not->toContain('Focus the list by lifecycle state')
         ->and($compass)->toContain('Completed Pay Code Explorer Primary Summary Compression Slice 2 / Closure')
         ->and($settlementCompass)->toContain('Pay Code Explorer Primary Summary Compression — Slice 2');

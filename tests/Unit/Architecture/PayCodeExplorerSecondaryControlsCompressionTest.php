@@ -13,12 +13,12 @@ it('documents pay code explorer secondary controls compression slice 1', functio
         ->toContain('Pay Code Explorer Secondary Controls Compression — Slice 1')
         ->toContain('slim utility disclosure row')
         ->toContain('Presentation-only secondary control compression')
-        ->and($page)->toContain('Read-only rules, totals, and connected-service context.')
+        ->and($page)->toContain('Filter metadata and read-model boundaries.')
         ->and($page)->toContain('class="rounded-xl border border-slate-200 bg-white px-4 py-3')
         ->and($page)->toContain('data-testid="cockpit-pay-code-page-details-disclosure"')
         ->and($page)->toContain('The main scan path stays focused on search and results.')
         ->and($page)->not->toContain('Open this panel for row-action rules, list totals, and connected-service readiness.')
-        ->and($frontendTest)->toContain('Read-only rules, totals, and connected-service context.')
+        ->and($frontendTest)->toContain('Filter metadata and read-model boundaries.')
         ->and($frontendTest)->toContain('py-3');
 });
 
@@ -36,7 +36,7 @@ it('documents pay code explorer secondary controls compression slice 2', functio
         ->and($filterBuilder)->toContain('Read-only query criteria.')
         ->and($filterBuilder)->toContain('rounded-full bg-slate-50 p-1.5')
         ->and($filterBuilder)->toContain('px-4 py-3')
-        ->and($filterBuilder)->toContain('Filtering uses normal GET navigation and only changes what the operator sees.')
+        ->and($filterBuilder)->toContain('Filtering uses normal GET navigation and only changes what the')
         ->and($frontendTest)->toContain('rounded-full')
         ->and($frontendTest)->toContain('py-3');
 });
@@ -57,8 +57,8 @@ it('documents pay code explorer secondary controls compression slice 3 closure',
         ->toContain('Pay Code Explorer Secondary Controls Compression — Slice 3 / Closure')
         ->toContain('Published package-owned Cockpit assets')
         ->toContain('Closed / pending human browser inspection')
-        ->and($page)->toContain('Read-only rules, totals, and connected-service context.')
-        ->and($hostPage)->toContain('Read-only rules, totals, and connected-service context.')
+        ->and($page)->toContain('Filter metadata and read-model boundaries.')
+        ->and($hostPage)->toContain('Filter metadata and read-model boundaries.')
         ->and($filterBuilder)->toContain('Read-only query criteria.')
         ->and($hostFilterBuilder)->toContain('Read-only query criteria.')
         ->and($hostFilterBuilder)->toContain('rounded-full bg-slate-50 p-1.5')

@@ -19,7 +19,6 @@ it('documents pay code explorer filter builder density polish slice 1', function
         ->and($component)->toContain('cockpit-pay-code-filter-density-summary')
         ->and($component)->toContain('activeFilterCount')
         ->and($component)->toContain('contextFilterCount')
-        ->and($component)->toContain('<details')
         ->and($hostComponent)->toContain('cockpit-pay-code-filter-density-summary')
         ->and($foundationTest)->toContain('Read-only query criteria')
         ->and($campaignTest)->toContain('cockpit-pay-code-filter-density-summary')

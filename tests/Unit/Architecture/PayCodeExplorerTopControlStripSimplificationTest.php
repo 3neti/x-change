@@ -14,8 +14,8 @@ it('documents pay code explorer top control strip simplification slice 1', funct
         ->toContain('single `Page details` disclosure')
         ->toContain('Presentation-only top control strip simplification')
         ->and($page)->toContain('data-testid="cockpit-pay-code-page-details-disclosure"')
-        ->and($page)->toContain('Page details')
-        ->and($page)->toContain('Read-only rules, totals, and connected-service context.')
+        ->and($page)->toContain('Explorer details')
+        ->and($page)->toContain('Filter metadata and read-model boundaries.')
         ->and($frontendTest)->toContain('groups secondary utility panels behind one page details disclosure')
         ->and($frontendTest)->toContain('cockpit-pay-code-page-details-disclosure');
 });
@@ -36,9 +36,9 @@ it('documents pay code explorer top control strip simplification slice 2 closure
         ->toContain('Closed / pending human browser inspection')
         ->and($page)->toContain('data-testid="cockpit-pay-code-page-details-disclosure"')
         ->and($hostPage)->toContain('data-testid="cockpit-pay-code-page-details-disclosure"')
-        ->and($hostPage)->toContain('Page details')
+        ->and($hostPage)->toContain('Explorer details')
         ->and($hostPage)->toContain('cockpit-pay-code-row-action-guidance')
-        ->and($hostPage)->toContain('cockpit-pay-code-integration-readiness')
+        ->and($hostPage)->toContain('cockpit-pay-code-technical-details')
         ->and($compass)->toContain('Completed Pay Code Explorer Top Control Strip Simplification Slice 2 / Closure')
         ->and($settlementCompass)->toContain('Pay Code Explorer Top Control Strip Simplification — Slice 2');
 });

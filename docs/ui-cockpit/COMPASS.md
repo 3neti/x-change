@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Secure Account Management and Funding Destination Readiness
+Current slice: Pay Code Explorer product alignment
 Status: Implemented / final regression and browser acceptance in progress
-Last updated: 2026-07-23
+Last updated: 2026-07-27
 
 ## Completed
 
+- Tightened `/x/cockpit/pay-codes` into one scan-first command surface:
+  - combined the title, lifecycle facts, search, filters, and Quick Generate;
+  - kept campaign and activity context compact and conditional;
+  - moved records directly below the working controls;
+  - reduced result chrome to count, visible range, density, and footer paging;
+  - consolidated secondary metadata under one Explorer details disclosure; and
+  - limited technical read-model details to authorized System Treasury users.
+- Canonical UI/UX contract: `PAY_CODE_EXPLORER_UI_UX.md`.
 - Implemented the package-owned `/x/cockpit/accounts` workspace:
   - shared destinations remain the default;
   - dedicated failures block instead of silently falling back;
