@@ -8,6 +8,15 @@ it('presents the package-owned funding treasury portfolio without duplicate lega
         $packageRoot.'/resources/js/cockpit/pages/Funding.vue',
     );
     $types = file_get_contents($packageRoot.'/resources/js/cockpit/types.ts');
+    $uiUxGuide = file_get_contents(
+        $packageRoot.'/docs/ui-cockpit/FUNDING_WORKSPACE_UI_UX.md',
+    );
+    $fundingArchitecture = file_get_contents(
+        $packageRoot.'/docs/architecture/FUNDING_ACCOUNT_MANAGEMENT.md',
+    );
+    $cockpitCompass = file_get_contents(
+        $packageRoot.'/docs/ui-cockpit/COMPASS.md',
+    );
 
     expect($fundingPage)
         ->toContain('data-testid="funding-treasury-portfolio"')
@@ -30,5 +39,19 @@ it('presents the package-owned funding treasury portfolio without duplicate lega
         ->and($types)
         ->toContain('export type CockpitFundingTreasuryPortfolio')
         ->toContain('export type CockpitFundingTreasuryConnection')
-        ->toContain('treasury_portfolio?: CockpitFundingTreasuryPortfolio;');
+        ->toContain('treasury_portfolio?: CockpitFundingTreasuryPortfolio;')
+        ->and($uiUxGuide)
+        ->toContain('Account Funding Workspace UI/UX Guide')
+        ->toContain('For the Account Holder')
+        ->toContain('For Developers')
+        ->toContain('For AI Agents')
+        ->toContain('Funding Activity is the one durable history surface')
+        ->toContain('`can_view_treasury_controls`')
+        ->toContain('Treasury controls → Provider diagnostics')
+        ->toContain('Automated tests and AI agents never initiate a real-money transfer')
+        ->and($fundingArchitecture)
+        ->toContain('../ui-cockpit/FUNDING_WORKSPACE_UI_UX.md')
+        ->and($cockpitCompass)
+        ->toContain('Account Funding Workspace UI/UX Contract')
+        ->toContain('FUNDING_WORKSPACE_UI_UX.md');
 });

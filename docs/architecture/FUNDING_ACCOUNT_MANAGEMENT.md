@@ -1,6 +1,10 @@
 # Funding Account Management
 
 > The provider-neutral initial-state, multi-position, reconciliation, and deployment model is documented in [Treasury Initial State and Account Portfolios](TREASURY_INITIAL_STATE_AND_ACCOUNT_PORTFOLIOS.md). This document retains the detailed Funding Account UI and provider-destination design.
+>
+> The accepted Account-holder journey, visual hierarchy, role visibility,
+> responsive behavior, developer map, and AI-agent invariants are documented in
+> the [Account Funding Workspace UI/UX Guide](../ui-cockpit/FUNDING_WORKSPACE_UI_UX.md).
 
 ## Purpose
 

@@ -4600,3 +4600,23 @@ Current boundary:
 - Published Cockpit asset parity and the production frontend build remain required closure checks.
 - Boundary remains unchanged: no distribution dispatch, feedback delivery, action execution, journal writes, provider calls, Live Balance enablement, voucher mutation, persistence, public API behavior, or money movement changed.
 - Next recommended wave: hydrate Quick Generate funding and issuance-preflight facts from the existing internal balance authority while preserving the disconnected Live Balance boundary.
+
+# 2026-07-27 — Account Funding Workspace UI/UX Contract
+
+- Added the canonical Account Funding presentation guide at
+  `FUNDING_WORKSPACE_UI_UX.md`.
+- Documented the Account-holder journey, stable product vocabulary, QR Ph,
+  Bank Transfer, Pay Code, Reviewed Value, and normalized Funding Activity
+  behavior.
+- Locked the accepted common method-panel geometry, icon vocabulary, quick
+  amounts, responsive behavior, accessibility expectations, and state-refresh
+  boundaries.
+- Documented the separate Treasury/system-operator experience and the
+  `can_view_treasury_controls` gate for Treasury oversight and Provider
+  diagnostics.
+- Added package ownership, verification commands, browser acceptance, and
+  explicit invariants for future developers and AI agents.
+- Linked the guide from the canonical Funding Account Management architecture.
+- Boundary remains unchanged: documentation only; no routes, read models,
+  authorization, provider calls, settlement behavior, accounting, persistence,
+  public APIs, or money movement changed.
