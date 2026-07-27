@@ -116,6 +116,8 @@ final readonly class CheckFundingRequestTransfer
             $automaticCreditWindowMinutes,
         );
         $searchEndedAt = $now->addSeconds($clockSkewSeconds);
+        $databaseSearchStartedAt = $searchStartedAt->utc();
+        $databaseSearchEndedAt = $searchEndedAt->utc();
         $providerLookupFailure = $this->refreshProviderEvidence(
             request: $request,
             provider: $provider,
@@ -125,7 +127,10 @@ final readonly class CheckFundingRequestTransfer
             ->where('provider_code', $provider)
             ->where('net_amount_minor', $request->requested_value_minor)
             ->where('currency', $request->currency)
-            ->whereBetween('occurred_at', [$searchStartedAt, $searchEndedAt])
+            ->whereBetween('occurred_at', [
+                $databaseSearchStartedAt,
+                $databaseSearchEndedAt,
+            ])
             ->whereNotIn(
                 'id',
                 FundingRequestTransferMatch::query()

@@ -84,6 +84,67 @@ it('queries the provider history adapter before matching and crediting', functio
     $this->travelBack();
 });
 
+it('matches UTC provider observations while the application uses Manila time', function () {
+    $originalTimezone = date_default_timezone_get();
+    date_default_timezone_set('Asia/Manila');
+    config()->set('app.timezone', 'Asia/Manila');
+
+    try {
+        $this->travelTo(new DateTimeImmutable('2026-07-27T11:45:00+08:00'));
+        enableNetbankTreasuryForTests();
+        $requester = actingAsTestUser(0);
+        config()->set(
+            'x-change.funding.requests.bank_transfer.provider_history_enabled',
+            false,
+        );
+        config()->set(
+            'x-change.funding.standing_addresses.creditable_provider_statuses',
+            ['settled'],
+        );
+        $request = app(CreateFundingRequest::class)->handle(
+            new CreateFundingRequestData(
+                accountReference: 'wallet:'.$requester->wallet->uuid,
+                requesterType: $requester::class,
+                requesterId: (string) $requester->getKey(),
+                fundingType: FundingRequestType::BankTransfer,
+                requestedValueMinor: 13_799,
+                currency: 'PHP',
+                description: 'Manila-time provider history lookup.',
+                idempotencyKey: 'provider-history-manila-time-13799',
+                transferWindow: FundingTransferWindow::Recent,
+            ),
+        );
+        app(RecordProviderFundingObservation::class)->handle(
+            new ProviderFundingObservationData(
+                provider: 'netbank',
+                providerTransactionId: 'NETBANK-MANILA-TIME-13799',
+                grossAmountMinor: 13_799,
+                feeAmountMinor: 0,
+                netAmountMinor: 13_799,
+                currency: 'PHP',
+                providerStatus: 'settled',
+                verificationSource: 'netbank-corporate-transaction-history',
+                payloadHash: hash('sha256', 'NETBANK-MANILA-TIME-13799'),
+                occurredAt: new DateTimeImmutable('2026-07-27T11:37:50+08:00'),
+                settledAt: new DateTimeImmutable('2026-07-27T11:38:00+08:00'),
+                metadata: [
+                    'destination_verified' => true,
+                    'connection_reference' => 'netbank-primary',
+                ],
+            ),
+        );
+
+        $result = app(CheckFundingRequestTransfer::class)->handle($request);
+
+        expect($result->status)->toBe('credited')
+            ->and((int) treasuryClientFundsLedger($requester)->balance)
+            ->toBe(13_799);
+    } finally {
+        $this->travelBack();
+        date_default_timezone_set($originalTimezone);
+    }
+});
+
 it('credits one recent exact amount and time match without trusting the sender reference', function () {
     $this->travelTo(new DateTimeImmutable('2026-07-27T21:15:00+08:00'));
     Event::fake([
