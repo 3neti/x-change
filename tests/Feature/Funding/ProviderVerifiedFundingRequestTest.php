@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Event;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingRequestAndIssueCode;
 use LBHurtado\XChange\Actions\Funding\CheckFundingRequestTransfer;
@@ -18,7 +19,70 @@ use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Events\FundingRequestChanged;
 use LBHurtado\XChange\Models\FundingRequestTransferMatch;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
+
+it('queries the provider history adapter before matching and crediting', function () {
+    $this->travelTo(new DateTimeImmutable('2026-07-27T21:15:00+08:00'));
+    enableNetbankTreasuryForTests();
+    $requester = actingAsTestUser(0);
+    config()->set(
+        'x-change.funding.standing_addresses.creditable_provider_statuses',
+        ['settled'],
+    );
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingObservation = new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'NETBANK-LIVE-HISTORY-1737',
+        grossAmountMinor: 1_737,
+        feeAmountMinor: 0,
+        netAmountMinor: 1_737,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'netbank-corporate-transaction-history',
+        payloadHash: hash('sha256', 'NETBANK-LIVE-HISTORY-1737'),
+        occurredAt: new DateTimeImmutable('2026-07-27T21:12:00+08:00'),
+        settledAt: new DateTimeImmutable('2026-07-27T21:12:00+08:00'),
+        metadata: [
+            'destination_verified' => true,
+        ],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(
+        FakeFundingProviderAdapter::class,
+        'emi.funding-provider-adapters',
+    );
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+    $request = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$requester->wallet->uuid,
+            requesterType: $requester::class,
+            requesterId: (string) $requester->getKey(),
+            fundingType: FundingRequestType::BankTransfer,
+            requestedValueMinor: 1_737,
+            currency: 'PHP',
+            description: 'Live provider history lookup.',
+            idempotencyKey: 'provider-history-lookup-1737',
+            transferWindow: FundingTransferWindow::Recent,
+        ),
+    );
+
+    $result = app(CheckFundingRequestTransfer::class)->handle($request);
+
+    expect($result->status)->toBe('credited')
+        ->and($adapter->lastVerification?->fundingAddress)
+        ->toBe('113001000019')
+        ->and($adapter->lastVerification?->expectedAmountMinor)->toBe(1_737)
+        ->and($adapter->lastVerification?->destination?->bankAccountNumber)
+        ->toBe('113001000019')
+        ->and(ProviderFundingObservation::query()->sole()->verification_source)
+        ->toBe('netbank-corporate-transaction-history')
+        ->and((int) treasuryClientFundsLedger($requester)->balance)
+        ->toBe(1_737);
+
+    $this->travelBack();
+});
 
 it('credits one recent exact amount and time match without trusting the sender reference', function () {
     $this->travelTo(new DateTimeImmutable('2026-07-27T21:15:00+08:00'));

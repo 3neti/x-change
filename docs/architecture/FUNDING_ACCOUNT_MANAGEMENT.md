@@ -168,6 +168,12 @@ inbound transfer.
 - `destination_verified=true`;
 - an occurrence timestamp inside the selected search window.
 
+When provider-history lookup is enabled, the check first asks the configured
+`FundingProviderAdapter` to inspect the configured receiving account. The
+adapter returns normalized provider evidence; x-change persists that evidence
+before applying the matching rules above. Provider errors are reduced to a
+sanitized failure type and never turn sender input into settlement authority.
+
 No match leaves the request at `awaiting_provider_evidence`; multiple matches
 require controlled review. Exactly one match no older than
 `XCHANGE_FUNDING_BANK_TRANSFER_AUTO_CREDIT_WINDOW_MINUTES` is eligible for
@@ -505,6 +511,7 @@ XCHANGE_FUNDING_BANK_TRANSFER_ENABLED
 XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER
 XCHANGE_FUNDING_BANK_TRANSFER_CONNECTION
 XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE
+XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER_HISTORY_ENABLED
 XCHANGE_FUNDING_BANK_TRANSFER_AUTO_CREDIT_WINDOW_MINUTES
 XCHANGE_FUNDING_BANK_TRANSFER_CLOCK_SKEW_SECONDS
 XCHANGE_COCKPIT_QRPH_FUNDING_SIMULATION_ENABLED

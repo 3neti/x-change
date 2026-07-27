@@ -650,6 +650,10 @@ return [
                     'XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE',
                     'provider_verified_auto',
                 ),
+                'provider_history_enabled' => env(
+                    'XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER_HISTORY_ENABLED',
+                    true,
+                ),
                 'automatic_credit_window_minutes' => max(
                     1,
                     (int) env(

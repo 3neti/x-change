@@ -7,6 +7,11 @@ namespace LBHurtado\XChange\Actions\Funding;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
+use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\XChange\Actions\Payment\CompleteVoucherCollection;
@@ -18,13 +23,17 @@ use LBHurtado\XChange\Enums\FundingTransferWindow;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\FundingRequestTransferMatch;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
 use RuntimeException;
+use Throwable;
 
 final readonly class CheckFundingRequestTransfer
 {
     public function __construct(
+        private FundingProviderAdapterRegistry $providers,
+        private RecordProviderFundingObservation $recordObservation,
         private StandingFundingRecognitionPolicy $recognitionPolicy,
         private CompleteVoucherCollection $completeCollection,
         private FundingRequestWorkflowPublisher $workflow,
@@ -107,6 +116,11 @@ final readonly class CheckFundingRequestTransfer
             $automaticCreditWindowMinutes,
         );
         $searchEndedAt = $now->addSeconds($clockSkewSeconds);
+        $providerLookupFailure = $this->refreshProviderEvidence(
+            request: $request,
+            provider: $provider,
+            connectionReference: $connectionReference,
+        );
         $observations = ProviderFundingObservation::query()
             ->where('provider_code', $provider)
             ->where('net_amount_minor', $request->requested_value_minor)
@@ -151,6 +165,7 @@ final readonly class CheckFundingRequestTransfer
                     'search_started_at' => $searchStartedAt->toIso8601String(),
                     'search_ended_at' => $searchEndedAt->toIso8601String(),
                     'sender_reference_used_as_authority' => false,
+                    'provider_lookup_failure_type' => $providerLookupFailure,
                     'balance_changed' => false,
                 ],
             );
@@ -214,6 +229,72 @@ final readonly class CheckFundingRequestTransfer
             $provider,
             $connectionReference,
         );
+    }
+
+    private function refreshProviderEvidence(
+        FundingRequest $request,
+        string $provider,
+        string $connectionReference,
+    ): ?string {
+        if (! (bool) config(
+            'x-change.funding.requests.bank_transfer.provider_history_enabled',
+            true,
+        )) {
+            return null;
+        }
+
+        $configuredAccountNumber = trim((string) config(
+            'payment-gateway.netbank.funding.corporate_account_number',
+        ));
+        $fundingAddress = preg_replace('/\D+/', '', $configuredAccountNumber) ?? '';
+
+        if (strlen($fundingAddress) < 12) {
+            return 'ProviderAccountNotConfigured';
+        }
+
+        try {
+            $observation = $this->providers
+                ->for($provider)
+                ->verifyFunding(new FundingVerificationData(
+                    provider: $provider,
+                    fundingIntentReference: 'funding-request:'.$request->reference,
+                    expectedAmountMinor: $request->requested_value_minor,
+                    currency: $request->currency,
+                    fundingAddress: $fundingAddress,
+                    destination: new FundingDestinationData(
+                        provider: $provider,
+                        mode: 'shared_corporate_account',
+                        destinationType: 'bank_account',
+                        accountReference: 'treasury-connection:'.$connectionReference,
+                        displayReference: 'configured-corporate-account',
+                        fingerprint: hash('sha256', $configuredAccountNumber),
+                        verificationStatus: 'configured',
+                        bankAccountNumber: $configuredAccountNumber,
+                        bankAccountName: trim((string) config(
+                            'payment-gateway.netbank.funding.corporate_account_name',
+                        )),
+                        routingAlias: trim((string) config(
+                            'payment-gateway.netbank.funding.vca_alias',
+                        )),
+                    ),
+                ));
+            $observation->metadata = array_merge(
+                $observation->metadata,
+                [
+                    'connection_reference' => $connectionReference,
+                    'funding_request_reference' => $request->reference,
+                ],
+            );
+            $this->recordObservation->handle($observation);
+
+            return null;
+        } catch (ProviderFundingNotObserved) {
+            return null;
+        } catch (ProviderFundingVerificationIndeterminate $exception) {
+            return class_basename($exception);
+        } catch (Throwable $exception) {
+            return class_basename($exception);
+        }
     }
 
     private function reserveMatch(
