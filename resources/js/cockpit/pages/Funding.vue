@@ -1248,99 +1248,29 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-funding-header"
             >
-                <div
-                    class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"
-                >
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <p
-                                class="text-xs font-semibold tracking-[0.18em] text-sky-700 uppercase dark:text-sky-300"
-                            >
-                                Funding workspace
-                            </p>
-                            <span
-                                class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-emerald-700 uppercase dark:bg-emerald-950/60 dark:text-emerald-300"
-                            >
-                                provider verified
-                            </span>
-                        </div>
-                        <h1
-                            class="mt-1 text-xl font-semibold tracking-tight text-slate-950 dark:text-white"
-                        >
-                            Account Funding
-                        </h1>
-                        <p
-                            class="mt-1 max-w-3xl text-sm leading-5 text-slate-600 dark:text-slate-400"
-                        >
-                            Fund this Account and monitor authoritative
-                            settlement.
-                        </p>
-                    </div>
-
-                    <dl
-                        class="grid shrink-0 grid-cols-3 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-slate-50 dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-950/50"
-                        aria-label="Funding control posture"
+                <div class="flex flex-wrap items-center gap-2">
+                    <h1
+                        class="text-xl font-semibold tracking-tight text-slate-950 dark:text-white"
                     >
-                        <div class="min-w-0 px-3 py-2 text-center">
-                            <dt
-                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                            >
-                                Authority
-                            </dt>
-                            <dd
-                                class="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white"
-                            >
-                                Provider
-                            </dd>
-                        </div>
-                        <div class="min-w-0 px-3 py-2 text-center">
-                            <dt
-                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                            >
-                                Posting
-                            </dt>
-                            <dd
-                                class="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white"
-                            >
-                                Atomic
-                            </dd>
-                        </div>
-                        <div class="min-w-0 px-3 py-2 text-center">
-                            <dt
-                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                            >
-                                Manual load
-                            </dt>
-                            <dd
-                                class="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white"
-                            >
-                                Disabled
-                            </dd>
-                        </div>
-                    </dl>
+                        Account Funding
+                    </h1>
+                    <span
+                        class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-emerald-700 uppercase dark:bg-emerald-950/60 dark:text-emerald-300"
+                    >
+                        Bank verified
+                    </span>
                 </div>
-
-                <details
-                    class="mt-3 border-t border-slate-200 pt-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                <p
+                    class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400"
                 >
-                    <summary
-                        class="cursor-pointer font-semibold text-slate-700 marker:text-slate-400 dark:text-slate-300"
-                    >
-                        Funding controls
-                    </summary>
-                    <div class="mt-2 grid gap-2 leading-5 sm:grid-cols-2">
-                        <p>
-                            There is no manual “add funds” control. Only
-                            verified bank or EMI evidence can increase the
-                            Client Funds.
-                        </p>
-                        <p>
-                            Webhook evidence ≠ Account credit. The provider is
-                            queried independently before Inventory recognition
-                            and Account posting occur atomically.
-                        </p>
-                    </div>
-                </details>
+                    Add funds using QR Ph, bank transfer, or Pay Code.
+                </p>
+                <p
+                    class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                >
+                    Funds appear in your Account only after confirmation from
+                    the bank or payment provider.
+                </p>
             </section>
 
             <section
@@ -1508,6 +1438,64 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </dd>
                     </div>
                 </dl>
+
+                <details
+                    class="border-t border-slate-200 px-4 py-2.5 dark:border-slate-800"
+                    data-testid="funding-settlement-safeguards"
+                >
+                    <summary
+                        class="cursor-pointer text-xs font-semibold text-slate-700 marker:text-slate-400 dark:text-slate-300"
+                    >
+                        Settlement safeguards
+                    </summary>
+                    <dl
+                        class="mt-3 grid grid-cols-3 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-slate-50 dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-950/50"
+                        aria-label="Funding control posture"
+                    >
+                        <div class="min-w-0 px-3 py-2 text-center">
+                            <dt
+                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                            >
+                                Authority
+                            </dt>
+                            <dd
+                                class="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white"
+                            >
+                                Bank or EMI
+                            </dd>
+                        </div>
+                        <div class="min-w-0 px-3 py-2 text-center">
+                            <dt
+                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                            >
+                                Posting
+                            </dt>
+                            <dd
+                                class="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white"
+                            >
+                                Verified
+                            </dd>
+                        </div>
+                        <div class="min-w-0 px-3 py-2 text-center">
+                            <dt
+                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                            >
+                                Manual credit
+                            </dt>
+                            <dd
+                                class="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white"
+                            >
+                                Disabled
+                            </dd>
+                        </div>
+                    </dl>
+                    <p
+                        class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                    >
+                        Provider evidence is independently verified before
+                        Inventory recognition and Account posting.
+                    </p>
+                </details>
 
                 <details
                     class="border-t border-slate-200 px-4 py-2.5 dark:border-slate-800"

@@ -637,10 +637,23 @@ describe('Cockpit Funding foundation', () => {
         ).toBeLessThan(
             wrapper.html().indexOf('cockpit-standing-funding-address'),
         );
-        expect(wrapper.text()).toContain(
-            'There is no manual “add funds” control',
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).toContain('Bank verified');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).toContain('Add funds using QR Ph, bank transfer, or Pay Code.');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).toContain(
+            'Funds appear in your Account only after confirmation from the bank or payment provider.',
         );
-        expect(wrapper.text()).toContain('Webhook evidence ≠ Account credit');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).not.toContain('Funding workspace');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).not.toContain('Manual load');
         expect(wrapper.text()).toContain('NetBank');
         expect(wrapper.text()).toContain('Shared · Platform-managed');
         expect(wrapper.text()).toContain('Paynamics');
@@ -674,6 +687,12 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
         ).toContain('Position control');
+        expect(
+            wrapper.get('[data-testid="funding-settlement-safeguards"]').text(),
+        ).toContain('Settlement safeguards');
+        expect(
+            wrapper.get('[data-testid="funding-settlement-safeguards"]').text(),
+        ).toContain('Manual credit');
         expect(
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
         ).toContain('₱24,950.00');
@@ -824,7 +843,23 @@ describe('Cockpit Funding foundation', () => {
         ).toBe(false);
         expect(wrapper.text()).not.toContain('Provider Inventory');
         expect(wrapper.text()).not.toContain('Reconciliation approval queue');
+        expect(
+            wrapper.find('[data-testid="funding-settlement-safeguards"]')
+                .exists(),
+        ).toBe(false);
         expect(wrapper.text()).toContain('Operating as: Account holder');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).toContain('Bank verified');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).not.toContain('Authority');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).not.toContain('Posting');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+        ).not.toContain('Manual load');
         expect(wrapper.text()).toContain('QR Ph');
         expect(wrapper.text()).toContain('Funding Activity');
     });
