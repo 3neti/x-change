@@ -4,12 +4,27 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer product alignment
+Current slice: Create Pay Code product alignment
 Status: Implemented / accepted
 Last updated: 2026-07-27
 
 ## Completed
 
+- Reframed `/x/cockpit/quick-generate` as **Create Pay Code**:
+  - established `Create → Design → Review → Issue` as the user journey;
+  - replaced the technical page header with plain-language product copy;
+  - added a live front/back digital Pay Code canvas;
+  - made amount, recipient, and purpose the first controls;
+  - collapsed templates, design status, DTO coverage, and full instruction
+    controls behind progressive disclosures;
+  - renamed the mutation action to **Issue Pay Code** and success to
+    **Pay Code issued**;
+  - removed engineering diagnostics and architecture history from the
+    ordinary-user page while retaining package-owned diagnostic components;
+  - preserved the existing issuance compiler, payload, validation,
+    idempotency, and downstream boundaries; and
+  - published and verified the package-owned Cockpit assets.
+- Canonical UI/UX contract: `CREATE_PAY_CODE_UI_UX.md`.
 - Tightened `/x/cockpit/pay-codes` into one scan-first command surface:
   - combined the title, lifecycle facts, search, filters, and Quick Generate;
   - made lifecycle status selection immediately reactive while keeping
