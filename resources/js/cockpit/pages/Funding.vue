@@ -492,7 +492,7 @@ const summaryCards = computed(() => [
     },
     {
         key: 'recovery',
-        label: 'Recovery Outstanding',
+        label: 'Recovery',
         value: props.funding_read_model.summary.recovery_outstanding,
         helper: 'Reversed funding still held against future Issuance Capacity.',
         tone: 'text-rose-700 dark:text-rose-300',
