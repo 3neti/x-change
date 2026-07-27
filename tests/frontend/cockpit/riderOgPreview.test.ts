@@ -17,10 +17,10 @@ describe('rider OG preview helpers', () => {
 
         expect(preview).toMatchObject({
             source: 'default',
-            label: 'Default preview',
+            label: 'Default Preview',
             title: 'Splash headline',
             description: 'Splash body',
-            reference: 'rider.og_source: default',
+            reference: 'Automatic',
         });
     });
 
@@ -32,9 +32,9 @@ describe('rider OG preview helpers', () => {
 
         expect(preview).toMatchObject({
             source: 'message',
-            label: 'Message preview',
+            label: 'Message Preview',
             title: 'The quick brown fox jumps over the lazy dog.',
-            reference: 'rider.message',
+            reference: 'Message',
         });
     });
 

@@ -142,7 +142,7 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(design.exists()).toBe(true);
-        expect(design.attributes('srcdoc')).toContain('No message yet');
+        expect(design.attributes('srcdoc')).toContain('No Message Yet');
 
         await wrapper
             .find('[data-testid="cockpit-quick-generate-submit-purpose"]')
@@ -1193,13 +1193,13 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(checklist.exists()).toBe(true);
         expect(checklist.text()).toContain('Contract Builder Checklist');
-        expect(checklist.text()).toContain('Money');
-        expect(checklist.text()).toContain('Claim Inputs');
+        expect(checklist.text()).toContain('Issuance Details');
+        expect(checklist.text()).toContain('Claim Requirements');
         expect(checklist.text()).toContain('Validation');
-        expect(checklist.text()).toContain('Rider');
-        expect(checklist.text()).toContain('Feedback');
-        expect(checklist.text()).toContain('Slices');
-        expect(checklist.text()).toContain('Execution');
+        expect(checklist.text()).toContain('Claim Experience');
+        expect(checklist.text()).toContain('Status Updates');
+        expect(checklist.text()).toContain('Claim Schedule');
+        expect(checklist.text()).toContain('Advanced Settlement');
         expect(
             wrapper.findAll(
                 '[data-testid="cockpit-quick-generate-contract-builder-check"]',
@@ -1228,7 +1228,7 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper.find('#quick-generate-contract-execution').exists(),
         ).toBe(true);
         expect(checklist.text()).toContain('PHP 25 × 1');
-        expect(checklist.text()).toContain('Implicit default execution.');
+        expect(checklist.text()).toContain('Standard Claim Processing.');
 
         expect(
             wrapper
@@ -2409,7 +2409,28 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Instructions and safeguards');
+        const instructionBuilder = wrapper.find(
+            '[data-testid="cockpit-voucher-instruction-builder"]',
+        );
+        const instructionBuilderText = instructionBuilder.text();
+
+        expect(instructionBuilderText).toContain('Instructions And Safeguards');
+        expect(instructionBuilderText).toContain('Issuance Details');
+        expect(instructionBuilderText).toContain('Claim Requirements');
+        expect(instructionBuilderText).toContain('Validation And Verification');
+        expect(instructionBuilderText).toContain('Claim Experience');
+        expect(instructionBuilderText).toContain('Status Updates');
+        expect(instructionBuilderText).toContain(
+            'Claim Schedule And Availability',
+        );
+        expect(instructionBuilderText).toContain(
+            'Advanced Settlement Settings',
+        );
+        expect(instructionBuilderText).not.toContain('CreateV2');
+        expect(instructionBuilderText).not.toContain('DTO');
+        expect(instructionBuilderText).not.toContain('maps to');
+        expect(instructionBuilderText).not.toContain('payload preview');
+        expect(instructionBuilderText).not.toContain('instruction metadata');
         const instructionCards = [
             '#quick-generate-contract-money',
             '#quick-generate-contract-inputs',

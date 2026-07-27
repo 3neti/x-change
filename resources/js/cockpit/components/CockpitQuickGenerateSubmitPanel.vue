@@ -98,7 +98,7 @@ type NormalizedNamedClaimSlice = {
 };
 
 type EffectiveExpiry = {
-    source: 'none' | 'preset' | 'ttl_override' | 'absolute_expires_at';
+    source: string;
     label: string;
     payload: Record<string, string>;
 };
@@ -149,62 +149,62 @@ const voucherInputFieldOptions: VoucherInputFieldOption[] = [
     {
         value: 'signature',
         label: 'Signature',
-        helper: 'Beneficiary signature evidence.',
+        helper: 'Require the recipient to provide a signature.',
     },
     {
         value: 'selfie',
         label: 'Selfie Photo',
-        helper: 'Beneficiary selfie evidence.',
+        helper: 'Require the recipient to provide a selfie.',
     },
     {
         value: 'location',
         label: 'Location',
-        helper: 'Location capture during claim.',
+        helper: 'Record the recipient’s location during the claim.',
     },
     {
         value: 'otp',
         label: 'OTP',
-        helper: 'One-time-passcode input.',
+        helper: 'Require a one-time passcode.',
     },
     {
         value: 'kyc',
         label: 'KYC',
-        helper: 'Identity verification evidence.',
+        helper: 'Require identity verification.',
     },
     {
         value: 'reference_code',
         label: 'Reference Code',
-        helper: 'External or branch-provided claim reference.',
+        helper: 'Require a branch or external reference.',
     },
     {
         value: 'name',
         label: 'Full Name',
-        helper: 'Beneficiary legal or display name.',
+        helper: 'Collect the recipient’s legal or display name.',
     },
     {
         value: 'address',
         label: 'Address',
-        helper: 'Beneficiary address details.',
+        helper: 'Collect the recipient’s address.',
     },
     {
         value: 'birth_date',
         label: 'Birthdate',
-        helper: 'Beneficiary birth date.',
+        helper: 'Collect the recipient’s birth date.',
     },
     {
         value: 'gross_monthly_income',
         label: 'Gross Monthly Income',
-        helper: 'Financial profile input where required.',
+        helper: 'Collect monthly income when required.',
     },
     {
         value: 'mobile',
         label: 'Mobile Number',
-        helper: 'Beneficiary mobile or GCash-style reference.',
+        helper: 'Collect the recipient’s Philippine mobile number.',
     },
     {
         value: 'email',
         label: 'Email Address',
-        helper: 'Beneficiary email collected during claim.',
+        helper: 'Collect the recipient’s email address.',
     },
 ];
 
@@ -226,71 +226,71 @@ const voucherInputFieldPayloadOrder = [
 const cashTypeOptions: CashTypeOption[] = [
     {
         value: 'default',
-        label: 'Default cash contract',
-        helper: 'Omit cash.type and let the voucher package use its default cash behavior.',
+        label: 'Default',
+        helper: 'Use the standard Pay Code behavior.',
     },
     {
         value: 'cash',
         label: 'Cash',
-        helper: 'Standard claimable cash Pay Code.',
+        helper: 'Create a standard claimable cash Pay Code.',
     },
     {
         value: 'disbursement',
         label: 'Disbursement',
-        helper: 'Operator-issued payout contract for a known beneficiary or route.',
+        helper: 'Create a payout for a known recipient or route.',
     },
     {
         value: 'claimable_cash',
-        label: 'Claimable cash',
-        helper: 'Explicit claim-first cash contract.',
+        label: 'Claimable Cash',
+        helper: 'Require a claim before value is released.',
     },
     {
         value: 'settlement_cash',
-        label: 'Settlement cash',
-        helper: 'Settlement-oriented cash contract; execution still remains voucher-owned.',
+        label: 'Settlement Cash',
+        helper: 'Use the Pay Code for a settlement flow.',
     },
     {
         value: 'custom',
-        label: 'Custom key',
-        helper: 'Use only when an upstream contract defines the cash type key.',
+        label: 'Custom',
+        helper: 'Use a purpose defined by an approved integration.',
     },
 ];
 
 const mandateOptions: MandateOption[] = [
     {
         value: 'branch-release',
-        label: 'Branch release',
-        helper: 'Operator or branch counter release is required.',
+        label: 'Branch Release',
+        helper: 'Require release by an operator or branch counter.',
     },
     {
         value: 'counter-check',
-        label: 'Counter check',
-        helper: 'Counter staff must verify the Pay Code before release.',
+        label: 'Counter Check',
+        helper: 'Require counter staff to verify the Pay Code.',
     },
     {
         value: 'kyc-required',
-        label: 'KYC required',
-        helper: 'Identity evidence is expected before execution.',
+        label: 'KYC Required',
+        helper: 'Require identity verification before completion.',
     },
     {
         value: 'otp-required',
-        label: 'OTP required',
-        helper: 'One-time passcode verification is expected.',
+        label: 'OTP Required',
+        helper: 'Require one-time passcode verification.',
     },
     {
         value: 'manual-review',
-        label: 'Manual review',
-        helper: 'A human review step is expected before completion.',
+        label: 'Manual Review',
+        helper: 'Require a human review before completion.',
     },
     {
         value: 'recipient-match',
-        label: 'Recipient match',
-        helper: 'Claim data should match the intended recipient.',
+        label: 'Recipient Match',
+        helper: 'Require claim details to match the intended recipient.',
     },
     {
         value: 'settlement-readiness',
-        label: 'Settlement readiness',
-        helper: 'Settlement readiness must be confirmed before execution.',
+        label: 'Settlement Readiness',
+        helper: 'Require settlement readiness before completion.',
     },
 ];
 
@@ -299,37 +299,37 @@ const riderUrlPresets: RiderUrlPreset[] = [
         value: '',
         label: 'None',
         url: '',
-        helper: 'No CTA destination URL.',
+        helper: 'Do not show an action link.',
     },
     {
         value: 'branch-instructions',
         label: 'Branch Instructions',
         url: 'https://example.com/branch-instructions',
-        helper: 'Common branch counter or manual release instructions.',
+        helper: 'Send the recipient to branch or release instructions.',
     },
     {
         value: 'promo-page',
-        label: 'Promo / Ad Page',
+        label: 'Promotion Page',
         url: 'https://example.com/promo',
-        helper: 'Marketing or campaign landing page.',
+        helper: 'Send the recipient to a promotion or campaign page.',
     },
     {
         value: 'support-page',
-        label: 'Support / Help Page',
+        label: 'Help Page',
         url: 'https://example.com/support',
-        helper: 'Beneficiary support and help instructions.',
+        helper: 'Send the recipient to support instructions.',
     },
     {
         value: 'kyc-instructions',
         label: 'KYC Instructions',
         url: 'https://example.com/kyc-instructions',
-        helper: 'Identity-verification instructions.',
+        helper: 'Send the recipient to identity verification instructions.',
     },
     {
         value: 'remittance-status',
         label: 'Remittance Status',
         url: 'https://example.com/remittance-status',
-        helper: 'Status page for remittance-style payouts.',
+        helper: 'Send the recipient to a remittance status page.',
     },
     {
         value: 'custom',
@@ -700,7 +700,7 @@ const feedbackEmailError = computed<string | null>(() => {
 
     if (email === '') {
         return feedbackEmailEnabled.value
-            ? 'Email feedback is selected. Enter a valid email address.'
+            ? 'Email updates are selected. Enter a valid email address.'
             : null;
     }
 
@@ -716,7 +716,7 @@ const feedbackMobileError = computed<string | null>(() => {
 
     if (mobile === '') {
         return feedbackMobileEnabled.value
-            ? 'SMS feedback is selected. Enter a Philippine mobile number.'
+            ? 'Mobile updates are selected. Enter a Philippine mobile number.'
             : null;
     }
 
@@ -730,7 +730,7 @@ const feedbackWebhookError = computed<string | null>(() => {
 
     if (webhook === '') {
         return feedbackWebhookEnabled.value
-            ? 'Webhook feedback is selected. Enter a webhook URL.'
+            ? 'Webhook updates are selected. Enter a webhook URL.'
             : null;
     }
 
@@ -1118,19 +1118,19 @@ const canvasInstructionLabels = computed<string[]>(() => {
 
 const canvasExpiryLabel = computed<string>(() => {
     if (expiresAt.value.trim() !== '') {
-        return 'Exact expiry';
+        return 'Exact Expiration';
     }
 
     if (expiryPreset.value === 'none') {
-        return 'No expiry';
+        return 'No Expiration';
     }
 
     const labels: Record<string, string> = {
-        P12H: '12 hours',
-        P1D: '1 day',
-        P3D: '3 days',
-        P7D: '7 days',
-        custom: `${expiryCustomDays.value || 'Custom'} days`,
+        P12H: '12 Hours',
+        P1D: '1 Day',
+        P3D: '3 Days',
+        P7D: '7 Days',
+        custom: `${expiryCustomDays.value || 'Custom'} Days`,
     };
 
     return labels[expiryPreset.value] ?? expiryPreset.value;
@@ -1150,7 +1150,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
         return [
             {
                 key: 'money',
-                label: 'Money',
+                label: 'Issuance Details',
                 target: '#quick-generate-contract-money',
                 status: hasMoney ? 'ready' : 'needs-review',
                 summary: hasMoney
@@ -1159,19 +1159,19 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
             },
             {
                 key: 'claim',
-                label: 'Recipient receives',
+                label: 'Recipient Receives',
                 target: '#quick-generate-claim-outcome',
                 status:
                     claimRecipientError.value === null
                         ? 'ready'
                         : 'needs-review',
                 summary: isAccountFundingClaim.value
-                    ? 'Account funds · no provider payout'
-                    : 'Cash payout through the configured provider',
+                    ? 'Account Funds · No Provider Payout'
+                    : 'Cash Payout Through The Selected Provider',
             },
             {
                 key: 'inputs',
-                label: 'Claim Inputs',
+                label: 'Claim Requirements',
                 target: '#quick-generate-contract-inputs',
                 status:
                     selectedInputFields.value.length > 0
@@ -1180,7 +1180,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
                 summary:
                     selectedInputFields.value.length > 0
                         ? selectedInputFields.value.join(', ')
-                        : 'No beneficiary inputs selected.',
+                        : 'No Claim Requirements Selected.',
             },
             {
                 key: 'validation',
@@ -1190,11 +1190,11 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
                 summary:
                     validationKeys.length > 0
                         ? validationKeys.join(', ')
-                        : 'No cash validation rules selected.',
+                        : 'No Validation Rules Selected.',
             },
             {
                 key: 'rider',
-                label: 'Rider',
+                label: 'Claim Experience',
                 target: '#quick-generate-contract-rider',
                 status:
                     purpose.value.trim() !== '' ||
@@ -1206,12 +1206,12 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
                     purpose.value.trim() !== '' ||
                     riderUrl.value.trim() !== '' ||
                     riderSplash.value.trim() !== ''
-                        ? 'Beneficiary experience configured.'
-                        : 'No CTA or splash content configured.',
+                        ? 'Claim Experience Configured.'
+                        : 'No Claim Experience Added.',
             },
             {
                 key: 'feedback',
-                label: 'Feedback',
+                label: 'Status Updates',
                 target: '#quick-generate-contract-feedback',
                 status: feedbackValid.value
                     ? feedbackChannels.length > 0
@@ -1222,11 +1222,11 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
                     ? feedbackValidationErrors.value.join(' ')
                     : feedbackChannels.length > 0
                       ? feedbackChannels.join(', ')
-                      : 'No feedback channels selected.',
+                      : 'No Update Destinations Selected.',
             },
             {
                 key: 'slices',
-                label: 'Slices',
+                label: 'Claim Schedule',
                 target: '#quick-generate-contract-slices',
                 status:
                     namedClaimSliceValidationMessage.value === null
@@ -1238,14 +1238,14 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
             },
             {
                 key: 'execution',
-                label: 'Execution',
+                label: 'Advanced Settlement',
                 target: '#quick-generate-contract-execution',
                 status: includeExecutionInstruction.value
                     ? 'ready'
                     : 'optional',
                 summary: includeExecutionInstruction.value
                     ? `${executionDriver.value || 'default'} · ${executionSchema.value || 'voucher.execution.v1'}`
-                    : 'Implicit default execution.',
+                    : 'Standard Claim Processing.',
             },
         ];
     },
@@ -1295,7 +1295,7 @@ const payeeHelpText = computed<string>(() => {
         return `Restricted to vendor alias: ${normalizedPayee.value}`;
     }
 
-    return 'Blank or CASH means anyone can claim subject to the other validation gates.';
+    return 'Blank or CASH allows anyone who meets the other claim requirements.';
 });
 
 const effectiveTtl = computed<string>(() => {
@@ -1325,8 +1325,8 @@ const effectiveExpiry = computed<EffectiveExpiry>(() => {
         };
 
         return {
-            source: 'absolute_expires_at',
-            label: `Absolute expiry: ${absoluteExpiresAt}`,
+            source: 'Exact Time',
+            label: `Expires At: ${absoluteExpiresAt}`,
             payload,
         };
     }
@@ -1339,8 +1339,8 @@ const effectiveExpiry = computed<EffectiveExpiry>(() => {
         };
 
         return {
-            source: 'ttl_override',
-            label: `Raw TTL override: ${advancedTtl}`,
+            source: 'Custom Duration',
+            label: `Duration: ${advancedTtl}`,
             payload,
         };
     }
@@ -1351,15 +1351,15 @@ const effectiveExpiry = computed<EffectiveExpiry>(() => {
         };
 
         return {
-            source: 'preset',
-            label: `Expiry preset: ${effectiveTtl.value}`,
+            source: 'Preset',
+            label: `Duration: ${effectiveTtl.value}`,
             payload,
         };
     }
 
     return {
-        source: 'none',
-        label: 'No expiry payload will be submitted.',
+        source: 'No Expiration',
+        label: 'No Expiration',
         payload: {},
     };
 });
@@ -1387,7 +1387,7 @@ const feeStrategyLabel = computed<string>(() => {
         return 'Add fee on top of amount';
     }
 
-    return 'Issuer absorbs fee';
+    return 'Issuer Absorbs Fee';
 });
 
 const feeStrategyPreview = computed<{
@@ -1439,7 +1439,7 @@ const effectiveCashType = computed<string>(() => {
 const cashTypeHelper = computed<string>(() => {
     return (
         cashTypeOptions.find((option) => option.value === cashType.value)
-            ?.helper ?? 'Select how cash.type should be represented.'
+            ?.helper ?? 'Choose the purpose of this Pay Code.'
     );
 });
 
@@ -1454,7 +1454,7 @@ const effectiveMandates = computed<string[]>(() => {
 
 const effectiveMandatesDisplay = computed<string>(() => {
     if (effectiveMandates.value.length === 0) {
-        return 'No mandates selected';
+        return 'No Conditions Selected';
     }
 
     return effectiveMandates.value.join(', ');
@@ -1590,7 +1590,7 @@ const validationPreviewDisplay = computed<string>(() => {
     );
 
     if (labels.length === 0) {
-        return 'No cash validation rules selected';
+        return 'No Recipient Rules Selected';
     }
 
     return [...new Set(labels)].join(', ');
@@ -1602,7 +1602,7 @@ const structuredValidationPreviewDisplay = computed<string>(() => {
     );
 
     if (labels.length === 0) {
-        return 'No structured verification rules selected';
+        return 'No Additional Checks Selected';
     }
 
     return labels.join(', ');
@@ -1661,7 +1661,7 @@ const riderSplashPreviewIsHtml = computed<boolean>(() => {
 const riderSplashPreviewDocument = computed<string>(() => {
     const body = riderSplashPreviewIsHtml.value
         ? riderSplashContent.value
-        : `<p>${escapeHtml(riderSplashContent.value || 'No splash body yet.')}</p>`;
+        : `<p>${escapeHtml(riderSplashContent.value || 'No Introduction Message Yet.')}</p>`;
 
     return buildSandboxedPreviewDocument(body);
 });
@@ -1808,7 +1808,7 @@ const addSliceDisabledReason = computed<string | null>(() => {
     const nextAmount = normalizedPayCodeAmount() / nextCount;
 
     if (nextAmount + 0.0001 < minimumWithdrawalFloor.value) {
-        return `Adding another slice would create ${currency.value || 'PHP'} ${formatSliceAmount(nextAmount)} claims, below the ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)} effective minimum.`;
+        return `Adding another portion would create ${currency.value || 'PHP'} ${formatSliceAmount(nextAmount)} claims, below the ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)} effective minimum.`;
     }
 
     return null;
@@ -1824,7 +1824,7 @@ const namedClaimSliceValidationMessage = computed<string | null>(() => {
     if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
         return sliceMode.value === 'whole'
             ? null
-            : 'Enter a Pay Code amount before configuring slices.';
+            : 'Enter a Pay Code amount before configuring portions.';
     }
 
     if (sliceMode.value === 'fixed') {
@@ -1832,7 +1832,7 @@ const namedClaimSliceValidationMessage = computed<string | null>(() => {
         const computedAmount = count > 0 ? normalizedAmount / count : 0;
 
         if (computedAmount + 0.0001 < minimumWithdrawalFloor.value) {
-            return `${count} fixed slices would create ${currency.value || 'PHP'} ${formatSliceAmount(computedAmount)} claims, below the ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)} effective minimum.`;
+            return `${count} equal portions would create ${currency.value || 'PHP'} ${formatSliceAmount(computedAmount)} claims, below the ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)} effective minimum.`;
         }
 
         return null;
@@ -1845,7 +1845,7 @@ const namedClaimSliceValidationMessage = computed<string | null>(() => {
             Number.isFinite(minimum) &&
             minimum + 0.0001 < minimumWithdrawalFloor.value
         ) {
-            return `Minimum Withdrawal must be at least ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)}.`;
+            return `Minimum Claim Amount must be at least ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)}.`;
         }
 
         return null;
@@ -1856,11 +1856,11 @@ const namedClaimSliceValidationMessage = computed<string | null>(() => {
     }
 
     if (normalizedNamedClaimSlices.value.length === 0) {
-        return 'Add at least one named slice.';
+        return 'Add at least one scheduled portion.';
     }
 
     if (normalizedNamedClaimSlices.value.some((slice) => slice.amount <= 0)) {
-        return 'Each named slice must have an amount greater than zero.';
+        return 'Each scheduled portion must have an amount greater than zero.';
     }
 
     if (
@@ -1868,11 +1868,11 @@ const namedClaimSliceValidationMessage = computed<string | null>(() => {
             (slice) => slice.amount + 0.0001 < minimumWithdrawalFloor.value,
         )
     ) {
-        return `Each named slice must be at least ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)}.`;
+        return `Each scheduled portion must be at least ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)}.`;
     }
 
     if (Math.abs(namedClaimSliceRemaining.value) >= 0.01) {
-        return 'Named slice amounts must equal the Pay Code amount.';
+        return 'Scheduled portion amounts must equal the Pay Code amount.';
     }
 
     return null;
@@ -1999,22 +1999,22 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
         return [
             { label: 'Template', value: selectedTemplateName.value },
             {
-                label: 'Money',
+                label: 'Value',
                 value: `${currency.value.trim() || 'PHP'} ${amount.value || '0'} × ${count.value || '1'}`,
             },
             {
-                label: 'Payee',
+                label: 'Recipient',
                 value:
                     payeeType.value === 'anyone'
                         ? 'anyone'
                         : `${payeeType.value}: ${normalizedPayee.value}`,
             },
             {
-                label: 'Expiry',
+                label: 'Expiration',
                 value: effectiveTtl.value === '' ? 'none' : effectiveTtl.value,
             },
             {
-                label: 'Claim inputs',
+                label: 'Claim Requirements',
                 value:
                     selectedInputFields.value.length > 0
                         ? selectedInputFields.value.join(', ')
@@ -2035,7 +2035,7 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
                         : 'none',
             },
             {
-                label: 'Rider',
+                label: 'Claim Experience',
                 value:
                     purpose.value.trim() ||
                     riderUrl.value.trim() ||
@@ -2044,7 +2044,7 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
                         : 'none',
             },
             {
-                label: 'Feedback',
+                label: 'Status Updates',
                 value: Object.values(feedbackSummary.value).some(
                     (value) => value !== null,
                 )
@@ -2052,7 +2052,7 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
                     : 'none',
             },
             {
-                label: 'Slices',
+                label: 'Claim Schedule',
                 value:
                     sliceMode.value === 'named'
                         ? `named · ${normalizedNamedClaimSlices.value.length} slices · ${currency.value.trim() || 'PHP'} ${namedClaimSliceTotal.value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
@@ -3330,12 +3330,12 @@ function dataGet(source: unknown, path: string[]): unknown {
             >
                 <span class="flex items-center justify-between gap-3">
                     <span>
-                        Instructions and safeguards
+                        Instructions And Safeguards
                         <span
                             class="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400"
                         >
-                            Optional claim rules, verification, feedback, and
-                            advanced controls
+                            Optional claim requirements, recipient checks,
+                            updates, and advanced rules
                         </span>
                     </span>
                     <span
@@ -3361,14 +3361,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Money, payee, and expiry
+                                Issuance Details
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                CreateV2-inspired primary controls for amount,
-                                payee validation, expiry, template, and
-                                quantity.
+                                Choose the template, value, recipient,
+                                availability, and quantity.
                             </p>
                         </div>
                     </summary>
@@ -3440,7 +3439,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
-                            Payee
+                            Recipient
                             <input
                                 v-model="recipientReference"
                                 type="text"
@@ -3469,7 +3468,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <legend
                                 class="text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
-                                Recipient receives
+                                Recipient Receives
                             </legend>
                             <div class="grid gap-2 sm:grid-cols-2">
                                 <label
@@ -3492,13 +3491,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <span
                                             class="block text-sm font-semibold"
                                         >
-                                            Cash payout
+                                            Cash Payout
                                         </span>
                                         <span
                                             class="mt-0.5 block text-[11px] leading-4"
                                         >
-                                            Claim through the configured payout
-                                            provider.
+                                            Send the value through the selected
+                                            payout provider.
                                         </span>
                                     </span>
                                 </label>
@@ -3523,7 +3522,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <span
                                             class="block text-sm font-semibold"
                                         >
-                                            Account funds
+                                            Account Funds
                                         </span>
                                         <span
                                             class="mt-0.5 block text-[11px] leading-4"
@@ -3546,24 +3545,24 @@ function dataGet(source: unknown, path: string[]): unknown {
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
-                            Expiry
+                            Expiration
                             <select
                                 v-model="expiryPreset"
                                 class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-expiry-preset"
                                 :disabled="processing"
                             >
-                                <option value="none">No preset expiry</option>
-                                <option value="P12H">12 hours</option>
-                                <option value="P1D">1 day</option>
-                                <option value="P3D">3 days</option>
-                                <option value="P7D">7 days</option>
-                                <option value="custom">Custom days</option>
+                                <option value="none">No Expiration</option>
+                                <option value="P12H">12 Hours</option>
+                                <option value="P1D">1 Day</option>
+                                <option value="P3D">3 Days</option>
+                                <option value="P7D">7 Days</option>
+                                <option value="custom">Custom</option>
                             </select>
                             <span
                                 class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
                             >
-                                Advanced TTL overrides this preset when filled.
+                                Advanced timing settings take precedence.
                             </span>
                         </label>
 
@@ -3571,7 +3570,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             v-if="expiryPreset === 'custom'"
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
-                            Custom expiry days
+                            Custom Expiration (Days)
                             <input
                                 v-model="expiryCustomDays"
                                 type="number"
@@ -3590,7 +3589,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         <summary
                             class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                         >
-                            Advanced contract controls
+                            Advanced Issuance Settings
                         </summary>
                         <div
                             class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
@@ -3601,7 +3600,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             >
                                 <div>
                                     <p class="font-semibold">
-                                        Effective expiry
+                                        Effective Expiration
                                     </p>
                                     <p class="mt-1">
                                         {{ effectiveExpiry.label }}
@@ -3616,9 +3615,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <p
                                 class="mt-2 text-[11px] text-amber-800 dark:text-amber-200"
                             >
-                                Precedence: Exact expires at wins over raw TTL;
-                                raw TTL wins over the primary expiry preset.
-                                When exact expiry is set, TTL is not submitted.
+                                An exact expiration takes priority over a custom
+                                duration, which takes priority over the preset.
                             </p>
                         </div>
                         <div
@@ -3638,7 +3636,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Optional Pay Code prefix.
+                                    Optional characters shown before the
+                                    generated code.
                                 </span>
                             </label>
                             <label
@@ -3656,14 +3655,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Optional generated-code mask.
+                                    Optional pattern for generated codes.
                                 </span>
                             </label>
                             <label
                                 class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
                                 <span class="leading-none"
-                                    >Raw TTL override</span
+                                    >Custom Duration</span
                                 >
                                 <input
                                     v-model="ttl"
@@ -3676,14 +3675,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    ISO-8601 duration override. Example: P1D or
+                                    Use an ISO-8601 duration, such as P1D or
                                     PT12H.
                                 </span>
                             </label>
                             <label
                                 class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                <span class="leading-none">Starts at</span>
+                                <span class="leading-none">Starts At</span>
                                 <input
                                     v-model="startsAt"
                                     type="datetime-local"
@@ -3694,15 +3693,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Optional activation timestamp.
+                                    Optional date and time when claims begin.
                                 </span>
                             </label>
                             <label
                                 class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                <span class="leading-none"
-                                    >Exact expires at</span
-                                >
+                                <span class="leading-none">Expires At</span>
                                 <input
                                     v-model="expiresAt"
                                     type="datetime-local"
@@ -3713,15 +3710,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Absolute expiry. When filled, it dominates
-                                    TTL and expiry preset.
+                                    Exact date and time when claims end.
                                 </span>
                             </label>
                             <label
                                 class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
                                 <span class="leading-none"
-                                    >Settlement rail</span
+                                    >Transfer Network</span
                                 >
                                 <select
                                     v-model="settlementRail"
@@ -3738,14 +3734,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Optional routing hint; providers are not
-                                    called here.
+                                    Optional preference for the eventual
+                                    transfer.
                                 </span>
                             </label>
                             <label
                                 class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                <span class="leading-none">Fee strategy</span>
+                                <span class="leading-none">Fee Handling</span>
                                 <select
                                     v-model="feeStrategy"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -3755,20 +3751,20 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     "
                                 >
                                     <option value="absorb">
-                                        Absorb — issuer pays fee
+                                        Absorb — Issuer Pays
                                     </option>
                                     <option value="include">
-                                        Include — fee comes from amount
+                                        Include — Deduct From Value
                                     </option>
                                     <option value="add">
-                                        Add — fee added on top
+                                        Add — Charge On Top
                                     </option>
                                 </select>
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Controls operator-visible fee interpretation
-                                    only.
+                                    Preview how a possible fee affects the
+                                    recipient and issuer.
                                 </span>
                             </label>
                             <div
@@ -3792,7 +3788,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <p
                                             class="text-[11px] tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
                                         >
-                                            Estimated fee
+                                            Estimated Fee
                                         </p>
                                         <p class="font-semibold">
                                             {{ formatMoney(illustrativeFee) }}
@@ -3802,7 +3798,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <p
                                             class="text-[11px] tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
                                         >
-                                            Recipient amount
+                                            Recipient Amount
                                         </p>
                                         <p class="font-semibold">
                                             {{
@@ -3814,7 +3810,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <p
                                             class="text-[11px] tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
                                         >
-                                            Issuer cost
+                                            Issuer Cost
                                         </p>
                                         <p class="font-semibold">
                                             {{ feeStrategyPreview.issuerCost }}
@@ -3824,15 +3820,16 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <p
                                     class="text-[11px] text-emerald-700 dark:text-emerald-300"
                                 >
-                                    {{ feeStrategyPreview.note }} No pricing or
-                                    provider quote service is called by this
-                                    preview.
+                                    {{ feeStrategyPreview.note }} The final fee
+                                    is confirmed during issuance.
                                 </p>
                             </div>
                             <label
                                 class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                <span class="leading-none">Cash type</span>
+                                <span class="leading-none"
+                                    >Pay Code Purpose</span
+                                >
                                 <select
                                     v-model="cashType"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -3859,12 +3856,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
                                 <span class="leading-none"
-                                    >Custom cash type key</span
+                                    >Custom Purpose Key</span
                                 >
                                 <input
                                     v-model="customCashType"
                                     type="text"
-                                    placeholder="custom_cash_key"
+                                    placeholder="Approved purpose key"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                     data-testid="cockpit-quick-generate-custom-cash-type"
                                     :disabled="processing"
@@ -3872,7 +3869,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Submitted as cash.type when filled.
+                                    Use the key supplied by the approved
+                                    integration.
                                 </span>
                             </label>
                             <div
@@ -3883,14 +3881,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="leading-none font-semibold text-slate-800 dark:text-slate-100"
                                     >
-                                        Mandates
+                                        Required Conditions
                                     </p>
                                     <p
                                         class="mt-1 text-[11px] leading-snug text-slate-500 dark:text-slate-400"
                                     >
-                                        Choose expected contract obligations.
-                                        These are submitted as cash.mandates;
-                                        Cockpit does not enforce them directly.
+                                        Choose any conditions that must be met
+                                        before the Pay Code can be completed.
                                     </p>
                                 </div>
                                 <div class="grid gap-2 md:grid-cols-2">
@@ -3925,12 +3922,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     <span class="leading-none"
-                                        >Additional mandate keys</span
+                                        >Additional Condition Keys</span
                                     >
                                     <input
                                         v-model="customMandates"
                                         type="text"
-                                        placeholder="comma-separated custom keys"
+                                        placeholder="Comma-separated custom keys"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-mandates"
                                         :disabled="processing"
@@ -3938,8 +3935,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <span
                                         class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                     >
-                                        Optional escape hatch for contract keys
-                                        not listed above.
+                                        Add approved condition keys that are not
+                                        listed above.
                                     </span>
                                 </label>
                                 <details
@@ -3949,16 +3946,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <summary
                                         class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                                     >
-                                        Mandates payload preview
+                                        Selected Conditions
                                     </summary>
                                     <div class="mt-2 grid gap-2">
                                         <p
                                             class="text-[11px] leading-snug text-slate-500 dark:text-slate-400"
                                         >
-                                            Reactive comma-delimited preview of
-                                            the exact mandate keys that will be
-                                            submitted as
-                                            <code>cash.mandates</code>.
+                                            Review the condition keys that will
+                                            be included with this Pay Code.
                                         </p>
                                         <div
                                             class="rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs break-words text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
@@ -3988,13 +3983,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Claim inputs
+                                Claim Requirements
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                What the beneficiary must provide before
-                                execution.
+                                Choose what the recipient must provide before
+                                claiming.
                             </p>
                         </div>
                     </summary>
@@ -4020,7 +4015,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <span
                                         class="mt-0.5 block text-[11px] font-normal text-slate-500 dark:text-slate-400"
                                     >
-                                        {{ field.value }} · {{ field.helper }}
+                                        {{ field.helper }}
                                     </span>
                                 </span>
                             </label>
@@ -4044,14 +4039,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Validation and verification
+                                Validation And Verification
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Basic claim checks map to cash validation.
-                                Evidence and advanced policies map to
-                                verification intent.
+                                Choose how the recipient and submitted proof
+                                will be checked.
                             </p>
                         </div>
                     </summary>
@@ -4061,11 +4055,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                             data-testid="cockpit-quick-generate-recipient-match-group"
                         >
                             <div>
-                                <p class="font-semibold">Recipient Match</p>
+                                <p class="font-semibold">Recipient Matching</p>
                                 <p class="mt-1">
-                                    Match claim data against the intended payee
-                                    when the Pay Code should be restricted to a
-                                    mobile number or payable alias.
+                                    Match claim data against the intended
+                                    recipient when the Pay Code should be
+                                    restricted to a mobile number or payable
+                                    alias.
                                 </p>
                             </div>
                             <div
@@ -4073,7 +4068,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 data-testid="cockpit-quick-generate-payee-interpretation"
                             >
                                 <p class="font-semibold">
-                                    Payee validation interpretation
+                                    Recipient Matching Guide
                                 </p>
                                 <p class="mt-1">
                                     {{ payeeHelpText }}
@@ -4081,11 +4076,9 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <p
                                     class="mt-1 text-violet-700 dark:text-violet-300"
                                 >
-                                    Mobile payees map to
-                                    <code>cash.validation.mobile</code>; vendor
-                                    aliases map to
-                                    <code>cash.validation.payable</code>; blank
-                                    or CASH remains unrestricted by payee.
+                                    Mobile numbers and vendor aliases restrict
+                                    who may claim. CASH or a blank recipient
+                                    allows any eligible claimant.
                                 </p>
                             </div>
                             <div class="grid gap-2 sm:grid-cols-2">
@@ -4103,9 +4096,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <span
                                             class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
                                         >
-                                            Adds
-                                            <code>cash.validation.mobile</code>
-                                            when the payee is mobile.
+                                            Require the claimant’s mobile number
+                                            to match the recipient.
                                         </span>
                                     </span>
                                 </label>
@@ -4119,16 +4111,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         :disabled="processing"
                                     />
                                     <span class="grid gap-0.5">
-                                        <span
-                                            >Require Payable / Vendor
-                                            Alias</span
-                                        >
+                                        <span>Require Vendor Alias</span>
                                         <span
                                             class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
                                         >
-                                            Adds
-                                            <code>cash.validation.payable</code>
-                                            for unrestricted payees.
+                                            Require a payable vendor alias when
+                                            one is expected.
                                         </span>
                                     </span>
                                 </label>
@@ -4142,13 +4130,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         :disabled="processing"
                                     />
                                     <span class="grid gap-0.5">
-                                        <span>Require Country: PH</span>
+                                        <span>Restrict To The Philippines</span>
                                         <span
                                             class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
                                         >
-                                            Adds
-                                            <code>cash.validation.country</code>
-                                            as PH.
+                                            Accept claims only from the
+                                            Philippines.
                                         </span>
                                     </span>
                                 </label>
@@ -4166,8 +4153,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <span
                                             class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
                                         >
-                                            Adds location and radius checks to
-                                            cash validation.
+                                            Require the claim to occur within
+                                            the allowed area.
                                         </span>
                                     </span>
                                 </label>
@@ -4180,7 +4167,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <label
                                 class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                <span>Claim Secret / Branch PIN</span>
+                                <span>Claim PIN Or Release Code</span>
                                 <input
                                     v-model="validationSecret"
                                     type="text"
@@ -4191,9 +4178,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <span
                                     class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Use for branch PINs, release codes, or
-                                    manual verification passphrases. Preview
-                                    shows only that a secret is configured.
+                                    Use a private code when staff must verify
+                                    the recipient before release.
                                 </span>
                             </label>
                         </div>
@@ -4202,12 +4188,10 @@ function dataGet(source: unknown, path: string[]): unknown {
                             data-testid="cockpit-quick-generate-evidence-required-group"
                         >
                             <div>
-                                <p class="font-semibold">Evidence Required</p>
+                                <p class="font-semibold">Required Proof</p>
                                 <p class="mt-1">
-                                    These switches describe evidence expected in
-                                    the claim journey. Cockpit does not perform
-                                    KYC, OTP delivery, selfie capture, or
-                                    signature verification here.
+                                    Choose the proof the recipient must complete
+                                    during the claim.
                                 </p>
                             </div>
                             <div class="grid gap-2 sm:grid-cols-2">
@@ -4225,7 +4209,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <span
                                             class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
                                         >
-                                            Identity evidence is expected.
+                                            Verify the recipient’s identity.
                                         </span>
                                     </span>
                                 </label>
@@ -4243,8 +4227,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <span
                                             class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
                                         >
-                                            One-time passcode confirmation is
-                                            expected.
+                                            Confirm a one-time passcode.
                                         </span>
                                     </span>
                                 </label>
@@ -4262,7 +4245,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <span
                                             class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
                                         >
-                                            Selfie evidence is expected.
+                                            Capture a recipient selfie.
                                         </span>
                                     </span>
                                 </label>
@@ -4281,7 +4264,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <span
                                             class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
                                         >
-                                            Signature evidence is expected.
+                                            Capture the recipient’s signature.
                                         </span>
                                     </span>
                                 </label>
@@ -4294,7 +4277,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <summary
                                 class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
-                                Advanced verification rules
+                                Advanced Verification Rules
                             </summary>
                             <div
                                 class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
@@ -4302,7 +4285,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Signature failure
+                                    Signature Failure
                                     <select
                                         v-model="signatureFailure"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -4310,14 +4293,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             processing || !signatureRequired
                                         "
                                     >
-                                        <option value="block">block</option>
-                                        <option value="warn">warn</option>
+                                        <option value="block">
+                                            Block Claim
+                                        </option>
+                                        <option value="warn">
+                                            Allow With Warning
+                                        </option>
                                     </select>
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    OTP failure
+                                    OTP Failure
                                     <select
                                         v-model="otpFailure"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -4325,14 +4312,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             processing || !verificationOtp
                                         "
                                     >
-                                        <option value="block">block</option>
-                                        <option value="warn">warn</option>
+                                        <option value="block">
+                                            Block Claim
+                                        </option>
+                                        <option value="warn">
+                                            Allow With Warning
+                                        </option>
                                     </select>
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Selfie failure
+                                    Selfie Failure
                                     <select
                                         v-model="selfieFailure"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -4340,8 +4331,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             processing || !verificationSelfie
                                         "
                                     >
-                                        <option value="block">block</option>
-                                        <option value="warn">warn</option>
+                                        <option value="block">
+                                            Block Claim
+                                        </option>
+                                        <option value="warn">
+                                            Allow With Warning
+                                        </option>
                                     </select>
                                 </label>
                                 <label
@@ -4354,7 +4349,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         data-testid="cockpit-quick-generate-face-match-required"
                                         :disabled="processing"
                                     />
-                                    Face Match Required
+                                    Require Face Match
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -4384,8 +4379,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             processing || !faceMatchRequired
                                         "
                                     >
-                                        <option value="block">block</option>
-                                        <option value="warn">warn</option>
+                                        <option value="block">
+                                            Block Claim
+                                        </option>
+                                        <option value="warn">
+                                            Allow With Warning
+                                        </option>
                                     </select>
                                 </label>
                                 <label
@@ -4403,7 +4402,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Start time
+                                    Start Time
                                     <input
                                         v-model="timeWindowStart"
                                         type="time"
@@ -4416,7 +4415,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    End time
+                                    End Time
                                     <input
                                         v-model="timeWindowEnd"
                                         type="time"
@@ -4429,7 +4428,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Timezone
+                                    Time Zone
                                     <input
                                         v-model="timeWindowTimezone"
                                         type="text"
@@ -4442,7 +4441,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Limit minutes
+                                    Time Limit (Minutes)
                                     <input
                                         v-model="timeLimitMinutes"
                                         type="number"
@@ -4466,7 +4465,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             processing || !timeValidationEnabled
                                         "
                                     />
-                                    Track Duration
+                                    Track Claim Duration
                                 </label>
                             </div>
                         </details>
@@ -4477,7 +4476,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <summary
                                 class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
-                                Validation Payload Preview
+                                Validation Summary
                             </summary>
                             <div class="mt-3 grid gap-2 sm:grid-cols-2">
                                 <div
@@ -4486,7 +4485,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
                                     >
-                                        cash.validation
+                                        Recipient Rules
                                     </p>
                                     <p
                                         class="mt-1 font-mono text-xs break-words text-slate-800 dark:text-slate-100"
@@ -4501,7 +4500,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
                                     >
-                                        validation
+                                        Additional Checks
                                     </p>
                                     <p
                                         class="mt-1 font-mono text-xs break-words text-slate-800 dark:text-slate-100"
@@ -4514,9 +4513,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <p
                                 class="mt-2 text-[11px] leading-snug text-slate-500 dark:text-slate-400"
                             >
-                                This preview shows rule names only. Secret
-                                values, provider payloads, and verification
-                                evidence are not displayed.
+                                Only rule names are shown. Private codes and
+                                submitted proof remain hidden.
                             </p>
                         </details>
                     </div>
@@ -4537,13 +4535,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Rider and beneficiary experience
+                                Claim Experience
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Operator-safe context shown during the claim
-                                journey.
+                                Add a message, action link, and branded
+                                introduction for the recipient.
                             </p>
                         </div>
                     </summary>
@@ -4551,7 +4549,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
-                            Purpose/message
+                            Message
                             <textarea
                                 v-model="purpose"
                                 rows="2"
@@ -4565,20 +4563,19 @@ function dataGet(source: unknown, path: string[]): unknown {
                             data-testid="cockpit-quick-generate-rider-cta-section"
                         >
                             <div>
-                                <p class="font-semibold">CTA / Destination</p>
+                                <p class="font-semibold">Action Link</p>
                                 <p
                                     class="mt-1 text-amber-800 dark:text-amber-200"
                                 >
-                                    Choose a frequent beneficiary destination or
-                                    type a custom URL. This still maps only to
-                                    <code>rider.url</code>.
+                                    Choose a suggested destination or enter a
+                                    custom link for the recipient.
                                 </p>
                             </div>
                             <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-amber-950 dark:text-amber-100"
                                 >
-                                    Frequently Used CTA
+                                    Suggested Destination
                                     <select
                                         v-model="riderUrlPreset"
                                         class="w-full min-w-0 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-amber-900/60 dark:bg-slate-900 dark:text-slate-50"
@@ -4604,7 +4601,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-amber-950 dark:text-amber-100"
                                 >
-                                    CTA URL
+                                    Action URL
                                     <input
                                         v-model="riderUrl"
                                         type="url"
@@ -4615,9 +4612,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <span
                                         class="text-[11px] leading-snug font-normal text-amber-800 dark:text-amber-200"
                                     >
-                                        The claim experience can redirect or
-                                        point the beneficiary to this
-                                        destination.
+                                        Show this destination during the claim
+                                        experience.
                                     </span>
                                 </label>
                             </div>
@@ -4627,20 +4623,19 @@ function dataGet(source: unknown, path: string[]): unknown {
                             data-testid="cockpit-quick-generate-rider-splash-builder"
                         >
                             <div>
-                                <p class="font-semibold">Splash Page Builder</p>
+                                <p class="font-semibold">Claim Introduction</p>
                                 <p
                                     class="mt-1 text-orange-800 dark:text-orange-200"
                                 >
-                                    Compose the beneficiary-facing splash shown
-                                    around the claim journey. Preview is local;
-                                    no delivery or external rendering occurs.
+                                    Design the introduction shown to the
+                                    recipient during the claim.
                                 </p>
                             </div>
                             <div class="grid gap-3 lg:grid-cols-3">
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
                                 >
-                                    Splash Headline
+                                    Headline
                                     <input
                                         v-model="riderSplashHeadline"
                                         type="text"
@@ -4652,7 +4647,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
                                 >
-                                    CTA Button Text
+                                    Button Label
                                     <input
                                         v-model="riderSplashCtaText"
                                         type="text"
@@ -4664,7 +4659,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 content-start gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
                                 >
-                                    Splash Timeout
+                                    Display Time (Seconds)
                                     <input
                                         v-model="riderSplashTimeout"
                                         type="number"
@@ -4677,7 +4672,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 lg:col-span-3 dark:text-orange-100"
                                 >
-                                    Splash Body
+                                    Message Body
                                     <textarea
                                         v-model="riderSplash"
                                         rows="3"
@@ -4693,18 +4688,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="text-[11px] font-semibold tracking-wide text-orange-700 uppercase dark:text-orange-300"
                                     >
-                                        Local splash preview
+                                        Introduction Preview
                                     </p>
                                     <p
                                         class="mt-1 text-[11px] leading-snug text-orange-800 dark:text-orange-200"
                                     >
-                                        HTML is rendered in a sandboxed preview
-                                        iframe when tags are detected.
+                                        Custom HTML is isolated inside this
+                                        preview.
                                     </p>
                                     <div class="mt-2 grid gap-1">
                                         <iframe
                                             v-if="riderSplashPreviewIsHtml"
-                                            title="Sandboxed local splash HTML preview"
+                                            title="Claim Introduction Preview"
                                             sandbox=""
                                             class="h-80 w-full rounded-lg border border-orange-200 bg-slate-950 dark:border-orange-900/60"
                                             data-testid="cockpit-quick-generate-rider-splash-html-preview"
@@ -4725,7 +4720,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             >
                                                 {{
                                                     riderSplash.trim() ||
-                                                    'No splash body yet.'
+                                                    'No Introduction Message Yet.'
                                                 }}
                                             </p>
                                             <p
@@ -4750,19 +4745,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"
                             >
                                 <div>
-                                    <p class="font-semibold">OG Preview</p>
+                                    <p class="font-semibold">Link Preview</p>
                                     <p
                                         class="mt-1 text-sky-800 dark:text-sky-200"
                                     >
-                                        Local preview only. Cockpit does not
-                                        fetch external Open Graph metadata or
-                                        generate social share assets here.
+                                        Preview how the claim may appear when
+                                        shared.
                                     </p>
                                 </div>
                                 <label
                                     class="grid min-w-48 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
                                 >
-                                    OG Source
+                                    Preview Source
                                     <select
                                         v-model="riderOgSource"
                                         class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
@@ -4771,8 +4765,10 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     >
                                         <option value="">Default</option>
                                         <option value="message">Message</option>
-                                        <option value="url">CTA URL</option>
-                                        <option value="splash">Splash</option>
+                                        <option value="url">Action URL</option>
+                                        <option value="splash">
+                                            Claim Introduction
+                                        </option>
                                     </select>
                                 </label>
                             </div>
@@ -4790,7 +4786,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     </span>
                                 </div>
                                 <iframe
-                                    title="Sandboxed local OG preview"
+                                    title="Link Preview"
                                     sandbox=""
                                     class="mt-2 h-64 w-full rounded-lg border border-sky-200 bg-slate-950 dark:border-sky-900/60"
                                     data-testid="cockpit-quick-generate-rider-og-html-preview"
@@ -4799,9 +4795,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <p
                                     class="mt-2 text-[11px] text-sky-800 dark:text-sky-200"
                                 >
-                                    No external OG fetch, scraping, upload,
-                                    delivery, short-link generation, or claim
-                                    runtime mutation occurs.
+                                    The preview uses only the information
+                                    entered on this page.
                                 </p>
                             </div>
                         </div>
@@ -4812,7 +4807,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <summary
                                 class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
-                                Advanced rider metadata
+                                Advanced Experience Settings
                             </summary>
                             <div
                                 class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2"
@@ -4820,7 +4815,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Redirect timeout
+                                    Redirect Delay (Seconds)
                                     <input
                                         v-model="riderRedirectTimeout"
                                         type="number"
@@ -4835,7 +4830,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Splash HTML profile
+                                    HTML Profile
                                     <input
                                         v-model="riderSplashMetaProfile"
                                         type="text"
@@ -4853,7 +4848,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         class="rounded border-slate-300"
                                         :disabled="processing"
                                     />
-                                    Splash content sanitized
+                                    Sanitize Custom HTML
                                 </label>
                             </div>
                         </details>
@@ -4875,13 +4870,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Feedback channels
+                                Status Updates
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Saved as feedback intent. Cockpit still does not
-                                deliver SMS, email, or webhooks directly.
+                                Choose optional destinations for claim updates.
+                                Issuing the Pay Code does not send a message.
                             </p>
                         </div>
                     </summary>
@@ -4893,13 +4888,11 @@ function dataGet(source: unknown, path: string[]): unknown {
                             class="grid gap-2 rounded-xl border border-violet-100 bg-violet-50 p-3 text-xs text-violet-950 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
                         >
                             <p class="font-semibold">
-                                Quick-fill feedback recipients
+                                Suggested Update Destinations
                             </p>
                             <p class="text-violet-800 dark:text-violet-200">
-                                Select a channel to populate it from the
-                                authenticated operator defaults. Values remain
-                                editable and are saved only as feedback intent;
-                                Cockpit does not deliver messages here.
+                                Use your saved contact details or enter
+                                different destinations below.
                             </p>
                             <div class="grid gap-2 lg:grid-cols-2">
                                 <label
@@ -4920,14 +4913,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     />
                                     <span>
                                         <span class="font-semibold"
-                                            >Use my email</span
+                                            >Use My Email</span
                                         >
                                         <span
                                             class="block text-[11px] text-violet-700 dark:text-violet-200"
                                         >
                                             {{
                                                 defaultFeedbackEmail ||
-                                                'No operator email available'
+                                                'No Saved Email'
                                             }}
                                         </span>
                                     </span>
@@ -4950,14 +4943,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     />
                                     <span>
                                         <span class="font-semibold"
-                                            >Use my mobile</span
+                                            >Use My Mobile</span
                                         >
                                         <span
                                             class="block text-[11px] text-violet-700 dark:text-violet-200"
                                         >
                                             {{
                                                 defaultFeedbackMobile ||
-                                                'No operator mobile available'
+                                                'No Saved Mobile Number'
                                             }}
                                         </span>
                                     </span>
@@ -4980,14 +4973,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     />
                                     <span class="min-w-0">
                                         <span class="font-semibold"
-                                            >Use operator webhook</span
+                                            >Use My Webhook</span
                                         >
                                         <span
                                             class="block text-[11px] break-all text-violet-700 dark:text-violet-200"
                                         >
                                             {{
                                                 defaultFeedbackWebhook ||
-                                                'No default webhook available'
+                                                'No Saved Webhook'
                                             }}
                                         </span>
                                     </span>
@@ -4998,7 +4991,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Feedback email
+                                Update Email
                                 <input
                                     v-model="feedbackEmail"
                                     type="email"
@@ -5022,7 +5015,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Feedback mobile
+                                Update Mobile
                                 <CockpitPhoneInput
                                     v-model="feedbackMobile"
                                     :error="feedbackMobileError"
@@ -5041,14 +5034,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     class="text-[11px] font-normal text-emerald-700 dark:text-emerald-300"
                                     data-testid="cockpit-quick-generate-feedback-mobile-normalized"
                                 >
-                                    Normalized:
+                                    Saved As:
                                     {{ normalizedFeedbackMobile }}
                                 </span>
                             </label>
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-2 dark:text-slate-300"
                             >
-                                Feedback webhook
+                                Update Webhook
                                 <input
                                     v-model="feedbackWebhook"
                                     type="url"
@@ -5072,8 +5065,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     v-else
                                     class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Generated defaults are editable. No webhook
-                                    receiver route is registered by this UI.
+                                    Webhook delivery must be configured
+                                    separately.
                                 </span>
                             </label>
                         </div>
@@ -5095,13 +5088,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Slices and availability
+                                Claim Schedule And Availability
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Open-slice settings are passed through existing
-                                instruction metadata.
+                                Choose whether the value is claimed once, in
+                                portions, or on a schedule.
                             </p>
                         </div>
                     </summary>
@@ -5114,23 +5107,23 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 v-for="option in [
                                     {
                                         value: 'whole',
-                                        label: 'Whole amount',
-                                        helper: 'One claim consumes the full Pay Code.',
+                                        label: 'Whole Amount',
+                                        helper: 'One claim uses the entire Pay Code.',
                                     },
                                     {
                                         value: 'fixed',
-                                        label: 'Fixed slices',
-                                        helper: 'Split into equal numbered slices.',
+                                        label: 'Equal Portions',
+                                        helper: 'Split the value into equal claims.',
                                     },
                                     {
                                         value: 'open',
-                                        label: 'Open amount',
-                                        helper: 'Allow partial withdrawals up to a max count.',
+                                        label: 'Flexible Amounts',
+                                        helper: 'Let the recipient choose each partial amount.',
                                     },
                                     {
                                         value: 'named',
-                                        label: 'Named claim slices',
-                                        helper: 'Operator-defined slices shown during claim.',
+                                        label: 'Scheduled Portions',
+                                        helper: 'Set each portion’s value, label, and dates.',
                                     },
                                 ]"
                                 :key="option.value"
@@ -5165,7 +5158,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Fixed Slices
+                                    Equal Portions
                                     <input
                                         v-model="slices"
                                         type="number"
@@ -5182,13 +5175,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <span
                                         class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                     >
-                                        Number of equal claim portions.
+                                        Number of equal claims.
                                     </span>
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Max Claims
+                                    Maximum Claims
                                     <input
                                         v-model="maxSlices"
                                         type="number"
@@ -5205,14 +5198,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <span
                                         class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                     >
-                                        Mirrors fixed/named claim count;
-                                        editable only for Open Slice.
+                                        Available only for Flexible Amounts.
                                     </span>
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Minimum Withdrawal
+                                    Minimum Claim Amount
                                     <div
                                         class="flex min-w-0 rounded-xl shadow-sm"
                                     >
@@ -5244,7 +5236,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <span
                                         class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                     >
-                                        Smallest claim amount, shown in
+                                        Smallest permitted claim amount, shown
+                                        in
                                         {{ currency || 'PHP' }}.
                                     </span>
                                 </label>
@@ -5274,7 +5267,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 </p>
                                 <p>
                                     <span class="font-semibold"
-                                        >Max Valid Claims</span
+                                        >Maximum Claims</span
                                     >
                                     <span class="block">
                                         {{ maxValidClaimCount }}
@@ -5284,9 +5277,9 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <p
                                 class="text-[11px] leading-snug text-slate-500 dark:text-slate-400"
                             >
-                                Fixed and open amount settings are submitted as
-                                cash slice instructions. Named claim slices use
-                                open-slice cash semantics plus named metadata.
+                                The selected plan controls how much may be
+                                claimed and how many successful claims are
+                                allowed.
                             </p>
                         </div>
 
@@ -5301,16 +5294,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="text-xs font-semibold text-cyan-950 dark:text-cyan-100"
                                     >
-                                        Claim slice builder
+                                        Claim Plan
                                     </p>
                                     <p
                                         class="mt-1 text-[11px] text-cyan-800 dark:text-cyan-200"
                                     >
-                                        These rows drive the selected mode:
-                                        Whole Amount for one full slice, Fixed
-                                        Slices for equal default rows, and Named
-                                        claim slices when you customize labels,
-                                        dates, tags, or amounts.
+                                        Review or customize the portions
+                                        available to the recipient.
                                     </p>
                                 </div>
                                 <button
@@ -5320,7 +5310,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     :disabled="addSliceDisabled"
                                     @click="addNamedClaimSlice"
                                 >
-                                    Add slice
+                                    Add Portion
                                 </button>
                             </div>
                             <p
@@ -5394,7 +5384,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <label
                                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-2 dark:text-slate-300"
                                         >
-                                            Description
+                                            Label
                                             <input
                                                 :value="slice.description"
                                                 type="text"
@@ -5415,7 +5405,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <label
                                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
                                         >
-                                            Tag
+                                            Category
                                             <input
                                                 :value="slice.tag"
                                                 type="text"
@@ -5436,7 +5426,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <label
                                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
                                         >
-                                            Claim on
+                                            Available On
                                             <input
                                                 :value="slice.claim_on"
                                                 type="date"
@@ -5457,7 +5447,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <label
                                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
                                         >
-                                            Claim by
+                                            Expires On
                                             <input
                                                 :value="slice.claim_by"
                                                 type="date"
@@ -5486,7 +5476,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="text-[11px] text-slate-500 dark:text-slate-400"
                                     >
-                                        Slice total
+                                        Scheduled Total
                                     </p>
                                     <p
                                         class="mt-1 font-semibold text-slate-950 dark:text-slate-50"
@@ -5510,7 +5500,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="text-[11px] text-slate-500 dark:text-slate-400"
                                     >
-                                        Remaining
+                                        Unassigned Value
                                     </p>
                                     <p
                                         class="mt-1 font-semibold"
@@ -5540,19 +5530,19 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="text-[11px] text-slate-500 dark:text-slate-400"
                                     >
-                                        Payload mode
+                                        Claim Mode
                                     </p>
                                     <p
                                         class="mt-1 font-semibold text-cyan-800 dark:text-cyan-200"
                                     >
                                         {{
                                             sliceMode === 'whole'
-                                                ? 'whole amount'
+                                                ? 'Whole Amount'
                                                 : sliceMode === 'fixed'
-                                                  ? 'fixed cash slices'
+                                                  ? 'Equal Portions'
                                                   : sliceMode === 'open'
-                                                    ? 'open cash slices'
-                                                    : 'open cash + named metadata'
+                                                    ? 'Flexible Amounts'
+                                                    : 'Scheduled Portions'
                                         }}
                                     </p>
                                 </div>
@@ -5571,22 +5561,24 @@ function dataGet(source: unknown, path: string[]): unknown {
                             data-testid="cockpit-quick-generate-availability-summary"
                         >
                             <div>
-                                <p class="font-semibold">Availability window</p>
+                                <p class="font-semibold">Availability Window</p>
                                 <p class="mt-1 text-[11px]">
                                     Starts:
-                                    {{ startsAt || 'immediate' }}
+                                    {{ startsAt || 'Immediately' }}
                                 </p>
                             </div>
                             <div>
-                                <p class="font-semibold">Effective expiry</p>
+                                <p class="font-semibold">
+                                    Effective Expiration
+                                </p>
                                 <p class="mt-1 text-[11px]">
                                     {{ effectiveExpiry.label }}
                                 </p>
                             </div>
                             <div>
-                                <p class="font-semibold">Precedence</p>
+                                <p class="font-semibold">Timing Priority</p>
                                 <p class="mt-1 text-[11px]">
-                                    Exact expiry wins over TTL; TTL wins over
+                                    Exact expiration, then custom duration, then
                                     preset.
                                 </p>
                             </div>
@@ -5610,13 +5602,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Settlement, execution, and metadata
+                                Advanced Settlement Settings
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Advanced DTO fields remain opt-in and do not
-                                change the default issuance handoff.
+                                Use only for specialized collection, settlement,
+                                or automated claim flows.
                             </p>
                         </div>
                     </summary>
@@ -5628,7 +5620,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <summary
                                 class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
-                                Settlement fields
+                                Payment Rules
                             </summary>
                             <div
                                 class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
@@ -5636,7 +5628,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Voucher type
+                                    Pay Code Type
                                     <select
                                         v-model="voucherType"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -5644,18 +5636,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         :disabled="processing"
                                     >
                                         <option value="redeemable">
-                                            redeemable
+                                            Redeemable
                                         </option>
-                                        <option value="payable">payable</option>
+                                        <option value="payable">Payable</option>
                                         <option value="settlement">
-                                            settlement
+                                            Settlement
                                         </option>
                                     </select>
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Target amount
+                                    Target Value
                                     <input
                                         v-model="targetAmount"
                                         type="number"
@@ -5672,7 +5664,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Min payment
+                                    Minimum Payment
                                     <input
                                         v-model="rulesMinPayment"
                                         type="number"
@@ -5689,7 +5681,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Max payment
+                                    Maximum Payment
                                     <input
                                         v-model="rulesMaxPayment"
                                         type="number"
@@ -5714,7 +5706,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             voucherType === 'redeemable'
                                         "
                                     />
-                                    Allow overpayment
+                                    Allow Overpayment
                                 </label>
                                 <label
                                     class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
@@ -5728,7 +5720,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             voucherType === 'redeemable'
                                         "
                                     />
-                                    Auto-close on full payment
+                                    Close When Fully Paid
                                 </label>
                             </div>
                         </details>
@@ -5739,7 +5731,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <summary
                                 class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
-                                Execution instruction
+                                Automated Claim Flow
                             </summary>
                             <div
                                 class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
@@ -5754,12 +5746,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         data-testid="cockpit-quick-generate-include-execution"
                                         :disabled="processing"
                                     />
-                                    Include execution instruction
+                                    Use Automated Claim Flow
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Schema
+                                    Flow Version
                                     <input
                                         v-model="executionSchema"
                                         type="text"
@@ -5773,7 +5765,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Driver
+                                    Handler
                                     <input
                                         v-model="executionDriver"
                                         type="text"
@@ -5788,7 +5780,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Mode
+                                    Processing Mode
                                     <input
                                         v-model="executionMode"
                                         type="text"
@@ -5802,11 +5794,11 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Pipeline
+                                    Processing Steps
                                     <input
                                         v-model="executionPipeline"
                                         type="text"
-                                        placeholder="comma-separated step keys"
+                                        placeholder="Step keys, separated by commas"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-execution-pipeline"
                                         :disabled="
@@ -5818,7 +5810,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Fallback
+                                    Fallback Action
                                     <input
                                         v-model="executionFallback"
                                         type="text"
@@ -5832,11 +5824,11 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Visibility
+                                    Visible To
                                     <input
                                         v-model="executionVisibility"
                                         type="text"
-                                        placeholder="comma-separated visibility keys"
+                                        placeholder="Audience keys, separated by commas"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         :disabled="
                                             processing ||
@@ -5847,7 +5839,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-2 dark:text-slate-300"
                                 >
-                                    Execution metadata note
+                                    Operator Note
                                     <input
                                         v-model="executionMetadata"
                                         type="text"
@@ -5867,7 +5859,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <summary
                                 class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
-                                Metadata fields
+                                Issuance References
                             </summary>
                             <div
                                 class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
@@ -5875,7 +5867,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Flow type
+                                    Flow Name
                                     <input
                                         v-model="metadataFlowType"
                                         type="text"
@@ -5887,7 +5879,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Issuer ID
+                                    Issuer Reference
                                     <input
                                         v-model="metadataIssuerId"
                                         type="text"
@@ -5898,7 +5890,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Collection provider account ID
+                                    Collection Account Reference
                                     <input
                                         v-model="metadataCollectionWalletId"
                                         type="text"

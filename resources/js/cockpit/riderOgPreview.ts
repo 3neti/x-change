@@ -69,53 +69,51 @@ export function resolveRiderOgPreview(
     if (source === 'message') {
         return {
             source,
-            label: 'Message preview',
-            title: message === '' ? 'No message yet' : message,
-            description:
-                'Beneficiary preview is based on the rider message/purpose.',
-            reference: 'rider.message',
+            label: 'Message Preview',
+            title: message === '' ? 'No Message Yet' : message,
+            description: 'Preview based on the recipient message.',
+            reference: 'Message',
         };
     }
 
     if (source === 'url') {
         return {
             source,
-            label: 'CTA URL preview',
-            title: url === '' ? 'No CTA URL yet' : url,
-            description:
-                'Beneficiary preview is based on the selected CTA destination.',
-            reference: 'rider.url',
+            label: 'Action Link Preview',
+            title: url === '' ? 'No Action URL Yet' : url,
+            description: 'Preview based on the selected action link.',
+            reference: 'Action URL',
         };
     }
 
     if (source === 'splash') {
         return {
             source,
-            label: 'Splash preview',
+            label: 'Claim Introduction Preview',
             title:
                 splashHeadline === ''
-                    ? splashBody || 'No splash content yet'
+                    ? splashBody || 'No Introduction Yet'
                     : splashHeadline,
             description:
                 splashCta === ''
-                    ? splashBody || 'Splash body is empty.'
-                    : `${splashBody || 'Splash body is empty.'} · ${splashCta}`,
-            reference: 'rider.splash',
+                    ? splashBody || 'No Introduction Message Yet.'
+                    : `${splashBody || 'No Introduction Message Yet.'} · ${splashCta}`,
+            reference: 'Claim Introduction',
         };
     }
 
     return {
         source,
-        label: 'Default preview',
+        label: 'Default Preview',
         title:
             splashHeadline ||
             message ||
-            (url === '' ? 'Default beneficiary preview' : url),
+            (url === '' ? 'Default Claim Preview' : url),
         description:
             splashBody ||
             message ||
-            'Cockpit will submit only operator-safe rider fields.',
-        reference: 'rider.og_source: default',
+            'Uses the first available message, link, or introduction.',
+        reference: 'Automatic',
     };
 }
 
@@ -141,7 +139,8 @@ export function buildRiderOgPreviewDocument(
 }
 
 export function buildSandboxedPreviewDocument(content: string): string {
-    const body = content.trim() === '' ? '<p>No splash body yet.</p>' : content;
+    const body =
+        content.trim() === '' ? '<p>No Introduction Message Yet.</p>' : content;
 
     return `<!doctype html>
 <html>

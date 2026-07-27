@@ -76,3 +76,23 @@ it('documents quick generate primary workflow compression slice 3 closure', func
         ->and($compass)->toContain('Quick Generate Primary Workflow Compression — Slice 3 Closure')
         ->and($settlementCompass)->toContain('Quick Generate Primary Workflow Compression — Slice 3');
 });
+
+it('keeps quick generate instruction copy task oriented', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+
+    $panel = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue');
+
+    expect($panel)
+        ->toContain('Instructions And Safeguards')
+        ->toContain('Issuance Details')
+        ->toContain('Claim Requirements')
+        ->toContain('Validation And Verification')
+        ->toContain('Claim Experience')
+        ->toContain('Status Updates')
+        ->toContain('Claim Schedule And Availability')
+        ->toContain('Advanced Settlement Settings')
+        ->not->toContain('CreateV2-inspired primary controls')
+        ->not->toContain('Advanced DTO fields remain opt-in')
+        ->not->toContain('Basic claim checks map to cash validation')
+        ->not->toContain('Open-slice settings are passed through existing instruction metadata');
+});
