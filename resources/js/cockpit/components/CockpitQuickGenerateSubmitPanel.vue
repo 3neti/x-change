@@ -24,6 +24,7 @@ import {
     resolveRiderOgPreview,
 } from '../riderOgPreview';
 import type { RiderOgPreview } from '../riderOgPreview';
+import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
@@ -551,6 +552,7 @@ const processing = ref(false);
 const lastStatus = ref('ready');
 const lastMessage = ref('Ready to issue when the design is complete.');
 const lastResponse = ref<Record<string, unknown> | null>(null);
+const issuedPayCodeDialogOpen = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 
 watch(selectedTemplate, (templateKey): void => {
@@ -2197,6 +2199,7 @@ async function submit(): Promise<void> {
                 : 'Pay Code issued through the existing x-change issuance handoff.';
         submissionErrors.value = [];
         lastResponse.value = body;
+        issuedPayCodeDialogOpen.value = resultCode.value !== null;
         emit('submitSuccess', body);
     } catch (error) {
         const body = {
@@ -3173,6 +3176,28 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </CockpitPayCodeCanvas>
             </div>
         </div>
+
+        <CockpitIssuedPayCodeDialog
+            :open="issuedPayCodeDialogOpen"
+            :code="resultCode"
+            :amount="amount"
+            :currency="currency"
+            :recipient="recipientReference"
+            :purpose="purpose"
+            :claim-outcome="
+                isAccountFundingResult
+                    ? 'account_funding'
+                    : 'provider_disbursement'
+            "
+            :voucher-type="voucherType"
+            :expiry="canvasExpiryLabel"
+            :instruction-labels="canvasInstructionLabels"
+            :has-rider-design="hasRiderOgDesign"
+            :rider-design-document="riderOgPreviewDocument"
+            :claim-url="beneficiaryClaimUrl"
+            :detail-url="cockpitDetailUrl"
+            @close="issuedPayCodeDialogOpen = false"
+        />
 
         <section
             v-if="campaignContextAvailable"

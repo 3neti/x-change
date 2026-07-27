@@ -21,6 +21,7 @@ const props = withDefaults(
         issuedCode?: string | null;
         hasRiderDesign?: boolean;
         riderDesignDocument?: string;
+        presentation?: 'live' | 'finalized';
     }>(),
     {
         recipient: '',
@@ -30,6 +31,7 @@ const props = withDefaults(
         issuedCode: null,
         hasRiderDesign: false,
         riderDesignDocument: '',
+        presentation: 'live',
     },
 );
 
@@ -95,10 +97,18 @@ const displayedCode = computed<string>(() => {
                 <p
                     class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                 >
-                    Live Pay Code
+                    {{
+                        presentation === 'finalized'
+                            ? 'Issued Pay Code'
+                            : 'Live Pay Code'
+                    }}
                 </p>
                 <p class="text-xs text-slate-600 dark:text-slate-300">
-                    Updates as you design.
+                    {{
+                        presentation === 'finalized'
+                            ? 'Final design ready to share.'
+                            : 'Updates as you design.'
+                    }}
                 </p>
             </div>
             <div class="flex items-center gap-2">
