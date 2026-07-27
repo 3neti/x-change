@@ -1620,7 +1620,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 data-testid="cockpit-funding-mode-switcher"
             >
                 <div
-                    class="grid gap-2 sm:grid-cols-4"
+                    class="grid grid-cols-2 gap-2 sm:grid-cols-4"
                     role="tablist"
                     aria-label="Funding workspace mode"
                 >

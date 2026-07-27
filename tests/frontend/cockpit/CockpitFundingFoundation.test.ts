@@ -620,6 +620,12 @@ describe('Cockpit Funding foundation', () => {
         ).toBe('true');
         expect(
             wrapper
+                .get('[data-testid="cockpit-funding-mode-switcher"]')
+                .get('[role="tablist"]')
+                .classes(),
+        ).toContain('grid-cols-2');
+        expect(
+            wrapper
                 .get('[data-testid="funding-mode-pay_code"]')
                 .attributes('aria-selected'),
         ).toBe('false');
