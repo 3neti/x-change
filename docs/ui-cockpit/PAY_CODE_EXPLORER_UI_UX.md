@@ -16,8 +16,9 @@ The page should answer four questions quickly:
 
 1. How many Pay Codes exist and how many need attention?
 2. Which Pay Code am I looking for?
-3. What is its amount and lifecycle state?
-4. Which safe, read-only workspace can I open next?
+3. What can it do, which instructions govern it, and who is it for?
+4. What is its amount and lifecycle state?
+5. Which safe, read-only workspace can I open next?
 
 It does not issue, claim, cancel, deliver, or mutate a Pay Code.
 
@@ -62,16 +63,38 @@ primary task.
 
 The results surface presents:
 
-- Pay Code;
-- amount;
-- type or template;
-- lifecycle status;
-- created and expiry dates; and
+- Pay Code, template, and capability;
+- up to three allowlisted instruction badges, followed by `+N` when more
+  instructions exist;
+- amount and lifecycle status;
+- the masked target before claim or the masked claimant summary after claim;
+  and
 - safe row actions.
 
 Desktop uses a compact table; smaller viewports use cards with the same facts
 and action destinations. Amounts use tabular numerals. Status remains text
 inside the badge, so color is never the only signal.
+
+The capability vocabulary is:
+
+- **Disbursement · Redeemable** for one-way beneficiary disbursement;
+- **Collection · Payable** for collection; and
+- **Settlement · Bidirectional** for vouchers that can participate in both
+  directions.
+
+Instruction badges are semantic summaries owned by `3neti/voucher`, not a
+serialization of `VoucherInstructionsData`. Examples include Mobile-bound,
+Vendor-bound, OTP, Selfie, Signature, Location, Divisible, InstaPay, and Account
+funding. Mobile numbers, vendor binding values, secrets, webhook destinations,
+and provider execution payloads never appear inside the badges.
+
+The party column is labeled **Target / Claimed by**. Before claim, it shows a
+vendor alias, masked mobile, or Open claim. After claim, it prefers the contact
+name with a masked mobile beneath it. Full mobile numbers are never included in
+the Cockpit list projection.
+
+Created, start, expiry, and redemption dates remain available in each row's
+**More** disclosure. They do not occupy a primary scan column.
 
 The header shows the total, current visible range, and page-size control.
 Previous and next controls remain in the footer where they are available after
@@ -86,8 +109,10 @@ remain inspectable without competing with the working surface.
 **Technical details** are visible only to an authorized System Treasury
 principal. The server omits both the diagnostic read model and its permission
 for ordinary Account holders; hiding markup on the client is not an
-authorization boundary. Raw provider payloads, credentials, Account positions,
-and claim payloads are never included.
+authorization boundary. Ordinary Account holders receive only Pay Codes owned
+by their exact issuer morph and identifier. System Treasury may receive the
+broader operational inventory. Raw provider payloads, credentials, Account
+positions, complete instructions, and claim payloads are never included.
 
 ## Interaction and Safety Contract
 
@@ -109,6 +134,13 @@ Package-owned sources:
 - `resources/js/cockpit/components/CockpitPayCodeResultsTable.vue`
 - `src/Http/Controllers/Web/Cockpit/CockpitPayCodeExplorerPageController.php`
 - `src/Support/Cockpit/CockpitReadOnlyPageProps.php`
+- `src/Services/VoucherAccessService.php`
+- `src/Services/VoucherLifecycleService.php`
+- `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+
+The semantic capability and badge mapper is package-owned by:
+
+- `3neti/voucher/src/Data/VoucherOperationalSummaryData.php`
 
 The host files under `resources/js/cockpit` are generated mirrors. Change the
 package source first, publish it, and run the asset drift check.
@@ -121,10 +153,12 @@ Every material change must verify:
 2. hydrated, empty, filtered, campaign-context, and activity-context states;
 3. desktop table and mobile card layouts;
 4. search, clear, page-size, pagination, detail, and distribution controls;
-5. dark-mode-compatible contrast and visible focus states;
-6. package/host asset parity;
-7. TypeScript, focused frontend tests, focused Pest tests, formatting, and the
+5. redeemable, payable, and settlement capability labels;
+6. targeted, open, and claimed party presentations with mobile masking;
+7. instruction badge overflow and date disclosure behavior;
+8. dark-mode-compatible contrast and visible focus states;
+9. package/host asset parity;
+10. TypeScript, focused frontend tests, focused Pest tests, formatting, and the
    production build; and
-8. browser acceptance at desktop and mobile widths when browser control is
+11. browser acceptance at desktop and mobile widths when browser control is
    available.
-
