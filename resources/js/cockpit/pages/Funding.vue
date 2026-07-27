@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { router, useForm, usePoll } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
+import {
+    CirclePlus,
+    FileText,
+    Landmark,
+    QrCode,
+    RefreshCw,
+    Search,
+    TicketCheck,
+} from 'lucide-vue-next';
 import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit/funding/liquidity-refreshes';
@@ -1327,7 +1336,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             :key="mode.key"
                             type="button"
                             role="tab"
-                            class="min-h-10 rounded-xl px-2 py-2 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-2 py-2 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
                             :class="
                                 activeFundingMode === mode.key
                                     ? 'bg-slate-950 text-white shadow-sm dark:bg-sky-300 dark:text-slate-950'
@@ -1338,7 +1347,25 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             :data-testid="`funding-mode-${mode.key}`"
                             @click="activeFundingMode = mode.key"
                         >
-                            {{ mode.label }}
+                            <QrCode
+                                v-if="mode.key === 'self_top_up'"
+                                class="size-4 shrink-0"
+                                aria-hidden="true"
+                                data-testid="funding-mode-icon-self_top_up"
+                            />
+                            <Landmark
+                                v-else-if="mode.key === 'bank_transfer'"
+                                class="size-4 shrink-0"
+                                aria-hidden="true"
+                                data-testid="funding-mode-icon-bank_transfer"
+                            />
+                            <TicketCheck
+                                v-else
+                                class="size-4 shrink-0"
+                                aria-hidden="true"
+                                data-testid="funding-mode-icon-pay_code"
+                            />
+                            <span>{{ mode.label }}</span>
                         </button>
                     </div>
 
@@ -1760,16 +1787,20 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 standing_funding_address.available === true
                             "
                             type="button"
-                            class="h-9 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
+                            class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
                             data-testid="open-standing-funding-address"
                             @click="openStandingFundingAddress"
                         >
+                            <RefreshCw
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
                             Try again
                         </button>
                         <button
                             v-if="standingAddress"
                             type="button"
-                            class="h-9 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
+                            class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
                             :disabled="
                                 standingHistoryLoading ||
                                 standingHistoryCooldownSeconds > 0
@@ -1777,6 +1808,14 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             data-testid="check-standing-funding-history"
                             @click="checkStandingFundingHistory"
                         >
+                            <RefreshCw
+                                class="size-3.5 shrink-0"
+                                :class="{
+                                    'animate-spin': standingHistoryLoading,
+                                }"
+                                aria-hidden="true"
+                                data-testid="check-standing-funding-history-icon"
+                            />
                             {{
                                 standingHistoryLoading
                                     ? 'Checking NetBank…'
@@ -1871,11 +1910,21 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     </label>
                                     <button
                                         type="submit"
-                                        class="h-10 rounded-lg bg-sky-700 px-4 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-1"
+                                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-1"
                                         :disabled="
                                             merchantProfileForm.processing
                                         "
+                                        data-testid="funding-qr-update"
                                     >
+                                        <RefreshCw
+                                            class="size-4 shrink-0"
+                                            :class="{
+                                                'animate-spin':
+                                                    merchantProfileForm.processing,
+                                            }"
+                                            aria-hidden="true"
+                                            data-testid="funding-qr-update-icon"
+                                        />
                                         {{
                                             merchantProfileForm.processing
                                                 ? 'Updating…'
@@ -2020,13 +2069,18 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </fieldset>
                         <button
                             type="submit"
-                            class="min-h-11 rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 sm:col-start-2 sm:row-start-1 sm:self-end dark:bg-sky-400 dark:text-slate-950"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 sm:col-start-2 sm:row-start-1 sm:self-end dark:bg-sky-400 dark:text-slate-950"
                             :disabled="
                                 fundingRequestForm.processing ||
                                 !bankTransferInstructions.enabled
                             "
                             data-testid="reserve-bank-transfer-amount"
                         >
+                            <FileText
+                                class="size-4 shrink-0"
+                                aria-hidden="true"
+                                data-testid="reserve-bank-transfer-amount-icon"
+                            />
                             {{
                                 fundingRequestForm.processing
                                     ? 'Preparing…'
@@ -2202,7 +2256,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                             .can_check
                                     "
                                     type="button"
-                                    class="h-11 rounded-xl bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950"
+                                    class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950"
                                     :disabled="activeTransferCheck !== null"
                                     @click="
                                         checkTransfer(
@@ -2210,6 +2264,15 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         )
                                     "
                                 >
+                                    <RefreshCw
+                                        class="size-4 shrink-0"
+                                        :class="{
+                                            'animate-spin':
+                                                activeTransferCheck ===
+                                                selectedBankTransferRequest.reference,
+                                        }"
+                                        aria-hidden="true"
+                                    />
                                     {{
                                         activeTransferCheck ===
                                         selectedBankTransferRequest.reference
@@ -2273,12 +2336,22 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         />
                         <button
                             type="submit"
-                            class="h-11 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-50 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300"
+                            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-50 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300"
                             :disabled="
                                 payCodeInspectionForm.processing ||
                                 payCodeInspectionForm.code.trim() === ''
                             "
+                            data-testid="inspect-pay-code-funding"
                         >
+                            <Search
+                                class="size-4 shrink-0"
+                                :class="{
+                                    'animate-pulse':
+                                        payCodeInspectionForm.processing,
+                                }"
+                                aria-hidden="true"
+                                data-testid="inspect-pay-code-funding-icon"
+                            />
                             {{
                                 payCodeInspectionForm.processing
                                     ? 'Checking…'
@@ -2380,11 +2453,15 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     pay_code_funding_preview.inspection_token
                                 "
                                 type="button"
-                                class="min-h-11 w-full shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-50 sm:w-auto"
+                                class="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-50 sm:w-auto"
                                 :disabled="payCodeFundingClaimForm.processing"
                                 data-testid="claim-pay-code-funding"
                                 @click="claimPayCodeFunding"
                             >
+                                <CirclePlus
+                                    class="size-4 shrink-0"
+                                    aria-hidden="true"
+                                />
                                 {{
                                     payCodeFundingClaimForm.processing
                                         ? 'Adding to Account…'
@@ -3197,7 +3274,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                                         intent.can_check_provider
                                                     "
                                                     type="button"
-                                                    class="h-8 rounded-lg bg-sky-600 px-3 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-sky-600 px-3 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                                                     :disabled="
                                                         activeVerificationCheck !==
                                                         null
@@ -3209,6 +3286,15 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                                         )
                                                     "
                                                 >
+                                                    <RefreshCw
+                                                        class="size-3.5 shrink-0"
+                                                        :class="{
+                                                            'animate-spin':
+                                                                activeVerificationCheck ===
+                                                                intent.reference,
+                                                        }"
+                                                        aria-hidden="true"
+                                                    />
                                                     {{
                                                         activeVerificationCheck ===
                                                         intent.reference

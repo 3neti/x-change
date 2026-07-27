@@ -681,6 +681,37 @@ describe('Cockpit Funding foundation', () => {
                 .get('[data-testid="funding-mode-pay_code"]')
                 .attributes('aria-selected'),
         ).toBe('false');
+        for (const fundingMode of [
+            'self_top_up',
+            'bank_transfer',
+            'pay_code',
+        ]) {
+            expect(
+                wrapper
+                    .get(`[data-testid="funding-mode-icon-${fundingMode}"]`)
+                    .attributes('aria-hidden'),
+            ).toBe('true');
+        }
+        expect(
+            wrapper
+                .get('[data-testid="check-standing-funding-history-icon"]')
+                .attributes('aria-hidden'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="funding-qr-update-icon"]')
+                .attributes('aria-hidden'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="reserve-bank-transfer-amount-icon"]')
+                .attributes('aria-hidden'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="inspect-pay-code-funding-icon"]')
+                .attributes('aria-hidden'),
+        ).toBe('true');
         expect(
             wrapper.html().indexOf('cockpit-funding-summary-strip'),
         ).toBeLessThan(
