@@ -30,6 +30,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestApproval
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestEvidenceController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestReviewController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransferCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
@@ -104,6 +105,15 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             CockpitFundingRequestController::class,
         )->middleware((array) config('x-change.funding.requests.create_middleware', []))
             ->name('x-change.cockpit.funding.requests.store');
+        Route::post(
+            'funding/requests/{fundingRequest:reference}/transfer-checks',
+            CockpitFundingRequestTransferCheckController::class,
+        )->middleware((array) config(
+            'x-change.funding.requests.bank_transfer.check_middleware',
+            ['throttle:6,1'],
+        ))->name(
+            'x-change.cockpit.funding.requests.transfer-checks.store',
+        );
         Route::get(
             'funding/requests/{fundingRequest:reference}/evidence/{attachment}',
             CockpitFundingRequestEvidenceController::class,

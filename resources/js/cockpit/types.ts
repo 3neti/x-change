@@ -677,6 +677,20 @@ export type CockpitFundingRequest = {
     receipt_status: string;
     receipt_status_label: string;
     description: string;
+    transfer?: {
+        provider: string;
+        target_label: string;
+        reference_hint?: string | null;
+        verification_status:
+            | 'ready_to_check'
+            | 'awaiting_provider_evidence'
+            | 'review_required'
+            | 'reference_required'
+            | 'credited';
+        last_checked_at?: string | null;
+        can_check: boolean;
+        provider_authority_required: true;
+    } | null;
     submitted_at?: string | null;
     completed_at?: string | null;
     evidence?: CockpitFundingEvidenceSummary;

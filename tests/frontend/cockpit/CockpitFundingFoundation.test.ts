@@ -386,6 +386,15 @@ const fundingRequestReadModel = {
             receipt_status: 'funding',
             receipt_status_label: 'Adding funds',
             description: 'Matched corporate bank transfer.',
+            transfer: {
+                provider: 'netbank',
+                target_label: 'NetBank ••••0019',
+                reference_hint: '••••1236',
+                verification_status: 'ready_to_check',
+                last_checked_at: null,
+                can_check: true,
+                provider_authority_required: true as const,
+            },
             submitted_at: '2026-07-25T08:00:00+08:00',
             completed_at: null,
             evidence: {
@@ -949,6 +958,38 @@ describe('Cockpit Funding foundation', () => {
         await flushPromises();
         expect(writeText).toHaveBeenCalledWith(
             'Please process my ₱20,000.00 Account Funding request. Pay Code: FUNDABCD.',
+        );
+    });
+
+    it('checks a bank transfer through the owner-scoped Wayfinder route', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_requests: fundingRequestReadModel,
+                funding_workspace_mode: 'pay_code',
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+        });
+
+        const requests = wrapper.get('[data-testid="my-funding-requests"]');
+
+        expect(requests.text()).toContain('NetBank ••••0019');
+        expect(requests.text()).toContain('Ref ••••1236');
+
+        await requests
+            .findAll('button')
+            .find((button) => button.text() === 'Check transfer')
+            ?.trigger('click');
+
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/x/cockpit/funding/requests/01J-REQUEST-1/transfer-checks',
+            {},
+            expect.objectContaining({
+                preserveScroll: true,
+            }),
         );
     });
 

@@ -22,7 +22,7 @@ final readonly class FundingRequestCockpitReadModel
         $requests = FundingRequest::query()
             ->where('requester_type', $actorType)
             ->where('requester_id', $actorId)
-            ->with('voucher.envelope.attachments')
+            ->with(['events', 'voucher.envelope.attachments'])
             ->latest('submitted_at')
             ->limit(20)
             ->get();
@@ -53,6 +53,7 @@ final readonly class FundingRequestCockpitReadModel
                     $request->status,
                 ),
                 'description' => $request->description,
+                'transfer' => $this->transferSummary($request),
                 'submitted_at' => $request->submitted_at?->toIso8601String(),
                 'completed_at' => $request->completed_at?->toIso8601String(),
                 'evidence' => [
@@ -196,5 +197,60 @@ final readonly class FundingRequestCockpitReadModel
         }
 
         return '••••'.mb_substr((string) $fundingRequest->voucher?->code, -4);
+    }
+
+    /**
+     * @return array<string, bool|string|null>|null
+     */
+    private function transferSummary(FundingRequest $request): ?array
+    {
+        if ($request->funding_type->value !== 'bank_transfer') {
+            return null;
+        }
+
+        $reference = trim((string) $request->external_reference_ciphertext);
+        $event = $request->events
+            ->whereIn('event_type', [
+                'provider_check_awaiting_evidence',
+                'provider_check_ambiguous',
+                'provider_transfer_verified',
+                'provider_transfer_credited',
+            ])
+            ->last();
+        $accountNumber = preg_replace(
+            '/\D/',
+            '',
+            (string) config(
+                'payment-gateway.netbank.funding.corporate_account_number',
+            ),
+        );
+        $status = match (true) {
+            $request->status === FundingRequestStatus::Completed => 'credited',
+            $event?->event_type === 'provider_check_ambiguous' => 'review_required',
+            $event?->event_type === 'provider_check_awaiting_evidence' => 'awaiting_provider_evidence',
+            $reference === '' => 'reference_required',
+            default => 'ready_to_check',
+        };
+
+        return [
+            'provider' => mb_strtolower((string) config(
+                'x-change.funding.requests.bank_transfer.provider',
+                'netbank',
+            )),
+            'target_label' => $accountNumber === ''
+                ? 'Configured receiving account'
+                : 'NetBank ••••'.mb_substr($accountNumber, -4),
+            'reference_hint' => $reference === ''
+                ? null
+                : '••••'.mb_substr($reference, -4),
+            'verification_status' => $status,
+            'last_checked_at' => $event?->occurred_at?->toIso8601String(),
+            'can_check' => $reference !== ''
+                && in_array($request->status, [
+                    FundingRequestStatus::Submitted,
+                    FundingRequestStatus::UnderReview,
+                ], true),
+            'provider_authority_required' => true,
+        ];
     }
 }

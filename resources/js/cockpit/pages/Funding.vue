@@ -7,6 +7,7 @@ import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit
 import { store as claimPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-claims';
 import { store as inspectPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-inspections';
 import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
+import { store as checkFundingRequestTransfer } from '@/routes/x-change/cockpit/funding/requests/transfer-checks';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
 import { store as openStandingFundingAddressRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank';
 import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks';
@@ -60,6 +61,7 @@ const liquidityRefreshError = ref<string | null>(null);
 const fundingRequestAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
 const copiedFundingRequest = ref<string | null>(null);
+const activeTransferCheck = ref<string | null>(null);
 const dismissedFundingRequestResult = ref(false);
 type FundingWorkspaceMode = 'self_top_up' | 'pay_code' | 'simulation';
 const activeFundingMode = ref<FundingWorkspaceMode>(
@@ -452,6 +454,20 @@ function submitFundingRequest(): void {
             );
             fundingRequestForm.requested_value_minor = 0;
             fundingRequestForm.idempotency_key = newIdempotencyKey();
+        },
+    });
+}
+
+function checkTransfer(reference: string): void {
+    if (activeTransferCheck.value !== null) {
+        return;
+    }
+
+    activeTransferCheck.value = reference;
+    router.post(checkFundingRequestTransfer(reference), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            activeTransferCheck.value = null;
         },
     });
 }
@@ -2342,6 +2358,22 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                                 {{ document.filename }}
                                             </a>
                                         </div>
+                                        <p
+                                            v-if="item.transfer"
+                                            class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                                        >
+                                            {{ item.transfer.target_label }}
+                                            <template
+                                                v-if="
+                                                    item.transfer.reference_hint
+                                                "
+                                            >
+                                                · Ref
+                                                {{
+                                                    item.transfer.reference_hint
+                                                }}
+                                            </template>
+                                        </p>
                                     </td>
                                     <td
                                         class="border-b border-slate-100 px-3 py-3 font-semibold dark:border-slate-800"
@@ -2375,6 +2407,26 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     <td
                                         class="border-b border-slate-100 px-3 py-3 text-right dark:border-slate-800"
                                     >
+                                        <button
+                                            v-if="
+                                                item.transfer?.can_check === true
+                                            "
+                                            type="button"
+                                            class="mr-2 rounded-lg bg-sky-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 dark:bg-sky-500 dark:text-slate-950"
+                                            :disabled="
+                                                activeTransferCheck !== null
+                                            "
+                                            @click="
+                                                checkTransfer(item.reference)
+                                            "
+                                        >
+                                            {{
+                                                activeTransferCheck ===
+                                                item.reference
+                                                    ? 'Checking…'
+                                                    : 'Check transfer'
+                                            }}
+                                        </button>
                                         <button
                                             v-if="
                                                 item.pay_code?.can_copy === true
