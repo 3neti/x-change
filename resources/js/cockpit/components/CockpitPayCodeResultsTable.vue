@@ -15,6 +15,7 @@ import type {
 
 const defaultVisibleRecordLimit = 25;
 const visibleRecordLimitOptions = [10, 25, 50];
+const visibleInstructionBadgeLimit = 3;
 
 const props = defineProps<{
     records: CockpitPayCodeExplorerRecord[];
@@ -160,6 +161,31 @@ function actionIcon(
         ? 'distribution'
         : 'inspect';
 }
+
+function visibleInstructionBadges(record: CockpitPayCodeExplorerRecord) {
+    return record.instructionBadges.slice(0, visibleInstructionBadgeLimit);
+}
+
+function hiddenInstructionBadgeCount(
+    record: CockpitPayCodeExplorerRecord,
+): number {
+    return Math.max(
+        record.instructionBadges.length - visibleInstructionBadgeLimit,
+        0,
+    );
+}
+
+function capabilityBadgeClass(capabilityKey: string): string {
+    if (capabilityKey === 'collection') {
+        return 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800';
+    }
+
+    if (capabilityKey === 'settlement') {
+        return 'bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950 dark:text-violet-200 dark:ring-violet-800';
+    }
+
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800';
+}
 </script>
 
 <template>
@@ -251,6 +277,14 @@ function actionIcon(
                         >
                             {{ record.template }}
                         </p>
+                        <span
+                            :class="capabilityBadgeClass(record.capability.key)"
+                            class="mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ring-1"
+                            data-testid="cockpit-pay-code-mobile-capability"
+                        >
+                            {{ record.capability.label }} ·
+                            {{ record.capability.voucherTypeLabel }}
+                        </span>
                     </div>
                     <div class="shrink-0 text-right">
                         <span
@@ -269,34 +303,52 @@ function actionIcon(
                     </div>
                 </div>
 
-                <dl
-                    class="grid grid-cols-2 divide-x divide-slate-200 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:divide-slate-800 dark:bg-slate-950"
-                    data-testid="cockpit-pay-code-mobile-lifecycle-dates"
+                <div
+                    class="flex min-h-6 flex-wrap items-center gap-1.5"
+                    data-testid="cockpit-pay-code-mobile-instructions"
                 >
-                    <div class="min-w-0 pr-3">
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            Created
-                        </dt>
-                        <dd
-                            class="mt-0.5 truncate text-slate-700 dark:text-slate-200"
-                        >
-                            {{ record.createdAt ?? '—' }}
-                        </dd>
-                    </div>
-                    <div class="min-w-0 pl-3">
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            Expires
-                        </dt>
-                        <dd
-                            class="mt-0.5 truncate text-slate-700 dark:text-slate-200"
-                        >
-                            {{ record.expiresAt ?? '—' }}
-                        </dd>
-                    </div>
+                    <span
+                        v-for="badge in visibleInstructionBadges(record)"
+                        :key="badge.key"
+                        class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+                    >
+                        {{ badge.label }}
+                    </span>
+                    <span
+                        v-if="hiddenInstructionBadgeCount(record) > 0"
+                        class="inline-flex rounded-full bg-slate-50 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-500 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:ring-slate-700"
+                        data-testid="cockpit-pay-code-mobile-instruction-overflow"
+                    >
+                        +{{ hiddenInstructionBadgeCount(record) }}
+                    </span>
+                    <span
+                        v-if="record.instructionBadges.length === 0"
+                        class="text-xs text-slate-400 dark:text-slate-500"
+                    >
+                        Standard instructions
+                    </span>
+                </div>
+
+                <dl
+                    class="rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-950"
+                    data-testid="cockpit-pay-code-mobile-party"
+                >
+                    <dt
+                        class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                    >
+                        {{ record.party.label }}
+                    </dt>
+                    <dd
+                        class="mt-0.5 truncate font-medium text-slate-800 dark:text-slate-100"
+                    >
+                        {{ record.party.primary }}
+                    </dd>
+                    <dd
+                        v-if="record.party.secondary"
+                        class="mt-0.5 truncate text-slate-500 dark:text-slate-400"
+                    >
+                        {{ record.party.secondary }}
+                    </dd>
                 </dl>
 
                 <div class="grid gap-2 sm:grid-cols-2">
@@ -311,7 +363,6 @@ function actionIcon(
                         {{ action.label }}
                     </Link>
                     <details
-                        v-if="disabledActions(record).length > 0"
                         class="group sm:col-span-2"
                         data-testid="cockpit-pay-code-mobile-row-unavailable-actions"
                     >
@@ -355,6 +406,30 @@ function actionIcon(
                                         {{ record.lastActivity }}
                                     </dd>
                                 </div>
+                                <div>
+                                    <dt
+                                        class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                    >
+                                        Created
+                                    </dt>
+                                    <dd
+                                        class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{ record.timing.createdAt ?? '—' }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt
+                                        class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                    >
+                                        Expires
+                                    </dt>
+                                    <dd
+                                        class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{ record.timing.expiresAt ?? '—' }}
+                                    </dd>
+                                </div>
                             </dl>
                             <button
                                 v-for="action in disabledActions(record)"
@@ -375,16 +450,17 @@ function actionIcon(
 
         <div class="hidden overflow-x-auto md:block">
             <table
-                class="w-full min-w-[52rem] divide-y divide-slate-200 text-left text-sm dark:divide-slate-800"
+                class="w-full min-w-[68rem] divide-y divide-slate-200 text-left text-sm dark:divide-slate-800"
             >
                 <thead
                     class="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase dark:bg-slate-950 dark:text-slate-400"
                 >
                     <tr>
-                        <th class="w-[30%] px-4 py-2">Pay Code</th>
-                        <th class="w-[16%] px-4 py-2 text-right">Amount</th>
-                        <th class="w-[16%] px-4 py-2">Status</th>
-                        <th class="w-[24%] px-4 py-2">Lifecycle dates</th>
+                        <th class="w-[21%] px-4 py-2">Pay Code</th>
+                        <th class="w-[23%] px-4 py-2">Instructions</th>
+                        <th class="w-[13%] px-4 py-2 text-right">Amount</th>
+                        <th class="w-[13%] px-4 py-2">Status</th>
+                        <th class="w-[20%] px-4 py-2">Target / Claimed by</th>
                         <th class="px-4 py-2 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -408,6 +484,47 @@ function actionIcon(
                             >
                                 {{ record.template }}
                             </p>
+                            <span
+                                :class="
+                                    capabilityBadgeClass(record.capability.key)
+                                "
+                                class="mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ring-1"
+                                data-testid="cockpit-pay-code-capability"
+                            >
+                                {{ record.capability.label }} ·
+                                {{ record.capability.voucherTypeLabel }}
+                            </span>
+                        </td>
+                        <td
+                            class="px-4 py-2.5 align-top"
+                            data-testid="cockpit-pay-code-instructions"
+                        >
+                            <div class="flex min-h-6 flex-wrap gap-1.5">
+                                <span
+                                    v-for="badge in visibleInstructionBadges(
+                                        record,
+                                    )"
+                                    :key="badge.key"
+                                    class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+                                >
+                                    {{ badge.label }}
+                                </span>
+                                <span
+                                    v-if="
+                                        hiddenInstructionBadgeCount(record) > 0
+                                    "
+                                    class="inline-flex rounded-full bg-slate-50 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-500 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:ring-slate-700"
+                                    data-testid="cockpit-pay-code-instruction-overflow"
+                                >
+                                    +{{ hiddenInstructionBadgeCount(record) }}
+                                </span>
+                                <span
+                                    v-if="record.instructionBadges.length === 0"
+                                    class="text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    Standard
+                                </span>
+                            </div>
                         </td>
                         <td
                             class="px-4 py-2.5 text-right font-mono text-slate-700 tabular-nums dark:text-slate-200"
@@ -425,35 +542,25 @@ function actionIcon(
                             </span>
                         </td>
                         <td
-                            class="px-4 py-2.5"
-                            data-testid="cockpit-pay-code-row-lifecycle-dates"
+                            class="px-4 py-2.5 align-top"
+                            data-testid="cockpit-pay-code-party"
                         >
-                            <dl class="grid gap-0.5 text-xs">
-                                <div class="flex min-w-0 items-baseline gap-2">
-                                    <dt
-                                        class="w-12 shrink-0 font-semibold tracking-wide text-slate-400 uppercase dark:text-slate-500"
-                                    >
-                                        Created
-                                    </dt>
-                                    <dd
-                                        class="truncate text-slate-700 dark:text-slate-200"
-                                    >
-                                        {{ record.createdAt ?? '—' }}
-                                    </dd>
-                                </div>
-                                <div class="flex min-w-0 items-baseline gap-2">
-                                    <dt
-                                        class="w-12 shrink-0 font-semibold tracking-wide text-slate-400 uppercase dark:text-slate-500"
-                                    >
-                                        Expires
-                                    </dt>
-                                    <dd
-                                        class="truncate text-slate-500 dark:text-slate-400"
-                                    >
-                                        {{ record.expiresAt ?? '—' }}
-                                    </dd>
-                                </div>
-                            </dl>
+                            <p
+                                class="text-[0.65rem] font-semibold tracking-wide text-slate-400 uppercase dark:text-slate-500"
+                            >
+                                {{ record.party.label }}
+                            </p>
+                            <p
+                                class="mt-0.5 truncate text-sm font-medium text-slate-800 dark:text-slate-100"
+                            >
+                                {{ record.party.primary }}
+                            </p>
+                            <p
+                                v-if="record.party.secondary"
+                                class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400"
+                            >
+                                {{ record.party.secondary }}
+                            </p>
                         </td>
                         <td class="px-4 py-2.5">
                             <div class="flex justify-end gap-1.5">
@@ -486,7 +593,6 @@ function actionIcon(
                                     </Link>
                                 </div>
                                 <details
-                                    v-if="disabledActions(record).length > 0"
                                     class="group text-xs text-slate-500 dark:text-slate-400"
                                     data-testid="cockpit-pay-code-row-unavailable-actions"
                                 >
@@ -532,6 +638,66 @@ function actionIcon(
                                                     class="mt-0.5 text-slate-700 dark:text-slate-200"
                                                 >
                                                     {{ record.lastActivity }}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt
+                                                    class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                                >
+                                                    Created
+                                                </dt>
+                                                <dd
+                                                    class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                                >
+                                                    {{
+                                                        record.timing
+                                                            .createdAt ?? '—'
+                                                    }}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt
+                                                    class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                                >
+                                                    Starts
+                                                </dt>
+                                                <dd
+                                                    class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                                >
+                                                    {{
+                                                        record.timing
+                                                            .startsAt ?? '—'
+                                                    }}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt
+                                                    class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                                >
+                                                    Expires
+                                                </dt>
+                                                <dd
+                                                    class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                                >
+                                                    {{
+                                                        record.timing
+                                                            .expiresAt ?? '—'
+                                                    }}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt
+                                                    class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                                >
+                                                    Redeemed
+                                                </dt>
+                                                <dd
+                                                    class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                                >
+                                                    {{
+                                                        record.timing
+                                                            .redeemedAt ?? '—'
+                                                    }}
                                                 </dd>
                                             </div>
                                         </dl>

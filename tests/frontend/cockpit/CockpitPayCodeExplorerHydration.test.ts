@@ -52,6 +52,30 @@ const payCodesReadModel = {
             currency: 'PHP',
             status: 'issued',
             display_status: 'ready',
+            capability: {
+                key: 'disbursement',
+                label: 'Disbursement',
+                voucher_type_label: 'Redeemable',
+            },
+            instruction_badges: [
+                { key: 'mobile_bound', label: 'Mobile-bound' },
+                { key: 'settlement_rail', label: 'InstaPay' },
+                { key: 'otp', label: 'OTP' },
+                { key: 'signature', label: 'Signature' },
+            ],
+            party: {
+                state: 'claimed',
+                label: 'Claimed by',
+                primary: 'Leslie Chong',
+                secondary: '•••• 4567',
+                masked: true,
+            },
+            timing: {
+                created_at: '2026-07-03T09:00:00+08:00',
+                starts_at: '2026-07-03T09:15:00+08:00',
+                expires_at: '2026-07-10T09:00:00+08:00',
+                redeemed_at: '2026-07-03T10:00:00+08:00',
+            },
             owner: 'Treasury Desk',
             last_activity: '2026-07-03T10:00:00+08:00',
             provider_payload: 'must-not-render',
@@ -588,8 +612,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const mobileRow = wrapper.find(
             '[data-testid="cockpit-pay-code-mobile-row"]',
         );
-        const lifecycleDates = mobileRow.find(
-            '[data-testid="cockpit-pay-code-mobile-lifecycle-dates"]',
+        const instructions = mobileRow.find(
+            '[data-testid="cockpit-pay-code-mobile-instructions"]',
+        );
+        const party = mobileRow.find(
+            '[data-testid="cockpit-pay-code-mobile-party"]',
         );
         const amount = mobileRow.find(
             '[data-testid="cockpit-pay-code-mobile-amount"]',
@@ -600,10 +627,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileRow.text().match(/Money Changer/g)).toHaveLength(1);
         expect(amount.text()).toBe('₱1,500.75');
         expect(amount.classes()).toContain('text-right');
-        expect(lifecycleDates.classes()).toContain('divide-x');
-        expect(lifecycleDates.classes()).toContain('py-2');
-        expect(lifecycleDates.text()).toContain('Created');
-        expect(lifecycleDates.text()).toContain('Expires');
+        expect(instructions.text()).toContain('Mobile-bound');
+        expect(instructions.text()).toContain('InstaPay');
+        expect(instructions.text()).toContain('+1');
+        expect(party.text()).toContain('Claimed by');
+        expect(party.text()).toContain('Leslie Chong');
+        expect(party.text()).toContain('•••• 4567');
     });
 
     it('renders scan-friendly status badges without mutating status facts', () => {
@@ -675,7 +704,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileAmounts[0].classes()).toContain('tabular-nums');
     });
 
-    it('groups desktop row identity and lifecycle facts into compact scan columns', () => {
+    it('groups desktop capability instructions and party facts into compact scan columns', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
                 pay_codes_read_model: payCodesReadModel,
@@ -688,25 +717,37 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const identity = wrapper.find(
             '[data-testid="cockpit-pay-code-row-identity"]',
         );
-        const lifecycleDates = wrapper.find(
-            '[data-testid="cockpit-pay-code-row-lifecycle-dates"]',
+        const instructions = wrapper.find(
+            '[data-testid="cockpit-pay-code-instructions"]',
         );
+        const party = wrapper.find('[data-testid="cockpit-pay-code-party"]');
         const headers = table.findAll('th');
 
-        expect(table.classes()).toContain('min-w-[52rem]');
-        expect(headers).toHaveLength(5);
+        expect(table.classes()).toContain('min-w-[68rem]');
+        expect(headers).toHaveLength(6);
         expect(headers.map((header) => header.text())).toEqual([
             'Pay Code',
+            'Instructions',
             'Amount',
             'Status',
-            'Lifecycle dates',
+            'Target / Claimed by',
             'Actions',
         ]);
         expect(identity.text()).toContain('PC-HYDRATED-001');
         expect(identity.text()).toContain('Money Changer');
+        expect(identity.text()).toContain('Disbursement · Redeemable');
         expect(identity.find('p').classes()).toContain('font-semibold');
-        expect(lifecycleDates.text()).toContain('Created');
-        expect(lifecycleDates.text()).toContain('Expires');
+        expect(instructions.text()).toContain('Mobile-bound');
+        expect(instructions.text()).toContain('InstaPay');
+        expect(instructions.text()).toContain('+1');
+        expect(party.text()).toContain('Claimed by');
+        expect(party.text()).toContain('Leslie Chong');
+        expect(party.text()).toContain('•••• 4567');
+        const secondaryFacts = wrapper.find(
+            '[data-testid="cockpit-pay-code-row-secondary-facts"]',
+        );
+        expect(secondaryFacts.text()).toContain('Created');
+        expect(secondaryFacts.text()).toContain('Expires');
     });
 
     it('summarizes pay code result density before the rows', () => {

@@ -1443,12 +1443,32 @@ export type CockpitPayCodeExplorerStats = {
 export type CockpitPayCodeExplorerRecord = {
     code: string;
     template: string;
+    capability: {
+        key: string;
+        label: string;
+        voucherTypeLabel: string;
+    };
+    instructionBadges: Array<{
+        key: string;
+        label: string;
+    }>;
     amount: string;
     status: string;
+    party: {
+        state: string;
+        label: string;
+        primary: string;
+        secondary: string | null;
+        masked: boolean;
+    };
+    timing: {
+        createdAt: string | null;
+        startsAt: string | null;
+        expiresAt: string | null;
+        redeemedAt: string | null;
+    };
     owner: string;
     lastActivity: string;
-    createdAt?: string;
-    expiresAt?: string;
     actions?: CockpitPayCodeRowAction[];
 };
 
@@ -1579,6 +1599,32 @@ export type CockpitPayCodeExplorerReadModelRecord = {
     currency?: string | null;
     status?: string | null;
     display_status?: string | null;
+    capability?: {
+        key?: string | null;
+        label?: string | null;
+        voucher_type_label?: string | null;
+        [key: string]: unknown;
+    };
+    instruction_badges?: Array<{
+        key?: string | null;
+        label?: string | null;
+        [key: string]: unknown;
+    }>;
+    party?: {
+        state?: string | null;
+        label?: string | null;
+        primary?: string | null;
+        secondary?: string | null;
+        masked?: boolean;
+        [key: string]: unknown;
+    };
+    timing?: {
+        created_at?: string | null;
+        starts_at?: string | null;
+        expires_at?: string | null;
+        redeemed_at?: string | null;
+        [key: string]: unknown;
+    };
     owner?: string | null;
     last_activity?: string | null;
     created_at?: string | null;

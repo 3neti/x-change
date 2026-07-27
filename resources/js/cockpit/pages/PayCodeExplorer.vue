@@ -450,16 +450,18 @@ function sanitizeRecord(
     return {
         code,
         template: stringValue(record.template) ?? 'Template pending',
+        capability: sanitizeCapability(record.capability),
+        instructionBadges: sanitizeInstructionBadges(record.instruction_badges),
         amount: moneyValue(record.amount, stringValue(record.currency)),
         status:
             stringValue(record.display_status) ??
             stringValue(record.status) ??
             'not_wired',
+        party: sanitizeParty(record.party),
+        timing: sanitizeTiming(record),
         owner: stringValue(record.owner) ?? 'Redacted',
         lastActivity:
             stringValue(record.last_activity) ?? 'Read model activity pending',
-        createdAt: stringValue(record.created_at) ?? '—',
-        expiresAt: stringValue(record.expires_at) ?? '—',
         actions: Array.isArray(record.actions)
             ? record.actions
                   .map((action) => sanitizeRowAction(action))
@@ -472,6 +474,70 @@ function sanitizeRecord(
                       > => action !== null,
                   )
             : [],
+    };
+}
+
+function sanitizeCapability(
+    capability: CockpitPayCodeExplorerReadModelRecord['capability'],
+): CockpitPayCodeExplorerRecord['capability'] {
+    const value = objectValue(capability);
+
+    return {
+        key: stringValue(value.key) ?? 'disbursement',
+        label: stringValue(value.label) ?? 'Disbursement',
+        voucherTypeLabel: stringValue(value.voucher_type_label) ?? 'Redeemable',
+    };
+}
+
+function sanitizeInstructionBadges(
+    badges: CockpitPayCodeExplorerReadModelRecord['instruction_badges'],
+): CockpitPayCodeExplorerRecord['instructionBadges'] {
+    if (!Array.isArray(badges)) {
+        return [];
+    }
+
+    return badges
+        .map((badge) => {
+            const value = objectValue(badge);
+            const key = stringValue(value.key);
+            const label = stringValue(value.label);
+
+            return key && label ? { key, label } : null;
+        })
+        .filter(
+            (
+                badge,
+            ): badge is CockpitPayCodeExplorerRecord['instructionBadges'][number] =>
+                badge !== null,
+        );
+}
+
+function sanitizeParty(
+    party: CockpitPayCodeExplorerReadModelRecord['party'],
+): CockpitPayCodeExplorerRecord['party'] {
+    const value = objectValue(party);
+
+    return {
+        state: stringValue(value.state) ?? 'open',
+        label: stringValue(value.label) ?? 'Availability',
+        primary: stringValue(value.primary) ?? 'Open claim',
+        secondary: stringValue(value.secondary),
+        masked: value.masked === true,
+    };
+}
+
+function sanitizeTiming(
+    record: CockpitPayCodeExplorerReadModelRecord,
+): CockpitPayCodeExplorerRecord['timing'] {
+    const timing = objectValue(record.timing);
+
+    return {
+        createdAt:
+            stringValue(timing.created_at) ?? stringValue(record.created_at),
+        startsAt: stringValue(timing.starts_at),
+        expiresAt:
+            stringValue(timing.expires_at) ?? stringValue(record.expires_at),
+        redeemedAt: stringValue(timing.redeemed_at),
     };
 }
 
