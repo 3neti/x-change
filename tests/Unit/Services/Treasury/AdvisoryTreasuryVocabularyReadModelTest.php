@@ -9,14 +9,33 @@ it('provides package-owned Treasury vocabulary when x-legal is unavailable', fun
         'internal_balance',
         'issuance_capacity',
         'provider_account',
+        'funding_qr_ph',
+        'funding_bank_transfer',
+        'funding_pay_code',
+        'funding_reviewed_value',
+        'funding_activity',
     ]);
 
     expect($terms)
-        ->toHaveKeys(['internal_balance', 'issuance_capacity', 'provider_account'])
+        ->toHaveKeys([
+            'internal_balance',
+            'issuance_capacity',
+            'provider_account',
+            'funding_qr_ph',
+            'funding_bank_transfer',
+            'funding_pay_code',
+            'funding_reviewed_value',
+            'funding_activity',
+        ])
         ->and($terms['internal_balance']['label'])->toBe('Client Funds')
         ->and($terms['internal_balance']['source'])->toBe('x-change')
         ->and($terms['internal_balance']['approved_for_public_display'])->toBeFalse()
-        ->and($terms['issuance_capacity']['description'])->not->toBeEmpty();
+        ->and($terms['issuance_capacity']['description'])->not->toBeEmpty()
+        ->and($terms['funding_qr_ph']['label'])->toBe('QR Ph')
+        ->and($terms['funding_bank_transfer']['label'])->toBe('Bank Transfer')
+        ->and($terms['funding_pay_code']['label'])->toBe('Pay Code')
+        ->and($terms['funding_reviewed_value']['label'])->toBe('Reviewed Value')
+        ->and($terms['funding_activity']['label'])->toBe('Funding Activity');
 });
 
 it('uses an installed x-legal vocabulary resolver without making it an execution authority', function () {
