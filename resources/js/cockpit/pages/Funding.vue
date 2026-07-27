@@ -15,8 +15,10 @@ import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import CockpitFundingActivity from '../components/CockpitFundingActivity.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
+    CockpitFundingActivityItem,
     CockpitFundingPageProps,
     CockpitQrPhFundingSimulationResult,
     CockpitStandingFundingAddress,
@@ -75,6 +77,31 @@ const fundingRequests = computed(
             redactions: {},
         },
 );
+const fundingActivity = computed(
+    () =>
+        props.funding_activity ?? {
+            schema: 'x-change.cockpit.funding-activity.v1' as const,
+            items: [],
+            filters: [
+                { key: 'all' as const, label: 'All' },
+                { key: 'qr_ph' as const, label: 'QR Ph' },
+                {
+                    key: 'bank_transfer' as const,
+                    label: 'Bank Transfer',
+                },
+                { key: 'pay_code' as const, label: 'Pay Code' },
+                {
+                    key: 'reviewed_value' as const,
+                    label: 'Reviewed Value',
+                },
+            ],
+            redactions: {
+                payer_identity_exposed: false as const,
+                provider_transaction_id_exposed: false as const,
+                raw_evidence_exposed: false as const,
+            },
+        },
+);
 const activeReconciliationCase = ref<string | null>(null);
 const activeApproval = ref<string | null>(null);
 const activeVerificationCheck = ref<string | null>(null);
@@ -87,7 +114,6 @@ const standingAddressLoading = ref(false);
 const standingHistoryLoading = ref(false);
 const standingHistoryCooldownSeconds = ref(0);
 const standingAddressError = ref<string | null>(null);
-const standingHistoryCheckedAt = ref<string | null>(null);
 const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
 const liquidityRefreshRunning = ref(false);
@@ -106,6 +132,7 @@ type FundingWorkspaceMode =
     | 'self_top_up'
     | 'bank_transfer'
     | 'pay_code'
+    | 'reviewed_value'
     | 'simulation';
 const activeFundingMode = ref<FundingWorkspaceMode>(
     props.funding_workspace_mode ?? 'self_top_up',
@@ -126,7 +153,7 @@ const fundingQrMerchantProfile = computed(
 const fundingWorkspaceModes = computed(() => [
     {
         key: 'self_top_up' as const,
-        label: 'Self Top-Up',
+        label: 'QR Ph',
     },
     {
         key: 'bank_transfer' as const,
@@ -134,9 +161,24 @@ const fundingWorkspaceModes = computed(() => [
     },
     {
         key: 'pay_code' as const,
-        label: 'Pay Code Funding',
+        label: 'Pay Code',
+    },
+    {
+        key: 'reviewed_value' as const,
+        label: 'Reviewed Value',
     },
 ]);
+const fundingActivityFilter = computed(() => {
+    if (activeFundingMode.value === 'self_top_up') {
+        return 'qr_ph' as const;
+    }
+
+    if (activeFundingMode.value === 'simulation') {
+        return 'all' as const;
+    }
+
+    return activeFundingMode.value;
+});
 const processedFundingEvents = new Set<string>();
 let realtimeRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 let standingHistoryCooldownTimer: ReturnType<typeof setInterval> | null = null;
@@ -202,6 +244,7 @@ const { start: startFundingPoll, stop: stopFundingPoll } = usePoll(
             'cockpit_header_read_model',
             'funding_read_model',
             'funding_requests',
+            'funding_activity',
             'funding_notice',
         ],
     },
@@ -249,7 +292,6 @@ const selectedBankTransferRequest = computed(
                 request.reference === bankTransferInstructionReference.value,
         ) ?? null,
 );
-const payCodeFundingRequests = computed(() => fundingRequests.value.requests);
 const payCodeInspectionForm = useForm({
     code: '',
 });
@@ -283,7 +325,7 @@ const fundingRequestButtonLabel = computed(() => {
     const amountMinor = amountToMinor(fundingRequestAmount.value);
 
     if (amountMinor === null) {
-        return 'Request Account Funding';
+        return 'Request value review';
     }
 
     return `Request ${new Intl.NumberFormat('en-PH', {
@@ -650,6 +692,55 @@ function fundingRequestStatusTone(status: string): string {
     );
 }
 
+function openFundingActivityInstructions(
+    item: CockpitFundingActivityItem,
+): void {
+    if (item.request_reference) {
+        openBankTransferInstructions(item.request_reference);
+    }
+}
+
+function checkFundingActivityProvider(item: CockpitFundingActivityItem): void {
+    if (item.request_reference) {
+        checkTransfer(item.request_reference);
+    }
+}
+
+function copyFundingActivityPayCode(item: CockpitFundingActivityItem): void {
+    if (item.pay_code?.code) {
+        void copyFundingRequest(item.key, item.pay_code.code);
+    }
+}
+
+function approveFundingActivityReceipt(item: CockpitFundingActivityItem): void {
+    const receipt = standingReceipts.value.find(
+        (candidate) => candidate.approval_reference === item.approval_reference,
+    );
+
+    if (receipt) {
+        void approveStandingFundingReceipt(receipt);
+    }
+}
+
+const fundingActivityProcessingKey = computed(() => {
+    if (activeTransferCheck.value !== null) {
+        return `request:${activeTransferCheck.value}`;
+    }
+
+    if (activeStandingReceiptApproval.value !== null) {
+        return (
+            fundingActivity.value.items.find(
+                (item) =>
+                    item.source === 'standing_funding_receipt' &&
+                    item.display_reference ===
+                        activeStandingReceiptApproval.value,
+            )?.key ?? null
+        );
+    }
+
+    return null;
+});
+
 function selectFundingRequestEvidence(event: Event): void {
     const input = event.target as HTMLInputElement;
 
@@ -860,10 +951,6 @@ async function openStandingFundingAddress(): Promise<void> {
         standingReceipts.value = Array.isArray(persistedHistory.observations)
             ? (persistedHistory.observations as CockpitStandingFundingReceipt[])
             : [];
-        standingHistoryCheckedAt.value =
-            typeof persistedHistory.last_checked_at === 'string'
-                ? persistedHistory.last_checked_at
-                : null;
     } catch {
         standingAddressError.value =
             'The Account Funding Address could not reach NetBank.';
@@ -930,8 +1017,6 @@ async function checkStandingFundingHistory(): Promise<void> {
 
         standingReceipts.value =
             body.observations as CockpitStandingFundingReceipt[];
-        standingHistoryCheckedAt.value =
-            typeof body.checked_at === 'string' ? body.checked_at : null;
         standingActionNotice.value =
             body.balance_changed === true
                 ? 'New NetBank funding was applied to Client Funds exactly once.'
@@ -939,9 +1024,7 @@ async function checkStandingFundingHistory(): Promise<void> {
                   ? 'NetBank history refreshed. Previously applied receipts were not applied again.'
                   : null;
 
-        if (body.balance_changed === true) {
-            refreshFundingProjections();
-        }
+        refreshFundingProjections();
     } catch {
         standingAddressError.value =
             'The NetBank history check could not reach the provider.';
@@ -1065,6 +1148,7 @@ function refreshFundingProjections(): void {
             'cockpit_header_read_model',
             'funding_read_model',
             'funding_requests',
+            'funding_activity',
         ],
         preserveScroll: true,
         preserveState: true,
@@ -1085,7 +1169,6 @@ function saveFundingQrMerchantProfile(): void {
 function resetStandingFundingAddress(): void {
     standingAddress.value = null;
     standingReceipts.value = [];
-    standingHistoryCheckedAt.value = null;
     standingAddressError.value = null;
     standingActionNotice.value = null;
 }
@@ -1537,7 +1620,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 data-testid="cockpit-funding-mode-switcher"
             >
                 <div
-                    class="grid gap-2 sm:grid-cols-3"
+                    class="grid gap-2 sm:grid-cols-4"
                     role="tablist"
                     aria-label="Funding workspace mode"
                 >
@@ -1596,7 +1679,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 <div
                     class="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
                 >
-                    <h2 class="text-sm font-semibold">Account Funding QR Ph</h2>
+                    <h2 class="text-sm font-semibold">QR Ph</h2>
                     <div class="flex flex-wrap items-center gap-2">
                         <span
                             v-if="standingAddressLoading"
@@ -1644,7 +1727,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             "
                             class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                         >
-                            Self top-up unavailable
+                            QR Ph unavailable
                         </span>
                     </div>
                 </div>
@@ -1743,174 +1826,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     >
                         {{ standingActionNotice }}
                     </div>
-
-                    <div
-                        class="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
-                    >
-                        <div
-                            class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-800"
-                        >
-                            <div>
-                                <h3 class="text-sm font-semibold">
-                                    Account Funding Receipts
-                                </h3>
-                                <p class="mt-0.5 text-xs text-slate-500">
-                                    Sanitized classification and recognition
-                                    status. Payer identity and raw provider data
-                                    stay hidden.
-                                </p>
-                            </div>
-                            <span class="text-xs text-slate-500">
-                                {{
-                                    standingHistoryCheckedAt
-                                        ? `Last synchronized ${displayTime(
-                                              standingHistoryCheckedAt,
-                                          )}`
-                                        : 'Not synchronized yet'
-                                }}
-                            </span>
-                        </div>
-                        <div
-                            v-if="standingReceipts.length"
-                            class="overflow-x-auto"
-                        >
-                            <table
-                                class="w-full min-w-[52rem] text-left text-sm"
-                            >
-                                <thead
-                                    class="bg-slate-50 text-xs text-slate-500 uppercase dark:bg-slate-900"
-                                >
-                                    <tr>
-                                        <th class="px-4 py-2.5">Reference</th>
-                                        <th class="px-4 py-2.5">Amount</th>
-                                        <th class="px-4 py-2.5">NetBank</th>
-                                        <th class="px-4 py-2.5">Applied</th>
-                                        <th class="px-4 py-2.5">Observed</th>
-                                        <th class="px-4 py-2.5 text-right">
-                                            Control
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr
-                                        v-for="receipt in standingReceipts"
-                                        :key="receipt.reference"
-                                        class="border-t border-slate-100 dark:border-slate-800"
-                                    >
-                                        <td
-                                            class="px-4 py-3 font-mono text-xs font-semibold"
-                                        >
-                                            {{ receipt.reference }}
-                                        </td>
-                                        <td class="px-4 py-3 font-semibold">
-                                            {{ receipt.gross_amount }}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            {{
-                                                displayLabel(
-                                                    receipt.provider_status,
-                                                )
-                                            }}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div
-                                                v-if="receipt.applied"
-                                                class="flex flex-col gap-0.5"
-                                            >
-                                                <span
-                                                    class="font-semibold text-emerald-700 dark:text-emerald-300"
-                                                >
-                                                    Yes ·
-                                                    {{ receipt.applied_amount }}
-                                                </span>
-                                                <span
-                                                    v-if="receipt.provisional"
-                                                    class="text-[0.7rem] font-medium text-amber-700 dark:text-amber-300"
-                                                >
-                                                    Provisional provider status
-                                                </span>
-                                                <span
-                                                    v-else
-                                                    class="text-[0.7rem] text-slate-500"
-                                                >
-                                                    {{
-                                                        displayTime(
-                                                            receipt.applied_at,
-                                                        )
-                                                    }}
-                                                </span>
-                                            </div>
-                                            <div
-                                                v-else
-                                                class="flex flex-col gap-0.5"
-                                            >
-                                                <span
-                                                    class="font-medium text-slate-600 dark:text-slate-300"
-                                                >
-                                                    No
-                                                </span>
-                                                <span
-                                                    class="text-[0.7rem] text-slate-500"
-                                                >
-                                                    {{
-                                                        displayLabel(
-                                                            receipt.status,
-                                                        )
-                                                    }}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 text-slate-500">
-                                            {{
-                                                displayTime(receipt.occurred_at)
-                                            }}
-                                        </td>
-                                        <td class="px-4 py-3 text-right">
-                                            <button
-                                                v-if="receipt.can_approve"
-                                                type="button"
-                                                class="h-8 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                                :disabled="
-                                                    activeStandingReceiptApproval !==
-                                                    null
-                                                "
-                                                data-testid="approve-standing-funding-receipt"
-                                                @click="
-                                                    approveStandingFundingReceipt(
-                                                        receipt,
-                                                    )
-                                                "
-                                            >
-                                                {{
-                                                    activeStandingReceiptApproval ===
-                                                    receipt.reference
-                                                        ? 'Posting…'
-                                                        : 'Approve verified credit'
-                                                }}
-                                            </button>
-                                            <span
-                                                v-else
-                                                class="text-xs text-slate-400"
-                                            >
-                                                —
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <p
-                            v-else
-                            class="px-4 py-5 text-sm text-slate-500"
-                            data-testid="standing-funding-history-empty"
-                        >
-                            {{
-                                standingHistoryCheckedAt
-                                    ? 'No persisted incoming receipts were found during the last NetBank synchronization.'
-                                    : 'Check NetBank after a human scans and pays the QR. Persisted receipts will remain here after refresh.'
-                            }}
-                        </p>
-                    </div>
                 </div>
 
                 <div
@@ -1946,7 +1861,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     >
                         <div>
                             <h2 class="text-base font-semibold">
-                                Fund by bank transfer
+                                Bank Transfer
                             </h2>
                             <p
                                 class="mt-1 text-sm text-slate-500 dark:text-slate-400"
@@ -2015,107 +1930,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             }}
                         </button>
                     </form>
-                </article>
-
-                <article
-                    v-if="bankTransferRequests.length"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="bank-transfer-history"
-                >
-                    <div
-                        class="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 dark:border-slate-800"
-                    >
-                        <h2 class="text-sm font-semibold">Bank transfers</h2>
-                        <span class="text-xs font-semibold text-slate-500">
-                            {{ bankTransferRequests.length }}
-                        </span>
-                    </div>
-                    <ul class="divide-y divide-slate-100 dark:divide-slate-800">
-                        <li
-                            v-for="item in bankTransferRequests"
-                            :key="item.reference"
-                            class="grid gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
-                        >
-                            <div>
-                                <p class="font-semibold">
-                                    {{
-                                        item.transfer?.expected_amount ??
-                                        item.requested_value
-                                    }}
-                                </p>
-                                <p
-                                    class="text-xs text-slate-500 dark:text-slate-400"
-                                >
-                                    <template
-                                        v-if="
-                                            item.transfer?.matching_adjustment
-                                        "
-                                    >
-                                        {{ item.transfer.requested_amount }} +
-                                        {{ item.transfer.matching_adjustment }}
-                                        match
-                                    </template>
-                                    <template v-else>
-                                        {{ item.transfer?.window_label }}
-                                    </template>
-                                    <template
-                                        v-if="item.transfer?.reference_hint"
-                                    >
-                                        · Ref
-                                        {{ item.transfer.reference_hint }}
-                                    </template>
-                                </p>
-                            </div>
-                            <span
-                                class="w-fit rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase"
-                                :class="
-                                    fundingRequestStatusTone(
-                                        item.receipt_status,
-                                    )
-                                "
-                            >
-                                {{ item.receipt_status_label }}
-                            </span>
-                            <div class="flex flex-wrap justify-end gap-2">
-                                <button
-                                    v-if="item.transfer"
-                                    type="button"
-                                    class="h-9 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                                    @click="
-                                        openBankTransferInstructions(
-                                            item.reference,
-                                        )
-                                    "
-                                >
-                                    Instructions
-                                </button>
-                                <button
-                                    v-if="item.transfer?.can_check"
-                                    type="button"
-                                    class="h-9 rounded-lg border border-sky-300 px-3 text-xs font-semibold text-sky-800 transition hover:bg-sky-50 disabled:opacity-50 dark:border-sky-800 dark:text-sky-200 dark:hover:bg-sky-950"
-                                    :disabled="activeTransferCheck !== null"
-                                    @click="checkTransfer(item.reference)"
-                                >
-                                    {{
-                                        activeTransferCheck === item.reference
-                                            ? 'Checking…'
-                                            : 'Check NetBank'
-                                    }}
-                                </button>
-                                <span
-                                    v-else
-                                    class="self-center text-right text-xs text-slate-500"
-                                >
-                                    {{
-                                        item.transfer?.verification_status ===
-                                        'approval_required'
-                                            ? 'Awaiting approval'
-                                            : '—'
-                                    }}
-                                </span>
-                            </div>
-                        </li>
-                    </ul>
                 </article>
 
                 <Teleport
@@ -2321,9 +2135,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         class="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 px-4 py-3 sm:px-5 dark:border-emerald-950"
                     >
                         <div>
-                            <h2 class="text-base font-semibold">
-                                Fund with Pay Code
-                            </h2>
+                            <h2 class="text-base font-semibold">Pay Code</h2>
                             <p
                                 class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
                             >
@@ -2495,16 +2307,40 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </p>
                     </div>
                 </article>
+            </section>
 
-                <details
+            <section
+                v-show="activeFundingMode === 'reviewed_value'"
+                id="funding-panel-reviewed_value"
+                role="tabpanel"
+                aria-labelledby="funding-mode-reviewed_value"
+                class="space-y-4"
+                data-testid="cockpit-reviewed-value-funding"
+            >
+                <article
                     class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     data-testid="funding-request-form"
                 >
-                    <summary
-                        class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold marker:hidden sm:px-5"
+                    <header
+                        class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5"
                     >
-                        <span>Request Account Funding</span>
-                    </summary>
+                        <div>
+                            <h2 class="text-base font-semibold">
+                                Request a value review
+                            </h2>
+                            <p
+                                class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+                            >
+                                For funds or property already received outside
+                                QR Ph and bank transfer.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full bg-slate-100 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                        >
+                            independent review
+                        </span>
+                    </header>
                     <div
                         v-if="submittedFundingRequest"
                         class="border-t border-emerald-200 bg-emerald-50/70 p-4 sm:p-5 dark:border-emerald-900 dark:bg-emerald-950/20"
@@ -2517,7 +2353,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 <p
                                     class="text-xs font-semibold tracking-[0.14em] text-emerald-700 uppercase dark:text-emerald-300"
                                 >
-                                    Funding requested
+                                    Review requested
                                 </p>
                                 <p class="mt-1 text-2xl font-bold">
                                     {{
@@ -2614,7 +2450,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="flex flex-wrap items-center justify-between gap-3"
                         >
                             <h2 class="text-base font-semibold">
-                                Request Account Funding
+                                Reviewed Value
                             </h2>
                         </div>
 
@@ -2704,7 +2540,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                                 Vehicle
                                             </option>
                                             <option value="other">
-                                                Other accepted value
+                                                Other reviewed value
                                             </option>
                                         </select>
                                     </label>
@@ -2801,180 +2637,20 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </button>
                         </div>
                     </form>
-                </details>
-
-                <article
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="my-funding-requests"
-                >
-                    <div
-                        class="flex flex-wrap items-center justify-between gap-3"
-                    >
-                        <div>
-                            <h2 class="text-base font-semibold">
-                                Account Funding Requests
-                            </h2>
-                        </div>
-                        <span class="text-sm font-semibold">
-                            {{ payCodeFundingRequests.length }}
-                        </span>
-                    </div>
-                    <div
-                        v-if="payCodeFundingRequests.length"
-                        class="mt-4 overflow-x-auto"
-                    >
-                        <table
-                            class="w-full min-w-[52rem] border-separate border-spacing-0 text-left text-sm"
-                        >
-                            <thead>
-                                <tr
-                                    class="text-xs font-semibold text-slate-500"
-                                >
-                                    <th class="border-b px-3 py-2">Pay Code</th>
-                                    <th class="border-b px-3 py-2">Amount</th>
-                                    <th class="border-b px-3 py-2">Status</th>
-                                    <th class="border-b px-3 py-2">
-                                        Requested
-                                    </th>
-                                    <th class="border-b px-3 py-2">Funded</th>
-                                    <th class="border-b px-3 py-2 text-right">
-                                        Control
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="item in payCodeFundingRequests"
-                                    :key="item.reference"
-                                    class="align-top"
-                                >
-                                    <td
-                                        class="border-b border-slate-100 px-3 py-3 dark:border-slate-800"
-                                    >
-                                        <code
-                                            v-if="item.pay_code"
-                                            class="font-semibold tracking-wide"
-                                        >
-                                            {{ item.pay_code.display_code }}
-                                        </code>
-                                        <span v-else>—</span>
-                                        <div
-                                            v-if="
-                                                item.evidence?.documents.length
-                                            "
-                                            class="mt-1 flex flex-wrap gap-1"
-                                        >
-                                            <a
-                                                v-for="document in item.evidence
-                                                    .documents"
-                                                :key="document.id"
-                                                :href="document.url"
-                                                class="text-xs font-medium text-sky-700 hover:underline dark:text-sky-300"
-                                            >
-                                                {{ document.filename }}
-                                            </a>
-                                        </div>
-                                        <p
-                                            v-if="item.transfer"
-                                            class="mt-1 text-xs text-slate-500 dark:text-slate-400"
-                                        >
-                                            {{ item.transfer.target_label }}
-                                            <template
-                                                v-if="
-                                                    item.transfer.reference_hint
-                                                "
-                                            >
-                                                · Ref
-                                                {{
-                                                    item.transfer.reference_hint
-                                                }}
-                                            </template>
-                                        </p>
-                                    </td>
-                                    <td
-                                        class="border-b border-slate-100 px-3 py-3 font-semibold dark:border-slate-800"
-                                    >
-                                        {{ item.requested_value }}
-                                    </td>
-                                    <td
-                                        class="border-b border-slate-100 px-3 py-3 dark:border-slate-800"
-                                    >
-                                        <span
-                                            class="rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase"
-                                            :class="
-                                                fundingRequestStatusTone(
-                                                    item.receipt_status,
-                                                )
-                                            "
-                                        >
-                                            {{ item.receipt_status_label }}
-                                        </span>
-                                    </td>
-                                    <td
-                                        class="border-b border-slate-100 px-3 py-3 text-slate-600 dark:border-slate-800 dark:text-slate-300"
-                                    >
-                                        {{ displayTime(item.submitted_at) }}
-                                    </td>
-                                    <td
-                                        class="border-b border-slate-100 px-3 py-3 text-slate-600 dark:border-slate-800 dark:text-slate-300"
-                                    >
-                                        {{ displayTime(item.completed_at) }}
-                                    </td>
-                                    <td
-                                        class="border-b border-slate-100 px-3 py-3 text-right dark:border-slate-800"
-                                    >
-                                        <button
-                                            v-if="
-                                                item.transfer?.can_check ===
-                                                true
-                                            "
-                                            type="button"
-                                            class="mr-2 rounded-lg bg-sky-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 dark:bg-sky-500 dark:text-slate-950"
-                                            :disabled="
-                                                activeTransferCheck !== null
-                                            "
-                                            @click="
-                                                checkTransfer(item.reference)
-                                            "
-                                        >
-                                            {{
-                                                activeTransferCheck ===
-                                                item.reference
-                                                    ? 'Checking…'
-                                                    : 'Check transfer'
-                                            }}
-                                        </button>
-                                        <button
-                                            v-if="
-                                                item.pay_code?.can_copy === true
-                                            "
-                                            type="button"
-                                            class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
-                                            @click="
-                                                copyFundingRequest(
-                                                    `${item.reference}:code`,
-                                                    item.pay_code.code,
-                                                )
-                                            "
-                                        >
-                                            {{
-                                                copiedFundingRequest ===
-                                                `${item.reference}:code`
-                                                    ? 'Copied'
-                                                    : 'Copy'
-                                            }}
-                                        </button>
-                                        <span v-else>—</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p v-else class="mt-4 text-sm text-slate-500">
-                        No Account Funding requests yet.
-                    </p>
                 </article>
             </section>
+
+            <CockpitFundingActivity
+                v-show="activeFundingMode !== 'simulation'"
+                :activity="fundingActivity"
+                :initial-filter="fundingActivityFilter"
+                :processing-key="fundingActivityProcessingKey"
+                :copied-key="copiedFundingRequest"
+                @view-instructions="openFundingActivityInstructions"
+                @check-provider="checkFundingActivityProvider"
+                @copy-pay-code="copyFundingActivityPayCode"
+                @approve-receipt="approveFundingActivityReceipt"
+            />
 
             <section
                 v-if="funding_simulation"

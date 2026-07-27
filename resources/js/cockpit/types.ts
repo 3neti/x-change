@@ -842,7 +842,11 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
     funding_request_submitted_reference?: string | null;
-    funding_workspace_mode?: 'self_top_up' | 'bank_transfer' | 'pay_code';
+    funding_workspace_mode?:
+        | 'self_top_up'
+        | 'bank_transfer'
+        | 'pay_code'
+        | 'reviewed_value';
     funding_poll_interval?: number;
     funding_realtime?: {
         enabled: boolean;

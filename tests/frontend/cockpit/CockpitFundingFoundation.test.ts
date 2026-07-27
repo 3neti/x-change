@@ -483,6 +483,91 @@ const fundingRequestReadModel = {
     redactions: {},
 };
 
+const fundingActivityReadModel = {
+    schema: 'x-change.cockpit.funding-activity.v1',
+    items: [
+        {
+            key: 'request:01J-REQUEST-1',
+            source: 'funding_request',
+            reference: '01J-REQUEST-1',
+            display_reference: 'FUNDF9K2',
+            method: 'bank_transfer',
+            method_label: 'Bank Transfer',
+            amount: '₱20,005.37',
+            status: 'processing',
+            status_label: 'Processing',
+            updated_at: '2026-07-25T08:00:00+08:00',
+            timestamps: {
+                requested_at: '2026-07-25T08:00:00+08:00',
+                observed_at: null,
+                recognized_at: null,
+            },
+            summary: 'NetBank ••••0019 · ₱20,000.00 + ₱5.37 match',
+            action_keys: ['view_instructions', 'check_provider'],
+            request_reference: '01J-REQUEST-1',
+            pay_code: fundingRequestReadModel.requests[0].pay_code,
+            transfer: fundingRequestReadModel.requests[0].transfer,
+        },
+    ],
+    filters: [
+        { key: 'all', label: 'All' },
+        { key: 'qr_ph', label: 'QR Ph' },
+        { key: 'bank_transfer', label: 'Bank Transfer' },
+        { key: 'pay_code', label: 'Pay Code' },
+        { key: 'reviewed_value', label: 'Reviewed Value' },
+    ],
+    redactions: {
+        payer_identity_exposed: false,
+        provider_transaction_id_exposed: false,
+        raw_evidence_exposed: false,
+    },
+};
+
+function qrFundingActivity(
+    reference: string,
+    amount: string,
+    status: 'under_review' | 'recognized',
+    statusLabel: string,
+    options: {
+        approvalReference?: string | null;
+        provisional?: boolean;
+    } = {},
+) {
+    return {
+        ...fundingActivityReadModel,
+        items: [
+            {
+                key: `standing_receipt:${reference}`,
+                source: 'standing_funding_receipt',
+                reference,
+                display_reference: reference,
+                method: 'qr_ph',
+                method_label: 'QR Ph',
+                amount,
+                status,
+                status_label: statusLabel,
+                updated_at: '2026-07-25T08:55:00+00:00',
+                timestamps: {
+                    requested_at: null,
+                    observed_at: '2026-07-25T08:54:00+00:00',
+                    recognized_at:
+                        status === 'recognized'
+                            ? '2026-07-25T08:55:00+00:00'
+                            : null,
+                },
+                summary: options.provisional
+                    ? 'NetBank pending · provisional'
+                    : 'NetBank settled',
+                action_keys: options.approvalReference
+                    ? ['approve_receipt']
+                    : [],
+                approval_reference: options.approvalReference ?? null,
+                provisional: options.provisional ?? false,
+            },
+        ],
+    };
+}
+
 describe('Cockpit Funding foundation', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
@@ -623,7 +708,7 @@ describe('Cockpit Funding foundation', () => {
                 .attributes('src'),
         ).toBe('data:image/png;base64,REUSABLE');
         expect(wrapper.text()).toContain('Check NetBank');
-        expect(wrapper.text()).toContain('Account Funding QR Ph');
+        expect(wrapper.text()).toContain('QR Ph');
         expect(
             wrapper
                 .get('[data-testid="cockpit-standing-funding-address"]')
@@ -677,6 +762,7 @@ describe('Cockpit Funding foundation', () => {
                     'cockpit_header_read_model',
                     'funding_read_model',
                     'funding_requests',
+                    'funding_activity',
                     'funding_notice',
                 ],
             },
@@ -814,7 +900,7 @@ describe('Cockpit Funding foundation', () => {
         expect(fetch).not.toHaveBeenCalled();
     });
 
-    it('makes Pay Code Funding primary and keeps reviewed requests secondary', async () => {
+    it('keeps Pay Code and Reviewed Value as distinct funding methods', async () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
@@ -834,7 +920,7 @@ describe('Cockpit Funding foundation', () => {
 
         const panel = wrapper.get('[data-testid="cockpit-pay-code-funding"]');
 
-        expect(panel.text()).toContain('Fund with Pay Code');
+        expect(panel.text()).toContain('Pay Code');
         expect(
             panel
                 .get('[data-testid="pay-code-funding-inspection-form"] input')
@@ -852,43 +938,49 @@ describe('Cockpit Funding foundation', () => {
         expect(panel.text()).toContain('Add ₱20,000.00 to my Account');
         expect(panel.text()).toContain('no provider payout');
         expect(
-            panel
-                .get('[data-testid="funding-request-form"]')
-                .attributes('open'),
-        ).toBeUndefined();
-        expect(panel.text()).toContain('Request Account Funding');
-        expect(panel.text()).toContain('Message');
-        expect(panel.text()).toContain('(optional)');
-        expect(panel.text()).toContain('Add proof or transfer details');
-        expect(panel.text()).toContain('Evidence document');
+            panel.find('[data-testid="funding-request-form"]').exists(),
+        ).toBe(false);
+
+        await wrapper
+            .get('[data-testid="funding-mode-reviewed_value"]')
+            .trigger('click');
+        await nextTick();
+
+        const reviewedValuePanel = wrapper.get(
+            '[data-testid="cockpit-reviewed-value-funding"]',
+        );
+
+        expect(reviewedValuePanel.text()).toContain('Request a value review');
+        expect(reviewedValuePanel.text()).toContain('Message');
+        expect(reviewedValuePanel.text()).toContain('(optional)');
+        expect(reviewedValuePanel.text()).toContain(
+            'Add proof or transfer details',
+        );
+        expect(reviewedValuePanel.text()).toContain('Evidence document');
         expect(
-            panel
+            reviewedValuePanel
                 .get('[data-testid="funding-request-evidence"]')
                 .attributes('accept'),
         ).toContain('application/pdf');
-        expect(panel.text()).toContain('Request Account Funding');
-        expect(panel.text()).toContain('Account Funding Requests');
-        expect(panel.text()).toContain('Pay Code');
-        expect(panel.text()).toContain('Amount');
-        expect(panel.text()).toContain('Status');
-        expect(panel.text()).toContain('Requested');
-        expect(panel.text()).toContain('Funded');
-        expect(panel.text()).toContain('Control');
-        expect(panel.text()).toContain('FUNDF9K2');
-        expect(panel.text()).toContain('Adding funds');
-        expect(panel.text()).toContain('bank-transfer-proof.pdf');
-        expect(panel.text()).not.toContain('Verification details');
-        expect(panel.text()).not.toContain('Submit for Review');
+        expect(reviewedValuePanel.text()).not.toContain('Verification details');
+        expect(reviewedValuePanel.text()).not.toContain('Submit for Review');
+        expect(
+            wrapper.get('[data-testid="funding-activity"]').text(),
+        ).toContain('Funding Activity');
         expect(
             panel
                 .find('[data-testid="claim-reviewed-funding-pay-code"]')
                 .exists(),
         ).toBe(false);
-        expect(panel.text()).not.toContain('wallet');
-        expect(panel.text()).not.toContain('Two different operators');
-        expect(panel.text()).not.toContain('1 · Request');
-        expect(panel.text()).not.toContain('2 · Verify and reserve');
-        expect(panel.text()).not.toContain('3 · Claim once');
+        expect(reviewedValuePanel.text()).not.toContain('wallet');
+        expect(reviewedValuePanel.text()).not.toContain(
+            'Two different operators',
+        );
+        expect(reviewedValuePanel.text()).not.toContain('1 · Request');
+        expect(reviewedValuePanel.text()).not.toContain(
+            '2 · Verify and reserve',
+        );
+        expect(reviewedValuePanel.text()).not.toContain('3 · Claim once');
         expect(
             wrapper.find('[data-testid="open-funding-request-modal"]').exists(),
         ).toBe(false);
@@ -984,12 +1076,12 @@ describe('Cockpit Funding foundation', () => {
         });
 
         await wrapper
-            .get('[data-testid="funding-mode-pay_code"]')
+            .get('[data-testid="funding-mode-reviewed_value"]')
             .trigger('click');
         const result = wrapper.get('[data-testid="funding-request-result"]');
         const buttons = result.findAll('button');
 
-        expect(result.text()).toContain('Funding requested');
+        expect(result.text()).toContain('Review requested');
         expect(result.text()).toContain('₱20,000.00');
         expect(result.text()).toContain('FUNDABCD');
         expect(result.text()).toContain('Pending');
@@ -1010,6 +1102,7 @@ describe('Cockpit Funding foundation', () => {
             props: {
                 funding_read_model: fundingReadModel,
                 funding_requests: fundingRequestReadModel,
+                funding_activity: fundingActivityReadModel,
                 funding_workspace_mode: 'bank_transfer',
                 standing_funding_address: {
                     ...standingFundingAvailability,
@@ -1018,7 +1111,7 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        const requests = wrapper.get('[data-testid="bank-transfer-history"]');
+        const activity = wrapper.get('[data-testid="funding-activity"]');
 
         expect(
             wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
@@ -1026,14 +1119,15 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
         ).toContain('Amount to add');
-        expect(requests.text()).toContain('₱20,005.37');
-        expect(requests.text()).toContain('₱20,000.00 + ₱5.37 match');
-        expect(requests.text()).toContain('Ref ••••1236');
+        expect(activity.text()).toContain('₱20,005.37');
+        expect(activity.text()).toContain('₱20,000.00 + ₱5.37 match');
+        expect(activity.text()).toContain('NetBank ••••0019');
 
-        await requests
-            .findAll('button')
-            .find((button) => button.text() === 'Check NetBank')
-            ?.trigger('click');
+        await activity
+            .get(
+                '[data-testid="funding-activity-action-check_provider-request:01J-REQUEST-1"]',
+            )
+            .trigger('click');
 
         expect(routerPostMock).toHaveBeenCalledWith(
             '/x/cockpit/funding/requests/01J-REQUEST-1/transfer-checks',
@@ -1049,6 +1143,7 @@ describe('Cockpit Funding foundation', () => {
             props: {
                 funding_read_model: fundingReadModel,
                 funding_requests: fundingRequestReadModel,
+                funding_activity: fundingActivityReadModel,
                 funding_request_submitted_reference: '01J-REQUEST-1',
                 funding_workspace_mode: 'bank_transfer',
                 standing_funding_address: {
@@ -1092,18 +1187,11 @@ describe('Cockpit Funding foundation', () => {
                 '[data-testid="bank-transfer-instruction-dialog"]',
             ),
         ).toBeNull();
-        expect(
-            wrapper.get('[data-testid="bank-transfer-history"]').text(),
-        ).toContain('Instructions');
-        expect(
-            wrapper.get('[data-testid="bank-transfer-history"]').text(),
-        ).toContain('Check NetBank');
-
         await wrapper
-            .get('[data-testid="bank-transfer-history"]')
-            .findAll('button')
-            .find((button) => button.text() === 'Instructions')
-            ?.trigger('click');
+            .get(
+                '[data-testid="funding-activity-action-view_instructions-request:01J-REQUEST-1"]',
+            )
+            .trigger('click');
         await nextTick();
 
         expect(
@@ -1180,6 +1268,7 @@ describe('Cockpit Funding foundation', () => {
                 'cockpit_header_read_model',
                 'funding_read_model',
                 'funding_requests',
+                'funding_activity',
             ],
             preserveScroll: true,
             preserveState: true,
@@ -1312,6 +1401,15 @@ describe('Cockpit Funding foundation', () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
+                funding_activity: qrFundingActivity(
+                    'AF-ABC123',
+                    '₱25.00',
+                    'under_review',
+                    'Under review',
+                    {
+                        approvalReference: '01KY8R71ZNS1Y8HTRPQ7QDD41Q',
+                    },
+                ),
                 standing_funding_address: standingFundingAvailability,
             },
         });
@@ -1357,11 +1455,12 @@ describe('Cockpit Funding foundation', () => {
         );
         expect(wrapper.text()).toContain('AF-ABC123');
         expect(wrapper.text()).toContain('₱25.00');
-        expect(wrapper.text()).toContain('Awaiting Approval');
-        expect(wrapper.text()).toContain('No');
+        expect(wrapper.text()).toContain('Under review');
 
         await wrapper
-            .get('[data-testid="approve-standing-funding-receipt"]')
+            .get(
+                '[data-testid="funding-activity-action-approve_receipt-standing_receipt:AF-ABC123"]',
+            )
             .trigger('click');
         await flushPromises();
         await nextTick();
@@ -1377,13 +1476,13 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain(
             'Verified funding was recognized in Treasury Inventory',
         );
-        expect(wrapper.text()).toContain('Yes · ₱25.00');
         expect(routerReloadMock).toHaveBeenCalledOnce();
         expect(routerReloadMock).toHaveBeenCalledWith({
             only: [
                 'cockpit_header_read_model',
                 'funding_read_model',
                 'funding_requests',
+                'funding_activity',
             ],
             preserveScroll: true,
             preserveState: true,
@@ -1436,6 +1535,12 @@ describe('Cockpit Funding foundation', () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
+                funding_activity: qrFundingActivity(
+                    'AF-PERSISTED123',
+                    '₱50.00',
+                    'recognized',
+                    'Recognized',
+                ),
                 standing_funding_address: standingFundingAvailability,
             },
         });
@@ -1443,8 +1548,8 @@ describe('Cockpit Funding foundation', () => {
         await flushPromises();
 
         expect(wrapper.text()).toContain('AF-PERSISTED123');
-        expect(wrapper.text()).toContain('Yes · ₱50.00');
-        expect(wrapper.text()).toContain('Last synchronized');
+        expect(wrapper.text()).toContain('₱50.00');
+        expect(wrapper.text()).toContain('Recognized');
         expect(fetch).toHaveBeenCalledOnce();
         expect(fetch).toHaveBeenCalledWith(
             '/x/cockpit/funding/standing-addresses/netbank',
@@ -1553,6 +1658,13 @@ describe('Cockpit Funding foundation', () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
+                funding_activity: qrFundingActivity(
+                    'AF-PENDING123',
+                    '₱30.00',
+                    'recognized',
+                    'Recognized provisionally',
+                    { provisional: true },
+                ),
                 standing_funding_address: automaticAddress,
             },
         });
@@ -1564,9 +1676,10 @@ describe('Cockpit Funding foundation', () => {
         await nextTick();
         await nextTick();
 
-        expect(wrapper.text()).toContain('Pending');
-        expect(wrapper.text()).toContain('Yes · ₱30.00');
-        expect(wrapper.text()).toContain('Provisional provider status');
+        expect(wrapper.text()).toContain('AF-PENDING123');
+        expect(wrapper.text()).toContain('₱30.00');
+        expect(wrapper.text()).toContain('Recognized provisionally');
+        expect(wrapper.text()).toContain('provisional');
         expect(wrapper.text()).toContain(
             'New NetBank funding was applied to Client Funds exactly once.',
         );
@@ -1576,6 +1689,7 @@ describe('Cockpit Funding foundation', () => {
                 'cockpit_header_read_model',
                 'funding_read_model',
                 'funding_requests',
+                'funding_activity',
             ],
             preserveScroll: true,
             preserveState: true,

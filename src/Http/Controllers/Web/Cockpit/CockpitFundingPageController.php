@@ -68,6 +68,7 @@ class CockpitFundingPageController extends Controller
             'funding_workspace_mode' => match ($request->string('mode')->toString()) {
                 'bank_transfer' => 'bank_transfer',
                 'pay_code' => 'pay_code',
+                'reviewed_value' => 'reviewed_value',
                 default => 'self_top_up',
             },
             'pay_code_funding_preview' => $request->session()->pull(
