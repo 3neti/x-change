@@ -8,7 +8,7 @@ defineProps<{
 
 <template>
     <article
-        class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-950 dark:bg-slate-900"
+        class="min-h-[18.5rem] overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm sm:min-h-[21.5rem] dark:border-sky-950 dark:bg-slate-900"
         :data-testid="testId"
     >
         <header

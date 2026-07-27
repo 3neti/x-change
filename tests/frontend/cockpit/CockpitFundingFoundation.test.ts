@@ -647,6 +647,20 @@ describe('Cockpit Funding foundation', () => {
         );
         expect(methodPanelHeaders).toHaveLength(3);
         expect(methodPanelActions).toHaveLength(3);
+        for (const methodPanelTestId of [
+            'funding-method-panel-qr-ph',
+            'funding-method-panel-bank-transfer',
+            'pay-code-funding-primary',
+        ]) {
+            expect(
+                wrapper.get(`[data-testid="${methodPanelTestId}"]`).classes(),
+            ).toEqual(
+                expect.arrayContaining([
+                    'min-h-[18.5rem]',
+                    'sm:min-h-[21.5rem]',
+                ]),
+            );
+        }
         expect(methodPanelHeaders[1].classes()).toEqual(
             methodPanelHeaders[0].classes(),
         );
