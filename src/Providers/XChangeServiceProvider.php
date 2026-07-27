@@ -277,6 +277,7 @@ use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\Payment\AccountFundingCollectionPosting;
+use LBHurtado\XChange\Services\Payment\ProviderFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderWalletCollectionPosting;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionPostingRegistry;
 use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
@@ -852,6 +853,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(AccountFundingCollectionPosting::class);
         $this->app->tag(
             AccountFundingCollectionPosting::class,
+            'x-change.voucher-collection-postings',
+        );
+        $this->app->singleton(ProviderFundingCollectionPosting::class);
+        $this->app->tag(
+            ProviderFundingCollectionPosting::class,
             'x-change.voucher-collection-postings',
         );
         $this->app->singleton(ProviderWalletCollectionPosting::class);

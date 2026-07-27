@@ -633,6 +633,27 @@ return [
             ))),
         ],
         'requests' => [
+            'bank_transfer' => [
+                'enabled' => env(
+                    'XCHANGE_FUNDING_BANK_TRANSFER_ENABLED',
+                    true,
+                ),
+                'provider' => env(
+                    'XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER',
+                    'netbank',
+                ),
+                'connection_reference' => env(
+                    'XCHANGE_FUNDING_BANK_TRANSFER_CONNECTION',
+                    'netbank-primary',
+                ),
+                'verification_mode' => env(
+                    'XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE',
+                    'provider_verified_auto',
+                ),
+                'check_middleware' => [
+                    'throttle:6,1',
+                ],
+            ],
             'reviewer_ids' => array_values(array_filter(array_map(
                 static fn (string $id): string => trim($id),
                 explode(',', (string) env('XCHANGE_FUNDING_REQUEST_REVIEWER_IDS', '')),

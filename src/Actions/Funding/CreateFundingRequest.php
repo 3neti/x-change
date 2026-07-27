@@ -14,6 +14,7 @@ use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
+use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
@@ -105,6 +106,12 @@ final class CreateFundingRequest
                     'x-change.funding.requests.code_ttl_seconds',
                     604800,
                 ));
+                $isProviderVerifiableTransfer = $data->fundingType
+                    === FundingRequestType::BankTransfer
+                    && (bool) config(
+                        'x-change.funding.requests.bank_transfer.enabled',
+                        true,
+                    );
                 $voucher = $this->payCodes->handle(
                     issuer: $requester,
                     instructions: [
@@ -130,7 +137,9 @@ final class CreateFundingRequest
                             'allowed_payer' => 'system_principal',
                         ],
                         'execution' => [
-                            'driver' => 'x_change_account_funding',
+                            'driver' => $isProviderVerifiableTransfer
+                                ? 'x_change_provider_funding'
+                                : 'x_change_account_funding',
                             'mode' => 'collection',
                             'metadata' => [
                                 'funding_request_reference' => $request->reference,
@@ -153,7 +162,9 @@ final class CreateFundingRequest
                         ],
                     ],
                     expiresAt: $expiresAt,
-                    initialState: VoucherState::LOCKED,
+                    initialState: $isProviderVerifiableTransfer
+                        ? VoucherState::ACTIVE
+                        : VoucherState::LOCKED,
                 );
                 $envelope = $voucher->createEnvelope(
                     driverId: (string) config(
@@ -186,6 +197,7 @@ final class CreateFundingRequest
                         ),
                         'monetary_authority' => 'independent_backing_verification_only',
                         'settlement_envelope_id' => $envelope->getKey(),
+                        'provider_verification_enabled' => $isProviderVerifiableTransfer,
                     ],
                 ])->saveQuietly();
                 $this->workflow->submitted($request->refresh());

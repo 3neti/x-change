@@ -38,11 +38,11 @@ it('records a user assertion without changing Client Funds', function () {
         ->and($request->voucher)->not->toBeNull()
         ->and($request->voucher->owner->is($requester))->toBeTrue()
         ->and($request->voucher->voucher_type)->toBe(VoucherType::PAYABLE)
-        ->and($request->voucher->state)->toBe(VoucherState::LOCKED)
+        ->and($request->voucher->state)->toBe(VoucherState::ACTIVE)
         ->and($request->voucher->instructions->cash->amount)->toBe(0.0)
         ->and($request->voucher->instructions->target_amount)->toBe(20_000.0)
         ->and($request->voucher->instructions->execution?->driver)
-        ->toBe('x_change_account_funding')
+        ->toBe('x_change_provider_funding')
         ->and($request->voucher->envelope)->not->toBeNull()
         ->and($request->voucher->envelope->driver_id)
         ->toBe('account-funding-review')
@@ -55,6 +55,7 @@ it('records a user assertion without changing Client Funds', function () {
         ->and($request->metadata)->toMatchArray([
             'attachments_enabled' => true,
             'monetary_authority' => 'independent_backing_verification_only',
+            'provider_verification_enabled' => true,
         ])
         ->and($request->events)->toHaveCount(1)
         ->and($request->events->first()->event_type)->toBe('submitted')
