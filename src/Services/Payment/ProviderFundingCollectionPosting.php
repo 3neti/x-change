@@ -38,6 +38,7 @@ final readonly class ProviderFundingCollectionPosting implements VoucherCollecti
         ConfirmedVoucherCollectionData $collection,
     ): VoucherCollectionPostingData {
         $request = FundingRequest::query()
+            ->with('transferAmountReservation')
             ->where('voucher_id', $voucher->getKey())
             ->lockForUpdate()
             ->sole();
@@ -65,6 +66,8 @@ final readonly class ProviderFundingCollectionPosting implements VoucherCollecti
 
         $provider = mb_strtolower(trim((string) $collection->provider));
         $currency = mb_strtoupper(trim($collection->currency));
+        $expectedAmountMinor = $request->transferAmountReservation
+            ?->expected_amount_minor ?? $request->requested_value_minor;
         $matches = $provider !== ''
             && $provider === $observation->provider_code
             && hash_equals(
@@ -73,7 +76,7 @@ final readonly class ProviderFundingCollectionPosting implements VoucherCollecti
             )
             && $this->recognitionPolicy->accepts($observation)
             && $observation->net_amount_minor === $collection->amountMinor
-            && $observation->net_amount_minor === $request->requested_value_minor
+            && $observation->net_amount_minor === $expectedAmountMinor
             && $observation->currency === $currency
             && $request->currency === $currency
             && data_get($observation->metadata, 'destination_verified') === true
@@ -118,6 +121,10 @@ final readonly class ProviderFundingCollectionPosting implements VoucherCollecti
                 metadata: [
                     'provider_transaction_id' => $observation->provider_transaction_id,
                     'funding_request_reference' => $request->reference,
+                    'requested_amount_minor' => $request->requested_value_minor,
+                    'matching_adjustment_minor' => $request
+                        ->transferAmountReservation?->matching_adjustment_minor,
+                    'recognized_amount_minor' => $collection->amountMinor,
                     'verification_source' => $observation->verification_source,
                 ],
             ),
@@ -133,6 +140,10 @@ final readonly class ProviderFundingCollectionPosting implements VoucherCollecti
                 'provider' => $provider,
                 'provider_transaction_id' => $observation->provider_transaction_id,
                 'funding_request_reference' => $request->reference,
+                'requested_amount_minor' => $request->requested_value_minor,
+                'matching_adjustment_minor' => $request
+                    ->transferAmountReservation?->matching_adjustment_minor,
+                'credited_amount_minor' => $collection->amountMinor,
             ],
         );
 

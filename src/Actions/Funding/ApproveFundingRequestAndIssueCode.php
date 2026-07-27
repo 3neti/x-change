@@ -59,6 +59,7 @@ final readonly class ApproveFundingRequestAndIssueCode
                 ->with([
                     'voucher.envelope',
                     'transferMatch.providerFundingObservation',
+                    'transferAmountReservation',
                 ])
                 ->lockForUpdate()
                 ->findOrFail($fundingRequest->getKey());
@@ -120,11 +121,13 @@ final readonly class ApproveFundingRequestAndIssueCode
             }
 
             $amountMinor = (int) $locked->approved_value_minor;
+            $expectedAmountMinor = $locked->transferAmountReservation
+                ?->expected_amount_minor ?? $locked->requested_value_minor;
 
             if (
                 $amountMinor <= 0
                 || trim((string) $locked->evidence_reference) === ''
-                || $amountMinor !== (int) $locked->requested_value_minor
+                || $amountMinor !== (int) $expectedAmountMinor
             ) {
                 throw new RuntimeException(
                     'Recognized backing must exactly match the requested Pay Code target.',
@@ -242,6 +245,10 @@ final readonly class ApproveFundingRequestAndIssueCode
                     'pay_code_id' => (int) $locked->voucher->getKey(),
                     'reservation_operation_reference' => $reservationOperationReference,
                     'provider_transfer_match_id' => $providerTransferMatch?->getKey(),
+                    'requested_amount_minor' => $locked->requested_value_minor,
+                    'matching_adjustment_minor' => $locked
+                        ->transferAmountReservation?->matching_adjustment_minor,
+                    'approved_amount_minor' => $amountMinor,
                     'settlement_envelope_id' => $envelope->getKey(),
                     'provider_calls' => false,
                 ],

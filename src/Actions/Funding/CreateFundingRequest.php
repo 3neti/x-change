@@ -17,6 +17,7 @@ use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Enums\FundingTransferWindow;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Models\FundingTransferAmountReservation;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
 
@@ -25,6 +26,7 @@ final class CreateFundingRequest
     public function __construct(
         private readonly FundingAccountCreditContract $accounts,
         private readonly IssueTreasuryBackedPayCode $payCodes,
+        private readonly ReserveFundingTransferAmount $reserveTransferAmount,
         private readonly FundingRequestWorkflowPublisher $workflow,
     ) {}
 
@@ -109,16 +111,25 @@ final class CreateFundingRequest
                     );
                 }
 
-                $expiresAt = now()->addSeconds((int) config(
-                    'x-change.funding.requests.code_ttl_seconds',
-                    604800,
-                ));
                 $isProviderVerifiableTransfer = $data->fundingType
                     === FundingRequestType::BankTransfer
                     && (bool) config(
                         'x-change.funding.requests.bank_transfer.enabled',
                         true,
                     );
+                $transferAmountReservation = $isProviderVerifiableTransfer
+                    && (bool) config(
+                        'x-change.funding.requests.bank_transfer.reserved_amounts.enabled',
+                        true,
+                    )
+                    ? $this->reserveTransferAmount->handle($request)
+                    : null;
+                $collectionAmountMinor = $transferAmountReservation
+                    ?->expected_amount_minor ?? $data->requestedValueMinor;
+                $expiresAt = now()->addSeconds((int) config(
+                    'x-change.funding.requests.code_ttl_seconds',
+                    604800,
+                ));
                 $voucher = $this->payCodes->handle(
                     issuer: $requester,
                     instructions: [
@@ -135,10 +146,10 @@ final class CreateFundingRequest
                         'mask' => '****',
                         'expires_at' => $expiresAt,
                         'voucher_type' => VoucherType::PAYABLE->value,
-                        'target_amount' => $data->requestedValueMinor / 100,
+                        'target_amount' => $collectionAmountMinor / 100,
                         'rules' => [
-                            'min_payment' => $data->requestedValueMinor / 100,
-                            'max_payment' => $data->requestedValueMinor / 100,
+                            'min_payment' => $collectionAmountMinor / 100,
+                            'max_payment' => $collectionAmountMinor / 100,
                             'allow_overpayment' => false,
                             'auto_close_on_full_payment' => true,
                             'allowed_payer' => 'system_principal',
@@ -150,6 +161,8 @@ final class CreateFundingRequest
                             'mode' => 'collection',
                             'metadata' => [
                                 'funding_request_reference' => $request->reference,
+                                'requested_amount_minor' => $data->requestedValueMinor,
+                                'expected_amount_minor' => $collectionAmountMinor,
                             ],
                         ],
                         'metadata' => [
@@ -164,6 +177,8 @@ final class CreateFundingRequest
                                 'account_funding_request' => [
                                     'reference' => $request->reference,
                                     'account_reference' => $request->account_reference,
+                                    'requested_amount_minor' => $data->requestedValueMinor,
+                                    'expected_amount_minor' => $collectionAmountMinor,
                                 ],
                             ],
                         ],
@@ -181,6 +196,9 @@ final class CreateFundingRequest
                         'account_reference' => $request->account_reference,
                         'funding_type' => $request->funding_type->value,
                         'requested_value_minor' => $request->requested_value_minor,
+                        'matching_adjustment_minor' => $transferAmountReservation
+                            ?->matching_adjustment_minor,
+                        'expected_value_minor' => $collectionAmountMinor,
                         'currency' => $request->currency,
                         'description' => $request->description,
                         'external_reference' => $data->externalReference,
@@ -203,13 +221,25 @@ final class CreateFundingRequest
                         'monetary_authority' => 'independent_backing_verification_only',
                         'settlement_envelope_id' => $envelope->getKey(),
                         'provider_verification_enabled' => $isProviderVerifiableTransfer,
+                        'transfer_amount_reservation_id' => $transferAmountReservation
+                            ?->getKey(),
+                        'requested_amount_minor' => $data->requestedValueMinor,
+                        'matching_adjustment_minor' => $transferAmountReservation
+                            ?->matching_adjustment_minor,
+                        'expected_amount_minor' => $collectionAmountMinor,
+                        'full_expected_amount_is_credited' => $transferAmountReservation
+                            instanceof FundingTransferAmountReservation,
                         'transfer_window' => $transferWindow?->value,
                         'sender_reference_authority' => false,
                     ],
                 ])->saveQuietly();
                 $this->workflow->submitted($request->refresh());
 
-                return $request->refresh()->load(['events', 'voucher.envelope']);
+                return $request->refresh()->load([
+                    'events',
+                    'transferAmountReservation',
+                    'voucher.envelope',
+                ]);
             }, 3);
         } catch (UniqueConstraintViolationException $exception) {
             $existing = FundingRequest::query()
@@ -226,7 +256,7 @@ final class CreateFundingRequest
                 );
             }
 
-            return $existing->load('events');
+            return $existing->load(['events', 'transferAmountReservation']);
         }
     }
 }

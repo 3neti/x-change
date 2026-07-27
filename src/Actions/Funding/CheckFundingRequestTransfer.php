@@ -19,9 +19,11 @@ use LBHurtado\XChange\Data\Funding\FundingTransferCheckResultData;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
+use LBHurtado\XChange\Enums\FundingTransferAmountReservationStatus;
 use LBHurtado\XChange\Enums\FundingTransferWindow;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\FundingRequestTransferMatch;
+use LBHurtado\XChange\Models\FundingTransferAmountReservation;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
@@ -44,6 +46,7 @@ final readonly class CheckFundingRequestTransfer
         $request = $fundingRequest->fresh([
             'voucher',
             'transferMatch.providerFundingObservation',
+            'transferAmountReservation',
         ]);
 
         if ($request->funding_type !== FundingRequestType::BankTransfer) {
@@ -106,26 +109,35 @@ final readonly class CheckFundingRequestTransfer
             120,
         ));
         $now = CarbonImmutable::instance(now());
+        $reservation = $request->transferAmountReservation;
+        $expectedAmountMinor = $reservation
+            ?->expected_amount_minor ?? $request->requested_value_minor;
         $window = FundingTransferWindow::tryFrom((string) data_get(
             $request->metadata,
             'transfer_window',
             FundingTransferWindow::Recent->value,
         )) ?? FundingTransferWindow::Recent;
-        $searchStartedAt = $window->startsAt(
-            $now,
-            $automaticCreditWindowMinutes,
-        );
-        $searchEndedAt = $now->addSeconds($clockSkewSeconds);
+        $searchStartedAt = $reservation instanceof FundingTransferAmountReservation
+            ? $this->reservationInstant($reservation, 'reserved_at')
+                ->subSeconds($clockSkewSeconds)
+            : $window->startsAt($now, $automaticCreditWindowMinutes);
+        $searchEndedAt = $reservation instanceof FundingTransferAmountReservation
+            ? $this->reservationInstant($reservation, 'expires_at')
+                ->addSeconds($clockSkewSeconds)
+            : $now->addSeconds($clockSkewSeconds);
         $databaseSearchStartedAt = $searchStartedAt->utc();
         $databaseSearchEndedAt = $searchEndedAt->utc();
         $providerLookupFailure = $this->refreshProviderEvidence(
             request: $request,
             provider: $provider,
             connectionReference: $connectionReference,
+            expectedAmountMinor: $expectedAmountMinor,
+            observedAfter: $searchStartedAt,
+            observedBefore: $searchEndedAt,
         );
         $observations = ProviderFundingObservation::query()
             ->where('provider_code', $provider)
-            ->where('net_amount_minor', $request->requested_value_minor)
+            ->where('net_amount_minor', $expectedAmountMinor)
             ->where('currency', $request->currency)
             ->whereBetween('occurred_at', [
                 $databaseSearchStartedAt,
@@ -169,6 +181,10 @@ final readonly class CheckFundingRequestTransfer
                     'transfer_window' => $window->value,
                     'search_started_at' => $searchStartedAt->toIso8601String(),
                     'search_ended_at' => $searchEndedAt->toIso8601String(),
+                    'requested_amount_minor' => $request->requested_value_minor,
+                    'matching_adjustment_minor' => $reservation
+                        ?->matching_adjustment_minor,
+                    'expected_amount_minor' => $expectedAmountMinor,
                     'sender_reference_used_as_authority' => false,
                     'provider_lookup_failure_type' => $providerLookupFailure,
                     'balance_changed' => false,
@@ -205,14 +221,16 @@ final readonly class CheckFundingRequestTransfer
             );
         }
 
-        $occurredAt = $observation->occurredAtInstant();
+        $occurredAt = $this->observationInstant($observation);
         $automatic = (string) config(
             'x-change.funding.requests.bank_transfer.verification_mode',
             'provider_verified_auto',
         ) === 'provider_verified_auto'
             && $occurredAt !== null
             && $occurredAt->greaterThanOrEqualTo(
-                $now->subMinutes($automaticCreditWindowMinutes),
+                $reservation instanceof FundingTransferAmountReservation
+                    ? $searchStartedAt
+                    : $now->subMinutes($automaticCreditWindowMinutes),
             )
             && $occurredAt->lessThanOrEqualTo($searchEndedAt);
 
@@ -240,6 +258,9 @@ final readonly class CheckFundingRequestTransfer
         FundingRequest $request,
         string $provider,
         string $connectionReference,
+        int $expectedAmountMinor,
+        CarbonImmutable $observedAfter,
+        CarbonImmutable $observedBefore,
     ): ?string {
         if (! (bool) config(
             'x-change.funding.requests.bank_transfer.provider_history_enabled',
@@ -263,7 +284,7 @@ final readonly class CheckFundingRequestTransfer
                 ->verifyFunding(new FundingVerificationData(
                     provider: $provider,
                     fundingIntentReference: 'funding-request:'.$request->reference,
-                    expectedAmountMinor: $request->requested_value_minor,
+                    expectedAmountMinor: $expectedAmountMinor,
                     currency: $request->currency,
                     fundingAddress: $fundingAddress,
                     destination: new FundingDestinationData(
@@ -282,6 +303,8 @@ final readonly class CheckFundingRequestTransfer
                             'payment-gateway.netbank.funding.vca_alias',
                         )),
                     ),
+                    observedAfter: $observedAfter->toDateTimeImmutable(),
+                    observedBefore: $observedBefore->toDateTimeImmutable(),
                 ));
             $observation->metadata = array_merge(
                 $observation->metadata,
@@ -327,6 +350,8 @@ final readonly class CheckFundingRequestTransfer
                             'search_started_at' => $searchStartedAt->toIso8601String(),
                             'search_ended_at' => $searchEndedAt->toIso8601String(),
                             'sender_reference_used_as_authority' => false,
+                            'transfer_amount_reservation_id' => $request
+                                ->transferAmountReservation?->getKey(),
                         ],
                     ]),
                 3,
@@ -353,7 +378,7 @@ final readonly class CheckFundingRequestTransfer
             $automaticCreditWindowMinutes,
         ): FundingRequest {
             $locked = FundingRequest::query()
-                ->with('voucher')
+                ->with(['voucher', 'transferAmountReservation'])
                 ->lockForUpdate()
                 ->findOrFail($request->getKey());
             $from = $locked->status;
@@ -366,7 +391,8 @@ final readonly class CheckFundingRequestTransfer
             ]);
             $locked->forceFill([
                 'status' => FundingRequestStatus::AwaitingApproval,
-                'approved_value_minor' => $locked->requested_value_minor,
+                'approved_value_minor' => $locked->transferAmountReservation
+                    ?->expected_amount_minor ?? $locked->requested_value_minor,
                 'connection_reference' => $connectionReference,
                 'evidence_reference' => $provider.':'.$observation->provider_transaction_id,
                 'reviewed_by_type' => 'system',
@@ -381,6 +407,7 @@ final readonly class CheckFundingRequestTransfer
             $match->forceFill([
                 'status' => 'awaiting_approval',
             ])->saveQuietly();
+            $this->markReservationMatched($locked->transferAmountReservation);
             $this->recordCheckEvent(
                 $locked,
                 'provider_transfer_matched_for_approval',
@@ -389,6 +416,12 @@ final readonly class CheckFundingRequestTransfer
                     'connection_reference' => $connectionReference,
                     'provider_funding_observation_id' => $observation->getKey(),
                     'automatic_credit_window_minutes' => $automaticCreditWindowMinutes,
+                    'requested_amount_minor' => $locked->requested_value_minor,
+                    'matching_adjustment_minor' => $locked
+                        ->transferAmountReservation?->matching_adjustment_minor,
+                    'expected_amount_minor' => $locked
+                        ->transferAmountReservation?->expected_amount_minor
+                        ?? $locked->requested_value_minor,
                     'balance_changed' => false,
                 ],
                 $from,
@@ -433,13 +466,14 @@ final readonly class CheckFundingRequestTransfer
             $connectionReference,
         ): FundingRequest {
             $locked = FundingRequest::query()
-                ->with('voucher')
+                ->with(['voucher', 'transferAmountReservation'])
                 ->lockForUpdate()
                 ->findOrFail($request->getKey());
             $from = $locked->status;
             $locked->forceFill([
                 'status' => FundingRequestStatus::PayCodeIssued,
-                'approved_value_minor' => $locked->requested_value_minor,
+                'approved_value_minor' => $locked->transferAmountReservation
+                    ?->expected_amount_minor ?? $locked->requested_value_minor,
                 'connection_reference' => $connectionReference,
                 'reviewed_at' => now(),
                 'approved_at' => now(),
@@ -448,6 +482,7 @@ final readonly class CheckFundingRequestTransfer
             $locked->voucher->forceFill([
                 'state' => VoucherState::ACTIVE,
             ])->saveQuietly();
+            $this->markReservationMatched($locked->transferAmountReservation);
             $this->recordCheckEvent(
                 $locked,
                 'provider_transfer_verified',
@@ -457,6 +492,12 @@ final readonly class CheckFundingRequestTransfer
                     'provider_funding_observation_id' => $observation->getKey(),
                     'transfer_match_id' => $match->getKey(),
                     'automatic_credit_eligible' => true,
+                    'requested_amount_minor' => $locked->requested_value_minor,
+                    'matching_adjustment_minor' => $locked
+                        ->transferAmountReservation?->matching_adjustment_minor,
+                    'expected_amount_minor' => $locked
+                        ->transferAmountReservation?->expected_amount_minor
+                        ?? $locked->requested_value_minor,
                     'balance_changed' => false,
                 ],
                 $from,
@@ -469,7 +510,7 @@ final readonly class CheckFundingRequestTransfer
         $this->completeCollection->handle(
             $prepared->voucher,
             new ConfirmedVoucherCollectionData(
-                amountMinor: $prepared->requested_value_minor,
+                amountMinor: (int) $prepared->approved_value_minor,
                 currency: $prepared->currency,
                 executionDriver: 'x_change_provider_funding',
                 authority: 'provider_transaction_history',
@@ -482,6 +523,10 @@ final readonly class CheckFundingRequestTransfer
                     'provider_funding_observation_id' => $observation->getKey(),
                     'funding_request_reference' => $prepared->reference,
                     'transfer_match_id' => $match->getKey(),
+                    'requested_amount_minor' => $prepared->requested_value_minor,
+                    'matching_adjustment_minor' => $prepared
+                        ->transferAmountReservation?->matching_adjustment_minor,
+                    'expected_amount_minor' => $prepared->approved_value_minor,
                 ],
             ),
         );
@@ -490,6 +535,7 @@ final readonly class CheckFundingRequestTransfer
             $match,
         ): FundingRequest {
             $locked = FundingRequest::query()
+                ->with('transferAmountReservation')
                 ->lockForUpdate()
                 ->findOrFail($prepared->getKey());
 
@@ -504,11 +550,18 @@ final readonly class CheckFundingRequestTransfer
                     'status' => 'credited',
                     'credited_at' => now(),
                 ])->saveQuietly();
+                $this->markReservationCredited(
+                    $locked->transferAmountReservation,
+                );
                 $this->recordCheckEvent(
                     $locked,
                     'provider_transfer_credited',
                     [
                         'transfer_match_id' => $match->getKey(),
+                        'requested_amount_minor' => $locked->requested_value_minor,
+                        'matching_adjustment_minor' => $locked
+                            ->transferAmountReservation?->matching_adjustment_minor,
+                        'credited_amount_minor' => $locked->approved_value_minor,
                         'balance_changed' => true,
                     ],
                     $from,
@@ -526,6 +579,59 @@ final readonly class CheckFundingRequestTransfer
             credited: true,
             providerTransactionId: $observation->provider_transaction_id,
         );
+    }
+
+    private function markReservationMatched(
+        ?FundingTransferAmountReservation $reservation,
+    ): void {
+        if (! $reservation instanceof FundingTransferAmountReservation) {
+            return;
+        }
+
+        $reservation->forceFill([
+            'status' => FundingTransferAmountReservationStatus::Matched,
+            'matched_at' => $reservation->matched_at ?? now(),
+        ])->saveQuietly();
+    }
+
+    private function markReservationCredited(
+        ?FundingTransferAmountReservation $reservation,
+    ): void {
+        if (! $reservation instanceof FundingTransferAmountReservation) {
+            return;
+        }
+
+        $reuseDelaySeconds = max(0, (int) config(
+            'x-change.funding.requests.bank_transfer.reserved_amounts.reuse_delay_seconds',
+            3600,
+        ));
+        $reservation->forceFill([
+            'status' => FundingTransferAmountReservationStatus::Credited,
+            'credited_at' => $reservation->credited_at ?? now(),
+            'reusable_after' => now()->addSeconds($reuseDelaySeconds),
+        ])->saveQuietly();
+    }
+
+    private function reservationInstant(
+        FundingTransferAmountReservation $reservation,
+        string $attribute,
+    ): CarbonImmutable {
+        return CarbonImmutable::parse(
+            (string) $reservation->getRawOriginal($attribute),
+            'UTC',
+        );
+    }
+
+    private function observationInstant(
+        ProviderFundingObservation $observation,
+    ): ?CarbonImmutable {
+        $occurredAt = $observation->getRawOriginal('occurred_at');
+
+        if (! is_string($occurredAt) || trim($occurredAt) === '') {
+            return null;
+        }
+
+        return CarbonImmutable::parse($occurredAt, 'UTC');
     }
 
     /**

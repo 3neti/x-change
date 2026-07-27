@@ -84,4 +84,9 @@ class FundingRequest extends Model
     {
         return $this->hasOne(FundingRequestTransferMatch::class);
     }
+
+    public function transferAmountReservation(): HasOne
+    {
+        return $this->hasOne(FundingTransferAmountReservation::class);
+    }
 }

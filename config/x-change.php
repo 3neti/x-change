@@ -668,6 +668,49 @@ return [
                         120,
                     ),
                 ),
+                'reserved_amounts' => [
+                    'enabled' => (bool) env(
+                        'XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNTS_ENABLED',
+                        true,
+                    ),
+                    'minimum_adjustment_minor' => max(
+                        0,
+                        (int) env(
+                            'XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_MINIMUM_ADJUSTMENT_MINOR',
+                            317,
+                        ),
+                    ),
+                    'maximum_adjustment_minor' => max(
+                        0,
+                        (int) env(
+                            'XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_MAXIMUM_ADJUSTMENT_MINOR',
+                            537,
+                        ),
+                    ),
+                    'ttl_seconds' => max(
+                        60,
+                        (int) env(
+                            'XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_TTL_SECONDS',
+                            600,
+                        ),
+                    ),
+                    'reuse_delay_seconds' => max(
+                        0,
+                        (int) env(
+                            'XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_REUSE_DELAY_SECONDS',
+                            3600,
+                        ),
+                    ),
+                    'maximum_allocation_attempts' => max(
+                        1,
+                        (int) env(
+                            'XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_MAXIMUM_ALLOCATION_ATTEMPTS',
+                            221,
+                        ),
+                    ),
+                    'lock_seconds' => 10,
+                    'lock_wait_seconds' => 5,
+                ],
                 'check_middleware' => [
                     'throttle:6,1',
                 ],

@@ -15,8 +15,10 @@ use LBHurtado\XChange\Actions\Payment\CompleteVoucherCollection;
 use LBHurtado\XChange\Contracts\FundingProjectionPublisherContract;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
+use LBHurtado\XChange\Enums\FundingTransferAmountReservationStatus;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\FundingRequestTransferMatch;
+use LBHurtado\XChange\Models\FundingTransferAmountReservation;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
@@ -44,6 +46,7 @@ final readonly class PayApprovedFundingRequest
                 ->with([
                     'voucher.envelope',
                     'transferMatch.providerFundingObservation',
+                    'transferAmountReservation',
                 ])
                 ->where('voucher_id', $voucher->getKey())
                 ->lockForUpdate()
@@ -122,6 +125,26 @@ final readonly class PayApprovedFundingRequest
                     'status' => 'credited',
                     'credited_at' => now(),
                 ])->saveQuietly();
+                $transferAmountReservation = $request
+                    ->transferAmountReservation;
+
+                if (
+                    $transferAmountReservation
+                    instanceof FundingTransferAmountReservation
+                ) {
+                    $transferAmountReservation->forceFill([
+                        'status' => FundingTransferAmountReservationStatus::Credited,
+                        'credited_at' => $transferAmountReservation
+                            ->credited_at ?? now(),
+                        'reusable_after' => now()->addSeconds(max(
+                            0,
+                            (int) config(
+                                'x-change.funding.requests.bank_transfer.reserved_amounts.reuse_delay_seconds',
+                                3600,
+                            ),
+                        )),
+                    ])->saveQuietly();
+                }
             } else {
                 $collection = $this->collections->handle(
                     $request->voucher,
@@ -170,6 +193,10 @@ final readonly class PayApprovedFundingRequest
                     'provider_inventory_changed' => $providerTransferMatch
                         instanceof FundingRequestTransferMatch,
                     'provider_transfer_match_id' => $providerTransferMatch?->getKey(),
+                    'requested_amount_minor' => $request->requested_value_minor,
+                    'matching_adjustment_minor' => $request
+                        ->transferAmountReservation?->matching_adjustment_minor,
+                    'credited_amount_minor' => $request->approved_value_minor,
                 ],
                 'occurred_at' => now(),
             ]);
