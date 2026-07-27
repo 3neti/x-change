@@ -81,6 +81,35 @@ Cockpit read model.
 remain in legacy implementation identifiers where changing them would break a
 public contract, but those identifiers do not define the product grammar.
 
+### Treasury Oversight Visibility
+
+The Account Funding workspace separates Account-holder funding facts from
+system Treasury oversight.
+
+An ordinary Account holder sees:
+
+- Client Funds, outstanding Pay Codes, and Issuance Capacity;
+- their funding methods, requests, receipts, and Funding Activity; and
+- their own suspense or recovery status without reconciliation controls.
+
+They do not receive provider liquidity, provider Inventory, connection-level
+Treasury positions, the reconciliation approval queue, or refresh and
+reconciliation capabilities in the Inertia page payload.
+
+The default `CockpitTreasuryAccessContract` implementation grants those facts
+and controls only to the federated system principal resolved by
+`SystemUserResolverContract`. It compares the exact morph class and primary key
+and fails closed when the system principal cannot be resolved. Applications
+that later introduce human Treasury roles must replace this contract with an
+explicit authorization implementation; visible navigation or a client-side
+flag is never sufficient authority.
+
+The protected refresh and reconciliation endpoints repeat the authorization
+check server-side. Requests from an ordinary Account holder return `403` before
+provider access or Treasury mutation. Authorized system views place liquidity
+and reconciliation under the collapsed **Treasury oversight** disclosure so
+Account funding remains the primary task.
+
 ## QR Ph Payer Identity and Self-Top-Up
 
 “Self top-up” is a user story, not a settlement classifier. An exact flow binds the authenticated operator’s Funding Intent to their Account. A standing flow binds the exact Account Funding Address to that Account. In both cases, that pre-existing binding—not the payer mobile, webhook body, or QR scanner—determines which Account may receive the eventual credit.
