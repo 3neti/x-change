@@ -639,6 +639,29 @@ describe('Cockpit Funding foundation', () => {
                 .find('[data-testid="cockpit-funding-mode-switcher"]')
                 .exists(),
         ).toBe(true);
+        const methodPanelHeaders = wrapper.findAll(
+            '[data-testid="funding-method-panel-header"]',
+        );
+        const methodPanelActions = wrapper.findAll(
+            '[data-testid="funding-method-panel-action"]',
+        );
+        expect(methodPanelHeaders).toHaveLength(3);
+        expect(methodPanelActions).toHaveLength(3);
+        expect(methodPanelHeaders[1].classes()).toEqual(
+            methodPanelHeaders[0].classes(),
+        );
+        expect(methodPanelHeaders[2].classes()).toEqual(
+            methodPanelHeaders[0].classes(),
+        );
+        expect(methodPanelHeaders.map((header) => header.text())).toEqual([
+            expect.stringContaining(
+                'Scan your reusable QR Ph code, then check NetBank for confirmed funds.',
+            ),
+            expect.stringContaining('We’ll reserve a unique transfer amount.'),
+            expect.stringContaining(
+                'Check the code, review the amount, then confirm the one-time addition.',
+            ),
+        ]);
         expect(
             wrapper
                 .get('[data-testid="funding-mode-pay_code"]')
@@ -856,7 +879,8 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).not.toContain('Provider Inventory');
         expect(wrapper.text()).not.toContain('Reconciliation approval queue');
         expect(
-            wrapper.find('[data-testid="funding-settlement-safeguards"]')
+            wrapper
+                .find('[data-testid="funding-settlement-safeguards"]')
                 .exists(),
         ).toBe(false);
         expect(wrapper.text()).toContain('Operating as: Account holder');

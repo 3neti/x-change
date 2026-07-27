@@ -16,6 +16,7 @@ import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpi
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import CockpitFundingActivity from '../components/CockpitFundingActivity.vue';
+import CockpitFundingMethodPanel from '../components/CockpitFundingMethodPanel.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitFundingActivityItem,
@@ -1718,14 +1719,14 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 id="funding-panel-self_top_up"
                 role="tabpanel"
                 aria-labelledby="funding-mode-self_top_up"
-                class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-950 dark:bg-slate-900"
                 data-testid="cockpit-standing-funding-address"
             >
-                <div
-                    class="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+                <CockpitFundingMethodPanel
+                    title="QR Ph"
+                    description="Scan your reusable QR Ph code, then check NetBank for confirmed funds."
+                    test-id="funding-method-panel-qr-ph"
                 >
-                    <h2 class="text-sm font-semibold">QR Ph</h2>
-                    <div class="flex flex-wrap items-center gap-2">
+                    <template #action>
                         <span
                             v-if="standingAddressLoading"
                             class="inline-flex h-9 items-center rounded-lg bg-sky-100 px-3 text-xs font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200"
@@ -1774,120 +1775,134 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             QR Ph unavailable
                         </span>
-                    </div>
-                </div>
+                    </template>
 
-                <div
-                    v-if="standingAddress"
-                    class="border-t border-sky-100 bg-sky-50/50 p-4 dark:border-sky-950 dark:bg-sky-950/10"
-                >
                     <div
-                        class="grid gap-4 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start"
+                        v-if="standingAddress"
+                        class="bg-sky-50/50 p-4 dark:bg-sky-950/10"
                     >
                         <div
-                            class="mx-auto rounded-xl border border-sky-200 bg-white p-2 shadow-sm md:mx-0 dark:border-sky-900"
+                            class="grid gap-4 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start"
                         >
-                            <img
-                                :src="standingAddress.qr_code"
-                                alt="Account Funding Address QR Ph code"
-                                class="size-44 object-contain"
-                                data-testid="standing-funding-address-qr"
-                            />
-                        </div>
-                        <form
-                            class="rounded-xl border border-sky-200 bg-white p-4 shadow-sm dark:border-sky-900 dark:bg-slate-950"
-                            data-testid="funding-qr-merchant-profile"
-                            @submit.prevent="saveFundingQrMerchantProfile"
-                        >
-                            <h3 class="text-sm font-semibold">
-                                Merchant label
-                            </h3>
                             <div
-                                class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)_auto] xl:items-end"
+                                class="mx-auto rounded-xl border border-sky-200 bg-white p-2 shadow-sm md:mx-0 dark:border-sky-900"
                             >
-                                <label class="grid gap-1.5 text-xs font-medium">
-                                    <span>Merchant name</span>
-                                    <input
-                                        v-model="merchantProfileForm.name"
-                                        type="text"
-                                        maxlength="25"
-                                        autocomplete="organization"
-                                        class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
-                                    />
-                                    <span
-                                        v-if="merchantProfileForm.errors.name"
-                                        class="text-rose-700 dark:text-rose-300"
+                                <img
+                                    :src="standingAddress.qr_code"
+                                    alt="Account Funding Address QR Ph code"
+                                    class="size-44 object-contain"
+                                    data-testid="standing-funding-address-qr"
+                                />
+                            </div>
+                            <form
+                                class="rounded-xl border border-sky-200 bg-white p-4 shadow-sm dark:border-sky-900 dark:bg-slate-950"
+                                data-testid="funding-qr-merchant-profile"
+                                @submit.prevent="saveFundingQrMerchantProfile"
+                            >
+                                <h3 class="text-sm font-semibold">
+                                    Merchant label
+                                </h3>
+                                <div
+                                    class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)_auto] xl:items-end"
+                                >
+                                    <label
+                                        class="grid gap-1.5 text-xs font-medium"
                                     >
-                                        {{ merchantProfileForm.errors.name }}
-                                    </span>
-                                </label>
-                                <label class="grid gap-1.5 text-xs font-medium">
-                                    <span>City</span>
-                                    <input
-                                        v-model="merchantProfileForm.city"
-                                        type="text"
-                                        maxlength="15"
-                                        autocomplete="address-level2"
-                                        class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
-                                    />
-                                    <span
-                                        v-if="merchantProfileForm.errors.city"
-                                        class="text-rose-700 dark:text-rose-300"
+                                        <span>Merchant name</span>
+                                        <input
+                                            v-model="merchantProfileForm.name"
+                                            type="text"
+                                            maxlength="25"
+                                            autocomplete="organization"
+                                            class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
+                                        />
+                                        <span
+                                            v-if="
+                                                merchantProfileForm.errors.name
+                                            "
+                                            class="text-rose-700 dark:text-rose-300"
+                                        >
+                                            {{
+                                                merchantProfileForm.errors.name
+                                            }}
+                                        </span>
+                                    </label>
+                                    <label
+                                        class="grid gap-1.5 text-xs font-medium"
                                     >
-                                        {{ merchantProfileForm.errors.city }}
-                                    </span>
-                                </label>
-                                <button
-                                    type="submit"
-                                    class="h-10 rounded-lg bg-sky-700 px-4 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-1"
-                                    :disabled="merchantProfileForm.processing"
+                                        <span>City</span>
+                                        <input
+                                            v-model="merchantProfileForm.city"
+                                            type="text"
+                                            maxlength="15"
+                                            autocomplete="address-level2"
+                                            class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
+                                        />
+                                        <span
+                                            v-if="
+                                                merchantProfileForm.errors.city
+                                            "
+                                            class="text-rose-700 dark:text-rose-300"
+                                        >
+                                            {{
+                                                merchantProfileForm.errors.city
+                                            }}
+                                        </span>
+                                    </label>
+                                    <button
+                                        type="submit"
+                                        class="h-10 rounded-lg bg-sky-700 px-4 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-1"
+                                        :disabled="
+                                            merchantProfileForm.processing
+                                        "
+                                    >
+                                        {{
+                                            merchantProfileForm.processing
+                                                ? 'Updating…'
+                                                : 'Update QR'
+                                        }}
+                                    </button>
+                                </div>
+                                <p
+                                    v-if="
+                                        merchantProfileForm.errors
+                                            .merchant_name_template
+                                    "
+                                    class="mt-2 text-xs text-rose-700 dark:text-rose-300"
                                 >
                                     {{
-                                        merchantProfileForm.processing
-                                            ? 'Updating…'
-                                            : 'Update QR'
+                                        merchantProfileForm.errors
+                                            .merchant_name_template
                                     }}
-                                </button>
-                            </div>
-                            <p
-                                v-if="
-                                    merchantProfileForm.errors
-                                        .merchant_name_template
-                                "
-                                class="mt-2 text-xs text-rose-700 dark:text-rose-300"
-                            >
-                                {{
-                                    merchantProfileForm.errors
-                                        .merchant_name_template
-                                }}
-                            </p>
-                        </form>
+                                </p>
+                            </form>
+                        </div>
+
+                        <div
+                            v-if="standingActionNotice"
+                            class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
+                            role="status"
+                        >
+                            {{ standingActionNotice }}
+                        </div>
                     </div>
 
                     <div
-                        v-if="standingActionNotice"
-                        class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
-                        role="status"
+                        v-if="standingAddressError"
+                        class="flex flex-wrap items-center justify-between gap-3 bg-rose-50 px-5 py-3 text-sm text-rose-800 dark:bg-rose-950/20 dark:text-rose-200"
+                        role="alert"
                     >
-                        {{ standingActionNotice }}
+                        <span>{{ standingAddressError }}</span>
+                        <button
+                            v-if="standing_funding_address.available"
+                            type="button"
+                            class="h-9 rounded-lg border border-rose-300 bg-white px-3 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-200 dark:hover:bg-rose-950"
+                            @click="openStandingFundingAddress"
+                        >
+                            Try again
+                        </button>
                     </div>
-                </div>
-
-                <div
-                    v-if="standingAddressError"
-                    class="flex flex-wrap items-center justify-between gap-3 border-t border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200"
-                    role="alert"
-                >
-                    <span>{{ standingAddressError }}</span>
-                    <button
-                        v-if="standing_funding_address.available"
-                        type="button"
-                        class="h-9 rounded-lg border border-rose-300 bg-white px-3 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-200 dark:hover:bg-rose-950"
-                        @click="openStandingFundingAddress"
-                    >
-                        Try again
-                    </button>
-                </div>
+                </CockpitFundingMethodPanel>
             </section>
 
             <section
@@ -1898,27 +1913,18 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 class="space-y-4"
                 data-testid="cockpit-bank-transfer-funding"
             >
-                <article
-                    class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-950 dark:bg-slate-900"
+                <CockpitFundingMethodPanel
+                    title="Bank Transfer"
+                    :description="`Enter at least ${bankTransferInstructions.minimum_requested_amount}. We’ll reserve a unique transfer amount.`"
+                    test-id="funding-method-panel-bank-transfer"
                 >
-                    <div
-                        class="border-b border-slate-200 p-4 sm:p-5 dark:border-slate-800"
-                    >
-                        <div>
-                            <h2 class="text-base font-semibold">
-                                Bank Transfer
-                            </h2>
-                            <p
-                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-                            >
-                                Enter at least
-                                {{
-                                    bankTransferInstructions.minimum_requested_amount
-                                }}. x-change will reserve a unique exact
-                                transfer amount.
-                            </p>
-                        </div>
-                    </div>
+                    <template #action>
+                        <span
+                            class="inline-flex h-9 items-center rounded-full bg-sky-50 px-3 text-[0.65rem] font-semibold text-sky-700 uppercase dark:bg-sky-950 dark:text-sky-200"
+                        >
+                            Exact amount
+                        </span>
+                    </template>
 
                     <form
                         class="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-5"
@@ -1975,7 +1981,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             }}
                         </button>
                     </form>
-                </article>
+                </CockpitFundingMethodPanel>
 
                 <Teleport
                     v-if="
@@ -2172,28 +2178,18 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 class="space-y-4"
                 data-testid="cockpit-pay-code-funding"
             >
-                <article
-                    class="overflow-hidden rounded-2xl border border-emerald-300 bg-white shadow-sm dark:border-emerald-900 dark:bg-slate-900"
-                    data-testid="pay-code-funding-primary"
+                <CockpitFundingMethodPanel
+                    title="Pay Code"
+                    description="Check the code, review the amount, then confirm the one-time addition."
+                    test-id="pay-code-funding-primary"
                 >
-                    <div
-                        class="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 px-4 py-3 sm:px-5 dark:border-emerald-950"
-                    >
-                        <div>
-                            <h2 class="text-base font-semibold">Pay Code</h2>
-                            <p
-                                class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
-                            >
-                                Check the code, review the amount, then confirm
-                                the one-time addition.
-                            </p>
-                        </div>
+                    <template #action>
                         <span
-                            class="rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-semibold text-emerald-700 uppercase dark:bg-emerald-950 dark:text-emerald-200"
+                            class="inline-flex h-9 items-center rounded-full bg-emerald-50 px-3 text-[0.65rem] font-semibold text-emerald-700 uppercase dark:bg-emerald-950 dark:text-emerald-200"
                         >
                             no provider payout
                         </span>
-                    </div>
+                    </template>
                     <form
                         class="grid gap-2 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-5"
                         data-testid="pay-code-funding-inspection-form"
@@ -2351,7 +2347,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             {{ payCodeFundingClaimError }}
                         </p>
                     </div>
-                </article>
+                </CockpitFundingMethodPanel>
             </section>
 
             <section
