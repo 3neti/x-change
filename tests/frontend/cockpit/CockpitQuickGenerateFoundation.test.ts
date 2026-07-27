@@ -14,6 +14,7 @@ import CockpitQuickGenerateIdempotencyGatePanel from '../../../resources/js/cock
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
+import CockpitPayCodeCanvas from '../../../resources/js/cockpit/components/CockpitPayCodeCanvas.vue';
 import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
@@ -45,6 +46,43 @@ function quickGenerateEngineeringPreview(
 }
 
 describe('Cockpit Quick Generate foundation', () => {
+    it('renders a live front and back Pay Code canvas without a fake claim QR', async () => {
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '1250',
+                currency: 'PHP',
+                recipient: '09173011987',
+                purpose: 'Family support',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                expiry: '1 day',
+                instructionLabels: ['Mobile verified', 'OTP'],
+            },
+        });
+
+        expect(wrapper.text()).toContain('PHP 1,250.00');
+        expect(wrapper.text()).toContain('Mobile ending 1987');
+        expect(wrapper.text()).toContain('PAY CODE PREVIEW');
+        expect(
+            wrapper
+                .find('svg[aria-label="Claim QR appears after issue"]')
+                .exists(),
+        ).toBe(false);
+
+        await wrapper
+            .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        expect(wrapper.text()).toContain('Claim this Pay Code');
+        expect(wrapper.text()).toContain('Mobile verified');
+        expect(wrapper.text()).toContain('OTP');
+        expect(
+            wrapper
+                .find('[aria-label="Claim QR appears after issue"]')
+                .exists(),
+        ).toBe(true);
+    });
+
     it('renders template selector placeholders as institutional products', () => {
         const wrapper = mount(CockpitTemplateSelector, {
             props: {
@@ -140,8 +178,7 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitDiagnosticsDisclosure, {
             props: {
                 title: 'Engineering diagnostics',
-                summary:
-                    'A compact readiness summary is shown first.',
+                summary: 'A compact readiness summary is shown first.',
                 eyebrow: 'Optional diagnostics',
                 actionLabel: 'Show diagnostics',
             },
@@ -213,19 +250,25 @@ describe('Cockpit Quick Generate foundation', () => {
             ),
         ).toHaveLength(8);
         expect(
-            wrapper.find(
-                '[data-testid="cockpit-quick-generate-diagnostics-summary"]',
-            ).classes(),
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-diagnostics-summary"]',
+                )
+                .classes(),
         ).toContain('py-3');
         expect(
-            wrapper.find(
-                '[data-testid="cockpit-quick-generate-diagnostics-summary-grid"]',
-            ).classes(),
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-diagnostics-summary-grid"]',
+                )
+                .classes(),
         ).toContain('gap-2');
         expect(
-            wrapper.find(
-                '[data-testid="cockpit-quick-generate-diagnostics-summary-item"]',
-            ).classes(),
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-diagnostics-summary-item"]',
+                )
+                .classes(),
         ).toContain('p-2.5');
         expect(wrapper.text()).toContain('8 checks');
     });
@@ -248,9 +291,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Template and runtime reference');
         expect(wrapper.text()).toContain('Show template reference');
         expect(wrapper.text()).not.toContain('Engineering history');
-        expect(
-            wrapper.find('[data-testid="reference-slot"]').text(),
-        ).toContain('Template Selector');
+        expect(wrapper.find('[data-testid="reference-slot"]').text()).toContain(
+            'Template Selector',
+        );
     });
 
     it('renders compact reference disclosures without opening them by default', () => {
@@ -604,7 +647,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('Browser-local copy only. No delivery will be sent.');
         expect(
             wrapper
-                .find('[data-testid="cockpit-quick-generate-primary-claim-link"]')
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-claim-link"]',
+                )
                 .attributes('href'),
         ).toBe('https://example.test/x/claim/PC-UI-001/experience');
         expect(
@@ -616,7 +661,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('Claim experience URL');
         expect(
             wrapper
-                .find('[data-testid="cockpit-quick-generate-primary-detail-link"]')
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-detail-link"]',
+                )
                 .attributes('href'),
         ).toBe('/x/cockpit/pay-codes/PC-UI-001');
         expect(
@@ -874,26 +921,20 @@ describe('Cockpit Quick Generate foundation', () => {
             },
             profile: 'voucher.claim.v1',
         });
-        expect(
-            preview.metadata.custom.cockpit.recipient_reference,
-        ).toBe('CASH');
-        expect(
-            wrapper
-                .find(
-                    '[data-testid="cockpit-quick-generate-settlement-rail"]',
-                )
-                .attributes('disabled'),
-        ).toBeDefined();
-        expect(
-            wrapper
-                .find(
-                    '[data-testid="cockpit-quick-generate-slice-mode-open"]',
-                )
-                .attributes('disabled'),
-        ).toBeDefined();
-        expect(wrapper.text()).toContain(
-            'No bank payout occurs',
+        expect(preview.metadata.custom.cockpit.recipient_reference).toBe(
+            'CASH',
         );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-settlement-rail"]')
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-slice-mode-open"]')
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(wrapper.text()).toContain('No bank payout occurs');
     });
 
     it('hands an Account Funding Pay Code to the Funding workspace without exposing it in the URL', async () => {
@@ -982,7 +1023,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe('/x/cockpit/funding?mode=pay_code');
         expect(
             wrapper
-                .find('[data-testid="cockpit-quick-generate-primary-claim-link"]')
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-claim-link"]',
+                )
                 .exists(),
         ).toBe(false);
         expect(
@@ -1118,9 +1161,9 @@ describe('Cockpit Quick Generate foundation', () => {
             '#quick-generate-contract-slices',
             '#quick-generate-contract-execution',
         ]);
-        expect(
-            wrapper.find('#quick-generate-contract-money').exists(),
-        ).toBe(true);
+        expect(wrapper.find('#quick-generate-contract-money').exists()).toBe(
+            true,
+        );
         expect(
             wrapper.find('#quick-generate-contract-execution').exists(),
         ).toBe(true);
@@ -1134,7 +1177,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(coverage.exists()).toBe(true);
         expect(coverage.element.tagName).toBe('DETAILS');
         expect(coverage.text()).toContain('VoucherInstruction DTO coverage');
-        expect(coverage.text()).toContain('Open this only when checking contract coverage.');
+        expect(coverage.text()).toContain(
+            'Open this only when checking contract coverage.',
+        );
         expect(coverage.text()).toContain('cash.amount');
 
         await wrapper

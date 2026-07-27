@@ -25,6 +25,7 @@ import {
 } from '../riderOgPreview';
 import type { RiderOgPreview } from '../riderOgPreview';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
+import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
 
 const props = defineProps<{
@@ -1234,6 +1235,48 @@ const selectedTemplateName = computed<string>(() => {
             (template) => template.key === selectedTemplate.value,
         )?.name ?? selectedTemplate.value
     );
+});
+
+const canvasInstructionLabels = computed<string[]>(() => {
+    const labels: string[] = [];
+
+    if (requireMobileValidation.value) {
+        labels.push('Mobile verified');
+    }
+
+    if (verificationOtp.value) {
+        labels.push('OTP');
+    }
+
+    if (verificationKyc.value) {
+        labels.push('Identity check');
+    }
+
+    if (sliceMode.value !== 'whole') {
+        labels.push('Multiple claims');
+    }
+
+    return labels;
+});
+
+const canvasExpiryLabel = computed<string>(() => {
+    if (expiresAt.value.trim() !== '') {
+        return 'Exact expiry';
+    }
+
+    if (expiryPreset.value === 'none') {
+        return 'No expiry';
+    }
+
+    const labels: Record<string, string> = {
+        P12H: '12 hours',
+        P1D: '1 day',
+        P3D: '3 days',
+        P7D: '7 days',
+        custom: `${expiryCustomDays.value || 'Custom'} days`,
+    };
+
+    return labels[expiryPreset.value] ?? expiryPreset.value;
 });
 
 const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
@@ -3140,19 +3183,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                 <p
                     class="text-xs font-semibold tracking-[0.22em] text-emerald-700 uppercase dark:text-emerald-300"
                 >
-                    Guided voucher instruction builder
+                    Design your Pay Code
                 </p>
                 <h3
                     class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50"
                 >
-                    Design the Pay Code contract before generation
+                    Choose what it does and who can use it
                 </h3>
                 <p
                     class="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300"
                 >
-                    This builder maps operator choices into the existing
-                    x-change GeneratePayCode handoff. It does not create a
-                    parallel issuance runtime.
+                    Start with the essentials. Add safeguards and claim
+                    instructions only when you need them.
                 </p>
             </div>
             <span
@@ -3161,6 +3203,92 @@ function dataGet(source: unknown, path: string[]): unknown {
             >
                 {{ lastStatus }}
             </span>
+        </div>
+
+        <div
+            class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.82fr)]"
+        >
+            <div
+                class="rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
+            >
+                <p
+                    class="text-xs font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
+                >
+                    Create
+                </p>
+                <h4
+                    class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50"
+                >
+                    Start with the essentials
+                </h4>
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Amount, recipient, and purpose shape the Pay Code shown
+                    beside this form.
+                </p>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label
+                        class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
+                        Amount
+                        <div class="flex rounded-xl shadow-sm">
+                            <span
+                                class="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                            >
+                                ₱
+                            </span>
+                            <input
+                                v-model="amount"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                class="w-full min-w-0 rounded-r-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                data-testid="cockpit-quick-generate-primary-amount"
+                                :disabled="processing"
+                            />
+                        </div>
+                    </label>
+                    <label
+                        class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
+                        Recipient
+                        <input
+                            v-model="recipientReference"
+                            type="text"
+                            placeholder="Anyone, mobile, or vendor"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                            data-testid="cockpit-quick-generate-primary-recipient"
+                            :disabled="processing"
+                        />
+                    </label>
+                    <label
+                        class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
+                    >
+                        Purpose
+                        <input
+                            v-model="purpose"
+                            type="text"
+                            placeholder="What is this Pay Code for?"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                            data-testid="cockpit-quick-generate-primary-purpose"
+                            :disabled="processing"
+                        />
+                    </label>
+                </div>
+            </div>
+
+            <div class="xl:sticky xl:top-4 xl:self-start">
+                <CockpitPayCodeCanvas
+                    :amount="amount"
+                    :currency="currency"
+                    :recipient="recipientReference"
+                    :purpose="purpose"
+                    :claim-outcome="claimOutcome"
+                    :voucher-type="voucherType"
+                    :expiry="canvasExpiryLabel"
+                    :instruction-labels="canvasInstructionLabels"
+                    :issued-code="resultCode"
+                />
+            </div>
         </div>
 
         <section
