@@ -120,6 +120,70 @@ The successful first posting writes one sanitized x-journal collection entry
 and publishes one owner-scoped `FundingProjectionChanged` event after commit.
 No event or accounting entry is duplicated on replay.
 
+## Provider-Verified Bank Transfer Funding
+
+An InstaPay or bank-transfer request is a provider-backed variation of the
+same requester-owned PAYABLE flow. The Account holder supplies the expected
+amount and a transfer reference. A screenshot is supporting evidence only; it
+never authorizes a credit.
+
+```text
+Account holder creates exact PAYABLE request
+        ↓
+receiver-side provider history observes the inbound transfer
+        ↓
+provider transaction ID + destination + amount + currency + status match
+        ↓
+Check transfer runs CompleteVoucherCollection
+        ↓
+x_change_provider_funding recognizes provider Inventory
+        ↓
+the same atomic posting allocates Client Funds to the requester
+        ↓
+PAYABLE closes; the request becomes Funded; Echo refreshes Cockpit
+```
+
+The provider transaction ID is the financial idempotency key. A sender receipt
+number, invoice number, screenshot, payer name, remark, or balance delta may
+help locate the transaction, but none is sufficient to authorize credit.
+`voucher_collections` uniquely constrains the provider and transaction ID, so
+two requests cannot consume the same inbound transfer.
+
+`CheckFundingRequestTransfer` accepts only immutable
+`ProviderFundingObservation` records with:
+
+- an exact request reference match against a provider transaction, operation,
+  or request identifier;
+- the configured provider and Treasury connection;
+- exact requested amount and currency;
+- a creditable normalized provider status;
+- `destination_verified=true`.
+
+No match leaves the request at `awaiting_provider_evidence`; multiple matches
+require controlled review. A replay after settlement reports
+`already_credited` and performs no accounting.
+
+NetBank VCA history already produces these observations for purpose-bound QR
+addresses. Arbitrary deposits to the shared corporate account require a
+separate corporate-transaction-history adapter or an explicitly controlled
+receiver-side observation. The VCA endpoint and a corporate balance delta must
+not be presented as transaction-history proof.
+
+The operating mode is configurable, but provider-side evidence and exact-once
+posting are not:
+
+- `provider_verified_auto`: exact provider evidence credits automatically;
+- `provider_verified_threshold`: exact provider evidence may auto-credit only
+  within separately configured risk limits;
+- `manual_single_control`: an authorized operator may persist facts they
+  independently inspected in the provider's receiving-account dashboard;
+- `manual_dual_control`: a second operator must approve the persisted
+  receiver-side observation before it becomes creditable.
+
+Production should default to `provider_verified_auto`. A manual mode relaxes
+who may attest the receiver-side provider record; it never permits a sender
+screenshot or arbitrary amount entry to become monetary authority.
+
 ## Trust and Money Flow
 
 ```text
@@ -422,6 +486,10 @@ XCHANGE_STANDING_FUNDING_WEBHOOK_BATCH_SIZE
 XCHANGE_STANDING_FUNDING_MINIMUM_AMOUNT_MINOR
 XCHANGE_STANDING_FUNDING_MAXIMUM_AMOUNT_MINOR
 XCHANGE_STANDING_FUNDING_DAILY_LIMIT_MINOR
+XCHANGE_FUNDING_BANK_TRANSFER_ENABLED
+XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER
+XCHANGE_FUNDING_BANK_TRANSFER_CONNECTION
+XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE
 XCHANGE_COCKPIT_QRPH_FUNDING_SIMULATION_ENABLED
 XCHANGE_LIFECYCLE_QRPH_SIMULATION_ENABLED
 XCHANGE_MOBILE_VERIFICATION_ENABLED
