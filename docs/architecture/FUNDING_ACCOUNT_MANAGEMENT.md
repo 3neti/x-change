@@ -185,10 +185,11 @@ Funding Reserve. A replay after settlement reports `already_credited` and
 performs no accounting.
 
 NetBank VCA history already produces these observations for purpose-bound QR
-addresses. Arbitrary deposits to the shared corporate account require a
-separate corporate-transaction-history adapter or an explicitly controlled
-receiver-side observation. The VCA endpoint and a corporate balance delta must
-not be presented as transaction-history proof.
+addresses. With provider-history lookup enabled, the same NetBank funding
+adapter queries the configured corporate receiving account for direct bank
+transfers. Providers that cannot expose equivalent receiver-side history
+require their own adapter or an explicitly controlled observation import. A
+corporate balance delta must never be presented as transaction-history proof.
 
 The operating mode is configurable, but provider-side evidence and exact-once
 posting are not:
