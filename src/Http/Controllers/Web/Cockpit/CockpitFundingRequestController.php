@@ -8,8 +8,8 @@ use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Number;
 use LBHurtado\XChange\Actions\Funding\AttachFundingRequestEvidence;
-use LBHurtado\XChange\Actions\Funding\CheckFundingRequestTransfer;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
@@ -25,7 +25,6 @@ class CockpitFundingRequestController extends Controller
         WalletAccessContract $wallets,
         CreateFundingRequest $create,
         AttachFundingRequestEvidence $attachEvidence,
-        CheckFundingRequestTransfer $checkTransfer,
     ): RedirectResponse {
         $actor = $request->user();
         $account = $wallets->resolveForUser($actor);
@@ -72,7 +71,17 @@ class CockpitFundingRequestController extends Controller
         $notice = 'Funding requested. Share the Pay Code if you want to follow up.';
 
         if ($fundingRequest->funding_type === FundingRequestType::BankTransfer) {
-            $notice = $checkTransfer->handle($fundingRequest)->message;
+            $reservation = $fundingRequest->transferAmountReservation;
+            $notice = $reservation === null
+                ? 'Bank transfer request created. Transfer the requested amount, then check NetBank.'
+                : sprintf(
+                    'Transfer exactly %s to NetBank, then select Check NetBank. The full amount will be credited.',
+                    Number::currency(
+                        $reservation->expected_amount_minor / 100,
+                        in: $fundingRequest->currency,
+                        locale: 'en_PH',
+                    ),
+                );
         }
 
         return redirect()

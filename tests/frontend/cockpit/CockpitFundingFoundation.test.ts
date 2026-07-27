@@ -392,6 +392,12 @@ const fundingRequestReadModel = {
                 reference_hint: '••••1236',
                 window: 'recent' as const,
                 window_label: 'Last 10 minutes',
+                requested_amount: '₱20,000.00',
+                matching_adjustment: '₱5.37',
+                expected_amount: '₱20,005.37',
+                instruction_status: 'reserved',
+                instruction_expires_at: '2026-07-25T08:10:00+08:00',
+                full_expected_amount_is_credited: true,
                 verification_status: 'ready_to_check',
                 last_checked_at: null,
                 can_check: true,
@@ -440,6 +446,11 @@ const fundingRequestReadModel = {
         account_name: 'X-Change Sandbox',
         account_number: '113-001-00001-9',
         currency: 'PHP',
+        reserved_exact_amounts_enabled: true,
+        minimum_adjustment: '₱3.17',
+        maximum_adjustment: '₱5.37',
+        instruction_valid_for_minutes: 10,
+        full_expected_amount_is_credited: true as const,
         automatic_credit_window_minutes: 10,
         windows: [
             {
@@ -1010,19 +1021,17 @@ describe('Cockpit Funding foundation', () => {
         ).toContain('113-001-00001-9');
         expect(
             wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
-        ).toContain('Find my transfer');
+        ).toContain('Get transfer amount');
         expect(
             wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
-        ).toContain('Last hour');
-        expect(
-            wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
-        ).toContain('Today');
-        expect(requests.text()).toContain('Last 10 minutes');
+        ).toContain('Amount to add');
+        expect(requests.text()).toContain('₱20,005.37');
+        expect(requests.text()).toContain('₱20,000.00 + ₱5.37 match');
         expect(requests.text()).toContain('Ref ••••1236');
 
         await requests
             .findAll('button')
-            .find((button) => button.text() === 'Check again')
+            .find((button) => button.text() === 'Check NetBank')
             ?.trigger('click');
 
         expect(routerPostMock).toHaveBeenCalledWith(

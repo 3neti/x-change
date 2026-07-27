@@ -689,6 +689,12 @@ export type CockpitFundingRequest = {
             | 'credited';
         window: 'recent' | 'last_hour' | 'today';
         window_label: string;
+        requested_amount: string;
+        matching_adjustment?: string | null;
+        expected_amount: string;
+        instruction_status?: string | null;
+        instruction_expires_at?: string | null;
+        full_expected_amount_is_credited: boolean;
         last_checked_at?: string | null;
         can_check: boolean;
         provider_authority_required: true;
@@ -737,6 +743,11 @@ export type CockpitFundingRequestReadModel = {
         account_name: string;
         account_number: string;
         currency: string;
+        reserved_exact_amounts_enabled: boolean;
+        minimum_adjustment: string;
+        maximum_adjustment: string;
+        instruction_valid_for_minutes: number;
+        full_expected_amount_is_credited: true;
         automatic_credit_window_minutes: number;
         windows: Array<{
             value: 'recent' | 'last_hour' | 'today';

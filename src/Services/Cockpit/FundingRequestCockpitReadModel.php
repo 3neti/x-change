@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Cockpit;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingTransferWindow;
@@ -26,6 +28,7 @@ final readonly class FundingRequestCockpitReadModel
             ->with([
                 'events',
                 'transferMatch',
+                'transferAmountReservation',
                 'voucher.envelope.attachments',
             ])
             ->latest('submitted_at')
@@ -39,7 +42,7 @@ final readonly class FundingRequestCockpitReadModel
             ->get();
 
         return [
-            'schema' => 'x-change.cockpit.account-funding-requests.v2',
+            'schema' => 'x-change.cockpit.account-funding-requests.v3',
             'requests' => $requests->map(fn (FundingRequest $request): array => [
                 'reference' => $request->reference,
                 'type' => $request->funding_type->value,
@@ -206,7 +209,7 @@ final readonly class FundingRequestCockpitReadModel
     }
 
     /**
-     * @return array<string, bool|string|null>|null
+     * @return array<string, mixed>|null
      */
     private function transferSummary(FundingRequest $request): ?array
     {
@@ -247,6 +250,7 @@ final readonly class FundingRequestCockpitReadModel
             'transfer_window',
             FundingTransferWindow::Recent->value,
         )) ?? FundingTransferWindow::Recent;
+        $reservation = $request->transferAmountReservation;
 
         return [
             'provider' => mb_strtolower((string) config(
@@ -261,6 +265,31 @@ final readonly class FundingRequestCockpitReadModel
                 : '••••'.mb_substr($reference, -4),
             'window' => $window->value,
             'window_label' => $window->label($automaticCreditWindowMinutes),
+            'requested_amount' => $this->money(
+                $request->requested_value_minor,
+                $request->currency,
+            ),
+            'matching_adjustment' => $reservation === null
+                ? null
+                : $this->money(
+                    $reservation->matching_adjustment_minor,
+                    $request->currency,
+                ),
+            'expected_amount' => $reservation === null
+                ? $this->money(
+                    $request->requested_value_minor,
+                    $request->currency,
+                )
+                : $this->money(
+                    $reservation->expected_amount_minor,
+                    $request->currency,
+                ),
+            'instruction_status' => $reservation?->status->value,
+            'instruction_expires_at' => $reservation === null
+                ? null
+                : $this->storedInstant($reservation, 'expires_at')
+                    ->toIso8601String(),
+            'full_expected_amount_is_credited' => $reservation !== null,
             'verification_status' => $status,
             'last_checked_at' => $event?->occurred_at?->toIso8601String(),
             'can_check' => in_array($request->status, [
@@ -279,6 +308,22 @@ final readonly class FundingRequestCockpitReadModel
         $automaticCreditWindowMinutes = max(1, (int) config(
             'x-change.funding.requests.bank_transfer.automatic_credit_window_minutes',
             10,
+        ));
+        $reservedAmountsEnabled = (bool) config(
+            'x-change.funding.requests.bank_transfer.reserved_amounts.enabled',
+            true,
+        );
+        $minimumAdjustmentMinor = max(0, (int) config(
+            'x-change.funding.requests.bank_transfer.reserved_amounts.minimum_adjustment_minor',
+            317,
+        ));
+        $maximumAdjustmentMinor = max($minimumAdjustmentMinor, (int) config(
+            'x-change.funding.requests.bank_transfer.reserved_amounts.maximum_adjustment_minor',
+            537,
+        ));
+        $instructionTtlSeconds = max(60, (int) config(
+            'x-change.funding.requests.bank_transfer.reserved_amounts.ttl_seconds',
+            600,
         ));
 
         return [
@@ -300,6 +345,19 @@ final readonly class FundingRequestCockpitReadModel
                 '',
             ),
             'currency' => 'PHP',
+            'reserved_exact_amounts_enabled' => $reservedAmountsEnabled,
+            'minimum_adjustment' => $this->money(
+                $minimumAdjustmentMinor,
+                'PHP',
+            ),
+            'maximum_adjustment' => $this->money(
+                $maximumAdjustmentMinor,
+                'PHP',
+            ),
+            'instruction_valid_for_minutes' => (int) ceil(
+                $instructionTtlSeconds / 60,
+            ),
+            'full_expected_amount_is_credited' => true,
             'automatic_credit_window_minutes' => $automaticCreditWindowMinutes,
             'windows' => collect(FundingTransferWindow::cases())
                 ->map(fn (FundingTransferWindow $window): array => [
@@ -310,5 +368,15 @@ final readonly class FundingRequestCockpitReadModel
                 ->all(),
             'sender_reference_authority' => false,
         ];
+    }
+
+    private function storedInstant(
+        Model $model,
+        string $attribute,
+    ): CarbonImmutable {
+        return CarbonImmutable::parse(
+            (string) $model->getRawOriginal($attribute),
+            'UTC',
+        );
     }
 }
