@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
@@ -16,6 +17,7 @@ class CockpitQuickGeneratePageController extends Controller
     public function __construct(
         private readonly CockpitReadOnlyPageProps $props,
         private readonly QuickGenerateLastInstructionsStore $lastInstructions,
+        private readonly PayCodeTemplateReadModel $templates,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -36,6 +38,7 @@ class CockpitQuickGeneratePageController extends Controller
             ),
             'feedback_defaults' => $this->feedbackDefaults($request),
             'last_instructions' => $this->lastInstructions->for($request->user()),
+            'saved_templates' => $this->templates->for($request->user()),
         ]);
     }
 
