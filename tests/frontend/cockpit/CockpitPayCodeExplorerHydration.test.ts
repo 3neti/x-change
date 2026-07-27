@@ -236,9 +236,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
 
         expect(pageDetails.exists()).toBe(true);
         expect(pageDetails.element.tagName.toLowerCase()).toBe('details');
-        expect(pageDetails.find('summary').text()).toContain('Page details');
+        expect(pageDetails.find('summary').text()).toContain(
+            'Explorer details',
+        );
         expect(pageDetails.text()).toContain(
-            'Read-only rules, totals, and connected-service context.',
+            'Filter metadata, read-model boundaries, and technical context.',
         );
         expect(pageDetails.text()).toContain(
             'The main scan path stays focused on search and results.',
@@ -264,6 +266,17 @@ describe('Cockpit Pay Code Explorer hydration', () => {
                 .find('[data-testid="cockpit-pay-code-integration-readiness"]')
                 .exists(),
         ).toBe(true);
+        expect(
+            pageDetails
+                .find('[data-testid="cockpit-pay-code-filter-builder"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-results-table"]')
+                .element.compareDocumentPosition(pageDetails.element) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
     });
 
     it('renders the operator list summary as a compact scan strip', () => {
@@ -1321,11 +1334,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Activity navigation context');
+        expect(wrapper.text()).toContain('Opened from issuance activity');
+        expect(wrapper.text()).toContain('Activity context details');
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('operator_issuance_activity');
         expect(wrapper.text()).toContain('pay_code_explorer');
-        expect(wrapper.text()).toContain('activity-navigation-read-only');
+        expect(wrapper.text()).not.toContain('activity-navigation-read-only');
         expect(wrapper.text()).toContain('activity-navigation-context-only');
         expect(
             wrapper

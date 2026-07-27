@@ -38,8 +38,8 @@ describe('Cockpit Pay Code Explorer foundation', () => {
             },
         });
 
-        expect(wrapper.element.tagName.toLowerCase()).toBe('details');
-        expect(wrapper.text()).toContain('Filter Details');
+        expect(wrapper.element.tagName.toLowerCase()).toBe('section');
+        expect(wrapper.text()).toContain('Filter metadata');
         expect(wrapper.text()).toContain('Read-only query criteria');
         expect(wrapper.text()).toContain(
             'Filtering uses normal GET navigation',
@@ -118,7 +118,8 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         ).toBe(true);
         expect(wrapper.text()).toContain('Pay Code Explorer');
         expect(wrapper.text()).toContain('Search');
-        expect(wrapper.text()).toContain('Filter Details');
+        expect(wrapper.text()).toContain('Explorer details');
+        expect(wrapper.text()).toContain('Filter metadata');
         expect(wrapper.text()).toContain('Results');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
             'Pay Codes',

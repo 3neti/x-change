@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TicketPlus } from 'lucide-vue-next';
+import { Activity, ArrowLeft, Megaphone, TicketPlus } from 'lucide-vue-next';
 import { computed } from 'vue';
 import CockpitPayCodeFilterBuilder from '../components/CockpitPayCodeFilterBuilder.vue';
 import CockpitPayCodeResultsTable from '../components/CockpitPayCodeResultsTable.vue';
@@ -241,13 +241,6 @@ const campaignNavigationContextItems = computed(() => {
         },
     ];
 });
-const campaignNavigationPrimaryItems = computed(() =>
-    campaignNavigationContextItems.value.filter((item) =>
-        ['planning-key', 'campaign-id', 'recipient-id', 'source'].includes(
-            item.key,
-        ),
-    ),
-);
 const campaignDashboardHref = computed(() => {
     const context = campaignNavigationContext.value;
 
@@ -689,73 +682,51 @@ function integrationBadge(
 
             <section
                 v-if="campaignNavigationContext"
-                class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5 text-sm text-sky-950 shadow-sm dark:border-sky-900 dark:from-sky-950/70 dark:to-slate-900 dark:text-sky-100"
+                class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950 shadow-sm dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"
                 data-testid="cockpit-campaign-navigation-context"
             >
                 <div
-                    class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-[0.2em] text-sky-700 uppercase dark:text-sky-300"
+                    <div class="flex min-w-0 items-center gap-3">
+                        <span
+                            class="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 ring-1 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800"
                         >
-                            Campaign Context
-                        </p>
-                        <h3 class="mt-2 text-xl font-semibold">
-                            Showing Pay Codes from a campaign view
-                        </h3>
-                        <p
-                            class="mt-2 max-w-3xl leading-6 text-sky-900/80 dark:text-sky-100/80"
-                        >
-                            Campaign identifiers are preserved so operators can
-                            inspect related Pay Codes and return to the campaign
-                            view. This page does not change campaigns, send
-                            messages, issue additional Pay Codes, write audit
-                            entries, call providers, or move money.
-                        </p>
+                            <Megaphone aria-hidden="true" class="size-4" />
+                        </span>
+                        <div class="min-w-0">
+                            <p class="font-semibold">Campaign filter active</p>
+                            <p
+                                class="truncate text-xs text-sky-800/80 dark:text-sky-200/80"
+                            >
+                                {{ campaignNavigationContext.planning_key }}
+                                · read-only context
+                            </p>
+                        </div>
                     </div>
-                    <span
-                        class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:ring-sky-800"
+                    <a
+                        :href="campaignDashboardHref"
+                        class="inline-flex h-9 w-fit items-center gap-2 rounded-full border border-sky-300 bg-white px-4 text-xs font-semibold text-sky-700 transition hover:bg-sky-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-100 dark:hover:bg-sky-900"
+                        data-testid="cockpit-campaign-navigation-dashboard-link"
                     >
-                        Read-only context
-                    </span>
+                        <ArrowLeft aria-hidden="true" class="size-4" />
+                        Return to campaign
+                    </a>
                 </div>
-
-                <dl
-                    class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-                    data-testid="cockpit-campaign-navigation-primary-context"
-                >
-                    <div
-                        v-for="item in campaignNavigationPrimaryItems"
-                        :key="item.key"
-                        class="rounded-xl bg-white/85 p-4 ring-1 ring-sky-100 dark:bg-sky-900/50 dark:ring-sky-800"
-                        data-testid="cockpit-campaign-navigation-primary-context-item"
-                    >
-                        <dt
-                            class="text-xs font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
-                        >
-                            {{ item.label }}
-                        </dt>
-                        <dd class="mt-1 font-semibold break-words">
-                            {{ item.value }}
-                        </dd>
-                    </div>
-                </dl>
-
                 <details
-                    class="mt-4 rounded-xl border border-sky-200 bg-white/70 p-4 dark:border-sky-800 dark:bg-sky-900/40"
+                    class="mt-3 border-t border-sky-200 pt-2 dark:border-sky-800"
                     data-testid="cockpit-campaign-navigation-context-details"
                 >
                     <summary
-                        class="cursor-pointer text-sm font-semibold text-sky-800 dark:text-sky-100"
+                        class="cursor-pointer text-xs font-semibold text-sky-800 dark:text-sky-100"
                     >
                         Campaign filter details
                     </summary>
-                    <dl class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         <div
                             v-for="item in campaignNavigationContextItems"
                             :key="item.key"
-                            class="rounded-lg bg-sky-50/80 p-3 dark:bg-sky-950/70"
+                            class="rounded-lg bg-white/80 px-3 py-2 dark:bg-sky-950/70"
                             data-testid="cockpit-campaign-navigation-context-item"
                         >
                             <dt
@@ -769,31 +740,80 @@ function integrationBadge(
                         </div>
                     </dl>
                 </details>
+            </section>
 
-                <div
-                    class="mt-5 flex flex-col gap-3 rounded-xl border border-sky-200 bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-sky-800 dark:bg-sky-900/40"
-                >
-                    <div>
+            <section
+                v-else-if="activityNavigationContext"
+                class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+                data-testid="cockpit-activity-navigation-context"
+            >
+                <div class="flex min-w-0 items-center gap-3">
+                    <span
+                        class="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800"
+                    >
+                        <Activity aria-hidden="true" class="size-4" />
+                    </span>
+                    <div class="min-w-0">
                         <p class="font-semibold">
-                            Campaign changes are disabled
+                            Opened from issuance activity
                         </p>
                         <p
-                            class="mt-1 leading-6 text-sky-900/80 dark:text-sky-100/80"
+                            class="truncate font-mono text-xs text-emerald-800/80 dark:text-emerald-200/80"
                         >
-                            Use this view for inspection and navigation only.
-                            Campaign edits, delivery, and bulk issuance remain
-                            outside Pay Code Explorer.
+                            {{ activityNavigationContext.code }}
                         </p>
                     </div>
-                    <a
-                        :href="campaignDashboardHref"
-                        class="inline-flex w-fit items-center rounded-full border border-sky-300 bg-white px-4 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-100 dark:hover:bg-sky-900"
-                        data-testid="cockpit-campaign-navigation-dashboard-link"
-                    >
-                        Return to Cockpit campaign view
-                    </a>
                 </div>
+                <details
+                    class="mt-3 border-t border-emerald-200 pt-2 dark:border-emerald-800"
+                    data-testid="cockpit-activity-navigation-context-details"
+                >
+                    <summary
+                        class="cursor-pointer text-xs font-semibold text-emerald-800 dark:text-emerald-100"
+                    >
+                        Activity context details
+                    </summary>
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                        <div
+                            v-for="item in [
+                                {
+                                    label: 'Pay Code',
+                                    value: activityNavigationContext.code,
+                                },
+                                {
+                                    label: 'Source',
+                                    value: activityNavigationContext.source,
+                                },
+                                {
+                                    label: 'Destination',
+                                    value: activityNavigationContext.destination,
+                                },
+                                {
+                                    label: 'Payload Policy',
+                                    value: activityNavigationContext.redactions
+                                        ?.payloads,
+                                },
+                            ]"
+                            :key="item.label"
+                            class="rounded-lg bg-white/80 px-3 py-2 dark:bg-emerald-950/70"
+                        >
+                            <dt
+                                class="text-xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
+                            >
+                                {{ item.label }}
+                            </dt>
+                            <dd class="mt-1 font-semibold break-words">
+                                {{ item.value }}
+                            </dd>
+                        </div>
+                    </dl>
+                </details>
             </section>
+
+            <CockpitPayCodeResultsTable
+                :records="records"
+                :actions="cockpitPayCodeRowActions"
+            />
 
             <details
                 class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -807,13 +827,13 @@ function integrationBadge(
                             <p
                                 class="text-sm font-semibold text-slate-800 dark:text-slate-200"
                             >
-                                Page details
+                                Explorer details
                             </p>
                             <p
                                 class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Read-only rules, totals, and connected-service
-                                context.
+                                Filter metadata, read-model boundaries, and
+                                technical context.
                             </p>
                         </div>
                         <span
@@ -1152,76 +1172,10 @@ function integrationBadge(
                             </article>
                         </div>
                     </details>
+
+                    <CockpitPayCodeFilterBuilder :filters="filters" />
                 </div>
             </details>
-
-            <div
-                v-if="activityNavigationContext"
-                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
-                data-testid="cockpit-activity-navigation-context"
-            >
-                <p
-                    class="text-xs font-semibold tracking-[0.2em] text-emerald-700 uppercase dark:text-emerald-300"
-                >
-                    Activity navigation context
-                </p>
-                <div class="mt-3 grid gap-3 md:grid-cols-4">
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
-                        >
-                            Pay Code
-                        </p>
-                        <p class="mt-1 font-semibold">
-                            {{ activityNavigationContext.code }}
-                        </p>
-                    </div>
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
-                        >
-                            Source
-                        </p>
-                        <p class="mt-1 font-semibold">
-                            {{ activityNavigationContext.source }}
-                        </p>
-                    </div>
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
-                        >
-                            Destination
-                        </p>
-                        <p class="mt-1 font-semibold">
-                            {{ activityNavigationContext.destination }}
-                        </p>
-                    </div>
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
-                        >
-                            Payload policy
-                        </p>
-                        <p class="mt-1 font-semibold">
-                            {{ activityNavigationContext.redactions?.payloads }}
-                        </p>
-                    </div>
-                </div>
-                <div
-                    class="mt-4 rounded-lg border border-emerald-200 bg-white/60 px-3 py-3 dark:border-emerald-800 dark:bg-emerald-900/40"
-                >
-                    <p class="font-semibold">Mutation blocked</p>
-                    <p class="mt-1">
-                        {{ activityNavigationContext.mutation?.reason }}
-                    </p>
-                </div>
-            </div>
-
-            <CockpitPayCodeFilterBuilder :filters="filters" />
-            <CockpitPayCodeResultsTable
-                :records="records"
-                :actions="cockpitPayCodeRowActions"
-            />
         </section>
     </CockpitLayout>
 </template>
