@@ -10,6 +10,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 
 const props = withDefaults(
@@ -28,6 +29,7 @@ const props = withDefaults(
         riderDesignDocument?: string;
         claimUrl?: string | null;
         detailUrl?: string | null;
+        costEstimate?: PayCodeCostEstimate | null;
     }>(),
     {
         code: null,
@@ -39,6 +41,7 @@ const props = withDefaults(
         riderDesignDocument: '',
         claimUrl: null,
         detailUrl: null,
+        costEstimate: null,
     },
 );
 
@@ -242,6 +245,7 @@ async function copyClaimLink(): Promise<void> {
                         :issued-code="code"
                         :has-rider-design="hasRiderDesign"
                         :rider-design-document="riderDesignDocument"
+                        :cost-estimate="costEstimate"
                         presentation="finalized"
                     />
 

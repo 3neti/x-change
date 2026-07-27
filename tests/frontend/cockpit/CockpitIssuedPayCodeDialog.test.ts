@@ -36,6 +36,22 @@ describe('issued Pay Code dialog', () => {
                 voucherType: 'redeemable',
                 expiry: '1 day',
                 instructionLabels: ['Mobile Required', 'OTP Required'],
+                costEstimate: {
+                    currency: 'PHP',
+                    charges: [
+                        {
+                            label: 'Pay Code Generation',
+                            type: 'generation',
+                            price: 12,
+                        },
+                        {
+                            label: 'Selfie Verification',
+                            type: 'selfie',
+                            price: 5,
+                        },
+                    ],
+                    total: 17,
+                },
                 claimUrl: 'https://example.test/x/claim/PAY-READY-7/experience',
                 detailUrl: '/x/cockpit/pay-codes/PAY-READY-7',
             },
@@ -86,7 +102,12 @@ describe('issued Pay Code dialog', () => {
                 .get('[data-testid="cockpit-pay-code-canvas-back"]')
                 .isVisible(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Ready to share');
+        expect(wrapper.text()).toContain('Issue Cost');
+        expect(wrapper.text()).toContain('Pay Code Generation');
+        expect(wrapper.text()).toContain('₱12.00');
+        expect(wrapper.text()).toContain('Selfie Verification');
+        expect(wrapper.text()).toContain('₱5.00');
+        expect(wrapper.text()).toContain('₱17.00');
 
         await wrapper
             .get('[data-testid="cockpit-issued-pay-code-copy"]')
@@ -143,6 +164,17 @@ describe('issued Pay Code dialog', () => {
                 status: 'issued',
                 result: {
                     code: 'PAY-MODAL-1',
+                    issue_cost: {
+                        currency: 'PHP',
+                        charges: [
+                            {
+                                label: 'Pay Code Generation',
+                                type: 'generation',
+                                price: 12,
+                            },
+                        ],
+                        total: 12,
+                    },
                     links: {
                         redeem: 'https://example.test/x/claim/PAY-MODAL-1/experience',
                         redeem_path: '/x/claim/PAY-MODAL-1/experience',
@@ -191,5 +223,16 @@ describe('issued Pay Code dialog', () => {
                 .get('[data-testid="cockpit-issued-pay-code-detail"]')
                 .attributes('href'),
         ).toBe('/x/cockpit/pay-codes/PAY-MODAL-1');
+
+        await wrapper
+            .findAll('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .at(-1)
+            ?.trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-dialog"]')
+                .text(),
+        ).toContain('₱12.00');
     });
 });

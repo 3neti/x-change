@@ -17,6 +17,7 @@ import type {
     CockpitQuickGenerateTemplate,
 } from '../types';
 import { usePayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
+import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import {
     buildRiderOgPreviewDocument,
     buildRiderSplashContent,
@@ -1395,6 +1396,12 @@ const pricingPreflight =
             dataGet(lastResponse.value, ['preflight', 'pricing']),
         ) as CockpitQuickGenerateRuntimePricingPreflight | null;
     });
+
+const issuedCostEstimate = computed<PayCodeCostEstimate | null>(() => {
+    return objectValue(
+        dataGet(lastResponse.value, ['result', 'issue_cost']),
+    ) as PayCodeCostEstimate | null;
+});
 
 const fundingPreflight =
     computed<CockpitQuickGenerateRuntimeFundingPreflight | null>(() => {
@@ -3554,6 +3561,7 @@ function instructionRecord(
             :instruction-labels="canvasInstructionLabels"
             :has-rider-design="hasRiderOgDesign"
             :rider-design-document="riderOgPreviewDocument"
+            :cost-estimate="issuedCostEstimate"
             :claim-url="beneficiaryClaimUrl"
             :detail-url="cockpitDetailUrl"
             @close="issuedPayCodeDialogOpen = false"

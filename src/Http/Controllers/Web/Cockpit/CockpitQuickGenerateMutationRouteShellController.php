@@ -16,6 +16,7 @@ use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftValidationResultData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
+use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
@@ -214,7 +215,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'wallet' => 'excluded',
                 'debit' => 'excluded',
                 'allocations' => 'excluded',
-                'cost' => 'excluded',
+                'cost' => 'sanitized-issue-cost-only',
                 'raw_payload' => 'excluded',
             ],
             'next_step' => 'Draft next Cockpit mutation wave before adding more write behavior.',
@@ -308,6 +309,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             'code' => $result->code,
             'amount' => $result->amount,
             'currency' => $result->currency,
+            'issue_cost' => $this->operatorSafeIssueCost($result->cost),
             'claim' => [
                 'outcome' => $claimOutcome,
                 'label' => $claimOutcome === 'account_funding'
@@ -326,6 +328,61 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     ? route('x-change.cockpit.pay-codes.distribution', ['code' => $result->code], false)
                     : null,
             ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *     currency: string,
+     *     base_fee: float,
+     *     components: array<string, float>,
+     *     charges: list<array{
+     *         label: string,
+     *         type: string|null,
+     *         quantity: float|null,
+     *         price: float,
+     *         currency: string
+     *     }>,
+     *     total: float
+     * }
+     */
+    protected function operatorSafeIssueCost(PricingEstimateData $cost): array
+    {
+        $components = collect($cost->components)
+            ->filter(static fn (mixed $amount, mixed $key): bool => is_string($key) && is_numeric($amount))
+            ->map(static fn (mixed $amount): float => (float) $amount)
+            ->all();
+
+        $charges = collect($cost->charges)
+            ->filter(static fn (mixed $charge): bool => is_array($charge))
+            ->map(function (array $charge) use ($cost): ?array {
+                $label = $this->stringValue(data_get($charge, 'label'));
+                $price = data_get($charge, 'price', data_get($charge, 'amount', data_get($charge, 'total')));
+
+                if ($label === null || ! is_numeric($price)) {
+                    return null;
+                }
+
+                $quantity = data_get($charge, 'quantity');
+
+                return [
+                    'label' => $label,
+                    'type' => $this->stringValue(data_get($charge, 'type')),
+                    'quantity' => is_numeric($quantity) ? (float) $quantity : null,
+                    'price' => (float) $price,
+                    'currency' => $this->stringValue(data_get($charge, 'currency')) ?? $cost->currency,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return [
+            'currency' => $cost->currency,
+            'base_fee' => $cost->base_fee,
+            'components' => $components,
+            'charges' => $charges,
+            'total' => $cost->total,
         ];
     }
 
