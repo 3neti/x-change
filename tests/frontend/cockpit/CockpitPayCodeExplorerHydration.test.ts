@@ -1,5 +1,6 @@
+import { router } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import PayCodeExplorer from '../../../resources/js/cockpit/pages/PayCodeExplorer.vue';
 import PayCodeExplorerRouteAdapter from '../../../resources/js/pages/x-change/cockpit/PayCodeExplorer.vue';
 
@@ -41,6 +42,27 @@ const payCodesReadModel = {
             label: 'Redeemed',
             value: 'redeemed',
             active: true,
+            read_only: true,
+        },
+        {
+            key: 'status',
+            label: 'Locked',
+            value: 'locked',
+            active: false,
+            read_only: true,
+        },
+        {
+            key: 'status',
+            label: 'Cancelled',
+            value: 'cancelled',
+            active: false,
+            read_only: true,
+        },
+        {
+            key: 'status',
+            label: 'Closed',
+            value: 'closed',
+            active: false,
             read_only: true,
         },
     ],
@@ -221,6 +243,49 @@ describe('Cockpit Pay Code Explorer hydration', () => {
                 .find('[data-testid="cockpit-pay-code-clear-filters"]')
                 .text(),
         ).toBe('Clear');
+        expect(status.text()).toContain('Locked');
+        expect(status.text()).toContain('Cancelled');
+        expect(status.text()).toContain('Closed');
+    });
+
+    it('applies status changes immediately while text search remains explicit', async () => {
+        const routerGet = vi
+            .spyOn(router, 'get')
+            .mockImplementation(() => undefined);
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+        const search = wrapper.find(
+            '[data-testid="cockpit-pay-code-search-input"]',
+        );
+        const status = wrapper.find(
+            '[data-testid="cockpit-pay-code-status-filter"]',
+        );
+
+        await search.setValue('PC-CHANGED');
+
+        expect(routerGet).not.toHaveBeenCalled();
+
+        await status.setValue('locked');
+
+        expect(routerGet).toHaveBeenCalledOnce();
+        expect(routerGet).toHaveBeenCalledWith(
+            '/x/cockpit/pay-codes',
+            {
+                search: 'PC-CHANGED',
+                status: 'locked',
+            },
+            expect.objectContaining({
+                only: ['pay_codes_read_model'],
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            }),
+        );
+
+        routerGet.mockRestore();
     });
 
     it('renders pay code explorer functional parity stats from the read model', () => {

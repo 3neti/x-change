@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import CockpitPayCodeExplorerPageController from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeExplorerPageController';
+import { router } from '@inertiajs/vue3';
 import { Search, X } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { CockpitPayCodeExplorerFilter } from '../types';
 
 const props = defineProps<{
@@ -13,6 +15,10 @@ const props = defineProps<{
     }>;
     clearHref?: string;
 }>();
+
+const searchInput = ref<HTMLInputElement | null>(null);
+const isFilteringStatus = ref(false);
+const searchForm = CockpitPayCodeExplorerPageController.form();
 
 const statusOptions = computed(() => {
     const options = (props.filters ?? []).filter(
@@ -53,6 +59,47 @@ const activeFilters = computed(() => {
 
     return filters;
 });
+
+function applyStatusFilter(event: Event): void {
+    const select = event.target;
+
+    if (!(select instanceof HTMLSelectElement)) {
+        return;
+    }
+
+    const data: Record<string, string> = {};
+    const search = (searchInput.value?.value ?? props.query ?? '').trim();
+
+    if (search !== '') {
+        data.search = search;
+    }
+
+    if (select.value !== 'all') {
+        data.status = select.value;
+    }
+
+    for (const field of props.hiddenFields ?? []) {
+        const name = field.name.trim();
+        const value = field.value.trim();
+
+        if (name !== '' && value !== '') {
+            data[name] = value;
+        }
+    }
+
+    router.get(CockpitPayCodeExplorerPageController.url(), data, {
+        only: ['pay_codes_read_model'],
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        onStart: () => {
+            isFilteringStatus.value = true;
+        },
+        onFinish: () => {
+            isFilteringStatus.value = false;
+        },
+    });
+}
 </script>
 
 <template>
@@ -62,9 +109,9 @@ const activeFilters = computed(() => {
     >
         <h2 class="sr-only">Search Pay Codes</h2>
         <form
-            action="/x/cockpit/pay-codes"
+            :action="searchForm.action"
             class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_12rem_auto_auto] lg:items-center"
-            method="get"
+            :method="searchForm.method"
         >
             <input
                 v-for="field in hiddenFields ?? []"
@@ -77,6 +124,7 @@ const activeFilters = computed(() => {
             <label class="block">
                 <span class="sr-only">Search Pay Codes</span>
                 <input
+                    ref="searchInput"
                     :value="query ?? ''"
                     name="search"
                     type="search"
@@ -89,9 +137,12 @@ const activeFilters = computed(() => {
                 <span class="sr-only">Filter by status</span>
                 <select
                     :value="statusFilter ?? 'all'"
+                    :aria-busy="isFilteringStatus"
+                    :disabled="isFilteringStatus"
                     name="status"
-                    class="h-9 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
+                    class="h-9 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:cursor-wait disabled:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
                     data-testid="cockpit-pay-code-status-filter"
+                    @change="applyStatusFilter"
                 >
                     <option
                         v-for="option in statusOptions"
@@ -102,6 +153,13 @@ const activeFilters = computed(() => {
                         {{ option.label }}
                     </option>
                 </select>
+                <span class="sr-only" aria-live="polite">
+                    {{
+                        isFilteringStatus
+                            ? 'Applying status filter'
+                            : 'Status filter ready'
+                    }}
+                </span>
             </label>
             <button
                 type="submit"

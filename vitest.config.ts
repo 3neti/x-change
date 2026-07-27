@@ -72,6 +72,11 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/useRiderStagePhase.ts',
             ),
+            '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeExplorerPageController':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/cockpit-pay-code-explorer-route.ts',
+                ),
             '@/routes/x-change/cockpit/funding/intents/instructions':
                 path.resolve(
                     __dirname,
