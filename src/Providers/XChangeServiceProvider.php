@@ -114,6 +114,7 @@ use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRetentionPolicyCo
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
+use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
@@ -218,6 +219,7 @@ use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRecord
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
+use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
@@ -415,6 +417,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->registerFundingAccountServices();
         $this->registerIntegrations();
         $this->registerServiceContracts();
+        $this->registerCockpitTreasuryAccess();
         $this->registerFundingDestinationResolver();
         $this->registerMinimumWithdrawalPolicyResolver();
         $this->registerIntegrationContracts();
@@ -1240,6 +1243,21 @@ class XChangeServiceProvider extends ServiceProvider
                 return $app->make('x-change.services.minimum_withdrawal_policy');
             });
         }
+    }
+
+    protected function registerCockpitTreasuryAccess(): void
+    {
+        if ($this->app->bound(CockpitTreasuryAccessContract::class)) {
+            return;
+        }
+
+        $this->app->singleton(
+            CockpitTreasuryAccessContract::class,
+            fn ($app) => $app->make(config(
+                'x-change.services.cockpit_treasury_access',
+                SystemPrincipalCockpitTreasuryAccess::class,
+            )),
+        );
     }
 
     protected function registerFundingDestinationResolver(): void

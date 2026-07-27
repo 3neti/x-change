@@ -6,6 +6,8 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Auth\Access\AuthorizationException;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
+use LBHurtado\XChange\Providers\XChangeServiceProvider;
+use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('binds Treasury Cockpit access to the resolved system principal', function () {
@@ -69,4 +71,22 @@ it('fails closed when the system principal cannot be resolved', function () {
             AuthorizationException::class,
             'Treasury reconciliation controls are restricted to System Treasury.',
         );
+});
+
+it('registers a fallback binding when published host config is stale', function () {
+    config()->set('x-change.services', []);
+    config()->set('x-change.service_contracts', []);
+
+    app()->offsetUnset(CockpitTreasuryAccessContract::class);
+    app()->forgetInstance(CockpitTreasuryAccessContract::class);
+
+    $method = new ReflectionMethod(
+        XChangeServiceProvider::class,
+        'registerCockpitTreasuryAccess',
+    );
+    $method->setAccessible(true);
+    $method->invoke(new XChangeServiceProvider(app()));
+
+    expect(app(CockpitTreasuryAccessContract::class))
+        ->toBeInstanceOf(SystemPrincipalCockpitTreasuryAccess::class);
 });
