@@ -5,16 +5,20 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Event;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\XChange\Actions\Funding\CheckFundingRequestTransfer;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
+use LBHurtado\XChange\Enums\FundingTransferWindow;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Events\FundingRequestChanged;
+use LBHurtado\XChange\Models\FundingRequestTransferMatch;
 use LBHurtado\XChange\Models\VoucherCollection;
 
-it('credits an exact provider-observed bank transfer once through the PAYABLE collection engine', function () {
+it('credits one recent exact amount and time match without trusting the sender reference', function () {
+    $this->travelTo(new DateTimeImmutable('2026-07-27T21:15:00+08:00'));
     Event::fake([
         FundingProjectionChanged::class,
         FundingRequestChanged::class,
@@ -35,9 +39,12 @@ it('credits an exact provider-observed bank transfer once through the PAYABLE co
             currency: 'PHP',
             description: 'InstaPay transfer to the configured NetBank account.',
             idempotencyKey: 'provider-funding-request-250-1001',
-            externalReference: '026208691236',
+            externalReference: 'SENDER-VISIBLE-REFERENCE',
+            transferWindow: FundingTransferWindow::Recent,
         ),
     );
+
+    expect($request->voucher->state)->toBe(VoucherState::LOCKED);
 
     $pending = app(CheckFundingRequestTransfer::class)->handle($request);
 
@@ -57,7 +64,7 @@ it('credits an exact provider-observed bank transfer once through the PAYABLE co
             providerStatus: 'settled',
             verificationSource: 'netbank-corporate-transaction-history',
             payloadHash: hash('sha256', 'provider-funding-request-250-1001'),
-            providerOperationId: '026208691236',
+            providerOperationId: 'NETBANK-OPERATION-250-1001',
             occurredAt: new DateTimeImmutable('2026-07-27T21:10:00+08:00'),
             settledAt: new DateTimeImmutable('2026-07-27T21:10:00+08:00'),
             metadata: [
@@ -83,6 +90,128 @@ it('credits an exact provider-observed bank transfer once through the PAYABLE co
         ->toBe('x_change_provider_funding')
         ->and(VoucherCollection::query()->sole()->provider_transaction_id)
         ->toBe('NETBANK-INBOUND-250-1001')
+        ->and(FundingRequestTransferMatch::query()->sole()->status)
+        ->toBe('credited')
         ->and((int) treasuryClientFundsLedger($requester)->balance)
         ->toBe(25_000);
+
+    $this->travelBack();
+});
+
+it('reserves an older exact transfer for approval without crediting the Account', function () {
+    $this->travelTo(new DateTimeImmutable('2026-07-27T21:30:00+08:00'));
+    enableNetbankTreasuryForTests();
+    $requester = actingAsTestUser(0);
+    config()->set(
+        'x-change.funding.standing_addresses.creditable_provider_statuses',
+        ['settled'],
+    );
+    config()->set(
+        'x-change.funding.requests.bank_transfer.automatic_credit_window_minutes',
+        10,
+    );
+    $request = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$requester->wallet->uuid,
+            requesterType: $requester::class,
+            requesterId: (string) $requester->getKey(),
+            fundingType: FundingRequestType::BankTransfer,
+            requestedValueMinor: 30_000,
+            currency: 'PHP',
+            description: 'Older InstaPay transfer to the configured NetBank account.',
+            idempotencyKey: 'provider-funding-request-300-older',
+            externalReference: 'AUDIT-ONLY-REFERENCE',
+            transferWindow: FundingTransferWindow::LastHour,
+        ),
+    );
+    app(RecordProviderFundingObservation::class)->handle(
+        new ProviderFundingObservationData(
+            provider: 'netbank',
+            providerTransactionId: 'NETBANK-INBOUND-300-OLDER',
+            grossAmountMinor: 30_000,
+            feeAmountMinor: 0,
+            netAmountMinor: 30_000,
+            currency: 'PHP',
+            providerStatus: 'settled',
+            verificationSource: 'netbank-corporate-transaction-history',
+            payloadHash: hash('sha256', 'provider-funding-request-300-older'),
+            occurredAt: new DateTimeImmutable('2026-07-27T21:00:00+08:00'),
+            settledAt: new DateTimeImmutable('2026-07-27T21:00:00+08:00'),
+            metadata: [
+                'destination_verified' => true,
+                'connection_reference' => 'netbank-primary',
+            ],
+        ),
+    );
+
+    $result = app(CheckFundingRequestTransfer::class)->handle($request);
+    $replay = app(CheckFundingRequestTransfer::class)
+        ->handle($request->refresh());
+
+    expect($result->status)->toBe('approval_required')
+        ->and($result->credited)->toBeFalse()
+        ->and($replay->status)->toBe('approval_required')
+        ->and($request->refresh()->status)
+        ->toBe(FundingRequestStatus::AwaitingApproval)
+        ->and($request->voucher->refresh()->state)->toBe(VoucherState::LOCKED)
+        ->and(FundingRequestTransferMatch::query()->sole()->status)
+        ->toBe('awaiting_approval')
+        ->and(VoucherCollection::query()->count())->toBe(0)
+        ->and((int) $requester->wallet->fresh()->balance)->toBe(0);
+
+    $this->travelBack();
+});
+
+it('uses the configured automatic credit freshness limit', function () {
+    $this->travelTo(new DateTimeImmutable('2026-07-27T21:30:00+08:00'));
+    enableNetbankTreasuryForTests();
+    $requester = actingAsTestUser(0);
+    config()->set(
+        'x-change.funding.standing_addresses.creditable_provider_statuses',
+        ['settled'],
+    );
+    config()->set(
+        'x-change.funding.requests.bank_transfer.automatic_credit_window_minutes',
+        15,
+    );
+    $request = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$requester->wallet->uuid,
+            requesterType: $requester::class,
+            requesterId: (string) $requester->getKey(),
+            fundingType: FundingRequestType::BankTransfer,
+            requestedValueMinor: 12_300,
+            currency: 'PHP',
+            description: 'Configured freshness window transfer.',
+            idempotencyKey: 'provider-funding-request-configured-window',
+            transferWindow: FundingTransferWindow::Recent,
+        ),
+    );
+    app(RecordProviderFundingObservation::class)->handle(
+        new ProviderFundingObservationData(
+            provider: 'netbank',
+            providerTransactionId: 'NETBANK-INBOUND-CONFIGURED-WINDOW',
+            grossAmountMinor: 12_300,
+            feeAmountMinor: 0,
+            netAmountMinor: 12_300,
+            currency: 'PHP',
+            providerStatus: 'settled',
+            verificationSource: 'netbank-corporate-transaction-history',
+            payloadHash: hash('sha256', 'provider-funding-request-configured-window'),
+            occurredAt: new DateTimeImmutable('2026-07-27T21:18:00+08:00'),
+            settledAt: new DateTimeImmutable('2026-07-27T21:18:00+08:00'),
+            metadata: [
+                'destination_verified' => true,
+                'connection_reference' => 'netbank-primary',
+            ],
+        ),
+    );
+
+    $result = app(CheckFundingRequestTransfer::class)->handle($request);
+
+    expect($result->status)->toBe('credited')
+        ->and((int) treasuryClientFundsLedger($requester)->balance)
+        ->toBe(12_300);
+
+    $this->travelBack();
 });

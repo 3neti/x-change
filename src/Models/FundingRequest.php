@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
@@ -77,5 +78,10 @@ class FundingRequest extends Model
     public function notices(): HasMany
     {
         return $this->hasMany(FundingRequestNotice::class);
+    }
+
+    public function transferMatch(): HasOne
+    {
+        return $this->hasOne(FundingRequestTransferMatch::class);
     }
 }

@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
+use LBHurtado\XChange\Enums\FundingTransferWindow;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use RuntimeException;
@@ -34,6 +35,9 @@ final class CreateFundingRequest
         }
 
         $currency = mb_strtoupper(trim($data->currency));
+        $transferWindow = $data->fundingType === FundingRequestType::BankTransfer
+            ? ($data->transferWindow ?? FundingTransferWindow::Recent)
+            : null;
         $idempotencyHash = hash('sha256', implode("\0", [
             $data->requesterType,
             $data->requesterId,
@@ -44,6 +48,7 @@ final class CreateFundingRequest
             'funding_type' => $data->fundingType->value,
             'requested_value_minor' => $data->requestedValueMinor,
             'currency' => $currency,
+            'transfer_window' => $transferWindow?->value,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
 
         try {
@@ -52,6 +57,7 @@ final class CreateFundingRequest
                 $currency,
                 $idempotencyHash,
                 $fingerprint,
+                $transferWindow,
             ): FundingRequest {
                 $request = FundingRequest::query()->create([
                     'account_reference' => trim($data->accountReference),
@@ -72,6 +78,7 @@ final class CreateFundingRequest
                     'metadata' => [
                         'attachments_enabled' => false,
                         'monetary_authority' => 'independent_backing_verification_only',
+                        'transfer_window' => $transferWindow?->value,
                     ],
                 ]);
 
@@ -162,9 +169,7 @@ final class CreateFundingRequest
                         ],
                     ],
                     expiresAt: $expiresAt,
-                    initialState: $isProviderVerifiableTransfer
-                        ? VoucherState::ACTIVE
-                        : VoucherState::LOCKED,
+                    initialState: VoucherState::LOCKED,
                 );
                 $envelope = $voucher->createEnvelope(
                     driverId: (string) config(
@@ -198,6 +203,8 @@ final class CreateFundingRequest
                         'monetary_authority' => 'independent_backing_verification_only',
                         'settlement_envelope_id' => $envelope->getKey(),
                         'provider_verification_enabled' => $isProviderVerifiableTransfer,
+                        'transfer_window' => $transferWindow?->value,
+                        'sender_reference_authority' => false,
                     ],
                 ])->saveQuietly();
                 $this->workflow->submitted($request->refresh());

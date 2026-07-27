@@ -38,7 +38,7 @@ it('records a user assertion without changing Client Funds', function () {
         ->and($request->voucher)->not->toBeNull()
         ->and($request->voucher->owner->is($requester))->toBeTrue()
         ->and($request->voucher->voucher_type)->toBe(VoucherType::PAYABLE)
-        ->and($request->voucher->state)->toBe(VoucherState::ACTIVE)
+        ->and($request->voucher->state)->toBe(VoucherState::LOCKED)
         ->and($request->voucher->instructions->cash->amount)->toBe(0.0)
         ->and($request->voucher->instructions->target_amount)->toBe(20_000.0)
         ->and($request->voucher->instructions->execution?->driver)

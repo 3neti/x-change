@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Data\Funding;
 
 use DateTimeImmutable;
 use LBHurtado\XChange\Enums\FundingRequestType;
+use LBHurtado\XChange\Enums\FundingTransferWindow;
 use Spatie\LaravelData\Data;
 
 final class CreateFundingRequestData extends Data
@@ -22,5 +23,6 @@ final class CreateFundingRequestData extends Data
         public readonly ?string $externalReference = null,
         public readonly ?DateTimeImmutable $occurredOn = null,
         public readonly ?string $requesterNotes = null,
+        public readonly ?FundingTransferWindow $transferWindow = null,
     ) {}
 }

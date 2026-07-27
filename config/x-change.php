@@ -650,6 +650,24 @@ return [
                     'XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE',
                     'provider_verified_auto',
                 ),
+                'automatic_credit_window_minutes' => max(
+                    1,
+                    (int) env(
+                        'XCHANGE_FUNDING_BANK_TRANSFER_AUTO_CREDIT_WINDOW_MINUTES',
+                        10,
+                    ),
+                ),
+                'clock_skew_seconds' => max(
+                    0,
+                    (int) env(
+                        'XCHANGE_FUNDING_BANK_TRANSFER_CLOCK_SKEW_SECONDS',
+                        120,
+                    ),
+                ),
+                'older_match_policy' => env(
+                    'XCHANGE_FUNDING_BANK_TRANSFER_OLDER_MATCH_POLICY',
+                    'manual_approval',
+                ),
                 'check_middleware' => [
                     'throttle:6,1',
                 ],
