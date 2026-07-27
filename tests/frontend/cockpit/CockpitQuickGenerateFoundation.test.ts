@@ -60,6 +60,22 @@ describe('Cockpit Quick Generate foundation', () => {
                 hasRiderDesign: true,
                 riderDesignDocument:
                     '<!doctype html><html><body><h1>Family support</h1></body></html>',
+                costEstimate: {
+                    currency: 'PHP',
+                    charges: [
+                        {
+                            catalog_item_reference: 'cash.amount',
+                            label: 'Pay Code Generation',
+                            price: 12,
+                        },
+                        {
+                            catalog_item_reference: 'inputs.fields.selfie',
+                            label: 'Selfie Verification',
+                            price: 5,
+                        },
+                    ],
+                    total: 17,
+                },
             },
         });
 
@@ -89,14 +105,25 @@ describe('Cockpit Quick Generate foundation', () => {
             .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
             .trigger('click');
 
-        expect(wrapper.text()).toContain('Claim this Pay Code');
+        expect(wrapper.text()).toContain('Estimated Issue Cost');
+        expect(wrapper.text()).toContain('Pay Code Generation');
+        expect(wrapper.text()).toContain('₱12.00');
+        expect(wrapper.text()).toContain('Selfie Verification');
+        expect(wrapper.text()).toContain('₱5.00');
+        expect(wrapper.text()).toContain('Total');
+        expect(wrapper.text()).toContain('₱17.00');
         expect(wrapper.text()).toContain('Mobile verified');
         expect(wrapper.text()).toContain('OTP');
         expect(
             wrapper
                 .find('[aria-label="Claim QR appears after issue"]')
                 .exists(),
-        ).toBe(true);
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-cost-ledger"]')
+                .classes(),
+        ).toContain('grid-cols-[minmax(0,1fr)_auto]');
     });
 
     it('renders template selector placeholders as institutional products', () => {

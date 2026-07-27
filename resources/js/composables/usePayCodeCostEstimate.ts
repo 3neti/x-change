@@ -59,7 +59,7 @@ export function usePayCodeCostEstimate(
     function scheduleEstimate(): void {
         clearEstimateTimer();
 
-        if (!canEstimate.value) {
+        if (typeof window === 'undefined' || !canEstimate.value) {
             estimateAbortController?.abort();
             estimate.value = null;
             estimateError.value = null;
@@ -74,7 +74,7 @@ export function usePayCodeCostEstimate(
     }
 
     async function refreshEstimate(): Promise<void> {
-        if (!canEstimate.value) {
+        if (typeof window === 'undefined' || !canEstimate.value) {
             return;
         }
 

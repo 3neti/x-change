@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import {
     ArrowLeftRight,
-    BadgeCheck,
-    ScanLine,
+    ReceiptText,
     ShieldCheck,
     UserRound,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import type {
+    PayCodeCostCharge,
+    PayCodeCostEstimate,
+} from '../../composables/usePayCodeCostEstimate';
 
 const props = withDefaults(
     defineProps<{
@@ -22,6 +25,9 @@ const props = withDefaults(
         hasRiderDesign?: boolean;
         riderDesignDocument?: string;
         presentation?: 'live' | 'finalized';
+        costEstimate?: PayCodeCostEstimate | null;
+        costLoading?: boolean;
+        costError?: string | null;
     }>(),
     {
         recipient: '',
@@ -32,6 +38,9 @@ const props = withDefaults(
         hasRiderDesign: false,
         riderDesignDocument: '',
         presentation: 'live',
+        costEstimate: null,
+        costLoading: false,
+        costError: null,
     },
 );
 
@@ -83,6 +92,162 @@ const capabilityLabel = computed<string>(() => {
 const displayedCode = computed<string>(() => {
     return props.issuedCode?.trim() || 'PAY CODE PREVIEW';
 });
+
+const costCurrency = computed<string>(() => {
+    return props.costEstimate?.currency?.trim() || props.currency || 'PHP';
+});
+
+const costLineItems = computed<
+    Array<{ key: string; label: string; amount: number }>
+>(() => {
+    const chargeItems = (props.costEstimate?.charges ?? [])
+        .map((charge, index) => costChargeLine(charge, index))
+        .filter(
+            (item): item is { key: string; label: string; amount: number } =>
+                item !== null,
+        );
+
+    if (chargeItems.length > 0) {
+        return chargeItems;
+    }
+
+    const items: Array<{ key: string; label: string; amount: number }> = [];
+    const baseFee = normalizedCost(props.costEstimate?.base_fee);
+
+    if (baseFee > 0) {
+        items.push({
+            key: 'base-fee',
+            label: 'Pay Code Generation',
+            amount: baseFee,
+        });
+    }
+
+    Object.entries(props.costEstimate?.components ?? {}).forEach(
+        ([key, value]) => {
+            const amount = normalizedCost(value);
+
+            if (amount <= 0 || (key === 'base' && baseFee > 0)) {
+                return;
+            }
+
+            items.push({
+                key,
+                label: costComponentLabel(key),
+                amount,
+            });
+        },
+    );
+
+    return items;
+});
+
+const costTotal = computed<number | null>(() => {
+    const total = normalizedOptionalCost(props.costEstimate?.total);
+
+    if (total !== null) {
+        return total;
+    }
+
+    if (props.costEstimate === null) {
+        return null;
+    }
+
+    return costLineItems.value.reduce((sum, item) => sum + item.amount, 0);
+});
+
+const hasCostEstimate = computed<boolean>(() => {
+    return props.costEstimate !== null && costTotal.value !== null;
+});
+
+function costChargeLine(
+    charge: PayCodeCostCharge,
+    index: number,
+): { key: string; label: string; amount: number } | null {
+    const amount = normalizedCost(
+        charge.price ?? charge.amount ?? charge.total ?? charge.fee,
+    );
+
+    if (amount <= 0) {
+        return null;
+    }
+
+    const reference =
+        stringValue(charge.catalog_item_reference) ??
+        stringValue(charge.type) ??
+        `charge-${index + 1}`;
+
+    return {
+        key: `${reference}-${index}`,
+        label: stringValue(charge.label) ?? costComponentLabel(reference),
+        amount,
+    };
+}
+
+function costComponentLabel(key: string): string {
+    const labels: Record<string, string> = {
+        base: 'Pay Code Generation',
+        cash: 'Pay Code Generation',
+        generation: 'Pay Code Generation',
+        kyc: 'Identity Verification',
+        otp: 'One-Time Passcode',
+        selfie: 'Selfie Verification',
+        signature: 'Signature',
+        location: 'Location Verification',
+        webhook: 'Webhook Update',
+        email_feedback: 'Email Update',
+        sms_feedback: 'SMS Update',
+        rider: 'Claim Experience',
+        validation: 'Validation',
+        input_fields: 'Claim Requirements',
+    };
+
+    return (
+        labels[key] ??
+        key
+            .replace(/[._-]+/g, ' ')
+            .replace(/\b\w/g, (character) => character.toUpperCase())
+    );
+}
+
+function formattedCost(value: number): string {
+    try {
+        return new Intl.NumberFormat('en-PH', {
+            style: 'currency',
+            currency: costCurrency.value,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(value);
+    } catch {
+        return `${costCurrency.value} ${value.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}`;
+    }
+}
+
+function normalizedCost(value: unknown): number {
+    return normalizedOptionalCost(value) ?? 0;
+}
+
+function normalizedOptionalCost(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    const normalized = Number(value);
+
+    return Number.isFinite(normalized) ? normalized : null;
+}
+
+function stringValue(value: unknown): string | null {
+    if (typeof value !== 'string') {
+        return null;
+    }
+
+    const normalized = value.trim();
+
+    return normalized === '' ? null : normalized;
+}
 </script>
 
 <template>
@@ -292,64 +457,109 @@ const displayedCode = computed<string>(() => {
             class="relative aspect-[1.72/1] min-h-56 overflow-hidden rounded-[1.4rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20 @md:p-7"
             data-testid="cockpit-pay-code-canvas-back"
         >
-            <div class="flex h-full items-center gap-5 @md:gap-8">
-                <div
-                    class="flex aspect-square w-24 shrink-0 items-center justify-center rounded-2xl border border-dashed border-white/25 bg-white/5 @md:w-32"
-                >
-                    <BadgeCheck
-                        v-if="issuedCode"
-                        class="size-12 text-emerald-300"
-                        aria-label="Pay Code issued"
-                    />
-                    <ScanLine
-                        v-else
-                        class="size-12 text-white/35"
-                        aria-label="Claim QR appears after issue"
-                    />
-                </div>
-                <div class="min-w-0">
-                    <p
-                        class="text-[0.65rem] font-bold tracking-[0.2em] text-emerald-300 uppercase"
-                    >
-                        {{ issuedCode ? 'Ready to share' : 'Claim preview' }}
-                    </p>
-                    <h4 class="mt-2 text-xl font-bold">
-                        {{
-                            claimOutcome === 'account_funding'
-                                ? 'Add this value to an Account'
-                                : 'Claim this Pay Code'
-                        }}
-                    </h4>
-                    <ol class="mt-3 grid gap-1.5 text-xs text-slate-300">
-                        <li class="flex items-center gap-2">
-                            <span class="font-bold text-emerald-300">1</span>
-                            Open the secure claim page.
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="font-bold text-emerald-300">2</span>
-                            Complete the required checks.
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="font-bold text-emerald-300">3</span>
-                            Confirm the claim.
-                        </li>
-                    </ol>
-                    <div class="mt-4 flex flex-wrap gap-1.5">
-                        <span
-                            class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-slate-200"
+            <div class="flex h-full min-w-0 flex-col">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <p
+                            class="flex items-center gap-2 text-[0.65rem] font-bold tracking-[0.2em] text-emerald-300 uppercase"
                         >
-                            <ArrowLeftRight class="size-3" aria-hidden="true" />
-                            {{ expiry }}
-                        </span>
-                        <span
-                            v-for="label in instructionLabels.slice(0, 3)"
-                            :key="label"
-                            class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-slate-200"
-                        >
-                            <ShieldCheck class="size-3" aria-hidden="true" />
-                            {{ label }}
-                        </span>
+                            <ReceiptText class="size-3.5" aria-hidden="true" />
+                            {{
+                                presentation === 'finalized'
+                                    ? 'Issue Cost'
+                                    : 'Estimated Issue Cost'
+                            }}
+                        </p>
+                        <h4 class="mt-1 text-lg font-bold @sm:text-xl">
+                            Back Of The Pay Code
+                        </h4>
                     </div>
+                    <span
+                        v-if="costLoading && hasCostEstimate"
+                        class="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-300"
+                        data-testid="cockpit-pay-code-cost-updating"
+                    >
+                        Updating…
+                    </span>
+                </div>
+
+                <div class="mt-4 min-h-0 flex-1">
+                    <p
+                        v-if="costLoading && !hasCostEstimate"
+                        class="rounded-xl border border-white/10 bg-white/5 px-3 py-4 text-sm text-slate-300"
+                        data-testid="cockpit-pay-code-cost-loading"
+                    >
+                        Calculating…
+                    </p>
+
+                    <p
+                        v-else-if="!hasCostEstimate"
+                        class="rounded-xl border border-white/10 bg-white/5 px-3 py-4 text-sm text-slate-300"
+                        data-testid="cockpit-pay-code-cost-unavailable"
+                    >
+                        {{
+                            costError
+                                ? 'Estimate unavailable'
+                                : 'Enter an amount to see the issue cost.'
+                        }}
+                    </p>
+
+                    <dl
+                        v-else
+                        class="grid max-w-xl grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 text-xs @sm:text-sm"
+                        data-testid="cockpit-pay-code-cost-ledger"
+                    >
+                        <template v-for="item in costLineItems" :key="item.key">
+                            <dt
+                                class="min-w-0 truncate text-slate-300"
+                                data-testid="cockpit-pay-code-cost-label"
+                            >
+                                {{ item.label }}
+                            </dt>
+                            <dd
+                                class="text-right font-medium whitespace-nowrap text-white tabular-nums"
+                                data-testid="cockpit-pay-code-cost-amount"
+                            >
+                                {{ formattedCost(item.amount) }}
+                            </dd>
+                        </template>
+
+                        <dt
+                            v-if="costLineItems.length === 0"
+                            class="col-span-2 text-slate-300"
+                        >
+                            No priced instructions.
+                        </dt>
+
+                        <div
+                            class="col-span-2 my-1 border-t border-dashed border-white/25"
+                            aria-hidden="true"
+                        />
+                        <dt class="font-bold text-white">Total</dt>
+                        <dd
+                            class="text-right text-base font-black whitespace-nowrap text-emerald-300 tabular-nums @sm:text-lg"
+                            data-testid="cockpit-pay-code-cost-total"
+                        >
+                            {{ formattedCost(costTotal ?? 0) }}
+                        </dd>
+                    </dl>
+                </div>
+
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                    <span
+                        class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-slate-200"
+                    >
+                        <ArrowLeftRight class="size-3" aria-hidden="true" />
+                        {{ expiry }}
+                    </span>
+                    <span
+                        v-for="label in instructionLabels.slice(0, 3)"
+                        :key="label"
+                        class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-slate-200"
+                    >
+                        <ShieldCheck class="size-3" aria-hidden="true" />
+                        {{ label }}
+                    </span>
                 </div>
             </div>
         </article>

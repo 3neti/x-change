@@ -16,6 +16,7 @@ import type {
     CockpitQuickGenerateRuntimePricingPreflight,
     CockpitQuickGenerateTemplate,
 } from '../types';
+import { usePayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import {
     buildRiderOgPreviewDocument,
     buildRiderSplashContent,
@@ -2416,6 +2417,26 @@ const executionSummary = computed<Record<string, unknown> | null>(() => {
     };
 });
 
+const livePricingPayload = computed<Record<string, unknown>>(() => {
+    return buildPayloadShape(false);
+});
+const canEstimateLivePricing = computed<boolean>(() => {
+    const normalizedAmount = Number(amount.value);
+    const normalizedCount = Number(count.value);
+
+    return (
+        Number.isFinite(normalizedAmount) &&
+        normalizedAmount > 0 &&
+        Number.isFinite(normalizedCount) &&
+        normalizedCount > 0
+    );
+});
+const {
+    estimate: livePricingEstimate,
+    estimating: livePricingEstimating,
+    estimateError: livePricingEstimateError,
+} = usePayCodeCostEstimate(livePricingPayload, canEstimateLivePricing);
+
 async function submit(): Promise<void> {
     if (!canSubmit.value || processing.value || routeUrl.value === null) {
         return;
@@ -3494,6 +3515,9 @@ function instructionRecord(
                     :issued-code="resultCode"
                     :has-rider-design="hasRiderOgDesign"
                     :rider-design-document="riderOgPreviewDocument"
+                    :cost-estimate="livePricingEstimate"
+                    :cost-loading="livePricingEstimating"
+                    :cost-error="livePricingEstimateError"
                 >
                     <template #action>
                         <button
