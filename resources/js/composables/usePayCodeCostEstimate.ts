@@ -16,10 +16,10 @@ export type PayCodeCostCharge = {
 
 export type PayCodeCostEstimate = {
     currency?: string;
-    base_fee?: number | string;
-    components?: Record<string, number | string>;
+    base_fee?: number;
+    components?: Record<string, number>;
     charges?: PayCodeCostCharge[];
-    total?: number | string;
+    total?: number;
     [key: string]: unknown;
 };
 
