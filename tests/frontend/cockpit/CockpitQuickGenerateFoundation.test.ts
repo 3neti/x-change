@@ -2359,6 +2359,23 @@ describe('Cockpit Quick Generate foundation', () => {
                 .exists(),
         ).toBe(true);
         expect(wrapper.text()).toContain('Instructions and safeguards');
+        const instructionCards = [
+            '#quick-generate-contract-money',
+            '#quick-generate-contract-inputs',
+            '#quick-generate-contract-validation',
+            '#quick-generate-contract-rider',
+            '#quick-generate-contract-feedback',
+            '#quick-generate-contract-slices',
+            '#quick-generate-contract-execution',
+        ].map((selector) => wrapper.find(selector));
+
+        expect(
+            instructionCards.every(
+                (card) =>
+                    card.element.tagName === 'DETAILS' &&
+                    card.attributes('open') === undefined,
+            ),
+        ).toBe(true);
         expect(wrapper.text()).toContain('Ready to issue');
     });
 });

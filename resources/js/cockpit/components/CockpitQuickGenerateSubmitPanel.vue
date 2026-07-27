@@ -3335,11 +3335,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </span>
             </summary>
             <div class="mt-4 grid gap-4">
-                <section
+                <details
                     id="quick-generate-contract-money"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
-                    <div class="flex items-center gap-3">
+                    <summary
+                        class="flex cursor-pointer list-none items-center gap-3"
+                    >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
                             >1</span
@@ -3358,7 +3360,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 quantity.
                             </p>
                         </div>
-                    </div>
+                    </summary>
                     <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -3958,13 +3960,15 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </div>
                         </div>
                     </details>
-                </section>
+                </details>
 
-                <section
+                <details
                     id="quick-generate-contract-inputs"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
-                    <div class="flex items-center gap-3">
+                    <summary
+                        class="flex cursor-pointer list-none items-center gap-3"
+                    >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700 dark:bg-sky-900/60 dark:text-sky-200"
                             >2</span
@@ -3982,7 +3986,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 execution.
                             </p>
                         </div>
-                    </div>
+                    </summary>
                     <div class="mt-4 grid gap-3">
                         <div
                             class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
@@ -4011,14 +4015,16 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </label>
                         </div>
                     </div>
-                </section>
+                </details>
 
-                <section
+                <details
                     id="quick-generate-contract-validation"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                     data-testid="cockpit-quick-generate-validation-section"
                 >
-                    <div class="flex items-center gap-3">
+                    <summary
+                        class="flex cursor-pointer list-none items-center gap-3"
+                    >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-900/60 dark:text-violet-200"
                             >3</span
@@ -4037,7 +4043,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 verification intent.
                             </p>
                         </div>
-                    </div>
+                    </summary>
                     <div class="mt-4 grid gap-3">
                         <div
                             class="grid gap-3 rounded-xl border border-violet-100 bg-violet-50 p-3 text-xs text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
@@ -4503,13 +4509,15 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </p>
                         </details>
                     </div>
-                </section>
+                </details>
 
-                <section
+                <details
                     id="quick-generate-contract-rider"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
-                    <div class="flex items-center gap-3">
+                    <summary
+                        class="flex cursor-pointer list-none items-center gap-3"
+                    >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
                             >4</span
@@ -4527,7 +4535,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 journey.
                             </p>
                         </div>
-                    </div>
+                    </summary>
                     <div class="mt-4 grid gap-3">
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -4839,13 +4847,15 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </div>
                         </details>
                     </div>
-                </section>
+                </details>
 
-                <section
+                <details
                     id="quick-generate-contract-feedback"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
-                    <div class="flex items-center gap-3">
+                    <summary
+                        class="flex cursor-pointer list-none items-center gap-3"
+                    >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-sm font-bold text-rose-700 dark:bg-rose-900/60 dark:text-rose-200"
                             >5</span
@@ -4863,7 +4873,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 deliver SMS, email, or webhooks directly.
                             </p>
                         </div>
-                    </div>
+                    </summary>
                     <div
                         class="mt-4 grid gap-3"
                         data-testid="cockpit-quick-generate-feedback-channels"
@@ -5057,13 +5067,15 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </label>
                         </div>
                     </div>
-                </section>
+                </details>
 
-                <section
+                <details
                     id="quick-generate-contract-slices"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
-                    <div class="flex items-center gap-3">
+                    <summary
+                        class="flex cursor-pointer list-none items-center gap-3"
+                    >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700 dark:bg-cyan-900/60 dark:text-cyan-200"
                             >6</span
@@ -5081,7 +5093,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 instruction metadata.
                             </p>
                         </div>
-                    </div>
+                    </summary>
                     <div class="mt-4 grid gap-4">
                         <div
                             class="grid grid-cols-1 gap-2 lg:grid-cols-4"
@@ -5569,14 +5581,16 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </div>
                         </div>
                     </div>
-                </section>
+                </details>
 
-                <section
+                <details
                     id="quick-generate-contract-execution"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                     data-testid="cockpit-quick-generate-advanced-contract-section"
                 >
-                    <div class="flex items-center gap-3">
+                    <summary
+                        class="flex cursor-pointer list-none items-center gap-3"
+                    >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-900/60 dark:text-violet-200"
                             >7</span
@@ -5594,7 +5608,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 change the default issuance handoff.
                             </p>
                         </div>
-                    </div>
+                    </summary>
 
                     <div class="mt-4 grid gap-3">
                         <details
@@ -5884,7 +5898,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </div>
                         </details>
                     </div>
-                </section>
+                </details>
             </div>
         </details>
 
