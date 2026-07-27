@@ -312,7 +312,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Settlement Envelope');
         expect(
             wrapper.findAll('[data-testid="cockpit-template-option"]'),
-        ).toHaveLength(3);
+        ).toHaveLength(4);
     });
 
     it('uses the selected rider OG preview as the live canvas design', async () => {
@@ -2550,15 +2550,18 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-reference-guide"]',
         );
 
-        expect(referenceGuide.exists()).toBe(true);
-        expect(referenceGuide.classes()).toContain('py-3');
-        expect(referenceGuide.attributes('open')).toBeUndefined();
+        expect(referenceGuide.exists()).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-starting-point"]')
+                .exists(),
+        ).toBe(true);
         const workflowStack = wrapper.find(
             '[data-testid="cockpit-quick-generate-primary-workflow-stack"]',
         );
         expect(workflowStack.classes()).toContain('space-y-3');
-        expect(wrapper.text()).toContain('Template Selector');
-        expect(wrapper.text()).toContain('Runtime Inputs');
+        expect(wrapper.text()).toContain('Starting Point');
+        expect(wrapper.text()).toContain('Repeat Last Design');
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(

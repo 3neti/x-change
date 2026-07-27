@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 
 final class QuickGenerateLastInstructionsStore
@@ -66,14 +67,27 @@ final class QuickGenerateLastInstructionsStore
      */
     private function sanitize(array $instructions): array
     {
-        data_forget($instructions, [
+        data_set(
+            $instructions,
+            'metadata.custom.cockpit.template_preferences.mobile_validation',
+            filled(data_get($instructions, 'cash.validation.mobile')),
+        );
+
+        Arr::forget($instructions, [
             'cash.validation.secret',
+            'cash.validation.mobile',
             'validation.secret',
             'issuer_id',
             'metadata.issuer_id',
             'metadata.collection_wallet_id',
+            'metadata.custom.cockpit.recipient_reference',
             'metadata.campaign',
             'metadata.custom.cockpit.campaign_context',
+            'feedback.email',
+            'feedback.mobile',
+            'feedback.webhook',
+            'starts_at',
+            'expires_at',
         ]);
 
         return $instructions;

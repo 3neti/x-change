@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
+import {
+    Clock3,
+    FilePlus2,
+    LayoutTemplate,
+    RotateCcw,
+    X,
+} from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
@@ -340,6 +347,36 @@ const quickGenerateTemplateDefaults: Record<
     string,
     QuickGenerateTemplateDefaults
 > = {
+    'blank-pay-code': {
+        amount: '',
+        currency: 'PHP',
+        count: '1',
+        payee: '',
+        purpose: '',
+        inputFields: [],
+        expiryPreset: 'none',
+        requireMobileValidation: false,
+        requirePayableValidation: false,
+        requireCountryValidation: false,
+        verificationKyc: false,
+        verificationOtp: false,
+        verificationSelfie: false,
+        feedbackMobile: '',
+        feedbackEmail: '',
+        feedbackWebhook: '',
+        riderUrl: '',
+        riderSplash: '',
+        riderSplashTimeout: '3',
+        sliceMode: 'whole',
+        maxSlices: '1',
+        minWithdrawal: '25',
+        provider: 'netbank',
+        voucherType: 'redeemable',
+        targetAmount: '',
+        includeExecutionInstruction: false,
+        executionDriver: 'default',
+        claimOutcome: 'provider_disbursement',
+    },
     'money-changer': {
         amount: '25',
         currency: 'PHP',
@@ -550,13 +587,26 @@ const lastMessage = ref('Ready to issue when the design is complete.');
 const lastResponse = ref<Record<string, unknown> | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
 const lastInstructionsLoaded = ref(false);
+const startingPoint = ref<'blank' | 'last' | 'template'>(
+    props.lastInstructions ? 'last' : 'template',
+);
+const templatePickerOpen = ref(false);
+const applyingStartingPoint = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 
 hydrateLastInstructions();
 
-watch(selectedTemplate, (templateKey): void => {
-    applyTemplateDefaults(templateKey);
-});
+watch(
+    selectedTemplate,
+    (templateKey): void => {
+        if (applyingStartingPoint.value) {
+            return;
+        }
+
+        applyTemplateDefaults(templateKey);
+    },
+    { flush: 'sync' },
+);
 
 watch(amount, (): void => {
     if (sliceMode.value === 'whole') {
@@ -667,9 +717,14 @@ function applyTemplateDefaults(templateKey: string): void {
     lastResponse.value = null;
 }
 
-function startFresh(): void {
+function startBlank(): void {
+    applyingStartingPoint.value = true;
+    selectedTemplate.value = 'blank-pay-code';
     lastInstructionsLoaded.value = false;
-    applyTemplateDefaults(selectedTemplate.value);
+    startingPoint.value = 'blank';
+    applyTemplateDefaults('blank-pay-code');
+    applyingStartingPoint.value = false;
+    lastMessage.value = 'Blank Pay Code ready. Add only what this claim needs.';
 }
 
 function hydrateLastInstructions(): void {
@@ -679,6 +734,52 @@ function hydrateLastInstructions(): void {
         return;
     }
 
+    applyInstructionBlueprint(instructions, true);
+    startingPoint.value = 'last';
+    lastInstructionsLoaded.value = true;
+    lastStatus.value = 'ready';
+    lastMessage.value =
+        'Your last successful Pay Code design is ready to review or change.';
+}
+
+function repeatLastDesign(): void {
+    const instructions = props.lastInstructions?.instructions;
+
+    if (!instructions) {
+        return;
+    }
+
+    applyInstructionBlueprint(instructions, true);
+    startingPoint.value = 'last';
+    lastInstructionsLoaded.value = true;
+    lastStatus.value = 'ready';
+    lastMessage.value =
+        'Last design restored. Add the new recipient before issuing.';
+}
+
+function applySystemTemplate(templateKey: string): void {
+    const template = props.templates.find(
+        (candidate) => candidate.key === templateKey,
+    );
+
+    if (!template || template.disabled) {
+        return;
+    }
+
+    applyingStartingPoint.value = true;
+    selectedTemplate.value = templateKey;
+    applyTemplateDefaults(templateKey);
+    applyingStartingPoint.value = false;
+    startingPoint.value =
+        templateKey === 'blank-pay-code' ? 'blank' : 'template';
+    lastInstructionsLoaded.value = false;
+    templatePickerOpen.value = false;
+}
+
+function applyInstructionBlueprint(
+    instructions: Record<string, unknown>,
+    clearRecipient: boolean,
+): void {
     const templateKey = instructionString(
         instructions,
         ['metadata', 'custom', 'cockpit', 'template_key'],
@@ -686,7 +787,9 @@ function hydrateLastInstructions(): void {
     );
 
     if (props.templates.some((template) => template.key === templateKey)) {
+        applyingStartingPoint.value = true;
         selectedTemplate.value = templateKey;
+        applyingStartingPoint.value = false;
     }
 
     amount.value = instructionString(
@@ -734,7 +837,15 @@ function hydrateLastInstructions(): void {
     ]);
 
     validationSecret.value = '';
-    requireMobileValidation.value = mobileRecipient !== '';
+    requireMobileValidation.value =
+        mobileRecipient !== '' ||
+        dataGet(instructions, [
+            'metadata',
+            'custom',
+            'cockpit',
+            'template_preferences',
+            'mobile_validation',
+        ]) === true;
     requirePayableValidation.value = payableRecipient === 'required';
     requireCountryValidation.value =
         instructionString(instructions, ['cash', 'validation', 'country']) !==
@@ -980,10 +1091,18 @@ function hydrateLastInstructions(): void {
     metadataIssuerId.value = '';
     metadataCollectionWalletId.value = '';
 
-    lastInstructionsLoaded.value = true;
-    lastStatus.value = 'ready';
-    lastMessage.value =
-        'Your last successful Pay Code design is ready to review or change.';
+    if (clearRecipient) {
+        recipientReference.value = '';
+        validationSecret.value = '';
+        feedbackEmail.value = '';
+        feedbackMobile.value = '';
+        feedbackWebhook.value = '';
+        feedbackEmailEnabled.value = false;
+        feedbackMobileEnabled.value = false;
+        feedbackWebhookEnabled.value = false;
+        startsAt.value = '';
+        expiresAt.value = '';
+    }
 }
 
 function hydrateLastSlices(instructions: Record<string, unknown>): void {
@@ -3413,29 +3532,139 @@ function instructionRecord(
             </span>
         </div>
 
-        <div
-            v-if="lastInstructionsLoaded"
-            class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-100/70 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/50"
-            data-testid="cockpit-quick-generate-last-instructions"
+        <section
+            class="mt-4 rounded-2xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/70 dark:bg-slate-950/70"
+            data-testid="cockpit-quick-generate-starting-point"
         >
-            <div>
-                <p
-                    class="text-sm font-semibold text-emerald-950 dark:text-emerald-100"
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <p
+                        class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
+                    >
+                        Starting Point
+                    </p>
+                    <p
+                        class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+                    >
+                        Begin blank, repeat your last design, or use a template.
+                    </p>
+                </div>
+                <span
+                    v-if="lastInstructionsLoaded"
+                    class="rounded-full bg-emerald-100 px-2.5 py-1 text-[0.68rem] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                    data-testid="cockpit-quick-generate-last-instructions"
                 >
-                    Last Pay Code Design Loaded
-                </p>
-                <p class="text-xs text-emerald-800 dark:text-emerald-300">
-                    Review it as-is or change anything before issuing.
-                </p>
+                    Last Design Loaded
+                </span>
             </div>
-            <button
-                type="button"
-                class="inline-flex min-h-9 items-center justify-center rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-700 dark:bg-slate-950 dark:text-emerald-200 dark:hover:bg-slate-900"
-                data-testid="cockpit-quick-generate-start-fresh"
-                @click="startFresh"
+
+            <div class="mt-3 grid gap-2 sm:grid-cols-3">
+                <button
+                    type="button"
+                    :class="[
+                        'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition',
+                        startingPoint === 'blank'
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
+                    ]"
+                    data-testid="cockpit-quick-generate-start-blank"
+                    @click="startBlank"
+                >
+                    <FilePlus2 class="size-4" aria-hidden="true" />
+                    Blank Pay Code
+                </button>
+                <button
+                    type="button"
+                    :disabled="!lastInstructions"
+                    :class="[
+                        'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-45',
+                        startingPoint === 'last'
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
+                    ]"
+                    data-testid="cockpit-quick-generate-repeat-last"
+                    @click="repeatLastDesign"
+                >
+                    <RotateCcw class="size-4" aria-hidden="true" />
+                    Repeat Last Design
+                </button>
+                <button
+                    type="button"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                    data-testid="cockpit-quick-generate-choose-template"
+                    @click="templatePickerOpen = true"
+                >
+                    <LayoutTemplate class="size-4" aria-hidden="true" />
+                    Choose Template
+                </button>
+            </div>
+        </section>
+
+        <div
+            v-if="templatePickerOpen"
+            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            data-testid="cockpit-quick-generate-template-picker"
+            @click.self="templatePickerOpen = false"
+        >
+            <section
+                class="max-h-[88vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl sm:max-w-2xl sm:rounded-3xl sm:p-6 dark:bg-slate-950"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="quick-generate-template-title"
             >
-                Start Fresh
-            </button>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p
+                            class="text-xs font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
+                        >
+                            Recommended
+                        </p>
+                        <h3
+                            id="quick-generate-template-title"
+                            class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50"
+                        >
+                            Choose a starting template
+                        </h3>
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                        aria-label="Close template picker"
+                        @click="templatePickerOpen = false"
+                    >
+                        <X class="size-4" aria-hidden="true" />
+                    </button>
+                </div>
+
+                <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                    <button
+                        v-for="template in templates"
+                        :key="template.key"
+                        type="button"
+                        :disabled="template.disabled"
+                        class="rounded-2xl border border-slate-200 p-4 text-left transition hover:border-emerald-400 hover:bg-emerald-50/60 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-800 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30"
+                        data-testid="cockpit-quick-generate-template-option"
+                        @click="applySystemTemplate(template.key)"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <p
+                                class="font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                {{ template.name }}
+                            </p>
+                            <Clock3
+                                class="size-4 text-slate-400"
+                                aria-hidden="true"
+                            />
+                        </div>
+                        <p
+                            class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300"
+                        >
+                            {{ template.description }}
+                        </p>
+                    </button>
+                </div>
+            </section>
         </div>
 
         <div

@@ -79,7 +79,7 @@ describe('Quick Generate last instructions', () => {
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-recipient"]',
             ).element.value,
-        ).toBe('09173011987');
+        ).toBe('');
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-purpose"]',
@@ -94,7 +94,7 @@ describe('Quick Generate last instructions', () => {
             wrapper
                 .get('[data-testid="cockpit-quick-generate-last-instructions"]')
                 .text(),
-        ).toContain('Last Pay Code Design Loaded');
+        ).toContain('Last Design Loaded');
 
         const preview = JSON.parse(
             wrapper
@@ -112,8 +112,9 @@ describe('Quick Generate last instructions', () => {
             slices: 3,
         });
         expect(preview.cash.validation).not.toHaveProperty('secret');
+        expect(preview.cash.validation).not.toHaveProperty('mobile');
         expect(preview.inputs).toEqual({
-            fields: ['mobile', 'email', 'signature', 'name'],
+            fields: ['mobile', 'signature', 'name'],
             requirements: ['kyc', 'otp'],
         });
         expect(preview.rider).toMatchObject({
@@ -125,7 +126,7 @@ describe('Quick Generate last instructions', () => {
         });
 
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-start-fresh"]')
+            .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
 
         expect(
@@ -139,7 +140,32 @@ describe('Quick Generate last instructions', () => {
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
             ).element.value,
-        ).toBe('25');
+        ).toBe('');
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-recipient"]',
+            ).element.value,
+        ).toBe('');
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-repeat-last"]')
+            .trigger('click');
+
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element.value,
+        ).toBe('88.5');
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-recipient"]',
+            ).element.value,
+        ).toBe('');
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-feedback-mobile"]',
+            ).element.value,
+        ).toBe('');
     });
 
     it('gives explicit campaign context precedence over remembered instructions', () => {

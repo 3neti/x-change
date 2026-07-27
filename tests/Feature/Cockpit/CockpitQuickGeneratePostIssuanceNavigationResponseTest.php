@@ -53,15 +53,13 @@ it('hydrates quick generate post issuance navigation links without adding side e
             'props.last_instructions.instructions.rider.message',
             'Wave 34C post issuance navigation',
         )
-        ->assertJsonPath(
-            'props.last_instructions.instructions.starts_at',
-            '2026-07-28T09:00:00+08:00',
-        )
-        ->assertJsonPath(
-            'props.last_instructions.instructions.expires_at',
-            '2026-07-29T09:00:00+08:00',
-        )
+        ->assertJsonMissingPath('props.last_instructions.instructions.starts_at')
+        ->assertJsonMissingPath('props.last_instructions.instructions.expires_at')
         ->assertJsonMissingPath('props.last_instructions.instructions.cash.validation.secret')
+        ->assertJsonMissingPath('props.last_instructions.instructions.cash.validation.mobile')
+        ->assertJsonMissingPath('props.last_instructions.instructions.feedback.mobile')
+        ->assertJsonMissingPath('props.last_instructions.instructions.feedback.email')
+        ->assertJsonMissingPath('props.last_instructions.instructions.metadata.custom.cockpit.recipient_reference')
         ->assertJsonMissingPath('props.last_instructions.instructions.metadata.issuer_id');
 
     $otherOperator = actingAsTestUser();

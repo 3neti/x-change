@@ -397,6 +397,13 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     estimated_time: 'Under 5 seconds',
                 ),
                 new CockpitQuickGenerateTemplateData(
+                    key: 'blank-pay-code',
+                    name: 'Blank Pay Code',
+                    description: 'Begin with only the essentials and shape the Pay Code yourself.',
+                    profile: 'custom',
+                    estimated_time: 'Build your own',
+                ),
+                new CockpitQuickGenerateTemplateData(
                     key: 'ofw-remittance',
                     name: 'OFW Remittance',
                     description: 'Template-first remittance issuance with recipient details.',

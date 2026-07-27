@@ -27,6 +27,12 @@ class DefaultCockpitIssuanceTemplateRegistry implements CockpitIssuanceTemplateR
                 metadata: ['purpose' => 'branch-counter-cash-out'],
             ),
             new CockpitIssuanceTemplateProfileData(
+                key: 'blank-pay-code',
+                name: 'Blank Pay Code',
+                profile: 'custom',
+                metadata: ['purpose' => 'operator-defined'],
+            ),
+            new CockpitIssuanceTemplateProfileData(
                 key: 'ofw-remittance',
                 name: 'OFW Remittance',
                 profile: 'operations',

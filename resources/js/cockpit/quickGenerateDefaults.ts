@@ -13,16 +13,26 @@ export const cockpitQuickGenerateTemplates: CockpitQuickGenerateTemplate[] = [
         estimatedTime: 'Under 5 seconds',
     },
     {
+        key: 'blank-pay-code',
+        name: 'Blank Pay Code',
+        description:
+            'Begin with only the essentials and shape the Pay Code yourself.',
+        profile: 'custom',
+        estimatedTime: 'Build your own',
+    },
+    {
         key: 'ofw-remittance',
         name: 'OFW Remittance',
-        description: 'Template-first remittance issuance with recipient details.',
+        description:
+            'Template-first remittance issuance with recipient details.',
         profile: 'operations',
         estimatedTime: 'Pending runtime inputs',
     },
     {
         key: 'settlement-envelope',
         name: 'Settlement Envelope',
-        description: 'Complex settlement issuance remains deferred to later slices.',
+        description:
+            'Complex settlement issuance remains deferred to later slices.',
         profile: 'settlement',
         estimatedTime: 'Deferred',
         disabled: true,

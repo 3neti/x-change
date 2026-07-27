@@ -15,13 +15,10 @@ import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateSubmitPanel from '../components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
-import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
-import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import {
     cockpitPricingFundingSummary,
     cockpitQuickGenerateTemplates,
-    cockpitRuntimeInputs,
 } from '../quickGenerateDefaults';
 import type {
     CockpitPricingFundingSummary as CockpitPricingFundingSummaryType,
@@ -45,10 +42,8 @@ import type {
     CockpitQuickGenerateValidationRedactionGateCheck,
     CockpitQuickGeneratePageProps,
     CockpitQuickGenerateReadModelPricingSummary,
-    CockpitQuickGenerateReadModelRuntimeInput,
     CockpitQuickGenerateReadModelTemplate,
     CockpitQuickGenerateTemplate,
-    CockpitRuntimeInput,
 } from '../types';
 
 const props = defineProps<CockpitQuickGeneratePageProps>();
@@ -78,21 +73,6 @@ const templates = computed<CockpitQuickGenerateTemplate[]>(() => {
         );
 
     return mapped.length > 0 ? mapped : cockpitQuickGenerateTemplates;
-});
-
-const runtimeInputs = computed<CockpitRuntimeInput[]>(() => {
-    if (
-        !readModelAvailable.value ||
-        !Array.isArray(props.quick_generate_read_model?.runtime_inputs)
-    ) {
-        return cockpitRuntimeInputs;
-    }
-
-    const mapped = props.quick_generate_read_model.runtime_inputs
-        .map((input): CockpitRuntimeInput | null => sanitizeRuntimeInput(input))
-        .filter((input): input is CockpitRuntimeInput => input !== null);
-
-    return mapped.length > 0 ? mapped : cockpitRuntimeInputs;
 });
 
 const pricingSummaries = computed<CockpitPricingFundingSummaryType[]>(() => {
@@ -1052,26 +1032,6 @@ function sanitizeTemplate(
     };
 }
 
-function sanitizeRuntimeInput(
-    input: CockpitQuickGenerateReadModelRuntimeInput,
-): CockpitRuntimeInput | null {
-    const key = stringValue(input.key);
-    const label = stringValue(input.label);
-
-    if (!key || !label) {
-        return null;
-    }
-
-    return {
-        key,
-        label,
-        value: stringValue(input.value) ?? 'Use the Quick Generate form',
-        helper:
-            stringValue(input.helper) ??
-            'Runtime input is submitted through the existing issuance handoff.',
-    };
-}
-
 function sanitizePricingSummary(
     summary: CockpitQuickGenerateReadModelPricingSummary,
 ): CockpitPricingFundingSummaryType | null {
@@ -1162,24 +1122,6 @@ function stringValue(value: unknown): string | null {
                     </div>
                 </div>
             </div>
-
-            <CockpitDiagnosticsDisclosure
-                compact
-                title="Start from a template"
-                summary="Optional starting points for common Pay Codes."
-                eyebrow="Optional"
-                action-label="Show templates"
-                data-testid="cockpit-quick-generate-reference-guide"
-            >
-                <div class="grid gap-4 xl:grid-cols-2">
-                    <CockpitTemplateSelector
-                        :templates="templates"
-                        :selected-key="templates[0]?.key"
-                    />
-
-                    <CockpitRuntimeInputPanel :inputs="runtimeInputs" />
-                </div>
-            </CockpitDiagnosticsDisclosure>
 
             <div
                 class="space-y-3"
