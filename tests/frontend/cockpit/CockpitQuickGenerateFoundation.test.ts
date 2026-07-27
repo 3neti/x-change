@@ -251,6 +251,51 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(columns[2].text()).toContain('Total');
         expect(columns[2].text()).toContain('₱171.00');
         expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
+
+        const labels = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-cost-label"]',
+        );
+
+        expect(labels[0].classes()).toContain('line-clamp-2');
+        expect(labels[0].classes()).not.toContain('truncate');
+        expect(labels[0].attributes('title')).toBe('Charge 1');
+    });
+
+    it('gives long cost descriptions two compact lines in dense ledgers', async () => {
+        const longLabel = 'Monthly Gross Income Verification';
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '100',
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                costEstimate: {
+                    currency: 'PHP',
+                    charges: Array.from({ length: 18 }, (_, index) => ({
+                        catalog_item_reference: `long-charge.${index + 1}`,
+                        label: index === 0 ? longLabel : `Charge ${index + 1}`,
+                        price: index + 1,
+                    })),
+                    total: 171,
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        const label = wrapper
+            .findAll('[data-testid="cockpit-pay-code-cost-label"]')
+            .at(0);
+
+        expect(label?.text()).toBe(longLabel);
+        expect(label?.attributes('title')).toBe(longLabel);
+        expect(label?.classes()).toContain('line-clamp-2');
+        expect(label?.classes()).toContain('break-words');
+        expect(label?.classes()).not.toContain('truncate');
+        expect(wrapper.text()).toContain('Total');
+        expect(wrapper.text()).toContain('₱171.00');
     });
 
     it('renders template selector placeholders as institutional products', () => {

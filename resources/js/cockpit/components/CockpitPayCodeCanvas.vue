@@ -578,9 +578,9 @@ function stringValue(value: unknown): string | null {
                         class="grid gap-y-3"
                         :class="
                             costLedgerColumnCount === 3
-                                ? 'grid-cols-3 gap-x-2'
+                                ? 'grid-cols-3 gap-x-1.5'
                                 : costLedgerColumnCount === 2
-                                  ? 'grid-cols-2 gap-x-4'
+                                  ? 'grid-cols-2 gap-x-3'
                                   : 'grid-cols-1'
                         "
                         data-testid="cockpit-pay-code-cost-ledger"
@@ -592,14 +592,14 @@ function stringValue(value: unknown): string | null {
                             class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] content-start gap-y-1"
                             :class="[
                                 costLedgerColumnCount === 3
-                                    ? 'gap-x-1.5 text-[0.625rem] leading-4'
+                                    ? 'gap-x-1 text-[0.625rem] leading-3.5'
                                     : costLedgerColumnCount === 2
-                                      ? 'gap-x-2 text-[0.6875rem] leading-4'
+                                      ? 'gap-x-1.5 text-[0.6875rem] leading-4'
                                       : 'gap-x-4 text-xs @sm:text-sm',
                                 costLedgerColumnCount > 1 && columnIndex > 0
                                     ? costLedgerColumnCount === 3
-                                        ? 'border-l border-white/15 pl-2'
-                                        : 'border-l border-white/15 pl-3'
+                                        ? 'border-l border-white/15 pl-1.5'
+                                        : 'border-l border-white/15 pl-2'
                                     : '',
                             ]"
                             data-testid="cockpit-pay-code-cost-ledger-column"
@@ -610,7 +610,13 @@ function stringValue(value: unknown): string | null {
                                 :key="item.key"
                             >
                                 <dt
-                                    class="min-w-0 truncate text-slate-300"
+                                    class="min-w-0 break-words text-slate-300"
+                                    :class="
+                                        costLedgerColumnCount > 1
+                                            ? 'line-clamp-2 text-pretty'
+                                            : 'whitespace-normal'
+                                    "
+                                    :title="item.label"
                                     data-testid="cockpit-pay-code-cost-label"
                                 >
                                     {{ item.label }}
