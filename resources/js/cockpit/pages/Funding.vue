@@ -14,7 +14,7 @@ import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/coc
 import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts';
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitFundingPageProps,
@@ -97,7 +97,11 @@ const fundingRequestAmountError = ref<string | null>(null);
 const bankTransferAmountInput = ref<HTMLInputElement | null>(null);
 const copiedFundingRequest = ref<string | null>(null);
 const activeTransferCheck = ref<string | null>(null);
+const bankTransferInstructionsOpen = ref(false);
+const bankTransferInstructionReference = ref<string | null>(null);
+const bankTransferInstructionDialog = ref<HTMLElement | null>(null);
 const dismissedFundingRequestResult = ref(false);
+let bankTransferDialogReturnFocus: HTMLElement | null = null;
 type FundingWorkspaceMode =
     | 'self_top_up'
     | 'bank_transfer'
@@ -238,6 +242,13 @@ const bankTransferRequests = computed(() =>
         (request) => request.type === 'bank_transfer',
     ),
 );
+const selectedBankTransferRequest = computed(
+    () =>
+        bankTransferRequests.value.find(
+            (request) =>
+                request.reference === bankTransferInstructionReference.value,
+        ) ?? null,
+);
 const payCodeFundingRequests = computed(() => fundingRequests.value.requests);
 const payCodeInspectionForm = useForm({
     code: '',
@@ -362,6 +373,39 @@ watch(hasOpenFundingWork, (hasOpenWork) => {
     }
 
     stopFundingPoll();
+});
+
+watch(
+    submittedFundingRequest,
+    (request) => {
+        if (request?.type !== 'bank_transfer' || request.transfer === null) {
+            return;
+        }
+
+        bankTransferInstructionReference.value = request.reference;
+        bankTransferInstructionsOpen.value = true;
+    },
+    { immediate: true },
+);
+
+watch(bankTransferInstructionsOpen, async (isOpen) => {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    if (isOpen) {
+        bankTransferDialogReturnFocus =
+            document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+        await nextTick();
+        bankTransferInstructionDialog.value?.focus();
+
+        return;
+    }
+
+    bankTransferDialogReturnFocus?.focus();
+    bankTransferDialogReturnFocus = null;
 });
 
 const summaryCards = computed(() => [
@@ -538,6 +582,15 @@ function submitBankTransferRequest(): void {
     submitFundingRequest(
         bankTransferInstructions.value.minimum_requested_amount_minor,
     );
+}
+
+function openBankTransferInstructions(reference: string): void {
+    bankTransferInstructionReference.value = reference;
+    bankTransferInstructionsOpen.value = true;
+}
+
+function closeBankTransferInstructions(): void {
+    bankTransferInstructionsOpen.value = false;
 }
 
 function checkTransfer(reference: string): void {
@@ -1887,7 +1940,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-950 dark:bg-slate-900"
                 >
                     <div
-                        class="grid gap-4 border-b border-slate-200 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(16rem,0.8fr)] sm:p-5 dark:border-slate-800"
+                        class="border-b border-slate-200 p-4 sm:p-5 dark:border-slate-800"
                     >
                         <div>
                             <h2 class="text-base font-semibold">
@@ -1896,27 +1949,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             <p
                                 class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Choose how much to add. x-change will reserve a
-                                unique exact transfer amount.
+                                Enter at least
+                                {{
+                                    bankTransferInstructions.minimum_requested_amount
+                                }}. x-change will reserve a unique exact
+                                transfer amount.
                             </p>
                         </div>
-                        <dl
-                            class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-xl bg-slate-50 px-3 py-2.5 text-sm dark:bg-slate-950"
-                            data-testid="bank-transfer-instructions"
-                        >
-                            <dt class="text-slate-500">Bank</dt>
-                            <dd class="font-semibold">
-                                {{ bankTransferInstructions.institution }}
-                            </dd>
-                            <dt class="text-slate-500">Account</dt>
-                            <dd class="font-semibold">
-                                {{ bankTransferInstructions.account_name }}
-                            </dd>
-                            <dt class="text-slate-500">Number</dt>
-                            <dd class="font-mono font-semibold tracking-wide">
-                                {{ bankTransferInstructions.account_number }}
-                            </dd>
-                        </dl>
                     </div>
 
                     <form
@@ -1970,98 +2009,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             {{
                                 fundingRequestForm.processing
                                     ? 'Preparing…'
-                                    : 'Get transfer amount'
+                                    : 'Get bank transfer instructions'
                             }}
                         </button>
                     </form>
-
-                    <div
-                        v-if="
-                            submittedFundingRequest?.type === 'bank_transfer' &&
-                            submittedFundingRequest.transfer
-                        "
-                        class="border-t border-sky-200 bg-sky-50 p-4 sm:p-5 dark:border-sky-950 dark:bg-sky-950/30"
-                        data-testid="bank-transfer-request-result"
-                    >
-                        <div
-                            class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-                        >
-                            <div>
-                                <p
-                                    class="text-xs font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
-                                >
-                                    Transfer exactly
-                                </p>
-                                <p
-                                    class="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
-                                >
-                                    {{
-                                        submittedFundingRequest.transfer
-                                            .expected_amount
-                                    }}
-                                </p>
-                                <p
-                                    v-if="
-                                        submittedFundingRequest.transfer
-                                            .matching_adjustment
-                                    "
-                                    class="mt-1 text-xs text-slate-600 dark:text-slate-300"
-                                >
-                                    {{
-                                        submittedFundingRequest.transfer
-                                            .requested_amount
-                                    }}
-                                    requested +
-                                    {{
-                                        submittedFundingRequest.transfer
-                                            .matching_adjustment
-                                    }}
-                                    matching amount. The full
-                                    {{
-                                        submittedFundingRequest.transfer
-                                            .expected_amount
-                                    }}
-                                    will be credited.
-                                </p>
-                                <p
-                                    class="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400"
-                                >
-                                    Send to
-                                    {{ bankTransferInstructions.institution }}
-                                    {{
-                                        bankTransferInstructions.account_number
-                                    }}
-                                    · valid until
-                                    {{
-                                        displayTime(
-                                            submittedFundingRequest.transfer
-                                                .instruction_expires_at,
-                                        )
-                                    }}
-                                </p>
-                            </div>
-                            <button
-                                v-if="
-                                    submittedFundingRequest.transfer.can_check
-                                "
-                                type="button"
-                                class="h-11 rounded-xl border border-sky-300 bg-white px-4 text-sm font-semibold text-sky-800 transition hover:bg-sky-100 disabled:opacity-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
-                                :disabled="activeTransferCheck !== null"
-                                @click="
-                                    checkTransfer(
-                                        submittedFundingRequest.reference,
-                                    )
-                                "
-                            >
-                                {{
-                                    activeTransferCheck ===
-                                    submittedFundingRequest.reference
-                                        ? 'Checking…'
-                                        : 'Check NetBank'
-                                }}
-                            </button>
-                        </div>
-                    </div>
                 </article>
 
                 <article
@@ -2123,33 +2074,233 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             >
                                 {{ item.receipt_status_label }}
                             </span>
-                            <button
-                                v-if="item.transfer?.can_check"
-                                type="button"
-                                class="h-9 rounded-lg border border-sky-300 px-3 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-800 dark:text-sky-200"
-                                :disabled="activeTransferCheck !== null"
-                                @click="checkTransfer(item.reference)"
-                            >
-                                {{
-                                    activeTransferCheck === item.reference
-                                        ? 'Checking…'
-                                        : 'Check NetBank'
-                                }}
-                            </button>
-                            <span
-                                v-else
-                                class="text-right text-xs text-slate-500"
-                            >
-                                {{
-                                    item.transfer?.verification_status ===
-                                    'approval_required'
-                                        ? 'Awaiting approval'
-                                        : '—'
-                                }}
-                            </span>
+                            <div class="flex flex-wrap justify-end gap-2">
+                                <button
+                                    v-if="item.transfer"
+                                    type="button"
+                                    class="h-9 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                    @click="
+                                        openBankTransferInstructions(
+                                            item.reference,
+                                        )
+                                    "
+                                >
+                                    Instructions
+                                </button>
+                                <button
+                                    v-if="item.transfer?.can_check"
+                                    type="button"
+                                    class="h-9 rounded-lg border border-sky-300 px-3 text-xs font-semibold text-sky-800 transition hover:bg-sky-50 disabled:opacity-50 dark:border-sky-800 dark:text-sky-200 dark:hover:bg-sky-950"
+                                    :disabled="activeTransferCheck !== null"
+                                    @click="checkTransfer(item.reference)"
+                                >
+                                    {{
+                                        activeTransferCheck === item.reference
+                                            ? 'Checking…'
+                                            : 'Check NetBank'
+                                    }}
+                                </button>
+                                <span
+                                    v-else
+                                    class="self-center text-right text-xs text-slate-500"
+                                >
+                                    {{
+                                        item.transfer?.verification_status ===
+                                        'approval_required'
+                                            ? 'Awaiting approval'
+                                            : '—'
+                                    }}
+                                </span>
+                            </div>
                         </li>
                     </ul>
                 </article>
+
+                <Teleport
+                    v-if="
+                        bankTransferInstructionsOpen &&
+                        selectedBankTransferRequest?.transfer
+                    "
+                    to="body"
+                >
+                    <div
+                        class="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-sm"
+                        @click.self="closeBankTransferInstructions"
+                        @keydown.esc.prevent="closeBankTransferInstructions"
+                    >
+                        <section
+                            ref="bankTransferInstructionDialog"
+                            tabindex="-1"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="bank-transfer-dialog-title"
+                            aria-describedby="bank-transfer-dialog-description"
+                            class="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl outline-none dark:border-slate-800 dark:bg-slate-900"
+                            data-testid="bank-transfer-instruction-dialog"
+                        >
+                            <header
+                                class="border-b border-slate-200 bg-slate-50 p-5 text-left dark:border-slate-800 dark:bg-slate-950"
+                            >
+                                <h2
+                                    id="bank-transfer-dialog-title"
+                                    class="text-lg font-semibold text-slate-950 dark:text-white"
+                                >
+                                    Bank transfer instructions
+                                </h2>
+                                <p
+                                    id="bank-transfer-dialog-description"
+                                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                                >
+                                    Transfer the exact amount before the
+                                    instruction expires.
+                                </p>
+                            </header>
+
+                            <div class="grid gap-4 p-5">
+                                <div
+                                    class="rounded-2xl bg-sky-50 p-4 text-center dark:bg-sky-950/40"
+                                >
+                                    <p
+                                        class="text-xs font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
+                                    >
+                                        Transfer exactly
+                                    </p>
+                                    <p
+                                        class="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
+                                    >
+                                        {{
+                                            selectedBankTransferRequest.transfer
+                                                .expected_amount
+                                        }}
+                                    </p>
+                                    <p
+                                        v-if="
+                                            selectedBankTransferRequest.transfer
+                                                .matching_adjustment
+                                        "
+                                        class="mt-1 text-xs text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{
+                                            selectedBankTransferRequest.transfer
+                                                .requested_amount
+                                        }}
+                                        requested +
+                                        {{
+                                            selectedBankTransferRequest.transfer
+                                                .matching_adjustment
+                                        }}
+                                        matching amount. The full amount will be
+                                        credited.
+                                    </p>
+                                </div>
+
+                                <dl
+                                    class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-800"
+                                    data-testid="bank-transfer-instructions"
+                                >
+                                    <dt class="text-slate-500">Bank</dt>
+                                    <dd class="font-semibold">
+                                        {{
+                                            bankTransferInstructions.institution
+                                        }}
+                                    </dd>
+                                    <dt class="text-slate-500">Account</dt>
+                                    <dd class="font-semibold">
+                                        {{
+                                            bankTransferInstructions.account_name
+                                        }}
+                                    </dd>
+                                    <dt class="text-slate-500">Number</dt>
+                                    <dd
+                                        class="font-mono font-semibold tracking-wide"
+                                    >
+                                        {{
+                                            bankTransferInstructions.account_number
+                                        }}
+                                    </dd>
+                                    <dt class="text-slate-500">Valid until</dt>
+                                    <dd class="font-semibold">
+                                        {{
+                                            displayTime(
+                                                selectedBankTransferRequest
+                                                    .transfer
+                                                    .instruction_expires_at,
+                                            )
+                                        }}
+                                    </dd>
+                                </dl>
+
+                                <div
+                                    class="grid gap-2 text-xs text-slate-600 sm:grid-cols-2 dark:text-slate-300"
+                                >
+                                    <div
+                                        class="rounded-xl border border-slate-200 p-3 dark:border-slate-800"
+                                    >
+                                        <p
+                                            class="font-semibold text-slate-900 dark:text-white"
+                                        >
+                                            InstaPay
+                                        </p>
+                                        <p class="mt-1">
+                                            Usually reflected immediately;
+                                            delays may occur.
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="rounded-xl border border-slate-200 p-3 dark:border-slate-800"
+                                    >
+                                        <p
+                                            class="font-semibold text-slate-900 dark:text-white"
+                                        >
+                                            PESONet
+                                        </p>
+                                        <p class="mt-1">
+                                            Processed in banking-day batches,
+                                            subject to the sending bank’s
+                                            cutoff.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <footer
+                                class="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:justify-end dark:border-slate-800 dark:bg-slate-950"
+                            >
+                                <button
+                                    type="button"
+                                    class="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                                    data-testid="close-bank-transfer-instructions"
+                                    @click="
+                                        bankTransferInstructionsOpen = false
+                                    "
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    v-if="
+                                        selectedBankTransferRequest.transfer
+                                            .can_check
+                                    "
+                                    type="button"
+                                    class="h-11 rounded-xl bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950"
+                                    :disabled="activeTransferCheck !== null"
+                                    @click="
+                                        checkTransfer(
+                                            selectedBankTransferRequest.reference,
+                                        )
+                                    "
+                                >
+                                    {{
+                                        activeTransferCheck ===
+                                        selectedBankTransferRequest.reference
+                                            ? 'Checking…'
+                                            : 'Check NetBank'
+                                    }}
+                                </button>
+                            </footer>
+                        </section>
+                    </div>
+                </Teleport>
             </section>
 
             <section

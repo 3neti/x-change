@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { DOMWrapper, flushPromises, mount } from '@vue/test-utils';
 import { useEcho } from '@laravel/echo-vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
@@ -961,6 +961,8 @@ describe('Cockpit Funding foundation', () => {
                     requests: [
                         {
                             ...fundingRequestReadModel.requests[0],
+                            type: 'unspecified',
+                            transfer: null,
                             status: 'submitted',
                             receipt_status: 'pending',
                             receipt_status_label: 'Pending',
@@ -1019,11 +1021,8 @@ describe('Cockpit Funding foundation', () => {
         const requests = wrapper.get('[data-testid="bank-transfer-history"]');
 
         expect(
-            wrapper.get('[data-testid="bank-transfer-instructions"]').text(),
-        ).toContain('113-001-00001-9');
-        expect(
             wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
-        ).toContain('Get transfer amount');
+        ).toContain('Get bank transfer instructions');
         expect(
             wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
         ).toContain('Amount to add');
@@ -1043,6 +1042,77 @@ describe('Cockpit Funding foundation', () => {
                 preserveScroll: true,
             }),
         );
+    });
+
+    it('opens persistent bank transfer instructions in a closable dialog', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_requests: fundingRequestReadModel,
+                funding_request_submitted_reference: '01J-REQUEST-1',
+                funding_workspace_mode: 'bank_transfer',
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+            attachTo: document.body,
+        });
+
+        await nextTick();
+
+        const dialog = document.querySelector<HTMLElement>(
+            '[data-testid="bank-transfer-instruction-dialog"]',
+        );
+
+        expect(dialog?.textContent).toContain('Bank transfer instructions');
+        expect(dialog?.textContent).toContain('₱20,005.37');
+        expect(dialog?.textContent).toContain('113-001-00001-9');
+        expect(dialog?.textContent).toContain('InstaPay');
+        expect(dialog?.textContent).toContain('PESONet');
+        expect(dialog?.textContent).toContain('Check NetBank');
+
+        const closeButton = dialog?.querySelector<HTMLButtonElement>(
+            '[data-testid="close-bank-transfer-instructions"]',
+        );
+
+        expect(closeButton).toBeDefined();
+        await new DOMWrapper(closeButton as HTMLButtonElement).trigger('click');
+        await flushPromises();
+        expect(
+            (
+                wrapper.vm as unknown as {
+                    bankTransferInstructionsOpen: boolean;
+                }
+            ).bankTransferInstructionsOpen,
+        ).toBe(false);
+
+        expect(
+            document.querySelector(
+                '[data-testid="bank-transfer-instruction-dialog"]',
+            ),
+        ).toBeNull();
+        expect(
+            wrapper.get('[data-testid="bank-transfer-history"]').text(),
+        ).toContain('Instructions');
+        expect(
+            wrapper.get('[data-testid="bank-transfer-history"]').text(),
+        ).toContain('Check NetBank');
+
+        await wrapper
+            .get('[data-testid="bank-transfer-history"]')
+            .findAll('button')
+            .find((button) => button.text() === 'Instructions')
+            ?.trigger('click');
+        await nextTick();
+
+        expect(
+            document.querySelector(
+                '[data-testid="bank-transfer-instruction-dialog"]',
+            ),
+        ).not.toBeNull();
+
+        wrapper.unmount();
     });
 
     it('selects a bank transfer amount below the configured minimum', async () => {
