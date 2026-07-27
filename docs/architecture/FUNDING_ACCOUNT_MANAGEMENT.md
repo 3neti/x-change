@@ -123,18 +123,25 @@ No event or accounting entry is duplicated on replay.
 ## Provider-Verified Bank Transfer Funding
 
 An InstaPay or bank-transfer request is a provider-backed variation of the
-same requester-owned PAYABLE flow. The Account holder supplies the expected
-amount and a transfer reference. A screenshot is supporting evidence only; it
-never authorizes a credit.
+same requester-owned PAYABLE flow. The Account holder supplies the exact amount
+and selects a search window: the configured recent window, the last hour, or
+today. A sender-visible reference and screenshot are optional audit evidence
+only; neither participates in authoritative matching.
 
 ```text
-Account holder creates exact PAYABLE request
+Account holder enters exact amount and transfer window
         ↓
 receiver-side provider history observes the inbound transfer
         ↓
-provider transaction ID + destination + amount + currency + status match
+destination + amount + currency + status + time window match uniquely
         ↓
-Check transfer runs CompleteVoucherCollection
+recent match ─────────────── older match
+      ↓                          ↓
+automatic collection       provider observation reserved
+                                 ↓
+                         system approval required
+                                 ↓
+                         approved collection
         ↓
 x_change_provider_funding recognizes provider Inventory
         ↓
@@ -143,25 +150,33 @@ the same atomic posting allocates Client Funds to the requester
 PAYABLE closes; the request becomes Funded; Echo refreshes Cockpit
 ```
 
-The provider transaction ID is the financial idempotency key. A sender receipt
-number, invoice number, screenshot, payer name, remark, or balance delta may
-help locate the transaction, but none is sufficient to authorize credit.
-`voucher_collections` uniquely constrains the provider and transaction ID, so
-two requests cannot consume the same inbound transfer.
+The receiver-side provider transaction ID is the financial idempotency key. It
+is normally invisible to the sender. A sender receipt number, invoice number,
+screenshot, payer name, remark, or balance delta may help later audit, but none
+is sufficient to authorize credit. `x_change_funding_request_transfer_matches`
+uniquely reserves both the Funding Request and provider observation before any
+approval or posting. `voucher_collections` separately constrains the provider
+and transaction ID at collection, so two requests cannot consume the same
+inbound transfer.
 
 `CheckFundingRequestTransfer` accepts only immutable
 `ProviderFundingObservation` records with:
 
-- an exact request reference match against a provider transaction, operation,
-  or request identifier;
 - the configured provider and Treasury connection;
 - exact requested amount and currency;
 - a creditable normalized provider status;
-- `destination_verified=true`.
+- `destination_verified=true`;
+- an occurrence timestamp inside the selected search window.
 
 No match leaves the request at `awaiting_provider_evidence`; multiple matches
-require controlled review. A replay after settlement reports
-`already_credited` and performs no accounting.
+require controlled review. Exactly one match no older than
+`XCHANGE_FUNDING_BANK_TRANSFER_AUTO_CREDIT_WINDOW_MINUTES` is eligible for
+automatic credit in `provider_verified_auto` mode. An older exact match is
+reserved, leaves the PAYABLE locked, and moves the request to
+`awaiting_approval`. Checker approval activates the same PAYABLE and completes
+the `x_change_provider_funding` posting; it never draws from system Account
+Funding Reserve. A replay after settlement reports `already_credited` and
+performs no accounting.
 
 NetBank VCA history already produces these observations for purpose-bound QR
 addresses. Arbitrary deposits to the shared corporate account require a
@@ -490,6 +505,8 @@ XCHANGE_FUNDING_BANK_TRANSFER_ENABLED
 XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER
 XCHANGE_FUNDING_BANK_TRANSFER_CONNECTION
 XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE
+XCHANGE_FUNDING_BANK_TRANSFER_AUTO_CREDIT_WINDOW_MINUTES
+XCHANGE_FUNDING_BANK_TRANSFER_CLOCK_SKEW_SECONDS
 XCHANGE_COCKPIT_QRPH_FUNDING_SIMULATION_ENABLED
 XCHANGE_LIFECYCLE_QRPH_SIMULATION_ENABLED
 XCHANGE_MOBILE_VERIFICATION_ENABLED

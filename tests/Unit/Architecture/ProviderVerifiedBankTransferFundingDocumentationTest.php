@@ -15,5 +15,10 @@ it('documents receiver-side bank-transfer authority and exact-once posting', fun
         ->toContain('arbitrary amount entry')
         ->toContain('provider_verified_auto')
         ->toContain('manual_dual_control')
-        ->toContain('XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE');
+        ->toContain('XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE')
+        ->toContain('sender-visible reference')
+        ->toContain('normally invisible to the sender')
+        ->toContain('XCHANGE_FUNDING_BANK_TRANSFER_AUTO_CREDIT_WINDOW_MINUTES')
+        ->toContain('XCHANGE_FUNDING_BANK_TRANSFER_CLOCK_SKEW_SECONDS')
+        ->toContain('awaiting_approval');
 });
