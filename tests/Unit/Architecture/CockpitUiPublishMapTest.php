@@ -6,5 +6,11 @@ it('publishes the package cockpit implementation namespace with the x-change ui 
     $provider = file_get_contents(dirname(__DIR__, 3).'/src/Providers/XChangeServiceProvider.php');
 
     expect($provider)->toContain('resources/js/cockpit')
-        ->and($provider)->toContain("resource_path('js/cockpit')");
+        ->and($provider)->toContain("resource_path('js/cockpit')")
+        ->and($provider)->toContain(
+            "'resources/js/composables/usePayCodeCostEstimate.ts'",
+        )
+        ->and($provider)->toContain(
+            "resource_path('js/composables/usePayCodeCostEstimate.ts')",
+        );
 });
