@@ -1299,10 +1299,29 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                 [
                     'code' => 'PC-LIST-001',
                     'template' => 'Emergency Cash',
+                    'capability' => [
+                        'key' => 'disbursement',
+                        'label' => 'Disbursement',
+                        'voucher_type_label' => 'Redeemable',
+                    ],
+                    'instruction_badges' => [],
                     'amount' => 2500.5,
                     'currency' => 'PHP',
                     'status' => 'ready',
                     'display_status' => 'ready',
+                    'party' => [
+                        'state' => 'open',
+                        'label' => 'Availability',
+                        'primary' => 'Open claim',
+                        'secondary' => null,
+                        'masked' => false,
+                    ],
+                    'timing' => [
+                        'created_at' => null,
+                        'starts_at' => null,
+                        'expires_at' => null,
+                        'redeemed_at' => null,
+                    ],
                     'owner' => 'Operations',
                     'last_activity' => '2026-07-03T10:00:00+08:00',
                     'actions' => [
@@ -1343,10 +1362,29 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                 [
                     'code' => 'PC-LIST-002',
                     'template' => 'Pay Code',
+                    'capability' => [
+                        'key' => 'disbursement',
+                        'label' => 'Disbursement',
+                        'voucher_type_label' => 'Redeemable',
+                    ],
+                    'instruction_badges' => [],
                     'amount' => '99.95',
                     'currency' => 'PHP',
                     'status' => 'redeemed',
                     'display_status' => 'redeemed',
+                    'party' => [
+                        'state' => 'open',
+                        'label' => 'Availability',
+                        'primary' => 'Open claim',
+                        'secondary' => null,
+                        'masked' => false,
+                    ],
+                    'timing' => [
+                        'created_at' => '2026-07-02T10:00:00+08:00',
+                        'starts_at' => null,
+                        'expires_at' => null,
+                        'redeemed_at' => null,
+                    ],
                     'owner' => 'Redacted',
                     'last_activity' => '2026-07-02T10:00:00+08:00',
                     'actions' => [
@@ -1387,6 +1425,8 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
             ],
             'redactions' => [
                 'payloads' => 'sanitized-list-summary-only',
+                'instructions' => 'allowlisted-operational-badges-only',
+                'party' => 'masked-contact-summary-only',
                 'excluded' => [
                     'id',
                     'voucher_id',

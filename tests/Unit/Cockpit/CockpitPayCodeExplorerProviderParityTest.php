@@ -47,6 +47,21 @@ it('filters cockpit pay code explorer records using legacy index search and stat
         [
             'code' => 'pc-active-001',
             'template' => 'Money Changer',
+            'capability' => [
+                'key' => 'collection',
+                'label' => 'Collection',
+                'voucher_type_label' => 'Payable',
+            ],
+            'instruction_badges' => [
+                ['key' => 'vendor_bound', 'label' => 'Vendor-bound'],
+                ['key' => 'otp', 'label' => 'OTP'],
+            ],
+            'party' => [
+                'state' => 'targeted',
+                'label' => 'Vendor',
+                'primary' => 'TESTSHOP',
+                'masked' => false,
+            ],
             'formatted_amount' => 'PHP 25.00',
             'currency' => 'PHP',
             'mobile' => '09173011987',
@@ -134,6 +149,69 @@ it('filters cockpit pay code explorer records using legacy index search and stat
         ->and(collect($readModel->filters)->firstWhere('value', 'awaiting_approval')->active)->toBeTrue()
         ->and($readModel->toArray())->not->toHaveKey('account_number')
         ->and($readModel->toArray())->not->toHaveKey('mobile');
+});
+
+it('keeps only typed operational summaries in cockpit list records', function () {
+    $provider = new VoucherLifecycleCockpitReadModelProvider(cockpitWave30VoucherLifecycle([
+        [
+            'code' => 'pc-summary-001',
+            'status' => 'active',
+            'capability' => [
+                'key' => 'settlement',
+                'label' => 'Settlement',
+                'voucher_type_label' => 'Bidirectional',
+            ],
+            'instruction_badges' => [
+                ['key' => 'mobile_bound', 'label' => 'Mobile-bound'],
+                ['key' => '', 'label' => 'Ignored'],
+            ],
+            'party' => [
+                'state' => 'targeted',
+                'label' => 'For',
+                'primary' => '•••• 1987',
+                'masked' => true,
+            ],
+            'timing' => [
+                'created_at' => '2026-07-27T08:00:00+08:00',
+                'expires_at' => '2026-08-03T08:00:00+08:00',
+            ],
+            'instructions' => [
+                'cash' => [
+                    'validation' => [
+                        'mobile' => '09173011987',
+                    ],
+                ],
+            ],
+        ],
+    ]));
+
+    $record = $provider->forPayCodeList(new CockpitReadModelQueryData)->records[0]->toArray();
+
+    expect($record)->toMatchArray([
+        'capability' => [
+            'key' => 'settlement',
+            'label' => 'Settlement',
+            'voucher_type_label' => 'Bidirectional',
+        ],
+        'instruction_badges' => [
+            ['key' => 'mobile_bound', 'label' => 'Mobile-bound'],
+        ],
+        'party' => [
+            'state' => 'targeted',
+            'label' => 'For',
+            'primary' => '•••• 1987',
+            'secondary' => null,
+            'masked' => true,
+        ],
+        'timing' => [
+            'created_at' => '2026-07-27T08:00:00+08:00',
+            'starts_at' => null,
+            'expires_at' => '2026-08-03T08:00:00+08:00',
+            'redeemed_at' => null,
+        ],
+    ])
+        ->and(json_encode($record))->not->toContain('09173011987')
+        ->and($record)->not->toHaveKey('instructions');
 });
 
 it('url-encodes cockpit pay code explorer row action destinations', function () {

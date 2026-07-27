@@ -8,6 +8,7 @@ use Brick\Money\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
@@ -77,6 +78,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
     {
         $status = $this->statusLabel($voucher);
         $approval = $this->approvalSummary($voucher);
+        $operational = $this->operationalSummary($voucher);
 
         return [
             'id' => $voucher->id,
@@ -87,9 +89,38 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'status' => $status,
             'display_status' => $this->displayStatus($status, $approval),
             'issuer_id' => $this->issuerId($voucher),
+            'capability' => [
+                'key' => $operational->capability_key,
+                'label' => $operational->capability_label,
+                'voucher_type_label' => $operational->voucher_type_label,
+            ],
+            'instruction_badges' => $operational->instruction_badges,
             'party' => $this->partySummary($voucher),
+            'timing' => [
+                'created_at' => $voucher->created_at?->toIso8601String(),
+                'starts_at' => $voucher->starts_at?->toIso8601String(),
+                'expires_at' => $voucher->expires_at?->toIso8601String(),
+                'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
+            ],
             'approval' => $approval,
         ];
+    }
+
+    protected function operationalSummary(Voucher $voucher): VoucherOperationalSummaryData
+    {
+        try {
+            return VoucherOperationalSummaryData::fromInstructions(
+                $voucher->instructions,
+                $voucher->voucher_type,
+            );
+        } catch (\Throwable) {
+            return new VoucherOperationalSummaryData(
+                capability_key: 'disbursement',
+                capability_label: 'Disbursement',
+                voucher_type_label: 'Redeemable',
+                instruction_badges: [],
+            );
+        }
     }
 
     /**

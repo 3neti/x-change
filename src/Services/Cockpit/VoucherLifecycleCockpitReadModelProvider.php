@@ -21,11 +21,15 @@ use LBHurtado\XChange\Data\Cockpit\CockpitDashboardPipelineStageData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardRiskSignalData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeCapabilityData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeExplorerFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeExplorerStatsData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeInstructionBadgeData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodePartyData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeRowActionData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeTimingData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationGateData;
@@ -1326,6 +1330,8 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             records: $rows,
             redactions: [
                 'payloads' => 'sanitized-list-summary-only',
+                'instructions' => 'allowlisted-operational-badges-only',
+                'party' => 'masked-contact-summary-only',
                 'excluded' => $this->excludedPayloadKeys(),
             ],
         );
@@ -1444,10 +1450,14 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         return new CockpitPayCodeListRecordData(
             code: $code,
             template: $this->stringValue($row['template'] ?? null, 'Pay Code'),
+            capability: $this->payCodeCapability($row),
+            instruction_badges: $this->payCodeInstructionBadges($row),
             amount: $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null),
             currency: $this->nullableString($row['currency'] ?? null),
             status: $status,
             display_status: $this->stringValue($row['display_status'] ?? null, $status),
+            party: $this->payCodeParty($row),
+            timing: $this->payCodeTiming($row),
             owner: $this->stringValue($row['owner'] ?? null, 'Redacted'),
             last_activity: $this->nullableString(
                 $row['last_activity']
@@ -1457,6 +1467,69 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     ?? null
             ),
             actions: $this->payCodeRowActions($code),
+        );
+    }
+
+    private function payCodeCapability(array $row): CockpitPayCodeCapabilityData
+    {
+        $capability = is_array($row['capability'] ?? null) ? $row['capability'] : [];
+
+        return new CockpitPayCodeCapabilityData(
+            key: $this->stringValue($capability['key'] ?? null, 'disbursement'),
+            label: $this->stringValue($capability['label'] ?? null, 'Disbursement'),
+            voucher_type_label: $this->stringValue(
+                $capability['voucher_type_label'] ?? null,
+                'Redeemable',
+            ),
+        );
+    }
+
+    /**
+     * @return array<int, CockpitPayCodeInstructionBadgeData>
+     */
+    private function payCodeInstructionBadges(array $row): array
+    {
+        $badges = is_array($row['instruction_badges'] ?? null)
+            ? $row['instruction_badges']
+            : [];
+
+        return collect($badges)
+            ->filter(fn (mixed $badge): bool => is_array($badge))
+            ->map(function (array $badge): ?CockpitPayCodeInstructionBadgeData {
+                $key = $this->nullableString($badge['key'] ?? null);
+                $label = $this->nullableString($badge['label'] ?? null);
+
+                return $key !== null && $label !== null
+                    ? new CockpitPayCodeInstructionBadgeData($key, $label)
+                    : null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function payCodeParty(array $row): CockpitPayCodePartyData
+    {
+        $party = is_array($row['party'] ?? null) ? $row['party'] : [];
+
+        return new CockpitPayCodePartyData(
+            state: $this->stringValue($party['state'] ?? null, 'open'),
+            label: $this->stringValue($party['label'] ?? null, 'Availability'),
+            primary: $this->stringValue($party['primary'] ?? null, 'Open claim'),
+            secondary: $this->nullableString($party['secondary'] ?? null),
+            masked: ($party['masked'] ?? false) === true,
+        );
+    }
+
+    private function payCodeTiming(array $row): CockpitPayCodeTimingData
+    {
+        $timing = is_array($row['timing'] ?? null) ? $row['timing'] : [];
+
+        return new CockpitPayCodeTimingData(
+            created_at: $this->nullableString($timing['created_at'] ?? $row['created_at'] ?? null),
+            starts_at: $this->nullableString($timing['starts_at'] ?? $row['starts_at'] ?? null),
+            expires_at: $this->nullableString($timing['expires_at'] ?? $row['expires_at'] ?? null),
+            redeemed_at: $this->nullableString($timing['redeemed_at'] ?? $row['redeemed_at'] ?? null),
         );
     }
 
@@ -1516,7 +1589,17 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             $row['formatted_amount'] ?? null,
             $row['amount'] ?? null,
             $row['template'] ?? null,
+            data_get($row, 'capability.label'),
+            data_get($row, 'capability.voucher_type_label'),
+            data_get($row, 'party.primary'),
+            data_get($row, 'party.secondary'),
         ];
+
+        foreach (($row['instruction_badges'] ?? []) as $badge) {
+            if (is_array($badge)) {
+                $fields[] = $badge['label'] ?? null;
+            }
+        }
 
         return collect($fields)
             ->filter(fn (mixed $value): bool => is_scalar($value) && trim((string) $value) !== '')

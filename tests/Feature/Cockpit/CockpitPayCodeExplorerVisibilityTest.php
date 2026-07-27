@@ -52,3 +52,50 @@ it('projects a claimed contact without exposing the full mobile number', functio
         ])
         ->and(json_encode($record))->not->toContain('09171234567');
 });
+
+it('projects capability instructions target and timing without raw instruction payloads', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'voucher_type' => 'payable',
+        'target_amount' => 250,
+        'cash' => [
+            'validation' => [
+                'payable' => 'TESTSHOP',
+            ],
+        ],
+        'validation' => [
+            'otp' => [
+                'required' => true,
+            ],
+        ],
+    ]));
+
+    $record = collect(app(VoucherLifecycleServiceContract::class)->list([
+        'issuer_id' => $issuer->getKey(),
+        'issuer_type' => $issuer->getMorphClass(),
+        'include' => ['redeemer'],
+    ]))->sole();
+
+    expect($record)->toMatchArray([
+        'code' => $voucher->code,
+        'capability' => [
+            'key' => 'collection',
+            'label' => 'Collection',
+            'voucher_type_label' => 'Payable',
+        ],
+        'instruction_badges' => [
+            ['key' => 'vendor_bound', 'label' => 'Vendor-bound'],
+            ['key' => 'settlement_rail', 'label' => 'InstaPay'],
+            ['key' => 'otp', 'label' => 'OTP'],
+        ],
+        'party' => [
+            'state' => 'targeted',
+            'label' => 'Vendor',
+            'primary' => 'TESTSHOP',
+            'secondary' => null,
+            'masked' => false,
+        ],
+    ])
+        ->and($record['timing']['created_at'])->not->toBeNull()
+        ->and($record)->not->toHaveKey('instructions');
+});
