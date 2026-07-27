@@ -57,8 +57,8 @@ describe('Cockpit Quick Generate foundation', () => {
                 voucherType: 'redeemable',
                 expiry: '1 day',
                 instructionLabels: ['Mobile verified', 'OTP'],
-                hasRiderSplash: true,
-                riderSplashDocument:
+                hasRiderDesign: true,
+                riderDesignDocument:
                     '<!doctype html><html><body><h1>Family support</h1></body></html>',
             },
         });
@@ -66,13 +66,19 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('PHP 1,250.00');
         expect(wrapper.text()).toContain('Mobile ending 1987');
         expect(wrapper.text()).toContain('PAY CODE PREVIEW');
-        const splash = wrapper.find(
-            '[data-testid="cockpit-pay-code-canvas-rider-splash"]',
+        const design = wrapper.find(
+            '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
         );
 
-        expect(splash.exists()).toBe(true);
-        expect(splash.attributes('sandbox')).toBe('');
-        expect(splash.attributes('srcdoc')).toContain('Family support');
+        expect(design.exists()).toBe(true);
+        expect(design.attributes('sandbox')).toBe('');
+        expect(design.attributes('class')).not.toContain('opacity-45');
+        expect(design.attributes('srcdoc')).toContain('Family support');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-front"]')
+                .classes(),
+        ).not.toContain('bg-[#fffaf0]');
         expect(
             wrapper
                 .find('svg[aria-label="Claim QR appears after issue"]')
@@ -110,7 +116,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toHaveLength(3);
     });
 
-    it('uses the configured rider splash as the live canvas background', async () => {
+    it('uses the selected rider OG preview as the live canvas design', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -127,13 +133,23 @@ describe('Cockpit Quick Generate foundation', () => {
             .find('[data-testid="cockpit-quick-generate-rider-splash-body"]')
             .setValue('A distinct beneficiary splash');
 
-        const splash = wrapper.find(
-            '[data-testid="cockpit-pay-code-canvas-rider-splash"]',
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-rider-og-source"]')
+            .setValue('message');
+
+        const design = wrapper.find(
+            '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
         );
 
-        expect(splash.exists()).toBe(true);
-        expect(splash.attributes('srcdoc')).toContain(
-            'A distinct beneficiary splash',
+        expect(design.exists()).toBe(true);
+        expect(design.attributes('srcdoc')).toContain('No message yet');
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-submit-purpose"]')
+            .setValue('A purpose-led OG design');
+
+        expect(design.attributes('srcdoc')).toContain(
+            'A purpose-led OG design',
         );
     });
 

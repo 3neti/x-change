@@ -19,8 +19,8 @@ const props = withDefaults(
         expiry?: string;
         instructionLabels?: string[];
         issuedCode?: string | null;
-        hasRiderSplash?: boolean;
-        riderSplashDocument?: string;
+        hasRiderDesign?: boolean;
+        riderDesignDocument?: string;
     }>(),
     {
         recipient: '',
@@ -28,8 +28,8 @@ const props = withDefaults(
         expiry: 'No expiry',
         instructionLabels: () => [],
         issuedCode: null,
-        hasRiderSplash: false,
-        riderSplashDocument: '',
+        hasRiderDesign: false,
+        riderDesignDocument: '',
     },
 );
 
@@ -139,22 +139,27 @@ const displayedCode = computed<string>(() => {
 
         <article
             v-if="visibleSide === 'front'"
-            class="relative aspect-[1.72/1] min-h-56 overflow-hidden rounded-[1.4rem] border border-amber-200 bg-[#fffaf0] p-5 text-slate-950 shadow-xl shadow-slate-900/10 @md:p-7 dark:border-amber-900/60 dark:bg-[#19170f] dark:text-amber-50"
+            class="relative aspect-[1.72/1] min-h-56 overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10 @md:p-7"
+            :class="
+                hasRiderDesign
+                    ? 'border-slate-700 bg-slate-950 text-white'
+                    : 'border-amber-200 bg-[#fffaf0] text-slate-950 dark:border-amber-900/60 dark:bg-[#19170f] dark:text-amber-50'
+            "
             data-testid="cockpit-pay-code-canvas-front"
         >
             <iframe
-                v-if="hasRiderSplash && riderSplashDocument !== ''"
-                title="Pay Code rider splash background"
+                v-if="hasRiderDesign && riderDesignDocument !== ''"
+                title="Pay Code rider OG design"
                 sandbox=""
                 tabindex="-1"
                 aria-hidden="true"
-                class="pointer-events-none absolute inset-0 h-full w-full border-0 opacity-45"
-                data-testid="cockpit-pay-code-canvas-rider-splash"
-                :srcdoc="riderSplashDocument"
+                class="pointer-events-none absolute inset-0 h-full w-full border-0"
+                data-testid="cockpit-pay-code-canvas-rider-og-design"
+                :srcdoc="riderDesignDocument"
             />
             <div
-                v-if="hasRiderSplash"
-                class="absolute inset-0 bg-gradient-to-r from-[#fffaf0]/95 via-[#fffaf0]/80 to-[#fffaf0]/45 dark:from-slate-950/95 dark:via-slate-950/80 dark:to-slate-950/50"
+                v-if="hasRiderDesign"
+                class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/10"
                 aria-hidden="true"
             />
             <div
@@ -174,12 +179,22 @@ const displayedCode = computed<string>(() => {
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p
-                            class="text-[0.65rem] font-black tracking-[0.22em] text-emerald-700 uppercase dark:text-emerald-300"
+                            class="text-[0.65rem] font-black tracking-[0.22em] uppercase"
+                            :class="
+                                hasRiderDesign
+                                    ? 'text-emerald-300'
+                                    : 'text-emerald-700 dark:text-emerald-300'
+                            "
                         >
                             x-change
                         </p>
                         <p
-                            class="mt-1 text-xs font-semibold text-slate-500 dark:text-amber-100/60"
+                            class="mt-1 text-xs font-semibold"
+                            :class="
+                                hasRiderDesign
+                                    ? 'text-white/65'
+                                    : 'text-slate-500 dark:text-amber-100/60'
+                            "
                         >
                             Digital Pay Code
                         </p>
@@ -193,7 +208,12 @@ const displayedCode = computed<string>(() => {
 
                 <div>
                     <p
-                        class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-amber-100/60"
+                        class="text-[0.65rem] font-semibold tracking-[0.18em] uppercase"
+                        :class="
+                            hasRiderDesign
+                                ? 'text-white/65'
+                                : 'text-slate-500 dark:text-amber-100/60'
+                        "
                     >
                         Value
                     </p>
@@ -205,7 +225,12 @@ const displayedCode = computed<string>(() => {
                     </p>
                     <p
                         v-if="purpose"
-                        class="mt-1 max-w-[80%] truncate text-xs text-slate-600 dark:text-amber-100/70"
+                        class="mt-1 max-w-[80%] truncate text-xs"
+                        :class="
+                            hasRiderDesign
+                                ? 'text-white/75'
+                                : 'text-slate-600 dark:text-amber-100/70'
+                        "
                     >
                         {{ purpose }}
                     </p>
@@ -214,7 +239,12 @@ const displayedCode = computed<string>(() => {
                 <div class="flex items-end justify-between gap-4">
                     <div class="min-w-0">
                         <p
-                            class="flex items-center gap-1.5 text-[0.65rem] font-semibold text-slate-500 dark:text-amber-100/60"
+                            class="flex items-center gap-1.5 text-[0.65rem] font-semibold"
+                            :class="
+                                hasRiderDesign
+                                    ? 'text-white/65'
+                                    : 'text-slate-500 dark:text-amber-100/60'
+                            "
                         >
                             <UserRound class="size-3.5" aria-hidden="true" />
                             Prepared for
@@ -228,7 +258,12 @@ const displayedCode = computed<string>(() => {
                     </div>
                     <div class="shrink-0 text-right">
                         <p
-                            class="text-[0.6rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-amber-100/60"
+                            class="text-[0.6rem] font-semibold tracking-[0.18em] uppercase"
+                            :class="
+                                hasRiderDesign
+                                    ? 'text-white/65'
+                                    : 'text-slate-500 dark:text-amber-100/60'
+                            "
                         >
                             {{ issuedCode ? 'Issued code' : 'Preview' }}
                         </p>

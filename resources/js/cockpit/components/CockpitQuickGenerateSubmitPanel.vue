@@ -1666,10 +1666,6 @@ const riderSplashPreviewDocument = computed<string>(() => {
     return buildSandboxedPreviewDocument(body);
 });
 
-const hasRiderSplash = computed<boolean>(() => {
-    return riderSplashContent.value.trim() !== '';
-});
-
 const riderOgPreview = computed<RiderOgPreview>(() => {
     return resolveRiderOgPreview({
         source: riderOgSource.value,
@@ -1685,6 +1681,15 @@ const riderOgPreviewDocument = computed<string>(() => {
     return buildRiderOgPreviewDocument(
         riderOgPreview.value,
         riderSplashContent.value,
+    );
+});
+
+const hasRiderOgDesign = computed<boolean>(() => {
+    return (
+        purpose.value.trim() !== '' ||
+        riderUrl.value.trim() !== '' ||
+        riderSplashContent.value.trim() !== '' ||
+        riderOgSource.value.trim() !== ''
     );
 });
 
@@ -3148,8 +3153,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                     :expiry="canvasExpiryLabel"
                     :instruction-labels="canvasInstructionLabels"
                     :issued-code="resultCode"
-                    :has-rider-splash="hasRiderSplash"
-                    :rider-splash-document="riderSplashPreviewDocument"
+                    :has-rider-design="hasRiderOgDesign"
+                    :rider-design-document="riderOgPreviewDocument"
                 >
                     <template #action>
                         <button
