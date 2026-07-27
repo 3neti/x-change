@@ -117,7 +117,7 @@ it('lets an Account owner submit a request without accepting monetary authority'
             900,
         ),
     ])->assertRedirect(route('x-change.cockpit.funding.index', [
-        'mode' => 'pay_code',
+        'mode' => 'bank_transfer',
     ]))
         ->assertSessionHas('funding_notice');
 

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use LBHurtado\XChange\Enums\FundingRequestType;
+use LBHurtado\XChange\Enums\FundingTransferWindow;
 
 class CreateCockpitFundingRequestRequest extends FormRequest
 {
@@ -29,6 +30,10 @@ class CreateCockpitFundingRequestRequest extends FormRequest
                 'Account funding requested by the Account holder.',
             )),
             'external_reference' => trim((string) $this->input('external_reference')),
+            'transfer_window' => mb_strtolower(trim((string) $this->input(
+                'transfer_window',
+                FundingTransferWindow::Recent->value,
+            ))),
             'requester_notes' => trim((string) $this->input('requester_notes')),
             'idempotency_key' => trim((string) $this->input('idempotency_key')),
             'evidence_document_type' => mb_strtoupper(trim(
@@ -54,6 +59,14 @@ class CreateCockpitFundingRequestRequest extends FormRequest
             'currency' => ['required', 'string', 'size:3'],
             'description' => ['required', 'string', 'min:10', 'max:2000'],
             'external_reference' => ['nullable', 'string', 'max:191'],
+            'transfer_window' => [
+                Rule::requiredIf(
+                    fn (): bool => $this->input('funding_type')
+                        === FundingRequestType::BankTransfer->value,
+                ),
+                'nullable',
+                Rule::enum(FundingTransferWindow::class),
+            ],
             'occurred_on' => ['nullable', 'date', 'before_or_equal:today'],
             'requester_notes' => ['nullable', 'string', 'max:4000'],
             'idempotency_key' => ['required', 'string', 'max:191'],

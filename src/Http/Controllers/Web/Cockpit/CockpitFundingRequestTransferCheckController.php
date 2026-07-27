@@ -29,7 +29,7 @@ class CockpitFundingRequestTransferCheckController extends Controller
         $result = $check->handle($fundingRequest);
 
         return redirect()
-            ->route('x-change.cockpit.funding.index', ['mode' => 'pay_code'])
+            ->route('x-change.cockpit.funding.index', ['mode' => 'bank_transfer'])
             ->with('funding_notice', $result->message);
     }
 }

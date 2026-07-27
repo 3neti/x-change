@@ -390,6 +390,8 @@ const fundingRequestReadModel = {
                 provider: 'netbank',
                 target_label: 'NetBank ••••0019',
                 reference_hint: '••••1236',
+                window: 'recent' as const,
+                window_label: 'Last 10 minutes',
                 verification_status: 'ready_to_check',
                 last_checked_at: null,
                 can_check: true,
@@ -431,6 +433,33 @@ const fundingRequestReadModel = {
     ],
     notices: [],
     review_queue: [],
+    bank_transfer: {
+        enabled: true,
+        provider: 'netbank',
+        institution: 'NetBank',
+        account_name: 'X-Change Sandbox',
+        account_number: '113-001-00001-9',
+        currency: 'PHP',
+        automatic_credit_window_minutes: 10,
+        windows: [
+            {
+                value: 'recent' as const,
+                label: 'Last 10 minutes',
+                automatic: true,
+            },
+            {
+                value: 'last_hour' as const,
+                label: 'Last hour',
+                automatic: false,
+            },
+            {
+                value: 'today' as const,
+                label: 'Today',
+                automatic: false,
+            },
+        ],
+        sender_reference_authority: false as const,
+    },
     controls: {
         attachments_enabled: true,
         evidence_authorizes_credit: false,
@@ -966,7 +995,7 @@ describe('Cockpit Funding foundation', () => {
             props: {
                 funding_read_model: fundingReadModel,
                 funding_requests: fundingRequestReadModel,
-                funding_workspace_mode: 'pay_code',
+                funding_workspace_mode: 'bank_transfer',
                 standing_funding_address: {
                     ...standingFundingAvailability,
                     available: false,
@@ -974,14 +1003,26 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        const requests = wrapper.get('[data-testid="my-funding-requests"]');
+        const requests = wrapper.get('[data-testid="bank-transfer-history"]');
 
-        expect(requests.text()).toContain('NetBank ••••0019');
+        expect(
+            wrapper.get('[data-testid="bank-transfer-instructions"]').text(),
+        ).toContain('113-001-00001-9');
+        expect(
+            wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
+        ).toContain('Find my transfer');
+        expect(
+            wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
+        ).toContain('Last hour');
+        expect(
+            wrapper.get('[data-testid="bank-transfer-funding-form"]').text(),
+        ).toContain('Today');
+        expect(requests.text()).toContain('Last 10 minutes');
         expect(requests.text()).toContain('Ref ••••1236');
 
         await requests
             .findAll('button')
-            .find((button) => button.text() === 'Check transfer')
+            .find((button) => button.text() === 'Check again')
             ?.trigger('click');
 
         expect(routerPostMock).toHaveBeenCalledWith(

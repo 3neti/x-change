@@ -32,7 +32,7 @@ it('lets only the request owner check an InstaPay reference without crediting se
         'x-change.cockpit.funding.requests.transfer-checks.store',
         ['fundingRequest' => $fundingRequest->reference],
     ))->assertRedirect(route('x-change.cockpit.funding.index', [
-        'mode' => 'pay_code',
+        'mode' => 'bank_transfer',
     ]))->assertSessionHas(
         'funding_notice',
         'No exact receiver-side provider record is available yet.',

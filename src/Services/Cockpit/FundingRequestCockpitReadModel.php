@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
+use LBHurtado\XChange\Enums\FundingTransferWindow;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\FundingRequestNotice;
 
@@ -22,7 +23,11 @@ final readonly class FundingRequestCockpitReadModel
         $requests = FundingRequest::query()
             ->where('requester_type', $actorType)
             ->where('requester_id', $actorId)
-            ->with(['events', 'voucher.envelope.attachments'])
+            ->with([
+                'events',
+                'transferMatch',
+                'voucher.envelope.attachments',
+            ])
             ->latest('submitted_at')
             ->limit(20)
             ->get();
@@ -34,7 +39,7 @@ final readonly class FundingRequestCockpitReadModel
             ->get();
 
         return [
-            'schema' => 'x-change.cockpit.account-funding-requests.v1',
+            'schema' => 'x-change.cockpit.account-funding-requests.v2',
             'requests' => $requests->map(fn (FundingRequest $request): array => [
                 'reference' => $request->reference,
                 'type' => $request->funding_type->value,
@@ -123,6 +128,7 @@ final readonly class FundingRequestCockpitReadModel
                 'created_at' => $notice->created_at?->toIso8601String(),
             ])->all(),
             'review_queue' => [],
+            'bank_transfer' => $this->bankTransferInstructions(),
             'controls' => [
                 'attachments_enabled' => (bool) config(
                     'x-change.funding.requests.attachments_enabled',
@@ -226,11 +232,21 @@ final readonly class FundingRequestCockpitReadModel
         );
         $status = match (true) {
             $request->status === FundingRequestStatus::Completed => 'credited',
+            $request->status === FundingRequestStatus::AwaitingApproval
+                && $request->transferMatch !== null => 'approval_required',
             $event?->event_type === 'provider_check_ambiguous' => 'review_required',
             $event?->event_type === 'provider_check_awaiting_evidence' => 'awaiting_provider_evidence',
-            $reference === '' => 'reference_required',
             default => 'ready_to_check',
         };
+        $automaticCreditWindowMinutes = max(1, (int) config(
+            'x-change.funding.requests.bank_transfer.automatic_credit_window_minutes',
+            10,
+        ));
+        $window = FundingTransferWindow::tryFrom((string) data_get(
+            $request->metadata,
+            'transfer_window',
+            FundingTransferWindow::Recent->value,
+        )) ?? FundingTransferWindow::Recent;
 
         return [
             'provider' => mb_strtolower((string) config(
@@ -243,14 +259,56 @@ final readonly class FundingRequestCockpitReadModel
             'reference_hint' => $reference === ''
                 ? null
                 : '••••'.mb_substr($reference, -4),
+            'window' => $window->value,
+            'window_label' => $window->label($automaticCreditWindowMinutes),
             'verification_status' => $status,
             'last_checked_at' => $event?->occurred_at?->toIso8601String(),
-            'can_check' => $reference !== ''
-                && in_array($request->status, [
-                    FundingRequestStatus::Submitted,
-                    FundingRequestStatus::UnderReview,
-                ], true),
+            'can_check' => in_array($request->status, [
+                FundingRequestStatus::Submitted,
+                FundingRequestStatus::UnderReview,
+            ], true),
             'provider_authority_required' => true,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function bankTransferInstructions(): array
+    {
+        $automaticCreditWindowMinutes = max(1, (int) config(
+            'x-change.funding.requests.bank_transfer.automatic_credit_window_minutes',
+            10,
+        ));
+
+        return [
+            'enabled' => (bool) config(
+                'x-change.funding.requests.bank_transfer.enabled',
+                true,
+            ),
+            'provider' => mb_strtolower((string) config(
+                'x-change.funding.requests.bank_transfer.provider',
+                'netbank',
+            )),
+            'institution' => 'NetBank',
+            'account_name' => (string) config(
+                'payment-gateway.netbank.funding.corporate_account_name',
+                '',
+            ),
+            'account_number' => (string) config(
+                'payment-gateway.netbank.funding.corporate_account_number',
+                '',
+            ),
+            'currency' => 'PHP',
+            'automatic_credit_window_minutes' => $automaticCreditWindowMinutes,
+            'windows' => collect(FundingTransferWindow::cases())
+                ->map(fn (FundingTransferWindow $window): array => [
+                    'value' => $window->value,
+                    'label' => $window->label($automaticCreditWindowMinutes),
+                    'automatic' => $window === FundingTransferWindow::Recent,
+                ])
+                ->all(),
+            'sender_reference_authority' => false,
         ];
     }
 }

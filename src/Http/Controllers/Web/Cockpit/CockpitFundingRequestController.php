@@ -9,10 +9,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Actions\Funding\AttachFundingRequestEvidence;
+use LBHurtado\XChange\Actions\Funding\CheckFundingRequestTransfer;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestType;
+use LBHurtado\XChange\Enums\FundingTransferWindow;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCockpitFundingRequestRequest;
 use RuntimeException;
 
@@ -23,6 +25,7 @@ class CockpitFundingRequestController extends Controller
         WalletAccessContract $wallets,
         CreateFundingRequest $create,
         AttachFundingRequestEvidence $attachEvidence,
+        CheckFundingRequestTransfer $checkTransfer,
     ): RedirectResponse {
         $actor = $request->user();
         $account = $wallets->resolveForUser($actor);
@@ -49,6 +52,9 @@ class CockpitFundingRequestController extends Controller
                     ? new DateTimeImmutable($validated['occurred_on'])
                     : null,
                 requesterNotes: ($validated['requester_notes'] ?? '') ?: null,
+                transferWindow: isset($validated['transfer_window'])
+                    ? FundingTransferWindow::from($validated['transfer_window'])
+                    : null,
             ));
             $evidence = $request->file('evidence_document');
 
@@ -63,16 +69,25 @@ class CockpitFundingRequestController extends Controller
 
             return $fundingRequest;
         }, 3);
+        $notice = 'Funding requested. Share the Pay Code if you want to follow up.';
+
+        if ($fundingRequest->funding_type === FundingRequestType::BankTransfer) {
+            $notice = $checkTransfer->handle($fundingRequest)->message;
+        }
 
         return redirect()
-            ->route('x-change.cockpit.funding.index', ['mode' => 'pay_code'])
+            ->route('x-change.cockpit.funding.index', [
+                'mode' => $fundingRequest->funding_type === FundingRequestType::BankTransfer
+                    ? 'bank_transfer'
+                    : 'pay_code',
+            ])
             ->with(
                 'funding_request_submitted_reference',
                 $fundingRequest->reference,
             )
             ->with(
                 'funding_notice',
-                'Funding requested. Share the Pay Code if you want to follow up.',
+                $notice,
             );
     }
 

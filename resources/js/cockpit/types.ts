@@ -684,9 +684,11 @@ export type CockpitFundingRequest = {
         verification_status:
             | 'ready_to_check'
             | 'awaiting_provider_evidence'
+            | 'approval_required'
             | 'review_required'
-            | 'reference_required'
             | 'credited';
+        window: 'recent' | 'last_hour' | 'today';
+        window_label: string;
         last_checked_at?: string | null;
         can_check: boolean;
         provider_authority_required: true;
@@ -728,6 +730,21 @@ export type CockpitFundingRequestReadModel = {
         created_at?: string | null;
     }>;
     review_queue: CockpitFundingRequestReviewItem[];
+    bank_transfer: {
+        enabled: boolean;
+        provider: string;
+        institution: string;
+        account_name: string;
+        account_number: string;
+        currency: string;
+        automatic_credit_window_minutes: number;
+        windows: Array<{
+            value: 'recent' | 'last_hour' | 'today';
+            label: string;
+            automatic: boolean;
+        }>;
+        sender_reference_authority: false;
+    };
     controls: {
         attachments_enabled: boolean;
         evidence_authorizes_credit: boolean;
@@ -756,7 +773,7 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
     funding_request_submitted_reference?: string | null;
-    funding_workspace_mode?: 'self_top_up' | 'pay_code';
+    funding_workspace_mode?: 'self_top_up' | 'bank_transfer' | 'pay_code';
     funding_poll_interval?: number;
     funding_realtime?: {
         enabled: boolean;

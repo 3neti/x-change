@@ -31,6 +31,33 @@ const fundingRequests = computed(
             requests: [],
             notices: [],
             review_queue: [],
+            bank_transfer: {
+                enabled: false,
+                provider: 'netbank',
+                institution: 'NetBank',
+                account_name: '',
+                account_number: '',
+                currency: 'PHP',
+                automatic_credit_window_minutes: 10,
+                windows: [
+                    {
+                        value: 'recent' as const,
+                        label: 'Last 10 minutes',
+                        automatic: true,
+                    },
+                    {
+                        value: 'last_hour' as const,
+                        label: 'Last hour',
+                        automatic: false,
+                    },
+                    {
+                        value: 'today' as const,
+                        label: 'Today',
+                        automatic: false,
+                    },
+                ],
+                sender_reference_authority: false as const,
+            },
             controls: {
                 attachments_enabled: false,
                 evidence_authorizes_credit: false,
@@ -63,9 +90,13 @@ const fundingRequestAmountError = ref<string | null>(null);
 const copiedFundingRequest = ref<string | null>(null);
 const activeTransferCheck = ref<string | null>(null);
 const dismissedFundingRequestResult = ref(false);
-type FundingWorkspaceMode = 'self_top_up' | 'pay_code' | 'simulation';
+type FundingWorkspaceMode =
+    | 'self_top_up'
+    | 'bank_transfer'
+    | 'pay_code'
+    | 'simulation';
 const activeFundingMode = ref<FundingWorkspaceMode>(
-    props.funding_workspace_mode === 'pay_code' ? 'pay_code' : 'self_top_up',
+    props.funding_workspace_mode ?? 'self_top_up',
 );
 const fundingQrMerchantProfile = computed(
     () =>
@@ -84,6 +115,10 @@ const fundingWorkspaceModes = computed(() => [
     {
         key: 'self_top_up' as const,
         label: 'Self Top-Up',
+    },
+    {
+        key: 'bank_transfer' as const,
+        label: 'Bank Transfer',
     },
     {
         key: 'pay_code' as const,
@@ -180,12 +215,22 @@ const fundingRequestForm = useForm({
     funding_type: 'unspecified',
     requested_value_minor: 0,
     external_reference: '',
+    transfer_window: 'recent' as 'recent' | 'last_hour' | 'today',
     occurred_on: '',
     requester_notes: '',
     evidence_document_type: 'supporting_document',
     evidence_document: null as File | null,
     idempotency_key: newIdempotencyKey(),
 });
+const bankTransferInstructions = computed(
+    () => fundingRequests.value.bank_transfer,
+);
+const bankTransferRequests = computed(() =>
+    fundingRequests.value.requests.filter(
+        (request) => request.type === 'bank_transfer',
+    ),
+);
+const payCodeFundingRequests = computed(() => fundingRequests.value.requests);
 const payCodeInspectionForm = useForm({
     code: '',
 });
@@ -458,18 +503,27 @@ function submitFundingRequest(): void {
     });
 }
 
+function submitBankTransferRequest(): void {
+    fundingRequestForm.funding_type = 'bank_transfer';
+    submitFundingRequest();
+}
+
 function checkTransfer(reference: string): void {
     if (activeTransferCheck.value !== null) {
         return;
     }
 
     activeTransferCheck.value = reference;
-    router.post(checkFundingRequestTransfer(reference), {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            activeTransferCheck.value = null;
+    router.post(
+        checkFundingRequestTransfer(reference),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                activeTransferCheck.value = null;
+            },
         },
-    });
+    );
 }
 
 async function copyFundingRequest(
@@ -1396,7 +1450,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 data-testid="cockpit-funding-mode-switcher"
             >
                 <div
-                    class="grid gap-2 sm:grid-cols-2"
+                    class="grid gap-2 sm:grid-cols-3"
                     role="tablist"
                     aria-label="Funding workspace mode"
                 >
@@ -1787,6 +1841,290 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         Try again
                     </button>
                 </div>
+            </section>
+
+            <section
+                v-show="activeFundingMode === 'bank_transfer'"
+                id="funding-panel-bank_transfer"
+                role="tabpanel"
+                aria-labelledby="funding-mode-bank_transfer"
+                class="space-y-4"
+                data-testid="cockpit-bank-transfer-funding"
+            >
+                <article
+                    class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-950 dark:bg-slate-900"
+                >
+                    <div
+                        class="grid gap-4 border-b border-slate-200 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(16rem,0.8fr)] sm:p-5 dark:border-slate-800"
+                    >
+                        <div>
+                            <h2 class="text-base font-semibold">
+                                Fund by bank transfer
+                            </h2>
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                Transfer the exact amount, then let x-change
+                                find it in NetBank.
+                            </p>
+                        </div>
+                        <dl
+                            class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-xl bg-slate-50 px-3 py-2.5 text-sm dark:bg-slate-950"
+                            data-testid="bank-transfer-instructions"
+                        >
+                            <dt class="text-slate-500">Bank</dt>
+                            <dd class="font-semibold">
+                                {{ bankTransferInstructions.institution }}
+                            </dd>
+                            <dt class="text-slate-500">Account</dt>
+                            <dd class="font-semibold">
+                                {{ bankTransferInstructions.account_name }}
+                            </dd>
+                            <dt class="text-slate-500">Number</dt>
+                            <dd class="font-mono font-semibold tracking-wide">
+                                {{ bankTransferInstructions.account_number }}
+                            </dd>
+                        </dl>
+                    </div>
+
+                    <form
+                        class="grid gap-4 p-4 sm:p-5"
+                        data-testid="bank-transfer-funding-form"
+                        @submit.prevent="submitBankTransferRequest"
+                    >
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <label class="block text-xs font-semibold">
+                                Exact amount
+                                <div
+                                    class="mt-1.5 flex h-11 rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
+                                >
+                                    <span
+                                        class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
+                                    >
+                                        PHP
+                                    </span>
+                                    <input
+                                        v-model="fundingRequestAmount"
+                                        inputmode="decimal"
+                                        placeholder="0.00"
+                                        class="min-w-0 flex-1 bg-transparent px-3 text-base font-semibold outline-none"
+                                        data-testid="bank-transfer-amount"
+                                    />
+                                </div>
+                                <span
+                                    v-if="
+                                        fundingRequestAmountError ||
+                                        fundingRequestForm.errors
+                                            .requested_value_minor
+                                    "
+                                    class="mt-1 block text-xs text-rose-600"
+                                >
+                                    {{
+                                        fundingRequestAmountError ??
+                                        fundingRequestForm.errors
+                                            .requested_value_minor
+                                    }}
+                                </span>
+                            </label>
+
+                            <fieldset>
+                                <legend class="text-xs font-semibold">
+                                    When did you transfer?
+                                </legend>
+                                <div
+                                    class="mt-1.5 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-950"
+                                >
+                                    <button
+                                        v-for="window in bankTransferInstructions.windows"
+                                        :key="window.value"
+                                        type="button"
+                                        class="min-h-9 rounded-lg px-2 py-1.5 text-xs font-semibold transition"
+                                        :class="
+                                            fundingRequestForm.transfer_window ===
+                                            window.value
+                                                ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white'
+                                                : 'text-slate-500 hover:text-slate-950 dark:hover:text-white'
+                                        "
+                                        :aria-pressed="
+                                            fundingRequestForm.transfer_window ===
+                                            window.value
+                                        "
+                                        @click="
+                                            fundingRequestForm.transfer_window =
+                                                window.value
+                                        "
+                                    >
+                                        {{ window.label }}
+                                    </button>
+                                </div>
+                                <p
+                                    class="mt-1.5 text-xs text-slate-500 dark:text-slate-400"
+                                >
+                                    {{
+                                        fundingRequestForm.transfer_window ===
+                                        'recent'
+                                            ? 'A unique recent match can credit automatically.'
+                                            : 'A unique older match is reserved for system approval.'
+                                    }}
+                                </p>
+                            </fieldset>
+                        </div>
+
+                        <details
+                            class="rounded-xl border border-slate-200 dark:border-slate-800"
+                        >
+                            <summary
+                                class="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold marker:hidden"
+                            >
+                                Add receipt reference
+                                <span class="font-normal text-slate-500">
+                                    (optional, audit only)
+                                </span>
+                            </summary>
+                            <div
+                                class="grid gap-3 border-t border-slate-200 p-3 sm:grid-cols-2 dark:border-slate-800"
+                            >
+                                <label class="text-xs font-semibold">
+                                    Sender reference
+                                    <input
+                                        v-model="
+                                            fundingRequestForm.external_reference
+                                        "
+                                        class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                        placeholder="Optional"
+                                    />
+                                </label>
+                                <label class="text-xs font-semibold">
+                                    Note
+                                    <input
+                                        v-model="
+                                            fundingRequestForm.requester_notes
+                                        "
+                                        class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                        placeholder="Optional"
+                                    />
+                                </label>
+                            </div>
+                        </details>
+
+                        <div
+                            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <p
+                                v-if="
+                                    submittedFundingRequest?.type ===
+                                    'bank_transfer'
+                                "
+                                class="text-sm font-semibold"
+                                data-testid="bank-transfer-request-result"
+                            >
+                                {{ submittedFundingRequest.requested_value }}
+                                ·
+                                {{
+                                    submittedFundingRequest.receipt_status_label
+                                }}
+                                <span
+                                    v-if="submittedFundingRequest.pay_code"
+                                    class="ml-1 font-mono"
+                                >
+                                    {{
+                                        submittedFundingRequest.pay_code
+                                            .display_code
+                                    }}
+                                </span>
+                            </p>
+                            <span v-else />
+                            <button
+                                type="submit"
+                                class="min-h-11 rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950"
+                                :disabled="
+                                    fundingRequestForm.processing ||
+                                    !bankTransferInstructions.enabled
+                                "
+                                data-testid="find-bank-transfer"
+                            >
+                                {{
+                                    fundingRequestForm.processing
+                                        ? 'Checking NetBank…'
+                                        : 'Find my transfer'
+                                }}
+                            </button>
+                        </div>
+                    </form>
+                </article>
+
+                <article
+                    v-if="bankTransferRequests.length"
+                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="bank-transfer-history"
+                >
+                    <div
+                        class="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 dark:border-slate-800"
+                    >
+                        <h2 class="text-sm font-semibold">Bank transfers</h2>
+                        <span class="text-xs font-semibold text-slate-500">
+                            {{ bankTransferRequests.length }}
+                        </span>
+                    </div>
+                    <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+                        <li
+                            v-for="item in bankTransferRequests"
+                            :key="item.reference"
+                            class="grid gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
+                        >
+                            <div>
+                                <p class="font-semibold">
+                                    {{ item.requested_value }}
+                                </p>
+                                <p
+                                    class="text-xs text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ item.transfer?.window_label }}
+                                    <template
+                                        v-if="item.transfer?.reference_hint"
+                                    >
+                                        · Ref
+                                        {{ item.transfer.reference_hint }}
+                                    </template>
+                                </p>
+                            </div>
+                            <span
+                                class="w-fit rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase"
+                                :class="
+                                    fundingRequestStatusTone(
+                                        item.receipt_status,
+                                    )
+                                "
+                            >
+                                {{ item.receipt_status_label }}
+                            </span>
+                            <button
+                                v-if="item.transfer?.can_check"
+                                type="button"
+                                class="h-9 rounded-lg border border-sky-300 px-3 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-800 dark:text-sky-200"
+                                :disabled="activeTransferCheck !== null"
+                                @click="checkTransfer(item.reference)"
+                            >
+                                {{
+                                    activeTransferCheck === item.reference
+                                        ? 'Checking…'
+                                        : 'Check again'
+                                }}
+                            </button>
+                            <span
+                                v-else
+                                class="text-right text-xs text-slate-500"
+                            >
+                                {{
+                                    item.transfer?.verification_status ===
+                                    'approval_required'
+                                        ? 'Awaiting approval'
+                                        : '—'
+                                }}
+                            </span>
+                        </li>
+                    </ul>
+                </article>
             </section>
 
             <section
@@ -2300,11 +2638,11 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </h2>
                         </div>
                         <span class="text-sm font-semibold">
-                            {{ fundingRequests.requests.length }}
+                            {{ payCodeFundingRequests.length }}
                         </span>
                     </div>
                     <div
-                        v-if="fundingRequests.requests.length"
+                        v-if="payCodeFundingRequests.length"
                         class="mt-4 overflow-x-auto"
                     >
                         <table
@@ -2328,7 +2666,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="item in fundingRequests.requests"
+                                    v-for="item in payCodeFundingRequests"
                                     :key="item.reference"
                                     class="align-top"
                                 >
@@ -2409,7 +2747,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     >
                                         <button
                                             v-if="
-                                                item.transfer?.can_check === true
+                                                item.transfer?.can_check ===
+                                                true
                                             "
                                             type="button"
                                             class="mr-2 rounded-lg bg-sky-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 dark:bg-sky-500 dark:text-slate-950"
