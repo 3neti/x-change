@@ -1177,17 +1177,13 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(checklist.text()).toContain('PHP 25 × 1');
         expect(checklist.text()).toContain('Implicit default execution.');
 
-        const coverage = wrapper.find(
-            '[data-testid="cockpit-voucher-instruction-coverage"]',
-        );
-
-        expect(coverage.exists()).toBe(true);
-        expect(coverage.element.tagName).toBe('DETAILS');
-        expect(coverage.text()).toContain('VoucherInstruction DTO coverage');
-        expect(coverage.text()).toContain(
-            'Open this only when checking contract coverage.',
-        );
-        expect(coverage.text()).toContain('cash.amount');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-voucher-instruction-coverage"]',
+                )
+                .exists(),
+        ).toBe(false);
 
         await wrapper
             .find('[data-testid="cockpit-quick-generate-feedback-email"]')
@@ -2355,6 +2351,13 @@ describe('Cockpit Quick Generate foundation', () => {
         );
         expect(wrapper.text()).toContain('Review your Pay Code');
         expect(wrapper.text()).toContain('Issue Pay Code');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-canvas-submit-button"]',
+                )
+                .exists(),
+        ).toBe(true);
         expect(wrapper.text()).toContain('Instructions and safeguards');
         expect(wrapper.text()).toContain('Ready to issue');
     });

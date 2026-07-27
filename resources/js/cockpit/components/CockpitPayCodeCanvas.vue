@@ -95,36 +95,39 @@ const displayedCode = computed<string>(() => {
                     Updates as you design.
                 </p>
             </div>
-            <div
-                class="inline-flex rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
-                aria-label="Pay Code side"
-            >
-                <button
-                    type="button"
-                    class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
-                    :class="
-                        visibleSide === 'front'
-                            ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                            : 'text-slate-500 dark:text-slate-400'
-                    "
-                    data-testid="cockpit-pay-code-canvas-front-button"
-                    @click="visibleSide = 'front'"
+            <div class="flex items-center gap-2">
+                <slot name="action" />
+                <div
+                    class="inline-flex rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
+                    aria-label="Pay Code side"
                 >
-                    Front
-                </button>
-                <button
-                    type="button"
-                    class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
-                    :class="
-                        visibleSide === 'back'
-                            ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                            : 'text-slate-500 dark:text-slate-400'
-                    "
-                    data-testid="cockpit-pay-code-canvas-back-button"
-                    @click="visibleSide = 'back'"
-                >
-                    Back
-                </button>
+                    <button
+                        type="button"
+                        class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                        :class="
+                            visibleSide === 'front'
+                                ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                                : 'text-slate-500 dark:text-slate-400'
+                        "
+                        data-testid="cockpit-pay-code-canvas-front-button"
+                        @click="visibleSide = 'front'"
+                    >
+                        Front
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                        :class="
+                            visibleSide === 'back'
+                                ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                                : 'text-slate-500 dark:text-slate-400'
+                        "
+                        data-testid="cockpit-pay-code-canvas-back-button"
+                        @click="visibleSide = 'back'"
+                    >
+                        Back
+                    </button>
+                </div>
             </div>
         </div>
 
