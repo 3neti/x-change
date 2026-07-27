@@ -1190,6 +1190,7 @@ function stringValue(value: unknown): string | null {
                     :draft-contract="draftContract"
                     :campaign-context="campaignContext"
                     :feedback-defaults="props.feedback_defaults"
+                    :last-instructions="props.last_instructions"
                     :templates="templates"
                 />
             </div>

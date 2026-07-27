@@ -72,6 +72,8 @@ class GeneratePayCodeRequest extends FormRequest
             'prefix' => ['nullable', 'string'],
             'mask' => ['nullable', 'string'],
             'ttl' => ['nullable'],
+            'starts_at' => ['nullable', 'date'],
+            'expires_at' => ['nullable', 'date'],
             'voucher_type' => ['nullable', 'string', 'max:80'],
             'target_amount' => ['nullable', 'numeric', 'min:0'],
             'rules' => ['nullable', 'array'],

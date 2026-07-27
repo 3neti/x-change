@@ -205,6 +205,13 @@ return [
             'enabled' => (bool) env('XCHANGE_COCKPIT_HEADER_PROVIDER_BALANCE_ENABLED', true),
         ],
 
+        'quick_generate' => [
+            'last_instructions_ttl_seconds' => (int) env(
+                'XCHANGE_COCKPIT_QUICK_GENERATE_LAST_INSTRUCTIONS_TTL_SECONDS',
+                604800,
+            ),
+        ],
+
         'operator_issuance_activity' => [
             'repository' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_REPOSITORY')
                 ?: null,

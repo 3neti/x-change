@@ -8,11 +8,15 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 class CockpitQuickGeneratePageController extends Controller
 {
-    public function __construct(private readonly CockpitReadOnlyPageProps $props) {}
+    public function __construct(
+        private readonly CockpitReadOnlyPageProps $props,
+        private readonly QuickGenerateLastInstructionsStore $lastInstructions,
+    ) {}
 
     public function __invoke(Request $request): Response
     {
@@ -31,6 +35,7 @@ class CockpitQuickGeneratePageController extends Controller
                 campaignPurpose: $this->optionalString($request->query('campaign_purpose')),
             ),
             'feedback_defaults' => $this->feedbackDefaults($request),
+            'last_instructions' => $this->lastInstructions->for($request->user()),
         ]);
     }
 

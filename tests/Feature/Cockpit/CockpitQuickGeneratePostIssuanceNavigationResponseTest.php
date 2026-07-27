@@ -16,7 +16,7 @@ it('hydrates quick generate post issuance navigation links without adding side e
     app()->instance(BuildBalanceOverview::class, cockpitWave34cBalanceFake());
     app()->instance(GeneratePayCode::class, cockpitWave34cGeneratePayCodeFake('PC-WAVE-34C'));
 
-    actingAsTestUser();
+    $operator = actingAsTestUser();
 
     $this->withHeader('Accept', 'application/json')
         ->post(route('x-change.cockpit.quick-generate.store'), cockpitWave34cPayload())
@@ -40,6 +40,38 @@ it('hydrates quick generate post issuance navigation links without adding side e
         ->assertJsonMissingPath('post_issuance_navigation.provider_payload')
         ->assertJsonMissingPath('post_issuance_navigation.wallet')
         ->assertJsonMissingPath('post_issuance_navigation.idempotency_key');
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath(
+            'props.last_instructions.schema',
+            'x-change.cockpit.quick-generate-last-instructions.v1',
+        )
+        ->assertJsonPath('props.last_instructions.instructions.cash.amount', '25.00')
+        ->assertJsonPath(
+            'props.last_instructions.instructions.rider.message',
+            'Wave 34C post issuance navigation',
+        )
+        ->assertJsonPath(
+            'props.last_instructions.instructions.starts_at',
+            '2026-07-28T09:00:00+08:00',
+        )
+        ->assertJsonPath(
+            'props.last_instructions.instructions.expires_at',
+            '2026-07-29T09:00:00+08:00',
+        )
+        ->assertJsonMissingPath('props.last_instructions.instructions.cash.validation.secret')
+        ->assertJsonMissingPath('props.last_instructions.instructions.metadata.issuer_id');
+
+    $otherOperator = actingAsTestUser();
+
+    expect($otherOperator->is($operator))->toBeFalse();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('props.last_instructions', null);
 });
 
 function cockpitWave34cPricingFake(): EstimatePayCodeCost
@@ -114,6 +146,9 @@ function cockpitWave34cPayload(): array
         'cash' => [
             'amount' => '25.00',
             'currency' => 'PHP',
+            'validation' => [
+                'secret' => 'do-not-restore-this-pin',
+            ],
         ],
         'inputs' => [
             'fields' => [],
@@ -124,7 +159,10 @@ function cockpitWave34cPayload(): array
         'rider' => [
             'message' => 'Wave 34C post issuance navigation',
         ],
+        'starts_at' => '2026-07-28T09:00:00+08:00',
+        'expires_at' => '2026-07-29T09:00:00+08:00',
         'metadata' => [
+            'issuer_id' => 'should-be-server-owned',
             'custom' => [
                 'cockpit' => [
                     'template_key' => 'money-changer',

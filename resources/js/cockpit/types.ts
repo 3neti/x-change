@@ -1409,6 +1409,13 @@ export type CockpitQuickGenerateReadModel = {
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     quick_generate_read_model?: CockpitQuickGenerateReadModel;
     feedback_defaults?: CockpitQuickGenerateFeedbackDefaults;
+    last_instructions?: CockpitQuickGenerateLastInstructions | null;
+};
+
+export type CockpitQuickGenerateLastInstructions = {
+    schema: string;
+    saved_at: string;
+    instructions: Record<string, unknown>;
 };
 
 export type CockpitQuickGenerateFeedbackDefaults = {

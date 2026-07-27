@@ -6,6 +6,7 @@ import type {
     CockpitQuickGenerateCampaignContext,
     CockpitQuickGenerateDraftContract,
     CockpitQuickGenerateFeedbackDefaults,
+    CockpitQuickGenerateLastInstructions,
     CockpitQuickGenerateMutationContract,
     CockpitQuickGeneratePostIssuanceNavigation,
     CockpitQuickGeneratePostIssuanceNavigationItem,
@@ -34,6 +35,7 @@ const props = defineProps<{
     draftContract?: CockpitQuickGenerateDraftContract;
     campaignContext?: CockpitQuickGenerateCampaignContext;
     feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
+    lastInstructions?: CockpitQuickGenerateLastInstructions | null;
     templates: CockpitQuickGenerateTemplate[];
 }>();
 
@@ -553,7 +555,10 @@ const lastStatus = ref('ready');
 const lastMessage = ref('Ready to issue when the design is complete.');
 const lastResponse = ref<Record<string, unknown> | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
+const lastInstructionsLoaded = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
+
+hydrateLastInstructions();
 
 watch(selectedTemplate, (templateKey): void => {
     applyTemplateDefaults(templateKey);
@@ -666,6 +671,404 @@ function applyTemplateDefaults(templateKey: string): void {
     lastStatus.value = 'ready';
     lastMessage.value = `${selectedTemplateName.value} defaults applied. Submit will call the existing x-change issuance handoff route.`;
     lastResponse.value = null;
+}
+
+function startFresh(): void {
+    lastInstructionsLoaded.value = false;
+    applyTemplateDefaults(selectedTemplate.value);
+}
+
+function hydrateLastInstructions(): void {
+    const instructions = props.lastInstructions?.instructions;
+
+    if (!instructions || props.campaignContext?.status === 'available') {
+        return;
+    }
+
+    const templateKey = instructionString(
+        instructions,
+        ['metadata', 'custom', 'cockpit', 'template_key'],
+        selectedTemplate.value,
+    );
+
+    if (props.templates.some((template) => template.key === templateKey)) {
+        selectedTemplate.value = templateKey;
+    }
+
+    amount.value = instructionString(
+        instructions,
+        ['cash', 'amount'],
+        amount.value,
+    );
+    currency.value = instructionString(
+        instructions,
+        ['cash', 'currency'],
+        currency.value,
+    );
+    count.value = instructionString(instructions, ['count'], count.value);
+    provider.value = instructionString(
+        instructions,
+        ['provider'],
+        provider.value,
+    );
+
+    const mobileRecipient = instructionString(instructions, [
+        'cash',
+        'validation',
+        'mobile',
+    ]);
+    const payableRecipient = instructionString(instructions, [
+        'cash',
+        'validation',
+        'payable',
+    ]);
+    recipientReference.value = instructionString(
+        instructions,
+        ['metadata', 'custom', 'cockpit', 'recipient_reference'],
+        mobileRecipient ||
+            (payableRecipient !== 'required' ? payableRecipient : '') ||
+            recipientReference.value,
+    );
+    purpose.value = instructionString(
+        instructions,
+        ['rider', 'message'],
+        purpose.value,
+    );
+    selectedInputFieldValues.value = instructionStringArray(instructions, [
+        'inputs',
+        'fields',
+    ]);
+
+    validationSecret.value = '';
+    requireMobileValidation.value = mobileRecipient !== '';
+    requirePayableValidation.value = payableRecipient === 'required';
+    requireCountryValidation.value =
+        instructionString(instructions, ['cash', 'validation', 'country']) !==
+        '';
+    requireLocationValidation.value =
+        instructionString(instructions, ['cash', 'validation', 'location']) !==
+        '';
+
+    const requirements = instructionStringArray(instructions, [
+        'inputs',
+        'requirements',
+    ]);
+    verificationKyc.value = requirements.includes('kyc');
+    verificationOtp.value = requirements.includes('otp');
+    verificationSelfie.value = requirements.includes('selfie');
+
+    const structuredValidation = instructionRecord(instructions, [
+        'validation',
+    ]);
+    const signature = instructionRecord(structuredValidation, ['signature']);
+    const selfie = instructionRecord(structuredValidation, ['selfie']);
+    const otp = instructionRecord(structuredValidation, ['otp']);
+    const faceMatch = instructionRecord(structuredValidation, ['face_match']);
+    const time = instructionRecord(structuredValidation, ['time']);
+    const timeWindow = instructionRecord(time, ['window']);
+
+    signatureRequired.value = signature.required === true;
+    signatureFailure.value = signature.on_failure === 'warn' ? 'warn' : 'block';
+    verificationSelfie.value =
+        verificationSelfie.value || selfie.required === true;
+    selfieFailure.value = selfie.on_failure === 'warn' ? 'warn' : 'block';
+    verificationOtp.value = verificationOtp.value || otp.required === true;
+    otpFailure.value = otp.on_failure === 'warn' ? 'warn' : 'block';
+    faceMatchRequired.value = faceMatch.required === true;
+    faceMatchFailure.value = faceMatch.on_failure === 'warn' ? 'warn' : 'block';
+    faceMatchConfidence.value = instructionString(
+        faceMatch,
+        ['min_confidence'],
+        faceMatchConfidence.value,
+    );
+    timeValidationEnabled.value = Object.keys(time).length > 0;
+    timeWindowStart.value = instructionString(
+        timeWindow,
+        ['start_time'],
+        timeWindowStart.value,
+    );
+    timeWindowEnd.value = instructionString(
+        timeWindow,
+        ['end_time'],
+        timeWindowEnd.value,
+    );
+    timeWindowTimezone.value = instructionString(
+        timeWindow,
+        ['timezone'],
+        timeWindowTimezone.value,
+    );
+    timeLimitMinutes.value = instructionString(
+        time,
+        ['limit_minutes'],
+        timeLimitMinutes.value,
+    );
+    timeTrackDuration.value =
+        typeof time.track_duration === 'boolean'
+            ? time.track_duration
+            : timeTrackDuration.value;
+
+    riderUrl.value = instructionString(instructions, ['rider', 'url']);
+    riderRedirectTimeout.value = instructionString(instructions, [
+        'rider',
+        'redirect_timeout',
+    ]);
+    riderSplashHeadline.value = '';
+    riderSplash.value = instructionString(instructions, ['rider', 'splash']);
+    riderSplashCtaText.value = '';
+    riderSplashTimeout.value = instructionString(
+        instructions,
+        ['rider', 'splash_timeout'],
+        riderSplashTimeout.value,
+    );
+    riderSplashMetaSanitized.value =
+        dataGet(instructions, ['rider', 'splash_meta', 'sanitized']) !== false;
+    riderSplashMetaProfile.value = instructionString(instructions, [
+        'rider',
+        'splash_meta',
+        'html_profile',
+    ]);
+    riderOgSource.value = instructionString(instructions, [
+        'rider',
+        'og_source',
+    ]);
+
+    feedbackEmail.value = instructionString(instructions, [
+        'feedback',
+        'email',
+    ]);
+    feedbackMobile.value = instructionString(instructions, [
+        'feedback',
+        'mobile',
+    ]);
+    feedbackWebhook.value = instructionString(instructions, [
+        'feedback',
+        'webhook',
+    ]);
+    feedbackEmailEnabled.value = feedbackEmail.value !== '';
+    feedbackMobileEnabled.value = feedbackMobile.value !== '';
+    feedbackWebhookEnabled.value = feedbackWebhook.value !== '';
+
+    prefix.value = instructionString(instructions, ['prefix']);
+    mask.value = instructionString(instructions, ['mask']);
+    startsAt.value = instructionString(instructions, ['starts_at']);
+    expiresAt.value = instructionString(instructions, ['expires_at']);
+
+    const lastTtl = instructionString(instructions, ['ttl']);
+    const knownExpiryPresets = ['P12H', 'P1D', 'P3D', 'P7D'];
+
+    if (knownExpiryPresets.includes(lastTtl)) {
+        expiryPreset.value = lastTtl as 'P12H' | 'P1D' | 'P3D' | 'P7D';
+        ttl.value = '';
+    } else if (lastTtl !== '') {
+        expiryPreset.value = 'custom';
+        ttl.value = lastTtl;
+    } else {
+        expiryPreset.value = 'none';
+        ttl.value = '';
+    }
+
+    settlementRail.value = instructionString(instructions, [
+        'cash',
+        'settlement_rail',
+    ]);
+    const rememberedFeeStrategy = instructionString(instructions, [
+        'cash',
+        'fee_strategy',
+    ]);
+
+    if (
+        rememberedFeeStrategy === 'absorb' ||
+        rememberedFeeStrategy === 'include' ||
+        rememberedFeeStrategy === 'add'
+    ) {
+        feeStrategy.value = rememberedFeeStrategy;
+    }
+
+    const rememberedCashType = instructionString(instructions, [
+        'cash',
+        'type',
+    ]);
+    const knownCashType = cashTypeOptions.some(
+        (option) => option.value === rememberedCashType,
+    );
+    cashType.value =
+        rememberedCashType === ''
+            ? 'default'
+            : knownCashType
+              ? rememberedCashType
+              : 'custom';
+    customCashType.value = knownCashType ? '' : rememberedCashType;
+
+    const rememberedMandates = instructionStringArray(instructions, [
+        'cash',
+        'mandates',
+    ]);
+    const knownMandates = new Set(mandateOptions.map((option) => option.value));
+    selectedMandates.value = rememberedMandates.filter((mandate) =>
+        knownMandates.has(mandate),
+    );
+    customMandates.value = rememberedMandates
+        .filter((mandate) => !knownMandates.has(mandate))
+        .join(', ');
+
+    hydrateLastSlices(instructions);
+
+    const rememberedVoucherType = instructionString(
+        instructions,
+        ['voucher_type'],
+        'redeemable',
+    );
+
+    if (
+        rememberedVoucherType === 'redeemable' ||
+        rememberedVoucherType === 'payable' ||
+        rememberedVoucherType === 'settlement'
+    ) {
+        voucherType.value = rememberedVoucherType;
+    }
+
+    const rememberedClaimOutcome = instructionString(instructions, [
+        'claim',
+        'default_outcome',
+    ]);
+
+    if (
+        rememberedClaimOutcome === 'provider_disbursement' ||
+        rememberedClaimOutcome === 'account_funding'
+    ) {
+        claimOutcome.value = rememberedClaimOutcome;
+    }
+
+    targetAmount.value = instructionString(instructions, ['target_amount']);
+    rulesMinPayment.value = instructionString(instructions, [
+        'rules',
+        'min_payment',
+    ]);
+    rulesMaxPayment.value = instructionString(instructions, [
+        'rules',
+        'max_payment',
+    ]);
+    rulesAllowOverpayment.value =
+        dataGet(instructions, ['rules', 'allow_overpayment']) === true;
+    rulesAutoCloseOnFullPayment.value =
+        dataGet(instructions, ['rules', 'auto_close_on_full_payment']) !==
+        false;
+
+    const execution = instructionRecord(instructions, ['execution']);
+    includeExecutionInstruction.value = Object.keys(execution).length > 0;
+    executionSchema.value = instructionString(
+        execution,
+        ['schema'],
+        executionSchema.value,
+    );
+    executionDriver.value = instructionString(
+        execution,
+        ['driver'],
+        executionDriver.value,
+    );
+    executionMode.value = instructionString(execution, ['mode']);
+    executionPipeline.value = instructionStringArray(execution, [
+        'pipeline',
+    ]).join(', ');
+    executionFallback.value = instructionString(execution, ['fallback']);
+    executionVisibility.value = instructionStringArray(execution, [
+        'visibility',
+    ]).join(', ');
+    executionMetadata.value = instructionString(execution, [
+        'metadata',
+        'operator_note',
+    ]);
+
+    metadataFlowType.value = instructionString(instructions, [
+        'metadata',
+        'flow_type',
+    ]);
+    metadataIssuerId.value = '';
+    metadataCollectionWalletId.value = '';
+
+    lastInstructionsLoaded.value = true;
+    lastStatus.value = 'ready';
+    lastMessage.value =
+        'Your last successful Pay Code design is ready to review or change.';
+}
+
+function hydrateLastSlices(instructions: Record<string, unknown>): void {
+    const rememberedSlices = dataGet(instructions, ['metadata', 'slices']);
+    const rememberedMode = instructionString(instructions, [
+        'cash',
+        'slice_mode',
+    ]);
+
+    if (Array.isArray(rememberedSlices) && rememberedSlices.length > 0) {
+        sliceMode.value = 'named';
+        namedClaimSlices.value = rememberedSlices.map((slice, index) => {
+            const item =
+                typeof slice === 'object' && slice !== null
+                    ? (slice as Record<string, unknown>)
+                    : {};
+
+            return {
+                id: instructionString(item, ['id'], namedClaimSliceId(index)),
+                amount: instructionString(item, ['amount'], '0'),
+                description: instructionString(
+                    item,
+                    ['description'],
+                    defaultFixedSliceDescription(index),
+                ),
+                tag: instructionString(item, ['tag']),
+                claim_on: instructionString(item, ['claim_on']),
+                claim_by: instructionString(item, ['claim_by']),
+            };
+        });
+        slices.value = String(namedClaimSlices.value.length);
+        maxSlices.value = String(namedClaimSlices.value.length);
+        minWithdrawal.value = instructionString(
+            instructions,
+            ['cash', 'min_withdrawal'],
+            String(issuerDefaultMinimumWithdrawal),
+        );
+
+        return;
+    }
+
+    if (rememberedMode === 'fixed') {
+        const rememberedCount = Math.max(
+            1,
+            Number(instructionString(instructions, ['cash', 'slices'], '1')),
+        );
+
+        sliceMode.value = 'fixed';
+        slices.value = String(rememberedCount);
+        maxSlices.value = String(rememberedCount);
+        minWithdrawal.value = String(issuerDefaultMinimumWithdrawal);
+        namedClaimSlices.value = equalFixedNamedClaimSlices(rememberedCount);
+
+        return;
+    }
+
+    if (rememberedMode === 'open') {
+        sliceMode.value = 'open';
+        slices.value = '1';
+        maxSlices.value = instructionString(
+            instructions,
+            ['cash', 'max_slices'],
+            '2',
+        );
+        minWithdrawal.value = instructionString(
+            instructions,
+            ['cash', 'min_withdrawal'],
+            String(issuerDefaultMinimumWithdrawal),
+        );
+        namedClaimSlices.value = defaultOpenNamedClaimSlices();
+
+        return;
+    }
+
+    sliceMode.value = 'whole';
+    slices.value = '1';
+    maxSlices.value = '1';
+    minWithdrawal.value = String(issuerDefaultMinimumWithdrawal);
+    namedClaimSlices.value = defaultWholeNamedClaimSlices();
 }
 
 const routeUrl = computed<string | null>(() =>
@@ -3039,6 +3442,37 @@ function dataGet(source: unknown, path: string[]): unknown {
         return (value as Record<string, unknown>)[key];
     }, source);
 }
+
+function instructionString(
+    source: unknown,
+    path: string[],
+    fallback = '',
+): string {
+    return stringValue(dataGet(source, path)) ?? fallback;
+}
+
+function instructionStringArray(source: unknown, path: string[]): string[] {
+    const value = dataGet(source, path);
+
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value
+        .map((item) => stringValue(item))
+        .filter((item): item is string => item !== null);
+}
+
+function instructionRecord(
+    source: unknown,
+    path: string[],
+): Record<string, unknown> {
+    const value = dataGet(source, path);
+
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
 </script>
 
 <template>
@@ -3072,6 +3506,31 @@ function dataGet(source: unknown, path: string[]): unknown {
             >
                 {{ lastStatus }}
             </span>
+        </div>
+
+        <div
+            v-if="lastInstructionsLoaded"
+            class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-100/70 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/50"
+            data-testid="cockpit-quick-generate-last-instructions"
+        >
+            <div>
+                <p
+                    class="text-sm font-semibold text-emerald-950 dark:text-emerald-100"
+                >
+                    Last Pay Code Design Loaded
+                </p>
+                <p class="text-xs text-emerald-800 dark:text-emerald-300">
+                    Review it as-is or change anything before issuing.
+                </p>
+            </div>
+            <button
+                type="button"
+                class="inline-flex min-h-9 items-center justify-center rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-700 dark:bg-slate-950 dark:text-emerald-200 dark:hover:bg-slate-900"
+                data-testid="cockpit-quick-generate-start-fresh"
+                @click="startFresh"
+            >
+                Start Fresh
+            </button>
         </div>
 
         <div

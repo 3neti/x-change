@@ -20,6 +20,7 @@ use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
+use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\IdempotencyService;
 use Throwable;
 
@@ -36,6 +37,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         EstimatePayCodeCost $estimatePayCodeCost,
         BuildBalanceOverview $balanceOverview,
         CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
+        QuickGenerateLastInstructionsStore $lastInstructions,
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
@@ -69,6 +71,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             if (is_array($recalled)) {
                 data_set($recalled, 'idempotency.replayed', true);
                 data_set($recalled, 'status', 'replayed');
+                $this->rememberLastInstructions(
+                    $request,
+                    $validatedPayload,
+                    $lastInstructions,
+                );
 
                 return response()->json($recalled, 200);
             }
@@ -84,7 +91,34 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             $idempotency->remember($key, $payload, $response);
         }
 
+        $this->rememberLastInstructions(
+            $request,
+            $validatedPayload,
+            $lastInstructions,
+        );
+
         return response()->json($response, 201);
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     */
+    private function rememberLastInstructions(
+        GeneratePayCodeRequest $request,
+        array $instructions,
+        QuickGenerateLastInstructionsStore $lastInstructions,
+    ): void {
+        $operator = $request->user();
+
+        if ($operator === null) {
+            return;
+        }
+
+        try {
+            $lastInstructions->remember($operator, $instructions);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 
     /**
