@@ -15,6 +15,7 @@ use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
 use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Cockpit\FundingActivityCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\FundingQrMerchantProfileReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
@@ -30,6 +31,7 @@ class CockpitFundingPageController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly FundingCockpitReadModelProvider $funding,
         private readonly FundingRequestCockpitReadModel $fundingRequests,
+        private readonly FundingActivityCockpitReadModel $fundingActivity,
         private readonly FundingQrMerchantProfileReadModel $merchantProfiles,
         private readonly Base64PngQrPhFundingSimulationQrRenderer $simulationQr,
         private readonly NetbankStandingAddressProfile $standingAddressProfile,
@@ -47,10 +49,16 @@ class CockpitFundingPageController extends Controller
             throw new AuthenticationException;
         }
 
+        $fundingRequests = $this->fundingRequests->forOperator($operator);
+
         return Inertia::render('x-change/cockpit/Funding', [
             ...$this->props->toArray(),
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
-            'funding_requests' => $this->fundingRequests->forOperator($operator),
+            'funding_requests' => $fundingRequests,
+            'funding_activity' => $this->fundingActivity->forOperator(
+                $operator,
+                $fundingRequests,
+            ),
             'funding_instruction' => $request->session()->pull('funding_instruction'),
             'funding_notice' => $request->session()->pull('funding_notice')
                 ?? $request->session()->pull('funding_account_notice'),

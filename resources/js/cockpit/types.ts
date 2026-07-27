@@ -768,6 +768,61 @@ export type CockpitFundingRequestReadModel = {
     redactions: Record<string, boolean>;
 };
 
+export type CockpitFundingActivityItem = {
+    key: string;
+    source: 'funding_request' | 'standing_funding_receipt';
+    reference: string;
+    display_reference: string;
+    method: 'qr_ph' | 'bank_transfer' | 'pay_code' | 'reviewed_value';
+    method_label: string;
+    amount: string;
+    status:
+        | 'awaiting_payment'
+        | 'checking_provider'
+        | 'under_review'
+        | 'pay_code_ready'
+        | 'processing'
+        | 'recognized'
+        | 'needs_attention'
+        | 'declined'
+        | 'expired'
+        | 'cancelled'
+        | 'reversed';
+    status_label: string;
+    updated_at?: string | null;
+    timestamps: {
+        requested_at?: string | null;
+        observed_at?: string | null;
+        recognized_at?: string | null;
+    };
+    summary: string;
+    action_keys: Array<
+        | 'view_instructions'
+        | 'check_provider'
+        | 'copy_pay_code'
+        | 'approve_receipt'
+    >;
+    request_reference?: string;
+    approval_reference?: string | null;
+    provisional?: boolean;
+    pay_code?: CockpitReviewedFundingPayCode | null;
+    transfer?: CockpitFundingRequest['transfer'];
+};
+
+export type CockpitFundingActivityReadModel = {
+    schema: 'x-change.cockpit.funding-activity.v1';
+    items: CockpitFundingActivityItem[];
+    filters: Array<{
+        key: 'all' | 'qr_ph' | 'bank_transfer' | 'pay_code' | 'reviewed_value';
+        label: string;
+    }>;
+    redactions: {
+        payer_identity_exposed: false;
+        provider_transaction_id_exposed: false;
+        raw_evidence_exposed: false;
+    };
+};
+
 export type CockpitPayCodeFundingPreview = {
     eligible: boolean;
     status: string;
@@ -783,6 +838,7 @@ export type CockpitPayCodeFundingPreview = {
 export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_read_model: CockpitFundingReadModel;
     funding_requests?: CockpitFundingRequestReadModel;
+    funding_activity?: CockpitFundingActivityReadModel;
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
     funding_request_submitted_reference?: string | null;
