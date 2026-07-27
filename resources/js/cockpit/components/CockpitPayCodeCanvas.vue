@@ -314,7 +314,7 @@ function stringValue(value: unknown): string | null {
 
         <article
             v-if="visibleSide === 'front'"
-            class="relative aspect-[1.72/1] min-h-72 overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10 @md:p-7"
+            class="relative aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10 @md:p-7"
             :class="
                 hasRiderDesign
                     ? 'border-slate-700 bg-slate-950 text-white'
@@ -454,7 +454,7 @@ function stringValue(value: unknown): string | null {
 
         <article
             v-else
-            class="relative aspect-[1.72/1] min-h-72 overflow-hidden rounded-[1.4rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20 @lg:p-6"
+            class="relative aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20 @lg:p-6"
             data-testid="cockpit-pay-code-canvas-back"
         >
             <div class="flex h-full min-w-0 flex-col">
