@@ -45,8 +45,16 @@ describe('Cockpit Pay Code Explorer foundation', () => {
             'Filtering uses normal GET navigation',
         );
         expect(wrapper.classes()).toContain('py-3');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-filter-density-summary"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="cockpit-pay-code-filter-density-summary"]').classes()).toContain('rounded-full');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-filter-density-summary"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-filter-density-summary"]')
+                .classes(),
+        ).toContain('rounded-full');
         expect(wrapper.text()).toContain('Active');
         expect(wrapper.text()).toContain('Context');
         expect(wrapper.text()).toContain('Total');
@@ -81,7 +89,9 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(wrapper.text()).toContain('PC-PENDING-002');
         expect(wrapper.text()).toContain('PC-SETTLE-003');
         expect(
-            wrapper.find('[data-testid="cockpit-pay-code-results-scan-guide"]').exists(),
+            wrapper
+                .find('[data-testid="cockpit-pay-code-results-scan-guide"]')
+                .exists(),
         ).toBe(true);
         expect(
             wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
@@ -106,7 +116,6 @@ describe('Cockpit Pay Code Explorer foundation', () => {
                 .find('[data-testid="cockpit-pay-code-explorer-shell"]')
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Pay Code operations');
         expect(wrapper.text()).toContain('Pay Code Explorer');
         expect(wrapper.text()).toContain('Search');
         expect(wrapper.text()).toContain('Filter Details');
