@@ -106,8 +106,9 @@ describe('issued Pay Code dialog', () => {
         expect(wrapper.text()).toContain('Pay Code Generation');
         expect(wrapper.text()).toContain('₱12.00');
         expect(wrapper.text()).toContain('Selfie Verification');
-        expect(wrapper.text()).toContain('₱5.00');
+        expect(wrapper.text()).toContain('5.00');
         expect(wrapper.text()).toContain('₱17.00');
+        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
 
         await wrapper
             .get('[data-testid="cockpit-issued-pay-code-copy"]')

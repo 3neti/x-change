@@ -109,9 +109,10 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Pay Code Generation');
         expect(wrapper.text()).toContain('₱12.00');
         expect(wrapper.text()).toContain('Selfie Verification');
-        expect(wrapper.text()).toContain('₱5.00');
+        expect(wrapper.text()).toContain('5.00');
         expect(wrapper.text()).toContain('Total');
         expect(wrapper.text()).toContain('₱17.00');
+        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
         expect(wrapper.text()).toContain('Mobile verified');
         expect(wrapper.text()).toContain('OTP');
         expect(wrapper.text()).not.toContain('Back Of The Pay Code');
@@ -168,6 +169,54 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(columns[1].text()).toContain('Charge 8');
         expect(columns[1].text()).toContain('Total');
         expect(columns[1].text()).toContain('₱36.00');
+        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
+    });
+
+    it('splits eighteen priced instructions across three compact columns without losing the total', async () => {
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '100',
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                costEstimate: {
+                    currency: 'PHP',
+                    charges: Array.from({ length: 18 }, (_, index) => ({
+                        catalog_item_reference: `charge.${index + 1}`,
+                        label: `Charge ${index + 1}`,
+                        price: index + 1,
+                    })),
+                    total: 171,
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        const ledger = wrapper.find(
+            '[data-testid="cockpit-pay-code-cost-ledger"]',
+        );
+        const columns = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-cost-ledger-column"]',
+        );
+
+        expect(ledger.attributes('data-column-count')).toBe('3');
+        expect(columns).toHaveLength(3);
+        expect(columns[0].text()).toContain('Charge 1');
+        expect(columns[0].text()).toContain('Charge 6');
+        expect(columns[0].text()).toContain('₱1.00');
+        expect(columns[0].text()).not.toContain('Total');
+        expect(columns[1].text()).toContain('Charge 7');
+        expect(columns[1].text()).toContain('Charge 12');
+        expect(columns[1].text()).not.toContain('₱');
+        expect(columns[1].text()).not.toContain('Total');
+        expect(columns[2].text()).toContain('Charge 13');
+        expect(columns[2].text()).toContain('Charge 18');
+        expect(columns[2].text()).toContain('Total');
+        expect(columns[2].text()).toContain('₱171.00');
+        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
     });
 
     it('renders template selector placeholders as institutional products', () => {

@@ -159,23 +159,27 @@ const hasCostEstimate = computed<boolean>(() => {
     return props.costEstimate !== null && costTotal.value !== null;
 });
 
-const usesTwoColumnCostLedger = computed<boolean>(() => {
-    return costLineItems.value.length >= 8;
+const costLedgerColumnCount = computed<number>(() => {
+    return Math.min(3, Math.max(1, Math.ceil(costLineItems.value.length / 7)));
 });
 
 const costLedgerColumns = computed<
     Array<Array<{ key: string; label: string; amount: number }>>
 >(() => {
-    if (!usesTwoColumnCostLedger.value) {
+    if (costLedgerColumnCount.value === 1) {
         return [costLineItems.value];
     }
 
-    const splitAt = Math.ceil(costLineItems.value.length / 2);
+    const itemsPerColumn = Math.ceil(
+        costLineItems.value.length / costLedgerColumnCount.value,
+    );
 
-    return [
-        costLineItems.value.slice(0, splitAt),
-        costLineItems.value.slice(splitAt),
-    ];
+    return Array.from({ length: costLedgerColumnCount.value }, (_, index) =>
+        costLineItems.value.slice(
+            index * itemsPerColumn,
+            (index + 1) * itemsPerColumn,
+        ),
+    );
 });
 
 function costChargeLine(
@@ -228,7 +232,14 @@ function costComponentLabel(key: string): string {
     );
 }
 
-function formattedCost(value: number): string {
+function formattedCost(value: number, includeCurrency = true): string {
+    if (!includeCurrency) {
+        return value.toLocaleString('en-PH', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    }
+
     try {
         return new Intl.NumberFormat('en-PH', {
             style: 'currency',
@@ -530,27 +541,40 @@ function stringValue(value: unknown): string | null {
 
                     <div
                         v-else
-                        class="grid gap-x-6 gap-y-3"
+                        class="grid gap-y-3"
                         :class="
-                            usesTwoColumnCostLedger
-                                ? 'grid-cols-1 @md:grid-cols-2'
-                                : 'grid-cols-1'
+                            costLedgerColumnCount === 3
+                                ? 'grid-cols-3 gap-x-2'
+                                : costLedgerColumnCount === 2
+                                  ? 'grid-cols-2 gap-x-4'
+                                  : 'grid-cols-1'
                         "
                         data-testid="cockpit-pay-code-cost-ledger"
+                        :data-column-count="costLedgerColumnCount"
                     >
                         <dl
                             v-for="(column, columnIndex) in costLedgerColumns"
                             :key="`cost-column-${columnIndex}`"
-                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] content-start gap-x-4 gap-y-1 text-xs @sm:text-sm"
-                            :class="
-                                usesTwoColumnCostLedger && columnIndex === 1
-                                    ? '@md:border-l @md:border-white/15 @md:pl-5'
-                                    : ''
-                            "
+                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] content-start gap-y-1"
+                            :class="[
+                                costLedgerColumnCount === 3
+                                    ? 'gap-x-1.5 text-[0.625rem] leading-4'
+                                    : costLedgerColumnCount === 2
+                                      ? 'gap-x-2 text-[0.6875rem] leading-4'
+                                      : 'gap-x-4 text-xs @sm:text-sm',
+                                costLedgerColumnCount > 1 && columnIndex > 0
+                                    ? costLedgerColumnCount === 3
+                                        ? 'border-l border-white/15 pl-2'
+                                        : 'border-l border-white/15 pl-3'
+                                    : '',
+                            ]"
                             data-testid="cockpit-pay-code-cost-ledger-column"
                             :data-column="columnIndex + 1"
                         >
-                            <template v-for="item in column" :key="item.key">
+                            <template
+                                v-for="(item, itemIndex) in column"
+                                :key="item.key"
+                            >
                                 <dt
                                     class="min-w-0 truncate text-slate-300"
                                     data-testid="cockpit-pay-code-cost-label"
@@ -561,7 +585,13 @@ function stringValue(value: unknown): string | null {
                                     class="text-right font-medium whitespace-nowrap text-white tabular-nums"
                                     data-testid="cockpit-pay-code-cost-amount"
                                 >
-                                    {{ formattedCost(item.amount) }}
+                                    {{
+                                        formattedCost(
+                                            item.amount,
+                                            columnIndex === 0 &&
+                                                itemIndex === 0,
+                                        )
+                                    }}
                                 </dd>
                             </template>
 
@@ -577,7 +607,7 @@ function stringValue(value: unknown): string | null {
 
                             <template
                                 v-if="
-                                    !usesTwoColumnCostLedger ||
+                                    costLedgerColumnCount === 1 ||
                                     columnIndex === costLedgerColumns.length - 1
                                 "
                             >
