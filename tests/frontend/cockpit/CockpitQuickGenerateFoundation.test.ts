@@ -172,6 +172,40 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
     });
 
+    it('extends the unit issue cost when more than one Pay Code is requested', async () => {
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '100',
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                quantity: 2,
+                costEstimate: {
+                    currency: 'PHP',
+                    charges: [
+                        {
+                            label: 'Pay Code Generation',
+                            price: 65.3,
+                        },
+                    ],
+                    total: 65.3,
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        const total = wrapper.get(
+            '[data-testid="cockpit-pay-code-cost-total"]',
+        );
+
+        expect(total.text()).toBe('2 × ₱65.30 = ₱130.60');
+        expect(total.attributes('data-quantity')).toBe('2');
+        expect(total.classes()).toContain('text-[0.625rem]');
+    });
+
     it('splits eighteen priced instructions across three compact columns without losing the total', async () => {
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {

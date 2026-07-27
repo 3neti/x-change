@@ -158,6 +158,37 @@ describe('issued Pay Code dialog', () => {
         });
     });
 
+    it('shows quantity math on the finalized Pay Code cost total', async () => {
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'PAY-BATCH-2',
+                amount: 100,
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                quantity: 2,
+                costEstimate: {
+                    currency: 'PHP',
+                    total: 65.3,
+                },
+            },
+            global: {
+                stubs: {
+                    Teleport: true,
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-cost-total"]').text(),
+        ).toBe('2 × ₱65.30 = ₱130.60');
+    });
+
     it('opens automatically with the canonical result after issuance', async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,

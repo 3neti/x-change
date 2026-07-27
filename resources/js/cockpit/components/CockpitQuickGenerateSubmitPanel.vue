@@ -3525,6 +3525,7 @@ function instructionRecord(
                     :cost-estimate="livePricingEstimate"
                     :cost-loading="livePricingEstimating"
                     :cost-error="livePricingEstimateError"
+                    :quantity="count"
                 >
                     <template #action>
                         <button
@@ -3562,6 +3563,7 @@ function instructionRecord(
             :has-rider-design="hasRiderOgDesign"
             :rider-design-document="riderOgPreviewDocument"
             :cost-estimate="issuedCostEstimate"
+            :quantity="count"
             :claim-url="beneficiaryClaimUrl"
             :detail-url="cockpitDetailUrl"
             @close="issuedPayCodeDialogOpen = false"

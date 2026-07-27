@@ -30,6 +30,7 @@ const props = withDefaults(
         claimUrl?: string | null;
         detailUrl?: string | null;
         costEstimate?: PayCodeCostEstimate | null;
+        quantity?: string | number;
     }>(),
     {
         code: null,
@@ -42,6 +43,7 @@ const props = withDefaults(
         claimUrl: null,
         detailUrl: null,
         costEstimate: null,
+        quantity: 1,
     },
 );
 
@@ -246,6 +248,7 @@ async function copyClaimLink(): Promise<void> {
                         :has-rider-design="hasRiderDesign"
                         :rider-design-document="riderDesignDocument"
                         :cost-estimate="costEstimate"
+                        :quantity="quantity"
                         presentation="finalized"
                     />
 

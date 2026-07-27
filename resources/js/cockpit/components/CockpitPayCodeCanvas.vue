@@ -28,6 +28,7 @@ const props = withDefaults(
         costEstimate?: PayCodeCostEstimate | null;
         costLoading?: boolean;
         costError?: string | null;
+        quantity?: string | number;
     }>(),
     {
         recipient: '',
@@ -41,6 +42,7 @@ const props = withDefaults(
         costEstimate: null,
         costLoading: false,
         costError: null,
+        quantity: 1,
     },
 );
 
@@ -153,6 +155,38 @@ const costTotal = computed<number | null>(() => {
     }
 
     return costLineItems.value.reduce((sum, item) => sum + item.amount, 0);
+});
+
+const normalizedQuantity = computed<number>(() => {
+    const quantity = Number(props.quantity);
+
+    if (!Number.isFinite(quantity) || quantity < 1) {
+        return 1;
+    }
+
+    return Math.floor(quantity);
+});
+
+const extendedCostTotal = computed<number | null>(() => {
+    if (costTotal.value === null) {
+        return null;
+    }
+
+    return (
+        Math.round(
+            (costTotal.value * normalizedQuantity.value + Number.EPSILON) * 100,
+        ) / 100
+    );
+});
+
+const formattedCostTotal = computed<string>(() => {
+    const unitCost = costTotal.value ?? 0;
+
+    if (normalizedQuantity.value === 1) {
+        return formattedCost(unitCost);
+    }
+
+    return `${normalizedQuantity.value} × ${formattedCost(unitCost)} = ${formattedCost(extendedCostTotal.value ?? 0)}`;
 });
 
 const hasCostEstimate = computed<boolean>(() => {
@@ -617,10 +651,16 @@ function stringValue(value: unknown): string | null {
                                 />
                                 <dt class="font-bold text-white">Total</dt>
                                 <dd
-                                    class="text-right text-base font-black whitespace-nowrap text-emerald-300 tabular-nums @sm:text-lg"
+                                    class="text-right font-black whitespace-nowrap text-emerald-300 tabular-nums"
+                                    :class="
+                                        normalizedQuantity > 1
+                                            ? 'text-[0.625rem] leading-4 @sm:text-xs'
+                                            : 'text-base @sm:text-lg'
+                                    "
                                     data-testid="cockpit-pay-code-cost-total"
+                                    :data-quantity="normalizedQuantity"
                                 >
-                                    {{ formattedCost(costTotal ?? 0) }}
+                                    {{ formattedCostTotal }}
                                 </dd>
                             </template>
                         </dl>
