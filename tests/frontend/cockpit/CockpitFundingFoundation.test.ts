@@ -626,7 +626,19 @@ describe('Cockpit Funding foundation', () => {
                 .get('[data-testid="cockpit-funding-mode-switcher"]')
                 .get('[role="tablist"]')
                 .classes(),
-        ).toContain('grid-cols-2');
+        ).toContain('grid-cols-3');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-header"]')
+                .find('[data-testid="cockpit-funding-summary-strip"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-header"]')
+                .find('[data-testid="cockpit-funding-mode-switcher"]')
+                .exists(),
+        ).toBe(true);
         expect(
             wrapper
                 .get('[data-testid="funding-mode-pay_code"]')
@@ -934,7 +946,7 @@ describe('Cockpit Funding foundation', () => {
         expect(routerPostMock.mock.calls[0]?.[1]).toEqual({});
     });
 
-    it('keeps two funding paths primary and removes exact-amount tooling', async () => {
+    it('keeps three funding paths primary and moves exceptional paths behind disclosure', async () => {
         const fetch = vi.fn();
         vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Funding, {
@@ -966,6 +978,12 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.get('[data-testid="funding-advanced-paths"]').text(),
         ).toContain('Lifecycle simulation');
+        expect(
+            wrapper.get('[data-testid="funding-advanced-paths"]').text(),
+        ).toContain('Other funding options');
+        expect(
+            wrapper.get('[data-testid="funding-advanced-paths"]').text(),
+        ).toContain('Reviewed Value');
         expect(
             wrapper.get('[data-testid="funding-advanced-paths"]').text(),
         ).not.toContain('Exact provider instructions');
