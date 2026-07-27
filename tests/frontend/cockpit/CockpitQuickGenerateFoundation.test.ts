@@ -57,12 +57,22 @@ describe('Cockpit Quick Generate foundation', () => {
                 voucherType: 'redeemable',
                 expiry: '1 day',
                 instructionLabels: ['Mobile verified', 'OTP'],
+                hasRiderSplash: true,
+                riderSplashDocument:
+                    '<!doctype html><html><body><h1>Family support</h1></body></html>',
             },
         });
 
         expect(wrapper.text()).toContain('PHP 1,250.00');
         expect(wrapper.text()).toContain('Mobile ending 1987');
         expect(wrapper.text()).toContain('PAY CODE PREVIEW');
+        const splash = wrapper.find(
+            '[data-testid="cockpit-pay-code-canvas-rider-splash"]',
+        );
+
+        expect(splash.exists()).toBe(true);
+        expect(splash.attributes('sandbox')).toBe('');
+        expect(splash.attributes('srcdoc')).toContain('Family support');
         expect(
             wrapper
                 .find('svg[aria-label="Claim QR appears after issue"]')
@@ -98,6 +108,33 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper.findAll('[data-testid="cockpit-template-option"]'),
         ).toHaveLength(3);
+    });
+
+    it('uses the configured rider splash as the live canvas background', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-rider-splash-body"]')
+            .setValue('A distinct beneficiary splash');
+
+        const splash = wrapper.find(
+            '[data-testid="cockpit-pay-code-canvas-rider-splash"]',
+        );
+
+        expect(splash.exists()).toBe(true);
+        expect(splash.attributes('srcdoc')).toContain(
+            'A distinct beneficiary splash',
+        );
     });
 
     it('renders runtime inputs as reference facts without a submit form', () => {
@@ -1179,9 +1216,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-voucher-instruction-coverage"]',
-                )
+                .find('[data-testid="cockpit-voucher-instruction-coverage"]')
                 .exists(),
         ).toBe(false);
 

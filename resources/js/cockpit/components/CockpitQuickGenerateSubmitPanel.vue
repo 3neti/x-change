@@ -1666,6 +1666,10 @@ const riderSplashPreviewDocument = computed<string>(() => {
     return buildSandboxedPreviewDocument(body);
 });
 
+const hasRiderSplash = computed<boolean>(() => {
+    return riderSplashContent.value.trim() !== '';
+});
+
 const riderOgPreview = computed<RiderOgPreview>(() => {
     return resolveRiderOgPreview({
         source: riderOgSource.value,
@@ -3144,6 +3148,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                     :expiry="canvasExpiryLabel"
                     :instruction-labels="canvasInstructionLabels"
                     :issued-code="resultCode"
+                    :has-rider-splash="hasRiderSplash"
+                    :rider-splash-document="riderSplashPreviewDocument"
                 >
                     <template #action>
                         <button

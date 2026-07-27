@@ -19,6 +19,8 @@ const props = withDefaults(
         expiry?: string;
         instructionLabels?: string[];
         issuedCode?: string | null;
+        hasRiderSplash?: boolean;
+        riderSplashDocument?: string;
     }>(),
     {
         recipient: '',
@@ -26,6 +28,8 @@ const props = withDefaults(
         expiry: 'No expiry',
         instructionLabels: () => [],
         issuedCode: null,
+        hasRiderSplash: false,
+        riderSplashDocument: '',
     },
 );
 
@@ -84,7 +88,9 @@ const displayedCode = computed<string>(() => {
         class="@container rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80"
         data-testid="cockpit-pay-code-canvas"
     >
-        <div class="mb-3 flex items-center justify-between gap-3 px-1">
+        <div
+            class="mb-3 flex flex-wrap items-center justify-between gap-3 px-1"
+        >
             <div>
                 <p
                     class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
@@ -136,6 +142,21 @@ const displayedCode = computed<string>(() => {
             class="relative aspect-[1.72/1] min-h-56 overflow-hidden rounded-[1.4rem] border border-amber-200 bg-[#fffaf0] p-5 text-slate-950 shadow-xl shadow-slate-900/10 @md:p-7 dark:border-amber-900/60 dark:bg-[#19170f] dark:text-amber-50"
             data-testid="cockpit-pay-code-canvas-front"
         >
+            <iframe
+                v-if="hasRiderSplash && riderSplashDocument !== ''"
+                title="Pay Code rider splash background"
+                sandbox=""
+                tabindex="-1"
+                aria-hidden="true"
+                class="pointer-events-none absolute inset-0 h-full w-full border-0 opacity-45"
+                data-testid="cockpit-pay-code-canvas-rider-splash"
+                :srcdoc="riderSplashDocument"
+            />
+            <div
+                v-if="hasRiderSplash"
+                class="absolute inset-0 bg-gradient-to-r from-[#fffaf0]/95 via-[#fffaf0]/80 to-[#fffaf0]/45 dark:from-slate-950/95 dark:via-slate-950/80 dark:to-slate-950/50"
+                aria-hidden="true"
+            />
             <div
                 class="absolute inset-y-0 left-0 w-2 bg-emerald-600"
                 aria-hidden="true"
