@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Brick\Money\Money;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
@@ -85,8 +87,113 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'status' => $status,
             'display_status' => $this->displayStatus($status, $approval),
             'issuer_id' => $this->issuerId($voucher),
+            'party' => $this->partySummary($voucher),
             'approval' => $approval,
         ];
+    }
+
+    /**
+     * @return array{state: string, label: string, primary: string, secondary: string|null, masked: bool}
+     */
+    protected function partySummary(Voucher $voucher): array
+    {
+        $redeemer = $this->redeemer($voucher);
+
+        if ($redeemer instanceof Model) {
+            $name = $this->nullableDisplayValue($redeemer->getAttribute('name'));
+            $mobile = $this->maskedMobile($redeemer->getAttribute('mobile'));
+
+            return [
+                'state' => 'claimed',
+                'label' => 'Claimed by',
+                'primary' => $name ?? $mobile ?? 'Contact unavailable',
+                'secondary' => $name !== null ? $mobile : null,
+                'masked' => $mobile !== null,
+            ];
+        }
+
+        try {
+            $instructions = $voucher->instructions;
+            $vendorAlias = $this->nullableDisplayValue($instructions->cash->validation->payable);
+            $targetMobile = $this->maskedMobile($instructions->cash->validation->mobile);
+        } catch (\Throwable) {
+            $vendorAlias = null;
+            $targetMobile = null;
+        }
+
+        if ($vendorAlias !== null) {
+            return [
+                'state' => 'targeted',
+                'label' => 'Vendor',
+                'primary' => Str::limit($vendorAlias, 40, '…'),
+                'secondary' => null,
+                'masked' => false,
+            ];
+        }
+
+        if ($targetMobile !== null) {
+            return [
+                'state' => 'targeted',
+                'label' => 'For',
+                'primary' => $targetMobile,
+                'secondary' => null,
+                'masked' => true,
+            ];
+        }
+
+        return [
+            'state' => 'open',
+            'label' => 'Availability',
+            'primary' => 'Open claim',
+            'secondary' => null,
+            'masked' => false,
+        ];
+    }
+
+    protected function redeemer(Voucher $voucher): ?Model
+    {
+        if (! $voucher->relationLoaded('redeemers')) {
+            return null;
+        }
+
+        $redemption = $voucher->redeemers->first();
+
+        if (
+            ! $redemption instanceof Model
+            || ! $redemption->relationLoaded('redeemer')
+        ) {
+            return null;
+        }
+
+        $redeemer = $redemption->getRelation('redeemer');
+
+        return $redeemer instanceof Model ? $redeemer : null;
+    }
+
+    protected function maskedMobile(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', (string) $value);
+
+        if (! is_string($digits) || strlen($digits) < 4) {
+            return null;
+        }
+
+        return '•••• '.substr($digits, -4);
+    }
+
+    protected function nullableDisplayValue(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     protected function toDetailArray(Voucher $voucher): array

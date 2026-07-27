@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -33,6 +34,8 @@ class CockpitPayCodeExplorerPageController extends Controller
             activitySource: $this->optionalString($request->query('activity_source')),
             search: $this->optionalString($request->query('search')),
             status: $this->optionalString($request->query('status')),
+            operatorId: $actor instanceof Model ? (string) $actor->getKey() : null,
+            operatorType: $actor instanceof Model ? $actor->getMorphClass() : null,
             canViewTechnicalDetails: $actor !== null
                 && $this->treasuryAccess->canViewTreasuryControls($actor),
         ));

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use FrittenKeeZ\Vouchers\Config;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherNotRedeemable;
 use LBHurtado\XChange\Services\VoucherAccessService;
@@ -89,3 +90,42 @@ it('throws when a voucher is already redeemed (full pipeline)', function () {
             $voucher->code
         ));
 })->skip('Pending full redemption pipeline: requires Contact + HyperVerge + wallet + payout integration to be stabilized in x-change test environment.');
+
+it('scopes voucher lists to the exact issuer morph and identifier', function () {
+    $firstIssuer = actingAsTestUser();
+    $firstVoucher = issueVoucher();
+    $secondIssuer = actingAsTestUser();
+    $secondVoucher = issueVoucher();
+
+    $service = new VoucherAccessService;
+    $results = collect($service->list([
+        'issuer_id' => $firstIssuer->getKey(),
+        'issuer_type' => $firstIssuer->getMorphClass(),
+    ]));
+
+    expect($results)->toHaveCount(1)
+        ->and($results->sole()->is($firstVoucher))->toBeTrue()
+        ->and($results->contains(fn ($voucher): bool => $voucher->is($secondVoucher)))->toBeFalse();
+});
+
+it('eager loads the redeemer projection only when requested', function () {
+    $voucher = issueVoucher();
+    $contact = Contact::factory()->create([
+        'mobile' => '09171234567',
+        'name' => 'Leslie Chong',
+        'bank_account' => 'GCASH:09171234567',
+    ]);
+    $redeemerClass = Config::model('redeemer');
+    $redeemer = new $redeemerClass(['metadata' => []]);
+    $redeemer->redeemer()->associate($contact);
+    $voucher->redeemers()->save($redeemer);
+
+    $service = new VoucherAccessService;
+    $result = collect($service->list([
+        'include' => ['redeemer'],
+    ]))->sole();
+
+    expect($result->relationLoaded('redeemers'))->toBeTrue()
+        ->and($result->redeemers->sole()->relationLoaded('redeemer'))->toBeTrue()
+        ->and($result->redeemers->sole()->redeemer->is($contact))->toBeTrue();
+});

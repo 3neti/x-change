@@ -62,6 +62,7 @@ class VoucherAccessService implements VoucherAccessContract
 
         $this->applyStatusFilter($query, $filters);
         $this->applyIssuerFilter($query, $filters);
+        $this->applyIncludes($query, $filters);
 
         return $query
             ->latest('id')
@@ -115,8 +116,26 @@ class VoucherAccessService implements VoucherAccessContract
             return;
         }
 
-        // Assumes owner morph/key is available through owner_id.
-        // Adjust here if your voucher package stores issuer ownership differently.
         $query->where('owner_id', (int) $issuerId);
+
+        $issuerType = $filters['issuer_type'] ?? null;
+
+        if (is_string($issuerType) && trim($issuerType) !== '') {
+            $query->where('owner_type', trim($issuerType));
+        }
+    }
+
+    /**
+     * @param  array<string,mixed>  $filters
+     */
+    protected function applyIncludes(Builder $query, array $filters): void
+    {
+        $includes = $filters['include'] ?? [];
+
+        if (! is_array($includes) || ! in_array('redeemer', $includes, true)) {
+            return;
+        }
+
+        $query->with('redeemers.redeemer');
     }
 }

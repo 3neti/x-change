@@ -1219,7 +1219,9 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
             correlationId: 'corr-1',
         ));
 
-    expect($lifecycle->requestedFilters)->toBe([])
+    expect($lifecycle->requestedFilters)->toBe([
+        'include' => ['redeemer'],
+    ])
         ->and($readModel->toArray())->toBe([
             'status' => 'available',
             'authorized' => true,

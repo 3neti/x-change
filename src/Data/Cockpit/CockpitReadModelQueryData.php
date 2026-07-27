@@ -16,6 +16,8 @@ class CockpitReadModelQueryData extends Data
         public readonly ?string $payCodeSearch = null,
         public readonly ?string $payCodeStatus = null,
         public readonly ?string $operatorId = null,
+        public readonly ?string $operatorType = null,
+        public readonly bool $canViewAllPayCodes = false,
         public readonly array $include = [],
         public readonly ?string $correlationId = null,
         public readonly ?CockpitOperatorIssuanceActivitySearchFilterData $operatorActivityFilters = null,

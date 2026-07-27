@@ -1298,7 +1298,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         $queryCode = $this->normalizeCode($query->code);
         $search = $this->normalizeSearch($query->payCodeSearch ?? $query->code);
         $statusFilter = $this->normalizeStatusFilter($query->payCodeStatus);
-        $sourceRows = collect($this->vouchers->list())
+        $sourceRows = collect($this->vouchers->list($this->payCodeListFilters($query)))
             ->map(fn (mixed $row): array => $this->toArray($row))
             ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
             ->values();
@@ -1329,6 +1329,27 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 'excluded' => $this->excludedPayloadKeys(),
             ],
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payCodeListFilters(CockpitReadModelQueryData $query): array
+    {
+        $filters = [
+            'include' => ['redeemer'],
+        ];
+
+        if (
+            ! $query->canViewAllPayCodes
+            && $query->operatorId !== null
+            && $query->operatorType !== null
+        ) {
+            $filters['issuer_id'] = $query->operatorId;
+            $filters['issuer_type'] = $query->operatorType;
+        }
+
+        return $filters;
     }
 
     private function normalizeSearch(?string $value): ?string

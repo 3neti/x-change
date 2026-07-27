@@ -109,6 +109,8 @@ class CockpitReadOnlyPageProps
         ?string $activitySource = null,
         ?string $search = null,
         ?string $status = null,
+        ?string $operatorId = null,
+        ?string $operatorType = null,
         bool $canViewTechnicalDetails = false,
     ): array {
         $baseProps = $this->toArray(
@@ -122,7 +124,10 @@ class CockpitReadOnlyPageProps
                 code: $this->normalizeCode($activityCode),
                 payCodeSearch: $this->optionalString($search),
                 payCodeStatus: $this->optionalString($status),
-                include: ['voucher'],
+                operatorId: $this->optionalString($operatorId),
+                operatorType: $this->optionalString($operatorType),
+                canViewAllPayCodes: $canViewTechnicalDetails,
+                include: ['voucher', 'redeemer'],
             ))->toArray(),
             'campaign_navigation_context' => $this->campaignNavigationContext(
                 campaignPlanningKey: $campaignPlanningKey,
