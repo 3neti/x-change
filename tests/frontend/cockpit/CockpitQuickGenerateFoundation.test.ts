@@ -2266,29 +2266,23 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-quick-generate-shell"]')
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Quick Generate');
-        expect(wrapper.text()).toContain('Pay Code generation');
+        expect(wrapper.text()).toContain('Create a Pay Code');
+        expect(wrapper.text()).toContain(
+            'Set the amount, recipient, and claim rules.',
+        );
         const header = wrapper.find(
             '[data-testid="cockpit-quick-generate-header"]',
         );
-        const headerFacts = wrapper.find(
-            '[data-testid="cockpit-quick-generate-header-facts"]',
-        );
-        const headerBoundary = wrapper.find(
-            '[data-testid="cockpit-quick-generate-header-boundary"]',
+        const headerProgress = wrapper.find(
+            '[data-testid="cockpit-quick-generate-header-progress"]',
         );
 
         expect(header.classes()).toContain('py-3');
         expect(header.classes()).not.toContain('p-6');
-        expect(headerFacts.findAll('div')).toHaveLength(3);
-        expect(headerFacts.text()).toContain('Template-first');
-        expect(headerFacts.text()).toContain('GeneratePayCode');
-        expect(headerFacts.text()).toContain('Separately gated');
-        expect(headerBoundary.element.tagName.toLowerCase()).toBe('details');
-        expect(headerBoundary.attributes('open')).toBeUndefined();
-        expect(headerBoundary.find('summary').text()).toContain(
-            'Workflow limits',
-        );
+        expect(headerProgress.text()).toContain('Create');
+        expect(headerProgress.text()).toContain('Design');
+        expect(headerProgress.text()).toContain('Review');
+        expect(headerProgress.text()).toContain('Issue');
         const referenceGuide = wrapper.find(
             '[data-testid="cockpit-quick-generate-reference-guide"]',
         );
@@ -2316,11 +2310,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Pricing and Funding');
         expect(wrapper.text()).toContain('Issuance handoff status');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
-            'Quick Generate',
+            'Create Pay Code',
         );
-        expect(wrapper.text()).toContain('approved template-first handoff');
         expect(wrapper.text()).toContain('GeneratePayCode action');
-        expect(wrapper.text()).toContain('preflights are informational');
         expect(wrapper.text()).toContain('Issuance Boundary Plan');
         expect(wrapper.text()).toContain(
             'current Quick Generate uses the approved handoff route.',

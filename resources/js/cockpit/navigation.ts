@@ -10,10 +10,10 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
     },
     {
         key: 'quick-generate',
-        label: 'Quick Generate',
+        label: 'Create Pay Code',
         href: '/x/cockpit/quick-generate',
         group: 'primary',
-        description: 'Template-first issuance',
+        description: 'Design and issue a Pay Code',
     },
     {
         key: 'funding',
