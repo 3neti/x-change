@@ -1174,7 +1174,7 @@ describe('Cockpit Quick Generate foundation', () => {
         vi.unstubAllGlobals();
     });
 
-    it('renders a contract builder checklist with reactive section statuses', async () => {
+    it('keeps one instruction hierarchy with a secondary engineering preview', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -1187,67 +1187,32 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        const checklist = wrapper.find(
-            '[data-testid="cockpit-quick-generate-contract-builder-checklist"]',
-        );
-
-        expect(checklist.exists()).toBe(true);
-        expect(checklist.text()).toContain('Contract Builder Checklist');
-        expect(checklist.text()).toContain('Issuance Details');
-        expect(checklist.text()).toContain('Claim Requirements');
-        expect(checklist.text()).toContain('Validation');
-        expect(checklist.text()).toContain('Claim Experience');
-        expect(checklist.text()).toContain('Status Updates');
-        expect(checklist.text()).toContain('Claim Schedule');
-        expect(checklist.text()).toContain('Advanced Settlement');
-        expect(
-            wrapper.findAll(
-                '[data-testid="cockpit-quick-generate-contract-builder-check"]',
-            ),
-        ).toHaveLength(8);
         expect(
             wrapper
-                .findAll(
-                    '[data-testid="cockpit-quick-generate-contract-builder-jump"]',
+                .find(
+                    '[data-testid="cockpit-quick-generate-contract-builder-checklist"]',
                 )
-                .map((link) => link.attributes('href')),
-        ).toEqual([
-            '#quick-generate-contract-money',
-            '#quick-generate-claim-outcome',
-            '#quick-generate-contract-inputs',
-            '#quick-generate-contract-validation',
-            '#quick-generate-contract-rider',
-            '#quick-generate-contract-feedback',
-            '#quick-generate-contract-slices',
-            '#quick-generate-contract-execution',
-        ]);
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-voucher-instruction-summary"]')
+                .exists(),
+        ).toBe(false);
+        expect(wrapper.text()).not.toContain('Design status');
+        expect(wrapper.text()).not.toContain('Review your Pay Code');
         expect(wrapper.find('#quick-generate-contract-money').exists()).toBe(
             true,
         );
         expect(
             wrapper.find('#quick-generate-contract-execution').exists(),
         ).toBe(true);
-        expect(checklist.text()).toContain('PHP 25 × 1');
-        expect(checklist.text()).toContain('Standard Claim Processing.');
-
-        expect(
-            wrapper
-                .find('[data-testid="cockpit-voucher-instruction-coverage"]')
-                .exists(),
-        ).toBe(false);
-
-        await wrapper
-            .find('[data-testid="cockpit-quick-generate-feedback-email"]')
-            .setValue('not-an-email');
-        await wrapper.vm.$nextTick();
-
-        expect(
-            wrapper
-                .find(
-                    '[data-testid="cockpit-quick-generate-contract-builder-checklist"]',
-                )
-                .text(),
-        ).toContain('Enter a valid email address.');
+        const engineeringPreview = wrapper.find(
+            '[data-testid="cockpit-quick-generate-engineering-preview"]',
+        );
+        expect(engineeringPreview.exists()).toBe(true);
+        expect(engineeringPreview.attributes('open')).toBeUndefined();
+        expect(engineeringPreview.text()).toContain('Engineering Preview');
     });
 
     it('reflects fixed slice-builder rows in the engineering preview without submitting named metadata', async () => {
@@ -2400,7 +2365,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
             'Create Pay Code',
         );
-        expect(wrapper.text()).toContain('Review your Pay Code');
+        expect(wrapper.text()).not.toContain('Review your Pay Code');
+        expect(wrapper.text()).not.toContain('Design status');
+        expect(wrapper.text()).toContain('Engineering Preview');
         expect(wrapper.text()).toContain('Issue Pay Code');
         expect(
             wrapper

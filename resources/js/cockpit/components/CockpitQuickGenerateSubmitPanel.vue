@@ -45,14 +45,6 @@ const emit = defineEmits<{
     submitError: [error: Record<string, unknown>];
 }>();
 
-type ContractBuilderChecklistItem = {
-    key: string;
-    label: string;
-    target: string;
-    status: 'ready' | 'optional' | 'needs-review';
-    summary: string;
-};
-
 type VoucherInputFieldOption = {
     value: string;
     label: string;
@@ -1540,121 +1532,6 @@ const canvasExpiryLabel = computed<string>(() => {
 
     return labels[expiryPreset.value] ?? expiryPreset.value;
 });
-
-const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(
-    () => {
-        const amountValue = Number(amount.value);
-        const hasMoney = Number.isFinite(amountValue) && amountValue > 0;
-        const validationKeys = Object.keys(validationSummary.value);
-        const feedbackChannels = [
-            feedbackEmail.value.trim() === '' ? null : 'email',
-            normalizedFeedbackMobile.value === '' ? null : 'mobile',
-            feedbackWebhook.value.trim() === '' ? null : 'webhook',
-        ].filter((channel): channel is string => channel !== null);
-
-        return [
-            {
-                key: 'money',
-                label: 'Issuance Details',
-                target: '#quick-generate-contract-money',
-                status: hasMoney ? 'ready' : 'needs-review',
-                summary: hasMoney
-                    ? `${currency.value || 'PHP'} ${amount.value || '0'} × ${count.value || '1'}`
-                    : 'Amount is required before issuance.',
-            },
-            {
-                key: 'claim',
-                label: 'Recipient Receives',
-                target: '#quick-generate-claim-outcome',
-                status:
-                    claimRecipientError.value === null
-                        ? 'ready'
-                        : 'needs-review',
-                summary: isAccountFundingClaim.value
-                    ? 'Account Funds · No Provider Payout'
-                    : 'Cash Payout Through The Selected Provider',
-            },
-            {
-                key: 'inputs',
-                label: 'Claim Requirements',
-                target: '#quick-generate-contract-inputs',
-                status:
-                    selectedInputFields.value.length > 0
-                        ? 'ready'
-                        : 'needs-review',
-                summary:
-                    selectedInputFields.value.length > 0
-                        ? selectedInputFields.value.join(', ')
-                        : 'No Claim Requirements Selected.',
-            },
-            {
-                key: 'validation',
-                label: 'Validation',
-                target: '#quick-generate-contract-validation',
-                status: validationKeys.length > 0 ? 'ready' : 'optional',
-                summary:
-                    validationKeys.length > 0
-                        ? validationKeys.join(', ')
-                        : 'No Validation Rules Selected.',
-            },
-            {
-                key: 'rider',
-                label: 'Claim Experience',
-                target: '#quick-generate-contract-rider',
-                status:
-                    purpose.value.trim() !== '' ||
-                    riderUrl.value.trim() !== '' ||
-                    riderSplash.value.trim() !== ''
-                        ? 'ready'
-                        : 'optional',
-                summary:
-                    purpose.value.trim() !== '' ||
-                    riderUrl.value.trim() !== '' ||
-                    riderSplash.value.trim() !== ''
-                        ? 'Claim Experience Configured.'
-                        : 'No Claim Experience Added.',
-            },
-            {
-                key: 'feedback',
-                label: 'Status Updates',
-                target: '#quick-generate-contract-feedback',
-                status: feedbackValid.value
-                    ? feedbackChannels.length > 0
-                        ? 'ready'
-                        : 'optional'
-                    : 'needs-review',
-                summary: !feedbackValid.value
-                    ? feedbackValidationErrors.value.join(' ')
-                    : feedbackChannels.length > 0
-                      ? feedbackChannels.join(', ')
-                      : 'No Update Destinations Selected.',
-            },
-            {
-                key: 'slices',
-                label: 'Claim Schedule',
-                target: '#quick-generate-contract-slices',
-                status:
-                    namedClaimSliceValidationMessage.value === null
-                        ? 'ready'
-                        : 'needs-review',
-                summary:
-                    namedClaimSliceValidationMessage.value ??
-                    `${sliceSummary.value.mode ?? sliceMode.value}`,
-            },
-            {
-                key: 'execution',
-                label: 'Advanced Settlement',
-                target: '#quick-generate-contract-execution',
-                status: includeExecutionInstruction.value
-                    ? 'ready'
-                    : 'optional',
-                summary: includeExecutionInstruction.value
-                    ? `${executionDriver.value || 'default'} · ${executionSchema.value || 'voucher.execution.v1'}`
-                    : 'Standard Claim Processing.',
-            },
-        ];
-    },
-);
 
 const normalizedPayee = computed<string>(() => {
     const normalized = recipientReference.value.trim();
@@ -3718,92 +3595,6 @@ function instructionRecord(
                 </div>
             </dl>
         </section>
-
-        <details
-            class="mt-5 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300"
-            data-testid="cockpit-quick-generate-contract-builder-checklist"
-        >
-            <summary
-                class="cursor-pointer text-sm font-semibold text-slate-950 dark:text-slate-50"
-            >
-                Design status ·
-                {{
-                    contractBuilderChecklist.filter(
-                        (item) => item.status === 'needs-review',
-                    ).length === 0
-                        ? 'Ready to review'
-                        : 'Needs attention'
-                }}
-            </summary>
-            <div
-                class="mt-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
-            >
-                <div>
-                    <p
-                        class="font-semibold tracking-[0.2em] text-emerald-700 uppercase dark:text-emerald-300"
-                    >
-                        Contract Builder Checklist
-                    </p>
-                    <h4
-                        class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50"
-                    >
-                        Review the instruction contract before generation
-                    </h4>
-                    <p class="mt-1 max-w-3xl leading-5">
-                        This checklist summarizes the current builder state
-                        only. It does not validate against providers, reserve
-                        funds, deliver feedback, execute actions, or run voucher
-                        drivers.
-                    </p>
-                </div>
-                <span
-                    class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800"
-                >
-                    operator review
-                </span>
-            </div>
-
-            <dl class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div
-                    v-for="item in contractBuilderChecklist"
-                    :key="item.key"
-                    class="rounded-xl border p-3"
-                    :class="
-                        item.status === 'needs-review'
-                            ? 'border-rose-200 bg-rose-50 dark:border-rose-900/70 dark:bg-rose-950/30'
-                            : item.status === 'ready'
-                              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/70 dark:bg-emerald-950/30'
-                              : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60'
-                    "
-                    data-testid="cockpit-quick-generate-contract-builder-check"
-                >
-                    <dt
-                        class="flex items-center justify-between gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
-                        :class="
-                            item.status === 'needs-review'
-                                ? 'text-rose-700 dark:text-rose-300'
-                                : item.status === 'ready'
-                                  ? 'text-emerald-700 dark:text-emerald-300'
-                                  : 'text-slate-500 dark:text-slate-400'
-                        "
-                    >
-                        <a
-                            :href="item.target"
-                            class="underline decoration-current/30 underline-offset-4 hover:decoration-current"
-                            data-testid="cockpit-quick-generate-contract-builder-jump"
-                        >
-                            {{ item.label }}
-                        </a>
-                        <span>{{ item.status }}</span>
-                    </dt>
-                    <dd
-                        class="mt-2 text-sm font-semibold break-words text-slate-950 dark:text-slate-50"
-                    >
-                        {{ item.summary }}
-                    </dd>
-                </div>
-            </dl>
-        </details>
 
         <details
             class="mt-5 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70"
@@ -6389,69 +6180,25 @@ function instructionRecord(
             </div>
         </details>
 
-        <section
-            class="mt-5 rounded-2xl border border-slate-200 bg-slate-950 p-4 text-xs text-slate-300 shadow-sm dark:border-slate-800"
-            data-testid="cockpit-voucher-instruction-summary"
+        <details
+            class="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-300 shadow-sm"
+            data-testid="cockpit-quick-generate-engineering-preview"
         >
-            <div
-                class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+            <summary
+                class="cursor-pointer text-sm font-semibold text-slate-100"
             >
-                <div>
-                    <p
-                        class="font-semibold tracking-[0.22em] text-emerald-300 uppercase"
-                    >
-                        Review your Pay Code
-                    </p>
-                    <p class="mt-2 leading-5 text-slate-400">
-                        Confirm what the recipient receives and how the Pay Code
-                        may be claimed.
-                    </p>
-                </div>
-                <span
-                    class="w-fit rounded-full bg-emerald-400/10 px-3 py-1 font-semibold text-emerald-200 ring-1 ring-emerald-400/20"
-                >
-                    Ready for confirmation
-                </span>
-            </div>
-            <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div
-                    v-for="item in contractSummaryItems"
-                    :key="item.label"
-                    class="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3"
-                >
-                    <dt class="text-slate-500">
-                        {{ item.label }}
-                    </dt>
-                    <dd class="mt-1 font-semibold break-words text-slate-100">
-                        {{ item.value }}
-                    </dd>
-                </div>
-            </dl>
-
-            <details
-                class="mt-4 rounded-xl border border-white/10 bg-white/5 p-3"
-                data-testid="cockpit-quick-generate-engineering-preview"
+                Engineering Preview
+            </summary>
+            <p class="mt-2 text-xs leading-5 text-slate-400">
+                Sanitized Pay Code instructions. Secrets and execution internals
+                are excluded.
+            </p>
+            <pre
+                class="mt-3 max-h-96 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] leading-5 text-slate-200"
+                data-testid="cockpit-quick-generate-engineering-preview-json"
+                >{{ sanitizedInstructionPayloadJson }}</pre
             >
-                <summary
-                    class="cursor-pointer text-sm font-semibold text-slate-100"
-                >
-                    Engineering Preview — sanitized instruction payload
-                </summary>
-                <p class="mt-2 text-xs leading-5 text-slate-400">
-                    This preview shows how the builder maps into
-                    <code>cash</code>, <code>inputs</code>,
-                    <code>validation</code>, <code>rider</code>,
-                    <code>feedback</code>, and <code>metadata</code>. Secrets
-                    are redacted; provider, wallet, journal, action, feedback
-                    delivery, and campaign mutation internals are not rendered.
-                </p>
-                <pre
-                    class="mt-3 max-h-96 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] leading-5 text-slate-200"
-                    data-testid="cockpit-quick-generate-engineering-preview-json"
-                    >{{ sanitizedInstructionPayloadJson }}</pre
-                >
-            </details>
-        </section>
+        </details>
 
         <button
             type="submit"
