@@ -114,16 +114,60 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('₱17.00');
         expect(wrapper.text()).toContain('Mobile verified');
         expect(wrapper.text()).toContain('OTP');
+        expect(wrapper.text()).not.toContain('Back Of The Pay Code');
         expect(
             wrapper
                 .find('[aria-label="Claim QR appears after issue"]')
                 .exists(),
         ).toBe(false);
         expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-pay-code-cost-ledger-column"]',
+            ),
+        ).toHaveLength(1);
+        expect(
             wrapper
-                .find('[data-testid="cockpit-pay-code-cost-ledger"]')
+                .find('[data-testid="cockpit-pay-code-cost-ledger-column"]')
                 .classes(),
         ).toContain('grid-cols-[minmax(0,1fr)_auto]');
+    });
+
+    it('splits eight priced instructions and keeps the total in the second ledger column', async () => {
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '100',
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                costEstimate: {
+                    currency: 'PHP',
+                    charges: Array.from({ length: 8 }, (_, index) => ({
+                        catalog_item_reference: `charge.${index + 1}`,
+                        label: `Charge ${index + 1}`,
+                        price: index + 1,
+                    })),
+                    total: 36,
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        const columns = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-cost-ledger-column"]',
+        );
+
+        expect(columns).toHaveLength(2);
+        expect(columns[0].text()).toContain('Charge 1');
+        expect(columns[0].text()).toContain('Charge 4');
+        expect(columns[0].text()).not.toContain('Charge 5');
+        expect(columns[0].text()).not.toContain('Total');
+        expect(columns[1].text()).toContain('Charge 5');
+        expect(columns[1].text()).toContain('Charge 8');
+        expect(columns[1].text()).toContain('Total');
+        expect(columns[1].text()).toContain('₱36.00');
     });
 
     it('renders template selector placeholders as institutional products', () => {

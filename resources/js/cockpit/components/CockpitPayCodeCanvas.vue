@@ -159,6 +159,25 @@ const hasCostEstimate = computed<boolean>(() => {
     return props.costEstimate !== null && costTotal.value !== null;
 });
 
+const usesTwoColumnCostLedger = computed<boolean>(() => {
+    return costLineItems.value.length >= 8;
+});
+
+const costLedgerColumns = computed<
+    Array<Array<{ key: string; label: string; amount: number }>>
+>(() => {
+    if (!usesTwoColumnCostLedger.value) {
+        return [costLineItems.value];
+    }
+
+    const splitAt = Math.ceil(costLineItems.value.length / 2);
+
+    return [
+        costLineItems.value.slice(0, splitAt),
+        costLineItems.value.slice(splitAt),
+    ];
+});
+
 function costChargeLine(
     charge: PayCodeCostCharge,
     index: number,
@@ -470,9 +489,6 @@ function stringValue(value: unknown): string | null {
                                     : 'Estimated Issue Cost'
                             }}
                         </p>
-                        <h4 class="mt-1 text-lg font-bold @sm:text-xl">
-                            Back Of The Pay Code
-                        </h4>
                     </div>
                     <div class="flex shrink-0 items-center gap-1.5">
                         <span
@@ -485,10 +501,7 @@ function stringValue(value: unknown): string | null {
                         <span
                             class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-slate-200"
                         >
-                            <ArrowLeftRight
-                                class="size-3"
-                                aria-hidden="true"
-                            />
+                            <ArrowLeftRight class="size-3" aria-hidden="true" />
                             {{ expiry }}
                         </span>
                     </div>
@@ -515,45 +528,73 @@ function stringValue(value: unknown): string | null {
                         }}
                     </p>
 
-                    <dl
+                    <div
                         v-else
-                        class="grid max-w-xl grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 text-xs @sm:text-sm"
+                        class="grid gap-x-6 gap-y-3"
+                        :class="
+                            usesTwoColumnCostLedger
+                                ? 'grid-cols-1 @md:grid-cols-2'
+                                : 'grid-cols-1'
+                        "
                         data-testid="cockpit-pay-code-cost-ledger"
                     >
-                        <template v-for="item in costLineItems" :key="item.key">
+                        <dl
+                            v-for="(column, columnIndex) in costLedgerColumns"
+                            :key="`cost-column-${columnIndex}`"
+                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] content-start gap-x-4 gap-y-1 text-xs @sm:text-sm"
+                            :class="
+                                usesTwoColumnCostLedger && columnIndex === 1
+                                    ? '@md:border-l @md:border-white/15 @md:pl-5'
+                                    : ''
+                            "
+                            data-testid="cockpit-pay-code-cost-ledger-column"
+                            :data-column="columnIndex + 1"
+                        >
+                            <template v-for="item in column" :key="item.key">
+                                <dt
+                                    class="min-w-0 truncate text-slate-300"
+                                    data-testid="cockpit-pay-code-cost-label"
+                                >
+                                    {{ item.label }}
+                                </dt>
+                                <dd
+                                    class="text-right font-medium whitespace-nowrap text-white tabular-nums"
+                                    data-testid="cockpit-pay-code-cost-amount"
+                                >
+                                    {{ formattedCost(item.amount) }}
+                                </dd>
+                            </template>
+
                             <dt
-                                class="min-w-0 truncate text-slate-300"
-                                data-testid="cockpit-pay-code-cost-label"
+                                v-if="
+                                    costLineItems.length === 0 &&
+                                    columnIndex === 0
+                                "
+                                class="col-span-2 text-slate-300"
                             >
-                                {{ item.label }}
+                                No priced instructions.
                             </dt>
-                            <dd
-                                class="text-right font-medium whitespace-nowrap text-white tabular-nums"
-                                data-testid="cockpit-pay-code-cost-amount"
+
+                            <template
+                                v-if="
+                                    !usesTwoColumnCostLedger ||
+                                    columnIndex === costLedgerColumns.length - 1
+                                "
                             >
-                                {{ formattedCost(item.amount) }}
-                            </dd>
-                        </template>
-
-                        <dt
-                            v-if="costLineItems.length === 0"
-                            class="col-span-2 text-slate-300"
-                        >
-                            No priced instructions.
-                        </dt>
-
-                        <div
-                            class="col-span-2 my-1 border-t border-dashed border-white/25"
-                            aria-hidden="true"
-                        />
-                        <dt class="font-bold text-white">Total</dt>
-                        <dd
-                            class="text-right text-base font-black whitespace-nowrap text-emerald-300 tabular-nums @sm:text-lg"
-                            data-testid="cockpit-pay-code-cost-total"
-                        >
-                            {{ formattedCost(costTotal ?? 0) }}
-                        </dd>
-                    </dl>
+                                <div
+                                    class="col-span-2 my-1 border-t border-dashed border-white/25"
+                                    aria-hidden="true"
+                                />
+                                <dt class="font-bold text-white">Total</dt>
+                                <dd
+                                    class="text-right text-base font-black whitespace-nowrap text-emerald-300 tabular-nums @sm:text-lg"
+                                    data-testid="cockpit-pay-code-cost-total"
+                                >
+                                    {{ formattedCost(costTotal ?? 0) }}
+                                </dd>
+                            </template>
+                        </dl>
+                    </div>
                 </div>
 
                 <div class="mt-2 flex flex-wrap gap-1.5">
