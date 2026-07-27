@@ -1410,6 +1410,18 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     quick_generate_read_model?: CockpitQuickGenerateReadModel;
     feedback_defaults?: CockpitQuickGenerateFeedbackDefaults;
     last_instructions?: CockpitQuickGenerateLastInstructions | null;
+    saved_templates?: CockpitSavedPayCodeTemplate[];
+};
+
+export type CockpitSavedPayCodeTemplate = {
+    reference: string;
+    name: string;
+    description?: string | null;
+    base_template_key: string;
+    instructions: Record<string, unknown>;
+    include_amount: boolean;
+    include_purpose: boolean;
+    updated_at?: string | null;
 };
 
 export type CockpitQuickGenerateLastInstructions = {

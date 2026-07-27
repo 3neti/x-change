@@ -1133,6 +1133,7 @@ function stringValue(value: unknown): string | null {
                     :campaign-context="campaignContext"
                     :feedback-defaults="props.feedback_defaults"
                     :last-instructions="props.last_instructions"
+                    :saved-templates="props.saved_templates ?? []"
                     :templates="templates"
                 />
             </div>

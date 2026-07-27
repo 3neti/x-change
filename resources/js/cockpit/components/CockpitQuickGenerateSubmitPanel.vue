@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import CockpitPayCodeTemplateStoreController from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateStoreController';
 import { router } from '@inertiajs/vue3';
 import {
     Clock3,
     FilePlus2,
     LayoutTemplate,
     RotateCcw,
+    Save,
     X,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -22,6 +24,7 @@ import type {
     CockpitQuickGenerateRuntimeFundingPreflight,
     CockpitQuickGenerateRuntimePricingPreflight,
     CockpitQuickGenerateTemplate,
+    CockpitSavedPayCodeTemplate,
 } from '../types';
 import { usePayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
@@ -45,6 +48,7 @@ const props = defineProps<{
     campaignContext?: CockpitQuickGenerateCampaignContext;
     feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
     lastInstructions?: CockpitQuickGenerateLastInstructions | null;
+    savedTemplates?: CockpitSavedPayCodeTemplate[];
     templates: CockpitQuickGenerateTemplate[];
 }>();
 
@@ -591,6 +595,17 @@ const startingPoint = ref<'blank' | 'last' | 'template'>(
     props.lastInstructions ? 'last' : 'template',
 );
 const templatePickerOpen = ref(false);
+const saveTemplateOpen = ref(false);
+const saveTemplateName = ref('');
+const saveTemplateDescription = ref('');
+const saveTemplateIncludeAmount = ref(false);
+const saveTemplateIncludePurpose = ref(true);
+const templateSaving = ref(false);
+const templateSaveError = ref('');
+const activeSavedTemplate = ref<{
+    reference: string;
+    name: string;
+} | null>(null);
 const applyingStartingPoint = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 
@@ -604,6 +619,9 @@ watch(
         }
 
         applyTemplateDefaults(templateKey);
+        activeSavedTemplate.value = null;
+        startingPoint.value =
+            templateKey === 'blank-pay-code' ? 'blank' : 'template';
     },
     { flush: 'sync' },
 );
@@ -722,6 +740,7 @@ function startBlank(): void {
     selectedTemplate.value = 'blank-pay-code';
     lastInstructionsLoaded.value = false;
     startingPoint.value = 'blank';
+    activeSavedTemplate.value = null;
     applyTemplateDefaults('blank-pay-code');
     applyingStartingPoint.value = false;
     lastMessage.value = 'Blank Pay Code ready. Add only what this claim needs.';
@@ -751,6 +770,7 @@ function repeatLastDesign(): void {
 
     applyInstructionBlueprint(instructions, true);
     startingPoint.value = 'last';
+    activeSavedTemplate.value = null;
     lastInstructionsLoaded.value = true;
     lastStatus.value = 'ready';
     lastMessage.value =
@@ -772,8 +792,98 @@ function applySystemTemplate(templateKey: string): void {
     applyingStartingPoint.value = false;
     startingPoint.value =
         templateKey === 'blank-pay-code' ? 'blank' : 'template';
+    activeSavedTemplate.value = null;
     lastInstructionsLoaded.value = false;
     templatePickerOpen.value = false;
+}
+
+function applySavedTemplate(template: CockpitSavedPayCodeTemplate): void {
+    applyingStartingPoint.value = true;
+    selectedTemplate.value = template.base_template_key;
+    applyingStartingPoint.value = false;
+    amount.value = '';
+    purpose.value = '';
+    applyInstructionBlueprint(template.instructions, true);
+    startingPoint.value = 'template';
+    activeSavedTemplate.value = {
+        reference: template.reference,
+        name: template.name,
+    };
+    lastInstructionsLoaded.value = false;
+    templatePickerOpen.value = false;
+    lastStatus.value = 'ready';
+    lastMessage.value = `${template.name} is ready. Add the recipient and review before issuing.`;
+}
+
+function reusableTemplateInstructions(): Record<string, unknown> {
+    const instructions = JSON.parse(JSON.stringify(buildPayload())) as Record<
+        string,
+        unknown
+    >;
+    const cash = instructionRecord(instructions, ['cash']);
+    const cashValidation = instructionRecord(cash, ['validation']);
+    const feedback = instructionRecord(instructions, ['feedback']);
+    const metadata = instructionRecord(instructions, ['metadata']);
+    const cockpit = instructionRecord(instructionRecord(metadata, ['custom']), [
+        'cockpit',
+    ]);
+
+    delete cashValidation.secret;
+    delete cashValidation.mobile;
+    delete feedback.email;
+    delete feedback.mobile;
+    delete feedback.webhook;
+    delete cockpit.recipient_reference;
+    delete cockpit.campaign_context;
+    delete metadata.campaign;
+    delete instructions.starts_at;
+    delete instructions.expires_at;
+
+    return instructions;
+}
+
+function saveAsTemplate(): void {
+    const name = saveTemplateName.value.trim();
+
+    if (name === '') {
+        templateSaveError.value = 'Give this template a short name.';
+
+        return;
+    }
+
+    templateSaving.value = true;
+    templateSaveError.value = '';
+
+    router.post(
+        CockpitPayCodeTemplateStoreController(),
+        {
+            name,
+            description: saveTemplateDescription.value.trim() || null,
+            base_template_key: selectedTemplate.value,
+            instructions: reusableTemplateInstructions(),
+            include_amount: saveTemplateIncludeAmount.value,
+            include_purpose: saveTemplateIncludePurpose.value,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: (): void => {
+                saveTemplateOpen.value = false;
+                saveTemplateName.value = '';
+                saveTemplateDescription.value = '';
+                templateSaveError.value = '';
+                lastStatus.value = 'ready';
+                lastMessage.value = `${name} saved to My Templates.`;
+            },
+            onError: (errors): void => {
+                templateSaveError.value =
+                    String(Object.values(errors)[0] ?? '') ||
+                    'The template could not be saved.';
+            },
+            onFinish: (): void => {
+                templateSaving.value = false;
+            },
+        },
+    );
 }
 
 function applyInstructionBlueprint(
@@ -2837,6 +2947,15 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
             custom: {
                 cockpit: {
                     template_key: selectedTemplate.value,
+                    ...(activeSavedTemplate.value === null
+                        ? {}
+                        : {
+                              saved_template: {
+                                  reference:
+                                      activeSavedTemplate.value.reference,
+                                  name: activeSavedTemplate.value.name,
+                              },
+                          }),
                     source: 'cockpit.quick-generate',
                     builder: 'guided-voucher-instruction-builder',
                     contract_summary: contractSummaryItems.value,
@@ -3558,7 +3677,7 @@ function instructionRecord(
                 </span>
             </div>
 
-            <div class="mt-3 grid gap-2 sm:grid-cols-3">
+            <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 <button
                     type="button"
                     :class="[
@@ -3596,6 +3715,15 @@ function instructionRecord(
                 >
                     <LayoutTemplate class="size-4" aria-hidden="true" />
                     Choose Template
+                </button>
+                <button
+                    type="button"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                    data-testid="cockpit-quick-generate-save-template"
+                    @click="saveTemplateOpen = true"
+                >
+                    <Save class="size-4" aria-hidden="true" />
+                    Save As Template
                 </button>
             </div>
         </section>
@@ -3662,6 +3790,181 @@ function instructionRecord(
                         >
                             {{ template.description }}
                         </p>
+                    </button>
+                </div>
+
+                <div
+                    class="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p
+                                class="text-xs font-semibold tracking-[0.18em] text-sky-700 uppercase dark:text-sky-300"
+                            >
+                                My Templates
+                            </p>
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                Designs you saved for reuse.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                        >
+                            {{ savedTemplates?.length ?? 0 }}
+                        </span>
+                    </div>
+
+                    <div
+                        v-if="savedTemplates?.length"
+                        class="mt-3 grid gap-3 sm:grid-cols-2"
+                    >
+                        <button
+                            v-for="template in savedTemplates"
+                            :key="template.reference"
+                            type="button"
+                            class="rounded-2xl border border-slate-200 p-4 text-left transition hover:border-sky-400 hover:bg-sky-50/60 dark:border-slate-800 dark:hover:border-sky-700 dark:hover:bg-sky-950/30"
+                            data-testid="cockpit-quick-generate-saved-template-option"
+                            @click="applySavedTemplate(template)"
+                        >
+                            <p
+                                class="font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                {{ template.name }}
+                            </p>
+                            <p
+                                v-if="template.description"
+                                class="mt-1 line-clamp-2 text-sm text-slate-600 dark:text-slate-300"
+                            >
+                                {{ template.description }}
+                            </p>
+                            <p
+                                class="mt-3 text-[0.68rem] font-semibold tracking-wide text-slate-400 uppercase"
+                            >
+                                {{ template.base_template_key }}
+                            </p>
+                        </button>
+                    </div>
+                    <div
+                        v-else
+                        class="mt-3 rounded-2xl border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
+                    >
+                        Save a design to find it here next time.
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div
+            v-if="saveTemplateOpen"
+            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            data-testid="cockpit-quick-generate-save-template-dialog"
+            @click.self="saveTemplateOpen = false"
+        >
+            <section
+                class="w-full rounded-t-3xl bg-white p-4 shadow-2xl sm:max-w-lg sm:rounded-3xl sm:p-6 dark:bg-slate-950"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="quick-generate-save-template-title"
+            >
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p
+                            class="text-xs font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
+                        >
+                            My Templates
+                        </p>
+                        <h3
+                            id="quick-generate-save-template-title"
+                            class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50"
+                        >
+                            Save this design
+                        </h3>
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                        aria-label="Close save template dialog"
+                        @click="saveTemplateOpen = false"
+                    >
+                        <X class="size-4" aria-hidden="true" />
+                    </button>
+                </div>
+
+                <div class="mt-5 grid gap-4">
+                    <label
+                        class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                    >
+                        Template Name
+                        <input
+                            v-model="saveTemplateName"
+                            type="text"
+                            maxlength="80"
+                            placeholder="e.g. Weekly Allowance"
+                            class="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-slate-950 ring-emerald-500 outline-none focus:ring-2 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                            data-testid="cockpit-quick-generate-template-name"
+                        />
+                    </label>
+                    <label
+                        class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                    >
+                        Description
+                        <textarea
+                            v-model="saveTemplateDescription"
+                            rows="2"
+                            maxlength="240"
+                            placeholder="Optional note for future you"
+                            class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-950 ring-emerald-500 outline-none focus:ring-2 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                            data-testid="cockpit-quick-generate-template-description"
+                        />
+                    </label>
+                    <div class="grid gap-2 sm:grid-cols-2">
+                        <label
+                            class="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200"
+                        >
+                            <input
+                                v-model="saveTemplateIncludeAmount"
+                                type="checkbox"
+                                class="size-4 rounded border-slate-300 text-emerald-600"
+                                data-testid="cockpit-quick-generate-template-include-amount"
+                            />
+                            Include Amount
+                        </label>
+                        <label
+                            class="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200"
+                        >
+                            <input
+                                v-model="saveTemplateIncludePurpose"
+                                type="checkbox"
+                                class="size-4 rounded border-slate-300 text-emerald-600"
+                                data-testid="cockpit-quick-generate-template-include-purpose"
+                            />
+                            Include Purpose
+                        </label>
+                    </div>
+                    <p
+                        class="text-xs leading-5 text-slate-500 dark:text-slate-400"
+                    >
+                        Recipient details, contact destinations, secrets, and
+                        one-time dates are never saved.
+                    </p>
+                    <p
+                        v-if="templateSaveError"
+                        class="text-sm font-medium text-rose-600 dark:text-rose-300"
+                        data-testid="cockpit-quick-generate-template-save-error"
+                    >
+                        {{ templateSaveError }}
+                    </p>
+                    <button
+                        type="button"
+                        :disabled="templateSaving"
+                        class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"
+                        data-testid="cockpit-quick-generate-template-save-submit"
+                        @click="saveAsTemplate"
+                    >
+                        <Save class="size-4" aria-hidden="true" />
+                        {{ templateSaving ? 'Saving…' : 'Save Template' }}
                     </button>
                 </div>
             </section>
