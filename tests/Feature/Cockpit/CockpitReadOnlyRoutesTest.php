@@ -47,8 +47,8 @@ it('renders cockpit pages as read-only inertia endpoints', function (string $rou
         ->assertJsonPath('props.cockpit_header_read_model.balances.0.key', 'internal')
         ->assertJsonPath('props.cockpit_header_read_model.balances.1.key', 'outstanding')
         ->assertJsonPath('props.cockpit_header_read_model.balances.2.key', 'issuance')
-        ->assertJsonPath('props.cockpit_header_read_model.balances.3.key', 'live')
-        ->assertJsonPath('props.cockpit_header_read_model.balances.3.value', 'Not available')
+        ->assertJsonCount(3, 'props.cockpit_header_read_model.balances')
+        ->assertJsonPath('props.cockpit_header_read_model.redactions.provider_balance_exposed', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.calls_providers', false);
 })->with([
     'dashboard' => ['x-change.cockpit.dashboard', [], 'x-change/cockpit/Dashboard'],
@@ -77,15 +77,16 @@ it('hydrates funding operations with secure read-only controls', function () {
         ->assertJsonPath('props.funding_read_model.controls.webhook_direct_credit_enabled', false)
         ->assertJsonPath('props.funding_read_model.controls.authoritative_provider_verification_required', true)
         ->assertJsonPath('props.funding_read_model.controls.dual_control_reconciliation_required', true)
-        ->assertJsonPath(
-            'props.funding_read_model.treasury_portfolio.schema',
-            'x-change.cockpit.funding-treasury-portfolio.v1',
-        )
-        ->assertJsonPath('props.funding_read_model.treasury_portfolio.read_only', true)
-        ->assertJsonPath('props.funding_read_model.treasury_portfolio.provider_calls', false)
+        ->assertJsonPath('props.funding_read_model.controls.can_view_treasury_controls', false)
+        ->assertJsonPath('props.funding_read_model.controls.can_refresh_provider_liquidity', false)
+        ->assertJsonCount(0, 'props.funding_read_model.treasury_positions')
+        ->assertJsonCount(0, 'props.funding_read_model.treasury_portfolio')
         ->assertJsonPath('props.funding_read_model.redactions.payloads', 'funding-operations-summary-only')
         ->assertJsonPath('props.funding_read_model.redactions.webhook_payloads_exposed', false)
         ->assertJsonPath('props.funding_read_model.redactions.raw_evidence_exposed', false)
+        ->assertJsonPath('props.funding_read_model.redactions.treasury_controls_exposed', false)
+        ->assertJsonPath('props.funding_read_model.redactions.provider_liquidity_exposed', false)
+        ->assertJsonPath('props.funding_read_model.redactions.provider_inventory_exposed', false)
         ->assertJsonPath('props.funding_qr_merchant_profile.name', fn (mixed $name): bool => is_string($name) && trim($name) !== '')
         ->assertJsonPath('props.funding_qr_merchant_profile.city', fn (mixed $city): bool => is_string($city) && trim($city) !== '')
         ->assertJsonPath('props.funding_qr_merchant_profile.presentation_only', true)

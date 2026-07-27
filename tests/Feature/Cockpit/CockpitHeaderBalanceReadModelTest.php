@@ -51,9 +51,7 @@ it('binds a read-only cockpit header balance read model with safe provider fallb
         ->and($readModel['balances'][2]['key'])->toBe('issuance')
         ->and($readModel['balances'][2]['label'])->toBe('Issuance Capacity')
         ->and($readModel['balances'][2]['value'])->toBe('Not available')
-        ->and($readModel['balances'][3]['key'])->toBe('live')
-        ->and($readModel['balances'][3]['label'])->toBe('Provider Liquidity')
-        ->and($readModel['balances'][3]['value'])->toBe('Not available')
+        ->and($readModel['balances'])->toHaveCount(3)
         ->and($readModel['vocabulary']['internal_balance']['label'])->toBe('Client Funds')
         ->and($readModel['vocabulary']['internal_balance']['source'])->toBe('x-change')
         ->and($readModel['vocabulary']['internal_balance']['approved_for_public_display'])->toBeFalse()
@@ -103,38 +101,30 @@ it('caps issuance capacity by internal balance and fresh provider headroom after
             );
         }
     };
-    $fundingOverview = new class($providerLiquidityMinor, $providerLiquidityIsStale) extends BuildBalanceOverview
-    {
-        public function __construct(
-            private readonly int $providerLiquidityMinor,
-            private readonly bool $providerLiquidityIsStale,
-        ) {}
-
-        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
-        {
-            expect($syncIfStale)->toBeFalse();
-
-            return [
-                'provider' => 'netbank',
-                'topology' => 'ledger_pooled',
-                'balances' => [
-                    [
-                        'key' => 'netbank_source_account',
-                        'authority' => 'provider_source_account',
-                        'description' => 'Cached NetBank source account liquidity.',
-                        'available_balance_minor' => $this->providerLiquidityMinor,
-                        'is_stale' => $this->providerLiquidityIsStale,
-                    ],
+    $fundingOverview = Mockery::mock(BuildBalanceOverview::class);
+    $fundingOverview->shouldReceive('handle')
+        ->once()
+        ->with(Mockery::any(), null, false)
+        ->andReturn([
+            'provider' => 'netbank',
+            'topology' => 'ledger_pooled',
+            'balances' => [
+                [
+                    'key' => 'netbank_source_account',
+                    'authority' => 'provider_source_account',
+                    'description' => 'Cached NetBank source account liquidity.',
+                    'available_balance_minor' => $providerLiquidityMinor,
+                    'is_stale' => $providerLiquidityIsStale,
                 ],
-            ];
-        }
-    };
+            ],
+        ]);
 
-    $readModel = (new WalletCockpitHeaderReadModelProvider(
+    $provider = new WalletCockpitHeaderReadModelProvider(
         $wallets,
         $fundingOverview,
         $liabilities,
-    ))->forOperator((object) ['id' => 1])->toArray();
+    );
+    $readModel = $provider->forOperator((object) ['id' => 1])->toArray();
 
     expect($readModel['balances'][2])
         ->toMatchArray([
@@ -149,63 +139,45 @@ it('caps issuance capacity by internal balance and fresh provider headroom after
     'stale provider liquidity fails closed' => [500_000, 240_000, 25_000, true, 'Not available'],
 ]);
 
-it('can expose a read-only provider balance summary when explicitly enabled', function () {
+it('exposes a read-only provider balance summary only to System Treasury', function () {
     config(['x-change.cockpit.header_provider_balance.enabled' => true]);
+    $system = enableNetbankTreasuryForTests();
     app()->forgetInstance(CockpitHeaderReadModelProviderContract::class);
-    app()->instance(WalletAccessContract::class, new class implements WalletAccessContract
-    {
-        public function resolveForUser(mixed $user): mixed
-        {
-            return (object) ['id' => 789];
-        }
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('resolveForUser')->andReturn((object) ['id' => 789]);
+    $wallets->shouldReceive('getBalance')->andReturn(500000);
+    app()->instance(WalletAccessContract::class, $wallets);
 
-        public function getBalance(mixed $wallet): int|float|string
-        {
-            return 500000;
-        }
-
-        public function assertCanAfford(mixed $wallet, int|float|string $amount): void {}
-
-        public function debit(mixed $wallet, int|float|string $amount, array $meta = []): mixed
-        {
-            throw new RuntimeException('Header read model must not debit wallets.');
-        }
-    });
-    app()->instance(BuildBalanceOverview::class, new class extends BuildBalanceOverview
-    {
-        public function __construct() {}
-
-        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
-        {
-            expect($syncIfStale)->toBeFalse();
-
-            return [
-                'provider' => 'netbank',
-                'topology' => 'ledger_pooled',
-                'authority' => 'local_ledger',
-                'balances' => [
-                    [
-                        'key' => 'local_ledger',
-                        'authority' => 'local_ledger',
-                        'balance_minor' => 500000,
-                        'currency' => 'PHP',
-                    ],
-                    [
-                        'key' => 'netbank_source_account',
-                        'authority' => 'provider_source_account',
-                        'description' => 'NetBank source account liquidity summary.',
-                        'balance_minor' => 2500000,
-                        'available_balance_minor' => 2400000,
-                        'currency' => 'PHP',
-                        'is_stale' => false,
-                    ],
+    $fundingOverview = Mockery::mock(BuildBalanceOverview::class);
+    $fundingOverview->shouldReceive('handle')
+        ->once()
+        ->with($system, null, false)
+        ->andReturn([
+            'provider' => 'netbank',
+            'topology' => 'ledger_pooled',
+            'authority' => 'local_ledger',
+            'balances' => [
+                [
+                    'key' => 'local_ledger',
+                    'authority' => 'local_ledger',
+                    'balance_minor' => 500000,
+                    'currency' => 'PHP',
                 ],
-            ];
-        }
-    });
+                [
+                    'key' => 'netbank_source_account',
+                    'authority' => 'provider_source_account',
+                    'description' => 'NetBank source account liquidity summary.',
+                    'balance_minor' => 2500000,
+                    'available_balance_minor' => 2400000,
+                    'currency' => 'PHP',
+                    'is_stale' => false,
+                ],
+            ],
+        ]);
+    app()->instance(BuildBalanceOverview::class, $fundingOverview);
 
     $readModel = app(CockpitHeaderReadModelProviderContract::class)
-        ->forOperator((object) ['id' => 1])
+        ->forOperator($system)
         ->toArray();
 
     expect($readModel['balances'][3]['key'])->toBe('live')
@@ -214,7 +186,8 @@ it('can expose a read-only provider balance summary when explicitly enabled', fu
         ->and($readModel['balances'][3]['helper'])->toBe('NetBank source account liquidity summary.')
         ->and($readModel['balances'][3]['tone'])->toBe('healthy')
         ->and($readModel['redactions']['calls_providers'])->toBeFalse()
-        ->and($readModel['redactions']['provider_payloads_exposed'])->toBeFalse();
+        ->and($readModel['redactions']['provider_payloads_exposed'])->toBeFalse()
+        ->and($readModel['redactions']['provider_balance_exposed'])->toBeTrue();
 });
 
 it('hydrates the cockpit dashboard with header balance read-model props', function () {
@@ -250,8 +223,8 @@ it('hydrates the cockpit dashboard with header balance read-model props', functi
         ->assertJsonPath('props.cockpit_header_read_model.balances.0.key', 'internal')
         ->assertJsonPath('props.cockpit_header_read_model.balances.1.key', 'outstanding')
         ->assertJsonPath('props.cockpit_header_read_model.balances.2.key', 'issuance')
-        ->assertJsonPath('props.cockpit_header_read_model.balances.3.label', 'Provider Liquidity')
-        ->assertJsonPath('props.cockpit_header_read_model.balances.3.value', 'Not available')
+        ->assertJsonCount(3, 'props.cockpit_header_read_model.balances')
+        ->assertJsonPath('props.cockpit_header_read_model.redactions.provider_balance_exposed', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.mutates_wallets', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.releases_funds', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.calls_providers', false)

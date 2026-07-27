@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Cockpit;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
+use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Contracts\TreasuryVocabularyReadModelContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
@@ -27,6 +29,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         private readonly ?VoucherLiabilitySummaryContract $liabilities = null,
         private readonly ?AccountBalanceReadModelContract $accountBalances = null,
         private readonly ?TreasuryVocabularyReadModelContract $vocabulary = null,
+        private readonly ?CockpitTreasuryAccessContract $treasuryAccess = null,
     ) {}
 
     public function forOperator(mixed $operator = null): CockpitHeaderReadModelData
@@ -35,6 +38,9 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         $outstandingLiability = $this->outstandingLiability($operator);
         $providerBalance = $this->providerBalance($operator);
         $vocabulary = $this->vocabulary();
+        $providerBalanceExposed = $operator instanceof Authenticatable
+            && ($this->treasuryAccess ?? app(CockpitTreasuryAccessContract::class))
+                ->canViewTreasuryControls($operator);
 
         return new CockpitHeaderReadModelData(
             balances: [
@@ -46,13 +52,14 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                     $providerBalance['minor'],
                     $providerBalance['fresh'],
                 ),
-                $providerBalance['metric'],
+                ...($providerBalanceExposed ? [$providerBalance['metric']] : []),
             ],
             vocabulary: $vocabulary,
             redactions: [
                 'payloads' => 'balance-summary-only',
                 'wallet_payloads_exposed' => false,
                 'provider_payloads_exposed' => false,
+                'provider_balance_exposed' => $providerBalanceExposed,
                 'voucher_payloads_exposed' => false,
                 'raw_payloads_exposed' => false,
                 'mutates_wallets' => false,

@@ -16,7 +16,7 @@ use LBHurtado\XChange\Models\ProviderAccountLink;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 
-it('presents operator scoped funding controls without exposing provider evidence', function () {
+it('presents account scoped funding controls without exposing Treasury oversight', function () {
     enableNetbankTreasuryForTests();
     config([
         'x-change.funding.providers.netbank.enabled' => true,
@@ -81,6 +81,8 @@ it('presents operator scoped funding controls without exposing provider evidence
                 'authoritative_provider_verification_required' => true,
                 'dual_control_reconciliation_required' => true,
                 'live_provider_balance_connected' => true,
+                'can_view_treasury_controls' => false,
+                'can_refresh_provider_liquidity' => false,
             ],
         ])
         ->and($readModel['redactions']['payloads'])->toBe('funding-operations-summary-only')
@@ -103,46 +105,17 @@ it('presents operator scoped funding controls without exposing provider evidence
             'pending_action' => 'retry_verification',
             'allowed_actions' => [],
         ])
-        ->and($readModel['approval_queue'][0])->toMatchArray([
-            'case_reference' => $suspenseCase->reference,
-            'provider' => 'netbank',
-            'action' => 'retry_verification',
-            'status' => 'pending_approval',
-            'requested_by_self' => false,
-            'can_approve' => true,
-            'amount_input_allowed' => false,
-            'evidence_input_allowed' => false,
-        ])
+        ->and($readModel['approval_queue'])->toBe([])
         ->and($readModel['recovery_holds'][0])->toMatchArray([
             'status' => 'open',
             'hold_status' => 'active',
             'outstanding' => '₱200.00',
         ])
-        ->and($readModel['treasury_positions'][0])->toMatchArray([
-            'provider' => 'netbank',
-            'recognized' => '₱0.00',
-            'has_treasury_facts' => true,
-        ])
-        ->and($readModel['treasury_portfolio'])->toMatchArray([
-            'schema' => 'x-change.cockpit.funding-treasury-portfolio.v1',
-            'read_only' => true,
-            'provider_calls' => false,
-            'accounting_boundary' => [
-                'provider_outflow' => 'provider_principal_only',
-                'sender_system_charge' => 'deferred_accounting_wave',
-                'provider_liquidity_source' => 'cached_projection_only',
-            ],
-        ])
-        ->and($readModel['treasury_portfolio']['connections'][0])
-        ->toHaveKeys([
-            'client_funds',
-            'pay_code_reserve',
-            'account_position',
-            'provider_inventory',
-            'provider_liquidity',
-            'issuance_capacity',
-            'control_status',
-        ])
+        ->and($readModel['treasury_positions'])->toBe([])
+        ->and($readModel['treasury_portfolio'])->toBe([])
+        ->and($readModel['redactions']['treasury_controls_exposed'])->toBeFalse()
+        ->and($readModel['redactions']['provider_liquidity_exposed'])->toBeFalse()
+        ->and($readModel['redactions']['provider_inventory_exposed'])->toBeFalse()
         ->and(collect($readModel['providers'])->pluck('code')->all())
         ->toBe(['netbank', 'paynamics_constellation', 'qrph_simulator']);
 
@@ -154,6 +127,40 @@ it('presents operator scoped funding controls without exposing provider evidence
         ->not->toContain((string) $settledIntent->provider_request_id)
         ->not->toContain((string) $settledIntent->account_reference)
         ->not->toContain('001234567890');
+});
+
+it('exposes provider-wide Treasury oversight only to the resolved system principal', function () {
+    $system = enableNetbankTreasuryForTests();
+
+    $readModel = app(FundingCockpitReadModelProvider::class)
+        ->forOperator($system)
+        ->toArray();
+
+    expect($readModel['controls'])
+        ->toMatchArray([
+            'can_view_treasury_controls' => true,
+            'can_refresh_provider_liquidity' => true,
+        ])
+        ->and($readModel['redactions'])
+        ->toMatchArray([
+            'treasury_controls_exposed' => true,
+            'provider_liquidity_exposed' => true,
+            'provider_inventory_exposed' => true,
+            'reconciliation_controls_exposed' => true,
+        ])
+        ->and($readModel['treasury_portfolio'])
+        ->toMatchArray([
+            'schema' => 'x-change.cockpit.funding-treasury-portfolio.v1',
+            'read_only' => true,
+            'provider_calls' => false,
+        ])
+        ->and($readModel['treasury_portfolio']['connections'][0])
+        ->toHaveKeys([
+            'provider_inventory',
+            'provider_liquidity',
+            'provider_liquidity_checked_at',
+            'control_status',
+        ]);
 });
 
 it('offers checks and QR reopening only for the owners unexpired NetBank intents', function () {

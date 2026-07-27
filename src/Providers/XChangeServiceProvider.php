@@ -114,7 +114,6 @@ use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRetentionPolicyCo
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
-use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
@@ -219,7 +218,6 @@ use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRecord
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
-use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
@@ -499,7 +497,6 @@ class XChangeServiceProvider extends ServiceProvider
             AdvisoryTreasuryVocabularyReadModel::class,
         );
         $this->app->singleton(CockpitHeaderReadModelProviderContract::class, WalletCockpitHeaderReadModelProvider::class);
-        $this->app->bind(CockpitTreasuryAccessContract::class, SystemPrincipalCockpitTreasuryAccess::class);
         $this->app->singleton(CockpitRedactorContract::class, DefaultCockpitRedactor::class);
         $this->app->bind(CockpitOperatorIssuanceActivityRecorderContract::class, function ($app) {
             $service = $this->cockpitOperatorIssuanceActivityService(

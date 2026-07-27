@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Number;
+use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitFundingReadModelData;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
@@ -23,6 +24,7 @@ class FundingCockpitReadModelProvider
 
     public function __construct(
         private readonly FundingTreasuryPortfolioReadModel $treasury,
+        private readonly CockpitTreasuryAccessContract $treasuryAccess,
     ) {}
 
     public function forOperator(Authenticatable $operator): CockpitFundingReadModelData
@@ -50,14 +52,22 @@ class FundingCockpitReadModelProvider
             ->where('outstanding_amount_minor', '>', 0)
             ->latest('opened_at')
             ->get();
-        $treasuryPortfolio = $this->treasury->forOperator($operator);
+        $canViewTreasuryControls = $this->treasuryAccess
+            ->canViewTreasuryControls($operator);
+        $canRefreshProviderLiquidity = $this->treasuryAccess
+            ->canRefreshProviderLiquidity($operator);
+        $treasuryPortfolio = $canViewTreasuryControls
+            ? $this->treasury->forOperator($operator)
+            : [];
 
         return new CockpitFundingReadModelData(
             summary: $this->summary($operationalIntentsQuery, $settlements, $openSuspenseCases, $activeRecoveries),
             providers: $this->providers($actorType, $actorId),
             intents: $this->intents($operationalIntentsQuery),
             suspense_cases: $this->suspenseCases($openSuspenseCases),
-            approval_queue: $this->approvalQueue($actorType, $actorId),
+            approval_queue: $canViewTreasuryControls
+                ? $this->approvalQueue($actorType, $actorId)
+                : [],
             recovery_holds: $this->recoveryHolds($activeRecoveries),
             treasury_positions: $this->treasuryPositions($treasuryPortfolio),
             treasury_portfolio: $treasuryPortfolio,
@@ -68,6 +78,8 @@ class FundingCockpitReadModelProvider
                 'authoritative_provider_verification_required' => true,
                 'dual_control_reconciliation_required' => true,
                 'live_provider_balance_connected' => (bool) config('x-change.cockpit.header_provider_balance.enabled', true),
+                'can_view_treasury_controls' => $canViewTreasuryControls,
+                'can_refresh_provider_liquidity' => $canRefreshProviderLiquidity,
             ],
             redactions: [
                 'payloads' => 'funding-operations-summary-only',
@@ -78,6 +90,10 @@ class FundingCockpitReadModelProvider
                 'webhook_payloads_exposed' => false,
                 'raw_evidence_exposed' => false,
                 'secrets_exposed' => false,
+                'treasury_controls_exposed' => $canViewTreasuryControls,
+                'provider_liquidity_exposed' => $canViewTreasuryControls,
+                'provider_inventory_exposed' => $canViewTreasuryControls,
+                'reconciliation_controls_exposed' => $canViewTreasuryControls,
             ],
         );
     }

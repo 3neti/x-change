@@ -6,6 +6,7 @@ use App\Models\User;
 use LBHurtado\Instruction\Models\InstructionItem;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
@@ -42,6 +43,7 @@ use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityFe
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
+use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\XActionCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\XFeedbackCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\XJournalCockpitOperatorIssuanceActivityJournalHandoff;
@@ -377,6 +379,7 @@ return [
         'pricing' => PricingService::class,
         'issuance' => PayCodeIssuanceService::class,
         'wallet_access' => WalletAccessService::class,
+        'cockpit_treasury_access' => SystemPrincipalCockpitTreasuryAccess::class,
         'funding_account_credit' => BavixFundingAccountCredit::class,
         'system_account_funding_pay_code_authorization' => ConfigSystemAccountFundingPayCodeAuthorization::class,
         'funding_destination_resolver' => DefaultFundingDestinationResolver::class,
@@ -418,6 +421,7 @@ return [
         PricingServiceContract::class => 'pricing',
         PayCodeIssuanceContract::class => 'issuance',
         WalletAccessContract::class => 'wallet_access',
+        CockpitTreasuryAccessContract::class => 'cockpit_treasury_access',
         FundingAccountCreditContract::class => 'funding_account_credit',
         FundingAccountRecoveryContract::class => 'funding_account_credit',
         SystemAccountFundingPayCodeAuthorizationContract::class => 'system_account_funding_pay_code_authorization',
