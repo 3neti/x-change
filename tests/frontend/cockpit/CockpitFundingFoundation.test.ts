@@ -235,6 +235,9 @@ const fundingReadModel = {
     controls: {
         funding_intent_required: true,
         manual_balance_adjustment_enabled: false,
+        can_view_treasury_controls: true,
+        can_refresh_provider_liquidity: true,
+        can_manage_treasury_reconciliation: true,
     },
     redactions: {
         payloads: 'funding-operations-summary-only',
@@ -653,6 +656,16 @@ describe('Cockpit Funding foundation', () => {
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
         ).toContain('Liquidity & reconciliation');
         expect(
+            wrapper
+                .get('[data-testid="funding-treasury-portfolio"]')
+                .attributes('open'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .get('[data-testid="funding-treasury-oversight-summary"]')
+                .text(),
+        ).toContain('Treasury oversight');
+        expect(
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
         ).toContain('NetBank liquidity fresh');
         expect(
@@ -777,6 +790,43 @@ describe('Cockpit Funding foundation', () => {
                 mode: 'rest',
             },
         );
+    });
+
+    it('omits Treasury oversight for an ordinary Account holder', () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: {
+                    ...fundingReadModel,
+                    suspense_cases: fundingReadModel.suspense_cases.map(
+                        (fundingCase) => ({
+                            ...fundingCase,
+                            allowed_actions: [],
+                        }),
+                    ),
+                    approval_queue: [],
+                    treasury_positions: [],
+                    treasury_portfolio: undefined,
+                    controls: {
+                        ...fundingReadModel.controls,
+                        can_view_treasury_controls: false,
+                        can_refresh_provider_liquidity: false,
+                        can_manage_treasury_reconciliation: false,
+                    },
+                },
+            },
+        });
+
+        expect(
+            wrapper.find('[data-testid="funding-treasury-portfolio"]').exists(),
+        ).toBe(false);
+        expect(
+            wrapper.find('[data-testid="funding-liquidity-refresh"]').exists(),
+        ).toBe(false);
+        expect(wrapper.text()).not.toContain('Provider Inventory');
+        expect(wrapper.text()).not.toContain('Reconciliation approval queue');
+        expect(wrapper.text()).toContain('Operating as: Account holder');
+        expect(wrapper.text()).toContain('QR Ph');
+        expect(wrapper.text()).toContain('Funding Activity');
     });
 
     it('explains when stale provider liquidity pauses issuance capacity', () => {

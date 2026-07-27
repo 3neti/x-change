@@ -316,6 +316,7 @@ export type CockpitHeaderReadModel = {
     status?: string;
     authorized?: boolean;
     read_only?: boolean;
+    operating_identity?: 'Account holder' | 'System Treasury';
     balances?: CockpitBalanceMetric[];
     vocabulary?: Record<string, CockpitVocabularyTerm>;
     redactions?: CockpitReadModelRedactions;
@@ -629,7 +630,7 @@ export type CockpitFundingReadModel = {
     approval_queue: CockpitFundingApproval[];
     recovery_holds: CockpitFundingRecoveryHold[];
     treasury_positions: CockpitTreasuryPosition[];
-    treasury_portfolio: CockpitFundingTreasuryPortfolio;
+    treasury_portfolio?: CockpitFundingTreasuryPortfolio;
     controls: Record<string, boolean | string>;
     redactions: CockpitReadModelRedactions;
 };

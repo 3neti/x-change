@@ -12,6 +12,7 @@ it('presents the package-owned funding treasury portfolio without duplicate lega
     expect($fundingPage)
         ->toContain('data-testid="funding-treasury-portfolio"')
         ->toContain('data-testid="funding-treasury-provider-breakdown"')
+        ->toContain('Treasury oversight')
         ->toContain('Liquidity &amp; reconciliation')
         ->toContain('Provider Inventory')
         ->toContain('Position control')
@@ -19,14 +20,15 @@ it('presents the package-owned funding treasury portfolio without duplicate lega
         ->toContain('Provider controls')
         ->toContain('Refresh liquidity')
         ->toContain('refreshFundingLiquidityRoute')
-        ->toContain('funding_read_model.treasury_portfolio.connections')
+        ->toContain('treasuryPortfolio.value?.connections')
+        ->toContain('canViewTreasuryControls && treasuryPortfolio')
         ->toContain('Cached projections only')
-        ->toContain('Self Top-Up')
+        ->toContain("label: 'QR Ph'")
         ->not->toContain('treasuryPortfolioCards')
         ->not->toContain('funding_read_model.treasury_positions.length')
         ->not->toContain('3neti/wallet grammar')
         ->and($types)
         ->toContain('export type CockpitFundingTreasuryPortfolio')
         ->toContain('export type CockpitFundingTreasuryConnection')
-        ->toContain('treasury_portfolio: CockpitFundingTreasuryPortfolio;');
+        ->toContain('treasury_portfolio?: CockpitFundingTreasuryPortfolio;');
 });

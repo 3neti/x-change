@@ -198,15 +198,37 @@ const operationalFundingIntents = computed(() =>
         (intent) => intent.provider !== 'qrph_simulator',
     ),
 );
+const canViewTreasuryControls = computed(
+    () => props.funding_read_model.controls.can_view_treasury_controls === true,
+);
+const canRefreshProviderLiquidity = computed(
+    () =>
+        props.funding_read_model.controls.can_refresh_provider_liquidity ===
+        true,
+);
+const canManageTreasuryReconciliation = computed(
+    () =>
+        props.funding_read_model.controls.can_manage_treasury_reconciliation ===
+        true,
+);
+const treasuryPortfolio = computed(() => {
+    const portfolio = props.funding_read_model.treasury_portfolio;
+
+    return canViewTreasuryControls.value &&
+        portfolio &&
+        Array.isArray(portfolio.connections)
+        ? portfolio
+        : null;
+});
 const staleProviderLiquidity = computed(() =>
-    props.funding_read_model.treasury_portfolio.connections.find(
+    treasuryPortfolio.value?.connections.find(
         (connection) =>
             connection.mode !== 'disabled' &&
             connection.provider_liquidity_is_stale,
     ),
 );
 const refreshableProviderLiquidity = computed(() =>
-    props.funding_read_model.treasury_portfolio.connections.find(
+    treasuryPortfolio.value?.connections.find(
         (connection) => connection.mode !== 'disabled',
     ),
 );
@@ -482,10 +504,9 @@ const summaryCards = computed(() => [
 ]);
 
 const treasuryPositionControl = computed(() => {
-    const activeConnections =
-        props.funding_read_model.treasury_portfolio.connections.filter(
-            (connection) => connection.mode !== 'disabled',
-        );
+    const activeConnections = (
+        treasuryPortfolio.value?.connections ?? []
+    ).filter((connection) => connection.mode !== 'disabled');
 
     if (activeConnections.length === 0) {
         return 'No active provider connection';
@@ -771,6 +792,10 @@ function claimPayCodeFunding(): void {
 }
 
 function requestReconciliation(caseReference: string, action: string): void {
+    if (!canManageTreasuryReconciliation.value) {
+        return;
+    }
+
     activeReconciliationCase.value = caseReference;
     reconciliationForm.action = action;
     reconciliationForm.post(storeReconciliationRequest(caseReference), {
@@ -782,6 +807,10 @@ function requestReconciliation(caseReference: string, action: string): void {
 }
 
 function approveFundingReconciliation(reference: string): void {
+    if (!canManageTreasuryReconciliation.value) {
+        return;
+    }
+
     activeApproval.value = reference;
     approvalForm.post(approveReconciliation(reference), {
         preserveScroll: true,
@@ -808,6 +837,7 @@ function checkNetBank(reference: string): void {
 
 function refreshLiquidity(): void {
     if (
+        !canRefreshProviderLiquidity.value ||
         liquidityRefreshRunning.value ||
         refreshableProviderLiquidity.value === undefined
     ) {
@@ -1342,19 +1372,21 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 </article>
             </section>
 
-            <section
+            <details
+                v-if="canViewTreasuryControls && treasuryPortfolio"
                 class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="funding-treasury-portfolio"
             >
-                <div
-                    class="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                <summary
+                    class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 marker:hidden"
+                    data-testid="funding-treasury-oversight-summary"
                 >
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <p
                                 class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
                             >
-                                Treasury controls
+                                Treasury oversight
                             </p>
                             <span
                                 class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
@@ -1368,13 +1400,20 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             Liquidity &amp; reconciliation
                         </h2>
                     </div>
-                    <div
-                        class="flex flex-col items-start gap-2 sm:items-end"
-                        data-testid="funding-liquidity-control"
+                    <span
+                        class="text-right text-xs font-semibold text-slate-500 dark:text-slate-400"
                     >
+                        {{ treasuryPositionControl }}
+                    </span>
+                </summary>
+                <div
+                    class="flex flex-col items-start gap-2 border-t border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                    data-testid="funding-liquidity-control"
+                >
+                    <div>
                         <p
                             v-if="staleProviderLiquidity"
-                            class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 sm:text-right dark:bg-amber-950/40 dark:text-amber-300"
+                            class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                             data-testid="funding-liquidity-freshness"
                         >
                             {{ staleProviderLiquidity.provider_label }}
@@ -1390,7 +1429,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 refreshableProviderLiquidity?.provider_liquidity !=
                                 null
                             "
-                            class="text-xs text-slate-500 sm:text-right dark:text-slate-400"
+                            class="text-xs text-slate-500 dark:text-slate-400"
                             data-testid="funding-liquidity-freshness"
                         >
                             {{ refreshableProviderLiquidity.provider_label }}
@@ -1403,14 +1442,19 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </p>
                         <p
                             v-else
-                            class="text-xs text-slate-500 sm:text-right dark:text-slate-400"
+                            class="text-xs text-slate-500 dark:text-slate-400"
                             data-testid="funding-liquidity-freshness"
                         >
                             Cached projections only · no provider call on page
                             load
                         </p>
+                    </div>
+                    <div class="flex flex-col items-start gap-2 sm:items-end">
                         <button
-                            v-if="refreshableProviderLiquidity"
+                            v-if="
+                                canRefreshProviderLiquidity &&
+                                refreshableProviderLiquidity
+                            "
                             type="button"
                             class="inline-flex min-h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-sky-600 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
                             data-testid="funding-liquidity-refresh"
@@ -1444,8 +1488,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="mt-1 text-base font-semibold tracking-tight text-slate-950 dark:text-white"
                         >
                             {{
-                                funding_read_model.treasury_portfolio.totals
-                                    .provider_inventory ?? 'Not available'
+                                treasuryPortfolio.totals.provider_inventory ??
+                                'Not available'
                             }}
                         </dd>
                     </div>
@@ -1474,22 +1518,15 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     >
                         Provider controls
                         <span class="font-normal text-slate-500">
-                            ({{
-                                funding_read_model.treasury_portfolio
-                                    .connections.length
-                            }})
+                            ({{ treasuryPortfolio.connections.length }})
                         </span>
                     </summary>
                     <div
-                        v-if="
-                            funding_read_model.treasury_portfolio.connections
-                                .length
-                        "
+                        v-if="treasuryPortfolio.connections.length"
                         class="mt-3 grid gap-3 lg:grid-cols-2"
                     >
                         <article
-                            v-for="connection in funding_read_model
-                                .treasury_portfolio.connections"
+                            v-for="connection in treasuryPortfolio.connections"
                             :key="`${connection.provider}-${connection.currency}`"
                             class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-950/40"
                         >
@@ -1613,7 +1650,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         implemented.
                     </p>
                 </details>
-            </section>
+            </details>
 
             <section
                 class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -3175,6 +3212,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     class="space-y-5 border-t border-slate-200 p-4 dark:border-slate-800"
                 >
                     <section
+                        v-if="canManageTreasuryReconciliation"
                         class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                         data-testid="cockpit-funding-approval-queue"
                     >

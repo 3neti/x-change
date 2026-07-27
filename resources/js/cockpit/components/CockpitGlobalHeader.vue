@@ -2,42 +2,39 @@
 import CockpitBalanceHud from './CockpitBalanceHud.vue';
 import type { CockpitBalanceMetric } from '../types';
 
-withDefaults(defineProps<{
-    institution?: string;
-    operatingIdentity?: string;
-    connectivity?: string;
-    balances?: CockpitBalanceMetric[];
-}>(), {
-    institution: 'x-change Cockpit',
-    operatingIdentity: 'Treasury Operations',
-    connectivity: 'Online',
-    balances: () => [
-        {
-            key: 'internal',
-            label: 'Client Funds',
-            value: 'Client Funds not connected',
-            tone: 'neutral',
-        },
-        {
-            key: 'outstanding',
-            label: 'Outstanding Pay Codes',
-            value: 'Liability summary not connected',
-            tone: 'neutral',
-        },
-        {
-            key: 'issuance',
-            label: 'Issuance Capacity',
-            value: 'Not available',
-            tone: 'neutral',
-        },
-        {
-            key: 'live',
-            label: 'Provider Liquidity',
-            value: 'Not available',
-            tone: 'neutral',
-        },
-    ],
-});
+withDefaults(
+    defineProps<{
+        institution?: string;
+        operatingIdentity?: string;
+        connectivity?: string;
+        balances?: CockpitBalanceMetric[];
+    }>(),
+    {
+        institution: 'x-change Cockpit',
+        operatingIdentity: 'Account holder',
+        connectivity: 'Online',
+        balances: () => [
+            {
+                key: 'internal',
+                label: 'Client Funds',
+                value: 'Client Funds not connected',
+                tone: 'neutral',
+            },
+            {
+                key: 'outstanding',
+                label: 'Outstanding Pay Codes',
+                value: 'Liability summary not connected',
+                tone: 'neutral',
+            },
+            {
+                key: 'issuance',
+                label: 'Issuance Capacity',
+                value: 'Not available',
+                tone: 'neutral',
+            },
+        ],
+    },
+);
 </script>
 
 <template>
@@ -45,16 +42,24 @@ withDefaults(defineProps<{
         class="border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95"
         data-testid="cockpit-global-header"
     >
-        <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div
+            class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"
+        >
             <div class="min-w-0">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                <p
+                    class="text-xs font-semibold tracking-[0.22em] text-slate-500 uppercase dark:text-slate-400"
+                >
                     Settlement Operating System
                 </p>
                 <div class="mt-1 flex flex-wrap items-center gap-3">
-                    <h1 class="text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    <h1
+                        class="text-lg font-semibold text-slate-950 dark:text-slate-50"
+                    >
                         {{ institution }}
                     </h1>
-                    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+                    <span
+                        class="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
+                    >
                         {{ connectivity }}
                     </span>
                 </div>

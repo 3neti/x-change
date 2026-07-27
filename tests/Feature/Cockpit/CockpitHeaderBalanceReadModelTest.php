@@ -42,6 +42,7 @@ it('binds a read-only cockpit header balance read model with safe provider fallb
             'status' => 'available',
             'authorized' => true,
             'read_only' => true,
+            'operating_identity' => 'Account holder',
         ])
         ->and($readModel['balances'][0]['key'])->toBe('internal')
         ->and($readModel['balances'][0]['label'])->toBe('Client Funds')
@@ -181,6 +182,7 @@ it('exposes a read-only provider balance summary only to System Treasury', funct
         ->toArray();
 
     expect($readModel['balances'][3]['key'])->toBe('live')
+        ->and($readModel['operating_identity'])->toBe('System Treasury')
         ->and($readModel['balances'][3]['label'])->toBe('NetBank Liquidity')
         ->and($readModel['balances'][3]['value'])->toContain('24,000')
         ->and($readModel['balances'][3]['helper'])->toBe('NetBank source account liquidity summary.')
@@ -220,6 +222,7 @@ it('hydrates the cockpit dashboard with header balance read-model props', functi
         ->assertJsonPath('props.cockpit_header_read_model.schema', 'x-change.cockpit.header-read-model.v2')
         ->assertJsonPath('props.cockpit_header_read_model.authorized', true)
         ->assertJsonPath('props.cockpit_header_read_model.read_only', true)
+        ->assertJsonPath('props.cockpit_header_read_model.operating_identity', 'Account holder')
         ->assertJsonPath('props.cockpit_header_read_model.balances.0.key', 'internal')
         ->assertJsonPath('props.cockpit_header_read_model.balances.1.key', 'outstanding')
         ->assertJsonPath('props.cockpit_header_read_model.balances.2.key', 'issuance')

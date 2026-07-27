@@ -18,6 +18,7 @@ class CockpitHeaderReadModelData extends Data
         public readonly string $status = 'available',
         public readonly bool $authorized = true,
         public readonly bool $read_only = true,
+        public readonly string $operating_identity = 'Account holder',
         public readonly array $balances = [],
         public readonly array $vocabulary = [],
         public readonly array $redactions = ['payloads' => 'balance-summary-only'],

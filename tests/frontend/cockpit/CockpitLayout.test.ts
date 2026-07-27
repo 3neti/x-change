@@ -29,15 +29,26 @@ describe('Cockpit shell layout baseline', () => {
                 ],
             },
             slots: {
-                default: '<div data-testid="workspace-content">Operator workspace</div>',
+                default:
+                    '<div data-testid="workspace-content">Operator workspace</div>',
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('DBP Pay Code');
-        expect(wrapper.find('[data-testid="cockpit-sidebar"]').text()).toContain('Pay Codes');
-        expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
-        expect(wrapper.find('[data-testid="cockpit-workspace"]').text()).toContain('Operator workspace');
+        expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(
+            true,
+        );
+        expect(
+            wrapper.find('[data-testid="cockpit-global-header"]').text(),
+        ).toContain('DBP Pay Code');
+        expect(
+            wrapper.find('[data-testid="cockpit-sidebar"]').text(),
+        ).toContain('Pay Codes');
+        expect(wrapper.find('[aria-current="page"]').text()).toContain(
+            'Pay Codes',
+        );
+        expect(
+            wrapper.find('[data-testid="cockpit-workspace"]').text(),
+        ).toContain('Operator workspace');
     });
 
     it('renders planned Cockpit navigation items as disabled coming soon entries', () => {
@@ -47,7 +58,9 @@ describe('Cockpit shell layout baseline', () => {
             },
         });
 
-        const disabledItems = wrapper.findAll('[data-testid="cockpit-nav-item-disabled"]');
+        const disabledItems = wrapper.findAll(
+            '[data-testid="cockpit-nav-item-disabled"]',
+        );
         const disabledText = disabledItems.map((item) => item.text()).join(' ');
 
         expect(disabledItems).toHaveLength(6);
@@ -75,6 +88,7 @@ describe('Cockpit shell layout baseline', () => {
                     schema: 'x-change.cockpit.header-read-model.v2',
                     authorized: true,
                     read_only: true,
+                    operating_identity: 'Account holder',
                     balances: [
                         {
                             key: 'internal',
@@ -94,12 +108,6 @@ describe('Cockpit shell layout baseline', () => {
                             value: '₱9,851.50',
                             tone: 'healthy',
                         },
-                        {
-                            key: 'live',
-                            label: 'Provider Liquidity',
-                            value: 'Not available',
-                            tone: 'neutral',
-                        },
                     ],
                 },
             },
@@ -111,7 +119,8 @@ describe('Cockpit shell layout baseline', () => {
         expect(header.text()).toContain('₱25.00');
         expect(header.text()).toContain('₱9,851.50');
         expect(header.text()).toContain('Issuance Capacity');
-        expect(header.text()).toContain('Not available');
+        expect(header.text()).toContain('Operating as: Account holder');
+        expect(header.text()).not.toContain('Provider Liquidity');
         expect(header.text()).not.toContain('Client Funds not connected');
     });
 
@@ -120,16 +129,20 @@ describe('Cockpit shell layout baseline', () => {
             props: {},
         });
 
-        expect(wrapper.find('[data-testid="cockpit-balance-hud"]').exists()).toBe(true);
+        expect(
+            wrapper.find('[data-testid="cockpit-balance-hud"]').exists(),
+        ).toBe(true);
         expect(wrapper.text()).toContain('Client Funds');
         expect(wrapper.text()).toContain('Client Funds not connected');
         expect(wrapper.text()).toContain('Issuance Capacity');
-        expect(wrapper.text()).toContain('Provider Liquidity');
         expect(wrapper.text()).toContain('Not available');
+        expect(wrapper.text()).not.toContain('Provider Liquidity');
         expect(wrapper.text()).not.toContain('Summary not connected');
         expect(wrapper.text()).not.toContain('Provider not connected');
-        expect(wrapper.text()).toContain('Operating as: Treasury Operations');
-        expect(wrapper.find('[data-testid="cockpit-balance-hud"]').classes()).toContain('xl:min-w-[44rem]');
+        expect(wrapper.text()).toContain('Operating as: Account holder');
+        expect(
+            wrapper.find('[data-testid="cockpit-balance-hud"]').classes(),
+        ).toContain('xl:min-w-[44rem]');
     });
 
     it('keeps the balance HUD as supplied summary text', () => {
@@ -147,7 +160,9 @@ describe('Cockpit shell layout baseline', () => {
 
         expect(wrapper.text()).toContain('Available To Issue');
         expect(wrapper.text()).toContain('Summary not connected');
-        expect(wrapper.findAll('[data-testid="cockpit-balance-metric"]')).toHaveLength(1);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-balance-metric"]'),
+        ).toHaveLength(1);
     });
 
     it('centers single-line labels and values in width-aware balance columns', () => {
@@ -164,17 +179,26 @@ describe('Cockpit shell layout baseline', () => {
                         label: 'Outstanding Pay Codes',
                         value: '₱0.00',
                     },
+                    {
+                        key: 'issuance',
+                        label: 'Issuance Capacity',
+                        value: '₱8,241.70',
+                    },
                 ],
             },
         });
 
-        const labelRows = wrapper.findAll('[data-testid="cockpit-balance-label"]');
-        const valueRows = wrapper.findAll('[data-testid="cockpit-balance-value"]');
+        const labelRows = wrapper.findAll(
+            '[data-testid="cockpit-balance-label"]',
+        );
+        const valueRows = wrapper.findAll(
+            '[data-testid="cockpit-balance-value"]',
+        );
         const hud = wrapper.find('[data-testid="cockpit-balance-hud"]');
 
-        expect(labelRows).toHaveLength(2);
-        expect(valueRows).toHaveLength(2);
-        expect(hud.classes()).toContain('xl:grid-cols-[4fr_6fr_6fr_8fr]');
+        expect(labelRows).toHaveLength(3);
+        expect(valueRows).toHaveLength(3);
+        expect(hud.classes()).toContain('xl:grid-cols-[4fr_6fr_6fr]');
 
         for (const labelRow of labelRows) {
             expect(labelRow.classes()).toContain('text-center');

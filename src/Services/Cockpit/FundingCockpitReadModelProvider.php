@@ -56,6 +56,8 @@ class FundingCockpitReadModelProvider
             ->canViewTreasuryControls($operator);
         $canRefreshProviderLiquidity = $this->treasuryAccess
             ->canRefreshProviderLiquidity($operator);
+        $canManageTreasuryReconciliation = $this->treasuryAccess
+            ->canManageTreasuryReconciliation($operator);
         $treasuryPortfolio = $canViewTreasuryControls
             ? $this->treasury->forOperator($operator)
             : [];
@@ -64,8 +66,11 @@ class FundingCockpitReadModelProvider
             summary: $this->summary($operationalIntentsQuery, $settlements, $openSuspenseCases, $activeRecoveries),
             providers: $this->providers($actorType, $actorId),
             intents: $this->intents($operationalIntentsQuery),
-            suspense_cases: $this->suspenseCases($openSuspenseCases),
-            approval_queue: $canViewTreasuryControls
+            suspense_cases: $this->suspenseCases(
+                $openSuspenseCases,
+                $canManageTreasuryReconciliation,
+            ),
+            approval_queue: $canManageTreasuryReconciliation
                 ? $this->approvalQueue($actorType, $actorId)
                 : [],
             recovery_holds: $this->recoveryHolds($activeRecoveries),
@@ -80,6 +85,7 @@ class FundingCockpitReadModelProvider
                 'live_provider_balance_connected' => (bool) config('x-change.cockpit.header_provider_balance.enabled', true),
                 'can_view_treasury_controls' => $canViewTreasuryControls,
                 'can_refresh_provider_liquidity' => $canRefreshProviderLiquidity,
+                'can_manage_treasury_reconciliation' => $canManageTreasuryReconciliation,
             ],
             redactions: [
                 'payloads' => 'funding-operations-summary-only',
@@ -237,11 +243,13 @@ class FundingCockpitReadModelProvider
      * @param  Collection<int, FundingSuspenseCase>  $cases
      * @return array<int, array<string, mixed>>
      */
-    private function suspenseCases(Collection $cases): array
-    {
+    private function suspenseCases(
+        Collection $cases,
+        bool $canManageTreasuryReconciliation,
+    ): array {
         return $cases
             ->take(20)
-            ->map(function (FundingSuspenseCase $case): array {
+            ->map(function (FundingSuspenseCase $case) use ($canManageTreasuryReconciliation): array {
                 $pendingRequest = $case->reconciliationRequests
                     ->firstWhere('status', 'pending_approval');
 
@@ -253,7 +261,8 @@ class FundingCockpitReadModelProvider
                     'opened_at' => $case->opened_at?->toIso8601String(),
                     'pending_approval' => $pendingRequest !== null,
                     'pending_action' => $pendingRequest?->action->value,
-                    'allowed_actions' => $pendingRequest === null
+                    'allowed_actions' => $canManageTreasuryReconciliation
+                        && $pendingRequest === null
                         ? $this->allowedReconciliationActions($case)
                         : [],
                 ];

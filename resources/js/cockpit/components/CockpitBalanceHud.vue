@@ -7,10 +7,14 @@ defineProps<{
 
 const toneClass = (tone: CockpitBalanceMetric['tone'] = 'neutral'): string => {
     return {
-        neutral: 'border-slate-200 bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100',
-        healthy: 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100',
-        warning: 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100',
-        critical: 'border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100',
+        neutral:
+            'border-slate-200 bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100',
+        healthy:
+            'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100',
+        warning:
+            'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100',
+        critical:
+            'border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100',
     }[tone];
 };
 </script>
@@ -18,7 +22,12 @@ const toneClass = (tone: CockpitBalanceMetric['tone'] = 'neutral'): string => {
 <template>
     <section
         aria-label="Cockpit funding position"
-        class="grid gap-2 sm:grid-cols-2 xl:grid-cols-[4fr_6fr_6fr_8fr]"
+        class="grid gap-2 sm:grid-cols-2"
+        :class="
+            balances.length === 3
+                ? 'xl:grid-cols-[4fr_6fr_6fr]'
+                : 'xl:grid-cols-[4fr_6fr_6fr_8fr]'
+        "
         data-testid="cockpit-balance-hud"
     >
         <article
@@ -29,19 +38,21 @@ const toneClass = (tone: CockpitBalanceMetric['tone'] = 'neutral'): string => {
                 toneClass(balance.tone),
             ]"
             :title="balance.helper"
-            :aria-label="balance.helper
-                ? `${balance.label}: ${balance.value}. ${balance.helper}`
-                : `${balance.label}: ${balance.value}`"
+            :aria-label="
+                balance.helper
+                    ? `${balance.label}: ${balance.value}. ${balance.helper}`
+                    : `${balance.label}: ${balance.value}`
+            "
             data-testid="cockpit-balance-metric"
         >
             <p
-                class="whitespace-nowrap text-center text-[0.65rem] font-semibold uppercase tracking-[0.12em] opacity-70"
+                class="text-center text-[0.65rem] font-semibold tracking-[0.12em] whitespace-nowrap uppercase opacity-70"
                 data-testid="cockpit-balance-label"
             >
                 {{ balance.label }}
             </p>
             <p
-                class="mt-1 whitespace-nowrap text-center text-sm font-semibold tabular-nums"
+                class="mt-1 text-center text-sm font-semibold whitespace-nowrap tabular-nums"
                 data-testid="cockpit-balance-value"
             >
                 {{ balance.value }}

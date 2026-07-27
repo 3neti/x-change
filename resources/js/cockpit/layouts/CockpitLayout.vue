@@ -4,19 +4,21 @@ import CockpitGlobalHeader from '../components/CockpitGlobalHeader.vue';
 import CockpitSidebar from '../components/CockpitSidebar.vue';
 import type { CockpitBalanceMetric, CockpitHeaderReadModel } from '../types';
 
-const props = withDefaults(defineProps<{
-    activeNavigation?: string;
-    institution?: string;
-    operatingIdentity?: string;
-    connectivity?: string;
-    balances?: CockpitBalanceMetric[];
-    cockpitHeaderReadModel?: CockpitHeaderReadModel;
-}>(), {
-    activeNavigation: 'dashboard',
-    institution: 'x-change Cockpit',
-    operatingIdentity: 'Treasury Operations',
-    connectivity: 'Online',
-});
+const props = withDefaults(
+    defineProps<{
+        activeNavigation?: string;
+        institution?: string;
+        operatingIdentity?: string;
+        connectivity?: string;
+        balances?: CockpitBalanceMetric[];
+        cockpitHeaderReadModel?: CockpitHeaderReadModel;
+    }>(),
+    {
+        activeNavigation: 'dashboard',
+        institution: 'x-change Cockpit',
+        connectivity: 'Online',
+    },
+);
 
 const headerBalances = computed(() => {
     if (Array.isArray(props.balances) && props.balances.length > 0) {
@@ -29,6 +31,12 @@ const headerBalances = computed(() => {
         ? sharedBalances
         : undefined;
 });
+const headerOperatingIdentity = computed(
+    () =>
+        props.operatingIdentity ??
+        props.cockpitHeaderReadModel?.operating_identity ??
+        'Account holder',
+);
 </script>
 
 <template>
@@ -42,12 +50,15 @@ const headerBalances = computed(() => {
             <div class="flex min-w-0 flex-1 flex-col">
                 <CockpitGlobalHeader
                     :institution="institution"
-                    :operating-identity="operatingIdentity"
+                    :operating-identity="headerOperatingIdentity"
                     :connectivity="connectivity"
                     :balances="headerBalances"
                 />
 
-                <main class="flex-1 overflow-y-auto p-4 lg:p-6" data-testid="cockpit-workspace">
+                <main
+                    class="flex-1 overflow-y-auto p-4 lg:p-6"
+                    data-testid="cockpit-workspace"
+                >
                     <slot />
                 </main>
             </div>

@@ -83,6 +83,7 @@ it('presents account scoped funding controls without exposing Treasury oversight
                 'live_provider_balance_connected' => true,
                 'can_view_treasury_controls' => false,
                 'can_refresh_provider_liquidity' => false,
+                'can_manage_treasury_reconciliation' => false,
             ],
         ])
         ->and($readModel['redactions']['payloads'])->toBe('funding-operations-summary-only')
@@ -140,6 +141,7 @@ it('exposes provider-wide Treasury oversight only to the resolved system princip
         ->toMatchArray([
             'can_view_treasury_controls' => true,
             'can_refresh_provider_liquidity' => true,
+            'can_manage_treasury_reconciliation' => true,
         ])
         ->and($readModel['redactions'])
         ->toMatchArray([

@@ -43,6 +43,9 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                 ->canViewTreasuryControls($operator);
 
         return new CockpitHeaderReadModelData(
+            operating_identity: $providerBalanceExposed
+                ? 'System Treasury'
+                : 'Account holder',
             balances: [
                 $internalBalance['metric'],
                 $outstandingLiability['metric'],
