@@ -376,7 +376,7 @@ final readonly class FundingRequestCockpitReadModel
     ): CarbonImmutable {
         return CarbonImmutable::parse(
             (string) $model->getRawOriginal($attribute),
-            'UTC',
+            (string) config('app.timezone', 'UTC'),
         );
     }
 }

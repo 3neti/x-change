@@ -62,6 +62,10 @@ it('lets only the request owner check an InstaPay reference without crediting se
 });
 
 it('creates a reserved exact transfer instruction without checking the provider early', function () {
+    $originalTimezone = date_default_timezone_get();
+    date_default_timezone_set('Asia/Manila');
+    $this->travelTo(new DateTimeImmutable('2026-07-27T12:00:00+08:00'));
+    config()->set('app.timezone', 'Asia/Manila');
     enableNetbankTreasuryForTests();
     $requester = actingAsTestUser(0);
     config()->set(
@@ -117,7 +121,7 @@ it('creates a reserved exact transfer instruction without checking the provider 
         ->and(data_get(
             $readModel,
             'requests.0.transfer.instruction_expires_at',
-        ))->toBeString()
+        ))->toBe('2026-07-27T12:10:00+08:00')
         ->and(data_get(
             $readModel,
             'bank_transfer.reserved_exact_amounts_enabled',
@@ -126,4 +130,7 @@ it('creates a reserved exact transfer instruction without checking the provider 
             $readModel,
             'bank_transfer.instruction_valid_for_minutes',
         ))->toBe(10);
+
+    $this->travelBack();
+    date_default_timezone_set($originalTimezone);
 });

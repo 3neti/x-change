@@ -123,25 +123,38 @@ No event or accounting entry is duplicated on replay.
 ## Provider-Verified Bank Transfer Funding
 
 An InstaPay or bank-transfer request is a provider-backed variation of the
-same requester-owned PAYABLE flow. The Account holder supplies the exact amount
-and selects a search window: the configured recent window, the last hour, or
-today. A sender-visible reference and screenshot are optional audit evidence
-only; neither participates in authoritative matching.
+same requester-owned PAYABLE flow. The Account holder enters the amount they
+want added. x-change reserves a short-lived, unique exact amount on the
+configured receiving account. With the default adjustment range, a request for
+₱1,000.00 produces an instruction between ₱1,003.17 and ₱1,005.37.
+
+The adjustment is matching data, not a fee. The complete provider-observed
+amount is credited to Client Funds. The request therefore retains three
+separate integer-minor-unit facts:
+
+- `requested_amount_minor`: the Account holder's desired addition;
+- `matching_adjustment_minor`: the system-selected matching amount;
+- `expected_amount_minor`: the exact bank transfer and Account credit.
+
+A sender-visible reference and screenshot remain optional audit evidence only;
+neither participates in authoritative matching.
 
 ```text
-Account holder enters exact amount and transfer window
+Account holder enters desired Account addition
+        ↓
+x-change reserves one exact amount for the provider + connection + currency
+        ↓
+Account holder transfers the instructed amount before its expiry
         ↓
 receiver-side provider history observes the inbound transfer
         ↓
-destination + amount + currency + status + time window match uniquely
+destination + reserved amount + currency + status + reservation window match
         ↓
-recent match ─────────────── older match
+valid unique match ────────── no/ambiguous/out-of-window match
       ↓                          ↓
-automatic collection       provider observation reserved
+automatic collection       no automatic Account credit
                                  ↓
-                         system approval required
-                                 ↓
-                         approved collection
+                         controlled review when applicable
         ↓
 x_change_provider_funding recognizes provider Inventory
         ↓
@@ -163,10 +176,25 @@ inbound transfer.
 `ProviderFundingObservation` records with:
 
 - the configured provider and Treasury connection;
-- exact requested amount and currency;
+- exact reserved expected amount and currency;
 - a creditable normalized provider status;
 - `destination_verified=true`;
-- an occurrence timestamp inside the selected search window.
+- an occurrence timestamp inside the persisted reservation window.
+
+`x_change_funding_transfer_amount_reservations` gives one Funding Request one
+immutable amount instruction. Its `active_key` uniquely constrains the
+provider, connection, currency, and expected amount while that amount remains
+unsafe to reuse. Allocation begins at a cryptographically random point in the
+configured range and checks remaining candidates deterministically. An expired
+or credited amount is reusable only after the configured safety delay.
+Database uniqueness remains the concurrency backstop.
+
+The default reservation is valid for ten minutes and is not silently extended
+when the page is refreshed. The provider adapter receives the persisted lower
+and upper observation bounds, so a same-amount transfer outside the reservation
+cannot become the match. The provider transaction ID, transfer match, voucher
+collection, Inventory recognition, and Client Funds allocation continue to
+provide exact-once protection after an amount match is found.
 
 When provider-history lookup is enabled, the check first asks the configured
 `FundingProviderAdapter` to inspect the configured receiving account. The
@@ -177,7 +205,8 @@ sanitized failure type and never turn sender input into settlement authority.
 No match leaves the request at `awaiting_provider_evidence`; multiple matches
 require controlled review. Exactly one match no older than
 `XCHANGE_FUNDING_BANK_TRANSFER_AUTO_CREDIT_WINDOW_MINUTES` is eligible for
-automatic credit in `provider_verified_auto` mode. An older exact match is
+automatic credit in `provider_verified_auto` mode. Legacy non-reserved
+requests can still use their selected time window; an older exact match is
 reserved, leaves the PAYABLE locked, and moves the request to
 `awaiting_approval`. Checker approval activates the same PAYABLE and completes
 the `x_change_provider_funding` posting; it never draws from system Account
@@ -515,6 +544,12 @@ XCHANGE_FUNDING_BANK_TRANSFER_VERIFICATION_MODE
 XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER_HISTORY_ENABLED
 XCHANGE_FUNDING_BANK_TRANSFER_AUTO_CREDIT_WINDOW_MINUTES
 XCHANGE_FUNDING_BANK_TRANSFER_CLOCK_SKEW_SECONDS
+XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNTS_ENABLED
+XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_MINIMUM_ADJUSTMENT_MINOR
+XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_MAXIMUM_ADJUSTMENT_MINOR
+XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_TTL_SECONDS
+XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_REUSE_DELAY_SECONDS
+XCHANGE_FUNDING_BANK_TRANSFER_RESERVED_AMOUNT_MAXIMUM_ALLOCATION_ATTEMPTS
 XCHANGE_COCKPIT_QRPH_FUNDING_SIMULATION_ENABLED
 XCHANGE_LIFECYCLE_QRPH_SIMULATION_ENABLED
 XCHANGE_MOBILE_VERIFICATION_ENABLED

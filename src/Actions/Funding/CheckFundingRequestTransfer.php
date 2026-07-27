@@ -618,7 +618,7 @@ final readonly class CheckFundingRequestTransfer
     ): CarbonImmutable {
         return CarbonImmutable::parse(
             (string) $reservation->getRawOriginal($attribute),
-            'UTC',
+            (string) config('app.timezone', 'UTC'),
         );
     }
 
