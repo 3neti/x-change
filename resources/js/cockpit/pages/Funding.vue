@@ -534,10 +534,14 @@ function focusBankTransferAmount(): void {
     bankTransferAmountInput.value?.select();
 }
 
-function submitFundingRequest(minimumAmountMinor = 1): void {
+function submitFundingRequest(): void {
     fundingRequestForm.clearErrors();
     fundingRequestAmountError.value = null;
     const amountMinor = amountToMinor(fundingRequestAmount.value);
+    const minimumAmountMinor =
+        fundingRequestForm.funding_type === 'bank_transfer'
+            ? bankTransferInstructions.value.minimum_requested_amount_minor
+            : 1;
 
     if (amountMinor === null) {
         fundingRequestAmountError.value =
@@ -579,9 +583,7 @@ function submitFundingRequest(minimumAmountMinor = 1): void {
 
 function submitBankTransferRequest(): void {
     fundingRequestForm.funding_type = 'bank_transfer';
-    submitFundingRequest(
-        bankTransferInstructions.value.minimum_requested_amount_minor,
-    );
+    submitFundingRequest();
 }
 
 function openBankTransferInstructions(reference: string): void {
