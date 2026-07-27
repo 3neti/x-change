@@ -47,6 +47,40 @@ Inbound funding stops at two explicitly separate operations:
 
 Funding is not an Allocation or Draw. An **Account** is the user-facing accounting balance. A provider bank account or EMI wallet is a **Funding Destination**, not the Account itself. Provider-reported balance remains an external fact and is not adopted as Account truth.
 
+## Cockpit Information Architecture
+
+The Account Funding workspace presents four methods. Their labels are stable
+product vocabulary, not new accounting primitives:
+
+| Method | Operator intent | Settlement authority |
+| --- | --- | --- |
+| **QR Ph** | Receive an open amount at the Account's reusable funding address | Provider history matched to the immutable Account Funding Address |
+| **Bank Transfer** | Receive a reserved exact amount at the configured bank account | Provider history matched to the unexpired exact transfer instruction |
+| **Pay Code** | Apply an eligible one-time Pay Code to Client Funds | Voucher claim outcome and existing reserved principal |
+| **Reviewed Value** | Ask for independent review of value already received outside the automated rails | Maker-checker evidence and system Treasury payment through the shared collection engine |
+
+Each method panel contains only the inputs and immediate next action for that
+method. Requests and receipts are not repeated inside those panels.
+
+The single **Funding Activity** projection is the Account holder's durable
+history surface. It merges:
+
+- provider observations from reusable QR Ph funding;
+- exact bank-transfer requests and checks;
+- reviewed-value requests and their Pay Codes; and
+- recognized Account funding outcomes.
+
+Desktop and mobile render the same ordered records with the same fields:
+**Method**, **Reference**, **Amount**, **Status**, **Updated**, and **Action**.
+Filters use the four method names above. The projection exposes only sanitized
+references and status facts; payer identity, provider transaction identifiers,
+raw evidence, credentials, and destination secrets remain outside the general
+Cockpit read model.
+
+“Top-up” and “wallet” are not user-facing navigation or method labels. They may
+remain in legacy implementation identifiers where changing them would break a
+public contract, but those identifiers do not define the product grammar.
+
 ## QR Ph Payer Identity and Self-Top-Up
 
 “Self top-up” is a user story, not a settlement classifier. An exact flow binds the authenticated operator’s Funding Intent to their Account. A standing flow binds the exact Account Funding Address to that Account. In both cases, that pre-existing binding—not the payer mobile, webhook body, or QR scanner—determines which Account may receive the eventual credit.
