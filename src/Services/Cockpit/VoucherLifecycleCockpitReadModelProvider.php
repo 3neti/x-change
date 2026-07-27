@@ -1696,9 +1696,12 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ['value' => 'all', 'label' => 'All'],
             ['value' => 'awaiting_approval', 'label' => 'Awaiting Approval'],
             ['value' => 'active', 'label' => 'Active'],
+            ['value' => 'locked', 'label' => 'Locked'],
             ['value' => 'redeemed', 'label' => 'Redeemed'],
             ['value' => 'expired', 'label' => 'Expired'],
             ['value' => 'pending', 'label' => 'Pending'],
+            ['value' => 'cancelled', 'label' => 'Cancelled'],
+            ['value' => 'closed', 'label' => 'Closed'],
             ['value' => 'failed', 'label' => 'Failed'],
         ];
     }

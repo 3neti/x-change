@@ -139,7 +139,7 @@ it('filters cockpit pay code explorer records using legacy index search and stat
             'enabled' => false,
             'read_only' => true,
         ])
-        ->and($readModel->filters)->toHaveCount(8)
+        ->and($readModel->filters)->toHaveCount(11)
         ->and($readModel->filters[0]->toArray())->toMatchArray([
             'key' => 'search',
             'value' => 'ACCOUNT-555',
@@ -149,6 +149,30 @@ it('filters cockpit pay code explorer records using legacy index search and stat
         ->and(collect($readModel->filters)->firstWhere('value', 'awaiting_approval')->active)->toBeTrue()
         ->and($readModel->toArray())->not->toHaveKey('account_number')
         ->and($readModel->toArray())->not->toHaveKey('mobile');
+});
+
+it('filters every terminal voucher state including locked pay codes', function () {
+    $provider = new VoucherLifecycleCockpitReadModelProvider(cockpitWave30VoucherLifecycle([
+        ['code' => 'pc-active-001', 'display_status' => 'active'],
+        ['code' => 'pc-locked-001', 'display_status' => 'locked'],
+        ['code' => 'pc-cancelled-001', 'display_status' => 'cancelled'],
+        ['code' => 'pc-closed-001', 'display_status' => 'closed'],
+    ]));
+
+    $readModel = $provider->forPayCodeList(new CockpitReadModelQueryData(
+        payCodeStatus: ' LOCKED ',
+    ));
+
+    expect($readModel->status_filter)->toBe('locked')
+        ->and($readModel->records)->toHaveCount(1)
+        ->and($readModel->records[0]->code)->toBe('PC-LOCKED-001')
+        ->and($readModel->records[0]->display_status)->toBe('locked')
+        ->and(collect($readModel->filters)->firstWhere('value', 'locked')->active)->toBeTrue()
+        ->and(collect($readModel->filters)->pluck('value')->all())->toContain(
+            'locked',
+            'cancelled',
+            'closed',
+        );
 });
 
 it('keeps only typed operational summaries in cockpit list records', function () {
