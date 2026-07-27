@@ -11,6 +11,11 @@ class VoucherIssuancePayloadNormalizer
     public function normalize(array $input): array
     {
         $input = app(NamedVoucherSliceService::class)->normalizeIssuancePayload($input);
+        $cashValidation = Arr::get($input, 'cash.validation');
+
+        if (! is_array($cashValidation)) {
+            Arr::set($input, 'cash.validation', []);
+        }
 
         $flowType = Arr::get($input, 'metadata.flow_type');
 

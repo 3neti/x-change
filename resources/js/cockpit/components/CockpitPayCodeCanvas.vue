@@ -314,7 +314,7 @@ function stringValue(value: unknown): string | null {
 
         <article
             v-if="visibleSide === 'front'"
-            class="relative aspect-[1.72/1] min-h-56 overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10 @md:p-7"
+            class="relative aspect-[1.72/1] min-h-72 overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10 @md:p-7"
             :class="
                 hasRiderDesign
                     ? 'border-slate-700 bg-slate-950 text-white'
@@ -454,7 +454,7 @@ function stringValue(value: unknown): string | null {
 
         <article
             v-else
-            class="relative aspect-[1.72/1] min-h-56 overflow-hidden rounded-[1.4rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20 @md:p-7"
+            class="relative aspect-[1.72/1] min-h-72 overflow-hidden rounded-[1.4rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20 @lg:p-6"
             data-testid="cockpit-pay-code-canvas-back"
         >
             <div class="flex h-full min-w-0 flex-col">
@@ -474,16 +474,27 @@ function stringValue(value: unknown): string | null {
                             Back Of The Pay Code
                         </h4>
                     </div>
-                    <span
-                        v-if="costLoading && hasCostEstimate"
-                        class="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-300"
-                        data-testid="cockpit-pay-code-cost-updating"
-                    >
-                        Updating…
-                    </span>
+                    <div class="flex shrink-0 items-center gap-1.5">
+                        <span
+                            v-if="costLoading && hasCostEstimate"
+                            class="rounded-full bg-white/10 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-300"
+                            data-testid="cockpit-pay-code-cost-updating"
+                        >
+                            Updating…
+                        </span>
+                        <span
+                            class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-slate-200"
+                        >
+                            <ArrowLeftRight
+                                class="size-3"
+                                aria-hidden="true"
+                            />
+                            {{ expiry }}
+                        </span>
+                    </div>
                 </div>
 
-                <div class="mt-4 min-h-0 flex-1">
+                <div class="mt-3 min-h-0 flex-1">
                     <p
                         v-if="costLoading && !hasCostEstimate"
                         class="rounded-xl border border-white/10 bg-white/5 px-3 py-4 text-sm text-slate-300"
@@ -506,7 +517,7 @@ function stringValue(value: unknown): string | null {
 
                     <dl
                         v-else
-                        class="grid max-w-xl grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 text-xs @sm:text-sm"
+                        class="grid max-w-xl grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 text-xs @sm:text-sm"
                         data-testid="cockpit-pay-code-cost-ledger"
                     >
                         <template v-for="item in costLineItems" :key="item.key">
@@ -545,13 +556,7 @@ function stringValue(value: unknown): string | null {
                     </dl>
                 </div>
 
-                <div class="mt-3 flex flex-wrap gap-1.5">
-                    <span
-                        class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-slate-200"
-                    >
-                        <ArrowLeftRight class="size-3" aria-hidden="true" />
-                        {{ expiry }}
-                    </span>
+                <div class="mt-2 flex flex-wrap gap-1.5">
                     <span
                         v-for="label in instructionLabels.slice(0, 3)"
                         :key="label"

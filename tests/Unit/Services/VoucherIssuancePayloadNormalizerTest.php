@@ -35,5 +35,26 @@ it('does not mutate disbursable cash amount', function () {
     $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
 
     expect(data_get($normalized, 'cash.amount'))->toBe(100)
-        ->and(data_get($normalized, 'target_amount'))->toBeNull();
+        ->and(data_get($normalized, 'target_amount'))->toBeNull()
+        ->and(data_get($normalized, 'cash.validation'))->toBe([]);
+});
+
+it('preserves configured cash validation while normalizing legacy empty values', function () {
+    $normalizer = app(VoucherIssuancePayloadNormalizer::class);
+
+    $configured = $normalizer->normalize([
+        'cash' => [
+            'amount' => 100,
+            'validation' => ['country' => 'PH'],
+        ],
+    ]);
+    $legacy = $normalizer->normalize([
+        'cash' => [
+            'amount' => 100,
+            'validation' => null,
+        ],
+    ]);
+
+    expect(data_get($configured, 'cash.validation'))->toBe(['country' => 'PH'])
+        ->and(data_get($legacy, 'cash.validation'))->toBe([]);
 });
