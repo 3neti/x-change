@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import CockpitPayCodeTemplateStoreController from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateStoreController';
+import CockpitPayCodeTemplateUpdateController from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateUpdateController';
+import type { RequestPayload } from '@inertiajs/core';
 import { Link, router } from '@inertiajs/vue3';
 import {
     Clock3,
@@ -637,6 +639,7 @@ const saveTemplateIncludeAmount = ref(false);
 const saveTemplateIncludePurpose = ref(true);
 const templateSaving = ref(false);
 const templateSaveError = ref('');
+const saveTemplateMode = ref<'create' | 'update'>('create');
 const activeSavedTemplate = ref<CockpitSavedPayCodeTemplate | null>(null);
 const applyingStartingPoint = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
@@ -924,6 +927,7 @@ function reusableTemplateInstructions(): Record<string, unknown> {
     delete feedback.webhook;
     delete cockpit.recipient_reference;
     delete cockpit.campaign_context;
+    delete cockpit.saved_template;
     delete metadata.campaign;
     delete instructions.starts_at;
     delete instructions.expires_at;
@@ -931,8 +935,35 @@ function reusableTemplateInstructions(): Record<string, unknown> {
     return instructions;
 }
 
-function saveAsTemplate(): void {
+function openSaveTemplateDialog(): void {
+    const template = activeSavedTemplate.value;
+
+    saveTemplateMode.value = template === null ? 'create' : 'update';
+    saveTemplateName.value = template?.name ?? '';
+    saveTemplateDescription.value = template?.description ?? '';
+    saveTemplateIncludeAmount.value = template?.include_amount ?? false;
+    saveTemplateIncludePurpose.value = template?.include_purpose ?? true;
+    templateSaveError.value = '';
+    saveTemplateOpen.value = true;
+}
+
+function chooseSaveTemplateMode(mode: 'create' | 'update'): void {
+    const template = activeSavedTemplate.value;
+
+    if (mode === 'update' && template === null) {
+        return;
+    }
+
+    saveTemplateMode.value = mode;
+    saveTemplateName.value =
+        mode === 'create' && template !== null
+            ? `${template.name} Copy`
+            : (template?.name ?? '');
+}
+
+function saveTemplate(): void {
     const name = saveTemplateName.value.trim();
+    const template = activeSavedTemplate.value;
 
     if (name === '') {
         templateSaveError.value = 'Give this template a short name.';
@@ -943,36 +974,70 @@ function saveAsTemplate(): void {
     templateSaving.value = true;
     templateSaveError.value = '';
 
-    router.post(
-        CockpitPayCodeTemplateStoreController(),
-        {
-            name,
-            description: saveTemplateDescription.value.trim() || null,
-            base_template_key: selectedTemplate.value,
-            instructions: reusableTemplateInstructions(),
-            include_amount: saveTemplateIncludeAmount.value,
-            include_purpose: saveTemplateIncludePurpose.value,
+    const payload = {
+        name,
+        description: saveTemplateDescription.value.trim() || null,
+        base_template_key: selectedTemplate.value,
+        instructions: reusableTemplateInstructions(),
+        include_amount: saveTemplateIncludeAmount.value,
+        include_purpose: saveTemplateIncludePurpose.value,
+    } as RequestPayload;
+    const options = {
+        preserveScroll: true,
+        onSuccess: (page: {
+            props: Record<string, unknown>;
+        }): void => {
+            const savedTemplates = Array.isArray(page.props.saved_templates)
+                ? (page.props
+                      .saved_templates as CockpitSavedPayCodeTemplate[])
+                : (props.savedTemplates ?? []);
+            const savedTemplate =
+                saveTemplateMode.value === 'update' && template !== null
+                    ? savedTemplates.find(
+                          (candidate) =>
+                              candidate.reference === template.reference,
+                      )
+                    : savedTemplates.find(
+                          (candidate) => candidate.name === name,
+                      );
+
+            if (savedTemplate !== undefined) {
+                activeSavedTemplate.value = savedTemplate;
+                startingPoint.value = 'template';
+            }
+
+            saveTemplateOpen.value = false;
+            templateSaveError.value = '';
+            lastStatus.value = 'ready';
+            lastMessage.value =
+                saveTemplateMode.value === 'update'
+                    ? `${name} updated for future Pay Codes.`
+                    : `${name} saved to My Templates.`;
         },
-        {
-            preserveScroll: true,
-            onSuccess: (): void => {
-                saveTemplateOpen.value = false;
-                saveTemplateName.value = '';
-                saveTemplateDescription.value = '';
-                templateSaveError.value = '';
-                lastStatus.value = 'ready';
-                lastMessage.value = `${name} saved to My Templates.`;
-            },
-            onError: (errors): void => {
-                templateSaveError.value =
-                    String(Object.values(errors)[0] ?? '') ||
-                    'The template could not be saved.';
-            },
-            onFinish: (): void => {
-                templateSaving.value = false;
-            },
+        onError: (errors: Record<string, string>): void => {
+            templateSaveError.value =
+                String(Object.values(errors)[0] ?? '') ||
+                'The template could not be saved.';
         },
-    );
+        onFinish: (): void => {
+            templateSaving.value = false;
+        },
+    };
+
+    if (saveTemplateMode.value === 'update' && template !== null) {
+        router.patch(
+            CockpitPayCodeTemplateUpdateController(template.reference),
+            {
+                ...payload,
+                expected_updated_at: template.updated_at,
+            },
+            options,
+        );
+
+        return;
+    }
+
+    router.post(CockpitPayCodeTemplateStoreController(), payload, options);
 }
 
 function applyInstructionBlueprint(
@@ -4257,7 +4322,7 @@ function instructionRecord(
                         v-else
                         class="mt-3 rounded-2xl border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
                     >
-                        Save a design to find it here next time.
+                        Save a template to find it here next time.
                     </div>
                 </div>
             </section>
@@ -4286,7 +4351,11 @@ function instructionRecord(
                             id="quick-generate-save-template-title"
                             class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50"
                         >
-                            Save this design
+                            {{
+                                activeSavedTemplate
+                                    ? 'Save Template Changes'
+                                    : 'Create A Template'
+                            }}
                         </h3>
                     </div>
                     <button
@@ -4300,6 +4369,38 @@ function instructionRecord(
                 </div>
 
                 <div class="mt-5 grid gap-4">
+                    <div
+                        v-if="activeSavedTemplate"
+                        class="grid grid-cols-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-900"
+                        data-testid="cockpit-quick-generate-template-save-mode"
+                    >
+                        <button
+                            type="button"
+                            :class="[
+                                'min-h-10 rounded-lg px-3 text-sm font-semibold transition',
+                                saveTemplateMode === 'update'
+                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                    : 'text-slate-600 dark:text-slate-300',
+                            ]"
+                            data-testid="cockpit-quick-generate-template-update-mode"
+                            @click="chooseSaveTemplateMode('update')"
+                        >
+                            Update “{{ activeSavedTemplate.name }}”
+                        </button>
+                        <button
+                            type="button"
+                            :class="[
+                                'min-h-10 rounded-lg px-3 text-sm font-semibold transition',
+                                saveTemplateMode === 'create'
+                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                    : 'text-slate-600 dark:text-slate-300',
+                            ]"
+                            data-testid="cockpit-quick-generate-template-create-mode"
+                            @click="chooseSaveTemplateMode('create')"
+                        >
+                            Save As New
+                        </button>
+                    </div>
                     <label
                         class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
                     >
@@ -4357,6 +4458,13 @@ function instructionRecord(
                         one-time dates are never saved.
                     </p>
                     <p
+                        v-if="saveTemplateMode === 'update'"
+                        class="text-xs leading-5 text-slate-500 dark:text-slate-400"
+                    >
+                        Updating affects future Pay Codes only. Already issued
+                        Pay Codes will not change.
+                    </p>
+                    <p
                         v-if="templateSaveError"
                         class="text-sm font-medium text-rose-600 dark:text-rose-300"
                         data-testid="cockpit-quick-generate-template-save-error"
@@ -4368,10 +4476,16 @@ function instructionRecord(
                         :disabled="templateSaving"
                         class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"
                         data-testid="cockpit-quick-generate-template-save-submit"
-                        @click="saveAsTemplate"
+                        @click="saveTemplate"
                     >
                         <Save class="size-4" aria-hidden="true" />
-                        {{ templateSaving ? 'Saving…' : 'Save Template' }}
+                        {{
+                            templateSaving
+                                ? 'Saving…'
+                                : saveTemplateMode === 'update'
+                                  ? 'Update Template'
+                                  : 'Create Template'
+                        }}
                     </button>
                 </div>
             </section>
@@ -4532,7 +4646,7 @@ function instructionRecord(
                             type="button"
                             class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                             data-testid="cockpit-quick-generate-save-template"
-                            @click="saveTemplateOpen = true"
+                            @click="openSaveTemplateDialog"
                         >
                             <Save class="size-4" aria-hidden="true" />
                             Save Template
