@@ -39,6 +39,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\Claim\DefaultClaimShareCardUrlResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampArtifactStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
@@ -460,6 +461,7 @@ return [
         'redemption_completion_store' => NullRedemptionCompletionStore::class,
         'claim_execution_factory' => DefaultClaimExecutionFactory::class,
         'claim_share_metadata' => RiderStampClaimShareMetadataResolver::class,
+        'claim_share_card_url_resolver' => DefaultClaimShareCardUrlResolver::class,
         'claim_share_card_renderer' => StoredRiderStampClaimShareCardRenderer::class,
         'rider_stamp_copy' => DefaultRiderStampCopyResolver::class,
         'rider_stamp_recipient' => DefaultRiderStampRecipientResolver::class,

@@ -18,6 +18,7 @@ final class ClaimShareCardController extends Controller
         string $code,
         VoucherFlowCapabilityResolverContract $capabilities,
         ClaimShareCardRendererContract $renderer,
+        ?string $sha256 = null,
     ): Response {
         $voucher = Voucher::query()
             ->where('code', strtoupper(trim($code)))
@@ -33,6 +34,18 @@ final class ClaimShareCardController extends Controller
             $voucher,
             route('x-change.claim.show', ['code' => $voucher->code]),
         );
+
+        if ($sha256 !== null) {
+            abort_unless(
+                $card->immutable
+                    && hash_equals(
+                        strtolower($sha256),
+                        trim($card->etag, '"'),
+                    ),
+                404,
+            );
+        }
+
         $headers = $this->headers($card->etag, $card->immutable);
 
         if ($request->header('If-None-Match') === $card->etag) {

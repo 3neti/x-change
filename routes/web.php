@@ -63,6 +63,16 @@ use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 
 $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
 
+Route::get(
+    'x/claim/{code}/share-card/{sha256}.png',
+    ClaimShareCardController::class,
+)->where('sha256', '[a-f0-9]{64}')
+    ->middleware((array) config(
+        'x-change.claim.share.public_image_middleware',
+        ['throttle:60,1'],
+    ))
+    ->name('x-change.claim.share-card.artifact');
+
 Route::get('x/claim/{code}/share-card.png', ClaimShareCardController::class)
     ->middleware((array) config(
         'x-change.claim.share.public_image_middleware',

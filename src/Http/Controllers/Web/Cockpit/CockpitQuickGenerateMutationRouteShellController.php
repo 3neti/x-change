@@ -8,8 +8,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
@@ -30,6 +32,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
 {
     public function __construct(
         private readonly ClaimUrlQrRendererContract $claimUrlQrRenderer,
+        private readonly ClaimShareCardUrlResolverContract $shareCardUrls,
     ) {}
 
     public function __invoke(
@@ -309,6 +312,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         array $payload = [],
     ): array {
         $claimOutcome = $this->claimOutcome($payload);
+        $voucher = Voucher::query()->find($result->voucher_id);
 
         return [
             'code' => $result->code,
@@ -327,8 +331,8 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'redeem' => $result->links->redeem,
                 'redeem_path' => $result->links->redeem_path,
                 'claim_qr' => $this->claimUrlQrRenderer->render($result->links->redeem),
-                'share_card' => Route::has('x-change.claim.share-card')
-                    ? route('x-change.claim.share-card', ['code' => $result->code])
+                'share_card' => $voucher instanceof Voucher
+                    ? $this->shareCardUrls->resolve($voucher)
                     : null,
                 'cockpit_detail' => Route::has('x-change.cockpit.pay-codes.show')
                     ? route('x-change.cockpit.pay-codes.show', ['code' => $result->code], false)

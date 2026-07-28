@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
+use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
@@ -84,17 +85,29 @@ it('serves the exact immutable artifact materialized during issuance', function 
     );
     $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
     $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
+    $descriptor = app(RiderStampArtifactStoreContract::class)->descriptor($voucher);
 
-    expect($artifact)->not->toBeNull();
+    expect($artifact)->not->toBeNull()
+        ->and($descriptor)->not->toBeNull();
 
-    $response = $this->get(
-        route('x-change.claim.share-card', ['code' => $voucher->code]),
-    )->assertOk()
+    $url = app(ClaimShareCardUrlResolverContract::class)->resolve($voucher);
+
+    expect($url)->toBe(route('x-change.claim.share-card.artifact', [
+        'code' => $voucher->code,
+        'sha256' => $descriptor?->sha256,
+    ]));
+
+    $response = $this->get($url)->assertOk()
         ->assertHeader('ETag', $artifact?->etag ?? '');
 
     expect($response->getContent())->toBe($artifact?->contents)
         ->and((string) $response->headers->get('Cache-Control'))
         ->toContain('immutable');
+
+    $this->get(route('x-change.claim.share-card.artifact', [
+        'code' => $voucher->code,
+        'sha256' => str_repeat('0', 64),
+    ]))->assertNotFound();
 });
 
 it('paints the masked recipient in the lower Stamp region', function (): void {

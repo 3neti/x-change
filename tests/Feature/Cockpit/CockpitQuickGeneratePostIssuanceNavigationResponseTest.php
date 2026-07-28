@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Storage;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
@@ -12,9 +15,20 @@ use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 
 it('hydrates quick generate post issuance navigation links without adding side effects', function () {
+    Storage::fake('local');
+    $voucher = issueVoucher(validVoucherInstructions());
+    $voucher->forceFill(['code' => 'PC-WAVE-34C'])->save();
+    $artifact = app(RiderStampArtifactStoreContract::class)->materialize(
+        $voucher,
+        route('x-change.claim.show', ['code' => $voucher->code]),
+    );
+
     app()->instance(EstimatePayCodeCost::class, cockpitWave34cPricingFake());
     app()->instance(BuildBalanceOverview::class, cockpitWave34cBalanceFake());
-    app()->instance(GeneratePayCode::class, cockpitWave34cGeneratePayCodeFake('PC-WAVE-34C'));
+    app()->instance(
+        GeneratePayCode::class,
+        cockpitWave34cGeneratePayCodeFake($voucher),
+    );
 
     $operator = actingAsTestUser();
 
@@ -24,7 +38,10 @@ it('hydrates quick generate post issuance navigation links without adding side e
         ->assertJsonPath('result.code', 'PC-WAVE-34C')
         ->assertJsonPath(
             'result.links.share_card',
-            route('x-change.claim.share-card', ['code' => 'PC-WAVE-34C']),
+            route('x-change.claim.share-card.artifact', [
+                'code' => 'PC-WAVE-34C',
+                'sha256' => $artifact->sha256,
+            ]),
         )
         ->assertJsonPath('result.links.cockpit_detail', '/x/cockpit/pay-codes/PC-WAVE-34C')
         ->assertJsonPath('result.links.cockpit_distribution', '/x/cockpit/pay-codes/PC-WAVE-34C/distribution')
@@ -113,17 +130,17 @@ function cockpitWave34cBalanceFake(): BuildBalanceOverview
     };
 }
 
-function cockpitWave34cGeneratePayCodeFake(string $code): GeneratePayCode
+function cockpitWave34cGeneratePayCodeFake(Voucher $voucher): GeneratePayCode
 {
-    return new class($code) extends GeneratePayCode
+    return new class($voucher) extends GeneratePayCode
     {
-        public function __construct(private readonly string $code) {}
+        public function __construct(private readonly Voucher $voucher) {}
 
         public function handle(array $input): GeneratePayCodeResultData
         {
             return new GeneratePayCodeResultData(
-                voucher_id: 12345,
-                code: $this->code,
+                voucher_id: $this->voucher->getKey(),
+                code: $this->voucher->code,
                 amount: $input['cash']['amount'],
                 currency: $input['cash']['currency'],
                 issuer: new IssuerData(id: data_get($input, 'metadata.issuer_id')),
@@ -131,8 +148,8 @@ function cockpitWave34cGeneratePayCodeFake(string $code): GeneratePayCode
                 wallet: ['balance_before' => 100000, 'balance_after' => 99975],
                 debit: new DebitData(id: 987, amount: 25),
                 links: new PayCodeLinksData(
-                    redeem: 'https://example.test/r/'.$this->code,
-                    redeem_path: '/r/'.$this->code,
+                    redeem: 'https://example.test/r/'.$this->voucher->code,
+                    redeem_path: '/r/'.$this->voucher->code,
                 ),
             );
         }

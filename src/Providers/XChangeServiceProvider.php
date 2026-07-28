@@ -96,6 +96,7 @@ use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
 use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
+use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
@@ -209,6 +210,7 @@ use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Claim\DefaultClaimShareCardUrlResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampArtifactStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
@@ -1267,6 +1269,16 @@ class XChangeServiceProvider extends ServiceProvider
                 fn ($app) => $app->make(config(
                     'x-change.services.claim_share_metadata',
                     RiderStampClaimShareMetadataResolver::class,
+                )),
+            );
+        }
+
+        if (! $this->app->bound(ClaimShareCardUrlResolverContract::class)) {
+            $this->app->singleton(
+                ClaimShareCardUrlResolverContract::class,
+                fn ($app) => $app->make(config(
+                    'x-change.services.claim_share_card_url_resolver',
+                    DefaultClaimShareCardUrlResolver::class,
                 )),
             );
         }
