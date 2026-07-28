@@ -77,6 +77,30 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.find('canvas').exists()).toBe(false);
     });
 
+    it('keeps the x-change preview brand while the Pay Code is being designed', () => {
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '50',
+                currency: 'PHP',
+                recipient: '',
+                purpose: '',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+            },
+        });
+
+        expect(
+            wrapper.find('[data-testid="cockpit-pay-code-canvas-logo"]').exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-tagline"]')
+                .text(),
+        ).toContain('Money should adapt to people. Not the other way around.');
+        expect(wrapper.text()).toContain('PHP 50.00');
+        expect(wrapper.text()).not.toContain('Digital Pay Code');
+    });
+
     it('renders a live front and back Pay Code canvas without a fake claim QR', async () => {
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {

@@ -96,15 +96,7 @@ const displayedCode = computed<string>(() => {
     return props.issuedCode?.trim() || 'PAY CODE PREVIEW';
 });
 
-const isBlankCanvas = computed<boolean>(() => {
-    return (
-        String(props.amount).trim() === '' &&
-        props.recipient.trim() === '' &&
-        props.purpose.trim() === '' &&
-        !props.issuedCode?.trim() &&
-        !props.hasRiderDesign
-    );
-});
+const isUnissuedCanvas = computed<boolean>(() => !props.issuedCode?.trim());
 
 const costCurrency = computed<string>(() => {
     return props.costEstimate?.currency?.trim() || props.currency || 'PHP';
@@ -428,7 +420,7 @@ function stringValue(value: unknown): string | null {
             <div class="relative flex h-full flex-col justify-between gap-5">
                 <div class="flex items-start justify-between gap-4">
                     <div
-                        v-if="isBlankCanvas"
+                        v-if="isUnissuedCanvas"
                         class="flex min-w-0 items-center gap-2.5"
                         data-testid="cockpit-pay-code-canvas-blank-brand"
                     >
