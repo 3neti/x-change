@@ -4668,3 +4668,19 @@ Current boundary:
 - Boundary remains unchanged: Rider presentation cannot authorize claims,
   replace the canonical claim destination, embed arbitrary remote pages,
   mutate vouchers, call providers, post Treasury entries, or move money.
+
+# 2026-07-28 — Claim Rich-Link Metadata
+
+- Added a package-owned claim root view that renders Open Graph, Twitter Card,
+  canonical, description, and title elements in the first HTML response.
+- Added `ClaimShareMetadataResolverContract` so a future `3neti/og-meta`
+  adapter can replace the local resolver without changing claim routes.
+- The default resolver uses Rider Stamp copy, allow-listed Rider URL artwork,
+  safe Rider Splash artwork, and the configured x-change fallback image.
+- Confirmed Pay Code `HRSW` now returns crawler-visible metadata without
+  executing Vue or hydrating Inertia.
+- Recorded that a public HTTPS host remains mandatory; Herd `.test` URLs
+  cannot be fetched by iMessage preview infrastructure.
+- Boundary remains unchanged: share metadata cannot authorize a claim, alter
+  the canonical claim URL, expose a canvas data URI, embed a remote page,
+  mutate a Voucher, call a settlement provider, or move money.

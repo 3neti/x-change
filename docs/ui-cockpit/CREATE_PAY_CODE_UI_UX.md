@@ -56,6 +56,9 @@ flowchart LR
     Brand["x-change logo<br/>tagline and theme"] --> Stamp
     Claim["Canonical claim URL<br/>available after issue"] --> Stamp
     Stamp --> Front["Pay Code canvas<br/>front"]
+    Stamp --> Share["Claim-share metadata<br/>server resolver"]
+    Share --> Head["Server-rendered<br/>OG and Twitter tags"]
+    Head --> RichLink["iMessage and social<br/>rich-link preview"]
     Pricing["Issue-cost estimate"] --> Back["Pay Code canvas<br/>back"]
 ```
 
@@ -87,6 +90,43 @@ Before issuance, a requested QR position contains a dashed, explicitly
 non-scannable placeholder. Successful issuance renders the QR on the server
 from the canonical URL returned by `GeneratePayCode`. User-entered Rider
 content cannot set or replace the encoded destination.
+
+## Shared claim-link metadata
+
+`/x/claim/{code}` renders its share metadata in the first HTML response. Link
+preview crawlers do not need to execute Vue, hydrate Inertia, or inspect the
+embedded page props.
+
+`ClaimShareMetadataResolverContract` is the replacement boundary. The default
+resolver maps Rider Stamp instructions into:
+
+- a safe title and description;
+- the canonical claim URL;
+- the x-change site name;
+- an allow-listed public Rider URL artwork URL when available;
+- the first safe Rider Splash image as a fallback; or
+- the configured x-change image when no Rider artwork is usable.
+
+The server never publishes a canvas data URI as `og:image`. HTML copy is
+reduced to plain text and Blade escapes every metadata value. URL artwork
+remains subject to the existing provider and image-host allowlists.
+
+The package-owned claim root view emits Open Graph, Twitter Card, canonical,
+description, and ordinary title elements. A future `3neti/og-meta` adapter may
+replace the resolver and provide deterministic generated social cards without
+changing the claim controller or root view.
+
+The default presentation may be configured with:
+
+```text
+XCHANGE_CLAIM_SHARE_SITE_NAME
+XCHANGE_CLAIM_SHARE_DEFAULT_DESCRIPTION
+XCHANGE_CLAIM_SHARE_DEFAULT_IMAGE
+```
+
+A rich-link preview still requires a publicly reachable HTTPS claim URL and a
+publicly reachable HTTPS image. Herd `.test` addresses and locally trusted
+certificates cannot be fetched by iMessage or social-platform crawlers.
 
 ## Starting Point
 
@@ -197,6 +237,8 @@ Acceptance requires:
 - recipient and one-time-data removal from reusable blueprints;
 - no fake scannable QR before issuance;
 - a server-rendered canonical claim QR after issuance;
+- server-rendered OG and Twitter metadata on the canonical claim route;
+- an absolute public share image URL rather than a data URI;
 - no Rider-controlled claim destination or remote-page embedding;
 - one complete front preview, with Claim Splash kept visibly separate;
 - Rider Stamp version 1 read compatibility and version 2 submission;
