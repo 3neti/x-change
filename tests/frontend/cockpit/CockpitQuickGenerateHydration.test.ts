@@ -51,16 +51,25 @@ const quickGenerateReadModel = {
 };
 
 describe('Cockpit Quick Generate hydration', () => {
-    it('hydrates template and runtime references from sanitized read model props', () => {
+    it('hydrates sanitized template choices without restoring retired reference panels', () => {
         const wrapper = mount(QuickGenerate, {
             props: {
                 quick_generate_read_model: quickGenerateReadModel,
             },
         });
 
-        expect(wrapper.text()).toContain('Institutional Cash');
-        expect(wrapper.text()).toContain('Sanitized operator-facing template.');
-        expect(wrapper.text()).toContain('Pending amount');
+        const templateSelect = wrapper.find(
+            '[data-testid="cockpit-quick-generate-submit-template"]',
+        );
+
+        expect(templateSelect.text()).toContain('Institutional Cash');
+        expect(
+            templateSelect.find('option[value="institutional-cash"]').exists(),
+        ).toBe(true);
+        expect(wrapper.text()).not.toContain(
+            'Sanitized operator-facing template.',
+        );
+        expect(wrapper.text()).not.toContain('Pending amount');
         expect(wrapper.text()).not.toContain(
             'Existing pricing preflight returned.',
         );
@@ -104,7 +113,11 @@ describe('Cockpit Quick Generate hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Money Changer');
-        expect(wrapper.text()).toContain('Use the Quick Generate form');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-submit-template"]')
+                .text(),
+        ).toContain('Money Changer');
         expect(wrapper.text()).toContain('Ready to issue');
     });
 
@@ -115,7 +128,11 @@ describe('Cockpit Quick Generate hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Institutional Cash');
-        expect(wrapper.text()).toContain('Pending amount');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-submit-template"]')
+                .text(),
+        ).toContain('Institutional Cash');
+        expect(wrapper.text()).not.toContain('Pending amount');
     });
 });
