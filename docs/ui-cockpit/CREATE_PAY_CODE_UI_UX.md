@@ -34,6 +34,60 @@ identity. The back explains the claim journey. Before issuance it uses an
 explicitly non-scannable placeholder. After issuance it may display the real
 claim credential.
 
+## Rider Stamp and the Pay Code front
+
+**Rider Stamp** is the package’s composition instruction for the front of a
+Pay Code. It is not a fourth content experience and it does not compete with
+the canvas.
+
+- `rider.message` supplies purpose or recipient-facing copy;
+- `rider.url` supplies an action destination and, when safely resolved, an
+  artwork candidate;
+- `rider.splash` supplies the separate pre-claim introduction and may also
+  supply an artwork or copy candidate; and
+- `rider.stamp` chooses how those candidates, x-change branding, and the claim
+  marker are composed on the front.
+
+```mermaid
+flowchart LR
+    Message["rider.message<br/>purpose and copy"] --> Stamp["rider.stamp<br/>front composition"]
+    Url["rider.url<br/>action and resolved artwork"] --> Stamp
+    Splash["rider.splash<br/>claim introduction and artwork"] --> Stamp
+    Brand["x-change logo<br/>tagline and theme"] --> Stamp
+    Claim["Canonical claim URL<br/>available after issue"] --> Stamp
+    Stamp --> Front["Pay Code canvas<br/>front"]
+    Pricing["Issue-cost estimate"] --> Back["Pay Code canvas<br/>back"]
+```
+
+The full Pay Code canvas is the only complete Stamp preview. The Rider URL
+editor may show compact resolved-artwork status, and the Rider Splash editor
+may show the isolated **Claim Splash Preview**, but neither renders a second
+full Pay Code front.
+
+The Stamp version 2 composition fields independently select:
+
+- artwork source: x-change, Rider URL, Rider Splash, or none;
+- artwork treatment: automatic, artwork, or text;
+- copy source: best available, Rider Message, Rider URL, Rider Splash, custom,
+  or none;
+- logo and tagline visibility;
+- claim marker: QR, Pay Code text, both, or none; and
+- claim-marker position.
+
+Version 1 Stamp payloads remain readable and are normalized into version 2
+defaults. `rider.og_source` remains a compatibility mirror; it is not the
+authoritative composition field.
+
+Arbitrary remote pages are never embedded in the canvas. URL artwork is
+resolved through the package-owned preview boundary. Splash markup remains
+sandboxed, and its visible copy is composed by the canvas so headings are not
+painted twice.
+
+Before issuance, a requested QR position contains a dashed, explicitly
+non-scannable placeholder. Successful issuance renders the QR on the server
+from the canonical URL returned by `GeneratePayCode`. User-entered Rider
+content cannot set or replace the encoded destination.
+
 ## Starting Point
 
 Every design begins from one compact control:
@@ -93,12 +147,15 @@ must not compete with the essentials or live canvas.
 
 ## Review and issue
 
-**Review your Pay Code** summarizes the effective recipient, value, expiry,
-claim inputs, safeguards, rider, feedback, and slicing choices.
+The canvas, **Instructions and safeguards**, and collapsed Engineering Preview
+are the three review levels. Additional design-status and review-summary cards
+must not repeat the same facts.
 
 The primary action is **Issue Pay Code**. While processing it reads
 **Issuing Pay Code…**. Success reads **Pay Code issued** and keeps the issued
-code visually prominent.
+code visually prominent. **Edit Front** beside the primary action opens the
+Rider and Front Design controls without turning them into a competing primary
+surface.
 
 The existing issuance compiler, authorization, validation, idempotency,
 pricing, funding, journal, action, feedback, campaign, provider, and Treasury
@@ -139,6 +196,10 @@ Acceptance requires:
 - encrypted, owner-scoped personal-template persistence;
 - recipient and one-time-data removal from reusable blueprints;
 - no fake scannable QR before issuance;
+- a server-rendered canonical claim QR after issuance;
+- no Rider-controlled claim destination or remote-page embedding;
+- one complete front preview, with Claim Splash kept visibly separate;
+- Rider Stamp version 1 read compatibility and version 2 submission;
 - unchanged sanitized issuance payload semantics;
 - structured validation errors;
 - duplicate-submit prevention;

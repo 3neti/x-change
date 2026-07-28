@@ -4648,3 +4648,23 @@ Current boundary:
 - Boundary remains unchanged: documentation only; no routes, read models,
   authorization, provider calls, settlement behavior, accounting, persistence,
   public APIs, or money movement changed.
+
+# 2026-07-28 — Rider Stamp Front Composition
+
+- Rationalized Quick Generate artwork around one complete Pay Code canvas.
+- Rider Message, Rider URL, and Rider Splash remain independent content
+  sources; Rider Stamp version 2 composes their artwork and copy with x-change
+  branding and a claim marker.
+- Added a compact Front Design editor and an `Edit Front` canvas action.
+- Removed the redundant full Rider Stamp preview; the separate recipient
+  experience is explicitly named Claim Splash Preview.
+- The live canvas uses a non-scannable QR placeholder. The finalized canvas
+  receives a server-rendered QR that encodes only the canonical claim URL
+  returned after successful issuance.
+- Version 1 Rider Stamp payloads remain readable. Version 2 adds independent
+  artwork, copy, branding, and claim-marker composition fields.
+- Canonical UI/UX contract and composition diagram:
+  `CREATE_PAY_CODE_UI_UX.md`.
+- Boundary remains unchanged: Rider presentation cannot authorize claims,
+  replace the canonical claim destination, embed arbitrary remote pages,
+  mutate vouchers, call providers, post Treasury entries, or move money.
