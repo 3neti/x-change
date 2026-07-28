@@ -7,9 +7,11 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
+use LBHurtado\XChange\Services\Claim\StoredRiderStampClaimShareCardRenderer;
 
 beforeEach(function (): void {
     Cache::clear();
@@ -63,6 +65,14 @@ it('renders and conditionally caches a deterministic Rider Stamp PNG', function 
         ->assertHeader('ETag', $etag);
 
     Http::assertNothingSent();
+});
+
+it('uses stored Stamp artifacts with a legacy published services config', function (): void {
+    config()->set('x-change.services', []);
+    app()->forgetInstance(ClaimShareCardRendererContract::class);
+
+    expect(app(ClaimShareCardRendererContract::class))
+        ->toBeInstanceOf(StoredRiderStampClaimShareCardRenderer::class);
 });
 
 it('serves the exact immutable artifact materialized during issuance', function (): void {

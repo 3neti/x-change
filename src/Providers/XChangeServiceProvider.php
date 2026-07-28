@@ -215,6 +215,7 @@ use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
+use LBHurtado\XChange\Services\Claim\StoredRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftAuditMetadataBuilder;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftCompiler;
@@ -1275,7 +1276,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ClaimShareCardRendererContract::class,
                 fn ($app) => $app->make(config(
                     'x-change.services.claim_share_card_renderer',
-                    GdRiderStampClaimShareCardRenderer::class,
+                    StoredRiderStampClaimShareCardRenderer::class,
                 )),
             );
         }
