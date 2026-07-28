@@ -4708,3 +4708,24 @@ Current boundary:
 - The renderer remains replaceable by the planned `3neti/og-meta` adapter.
   No claim authorization, Voucher mutation, provider settlement, Treasury
   posting, or money movement was added.
+
+# 2026-07-28 — Rider Stamp Copy Parity
+
+- Added `RiderStampCopyResolverContract` and immutable
+  `RiderStampCopyData` as the package-owned copy composition boundary.
+- Issued share-card PNGs and crawler metadata now follow the same Stamp rules
+  as the pre-issue canvas: Message, URL, Splash, Custom, Automatic, or None.
+- Automatic copy preserves the accepted precedence: Rider Message, Rider
+  Splash, Rider URL, then default copy.
+- Existing Front Copy, Front Title, and Front Subtitle controls remain
+  authoritative. No parallel social-copy fields were introduced.
+- Added configurable default title and Message/URL/Splash helper phrases.
+- Added a defensive service binding for hosts with older published
+  multi-dimensional x-change configuration; no host business logic or host
+  config edit is required.
+- Live Pay Code `XFYC` acceptance confirmed `Snacks` and
+  `Prepared with a message for the recipient.` on both crawler metadata and
+  the generated Stamp image, with URL artwork and canonical claim QR retained.
+- This is presentation-only. It does not affect claim authorization, Voucher
+  instructions, execution, provider settlement, Treasury accounting, or money
+  movement.

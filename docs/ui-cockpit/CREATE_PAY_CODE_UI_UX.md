@@ -142,6 +142,23 @@ Rider Splash artwork as `og:image`. HTML copy is reduced to plain text and
 Blade escapes every metadata value. The PNG response is stateless, throttled,
 publicly cacheable, ETag-addressable, and marked `nosniff`.
 
+`RiderStampCopyResolverContract` keeps issued PNG and HTML metadata copy aligned
+with the live canvas. Stamp remains the only per-Pay-Code copy configuration:
+
+```text
+Best Available → Rider Message, then Rider Splash, then Rider URL
+Rider Message  → message plus the configured message helper
+Rider URL      → resolved allow-listed metadata when available, otherwise URL
+                 copy plus the configured continuation helper
+Rider Splash   → first heading and paragraph from the introduction
+Custom Copy    → Stamp title and subtitle
+No Copy        → hide copy on the composed image
+```
+
+`rider.stamp.title` and `rider.stamp.description` override the selected source.
+There are no separate “social copy” fields: canvas, share-card PNG, and
+crawler metadata consume the same stored Stamp decision.
+
 The package-owned claim root view emits Open Graph, Twitter Card, canonical,
 description, ordinary title, image MIME type, and 1200 × 630 dimensions. A
 future `3neti/og-meta` adapter may replace the renderer and metadata resolver
@@ -154,6 +171,10 @@ XCHANGE_CLAIM_SHARE_SITE_NAME
 XCHANGE_CLAIM_SHARE_DEFAULT_DESCRIPTION
 XCHANGE_CLAIM_SHARE_CACHE_TTL_SECONDS
 XCHANGE_CLAIM_SHARE_MAXIMUM_ARTWORK_PIXELS
+XCHANGE_CLAIM_SHARE_DEFAULT_TITLE
+XCHANGE_CLAIM_SHARE_MESSAGE_DESCRIPTION
+XCHANGE_CLAIM_SHARE_URL_DESCRIPTION
+XCHANGE_CLAIM_SHARE_SPLASH_DESCRIPTION
 ```
 
 A rich-link preview requires the receiving crawler or device to reach and
@@ -275,6 +296,8 @@ Acceptance requires:
   Rider image or data URI;
 - URL-artwork failure falls back to x-change branding and never to unrelated
   Rider Splash content;
+- automatic and explicit Stamp copy sources resolve consistently between the
+  live canvas, crawler metadata, and generated share card;
 - public cache headers, deterministic ETag, conditional 304, and `nosniff` on
   the share-card response;
 - no Rider-controlled claim destination or remote-page embedding;
