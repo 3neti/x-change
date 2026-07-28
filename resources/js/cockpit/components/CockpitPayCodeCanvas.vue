@@ -104,6 +104,18 @@ const displayedCode = computed<string>(() => {
 
 const isUnissuedCanvas = computed<boolean>(() => !props.issuedCode?.trim());
 
+const riderArtworkFrameClass = computed<string>(() => {
+    return props.riderDesignSource === 'message'
+        ? 'opacity-60'
+        : 'opacity-100';
+});
+
+const riderArtworkScrimClass = computed<string>(() => {
+    return props.riderDesignSource === 'message'
+        ? 'from-slate-950/95 via-slate-950/80 to-slate-950/55'
+        : 'from-slate-950/70 via-slate-950/25 to-transparent';
+});
+
 const costCurrency = computed<string>(() => {
     return props.costEstimate?.currency?.trim() || props.currency || 'PHP';
 });
@@ -401,13 +413,15 @@ function stringValue(value: unknown): string | null {
                 sandbox=""
                 tabindex="-1"
                 aria-hidden="true"
-                class="pointer-events-none absolute inset-0 h-full w-full border-0 opacity-60"
+                class="pointer-events-none absolute inset-0 h-full w-full border-0"
+                :class="riderArtworkFrameClass"
                 data-testid="cockpit-pay-code-canvas-rider-og-design"
                 :srcdoc="riderDesignDocument"
             />
             <div
                 v-if="hasRiderDesign"
-                class="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/55"
+                class="absolute inset-0 bg-gradient-to-r"
+                :class="riderArtworkScrimClass"
                 aria-hidden="true"
                 data-testid="cockpit-pay-code-canvas-rider-scrim"
             />

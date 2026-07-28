@@ -162,6 +162,19 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-pay-code-canvas-tagline"]')
                 .classes(),
         ).toContain('text-white/80');
+
+        await wrapper.setProps({
+            riderDesignSource: 'splash',
+        });
+
+        expect(design.classes()).toContain('opacity-100');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-canvas-rider-scrim"]',
+                )
+                .classes(),
+        ).toContain('to-transparent');
         expect(design.attributes('class')).not.toContain('opacity-45');
         expect(design.attributes('srcdoc')).toContain('Family support');
         expect(
