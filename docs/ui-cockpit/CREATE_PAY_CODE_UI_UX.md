@@ -29,10 +29,45 @@ The canvas is a digital credential preview, not a bank cheque. It must not use
 MICR lines, account routing, signature lines, or “pay to the order of”
 language.
 
-The front prioritizes capability, value, recipient, purpose, and Pay Code
-identity. The back explains the claim journey. Before issuance it uses an
-explicitly non-scannable placeholder. After issuance it may display the real
+The **Stamp** prioritizes capability, value, recipient, purpose, and Pay Code
+identity. The **Cost** side presents the itemized x-commerce estimate and its
+extended total. Before issuance the Stamp uses an explicitly non-scannable
+placeholder. After issuance the immutable Stamp artifact displays the real
 claim credential.
+
+## Instruction icons and tooltips
+
+The Stamp replaces a single textual capability pill with an outcome-first
+instruction rail:
+
+```text
+Outcome → inputs → validations → claim behavior
+```
+
+The rail shows at most six semantic icons. If more instructions are present,
+the remaining count appears as `+N` with a tooltip listing the hidden
+instructions. Every visible icon:
+
+- has a plain-language accessible name;
+- is keyboard focusable;
+- exposes the same concise tooltip on hover and focus; and
+- remains legible against both x-change and Rider artwork.
+
+The Cost side uses the same icon vocabulary beside every priced line. Icon
+selection follows the x-commerce `catalog_item_reference` or component key,
+never a display-label guess. This keeps distinctions such as **Mobile Number**
+and **Mobile Restriction** intact when product copy changes. Unknown future
+catalog keys use the neutral priced-instruction icon.
+
+An instruction may appear on the Stamp without creating a Cost line when the
+catalog prices it at zero. The UI never invents a charge to make the two sides
+look symmetrical. Conversely, the Cost side presents every positive catalog
+line even when the Stamp rail must collapse overflow.
+
+The editable canvas is the pre-issuance preview. New immutable Stamp PNGs use
+render-manifest v2 and paint the same outcome/instruction semantics. The
+finalized issue dialog and Open Graph endpoint serve the exact stored PNG.
+Previously issued v1 artifacts keep their original bytes and remain readable.
 
 ## Rider Stamp and the Pay Code front
 
@@ -63,6 +98,11 @@ flowchart LR
     Share --> Head
     Head --> RichLink["iMessage and social<br/>rich-link preview"]
     Pricing["Issue-cost estimate"] --> Back["Pay Code canvas<br/>back"]
+    Instructions["Persisted claim instructions"] --> Icons["Semantic icon rail"]
+    Icons --> Front
+    Icons --> Card
+    Catalog["x-commerce catalog-item references"] --> CostIcons["Cost-line icons"]
+    CostIcons --> Back
 ```
 
 The full Pay Code canvas is the only complete Stamp preview. The Rider URL

@@ -4,9 +4,9 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Create Pay Code product alignment
+Current slice: Create Pay Code semantic icon language
 Status: Implemented / accepted
-Last updated: 2026-07-27
+Last updated: 2026-07-28
 
 ## Completed
 
@@ -4831,3 +4831,22 @@ Current boundary:
   assertions. Pint and `git diff --check` completed successfully.
 - Public crawler requests remain read-only and never fetch Rider source URLs;
   no claim, provider, Treasury, or money-movement boundary changed.
+
+# 2026-07-28 — Pay Code Stamp and Cost Icon Language
+
+- Replaced the Stamp’s textual capability pill with an outcome-first semantic
+  icon rail covering the active outcome, inputs, validations, and multi-claim
+  behavior.
+- Added keyboard-focusable, hoverable plain-language tooltips and accessible
+  names to every icon. More than six active indicators collapse into a
+  tooltip-backed `+N` control.
+- Added matching semantic icons beside every priced Cost line. Resolution uses
+  canonical x-commerce catalog-item references and falls back to a neutral
+  priced-instruction icon for future keys.
+- Removed the duplicate generic safeguard badges from the Cost side.
+- Added the same instruction semantics to newly issued immutable Stamp PNGs
+  and advanced the rendering manifest to v2. Existing v1 artifacts remain
+  content-addressed, immutable, and readable.
+- The finalized issue dialog and crawler share-card endpoint continue to serve
+  the exact stored Stamp PNG. No claim authorization, provider settlement,
+  Treasury posting, or money movement changed.
