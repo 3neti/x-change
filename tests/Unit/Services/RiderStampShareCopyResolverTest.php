@@ -125,6 +125,9 @@ it('preserves every visible Rider Splash paragraph as safe Stamp copy', function
     expect($copy->title)->toBe('i carry your heart with me')
         ->and($copy->description)->toBe(
             '(i carry it in my heart) · 🤝 ❤️ ✌️ 🔫 ✈️ ⭐ · — e.e. cummings',
+        )
+        ->and($copy->rasterDescription)->toBe(
+            '(i carry it in my heart) · Handshake Heart Peace Water pistol Flight Star · — e.e. cummings',
         );
 });
 

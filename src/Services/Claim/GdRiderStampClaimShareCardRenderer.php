@@ -24,7 +24,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract
 {
-    private const string CacheVersion = 'v6';
+    private const string CacheVersion = 'v7';
 
     private const int Width = 1200;
 
@@ -97,7 +97,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $canvas,
             $voucher,
             $copy->title,
-            $copy->description,
+            $copy->rasterDescription,
             $textColor,
             $mutedColor,
             $copy->visible,

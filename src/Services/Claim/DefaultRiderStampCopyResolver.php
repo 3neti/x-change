@@ -31,6 +31,11 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
             'x-change.claim.share.default_description',
             'A Pay Code is ready to claim securely in X-Change.',
         );
+        $resolvedDescription = $this->safeText(
+            $rider->stamp?->description,
+            $description === '' ? $defaultDescription : $description,
+            240,
+        );
 
         return new RiderStampCopyData(
             source: $source,
@@ -39,10 +44,9 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
                 $title === '' ? $defaultTitle : $title,
                 120,
             ),
-            description: $this->safeText(
-                $rider->stamp?->description,
-                $description === '' ? $defaultDescription : $description,
-                240,
+            description: $resolvedDescription,
+            rasterDescription: $this->rasterDescription(
+                $resolvedDescription,
             ),
             visible: $source !== 'none',
         );
@@ -249,5 +253,31 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
         )->squish()->limit($limit)->toString();
 
         return $text === '' ? $fallback : $text;
+    }
+
+    private function rasterDescription(string $description): string
+    {
+        $description = str_replace(
+            ['🤝', '❤️', '❤', '✌️', '✌', '🔫', '✈️', '✈', '⭐'],
+            [
+                'Handshake',
+                'Heart',
+                'Heart',
+                'Peace',
+                'Peace',
+                'Water pistol',
+                'Flight',
+                'Flight',
+                'Star',
+            ],
+            $description,
+        );
+        $description = preg_replace(
+            '/[\x{1F000}-\x{1FAFF}\x{FE0F}\x{200D}]/u',
+            '',
+            $description,
+        ) ?? $description;
+
+        return Str::of($description)->squish()->toString();
     }
 }

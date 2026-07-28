@@ -10,6 +10,7 @@ final readonly class RiderStampCopyData
         public string $source,
         public string $title,
         public string $description,
+        public string $rasterDescription,
         public bool $visible,
     ) {}
 }
