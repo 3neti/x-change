@@ -3,7 +3,6 @@ import {
     ArrowLeftRight,
     QrCode,
     ReceiptText,
-    ShieldCheck,
     UserRound,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -11,10 +10,15 @@ import type {
     PayCodeCostCharge,
     PayCodeCostEstimate,
 } from '../../composables/usePayCodeCostEstimate';
+import {
+    payCodeOutcomeIndicatorKey,
+    resolvePayCodeIndicator,
+} from '../payCodeIndicators';
 import type {
     RiderStampPreview,
     RiderStampPreviewSource,
 } from '../riderStampPreview';
+import CockpitPayCodeIndicator from './CockpitPayCodeIndicator.vue';
 
 const props = withDefaults(
     defineProps<{
@@ -25,7 +29,7 @@ const props = withDefaults(
         claimOutcome: 'provider_disbursement' | 'account_funding';
         voucherType: 'redeemable' | 'payable' | 'settlement';
         expiry?: string;
-        instructionLabels?: string[];
+        instructionKeys?: string[];
         issuedCode?: string | null;
         hasRiderDesign?: boolean;
         riderDesignSource?: RiderStampPreviewSource;
@@ -42,7 +46,7 @@ const props = withDefaults(
         recipient: '',
         purpose: '',
         expiry: 'No expiry',
-        instructionLabels: () => [],
+        instructionKeys: () => [],
         issuedCode: null,
         hasRiderDesign: false,
         riderDesignSource: 'default',
@@ -90,20 +94,29 @@ const recipientLabel = computed<string>(() => {
     return recipient;
 });
 
-const capabilityLabel = computed<string>(() => {
-    if (props.claimOutcome === 'account_funding') {
-        return 'Add to Account';
-    }
+const stampIndicatorKeys = computed<string[]>(() => {
+    return [
+        ...new Set([
+            payCodeOutcomeIndicatorKey(props.claimOutcome, props.voucherType),
+            ...props.instructionKeys,
+        ]),
+    ];
+});
 
-    if (props.voucherType === 'payable') {
-        return 'Collect Payment';
-    }
+const visibleStampIndicatorKeys = computed<string[]>(() => {
+    return stampIndicatorKeys.value.slice(0, 6);
+});
 
-    if (props.voucherType === 'settlement') {
-        return 'Settlement';
-    }
+const hiddenStampIndicators = computed(() => {
+    return stampIndicatorKeys.value
+        .slice(6)
+        .map((key) => resolvePayCodeIndicator(key));
+});
 
-    return 'Receive Funds';
+const hiddenStampIndicatorTooltip = computed<string>(() => {
+    return hiddenStampIndicators.value
+        .map((indicator) => indicator.label)
+        .join(', ');
 });
 
 const displayedCode = computed<string>(() => {
@@ -162,25 +175,42 @@ const costCurrency = computed<string>(() => {
 });
 
 const costLineItems = computed<
-    Array<{ key: string; label: string; amount: number }>
+    Array<{
+        key: string;
+        indicatorKey: string;
+        label: string;
+        amount: number;
+    }>
 >(() => {
     const chargeItems = (props.costEstimate?.charges ?? [])
         .map((charge, index) => costChargeLine(charge, index))
         .filter(
-            (item): item is { key: string; label: string; amount: number } =>
-                item !== null,
+            (
+                item,
+            ): item is {
+                key: string;
+                indicatorKey: string;
+                label: string;
+                amount: number;
+            } => item !== null,
         );
 
     if (chargeItems.length > 0) {
         return chargeItems;
     }
 
-    const items: Array<{ key: string; label: string; amount: number }> = [];
+    const items: Array<{
+        key: string;
+        indicatorKey: string;
+        label: string;
+        amount: number;
+    }> = [];
     const baseFee = normalizedCost(props.costEstimate?.base_fee);
 
     if (baseFee > 0) {
         items.push({
             key: 'base-fee',
+            indicatorKey: 'generation',
             label: 'Pay Code Generation',
             amount: baseFee,
         });
@@ -196,6 +226,7 @@ const costLineItems = computed<
 
             items.push({
                 key,
+                indicatorKey: key,
                 label: costComponentLabel(key),
                 amount,
             });
@@ -260,7 +291,14 @@ const costLedgerColumnCount = computed<number>(() => {
 });
 
 const costLedgerColumns = computed<
-    Array<Array<{ key: string; label: string; amount: number }>>
+    Array<
+        Array<{
+            key: string;
+            indicatorKey: string;
+            label: string;
+            amount: number;
+        }>
+    >
 >(() => {
     if (costLedgerColumnCount.value === 1) {
         return [costLineItems.value];
@@ -281,7 +319,12 @@ const costLedgerColumns = computed<
 function costChargeLine(
     charge: PayCodeCostCharge,
     index: number,
-): { key: string; label: string; amount: number } | null {
+): {
+    key: string;
+    indicatorKey: string;
+    label: string;
+    amount: number;
+} | null {
     const amount = normalizedCost(
         charge.price ?? charge.amount ?? charge.total ?? charge.fee,
     );
@@ -297,6 +340,7 @@ function costChargeLine(
 
     return {
         key: `${reference}-${index}`,
+        indicatorKey: reference,
         label: stringValue(charge.label) ?? costComponentLabel(reference),
         amount,
     };
@@ -518,11 +562,32 @@ function stringValue(value: unknown): string | null {
                             <span class="block">Not the other way around.</span>
                         </p>
                     </div>
-                    <span
-                        class="rounded-full bg-emerald-700 px-3 py-1 text-[0.65rem] font-bold tracking-wide text-white uppercase"
+                    <div
+                        class="flex max-w-[55%] flex-wrap justify-end gap-1.5"
+                        aria-label="Pay Code instructions"
+                        data-testid="cockpit-pay-code-stamp-indicators"
                     >
-                        {{ capabilityLabel }}
-                    </span>
+                        <CockpitPayCodeIndicator
+                            v-for="indicatorKey in visibleStampIndicatorKeys"
+                            :key="indicatorKey"
+                            :indicator-key="indicatorKey"
+                        />
+                        <span
+                            v-if="hiddenStampIndicators.length > 0"
+                            tabindex="0"
+                            class="group/more relative inline-grid size-7 place-items-center rounded-full border border-emerald-700/20 bg-emerald-700 text-[0.6rem] font-black text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 dark:border-emerald-300/20 dark:bg-emerald-500 dark:text-slate-950 dark:focus-visible:outline-emerald-300"
+                            :aria-label="`${hiddenStampIndicators.length} more instructions`"
+                            data-testid="cockpit-pay-code-stamp-indicator-overflow"
+                        >
+                            +{{ hiddenStampIndicators.length }}
+                            <span
+                                role="tooltip"
+                                class="pointer-events-none absolute top-full right-0 z-50 mt-2 w-max max-w-52 rounded-md bg-slate-950 px-2.5 py-1.5 text-center text-[0.65rem] leading-4 font-medium text-white opacity-0 shadow-xl transition-opacity group-hover/more:opacity-100 group-focus/more:opacity-100"
+                            >
+                                {{ hiddenStampIndicatorTooltip }}
+                            </span>
+                        </span>
+                    </div>
                 </div>
 
                 <div>
@@ -570,7 +635,8 @@ function stringValue(value: unknown): string | null {
                             purpose &&
                             riderDesignSource !== 'message' &&
                             (!showStampCopy ||
-                                riderStamp?.composition.copySource !== 'message')
+                                riderStamp?.composition.copySource !==
+                                    'message')
                         "
                         class="mt-1 max-w-[80%] truncate text-xs"
                         :class="
@@ -719,7 +785,7 @@ function stringValue(value: unknown): string | null {
                                 :key="item.key"
                             >
                                 <dt
-                                    class="min-w-0 break-words text-slate-300"
+                                    class="flex min-w-0 items-start gap-1.5 break-words text-slate-300"
                                     :class="
                                         costLedgerColumnCount > 1
                                             ? 'line-clamp-2 text-pretty'
@@ -728,7 +794,18 @@ function stringValue(value: unknown): string | null {
                                     :title="item.label"
                                     data-testid="cockpit-pay-code-cost-label"
                                 >
-                                    {{ item.label }}
+                                    <CockpitPayCodeIndicator
+                                        :indicator-key="item.indicatorKey"
+                                        :tooltip="`${item.label} — priced instruction.`"
+                                        tone="dark"
+                                        size="sm"
+                                    />
+                                    <span
+                                        class="min-w-0"
+                                        data-testid="cockpit-pay-code-cost-label-text"
+                                    >
+                                        {{ item.label }}
+                                    </span>
                                 </dt>
                                 <dd
                                     class="text-right font-medium whitespace-nowrap text-white tabular-nums"
@@ -780,17 +857,6 @@ function stringValue(value: unknown): string | null {
                             </template>
                         </dl>
                     </div>
-                </div>
-
-                <div class="mt-2 flex flex-wrap gap-1.5">
-                    <span
-                        v-for="label in instructionLabels.slice(0, 3)"
-                        :key="label"
-                        class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-slate-200"
-                    >
-                        <ShieldCheck class="size-3" aria-hidden="true" />
-                        {{ label }}
-                    </span>
                 </div>
             </div>
         </article>

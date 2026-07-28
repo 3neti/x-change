@@ -262,7 +262,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 claimOutcome: 'provider_disbursement',
                 voucherType: 'redeemable',
                 expiry: '1 day',
-                instructionLabels: ['Mobile verified', 'OTP'],
+                instructionKeys: ['validation.mobile', 'validation.otp'],
                 hasRiderDesign: true,
                 riderDesignSource: 'message',
                 riderDesignDocument:
@@ -289,6 +289,34 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('₱1,250.00');
         expect(wrapper.text()).toContain('Mobile ending 1987');
         expect(wrapper.text()).toContain('PAY CODE PREVIEW');
+        const stampIndicators = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-stamp-indicators"] [data-testid="cockpit-pay-code-indicator"]',
+        );
+
+        expect(stampIndicators).toHaveLength(3);
+        expect(
+            stampIndicators.map((indicator) =>
+                indicator.attributes('data-indicator-key'),
+            ),
+        ).toEqual([
+            'outcome.provider_disbursement',
+            'validation.mobile',
+            'validation.otp',
+        ]);
+        expect(
+            stampIndicators.map((indicator) =>
+                indicator.get('[role="img"]').attributes('aria-label'),
+            ),
+        ).toEqual(['Receive Funds', 'Mobile Restriction', 'OTP Required']);
+        expect(
+            stampIndicators.map((indicator) =>
+                indicator.get('[role="tooltip"]').text(),
+            ),
+        ).toEqual([
+            'The recipient can receive the Pay Code value.',
+            'Only the intended mobile number can claim.',
+            'A one-time passcode is required to claim.',
+        ]);
         const design = wrapper.find(
             '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
         );
@@ -347,8 +375,24 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Total');
         expect(wrapper.text()).toContain('₱17.00');
         expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
-        expect(wrapper.text()).toContain('Mobile verified');
-        expect(wrapper.text()).toContain('OTP');
+        const costIndicators = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-cost-label"] [data-testid="cockpit-pay-code-indicator"]',
+        );
+
+        expect(costIndicators).toHaveLength(2);
+        expect(
+            costIndicators.map((indicator) =>
+                indicator.attributes('data-indicator-key'),
+            ),
+        ).toEqual(['generation', 'input.selfie']);
+        expect(
+            costIndicators.map((indicator) =>
+                indicator.get('[role="tooltip"]').text(),
+            ),
+        ).toEqual([
+            'Pay Code Generation — priced instruction.',
+            'Selfie Verification — priced instruction.',
+        ]);
         expect(wrapper.text()).not.toContain('Back Of The Pay Code');
         expect(
             wrapper
@@ -523,7 +567,11 @@ describe('Cockpit Quick Generate foundation', () => {
             .findAll('[data-testid="cockpit-pay-code-cost-label"]')
             .at(0);
 
-        expect(label?.text()).toBe(longLabel);
+        expect(
+            label
+                ?.get('[data-testid="cockpit-pay-code-cost-label-text"]')
+                .text(),
+        ).toBe(longLabel);
         expect(label?.attributes('title')).toBe(longLabel);
         expect(label?.classes()).toContain('line-clamp-2');
         expect(label?.classes()).toContain('break-words');
@@ -617,9 +665,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .exists(),
         ).toBe(false);
-        expect(design.attributes('srcdoc')).toContain(
-            'stamp-abstract-splash',
-        );
+        expect(design.attributes('srcdoc')).toContain('stamp-abstract-splash');
         expect(design.attributes('srcdoc')).not.toContain(
             'A purpose-led Rider Stamp',
         );
@@ -3012,9 +3058,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(essentialsCanvas.text()).toContain('Essentials');
         expect(
             essentialsCanvas
-                .find(
-                    '[data-testid="cockpit-quick-generate-starting-point"]',
-                )
+                .find('[data-testid="cockpit-quick-generate-starting-point"]')
                 .exists(),
         ).toBe(true);
         expect(reuseDesign.text()).toContain('Reuse A Design');

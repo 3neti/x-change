@@ -39,7 +39,7 @@ describe('issued Pay Code dialog', () => {
                 claimOutcome: 'provider_disbursement',
                 voucherType: 'redeemable',
                 expiry: '1 day',
-                instructionLabels: ['Mobile Required', 'OTP Required'],
+                instructionKeys: ['validation.mobile', 'validation.otp'],
                 costEstimate: {
                     currency: 'PHP',
                     charges: [

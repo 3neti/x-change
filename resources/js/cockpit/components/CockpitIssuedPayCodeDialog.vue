@@ -28,7 +28,7 @@ const props = withDefaults(
         claimOutcome: 'provider_disbursement' | 'account_funding';
         voucherType: 'redeemable' | 'payable' | 'settlement';
         expiry?: string;
-        instructionLabels?: string[];
+        instructionKeys?: string[];
         hasRiderDesign?: boolean;
         riderDesignSource?: RiderStampPreviewSource;
         riderDesignDocument?: string;
@@ -45,7 +45,7 @@ const props = withDefaults(
         recipient: '',
         purpose: '',
         expiry: 'No expiry',
-        instructionLabels: () => [],
+        instructionKeys: () => [],
         hasRiderDesign: false,
         riderDesignSource: 'default',
         riderDesignDocument: '',
@@ -290,7 +290,7 @@ async function copyClaimLink(): Promise<void> {
                         :claim-outcome="claimOutcome"
                         :voucher-type="voucherType"
                         :expiry="expiry"
-                        :instruction-labels="instructionLabels"
+                        :instruction-keys="instructionKeys"
                         :issued-code="code"
                         :has-rider-design="hasRiderDesign"
                         :rider-design-source="riderDesignSource"

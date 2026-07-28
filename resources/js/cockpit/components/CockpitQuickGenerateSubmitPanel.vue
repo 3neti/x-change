@@ -550,8 +550,7 @@ const riderSplashTimeout = ref('3');
 const riderSplashMetaSanitized = ref(true);
 const riderSplashMetaProfile = ref('');
 const riderStampArtworkSource = ref<RiderStampArtworkSource>('x_change');
-const riderStampArtworkTreatment =
-    ref<RiderStampArtworkTreatment>('automatic');
+const riderStampArtworkTreatment = ref<RiderStampArtworkTreatment>('automatic');
 const riderStampCopySource = ref<RiderStampCopySource>('automatic');
 const riderStampShowLogo = ref(true);
 const riderStampShowTagline = ref(true);
@@ -1161,10 +1160,11 @@ function applyInstructionBlueprint(
         dataGet(instructions, ['rider', 'stamp', 'show_logo']) !== false;
     riderStampShowTagline.value =
         dataGet(instructions, ['rider', 'stamp', 'show_tagline']) !== false;
-    riderStampClaimMarker.value = instructionStampClaimMarker(
-        instructions,
-        ['rider', 'stamp', 'claim_marker'],
-    );
+    riderStampClaimMarker.value = instructionStampClaimMarker(instructions, [
+        'rider',
+        'stamp',
+        'claim_marker',
+    ]);
     riderStampClaimMarkerPosition.value = instructionStampClaimMarkerPosition(
         instructions,
         ['rider', 'stamp', 'claim_marker_position'],
@@ -1893,26 +1893,42 @@ const selectedTemplateName = computed<string>(() => {
     );
 });
 
-const canvasInstructionLabels = computed<string[]>(() => {
-    const labels: string[] = [];
+const canvasInstructionKeys = computed<string[]>(() => {
+    const keys = selectedInputFields.value.map((field) => `input.${field}`);
 
     if (requireMobileValidation.value) {
-        labels.push('Mobile verified');
+        keys.push('validation.mobile');
     }
 
     if (verificationOtp.value) {
-        labels.push('OTP');
+        keys.push('validation.otp');
     }
 
     if (verificationKyc.value) {
-        labels.push('Identity check');
+        keys.push('validation.identity');
+    }
+
+    if (verificationSelfie.value) {
+        keys.push('validation.selfie');
+    }
+
+    if (signatureRequired.value) {
+        keys.push('validation.signature');
+    }
+
+    if (requireLocationValidation.value) {
+        keys.push('validation.location');
+    }
+
+    if (timeValidationEnabled.value) {
+        keys.push('validation.time');
     }
 
     if (sliceMode.value !== 'whole') {
-        labels.push('Multiple claims');
+        keys.push('claim.multiple');
     }
 
-    return labels;
+    return [...new Set(keys)];
 });
 
 const canvasExpiryLabel = computed<string>(() => {
@@ -2566,8 +2582,7 @@ const riderSummary = computed<Record<string, unknown>>(() => {
                   show_logo: riderStampShowLogo.value,
                   show_tagline: riderStampShowTagline.value,
                   claim_marker: riderStampClaimMarker.value,
-                  claim_marker_position:
-                      riderStampClaimMarkerPosition.value,
+                  claim_marker_position: riderStampClaimMarkerPosition.value,
                   version: 2,
               }
             : null,
@@ -4463,10 +4478,7 @@ function instructionRecord(
                             data-testid="cockpit-quick-generate-choose-template"
                             @click="templatePickerOpen = true"
                         >
-                            <LayoutTemplate
-                                class="size-4"
-                                aria-hidden="true"
-                            />
+                            <LayoutTemplate class="size-4" aria-hidden="true" />
                             Choose Template
                         </button>
                         <button
@@ -4491,7 +4503,7 @@ function instructionRecord(
                     :claim-outcome="claimOutcome"
                     :voucher-type="voucherType"
                     :expiry="canvasExpiryLabel"
-                    :instruction-labels="canvasInstructionLabels"
+                    :instruction-keys="canvasInstructionKeys"
                     :issued-code="resultCode"
                     :has-rider-design="usesRiderArtwork"
                     :rider-design-source="riderStampPreview.source"
@@ -4506,7 +4518,7 @@ function instructionRecord(
                         <Link
                             :href="fundingIndex()"
                             prefetch
-                            class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
+                            class="inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold whitespace-nowrap text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
                             data-testid="cockpit-quick-generate-funding-link"
                         >
                             <Landmark class="size-3.5" aria-hidden="true" />
@@ -4516,7 +4528,7 @@ function instructionRecord(
                     <template #action>
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-sky-400 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                            class="inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold whitespace-nowrap text-slate-700 shadow-sm transition hover:border-sky-400 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                             data-testid="cockpit-quick-generate-edit-front-button"
                             :disabled="processing"
                             @click="openFrontDesignEditor"
@@ -4526,7 +4538,7 @@ function instructionRecord(
                         </button>
                         <button
                             type="submit"
-                            class="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                            class="inline-flex items-center justify-center rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                             data-testid="cockpit-quick-generate-canvas-submit-button"
                             :disabled="!canSubmit || processing"
                         >
@@ -4555,7 +4567,7 @@ function instructionRecord(
             "
             :voucher-type="voucherType"
             :expiry="canvasExpiryLabel"
-            :instruction-labels="canvasInstructionLabels"
+            :instruction-keys="canvasInstructionKeys"
             :has-rider-design="usesRiderArtwork"
             :rider-design-source="riderStampPreview.source"
             :rider-design-document="riderCanvasArtworkDocument"
@@ -6170,9 +6182,7 @@ function instructionRecord(
                                         <option value="automatic">
                                             Automatic
                                         </option>
-                                        <option value="artwork">
-                                            Artwork
-                                        </option>
+                                        <option value="artwork">Artwork</option>
                                         <option value="text">Text</option>
                                     </select>
                                 </label>
@@ -8450,6 +8460,4 @@ function instructionRecord(
         </div>
     </form>
 </template>
-    if (instructionBuilder !== null) {
-        instructionBuilder.open = true;
-    }
+if (instructionBuilder !== null) { instructionBuilder.open = true; }

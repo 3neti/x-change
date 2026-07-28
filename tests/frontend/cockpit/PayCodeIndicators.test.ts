@@ -33,10 +33,7 @@ describe('Pay Code indicators', () => {
 
     it('selects the first-class outcome indicator', () => {
         expect(
-            payCodeOutcomeIndicatorKey(
-                'provider_disbursement',
-                'redeemable',
-            ),
+            payCodeOutcomeIndicatorKey('provider_disbursement', 'redeemable'),
         ).toBe('outcome.provider_disbursement');
         expect(
             payCodeOutcomeIndicatorKey('account_funding', 'redeemable'),

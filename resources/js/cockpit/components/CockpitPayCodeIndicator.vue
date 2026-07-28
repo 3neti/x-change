@@ -51,7 +51,7 @@ const tooltipCopy = computed(
         <span
             :id="tooltipId"
             role="tooltip"
-            class="pointer-events-none absolute z-50 w-max max-w-52 rounded-md bg-slate-950 px-2.5 py-1.5 text-center text-[0.65rem] leading-4 font-medium text-white opacity-0 shadow-xl transition-opacity group-hover/indicator:opacity-100 group-focus-within/indicator:opacity-100"
+            class="pointer-events-none absolute z-50 w-max max-w-52 rounded-md bg-slate-950 px-2.5 py-1.5 text-center text-[0.65rem] leading-4 font-medium text-white opacity-0 shadow-xl transition-opacity group-focus-within/indicator:opacity-100 group-hover/indicator:opacity-100"
             :class="
                 tone === 'dark'
                     ? 'bottom-full left-1/2 mb-2 -translate-x-1/2'
