@@ -552,6 +552,7 @@ const riderSplashTimeout = ref('3');
 const riderSplashMetaSanitized = ref(true);
 const riderSplashMetaProfile = ref('');
 const riderStampArtworkSource = ref<RiderStampArtworkSource>('x_change');
+const riderStampArtworkSourceWasExplicitlySelected = ref(false);
 const riderStampArtworkTreatment = ref<RiderStampArtworkTreatment>('automatic');
 const riderStampCopySource = ref<RiderStampCopySource>('automatic');
 const riderStampShowLogo = ref(true);
@@ -716,6 +717,31 @@ watch(claimOutcome, (outcome): void => {
     feeStrategy.value = 'absorb';
 });
 
+watch(
+    [riderSplashHeadline, riderSplash, riderSplashCtaText],
+    (currentValues, previousValues): void => {
+        const hasCurrentSplash = currentValues.some(
+            (value) => value.trim() !== '',
+        );
+        const hadPreviousSplash = previousValues.some(
+            (value) => value.trim() !== '',
+        );
+
+        if (
+            applyingStartingPoint.value ||
+            startingPoint.value !== 'blank' ||
+            riderStampArtworkSourceWasExplicitlySelected.value ||
+            riderStampArtworkSource.value !== 'x_change' ||
+            !hasCurrentSplash ||
+            hadPreviousSplash
+        ) {
+            return;
+        }
+
+        riderStampArtworkSource.value = 'splash';
+    },
+);
+
 function applyTemplateDefaults(templateKey: string): void {
     const defaults = quickGenerateTemplateDefaults[templateKey];
 
@@ -751,6 +777,7 @@ function applyTemplateDefaults(templateKey: string): void {
     riderSplashCtaText.value = '';
     riderSplashTimeout.value = defaults.riderSplashTimeout;
     riderStampArtworkSource.value = 'x_change';
+    riderStampArtworkSourceWasExplicitlySelected.value = false;
     riderStampArtworkTreatment.value = 'automatic';
     riderStampCopySource.value = 'automatic';
     riderStampShowLogo.value = true;
@@ -797,6 +824,10 @@ function startBlank(): void {
     applyTemplateDefaults('blank-pay-code');
     applyingStartingPoint.value = false;
     lastMessage.value = 'Blank Pay Code ready. Add only what this claim needs.';
+}
+
+function markRiderStampArtworkSourceSelection(): void {
+    riderStampArtworkSourceWasExplicitlySelected.value = true;
 }
 
 async function openDesignEditor(): Promise<void> {
@@ -6326,6 +6357,9 @@ function instructionRecord(
                                             class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
                                             data-testid="cockpit-quick-generate-rider-stamp-source"
                                             :disabled="processing"
+                                            @change="
+                                                markRiderStampArtworkSourceSelection
+                                            "
                                         >
                                             <option value="x_change">
                                                 x-change Design (Recommended)

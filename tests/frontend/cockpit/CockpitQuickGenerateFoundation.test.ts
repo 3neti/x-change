@@ -917,6 +917,81 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('A purpose-led Rider Stamp');
     });
 
+    it('promotes the first Rider Splash entered on a blank Pay Code to Stamp artwork', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-start-blank"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-rider-splash-format"]')
+            .setValue('html');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-rider-splash-body"]')
+            .setValue(
+                '<img src="https://i.imgur.com/L76d0pN.jpeg" alt="Failure of Simultaneity" />',
+            );
+
+        expect(
+            (
+                wrapper.get(
+                    '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
+                ).element as HTMLSelectElement
+            ).value,
+        ).toBe('splash');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
+                .attributes('srcdoc'),
+        ).toContain('https://i.imgur.com/L76d0pN.jpeg');
+    });
+
+    it('preserves an explicit blank Pay Code artwork choice when Splash content is added', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-start-blank"]')
+            .trigger('click');
+        const artworkSource = wrapper.get(
+            '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
+        );
+
+        await artworkSource.setValue('none');
+        await artworkSource.setValue('x_change');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-rider-splash-body"]')
+            .setValue('Introduction only');
+
+        expect((artworkSource.element as HTMLSelectElement).value).toBe(
+            'x_change',
+        );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
+                .exists(),
+        ).toBe(false);
+    });
+
     it('loads Spotify artwork when action link artwork is selected', async () => {
         vi.useFakeTimers();
         const fetchMock = vi.fn().mockResolvedValue({
