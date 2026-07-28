@@ -422,6 +422,22 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-pay-code-canvas-logo"]')
                 .exists(),
         ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-artwork-default"]',
+                )
+                .text(),
+        ).toContain(
+            'Messages, action links, and claim introductions remain active',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-og-html-preview"]',
+                )
+                .exists(),
+        ).toBe(false);
 
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-og-source"]')
@@ -432,6 +448,13 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(design.exists()).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-og-html-preview"]',
+                )
+                .exists(),
+        ).toBe(true);
         expect(design.attributes('srcdoc')).toContain(
             'A purpose-led OG design',
         );

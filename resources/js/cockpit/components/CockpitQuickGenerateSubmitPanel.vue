@@ -5583,29 +5583,38 @@ function instructionRecord(
                                 class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"
                             >
                                 <div>
-                                    <p class="font-semibold">Link Preview</p>
+                                    <p class="font-semibold">
+                                        Pay Code Artwork
+                                    </p>
                                     <p
                                         class="mt-1 text-sky-800 dark:text-sky-200"
                                     >
-                                        Preview how the claim may appear when
-                                        shared.
+                                        Keep the x-change design, or
+                                        intentionally use claim content as
+                                        background artwork.
                                     </p>
                                 </div>
                                 <label
                                     class="grid min-w-48 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
                                 >
-                                    Preview Source
+                                    Canvas Appearance
                                     <select
                                         v-model="riderOgSource"
                                         class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-rider-og-source"
                                         :disabled="processing"
                                     >
-                                        <option value="">Default</option>
-                                        <option value="message">Message</option>
-                                        <option value="url">Action URL</option>
+                                        <option value="">
+                                            x-change Design (Recommended)
+                                        </option>
+                                        <option value="message">
+                                            Message Artwork
+                                        </option>
+                                        <option value="url">
+                                            Action Link Artwork
+                                        </option>
                                         <option value="splash">
-                                            Claim Introduction
+                                            Claim Introduction Artwork
                                         </option>
                                     </select>
                                 </label>
@@ -5614,28 +5623,49 @@ function instructionRecord(
                                 class="rounded-xl border border-sky-200 bg-white p-3 dark:border-sky-900/60 dark:bg-slate-950"
                             >
                                 <div
-                                    class="flex flex-wrap items-center gap-2 text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
+                                    v-if="!usesRiderArtwork"
+                                    class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/30"
+                                    data-testid="cockpit-quick-generate-rider-artwork-default"
                                 >
-                                    <span>{{ riderOgPreview.label }}</span>
-                                    <span
-                                        class="rounded-full bg-sky-100 px-2 py-0.5 text-sky-800 dark:bg-sky-900/60 dark:text-sky-100"
+                                    <p
+                                        class="text-xs font-semibold text-emerald-800 dark:text-emerald-200"
                                     >
-                                        {{ riderOgPreview.reference }}
-                                    </span>
+                                        x-change Design
+                                    </p>
+                                    <p
+                                        class="mt-1 text-[11px] leading-snug text-emerald-700 dark:text-emerald-300"
+                                    >
+                                        Messages, action links, and claim
+                                        introductions remain active without
+                                        replacing the Pay Code canvas.
+                                    </p>
                                 </div>
-                                <iframe
-                                    title="Link Preview"
-                                    sandbox=""
-                                    class="mt-2 h-64 w-full rounded-lg border border-sky-200 bg-slate-950 dark:border-sky-900/60"
-                                    data-testid="cockpit-quick-generate-rider-og-html-preview"
-                                    :srcdoc="riderOgPreviewDocument"
-                                />
-                                <p
-                                    class="mt-2 text-[11px] text-sky-800 dark:text-sky-200"
-                                >
-                                    The preview uses only the information
-                                    entered on this page.
-                                </p>
+                                <template v-else>
+                                    <div
+                                        class="flex flex-wrap items-center gap-2 text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
+                                    >
+                                        <span>{{ riderOgPreview.label }}</span>
+                                        <span
+                                            class="rounded-full bg-sky-100 px-2 py-0.5 text-sky-800 dark:bg-sky-900/60 dark:text-sky-100"
+                                        >
+                                            {{ riderOgPreview.reference }}
+                                        </span>
+                                    </div>
+                                    <iframe
+                                        title="Pay Code Artwork Preview"
+                                        sandbox=""
+                                        class="mt-2 h-64 w-full rounded-lg border border-sky-200 bg-slate-950 dark:border-sky-900/60"
+                                        data-testid="cockpit-quick-generate-rider-og-html-preview"
+                                        :srcdoc="riderOgPreviewDocument"
+                                    />
+                                    <p
+                                        class="mt-2 text-[11px] text-sky-800 dark:text-sky-200"
+                                    >
+                                        The selected source is subdued behind
+                                        the Pay Code details to preserve
+                                        readability.
+                                    </p>
+                                </template>
                             </div>
                         </div>
                         <details
