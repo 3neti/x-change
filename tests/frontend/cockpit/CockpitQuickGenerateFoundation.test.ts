@@ -90,7 +90,9 @@ describe('Cockpit Quick Generate foundation', () => {
         });
 
         expect(
-            wrapper.find('[data-testid="cockpit-pay-code-canvas-logo"]').exists(),
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-logo"]')
+                .exists(),
         ).toBe(true);
         expect(
             wrapper
@@ -147,9 +149,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(design.classes()).toContain('opacity-60');
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-pay-code-canvas-rider-scrim"]',
-                )
+                .find('[data-testid="cockpit-pay-code-canvas-rider-scrim"]')
                 .exists(),
         ).toBe(true);
         expect(
@@ -170,9 +170,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(design.classes()).toContain('opacity-100');
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-pay-code-canvas-rider-scrim"]',
-                )
+                .find('[data-testid="cockpit-pay-code-canvas-rider-scrim"]')
                 .classes(),
         ).toContain('to-transparent');
         expect(design.attributes('class')).not.toContain('opacity-45');
@@ -425,9 +423,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
-                )
+                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
                 .exists(),
         ).toBe(false);
         expect(
@@ -523,9 +519,7 @@ describe('Cockpit Quick Generate foundation', () => {
         );
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
-                )
+                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
                 .attributes('srcdoc'),
         ).toContain('https://i.scdn.co/image/example-artwork');
         expect(
@@ -2776,7 +2770,16 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(instructionBuilderText).toContain('Issuance Details');
         expect(instructionBuilderText).toContain('Claim Requirements');
         expect(instructionBuilderText).toContain('Validation And Verification');
-        expect(instructionBuilderText).toContain('Claim Experience');
+        expect(instructionBuilderText).toContain('Rider');
+        expect(instructionBuilderText).toContain('Rider Message');
+        expect(instructionBuilderText).toContain('Rider URL');
+        expect(instructionBuilderText).toContain('Rider Splash');
+        expect(instructionBuilderText).toContain('OG Meta');
+        expect(instructionBuilderText).toContain('OG Meta Source');
+        expect(instructionBuilderText).toContain('Rider Splash Preview');
+        expect(instructionBuilderText).not.toContain('Claim Introduction');
+        expect(instructionBuilderText).not.toContain('Action Link');
+        expect(instructionBuilderText).not.toContain('Message Body');
         expect(instructionBuilderText).toContain('Status Updates');
         expect(instructionBuilderText).toContain(
             'Claim Schedule And Availability',

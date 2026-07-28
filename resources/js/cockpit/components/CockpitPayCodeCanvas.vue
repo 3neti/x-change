@@ -105,9 +105,7 @@ const displayedCode = computed<string>(() => {
 const isUnissuedCanvas = computed<boolean>(() => !props.issuedCode?.trim());
 
 const riderArtworkFrameClass = computed<string>(() => {
-    return props.riderDesignSource === 'message'
-        ? 'opacity-60'
-        : 'opacity-100';
+    return props.riderDesignSource === 'message' ? 'opacity-60' : 'opacity-100';
 });
 
 const riderArtworkScrimClass = computed<string>(() => {
@@ -274,7 +272,7 @@ function costComponentLabel(key: string): string {
         webhook: 'Webhook Update',
         email_feedback: 'Email Update',
         sms_feedback: 'SMS Update',
-        rider: 'Claim Experience',
+        rider: 'Rider',
         validation: 'Validation',
         input_fields: 'Claim Requirements',
     };
@@ -527,15 +525,14 @@ function stringValue(value: unknown): string | null {
                     <p
                         v-if="
                             purpose &&
-                            (!hasRiderDesign ||
-                                riderDesignSource !== 'message')
+                            (!hasRiderDesign || riderDesignSource !== 'message')
                         "
                         class="mt-1 max-w-[80%] truncate text-xs"
                         :class="
                             hasRiderDesign
                                 ? 'text-white/75'
                                 : 'text-slate-600 dark:text-amber-100/70'
-                            "
+                        "
                         data-testid="cockpit-pay-code-canvas-purpose"
                     >
                         {{ purpose }}

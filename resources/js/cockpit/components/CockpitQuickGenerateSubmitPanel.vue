@@ -2556,7 +2556,7 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
                         : 'none',
             },
             {
-                label: 'Claim Experience',
+                label: 'Rider',
                 value:
                     purpose.value.trim() ||
                     riderUrl.value.trim() ||
@@ -4039,6 +4039,11 @@ function instructionRecord(
                             data-testid="cockpit-quick-generate-primary-purpose"
                             :disabled="processing"
                         />
+                        <span
+                            class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                        >
+                            Used as the Rider Message.
+                        </span>
                     </label>
                 </div>
             </div>
@@ -5380,13 +5385,13 @@ function instructionRecord(
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Claim Experience
+                                Rider
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Add a message, action link, and branded
-                                introduction for the recipient.
+                                Add a Rider Message, Rider URL, or Rider Splash
+                                for the recipient.
                             </p>
                         </div>
                     </summary>
@@ -5394,7 +5399,7 @@ function instructionRecord(
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
-                            Message
+                            Rider Message
                             <textarea
                                 v-model="purpose"
                                 rows="2"
@@ -5408,19 +5413,19 @@ function instructionRecord(
                             data-testid="cockpit-quick-generate-rider-cta-section"
                         >
                             <div>
-                                <p class="font-semibold">Action Link</p>
+                                <p class="font-semibold">Rider URL</p>
                                 <p
                                     class="mt-1 text-amber-800 dark:text-amber-200"
                                 >
-                                    Choose a suggested destination or enter a
-                                    custom link for the recipient.
+                                    Choose a URL preset or enter a custom Rider
+                                    URL.
                                 </p>
                             </div>
                             <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-amber-950 dark:text-amber-100"
                                 >
-                                    Suggested Destination
+                                    URL Preset
                                     <select
                                         v-model="riderUrlPreset"
                                         class="w-full min-w-0 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-amber-900/60 dark:bg-slate-900 dark:text-slate-50"
@@ -5446,7 +5451,7 @@ function instructionRecord(
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-amber-950 dark:text-amber-100"
                                 >
-                                    Action URL
+                                    Rider URL
                                     <input
                                         v-model="riderUrl"
                                         type="url"
@@ -5457,8 +5462,7 @@ function instructionRecord(
                                     <span
                                         class="text-[11px] leading-snug font-normal text-amber-800 dark:text-amber-200"
                                     >
-                                        Show this destination during the claim
-                                        experience.
+                                        Open this destination during the claim.
                                     </span>
                                 </label>
                             </div>
@@ -5468,19 +5472,18 @@ function instructionRecord(
                             data-testid="cockpit-quick-generate-rider-splash-builder"
                         >
                             <div>
-                                <p class="font-semibold">Claim Introduction</p>
+                                <p class="font-semibold">Rider Splash</p>
                                 <p
                                     class="mt-1 text-orange-800 dark:text-orange-200"
                                 >
-                                    Design the introduction shown to the
-                                    recipient during the claim.
+                                    Design the splash shown before the claim.
                                 </p>
                             </div>
                             <div class="grid gap-3 lg:grid-cols-3">
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
                                 >
-                                    Headline
+                                    Splash Headline
                                     <input
                                         v-model="riderSplashHeadline"
                                         type="text"
@@ -5492,7 +5495,7 @@ function instructionRecord(
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
                                 >
-                                    Button Label
+                                    Splash Button Label
                                     <input
                                         v-model="riderSplashCtaText"
                                         type="text"
@@ -5504,7 +5507,7 @@ function instructionRecord(
                                 <label
                                     class="grid min-w-0 content-start gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
                                 >
-                                    Display Time (Seconds)
+                                    Splash Duration (Seconds)
                                     <input
                                         v-model="riderSplashTimeout"
                                         type="number"
@@ -5517,7 +5520,7 @@ function instructionRecord(
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 lg:col-span-3 dark:text-orange-100"
                                 >
-                                    Message Body
+                                    Rider Splash Content
                                     <textarea
                                         v-model="riderSplash"
                                         rows="3"
@@ -5533,7 +5536,7 @@ function instructionRecord(
                                     <p
                                         class="text-[11px] font-semibold tracking-wide text-orange-700 uppercase dark:text-orange-300"
                                     >
-                                        Introduction Preview
+                                        Rider Splash Preview
                                     </p>
                                     <p
                                         class="mt-1 text-[11px] leading-snug text-orange-800 dark:text-orange-200"
@@ -5544,7 +5547,7 @@ function instructionRecord(
                                     <div class="mt-2 grid gap-1">
                                         <iframe
                                             v-if="riderSplashPreviewIsHtml"
-                                            title="Claim Introduction Preview"
+                                            title="Rider Splash Preview"
                                             sandbox=""
                                             class="h-80 w-full rounded-lg border border-orange-200 bg-slate-950 dark:border-orange-900/60"
                                             data-testid="cockpit-quick-generate-rider-splash-html-preview"
@@ -5590,21 +5593,18 @@ function instructionRecord(
                                 class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"
                             >
                                 <div>
-                                    <p class="font-semibold">
-                                        Pay Code Artwork
-                                    </p>
+                                    <p class="font-semibold">OG Meta</p>
                                     <p
                                         class="mt-1 text-sky-800 dark:text-sky-200"
                                     >
-                                        Keep the x-change design, or
-                                        intentionally use claim content as
-                                        background artwork.
+                                        Choose which Rider value supplies the
+                                        Pay Code and OG artwork.
                                     </p>
                                 </div>
                                 <label
                                     class="grid min-w-48 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
                                 >
-                                    Canvas Appearance
+                                    OG Meta Source
                                     <select
                                         v-model="riderOgSource"
                                         class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
@@ -5615,13 +5615,11 @@ function instructionRecord(
                                             x-change Design (Recommended)
                                         </option>
                                         <option value="message">
-                                            Message Artwork
+                                            Rider Message
                                         </option>
-                                        <option value="url">
-                                            Action Link Artwork
-                                        </option>
+                                        <option value="url">Rider URL</option>
                                         <option value="splash">
-                                            Claim Introduction Artwork
+                                            Rider Splash
                                         </option>
                                     </select>
                                 </label>
@@ -5659,7 +5657,7 @@ function instructionRecord(
                                         </span>
                                     </div>
                                     <iframe
-                                        title="Pay Code Artwork Preview"
+                                        title="OG Meta Preview"
                                         sandbox=""
                                         class="mt-2 h-64 w-full rounded-lg border border-sky-200 bg-slate-950 dark:border-sky-900/60"
                                         data-testid="cockpit-quick-generate-rider-og-html-preview"
@@ -5675,7 +5673,7 @@ function instructionRecord(
                                                 riderUrlArtworkResolving
                                             "
                                         >
-                                            Loading Link Artwork…
+                                            Loading Rider URL Artwork…
                                         </template>
                                         <template
                                             v-else-if="

@@ -80,10 +80,10 @@ export function resolveRiderOgPreview(
     if (source === 'message') {
         return {
             source,
-            label: 'Message Preview',
+            label: 'OG Meta Preview',
             title: message === '' ? 'No Message Yet' : message,
-            description: 'Preview based on the recipient message.',
-            reference: 'Message',
+            description: 'Preview based on the Rider Message.',
+            reference: 'Rider Message',
             imageUrl: null,
         };
     }
@@ -94,13 +94,11 @@ export function resolveRiderOgPreview(
 
         return {
             source,
-            label: 'Action Link Preview',
-            title:
-                artwork?.title || (url === '' ? 'No Action URL Yet' : url),
+            label: 'OG Meta Preview',
+            title: artwork?.title || (url === '' ? 'No Action URL Yet' : url),
             description:
-                artwork?.description ||
-                'Preview based on the selected action link.',
-            reference: artwork?.reference || 'Action URL',
+                artwork?.description || 'Preview based on the Rider URL.',
+            reference: artwork?.reference || 'Rider URL',
             imageUrl: artwork?.image_url || null,
         };
     }
@@ -108,7 +106,7 @@ export function resolveRiderOgPreview(
     if (source === 'splash') {
         return {
             source,
-            label: 'Claim Introduction Preview',
+            label: 'OG Meta Preview',
             title:
                 splashHeadline === ''
                     ? splashBody || 'No Introduction Yet'
@@ -117,14 +115,14 @@ export function resolveRiderOgPreview(
                 splashCta === ''
                     ? splashBody || 'No Introduction Message Yet.'
                     : `${splashBody || 'No Introduction Message Yet.'} · ${splashCta}`,
-            reference: 'Claim Introduction',
+            reference: 'Rider Splash',
             imageUrl: null,
         };
     }
 
     return {
         source,
-        label: 'Default Preview',
+        label: 'OG Meta Preview',
         title:
             splashHeadline ||
             message ||
@@ -133,7 +131,7 @@ export function resolveRiderOgPreview(
             splashBody ||
             message ||
             'Uses the first available message, link, or introduction.',
-        reference: 'Automatic',
+        reference: 'x-change',
         imageUrl: null,
     };
 }
