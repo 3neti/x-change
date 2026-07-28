@@ -158,6 +158,66 @@ it('retries transient remote failures before persisting Splash artwork', functio
     Http::assertSentCount(2);
 });
 
+it('reuses the last verified Splash snapshot during a transient remote outage', function (): void {
+    $image = imagecreatetruecolor(8, 8);
+    $purple = imagecolorallocate($image, 139, 92, 246);
+    imagefilledrectangle($image, 0, 0, 8, 8, $purple);
+    ob_start();
+    imagepng($image);
+    $contents = ob_get_clean();
+    imagedestroy($image);
+
+    expect($contents)->toBeString()->not->toBeEmpty();
+
+    config()->set(
+        'x-change.claim.share.splash_artwork.retry_attempts',
+        1,
+    );
+
+    $attempt = 0;
+    Http::fake(function () use (&$attempt, $contents) {
+        $attempt++;
+
+        return $attempt === 1
+            ? Http::response($contents, 200, ['Content-Type' => 'image/png'])
+            : Http::failedConnection('temporary DNS failure');
+    });
+
+    $input = validVoucherInstructions(overrides: [
+        'rider' => [
+            'splash' => '<img src="https://github.com/example/art/blob/main/purple.png?raw=true">',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'splash',
+            ],
+        ],
+    ])->toArray();
+    $snapshots = app(RiderSplashArtworkSnapshotterContract::class);
+    $captured = RiderSplashArtworkSnapshotData::fromArray(data_get(
+        $snapshots->prepare($input),
+        'metadata.custom.rider_splash_artwork',
+    ));
+    $reused = RiderSplashArtworkSnapshotData::fromArray(data_get(
+        $snapshots->prepare($input),
+        'metadata.custom.rider_splash_artwork',
+    ));
+
+    expect($captured)->toBeInstanceOf(RiderSplashArtworkSnapshotData::class)
+        ->and($reused?->sha256)->toBe($captured->sha256)
+        ->and($reused?->width)->toBe($captured->width)
+        ->and($reused?->height)->toBe($captured->height);
+
+    Storage::disk('local')->assertExists(
+        'x-change/claim/splash-artwork/sources/'
+        .hash(
+            'sha256',
+            'https://raw.githubusercontent.com/example/art/main/purple.png',
+        )
+        .'.json',
+    );
+    Http::assertSentCount(2);
+});
+
 it('does not require an artwork snapshot for a non-Splash Stamp', function (): void {
     $input = validVoucherInstructions(overrides: [
         'rider' => [

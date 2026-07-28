@@ -148,7 +148,8 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
             return null;
         }
 
-        [$contents, $mimeType] = $image;
+        $contents = $image['contents'];
+        $mimeType = $image['mime_type'];
         $dimensions = @getimagesizefromstring($contents);
         $maximumPixels = max(
             1200 * 630,
@@ -186,11 +187,23 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
             return null;
         }
 
-        return $stored ? $snapshot : null;
+        if (! $stored) {
+            return null;
+        }
+
+        if (is_string($image['remote_url'])) {
+            $this->rememberRemoteSnapshot($image['remote_url'], $snapshot);
+        }
+
+        return $snapshot;
     }
 
     /**
-     * @return null|array{0: string, 1: string}
+     * @return null|array{
+     *     contents: string,
+     *     mime_type: string,
+     *     remote_url: ?string
+     * }
      */
     private function resolveImage(string $source): ?array
     {
@@ -202,7 +215,11 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
             $contents = base64_decode($matches[2], true);
 
             return is_string($contents) && $this->withinByteLimit($contents)
-                ? [$contents, $matches[1]]
+                ? [
+                    'contents' => $contents,
+                    'mime_type' => $matches[1],
+                    'remote_url' => null,
+                ]
                 : null;
         }
 
@@ -261,8 +278,10 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
                     throw: false,
                 )
                 ->get($url);
-        } catch (Throwable) {
-            return null;
+        } catch (Throwable $exception) {
+            return $exception instanceof ConnectionException
+                ? $this->cachedRemoteImage($url)
+                : null;
         }
 
         $mimeType = strtolower(trim(explode(
@@ -271,11 +290,102 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
         )[0]));
         $contents = $response->body();
 
-        return $response->successful()
-            && isset(self::Extensions[$mimeType])
-            && $this->withinByteLimit($contents)
-                ? [$contents, $mimeType]
+        if (
+            ! $response->successful()
+            || ! isset(self::Extensions[$mimeType])
+            || ! $this->withinByteLimit($contents)
+        ) {
+            return $response->serverError() || $response->status() === 429
+                ? $this->cachedRemoteImage($url)
                 : null;
+        }
+
+        return [
+            'contents' => $contents,
+            'mime_type' => $mimeType,
+            'remote_url' => $url,
+        ];
+    }
+
+    /**
+     * @return null|array{
+     *     contents: string,
+     *     mime_type: string,
+     *     remote_url: string
+     * }
+     */
+    private function cachedRemoteImage(string $url): ?array
+    {
+        try {
+            $manifest = json_decode(
+                Storage::disk($this->disk())->get(
+                    $this->sourceManifestPath($url),
+                ),
+                true,
+                flags: JSON_THROW_ON_ERROR,
+            );
+        } catch (Throwable) {
+            return null;
+        }
+
+        $snapshot = RiderSplashArtworkSnapshotData::fromArray($manifest);
+
+        if (! $snapshot instanceof RiderSplashArtworkSnapshotData) {
+            return null;
+        }
+
+        try {
+            $contents = Storage::disk($this->disk())
+                ->get($this->path($snapshot));
+        } catch (Throwable) {
+            return null;
+        }
+
+        $dimensions = @getimagesizefromstring($contents);
+
+        if (
+            ! $this->withinByteLimit($contents)
+            || ! hash_equals($snapshot->sha256, hash('sha256', $contents))
+            || ! is_array($dimensions)
+            || ($dimensions['mime'] ?? null) !== $snapshot->mimeType
+            || ($dimensions[0] ?? null) !== $snapshot->width
+            || ($dimensions[1] ?? null) !== $snapshot->height
+        ) {
+            return null;
+        }
+
+        return [
+            'contents' => $contents,
+            'mime_type' => $snapshot->mimeType,
+            'remote_url' => $url,
+        ];
+    }
+
+    private function rememberRemoteSnapshot(
+        string $url,
+        RiderSplashArtworkSnapshotData $snapshot,
+    ): void {
+        try {
+            Storage::disk($this->disk())->put(
+                $this->sourceManifestPath($url),
+                json_encode(
+                    $snapshot->toArray(),
+                    JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
+                ),
+            );
+        } catch (Throwable) {
+            return;
+        }
+    }
+
+    private function sourceManifestPath(string $url): string
+    {
+        $directory = trim((string) config(
+            'x-change.claim.share.splash_artwork.directory',
+            'x-change/claim/splash-artwork',
+        ), '/');
+
+        return $directory.'/sources/'.hash('sha256', $url).'.json';
     }
 
     private function withinByteLimit(string $contents): bool
