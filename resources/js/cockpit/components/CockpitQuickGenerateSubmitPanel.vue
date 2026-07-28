@@ -625,6 +625,7 @@ const lastStatus = ref('ready');
 const lastMessage = ref('Ready to issue when the design is complete.');
 const lastResponse = ref<Record<string, unknown> | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
+const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
 const riderSectionElement = ref<HTMLDetailsElement | null>(null);
 const lastInstructionsLoaded = ref(false);
 const startingPoint = ref<'blank' | 'last' | 'template'>(
@@ -800,10 +801,15 @@ function startBlank(): void {
 async function openFrontDesignEditor(): Promise<void> {
     await nextTick();
 
+    const instructionBuilder = instructionBuilderElement.value;
     const riderSection = riderSectionElement.value;
     const frontDesign = riderSection?.querySelector<HTMLDetailsElement>(
         '#quick-generate-front-design',
     );
+
+    if (instructionBuilder !== null) {
+        instructionBuilder.open = true;
+    }
 
     if (riderSection !== null) {
         riderSection.open = true;
@@ -4597,6 +4603,7 @@ function instructionRecord(
         </section>
 
         <details
+            ref="instructionBuilderElement"
             class="mt-5 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70"
             data-testid="cockpit-voucher-instruction-builder"
         >
@@ -8381,3 +8388,6 @@ function instructionRecord(
         </div>
     </form>
 </template>
+    if (instructionBuilder !== null) {
+        instructionBuilder.open = true;
+    }

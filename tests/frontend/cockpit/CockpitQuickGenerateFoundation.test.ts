@@ -122,6 +122,11 @@ describe('Cockpit Quick Generate foundation', () => {
             .trigger('click');
 
         expect(
+            wrapper
+                .get('[data-testid="cockpit-voucher-instruction-builder"]')
+                .attributes('open'),
+        ).toBeDefined();
+        expect(
             wrapper.get('#quick-generate-contract-rider').attributes('open'),
         ).toBeDefined();
         expect(
