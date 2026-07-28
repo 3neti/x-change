@@ -370,7 +370,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toHaveLength(4);
     });
 
-    it('uses the selected rider OG preview as the live canvas design', async () => {
+    it('keeps rider content on the x-change canvas until artwork is explicitly selected', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -388,6 +388,23 @@ describe('Cockpit Quick Generate foundation', () => {
             .setValue('A distinct beneficiary splash');
 
         await wrapper
+            .find('[data-testid="cockpit-quick-generate-submit-purpose"]')
+            .setValue('A purpose-led OG design');
+
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-logo"]')
+                .exists(),
+        ).toBe(true);
+
+        await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-og-source"]')
             .setValue('message');
 
@@ -396,12 +413,6 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(design.exists()).toBe(true);
-        expect(design.attributes('srcdoc')).toContain('No Message Yet');
-
-        await wrapper
-            .find('[data-testid="cockpit-quick-generate-submit-purpose"]')
-            .setValue('A purpose-led OG design');
-
         expect(design.attributes('srcdoc')).toContain(
             'A purpose-led OG design',
         );

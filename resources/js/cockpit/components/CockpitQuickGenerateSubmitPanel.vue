@@ -2203,13 +2203,8 @@ const riderOgPreviewDocument = computed<string>(() => {
     );
 });
 
-const hasRiderOgDesign = computed<boolean>(() => {
-    return (
-        purpose.value.trim() !== '' ||
-        riderUrl.value.trim() !== '' ||
-        riderSplashContent.value.trim() !== '' ||
-        riderOgSource.value.trim() !== ''
-    );
+const usesRiderArtwork = computed<boolean>(() => {
+    return ['message', 'url', 'splash'].includes(riderOgSource.value.trim());
 });
 
 const riderSummary = computed<Record<string, unknown>>(() => {
@@ -4052,7 +4047,7 @@ function instructionRecord(
                     :expiry="canvasExpiryLabel"
                     :instruction-labels="canvasInstructionLabels"
                     :issued-code="resultCode"
-                    :has-rider-design="hasRiderOgDesign"
+                    :has-rider-design="usesRiderArtwork"
                     :rider-design-document="riderOgPreviewDocument"
                     :cost-estimate="livePricingEstimate"
                     :cost-loading="livePricingEstimating"
@@ -4092,7 +4087,7 @@ function instructionRecord(
             :voucher-type="voucherType"
             :expiry="canvasExpiryLabel"
             :instruction-labels="canvasInstructionLabels"
-            :has-rider-design="hasRiderOgDesign"
+            :has-rider-design="usesRiderArtwork"
             :rider-design-document="riderOgPreviewDocument"
             :cost-estimate="issuedCostEstimate"
             :quantity="count"
