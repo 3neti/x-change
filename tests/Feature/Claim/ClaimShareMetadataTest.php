@@ -17,29 +17,7 @@ beforeEach(function (): void {
     $this->withoutVite();
 });
 
-it('server renders Rider Stamp share metadata with allow-listed URL artwork', function (): void {
-    Http::fake([
-        'https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH' => Http::response(
-            <<<'HTML'
-            <!doctype html>
-            <html>
-                <head>
-                    <meta property="og:title" content="An Example Track">
-                    <meta property="og:description" content="An Example Artist">
-                    <meta property="og:image" content="https://i.scdn.co/image/example-artwork">
-                </head>
-            </html>
-            HTML,
-            200,
-            ['Content-Type' => 'text/html; charset=utf-8'],
-        ),
-        'https://i.scdn.co/image/example-artwork' => Http::response(
-            'fake-jpeg-bytes',
-            200,
-            ['Content-Type' => 'image/jpeg'],
-        ),
-    ]);
-
+it('server renders Rider Stamp share metadata with a composed image endpoint', function (): void {
     $voucher = issueVoucher(validVoucherInstructions(overrides: [
         'rider' => [
             'message' => 'Snacks for today',
@@ -56,6 +34,7 @@ it('server renders Rider Stamp share metadata with allow-listed URL artwork', fu
     ]));
 
     $claimUrl = "https://share.example.test/x/claim/{$voucher->code}";
+    $shareCardUrl = "{$claimUrl}/share-card.png";
 
     $this->withHeader('User-Agent', 'facebookexternalhit/1.1')
         ->get(route('x-change.claim.show', ['code' => $voucher->code]))
@@ -69,13 +48,16 @@ it('server renders Rider Stamp share metadata with allow-listed URL artwork', fu
             false,
         )
         ->assertSee(
-            '<meta property="og:image" content="https://i.scdn.co/image/example-artwork">',
+            '<meta property="og:image" content="'.$shareCardUrl.'">',
             false,
         )
         ->assertSee(
-            '<meta property="og:image:secure_url" content="https://i.scdn.co/image/example-artwork">',
+            '<meta property="og:image:secure_url" content="'.$shareCardUrl.'">',
             false,
         )
+        ->assertSee('<meta property="og:image:type" content="image/png">', false)
+        ->assertSee('<meta property="og:image:width" content="1200">', false)
+        ->assertSee('<meta property="og:image:height" content="630">', false)
         ->assertSee(
             '<meta property="og:url" content="'.$claimUrl.'">',
             false,
@@ -87,7 +69,7 @@ it('server renders Rider Stamp share metadata with allow-listed URL artwork', fu
         )
         ->assertDontSee('data:image', false);
 
-    Http::assertSentCount(2);
+    Http::assertNothingSent();
 });
 
 it('escapes share copy and falls back to the configured public image', function (): void {
@@ -120,10 +102,7 @@ it('escapes share copy and falls back to the configured public image', function 
             '<meta property="og:description" content="Claim safely &amp; enjoy.">',
             false,
         )
-        ->assertSee(
-            '<meta property="og:image" content="https://share.example.test/vendor/x-change/images/logo-orange.png">',
-            false,
-        )
+        ->assertSee('<meta property="og:image" content="https://share.example.test/x/claim/'.$voucher->code.'/share-card.png">', false)
         ->assertDontSee('javascript:alert', false)
         ->assertDontSee('<script>alert', false);
 

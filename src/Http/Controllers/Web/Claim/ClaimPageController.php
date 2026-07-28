@@ -55,6 +55,7 @@ class ClaimPageController extends Controller
             shareMetadata: $shareMetadata->resolve(
                 $voucher,
                 route('x-change.claim.show', ['code' => $voucher->code]),
+                route('x-change.claim.share-card', ['code' => $voucher->code]),
             ),
         );
     }

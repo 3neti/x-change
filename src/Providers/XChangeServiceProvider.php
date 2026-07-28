@@ -94,6 +94,7 @@ use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
+use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
@@ -202,6 +203,7 @@ use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftAuditMetadataBuilder;
@@ -1203,6 +1205,16 @@ class XChangeServiceProvider extends ServiceProvider
                 fn ($app) => $app->make(config(
                     'x-change.services.claim_share_metadata',
                     RiderStampClaimShareMetadataResolver::class,
+                )),
+            );
+        }
+
+        if (! $this->app->bound(ClaimShareCardRendererContract::class)) {
+            $this->app->singleton(
+                ClaimShareCardRendererContract::class,
+                fn ($app) => $app->make(config(
+                    'x-change.services.claim_share_card_renderer',
+                    GdRiderStampClaimShareCardRenderer::class,
                 )),
             );
         }

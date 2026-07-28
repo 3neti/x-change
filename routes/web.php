@@ -11,6 +11,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimCompleteController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimExperienceController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
+use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimShareCardController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
@@ -61,6 +62,13 @@ use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 
 $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
+
+Route::get('x/claim/{code}/share-card.png', ClaimShareCardController::class)
+    ->middleware((array) config(
+        'x-change.claim.share.public_image_middleware',
+        ['throttle:60,1'],
+    ))
+    ->name('x-change.claim.share-card');
 
 // Authenticated operator routes
 Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {

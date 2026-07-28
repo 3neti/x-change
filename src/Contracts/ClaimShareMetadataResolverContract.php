@@ -9,5 +9,9 @@ use LBHurtado\XChange\Data\Claim\ClaimShareMetadataData;
 
 interface ClaimShareMetadataResolverContract
 {
-    public function resolve(Voucher $voucher, string $claimUrl): ClaimShareMetadataData;
+    public function resolve(
+        Voucher $voucher,
+        string $claimUrl,
+        string $shareCardUrl,
+    ): ClaimShareMetadataData;
 }

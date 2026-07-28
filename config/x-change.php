@@ -38,6 +38,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector;
@@ -453,6 +454,7 @@ return [
         'redemption_completion_store' => NullRedemptionCompletionStore::class,
         'claim_execution_factory' => DefaultClaimExecutionFactory::class,
         'claim_share_metadata' => RiderStampClaimShareMetadataResolver::class,
+        'claim_share_card_renderer' => GdRiderStampClaimShareCardRenderer::class,
         'redemption_context_resolver' => DefaultRedemptionContextResolverService::class,
         'redemption_validation' => DefaultRedemptionValidationService::class,
         'redemption_processor' => DefaultRedemptionProcessorService::class,
@@ -1804,6 +1806,17 @@ return [
         'submission_lock_seconds' => 30,
         'submission_lock_wait_seconds' => 3,
         'share' => [
+            'public_image_middleware' => [
+                'throttle:60,1',
+            ],
+            'cache_ttl_seconds' => (int) env(
+                'XCHANGE_CLAIM_SHARE_CACHE_TTL_SECONDS',
+                300,
+            ),
+            'maximum_artwork_pixels' => (int) env(
+                'XCHANGE_CLAIM_SHARE_MAXIMUM_ARTWORK_PIXELS',
+                16000000,
+            ),
             'site_name' => env(
                 'XCHANGE_CLAIM_SHARE_SITE_NAME',
                 env('XCHANGE_BRAND_NAME', env('XCHANGE_PRODUCT_NAME', 'X-Change')),

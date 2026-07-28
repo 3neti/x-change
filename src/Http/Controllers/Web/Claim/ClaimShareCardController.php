@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Controller;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+
+final class ClaimShareCardController extends Controller
+{
+    public function __invoke(
+        Request $request,
+        string $code,
+        VoucherFlowCapabilityResolverContract $capabilities,
+        ClaimShareCardRendererContract $renderer,
+    ): Response {
+        $voucher = Voucher::query()
+            ->where('code', strtoupper(trim($code)))
+            ->first();
+
+        abort_unless(
+            $voucher instanceof Voucher
+                && $capabilities->resolve($voucher)->can_disburse,
+            404,
+        );
+
+        $card = $renderer->render(
+            $voucher,
+            route('x-change.claim.show', ['code' => $voucher->code]),
+        );
+        $headers = $this->headers($card->etag);
+
+        if ($request->header('If-None-Match') === $card->etag) {
+            return response('', 304, $headers);
+        }
+
+        return response($card->contents, 200, $headers);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function headers(string $etag): array
+    {
+        $maxAge = max(
+            60,
+            (int) config('x-change.claim.share.cache_ttl_seconds', 300),
+        );
+
+        return [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => "public, max-age={$maxAge}, s-maxage={$maxAge}",
+            'ETag' => $etag,
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+    }
+}
