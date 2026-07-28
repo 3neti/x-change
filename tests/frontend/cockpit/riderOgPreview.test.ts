@@ -63,6 +63,26 @@ describe('rider OG preview helpers', () => {
         expect(document).toContain('overflow-wrap: anywhere');
     });
 
+    it('renders explicit Rider Splash formats without guessing from content', () => {
+        const plain = buildRiderSplashContent({
+            body: '<strong>Plain</strong>',
+            format: 'plain',
+        });
+        const markdown = buildRiderSplashContent({
+            body: '**Bold** [unsafe](javascript:alert(1))',
+            format: 'markdown',
+        });
+        const html = buildRiderSplashContent({
+            body: '<strong>HTML</strong>',
+            format: 'html',
+        });
+
+        expect(plain).toContain('&lt;strong&gt;Plain&lt;/strong&gt;');
+        expect(markdown).toContain('<strong>Bold</strong>');
+        expect(markdown).not.toContain('javascript:');
+        expect(html).toBe('<strong>HTML</strong>');
+    });
+
     it('renders URL artwork full bleed on canvas and uncropped in OG Meta preview', () => {
         const preview = resolveRiderOgPreview({
             source: 'url',

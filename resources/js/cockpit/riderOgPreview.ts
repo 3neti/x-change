@@ -1,3 +1,6 @@
+import type { RiderContentFormat } from './riderContent';
+import { escapeRiderHtml, renderRiderContent } from './riderContent';
+
 export type RiderOgPreviewSource = 'default' | 'message' | 'url' | 'splash';
 export type RiderArtworkSurface = 'canvas' | 'og-meta';
 
@@ -30,12 +33,7 @@ export type RiderOgPreviewInput = {
 };
 
 export function escapeHtml(value: string): string {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+    return escapeRiderHtml(value);
 }
 
 export function looksLikeHtml(value: string): boolean {
@@ -46,22 +44,23 @@ export function buildRiderSplashContent(input: {
     headline?: string | null;
     body?: string | null;
     cta?: string | null;
+    format?: RiderContentFormat | null;
 }): string {
     const headline = (input.headline ?? '').trim();
     const body = (input.body ?? '').trim();
     const cta = (input.cta ?? '').trim();
 
-    if (headline === '' && cta === '') {
-        return body;
-    }
+    const format = input.format;
+    const renderedBody =
+        body === ''
+            ? null
+            : format === null || format === undefined
+              ? renderRiderContent(body, looksLikeHtml(body) ? 'html' : 'plain')
+              : renderRiderContent(body, format);
 
     return [
         headline === '' ? null : `<h1>${escapeHtml(headline)}</h1>`,
-        body === ''
-            ? null
-            : looksLikeHtml(body)
-              ? body
-              : `<p>${escapeHtml(body)}</p>`,
+        renderedBody,
         cta === '' ? null : `<p><strong>${escapeHtml(cta)}</strong></p>`,
     ]
         .filter((item): item is string => item !== null)

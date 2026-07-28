@@ -20,6 +20,12 @@ trait SanitizesRiderSplashHtml
             return;
         }
 
+        $format = $rider['splash_format'] ?? null;
+
+        if (in_array($format, ['plain', 'markdown'], true)) {
+            return;
+        }
+
         $rider['splash'] = app(RiderHtmlSanitizer::class)
             ->sanitizeSplash($splash);
 

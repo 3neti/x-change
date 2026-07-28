@@ -36,11 +36,13 @@ import {
     resolveRiderOgPreview,
 } from '../riderOgPreview';
 import type { RiderOgPreview } from '../riderOgPreview';
+import type { RiderContentFormat } from '../riderContent';
 import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
 import CockpitRiderEditorDisclosure from './CockpitRiderEditorDisclosure.vue';
+import CockpitRiderMessageEditor from './CockpitRiderMessageEditor.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
 
 const props = defineProps<{
@@ -500,6 +502,7 @@ const purpose = ref(
         stringValue(props.draftContract?.purpose) ??
         '',
 );
+const riderMessageFormat = ref<RiderContentFormat>('plain');
 const count = ref('1');
 const selectedInputFieldValues = ref<string[]>(['mobile']);
 const validationSecret = ref('');
@@ -528,6 +531,7 @@ const riderUrlPreset = ref('');
 const riderRedirectTimeout = ref('');
 const riderSplashHeadline = ref('');
 const riderSplash = ref('');
+const riderSplashFormat = ref<RiderContentFormat>('plain');
 const riderSplashCtaText = ref('');
 const riderSplashTimeout = ref('3');
 const riderSplashMetaSanitized = ref(true);
@@ -695,6 +699,7 @@ function applyTemplateDefaults(templateKey: string): void {
     count.value = defaults.count;
     recipientReference.value = defaults.payee;
     purpose.value = defaults.purpose;
+    riderMessageFormat.value = 'plain';
     selectedInputFieldValues.value = [...defaults.inputFields];
     expiryPreset.value = defaults.expiryPreset;
     expiryCustomDays.value = '';
@@ -713,6 +718,7 @@ function applyTemplateDefaults(templateKey: string): void {
     riderUrlPreset.value = '';
     riderSplashHeadline.value = '';
     riderSplash.value = defaults.riderSplash;
+    riderSplashFormat.value = 'plain';
     riderSplashCtaText.value = '';
     riderSplashTimeout.value = defaults.riderSplashTimeout;
     cashType.value =
@@ -947,6 +953,11 @@ function applyInstructionBlueprint(
         ['rider', 'message'],
         purpose.value,
     );
+    riderMessageFormat.value = instructionContentFormat(
+        instructions,
+        ['rider', 'message_format'],
+        'plain',
+    );
     selectedInputFieldValues.value = instructionStringArray(instructions, [
         'inputs',
         'fields',
@@ -1035,6 +1046,11 @@ function applyInstructionBlueprint(
     ]);
     riderSplashHeadline.value = '';
     riderSplash.value = instructionString(instructions, ['rider', 'splash']);
+    riderSplashFormat.value = instructionContentFormat(
+        instructions,
+        ['rider', 'splash_format'],
+        riderSplash.value === '' ? 'plain' : 'html',
+    );
     riderSplashCtaText.value = '';
     riderSplashTimeout.value = instructionString(
         instructions,
@@ -2176,7 +2192,30 @@ const riderSplashContent = computed<string>(() => {
         headline: riderSplashHeadline.value,
         body: riderSplash.value,
         cta: riderSplashCtaText.value,
+        format: riderSplashFormat.value,
     });
+});
+
+const riderSplashInstructionContent = computed<string>(() => {
+    const headline = riderSplashHeadline.value.trim();
+    const body = riderSplash.value.trim();
+    const cta = riderSplashCtaText.value.trim();
+
+    if (riderSplashFormat.value === 'html') {
+        return riderSplashContent.value;
+    }
+
+    if (riderSplashFormat.value === 'markdown') {
+        return [
+            headline === '' ? null : `# ${headline}`,
+            body === '' ? null : body,
+            cta === '' ? null : `**${cta}**`,
+        ]
+            .filter((item): item is string => item !== null)
+            .join('\n\n');
+    }
+
+    return [headline, body, cta].filter((item) => item !== '').join('\n\n');
 });
 
 const riderSplashPreviewDocument = computed<string>(() => {
@@ -2262,23 +2301,26 @@ const riderSummary = computed<Record<string, unknown>>(() => {
     const message = purpose.value.trim();
     const url = riderUrl.value.trim();
     const redirectTimeout = Number(riderRedirectTimeout.value);
-    const splash = riderSplashContent.value.trim();
+    const splash = riderSplashInstructionContent.value.trim();
     const timeout = Number(riderSplashTimeout.value);
     const htmlProfile = riderSplashMetaProfile.value.trim();
     const ogSource = riderOgSource.value.trim();
 
     return {
         message: message === '' ? null : message,
+        message_format: message === '' ? null : riderMessageFormat.value,
         url: url === '' ? null : url,
         redirect_timeout:
             Number.isFinite(redirectTimeout) && redirectTimeout >= 0
                 ? redirectTimeout
                 : null,
         splash: splash === '' ? null : splash,
+        splash_format: splash === '' ? null : riderSplashFormat.value,
         splash_timeout:
             Number.isFinite(timeout) && timeout > 0 ? timeout : null,
         splash_meta:
-            riderSplashMetaSanitized.value || htmlProfile !== ''
+            riderSplashFormat.value === 'html' &&
+            (riderSplashMetaSanitized.value || htmlProfile !== '')
                 ? {
                       sanitized: riderSplashMetaSanitized.value,
                       ...(htmlProfile === ''
@@ -3638,6 +3680,18 @@ function instructionString(
     fallback = '',
 ): string {
     return stringValue(dataGet(source, path)) ?? fallback;
+}
+
+function instructionContentFormat(
+    source: unknown,
+    path: string[],
+    fallback: RiderContentFormat,
+): RiderContentFormat {
+    const value = instructionString(source, path);
+
+    return value === 'plain' || value === 'markdown' || value === 'html'
+        ? value
+        : fallback;
 }
 
 function instructionStringArray(source: unknown, path: string[]): string[] {
@@ -5449,18 +5503,11 @@ function instructionRecord(
                             :summary="riderMessageDisclosureSummary"
                             data-testid="cockpit-quick-generate-rider-message-editor"
                         >
-                            <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Message
-                                <textarea
-                                    v-model="purpose"
-                                    rows="3"
-                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                    data-testid="cockpit-quick-generate-submit-purpose"
-                                    :disabled="processing"
-                                />
-                            </label>
+                            <CockpitRiderMessageEditor
+                                v-model:message="purpose"
+                                v-model:format="riderMessageFormat"
+                                :disabled="processing"
+                            />
                         </CockpitRiderEditorDisclosure>
                         <CockpitRiderEditorDisclosure
                             title="Rider URL"
@@ -5471,7 +5518,7 @@ function instructionRecord(
                             :summary="riderUrlDisclosureSummary"
                             data-testid="cockpit-quick-generate-rider-cta-section"
                         >
-                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
@@ -5497,6 +5544,21 @@ function instructionRecord(
                                     >
                                         {{ selectedRiderUrlPreset.helper }}
                                     </span>
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Redirect Delay (Seconds)
+                                    <input
+                                        v-model="riderRedirectTimeout"
+                                        type="number"
+                                        min="0"
+                                        max="300"
+                                        step="1"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-redirect-timeout"
+                                        :disabled="processing"
+                                    />
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -5532,6 +5594,25 @@ function instructionRecord(
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
                                 >
+                                    Format
+                                    <select
+                                        v-model="riderSplashFormat"
+                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-splash-format"
+                                        :disabled="processing"
+                                    >
+                                        <option value="plain">
+                                            Plain Text
+                                        </option>
+                                        <option value="markdown">
+                                            Markdown
+                                        </option>
+                                        <option value="html">HTML</option>
+                                    </select>
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                >
                                     Splash Headline
                                     <input
                                         v-model="riderSplashHeadline"
@@ -5554,19 +5635,6 @@ function instructionRecord(
                                     />
                                 </label>
                                 <label
-                                    class="grid min-w-0 content-start gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
-                                >
-                                    Splash Duration (Seconds)
-                                    <input
-                                        v-model="riderSplashTimeout"
-                                        type="number"
-                                        min="0"
-                                        step="1"
-                                        class="h-10 w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                                <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 lg:col-span-3 dark:text-orange-100"
                                 >
                                     Rider Splash Content
@@ -5579,6 +5647,49 @@ function instructionRecord(
                                     />
                                 </label>
                                 <div
+                                    class="grid gap-3 lg:col-span-3 lg:grid-cols-3"
+                                >
+                                    <label
+                                        class="grid min-w-0 content-start gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                    >
+                                        Splash Duration (Seconds)
+                                        <input
+                                            v-model="riderSplashTimeout"
+                                            type="number"
+                                            min="0"
+                                            max="60"
+                                            step="1"
+                                            class="h-10 w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            :disabled="processing"
+                                        />
+                                    </label>
+                                    <label
+                                        v-if="riderSplashFormat === 'html'"
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                    >
+                                        HTML Profile
+                                        <input
+                                            v-model="riderSplashMetaProfile"
+                                            type="text"
+                                            class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-splash-profile"
+                                            :disabled="processing"
+                                        />
+                                    </label>
+                                    <label
+                                        v-if="riderSplashFormat === 'html'"
+                                        class="flex items-center gap-2 self-end rounded-xl border border-orange-200 bg-white p-3 text-xs font-medium text-orange-950 dark:border-orange-900/60 dark:bg-slate-950 dark:text-orange-100"
+                                    >
+                                        <input
+                                            v-model="riderSplashMetaSanitized"
+                                            type="checkbox"
+                                            class="rounded border-orange-300"
+                                            :disabled="processing"
+                                        />
+                                        Sanitize Custom HTML
+                                    </label>
+                                </div>
+                                <div
                                     class="rounded-xl border border-orange-200 bg-white p-3 lg:col-span-3 dark:border-orange-900/60 dark:bg-slate-950"
                                     data-testid="cockpit-quick-generate-rider-splash-preview"
                                 >
@@ -5590,8 +5701,11 @@ function instructionRecord(
                                     <p
                                         class="mt-1 text-[11px] leading-snug text-orange-800 dark:text-orange-200"
                                     >
-                                        Custom HTML is isolated inside this
-                                        preview.
+                                        {{
+                                            riderSplashFormat === 'html'
+                                                ? 'Custom HTML is isolated inside this preview.'
+                                                : 'Formatting is rendered inside an isolated preview.'
+                                        }}
                                     </p>
                                     <div class="mt-2">
                                         <CockpitRiderPreviewFrame
@@ -5712,58 +5826,6 @@ function instructionRecord(
                                 </template>
                             </div>
                         </CockpitRiderEditorDisclosure>
-                        <details
-                            class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
-                            data-testid="cockpit-quick-generate-rider-advanced"
-                        >
-                            <summary
-                                class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
-                            >
-                                Advanced Experience Settings
-                            </summary>
-                            <div
-                                class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2"
-                            >
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Redirect Delay (Seconds)
-                                    <input
-                                        v-model="riderRedirectTimeout"
-                                        type="number"
-                                        min="0"
-                                        max="300"
-                                        step="1"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-redirect-timeout"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    HTML Profile
-                                    <input
-                                        v-model="riderSplashMetaProfile"
-                                        type="text"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-splash-profile"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                                <label
-                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                                >
-                                    <input
-                                        v-model="riderSplashMetaSanitized"
-                                        type="checkbox"
-                                        class="rounded border-slate-300"
-                                        :disabled="processing"
-                                    />
-                                    Sanitize Custom HTML
-                                </label>
-                            </div>
-                        </details>
                     </div>
                 </details>
 

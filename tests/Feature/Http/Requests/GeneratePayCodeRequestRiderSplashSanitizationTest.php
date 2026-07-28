@@ -118,3 +118,25 @@ it('preserves existing rider splash metadata while marking sanitization', functi
             'html_profile' => 'rider_splash',
         ]);
 });
+
+it('preserves Markdown source for format-aware claim rendering', function (): void {
+    $request = GeneratePayCodeRequest::create(
+        uri: '/x-change/pay-codes',
+        method: 'POST',
+        parameters: [
+            'rider' => [
+                'splash' => "# Welcome\n\n**Use this Pay Code**",
+                'splash_format' => 'markdown',
+            ],
+        ],
+    );
+
+    $request->setContainer(app());
+
+    $method = new ReflectionMethod($request, 'prepareForValidation');
+    $method->invoke($request);
+
+    expect($request->input('rider.splash'))
+        ->toBe("# Welcome\n\n**Use this Pay Code**")
+        ->and($request->input('rider.splash_meta'))->toBeNull();
+});

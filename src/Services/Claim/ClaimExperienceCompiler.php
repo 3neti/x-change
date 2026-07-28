@@ -15,6 +15,7 @@ class ClaimExperienceCompiler
 {
     public function __construct(
         protected NamedVoucherSliceService $namedSlices,
+        protected RiderContentRenderer $riderContent,
     ) {}
 
     public function compile(Voucher $voucher): ClaimExperienceData
@@ -29,6 +30,11 @@ class ClaimExperienceCompiler
         $phases = [];
 
         if ($hasRiderSplash) {
+            $splash = $this->riderContent->splash(
+                data_get($rider, 'splash'),
+                data_get($rider, 'splash_format'),
+            );
+
             $phases[] = new ClaimPhaseData(
                 key: 'rider_intro',
                 owner: 'x-rider',
@@ -39,10 +45,10 @@ class ClaimExperienceCompiler
                     'enabled' => true,
                     'phase' => 'pre_claim',
                     'presentation' => 'fullscreen',
-                    'content' => data_get($rider, 'splash'),
+                    'content' => $splash,
                     'content_type' => 'html',
                     'payload' => [
-                        'content' => data_get($rider, 'splash'),
+                        'content' => $splash,
                         'content_type' => 'html',
                         'timeout' => data_get($rider, 'splash_timeout'),
                         'presentation' => 'fullscreen',
@@ -78,6 +84,11 @@ class ClaimExperienceCompiler
         );
 
         if ($hasRiderMessage) {
+            $message = $this->riderContent->message(
+                data_get($rider, 'message'),
+                data_get($rider, 'message_format'),
+            );
+
             $phases[] = new ClaimPhaseData(
                 key: 'success_rider',
                 owner: 'x-rider',
@@ -87,11 +98,11 @@ class ClaimExperienceCompiler
                     'key' => 'success-message',
                     'enabled' => true,
                     'phase' => 'post_claim',
-                    'content' => data_get($rider, 'message'),
-                    'content_type' => 'text',
+                    'content' => $message,
+                    'content_type' => 'html',
                     'payload' => [
-                        'content' => data_get($rider, 'message'),
-                        'content_type' => 'text',
+                        'content' => $message,
+                        'content_type' => 'html',
                     ],
                 ]],
             );

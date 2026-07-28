@@ -95,6 +95,32 @@ it('keeps form-flow splash available when rider intro splash does not exist', fu
         ->and($formFlow['skip_stages'])->toBe([]);
 });
 
+it('renders format-aware Rider content into sanitized claim HTML', function () {
+    $voucher = fakeClaimVoucher([
+        'rider' => [
+            'message' => '**Claim complete** <script>alert(1)</script>',
+            'message_format' => 'markdown',
+            'splash' => "# Welcome\n\n[Unsafe](javascript:alert(1))",
+            'splash_format' => 'markdown',
+        ],
+    ]);
+
+    $experience = app(ClaimExperienceCompiler::class)
+        ->compile($voucher)
+        ->toArray();
+
+    $phases = collect($experience['phases']);
+    $splash = $phases->firstWhere('key', 'rider_intro');
+    $message = $phases->firstWhere('key', 'success_rider');
+
+    expect(data_get($splash, 'stages.0.content_type'))->toBe('html')
+        ->and(data_get($splash, 'stages.0.content'))->toContain('<h1>Welcome</h1>')
+        ->and(data_get($splash, 'stages.0.content'))->not->toContain('javascript:')
+        ->and(data_get($message, 'stages.0.content_type'))->toBe('html')
+        ->and(data_get($message, 'stages.0.content'))->toContain('<strong>Claim complete</strong>')
+        ->and(data_get($message, 'stages.0.content'))->not->toContain('<script>');
+});
+
 it('assigns exactly one redirect owner when rider url exists', function () {
     $voucher = fakeClaimVoucher([
         'rider' => [

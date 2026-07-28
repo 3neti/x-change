@@ -982,9 +982,8 @@ describe('Cockpit Quick Generate foundation', () => {
         });
         expect(payload.rider).toMatchObject({
             message: 'Operator test issuance',
-            splash_meta: {
-                sanitized: true,
-            },
+            message_format: 'plain',
+            splash_meta: null,
         });
         expect(payload.claim).toEqual({
             outcomes: [
@@ -2013,9 +2012,8 @@ describe('Cockpit Quick Generate foundation', () => {
         });
         expect(payload.rider).toMatchObject({
             message: 'Campaign payout',
-            splash_meta: {
-                sanitized: true,
-            },
+            message_format: 'plain',
+            splash_meta: null,
         });
         expect(payload.metadata.campaign).toEqual({
             planning_key: 'plan-35d',
