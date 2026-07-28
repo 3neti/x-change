@@ -4785,8 +4785,12 @@ Current boundary:
   1536 × 1024 PNG is now stored by SHA-256 and the canonical 1200 × 630 share
   card renders the rose artwork, Stamp copy, recipient label, and claim QR.
 - New issuance now retries only transient connection failures, HTTP 429, and
-  server errors using a bounded, configurable budget. Permanent client errors
-  still fail closed to the x-change artwork fallback.
+  server errors using a bounded, configurable budget.
+- New issuance now requires a trusted snapshot when the Stamp explicitly
+  selects Rider Splash artwork. Exhausted retries or permanent validation
+  failures return an actionable 422 response and stop before pricing, funding
+  checks, Voucher creation, or financial mutation. Existing Pay Codes without
+  a snapshot retain the safe x-change fallback until explicitly backfilled.
 - Public claim and share-card requests remain read-only and never fetch Rider
   source URLs. The change cannot authorize claims, call a provider, post
   Treasury entries, or move money.
@@ -4800,8 +4804,9 @@ Current boundary:
 - The Pay Code canvas gives supporting copy three compact lines, retaining
   short symbol and attribution rows without rendering raw Splash HTML.
 - Browser canvas and crawler metadata preserve valid Unicode emoji.
-- The generated PNG uses readable symbol names when its bundled raster font
-  cannot draw an emoji, preventing mojibake while retaining meaning.
+- The generated PNG uses package-owned vector glyphs for the known Rider
+  symbol sequence, preventing host-font drift. Unknown pictographs retain the
+  readable text fallback.
 - Existing Pay Code `XV9D` passed live acceptance with the symbol sequence and
   `— e.e. cummings` visible on the canvas. Its durable rose artwork was
   backfilled, and the generated share card renders readable supporting copy.
@@ -4809,3 +4814,20 @@ Current boundary:
 - Boundary remains presentation-only: no Voucher value, claim authorization,
   canonical claim destination, settlement, Treasury posting, or money movement
   changed.
+
+# 2026-07-28 — LHNV Stamp Share-Card Parity
+
+- Existing Pay Code `LHNV` was explicitly backfilled with its validated
+  1536 × 1024 rose artwork. The operation changed presentation metadata only.
+- PHP share-card amounts now render with a deterministic drawn peso sign
+  (`₱57.00`) instead of `PHP 57.00` or a missing-font square.
+- Known Rider symbols now render as a compact package-owned vector row in the
+  PNG while HTML metadata keeps the original Unicode emoji.
+- Live LHNV acceptance confirmed the canonical 1200 × 630 card renders the
+  rose background, peso amount, title, supporting paragraph, six Rider
+  symbols, attribution, audience label, and claim QR.
+- Mandatory artwork-preflight coverage passed with 12 tests and 90 assertions.
+  Share-card and amount-format coverage passed with 10 tests and 51
+  assertions. Pint and `git diff --check` completed successfully.
+- Public crawler requests remain read-only and never fetch Rider source URLs;
+  no claim, provider, Treasury, or money-movement boundary changed.

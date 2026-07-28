@@ -150,6 +150,13 @@ server errors within a small configured budget. It does not retry permanent
 client errors. This makes remote artwork capture resilient without allowing
 the public claim or share-card request to contact the Rider source.
 
+When the Stamp explicitly selects Rider Splash artwork, the snapshot is a
+mandatory issuance preflight. If trusted bytes cannot be secured after the
+retry budget, issuance returns an actionable validation response and stops
+before pricing, funding checks, Voucher creation, or financial mutation.
+Selecting x-change, Rider URL, text-only, or no artwork does not invoke this
+Splash boundary.
+
 The safe descriptor contains the schema, hash, MIME type, dimensions, and
 capture time. It never exposes a source URL, filesystem disk, or storage path.
 Caller-supplied descriptors are discarded during issuance.
@@ -194,10 +201,14 @@ crawler metadata consume the same stored Stamp decision.
 When Rider Splash supplies copy, its paragraphs remain ordered and are joined
 with quiet separators. The canvas provides three compact supporting-copy lines
 so short symbol and attribution rows remain visible. Browser surfaces and
-crawler text retain valid Unicode emoji. The bundled raster font cannot draw
-every emoji reliably, so the generated PNG substitutes readable names for
-known symbols and removes unsupported pictographs instead of emitting garbled
-byte glyphs.
+crawler text retain valid Unicode emoji. The generated PNG paints the known
+Rider symbol sequence with package-owned GD vector glyphs, avoiding host-font
+and operating-system differences. Unknown pictographs retain the readable text
+fallback instead of emitting garbled byte glyphs.
+
+PHP amounts use a deterministic drawn peso sign (`₱`) because the bundled
+raster font does not contain that glyph. Other currencies retain their ISO
+code.
 
 The package-owned claim root view emits Open Graph, Twitter Card, canonical,
 description, ordinary title, image MIME type, and 1200 × 630 dimensions. A
