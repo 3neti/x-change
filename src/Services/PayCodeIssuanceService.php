@@ -12,12 +12,14 @@ use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
+use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 
 class PayCodeIssuanceService implements PayCodeIssuanceContract
 {
     public function __construct(
         protected RiderSplashArtworkSnapshotterContract $splashArtwork,
+        protected RiderStampArtifactStoreContract $stampArtifacts,
     ) {}
 
     public function issue(mixed $issuer, array $input): array
@@ -48,6 +50,8 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
                 $code = (string) $issued->code;
                 $redeemPath = $this->redeemPath($code);
+                $redeemUrl = $this->redeemUrl($redeemPath);
+                $this->stampArtifacts->materialize($issued, $redeemUrl);
 
                 return [
                     'voucher_id' => $issued->id,
@@ -56,7 +60,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                     'amount' => data_get($instructions->toArray(), 'cash.amount'),
                     'currency' => data_get($instructions->toArray(), 'cash.currency'),
                     'links' => [
-                        'redeem' => $this->redeemUrl($redeemPath),
+                        'redeem' => $redeemUrl,
                         'redeem_path' => $redeemPath,
                     ],
                     'metadata' => $issued->metadata ?? null,

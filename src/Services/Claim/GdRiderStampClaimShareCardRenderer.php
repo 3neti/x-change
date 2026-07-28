@@ -13,6 +13,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
+use LBHurtado\XChange\Contracts\RiderStampClaimCardComposerContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
 use LBHurtado\XChange\Contracts\RiderStampRecipientResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimShareCardData;
@@ -21,7 +22,7 @@ use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 use ReflectionClass;
 use RuntimeException;
 
-final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract
+final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
     private const string CacheVersion = 'v10';
 
@@ -54,6 +55,18 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         if (! is_string($contents) || $contents === '') {
             throw new RuntimeException('The Rider Stamp share card could not be rendered.');
         }
+
+        return new ClaimShareCardData(
+            contents: $contents,
+            etag: '"'.hash('sha256', $contents).'"',
+        );
+    }
+
+    public function compose(
+        Voucher $voucher,
+        string $claimUrl,
+    ): ClaimShareCardData {
+        $contents = $this->renderPng($voucher, $claimUrl);
 
         return new ClaimShareCardData(
             contents: $contents,

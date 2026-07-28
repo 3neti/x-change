@@ -40,6 +40,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
+use LBHurtado\XChange\Services\Claim\DefaultRiderStampArtifactStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
@@ -462,6 +463,8 @@ return [
         'rider_stamp_copy' => DefaultRiderStampCopyResolver::class,
         'rider_stamp_recipient' => DefaultRiderStampRecipientResolver::class,
         'rider_splash_artwork_snapshotter' => DefaultRiderSplashArtworkSnapshotter::class,
+        'rider_stamp_artifact_store' => DefaultRiderStampArtifactStore::class,
+        'rider_stamp_claim_card_composer' => GdRiderStampClaimShareCardRenderer::class,
         'redemption_context_resolver' => DefaultRedemptionContextResolverService::class,
         'redemption_validation' => DefaultRedemptionValidationService::class,
         'redemption_processor' => DefaultRedemptionProcessorService::class,
@@ -1821,6 +1824,20 @@ return [
                 'XCHANGE_CLAIM_SHARE_CACHE_TTL_SECONDS',
                 300,
             ),
+            'artifact' => [
+                'disk' => env(
+                    'XCHANGE_CLAIM_SHARE_ARTIFACT_DISK',
+                    'local',
+                ),
+                'directory' => env(
+                    'XCHANGE_CLAIM_SHARE_ARTIFACT_DIRECTORY',
+                    'x-change/claim/stamp-artifacts',
+                ),
+                'rendering_manifest_version' => env(
+                    'XCHANGE_CLAIM_SHARE_RENDERING_MANIFEST_VERSION',
+                    'x-change.rider-stamp-render-manifest.v1',
+                ),
+            ],
             'maximum_artwork_pixels' => (int) env(
                 'XCHANGE_CLAIM_SHARE_MAXIMUM_ARTWORK_PIXELS',
                 16000000,

@@ -153,6 +153,8 @@ use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
 use LBHurtado\XChange\Contracts\RedemptionValidationContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
+use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
+use LBHurtado\XChange\Contracts\RiderStampClaimCardComposerContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
 use LBHurtado\XChange\Contracts\RiderStampRecipientResolverContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
@@ -208,6 +210,7 @@ use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
+use LBHurtado\XChange\Services\Claim\DefaultRiderStampArtifactStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
@@ -1233,6 +1236,26 @@ class XChangeServiceProvider extends ServiceProvider
                 fn ($app) => $app->make(config(
                     'x-change.services.rider_splash_artwork_snapshotter',
                     DefaultRiderSplashArtworkSnapshotter::class,
+                )),
+            );
+        }
+
+        if (! $this->app->bound(RiderStampClaimCardComposerContract::class)) {
+            $this->app->singleton(
+                RiderStampClaimCardComposerContract::class,
+                fn ($app) => $app->make(config(
+                    'x-change.services.rider_stamp_claim_card_composer',
+                    GdRiderStampClaimShareCardRenderer::class,
+                )),
+            );
+        }
+
+        if (! $this->app->bound(RiderStampArtifactStoreContract::class)) {
+            $this->app->singleton(
+                RiderStampArtifactStoreContract::class,
+                fn ($app) => $app->make(config(
+                    'x-change.services.rider_stamp_artifact_store',
+                    DefaultRiderStampArtifactStore::class,
                 )),
             );
         }
