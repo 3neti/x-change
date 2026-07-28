@@ -884,11 +884,11 @@ function stringValue(value: unknown): string | null {
             class="mt-3 flex flex-wrap items-center gap-2 px-1"
             data-testid="cockpit-pay-code-canvas-controls"
         >
-            <div class="mr-auto flex items-center">
+            <div v-if="$slots.navigation" class="mr-auto flex items-center">
                 <slot name="navigation" />
             </div>
             <div
-                class="flex shrink-0 flex-nowrap items-center justify-end gap-2"
+                class="ml-auto flex shrink-0 flex-nowrap items-center justify-end gap-2"
                 data-testid="cockpit-pay-code-canvas-action-rail"
             >
                 <div

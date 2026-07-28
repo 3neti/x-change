@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import CockpitPayCodeTemplateStoreController from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateStoreController';
-import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
 import { Link, router } from '@inertiajs/vue3';
 import {
     Clock3,
     FilePlus2,
-    Landmark,
     LayoutTemplate,
     Palette,
     RotateCcw,
@@ -4514,17 +4512,6 @@ function instructionRecord(
                     :cost-error="livePricingEstimateError"
                     :quantity="count"
                 >
-                    <template #navigation>
-                        <Link
-                            :href="fundingIndex()"
-                            prefetch
-                            class="inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold whitespace-nowrap text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
-                            data-testid="cockpit-quick-generate-funding-link"
-                        >
-                            <Landmark class="size-3.5" aria-hidden="true" />
-                            Funding
-                        </Link>
-                    </template>
                     <template #action>
                         <button
                             type="button"

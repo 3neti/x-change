@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
+import { Link } from '@inertiajs/vue3';
+import { Landmark } from 'lucide-vue-next';
 import { computed } from 'vue';
 import CockpitDiagnosticsDisclosure from '../components/CockpitDiagnosticsDisclosure.vue';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
@@ -1074,20 +1077,31 @@ function stringValue(value: unknown): string | null {
     >
         <section class="space-y-4" data-testid="cockpit-quick-generate-shell">
             <header
-                class="px-1"
+                class="flex items-start justify-between gap-4 px-1"
                 data-testid="cockpit-quick-generate-header"
             >
-                <h2
-                    class="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
+                <div class="min-w-0">
+                    <h2
+                        class="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
+                    >
+                        Create Pay Code
+                    </h2>
+                    <p
+                        class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"
+                    >
+                        Set the value, recipient, and purpose. Add safeguards
+                        only when needed.
+                    </p>
+                </div>
+                <Link
+                    :href="fundingIndex()"
+                    prefetch
+                    class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold whitespace-nowrap text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
+                    data-testid="cockpit-quick-generate-funding-link"
                 >
-                    Create Pay Code
-                </h2>
-                <p
-                    class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"
-                >
-                    Set the value, recipient, and purpose. Add safeguards only
-                    when needed.
-                </p>
+                    <Landmark class="size-3.5" aria-hidden="true" />
+                    Funding
+                </Link>
             </header>
 
             <div

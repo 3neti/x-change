@@ -3178,7 +3178,10 @@ describe('Cockpit Quick Generate foundation', () => {
         const canvasControls = essentialsCanvas.find(
             '[data-testid="cockpit-pay-code-canvas-controls"]',
         );
-        const fundingLink = canvasControls.find(
+        const quickGenerateHeader = wrapper.get(
+            '[data-testid="cockpit-quick-generate-header"]',
+        );
+        const fundingLink = quickGenerateHeader.get(
             '[data-testid="cockpit-quick-generate-funding-link"]',
         );
 
@@ -3186,6 +3189,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(canvasControls.text()).toContain('Issue Pay Code');
         expect(canvasControls.text()).toContain('Stamp');
         expect(canvasControls.text()).toContain('Cost');
+        expect(canvasControls.text()).not.toContain('Funding');
+        expect(quickGenerateHeader.classes()).toContain('justify-between');
+        expect(quickGenerateHeader.text()).toContain('Create Pay Code');
         expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');
         const actionRail = canvasControls.get(
             '[data-testid="cockpit-pay-code-canvas-action-rail"]',
