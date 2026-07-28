@@ -10,7 +10,10 @@ import type {
     PayCodeCostCharge,
     PayCodeCostEstimate,
 } from '../../composables/usePayCodeCostEstimate';
-import type { RiderStampPreviewSource } from '../riderStampPreview';
+import type {
+    RiderStampPreview,
+    RiderStampPreviewSource,
+} from '../riderStampPreview';
 
 const props = withDefaults(
     defineProps<{
@@ -26,6 +29,7 @@ const props = withDefaults(
         hasRiderDesign?: boolean;
         riderDesignSource?: RiderStampPreviewSource;
         riderDesignDocument?: string;
+        riderStamp?: RiderStampPreview | null;
         presentation?: 'live' | 'finalized';
         costEstimate?: PayCodeCostEstimate | null;
         costLoading?: boolean;
@@ -41,6 +45,7 @@ const props = withDefaults(
         hasRiderDesign: false,
         riderDesignSource: 'default',
         riderDesignDocument: '',
+        riderStamp: null,
         presentation: 'live',
         costEstimate: null,
         costLoading: false,
@@ -102,16 +107,30 @@ const displayedCode = computed<string>(() => {
     return props.issuedCode?.trim() || 'PAY CODE PREVIEW';
 });
 
-const isUnissuedCanvas = computed<boolean>(() => !props.issuedCode?.trim());
-
-const riderArtworkFrameClass = computed<string>(() => {
-    return props.riderDesignSource === 'message' ? 'opacity-60' : 'opacity-100';
+const riderArtworkScrimClass = computed<string>(() => {
+    return 'from-slate-950/70 via-slate-950/25 to-transparent';
 });
 
-const riderArtworkScrimClass = computed<string>(() => {
-    return props.riderDesignSource === 'message'
-        ? 'from-slate-950/95 via-slate-950/80 to-slate-950/55'
-        : 'from-slate-950/70 via-slate-950/25 to-transparent';
+const riderArtworkFrameClass = computed<string>(() => {
+    return props.riderStamp === null && props.riderDesignSource === 'message'
+        ? 'opacity-60'
+        : 'opacity-100';
+});
+
+const showStampLogo = computed<boolean>(() => {
+    return props.riderStamp?.composition.showLogo !== false;
+});
+
+const showStampTagline = computed<boolean>(() => {
+    return props.riderStamp?.composition.showTagline !== false;
+});
+
+const showStampCopy = computed<boolean>(() => {
+    return (
+        props.riderStamp?.composition.copySource !== 'none' &&
+        ((props.riderStamp?.title.trim() ?? '') !== '' ||
+            (props.riderStamp?.description.trim() ?? '') !== '')
+    );
 });
 
 const costCurrency = computed<string>(() => {
@@ -439,7 +458,7 @@ function stringValue(value: unknown): string | null {
             <div class="relative flex h-full flex-col justify-between gap-5">
                 <div class="flex items-start justify-between gap-4">
                     <div
-                        v-if="isUnissuedCanvas"
+                        v-if="showStampLogo"
                         class="flex min-w-0 items-center gap-2.5"
                         data-testid="cockpit-pay-code-canvas-blank-brand"
                     >
@@ -461,6 +480,7 @@ function stringValue(value: unknown): string | null {
                                 x-change
                             </p>
                             <p
+                                v-if="showStampTagline"
                                 class="mt-1 max-w-52 text-[0.62rem] leading-4 font-semibold text-balance @md:text-xs"
                                 :class="
                                     hasRiderDesign
@@ -476,26 +496,19 @@ function stringValue(value: unknown): string | null {
                             </p>
                         </div>
                     </div>
-                    <div v-else>
+                    <div v-else class="min-h-10">
                         <p
-                            class="text-[0.65rem] font-black tracking-[0.22em] uppercase"
+                            v-if="showStampTagline"
+                            class="max-w-52 text-[0.62rem] leading-4 font-semibold text-balance @md:text-xs"
                             :class="
                                 hasRiderDesign
-                                    ? 'text-emerald-300'
-                                    : 'text-emerald-700 dark:text-emerald-300'
+                                    ? 'text-white/80'
+                                    : 'text-slate-600 dark:text-amber-100/70'
                             "
+                            data-testid="cockpit-pay-code-canvas-tagline"
                         >
-                            x-change
-                        </p>
-                        <p
-                            class="mt-1 text-xs font-semibold"
-                            :class="
-                                hasRiderDesign
-                                    ? 'text-white/65'
-                                    : 'text-slate-500 dark:text-amber-100/60'
-                            "
-                        >
-                            Digital Pay Code
+                            Money should adapt to people.
+                            <span class="block">Not the other way around.</span>
                         </p>
                     </div>
                     <span
@@ -506,6 +519,28 @@ function stringValue(value: unknown): string | null {
                 </div>
 
                 <div>
+                    <div
+                        v-if="showStampCopy"
+                        class="mb-3 max-w-[82%]"
+                        data-testid="cockpit-pay-code-canvas-stamp-copy"
+                    >
+                        <p
+                            class="line-clamp-1 text-base font-black text-balance @md:text-xl"
+                        >
+                            {{ riderStamp?.title }}
+                        </p>
+                        <p
+                            v-if="riderStamp?.description"
+                            class="mt-1 line-clamp-2 text-[0.65rem] leading-4 @md:text-xs"
+                            :class="
+                                hasRiderDesign
+                                    ? 'text-white/75'
+                                    : 'text-slate-600 dark:text-amber-100/70'
+                            "
+                        >
+                            {{ riderStamp.description }}
+                        </p>
+                    </div>
                     <p
                         class="text-[0.65rem] font-semibold tracking-[0.18em] uppercase"
                         :class="
@@ -525,7 +560,9 @@ function stringValue(value: unknown): string | null {
                     <p
                         v-if="
                             purpose &&
-                            (!hasRiderDesign || riderDesignSource !== 'message')
+                            riderDesignSource !== 'message' &&
+                            (!showStampCopy ||
+                                riderStamp?.composition.copySource !== 'message')
                         "
                         class="mt-1 max-w-[80%] truncate text-xs"
                         :class="

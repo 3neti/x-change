@@ -145,7 +145,7 @@ describe('Quick Generate last instructions', () => {
                 position: 'top',
                 scrim: 12,
                 theme: 'dark',
-                version: 1,
+                version: 2,
             },
         });
         expect(

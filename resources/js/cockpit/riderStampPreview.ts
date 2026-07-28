@@ -125,68 +125,36 @@ export function buildRiderSplashContent(input: {
 export function resolveRiderStampPreview(
     input: RiderStampPreviewInput,
 ): RiderStampPreview {
-    const source = normalizeSource(input.source);
+    const legacySource = normalizeSource(input.source);
     const composition = normalizeRiderStampComposition(input);
     const message = (input.message ?? '').trim();
     const url = (input.url ?? '').trim();
     const splashHeadline = (input.splashHeadline ?? '').trim();
     const splashBody = (input.splashBody ?? '').trim();
     const splashCta = (input.splashCta ?? '').trim();
+    const source = compositionPreviewSource(composition, legacySource);
     const presentation = {
         fit: normalizeFit(input.fit),
         position: normalizePosition(input.position),
         scrim: normalizeScrim(input.scrim),
         theme: normalizeTheme(input.theme),
     };
-    const preview: Omit<
-        RiderStampPreview,
-        'fit' | 'position' | 'scrim' | 'theme'
-    > =
-        source === 'message'
-            ? {
-                  source,
-                  label: 'Rider Stamp Preview',
-                  title: message === '' ? 'No Message Yet' : message,
-                  description: 'Preview based on the Rider Message.',
-                  reference: 'Rider Message',
-                  imageUrl: null,
-              }
-            : source === 'url'
-              ? resolveUrlStamp(input, source, url)
-              : source === 'splash'
-                ? {
-                      source,
-                      label: 'Rider Stamp Preview',
-                      title:
-                          splashHeadline === ''
-                              ? splashBody || 'No Introduction Yet'
-                              : splashHeadline,
-                      description:
-                          splashCta === ''
-                              ? splashBody || 'No Introduction Message Yet.'
-                              : `${splashBody || 'No Introduction Message Yet.'} · ${splashCta}`,
-                      reference: 'Rider Splash',
-                      imageUrl: null,
-                  }
-                : {
-                      source,
-                      label: 'Rider Stamp Preview',
-                      title:
-                          splashHeadline ||
-                          message ||
-                          (url === '' ? 'Default Claim Preview' : url),
-                      description:
-                          splashBody ||
-                          message ||
-                          'Uses the first available message, link, or introduction.',
-                      reference: 'x-change',
-                      imageUrl: null,
-                  };
+    const copy = resolveStampCopy(input, composition, {
+        message,
+        url,
+        splashHeadline,
+        splashBody,
+        splashCta,
+    });
+    const artwork = resolveStampArtwork(input, composition, url);
 
     return {
-        ...preview,
-        title: input.title?.trim() || preview.title,
-        description: input.description?.trim() || preview.description,
+        source,
+        label: 'Rider Stamp',
+        title: input.title?.trim() || copy.title,
+        description: input.description?.trim() || copy.description,
+        reference: artwork.reference,
+        imageUrl: artwork.imageUrl,
         ...presentation,
         composition,
     };
@@ -214,22 +182,133 @@ export function normalizeRiderStampComposition(
     };
 }
 
-function resolveUrlStamp(
+function resolveStampArtwork(
     input: RiderStampPreviewInput,
-    source: 'url',
+    composition: RiderStampComposition,
     url: string,
-): Omit<RiderStampPreview, 'fit' | 'position' | 'scrim' | 'theme'> {
+): { imageUrl: string | null; reference: string } {
+    if (composition.artworkSource === 'x_change') {
+        return { imageUrl: null, reference: 'x-change' };
+    }
+
+    if (composition.artworkSource === 'none') {
+        return { imageUrl: null, reference: 'No Artwork' };
+    }
+
+    if (composition.artworkSource === 'splash') {
+        return { imageUrl: null, reference: 'Rider Splash' };
+    }
+
     const artwork =
         input.urlArtwork?.available === true ? input.urlArtwork : null;
 
     return {
-        source,
-        label: 'Rider Stamp Preview',
-        title: artwork?.title || (url === '' ? 'No Action URL Yet' : url),
-        description: artwork?.description || 'Preview based on the Rider URL.',
         reference: artwork?.reference || 'Rider URL',
         imageUrl: artwork?.image_url || null,
     };
+}
+
+function resolveStampCopy(
+    input: RiderStampPreviewInput,
+    composition: RiderStampComposition,
+    sources: {
+        message: string;
+        url: string;
+        splashHeadline: string;
+        splashBody: string;
+        splashCta: string;
+    },
+): { title: string; description: string } {
+    const urlArtwork =
+        input.urlArtwork?.available === true ? input.urlArtwork : null;
+    const selectedSource =
+        composition.copySource === 'automatic'
+            ? firstAvailableCopySource(sources)
+            : composition.copySource;
+
+    if (selectedSource === 'message') {
+        return {
+            title: sources.message || 'Pay Code',
+            description:
+                sources.message === ''
+                    ? 'Add a purpose to give this Pay Code context.'
+                    : 'Prepared with a message for the recipient.',
+        };
+    }
+
+    if (selectedSource === 'url') {
+        return {
+            title:
+                urlArtwork?.title ||
+                (sources.url === '' ? 'Pay Code' : sources.url),
+            description:
+                urlArtwork?.description ||
+                (sources.url === ''
+                    ? 'Add an action link when the recipient needs one.'
+                    : 'Continue to this link after the claim.'),
+        };
+    }
+
+    if (selectedSource === 'splash') {
+        return {
+            title:
+                sources.splashHeadline ||
+                sources.splashBody ||
+                'Pay Code Introduction',
+            description:
+                sources.splashCta ||
+                sources.splashBody ||
+                'An introduction appears before the claim.',
+        };
+    }
+
+    if (selectedSource === 'none') {
+        return { title: '', description: '' };
+    }
+
+    return {
+        title: 'Pay Code',
+        description: 'Money should adapt to people. Not the other way around.',
+    };
+}
+
+function firstAvailableCopySource(sources: {
+    message: string;
+    url: string;
+    splashHeadline: string;
+    splashBody: string;
+}): RiderStampCopySource {
+    if (sources.message !== '') {
+        return 'message';
+    }
+
+    if (sources.splashHeadline !== '' || sources.splashBody !== '') {
+        return 'splash';
+    }
+
+    return sources.url === '' ? 'custom' : 'url';
+}
+
+function compositionPreviewSource(
+    composition: RiderStampComposition,
+    legacySource: RiderStampPreviewSource,
+): RiderStampPreviewSource {
+    if (
+        composition.artworkSource === 'url' ||
+        composition.artworkSource === 'splash'
+    ) {
+        return composition.artworkSource;
+    }
+
+    if (
+        composition.copySource === 'message' ||
+        composition.copySource === 'url' ||
+        composition.copySource === 'splash'
+    ) {
+        return composition.copySource;
+    }
+
+    return legacySource;
 }
 
 /** @deprecated Use resolveRiderStampPreview. */
@@ -263,11 +342,15 @@ export function buildRiderStampPreviewDocument(
     surface: RiderArtworkSurface = 'canvas',
 ): string {
     const content =
-        preview.source === 'url' && preview.imageUrl !== null
-            ? buildArtworkMarkup(preview, surface !== 'canvas')
-            : shouldRenderRiderStampSplash(preview, splashContent)
-              ? splashContent
-              : `<h1>${escapeHtml(preview.title)}</h1><p>${escapeHtml(preview.description)}</p>`;
+        surface === 'canvas'
+            ? buildCanvasArtworkMarkup(preview, splashContent)
+            : preview.composition.artworkSource === 'url' &&
+                preview.imageUrl !== null
+              ? buildArtworkMarkup(preview, true)
+              : preview.composition.artworkSource === 'splash' &&
+                  splashContent.trim() !== ''
+                ? splashContent
+                : `<h1>${escapeHtml(preview.title)}</h1><p>${escapeHtml(preview.description)}</p>`;
 
     return buildSandboxedPreviewDocument(buildStampMarkup(content, preview));
 }
@@ -297,6 +380,48 @@ function buildArtworkMarkup(
         : '';
 
     return `<div class="artwork-safe">${artwork}${copy}</div>`;
+}
+
+function buildCanvasArtworkMarkup(
+    preview: RiderStampPreview,
+    splashContent: string,
+): string {
+    if (
+        preview.composition.artworkTreatment === 'text' ||
+        preview.composition.artworkSource === 'none' ||
+        preview.composition.artworkSource === 'x_change'
+    ) {
+        return '<div class="stamp-abstract stamp-abstract-x-change"></div>';
+    }
+
+    if (
+        preview.composition.artworkSource === 'url' &&
+        preview.imageUrl !== null
+    ) {
+        return buildArtworkMarkup(preview, false);
+    }
+
+    if (preview.composition.artworkSource === 'splash') {
+        const splashImageUrl = firstImageUrl(splashContent);
+
+        if (splashImageUrl !== null) {
+            return buildArtworkMarkup(
+                { ...preview, imageUrl: splashImageUrl },
+                false,
+            );
+        }
+
+        return '<div class="stamp-abstract stamp-abstract-splash"></div>';
+    }
+
+    return '<div class="stamp-abstract stamp-abstract-x-change"></div>';
+}
+
+function firstImageUrl(content: string): string | null {
+    const match = content.match(/<img[^>]+src=["']([^"']+)["']/i);
+    const value = match?.[1]?.trim() ?? '';
+
+    return /^(https:|data:image\/)/i.test(value) ? value : null;
 }
 
 function buildStampMarkup(content: string, preview: RiderStampPreview): string {
@@ -435,6 +560,9 @@ img { max-width: 100%; height: auto; }
 .artwork-safe { position: relative; width: 100%; height: 100vh; overflow: hidden; background: #020617; }
 .artwork-backdrop { position: absolute; inset: -6%; width: 112%; height: 112%; max-width: none; object-fit: cover; filter: blur(18px); opacity: .58; transform: scale(1.08); }
 .artwork-contain { position: relative; display: block; width: 100%; height: 100vh; max-width: none; object-fit: contain; }
+.stamp-abstract { width: 100%; height: 100vh; }
+.stamp-abstract-x-change { background: radial-gradient(circle at 82% 16%, rgba(16, 185, 129, .2), transparent 28%), linear-gradient(135deg, #fffaf0, #f8fafc 55%, #ecfdf5); }
+.stamp-abstract-splash { background: radial-gradient(circle at 24% 22%, rgba(249, 115, 22, .55), transparent 30%), radial-gradient(circle at 82% 74%, rgba(16, 185, 129, .38), transparent 34%), linear-gradient(135deg, #0f172a, #1e293b); }
 .stamp-copy { position: absolute; z-index: 2; right: 6%; bottom: 8%; left: 6%; color: #fff; text-shadow: 0 2px 18px rgba(2, 6, 23, .9); }
 .stamp-copy h1 { margin-bottom: .35rem; font-size: clamp(1.15rem, 4vw, 2.5rem); line-height: 1.05; }
 .stamp-copy p { margin-bottom: 0; max-width: 42rem; font-size: clamp(.75rem, 2vw, 1.1rem); }

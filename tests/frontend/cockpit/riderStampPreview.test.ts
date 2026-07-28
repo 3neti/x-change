@@ -59,9 +59,9 @@ describe('Rider Stamp preview helpers', () => {
 
         expect(preview).toMatchObject({
             source: 'default',
-            label: 'Rider Stamp Preview',
-            title: 'Splash headline',
-            description: 'Splash body',
+            label: 'Rider Stamp',
+            title: 'Issuer message',
+            description: 'Prepared with a message for the recipient.',
             reference: 'x-change',
         });
     });
@@ -74,13 +74,13 @@ describe('Rider Stamp preview helpers', () => {
 
         expect(preview).toMatchObject({
             source: 'message',
-            label: 'Rider Stamp Preview',
+            label: 'Rider Stamp',
             title: 'The quick brown fox jumps over the lazy dog.',
-            reference: 'Rider Message',
+            reference: 'x-change',
         });
     });
 
-    it('builds sandboxed documents without leaking raw text into markup', () => {
+    it('isolates Splash artwork from the copy composed by the canvas', () => {
         const splash = buildRiderSplashContent({
             headline: 'Issuer <headline>',
             body: 'Plain body & copy',
@@ -100,7 +100,8 @@ describe('Rider Stamp preview helpers', () => {
         );
 
         expect(document).toContain('Content-Security-Policy');
-        expect(document).toContain('Issuer &lt;headline&gt;');
+        expect(document).toContain('stamp-abstract-splash');
+        expect(document).not.toContain('Issuer &lt;headline&gt;');
         expect(document).toContain('overflow: hidden');
         expect(document).toContain('overflow-wrap: anywhere');
     });

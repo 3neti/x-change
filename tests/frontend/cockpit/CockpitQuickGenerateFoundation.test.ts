@@ -400,7 +400,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toHaveLength(4);
     });
 
-    it('keeps Rider content on the x-change canvas until a Rider Stamp is explicitly selected', async () => {
+    it('composes Rider copy and artwork only on the live Pay Code front', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -433,11 +433,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(true);
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-quick-generate-rider-artwork-default"]',
-                )
+                .find('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
                 .text(),
-        ).toContain('Rider Message, Rider URL, and Rider Splash remain active');
+        ).toContain('A purpose-led Rider Stamp');
         const splashPreview = wrapper.find(
             '[data-testid="cockpit-quick-generate-rider-splash-html-preview"]',
         );
@@ -456,7 +454,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-stamp-source"]')
-            .setValue('message');
+            .setValue('splash');
 
         const design = wrapper.find(
             '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
@@ -469,17 +467,18 @@ describe('Cockpit Quick Generate foundation', () => {
                     '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
                 .exists(),
-        ).toBe(true);
-        expect(
-            wrapper
-                .find(
-                    '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
-                )
-                .classes(),
-        ).toContain('aspect-[1200/630]');
+        ).toBe(false);
         expect(design.attributes('srcdoc')).toContain(
+            'stamp-abstract-splash',
+        );
+        expect(design.attributes('srcdoc')).not.toContain(
             'A purpose-led Rider Stamp',
         );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
+                .text(),
+        ).toContain('A purpose-led Rider Stamp');
     });
 
     it('loads Spotify artwork when action link artwork is selected', async () => {
@@ -540,8 +539,8 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find(
                     '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
-                .attributes('srcdoc'),
-        ).toContain('class="artwork-cover"');
+                .exists(),
+        ).toBe(false);
 
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-stamp-fit"]')
@@ -554,11 +553,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('class="artwork-contain"');
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
-                )
-                .attributes('srcdoc'),
-        ).toContain('class="artwork-contain"');
+                .find('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
+                .text(),
+        ).toContain('An Example Track');
         expect(
             wrapper
                 .find(
@@ -2809,8 +2806,8 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(instructionBuilderText).toContain('Rider Message');
         expect(instructionBuilderText).toContain('Rider URL');
         expect(instructionBuilderText).toContain('Rider Splash');
-        expect(instructionBuilderText).toContain('Rider Stamp');
-        expect(instructionBuilderText).toContain('Stamp Source');
+        expect(instructionBuilderText).toContain('Front Design');
+        expect(instructionBuilderText).toContain('Artwork');
         expect(instructionBuilderText).toContain('Rider Splash Preview');
         expect(instructionBuilderText).not.toContain('Claim Introduction');
         expect(instructionBuilderText).not.toContain('Action Link');

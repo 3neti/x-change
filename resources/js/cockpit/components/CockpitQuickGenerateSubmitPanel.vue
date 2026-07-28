@@ -36,6 +36,11 @@ import {
     resolveRiderStampPreview,
 } from '../riderStampPreview';
 import type {
+    RiderStampArtworkSource,
+    RiderStampArtworkTreatment,
+    RiderStampClaimMarker,
+    RiderStampClaimMarkerPosition,
+    RiderStampCopySource,
     RiderStampFit,
     RiderStampPosition,
     RiderStampPreview,
@@ -541,7 +546,15 @@ const riderSplashCtaText = ref('');
 const riderSplashTimeout = ref('3');
 const riderSplashMetaSanitized = ref(true);
 const riderSplashMetaProfile = ref('');
-const riderStampSource = ref('');
+const riderStampArtworkSource = ref<RiderStampArtworkSource>('x_change');
+const riderStampArtworkTreatment =
+    ref<RiderStampArtworkTreatment>('automatic');
+const riderStampCopySource = ref<RiderStampCopySource>('automatic');
+const riderStampShowLogo = ref(true);
+const riderStampShowTagline = ref(true);
+const riderStampClaimMarker = ref<RiderStampClaimMarker>('qr');
+const riderStampClaimMarkerPosition =
+    ref<RiderStampClaimMarkerPosition>('bottom_right');
 const riderStampTitle = ref('');
 const riderStampDescription = ref('');
 const riderStampFit = ref<RiderStampFit>('cover');
@@ -552,7 +565,7 @@ const {
     preview: riderUrlArtworkPreview,
     resolving: riderUrlArtworkResolving,
     message: riderUrlArtworkMessage,
-} = useRiderUrlArtworkPreview(riderStampSource, riderUrl);
+} = useRiderUrlArtworkPreview(riderStampArtworkSource, riderUrl);
 const feedbackEmail = ref('');
 const feedbackMobile = ref(recipientReference.value);
 const feedbackWebhook = ref('');
@@ -732,7 +745,13 @@ function applyTemplateDefaults(templateKey: string): void {
     riderSplashFormat.value = 'plain';
     riderSplashCtaText.value = '';
     riderSplashTimeout.value = defaults.riderSplashTimeout;
-    riderStampSource.value = '';
+    riderStampArtworkSource.value = 'x_change';
+    riderStampArtworkTreatment.value = 'automatic';
+    riderStampCopySource.value = 'automatic';
+    riderStampShowLogo.value = true;
+    riderStampShowTagline.value = true;
+    riderStampClaimMarker.value = 'qr';
+    riderStampClaimMarkerPosition.value = 'bottom_right';
     riderStampTitle.value = '';
     riderStampDescription.value = '';
     riderStampFit.value = 'cover';
@@ -1087,11 +1106,37 @@ function applyInstructionBlueprint(
         'stamp',
         'source',
     ]);
-    riderStampSource.value =
+    const legacyStampSource =
         stampSource === 'automatic'
             ? ''
             : stampSource ||
               instructionString(instructions, ['rider', 'og_source']);
+    riderStampArtworkSource.value = instructionStampArtworkSource(
+        instructions,
+        ['rider', 'stamp', 'artwork_source'],
+        legacyStampSource,
+    );
+    riderStampArtworkTreatment.value = instructionStampArtworkTreatment(
+        instructions,
+        ['rider', 'stamp', 'artwork_treatment'],
+    );
+    riderStampCopySource.value = instructionStampCopySource(
+        instructions,
+        ['rider', 'stamp', 'copy_source'],
+        legacyStampSource,
+    );
+    riderStampShowLogo.value =
+        dataGet(instructions, ['rider', 'stamp', 'show_logo']) !== false;
+    riderStampShowTagline.value =
+        dataGet(instructions, ['rider', 'stamp', 'show_tagline']) !== false;
+    riderStampClaimMarker.value = instructionStampClaimMarker(
+        instructions,
+        ['rider', 'stamp', 'claim_marker'],
+    );
+    riderStampClaimMarkerPosition.value = instructionStampClaimMarkerPosition(
+        instructions,
+        ['rider', 'stamp', 'claim_marker_position'],
+    );
     riderStampTitle.value = instructionString(instructions, [
         'rider',
         'stamp',
@@ -2278,7 +2323,11 @@ const riderSplashPreviewDocument = computed<string>(() => {
 
 const riderStampPreview = computed<RiderStampPreview>(() => {
     return resolveRiderStampPreview({
-        source: riderStampSource.value,
+        source:
+            riderStampArtworkSource.value === 'url' ||
+            riderStampArtworkSource.value === 'splash'
+                ? riderStampArtworkSource.value
+                : riderStampCopySource.value,
         message: purpose.value,
         url: riderUrl.value,
         splashHeadline: riderSplashHeadline.value,
@@ -2291,6 +2340,13 @@ const riderStampPreview = computed<RiderStampPreview>(() => {
         position: riderStampPosition.value,
         scrim: riderStampScrim.value,
         theme: riderStampTheme.value,
+        artworkSource: riderStampArtworkSource.value,
+        artworkTreatment: riderStampArtworkTreatment.value,
+        copySource: riderStampCopySource.value,
+        showLogo: riderStampShowLogo.value,
+        showTagline: riderStampShowTagline.value,
+        claimMarker: riderStampClaimMarker.value,
+        claimMarkerPosition: riderStampClaimMarkerPosition.value,
     });
 });
 
@@ -2302,17 +2358,15 @@ const riderCanvasArtworkDocument = computed<string>(() => {
     );
 });
 
-const riderStampPreviewDocument = computed<string>(() => {
-    return buildRiderStampPreviewDocument(
-        riderStampPreview.value,
-        riderSplashContent.value,
-        'stamp',
-    );
-});
-
 const hasRiderStampCustomization = computed<boolean>(() => {
     return (
-        riderStampSource.value.trim() !== '' ||
+        riderStampArtworkSource.value !== 'x_change' ||
+        riderStampArtworkTreatment.value !== 'automatic' ||
+        riderStampCopySource.value !== 'automatic' ||
+        !riderStampShowLogo.value ||
+        !riderStampShowTagline.value ||
+        riderStampClaimMarker.value !== 'qr' ||
+        riderStampClaimMarkerPosition.value !== 'bottom_right' ||
         riderStampTitle.value.trim() !== '' ||
         riderStampDescription.value.trim() !== '' ||
         riderStampFit.value !== 'cover' ||
@@ -2323,7 +2377,10 @@ const hasRiderStampCustomization = computed<boolean>(() => {
 });
 
 const usesRiderArtwork = computed<boolean>(
-    () => hasRiderStampCustomization.value,
+    () =>
+        riderStampArtworkTreatment.value !== 'text' &&
+        (riderStampArtworkSource.value === 'url' ||
+            riderStampArtworkSource.value === 'splash'),
 );
 
 const riderMessageDisclosureSummary = computed<string>(() => {
@@ -2360,15 +2417,14 @@ const riderSplashDisclosureSummary = computed<string>(() => {
 });
 
 const riderStampDisclosureSummary = computed<string>(() => {
-    const source = riderStampSource.value.trim();
+    const artwork =
+        riderStampArtworkSource.value === 'x_change'
+            ? 'x-change'
+            : riderStampArtworkSource.value === 'none'
+              ? 'No artwork'
+              : `Rider ${riderStampArtworkSource.value}`;
 
-    if (source === '') {
-        return hasRiderStampCustomization.value
-            ? 'Customized x-change design'
-            : 'x-change design';
-    }
-
-    return `Projected from Rider ${source[0].toUpperCase()}${source.slice(1)}`;
+    return `${artwork} · ${riderStampCopySource.value} copy`;
 });
 
 const riderSummary = computed<Record<string, unknown>>(() => {
@@ -2378,7 +2434,6 @@ const riderSummary = computed<Record<string, unknown>>(() => {
     const splash = riderSplashInstructionContent.value.trim();
     const timeout = Number(riderSplashTimeout.value);
     const htmlProfile = riderSplashMetaProfile.value.trim();
-    const stampSource = riderStampSource.value.trim();
     const stampTitle = riderStampTitle.value.trim();
     const stampDescription = riderStampDescription.value.trim();
     const scrim = Math.min(
@@ -2386,7 +2441,13 @@ const riderSummary = computed<Record<string, unknown>>(() => {
         Math.max(0, Math.round(Number(riderStampScrim.value) || 0)),
     );
     const hasStamp =
-        stampSource !== '' ||
+        riderStampArtworkSource.value !== 'x_change' ||
+        riderStampArtworkTreatment.value !== 'automatic' ||
+        riderStampCopySource.value !== 'automatic' ||
+        !riderStampShowLogo.value ||
+        !riderStampShowTagline.value ||
+        riderStampClaimMarker.value !== 'qr' ||
+        riderStampClaimMarkerPosition.value !== 'bottom_right' ||
         stampTitle !== '' ||
         stampDescription !== '' ||
         riderStampFit.value !== 'cover' ||
@@ -2416,10 +2477,16 @@ const riderSummary = computed<Record<string, unknown>>(() => {
                           : { html_profile: htmlProfile }),
                   }
                 : null,
-        og_source: stampSource === '' ? null : stampSource,
+        og_source:
+            riderStampArtworkSource.value === 'x_change'
+                ? null
+                : riderStampArtworkSource.value,
         stamp: hasStamp
             ? {
-                  source: stampSource === '' ? 'automatic' : stampSource,
+                  source:
+                      riderStampArtworkSource.value === 'x_change'
+                          ? 'automatic'
+                          : riderStampArtworkSource.value,
                   title: stampTitle === '' ? null : stampTitle,
                   description:
                       stampDescription === '' ? null : stampDescription,
@@ -2427,7 +2494,15 @@ const riderSummary = computed<Record<string, unknown>>(() => {
                   position: riderStampPosition.value,
                   scrim,
                   theme: riderStampTheme.value,
-                  version: 1,
+                  artwork_source: riderStampArtworkSource.value,
+                  artwork_treatment: riderStampArtworkTreatment.value,
+                  copy_source: riderStampCopySource.value,
+                  show_logo: riderStampShowLogo.value,
+                  show_tagline: riderStampShowTagline.value,
+                  claim_marker: riderStampClaimMarker.value,
+                  claim_marker_position:
+                      riderStampClaimMarkerPosition.value,
+                  version: 2,
               }
             : null,
     };
@@ -3822,6 +3897,88 @@ function instructionStampTheme(
     return value === 'light' || value === 'dark' ? value : 'automatic';
 }
 
+function instructionStampArtworkSource(
+    source: unknown,
+    path: string[],
+    legacySource: string,
+): RiderStampArtworkSource {
+    const value = instructionString(source, path);
+
+    if (
+        value === 'x_change' ||
+        value === 'url' ||
+        value === 'splash' ||
+        value === 'none'
+    ) {
+        return value;
+    }
+
+    return legacySource === 'url' || legacySource === 'splash'
+        ? legacySource
+        : 'x_change';
+}
+
+function instructionStampArtworkTreatment(
+    source: unknown,
+    path: string[],
+): RiderStampArtworkTreatment {
+    const value = instructionString(source, path);
+
+    return value === 'artwork' || value === 'text' ? value : 'automatic';
+}
+
+function instructionStampCopySource(
+    source: unknown,
+    path: string[],
+    legacySource: string,
+): RiderStampCopySource {
+    const value = instructionString(source, path);
+
+    if (
+        value === 'automatic' ||
+        value === 'message' ||
+        value === 'url' ||
+        value === 'splash' ||
+        value === 'custom' ||
+        value === 'none'
+    ) {
+        return value;
+    }
+
+    return legacySource === 'message' ||
+        legacySource === 'url' ||
+        legacySource === 'splash'
+        ? legacySource
+        : 'automatic';
+}
+
+function instructionStampClaimMarker(
+    source: unknown,
+    path: string[],
+): RiderStampClaimMarker {
+    const value = instructionString(source, path);
+
+    return value === 'none' ||
+        value === 'code' ||
+        value === 'both' ||
+        value === 'qr'
+        ? value
+        : 'qr';
+}
+
+function instructionStampClaimMarkerPosition(
+    source: unknown,
+    path: string[],
+): RiderStampClaimMarkerPosition {
+    const value = instructionString(source, path);
+
+    return value === 'top_left' ||
+        value === 'top_right' ||
+        value === 'bottom_left'
+        ? value
+        : 'bottom_right';
+}
+
 function instructionStringArray(source: unknown, path: string[]): string[] {
     const value = dataGet(source, path);
 
@@ -4288,6 +4445,7 @@ function instructionRecord(
                     :has-rider-design="usesRiderArtwork"
                     :rider-design-source="riderStampPreview.source"
                     :rider-design-document="riderCanvasArtworkDocument"
+                    :rider-stamp="riderStampPreview"
                     :cost-estimate="livePricingEstimate"
                     :cost-loading="livePricingEstimating"
                     :cost-error="livePricingEstimateError"
@@ -4329,6 +4487,7 @@ function instructionRecord(
             :has-rider-design="usesRiderArtwork"
             :rider-design-source="riderStampPreview.source"
             :rider-design-document="riderCanvasArtworkDocument"
+            :rider-stamp="riderStampPreview"
             :cost-estimate="issuedCostEstimate"
             :quantity="count"
             :claim-url="beneficiaryClaimUrl"
@@ -5850,8 +6009,8 @@ function instructionRecord(
                             </div>
                         </CockpitRiderEditorDisclosure>
                         <CockpitRiderEditorDisclosure
-                            title="Rider Stamp"
-                            description="Choose the visual identity used on the Pay Code and share card."
+                            title="Front Design"
+                            description="Compose the Pay Code front from Rider content."
                             :status="
                                 hasRiderStampCustomization
                                     ? 'Configured'
@@ -5866,15 +6025,58 @@ function instructionRecord(
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
                                 >
-                                    Stamp Source
+                                    Artwork
                                     <select
-                                        v-model="riderStampSource"
+                                        v-model="riderStampArtworkSource"
                                         class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-rider-stamp-source"
                                         :disabled="processing"
                                     >
-                                        <option value="">
+                                        <option value="x_change">
                                             x-change Design (Recommended)
+                                        </option>
+                                        <option value="url">Rider URL</option>
+                                        <option value="splash">
+                                            Rider Splash
+                                        </option>
+                                        <option value="none">No Artwork</option>
+                                    </select>
+                                </label>
+                                <label
+                                    v-if="
+                                        riderStampArtworkSource === 'url' ||
+                                        riderStampArtworkSource === 'splash'
+                                    "
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                >
+                                    Artwork Treatment
+                                    <select
+                                        v-model="riderStampArtworkTreatment"
+                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-stamp-artwork-treatment"
+                                        :disabled="processing"
+                                    >
+                                        <option value="automatic">
+                                            Automatic
+                                        </option>
+                                        <option value="artwork">
+                                            Artwork
+                                        </option>
+                                        <option value="text">Text</option>
+                                    </select>
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                >
+                                    Front Copy
+                                    <select
+                                        v-model="riderStampCopySource"
+                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-stamp-copy-source"
+                                        :disabled="processing"
+                                    >
+                                        <option value="automatic">
+                                            Best Available
                                         </option>
                                         <option value="message">
                                             Rider Message
@@ -5883,6 +6085,10 @@ function instructionRecord(
                                         <option value="splash">
                                             Rider Splash
                                         </option>
+                                        <option value="custom">
+                                            Custom Copy
+                                        </option>
+                                        <option value="none">No Copy</option>
                                     </select>
                                 </label>
                                 <label
@@ -5936,7 +6142,7 @@ function instructionRecord(
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
                                 >
-                                    Stamp Title
+                                    Front Title
                                     <input
                                         v-model="riderStampTitle"
                                         type="text"
@@ -5950,7 +6156,7 @@ function instructionRecord(
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
                                 >
-                                    Stamp Description
+                                    Front Subtitle
                                     <input
                                         v-model="riderStampDescription"
                                         type="text"
@@ -5960,6 +6166,69 @@ function instructionRecord(
                                         :disabled="processing"
                                         placeholder="Use the selected Rider description"
                                     />
+                                </label>
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
+                                >
+                                    <input
+                                        v-model="riderStampShowLogo"
+                                        type="checkbox"
+                                        class="rounded border-sky-300"
+                                        :disabled="processing"
+                                    />
+                                    Show x-change Logo
+                                </label>
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
+                                >
+                                    <input
+                                        v-model="riderStampShowTagline"
+                                        type="checkbox"
+                                        class="rounded border-sky-300"
+                                        :disabled="processing"
+                                    />
+                                    Show Tagline
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                >
+                                    Claim Marker
+                                    <select
+                                        v-model="riderStampClaimMarker"
+                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-stamp-claim-marker"
+                                        :disabled="processing"
+                                    >
+                                        <option value="qr">QR Code</option>
+                                        <option value="code">Pay Code</option>
+                                        <option value="both">Both</option>
+                                        <option value="none">None</option>
+                                    </select>
+                                </label>
+                                <label
+                                    v-if="riderStampClaimMarker !== 'none'"
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                >
+                                    Marker Position
+                                    <select
+                                        v-model="riderStampClaimMarkerPosition"
+                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-stamp-claim-marker-position"
+                                        :disabled="processing"
+                                    >
+                                        <option value="bottom_right">
+                                            Bottom Right
+                                        </option>
+                                        <option value="bottom_left">
+                                            Bottom Left
+                                        </option>
+                                        <option value="top_right">
+                                            Top Right
+                                        </option>
+                                        <option value="top_left">
+                                            Top Left
+                                        </option>
+                                    </select>
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 lg:col-span-4 dark:text-sky-100"
@@ -5984,77 +6253,23 @@ function instructionRecord(
                             <p
                                 class="mt-2 text-[11px] text-sky-700 dark:text-sky-300"
                             >
-                                Presentation only. The Rider Stamp never
-                                authorizes a claim or proves settlement.
+                                The live Pay Code above is the complete front
+                                preview. Rider Stamp changes presentation only.
                             </p>
                             <div
-                                class="mt-3 rounded-xl border border-sky-200 bg-white p-3 dark:border-sky-900/60 dark:bg-slate-950"
+                                v-if="
+                                    riderStampArtworkSource === 'url' &&
+                                    (riderUrlArtworkResolving ||
+                                        riderUrlArtworkMessage)
+                                "
+                                class="mt-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-[11px] text-sky-800 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-200"
+                                data-testid="cockpit-quick-generate-rider-artwork-status"
                             >
-                                <div
-                                    v-if="!hasRiderStampCustomization"
-                                    class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/30"
-                                    data-testid="cockpit-quick-generate-rider-artwork-default"
-                                >
-                                    <p
-                                        class="text-xs font-semibold text-emerald-800 dark:text-emerald-200"
-                                    >
-                                        x-change Design
-                                    </p>
-                                    <p
-                                        class="mt-1 text-[11px] leading-snug text-emerald-700 dark:text-emerald-300"
-                                    >
-                                        Rider Message, Rider URL, and Rider
-                                        Splash remain active without replacing
-                                        the Pay Code canvas.
-                                    </p>
-                                </div>
-                                <template v-else>
-                                    <div
-                                        class="flex flex-wrap items-center gap-2 text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
-                                    >
-                                        <span>{{
-                                            riderStampPreview.label
-                                        }}</span>
-                                        <span
-                                            class="rounded-full bg-sky-100 px-2 py-0.5 text-sky-800 dark:bg-sky-900/60 dark:text-sky-100"
-                                        >
-                                            {{ riderStampPreview.reference }}
-                                        </span>
-                                    </div>
-                                    <CockpitRiderPreviewFrame
-                                        title="Rider Stamp Preview"
-                                        surface="stamp"
-                                        class="mt-2 border-sky-200 dark:border-sky-900/60"
-                                        data-testid="cockpit-quick-generate-rider-stamp-preview"
-                                        :document="riderStampPreviewDocument"
-                                    />
-                                    <p
-                                        class="mt-2 text-[11px] text-sky-800 dark:text-sky-200"
-                                        data-testid="cockpit-quick-generate-rider-artwork-status"
-                                    >
-                                        <template
-                                            v-if="
-                                                riderStampSource === 'url' &&
-                                                riderUrlArtworkResolving
-                                            "
-                                        >
-                                            Loading Rider URL Artwork…
-                                        </template>
-                                        <template
-                                            v-else-if="
-                                                riderStampSource === 'url' &&
-                                                riderUrlArtworkMessage
-                                            "
-                                        >
-                                            {{ riderUrlArtworkMessage }}
-                                        </template>
-                                        <template v-else>
-                                            The selected artwork remains
-                                            readable behind the Pay Code
-                                            details.
-                                        </template>
-                                    </p>
-                                </template>
+                                {{
+                                    riderUrlArtworkResolving
+                                        ? 'Loading Rider URL Artwork…'
+                                        : riderUrlArtworkMessage
+                                }}
                             </div>
                         </CockpitRiderEditorDisclosure>
                     </div>
