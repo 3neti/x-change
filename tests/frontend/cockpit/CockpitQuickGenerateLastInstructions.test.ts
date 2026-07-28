@@ -18,6 +18,17 @@ describe('Quick Generate last instructions', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
+                savedTemplates: [
+                    {
+                        reference: '01SAVEDTEMPLATE',
+                        name: 'School Allowance',
+                        description: 'Reusable school support settings.',
+                        base_template_key: 'money-changer',
+                        instructions: {},
+                        include_amount: true,
+                        include_purpose: true,
+                    },
+                ],
                 mutationContract: {
                     runtime_enabled: true,
                     route: 'x-change.cockpit.quick-generate.store',
@@ -78,6 +89,10 @@ describe('Quick Generate last instructions', () => {
                             custom: {
                                 cockpit: {
                                     template_key: 'money-changer',
+                                    saved_template: {
+                                        reference: '01SAVEDTEMPLATE',
+                                        name: 'Untrusted Historical Name',
+                                    },
                                 },
                             },
                         },
@@ -108,9 +123,9 @@ describe('Quick Generate last instructions', () => {
         ).toBe('');
         expect(
             wrapper
-                .get('[data-testid="cockpit-quick-generate-last-instructions"]')
+                .get('[data-testid="cockpit-quick-generate-current-template"]')
                 .text(),
-        ).toContain('Last Design Loaded');
+        ).toContain('School Allowance');
 
         const preview = JSON.parse(
             wrapper

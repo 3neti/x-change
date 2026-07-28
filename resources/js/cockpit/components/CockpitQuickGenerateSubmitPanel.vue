@@ -626,7 +626,6 @@ const lastResponse = ref<Record<string, unknown> | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
 const riderSectionElement = ref<HTMLDetailsElement | null>(null);
-const lastInstructionsLoaded = ref(false);
 const startingPoint = ref<'blank' | 'last' | 'template'>(
     props.lastInstructions ? 'last' : 'template',
 );
@@ -638,10 +637,7 @@ const saveTemplateIncludeAmount = ref(false);
 const saveTemplateIncludePurpose = ref(true);
 const templateSaving = ref(false);
 const templateSaveError = ref('');
-const activeSavedTemplate = ref<{
-    reference: string;
-    name: string;
-} | null>(null);
+const activeSavedTemplate = ref<CockpitSavedPayCodeTemplate | null>(null);
 const applyingStartingPoint = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 const submissionErrorHeading = ref('Fix these fields before issuing');
@@ -790,7 +786,6 @@ function applyTemplateDefaults(templateKey: string): void {
 function startBlank(): void {
     applyingStartingPoint.value = true;
     selectedTemplate.value = 'blank-pay-code';
-    lastInstructionsLoaded.value = false;
     startingPoint.value = 'blank';
     activeSavedTemplate.value = null;
     applyTemplateDefaults('blank-pay-code');
@@ -833,10 +828,10 @@ function hydrateLastInstructions(): void {
 
     applyInstructionBlueprint(instructions, true);
     startingPoint.value = 'last';
-    lastInstructionsLoaded.value = true;
+    activeSavedTemplate.value = savedTemplateRecordedBy(instructions);
     lastStatus.value = 'ready';
     lastMessage.value =
-        'Your last successful Pay Code design is ready to review or change.';
+        'Your last successful Pay Code is ready to review or change.';
 }
 
 function repeatLastDesign(): void {
@@ -848,11 +843,32 @@ function repeatLastDesign(): void {
 
     applyInstructionBlueprint(instructions, true);
     startingPoint.value = 'last';
-    activeSavedTemplate.value = null;
-    lastInstructionsLoaded.value = true;
+    activeSavedTemplate.value = savedTemplateRecordedBy(instructions);
     lastStatus.value = 'ready';
     lastMessage.value =
-        'Last design restored. Add the new recipient before issuing.';
+        'Last Pay Code settings restored. Add the new recipient before issuing.';
+}
+
+function savedTemplateRecordedBy(
+    instructions: Record<string, unknown>,
+): CockpitSavedPayCodeTemplate | null {
+    const reference = instructionString(instructions, [
+        'metadata',
+        'custom',
+        'cockpit',
+        'saved_template',
+        'reference',
+    ]);
+
+    if (reference === '') {
+        return null;
+    }
+
+    return (
+        props.savedTemplates?.find(
+            (template) => template.reference === reference,
+        ) ?? null
+    );
 }
 
 function applySystemTemplate(templateKey: string): void {
@@ -871,7 +887,6 @@ function applySystemTemplate(templateKey: string): void {
     startingPoint.value =
         templateKey === 'blank-pay-code' ? 'blank' : 'template';
     activeSavedTemplate.value = null;
-    lastInstructionsLoaded.value = false;
     templatePickerOpen.value = false;
 }
 
@@ -883,11 +898,7 @@ function applySavedTemplate(template: CockpitSavedPayCodeTemplate): void {
     purpose.value = '';
     applyInstructionBlueprint(template.instructions, true);
     startingPoint.value = 'template';
-    activeSavedTemplate.value = {
-        reference: template.reference,
-        name: template.name,
-    };
-    lastInstructionsLoaded.value = false;
+    activeSavedTemplate.value = template;
     templatePickerOpen.value = false;
     lastStatus.value = 'ready';
     lastMessage.value = `${template.name} is ready. Add the recipient and review before issuing.`;
@@ -1890,6 +1901,10 @@ const selectedTemplateName = computed<string>(() => {
         )?.name ?? selectedTemplate.value
     );
 });
+
+const currentTemplateName = computed<string>(
+    () => activeSavedTemplate.value?.name ?? selectedTemplateName.value,
+);
 
 const canvasInstructionKeys = computed<string[]>(() => {
     const keys = selectedInputFields.value.map((field) => `input.${field}`);
@@ -4457,21 +4472,20 @@ function instructionRecord(
                             <p
                                 class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
                             >
-                                Reuse A Design
+                                Templates
                             </p>
                             <p
                                 class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Start blank, repeat your last design, or choose
-                                a template.
+                                Choose a starting template, reuse your last Pay
+                                Code, or save these settings.
                             </p>
                         </div>
                         <span
-                            v-if="lastInstructionsLoaded"
                             class="rounded-full bg-emerald-100 px-2.5 py-1 text-[0.68rem] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                            data-testid="cockpit-quick-generate-last-instructions"
+                            data-testid="cockpit-quick-generate-current-template"
                         >
-                            Last Design Loaded
+                            {{ currentTemplateName }}
                         </span>
                     </div>
 
@@ -4503,7 +4517,7 @@ function instructionRecord(
                             @click="repeatLastDesign"
                         >
                             <RotateCcw class="size-4" aria-hidden="true" />
-                            Repeat Last Design
+                            Repeat Last Pay Code
                         </button>
                         <button
                             type="button"
@@ -4521,7 +4535,7 @@ function instructionRecord(
                             @click="saveTemplateOpen = true"
                         >
                             <Save class="size-4" aria-hidden="true" />
-                            Save As Template
+                            Save Template
                         </button>
                     </div>
                 </section>

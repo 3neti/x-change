@@ -3221,10 +3221,12 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-quick-generate-starting-point"]')
                 .exists(),
         ).toBe(true);
-        expect(reuseDesign.text()).toContain('Reuse A Design');
+        expect(reuseDesign.text()).toContain('Templates');
+        expect(reuseDesign.text()).toContain('Money Changer');
         expect(reuseDesign.classes()).toContain('border-t');
         expect(reuseDesign.classes()).not.toContain('rounded-2xl');
-        expect(wrapper.text()).toContain('Repeat Last Design');
+        expect(wrapper.text()).toContain('Repeat Last Pay Code');
+        expect(wrapper.text()).toContain('Save Template');
         expect(wrapper.text()).not.toContain('Editable Pay Code Preview');
         expect(wrapper.text()).not.toContain(
             'Changes appear here before issuance.',

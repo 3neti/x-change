@@ -75,6 +75,11 @@ describe('Quick Generate saved templates', () => {
             .trigger('click');
 
         expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-current-template"]')
+                .text(),
+        ).toBe('Weekly Allowance');
+        expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
             ).element.value,
