@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { router } from '@inertiajs/vue3';
 import { describe, expect, it, vi } from 'vitest';
@@ -471,6 +471,74 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(design.attributes('srcdoc')).toContain(
             'A purpose-led OG design',
         );
+    });
+
+    it('loads Spotify artwork when action link artwork is selected', async () => {
+        vi.useFakeTimers();
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                schema: 'x-change.cockpit.rider-artwork-preview.v1',
+                available: true,
+                source: 'spotify',
+                title: 'An Example Track',
+                description: 'Spotify',
+                image_url: 'https://i.scdn.co/image/example-artwork',
+                reference: 'Spotify',
+            }),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-rider-url"]')
+            .setValue(
+                'https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH?si=tracking',
+            );
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-rider-og-source"]')
+            .setValue('url');
+        await vi.advanceTimersByTimeAsync(351);
+        await flushPromises();
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            '/x/cockpit/quick-generate/artwork-previews',
+            expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({
+                    url: 'https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH?si=tracking',
+                }),
+            }),
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
+                )
+                .attributes('srcdoc'),
+        ).toContain('https://i.scdn.co/image/example-artwork');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-artwork-status"]',
+                )
+                .text(),
+        ).toContain('Spotify artwork ready.');
+
+        wrapper.unmount();
+        vi.unstubAllGlobals();
+        vi.useRealTimers();
     });
 
     it('renders runtime inputs as reference facts without a submit form', () => {

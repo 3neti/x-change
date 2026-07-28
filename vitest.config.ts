@@ -82,6 +82,11 @@ export default defineConfig({
                     __dirname,
                     'tests/frontend/stubs/pay-code-template-store-route.ts',
                 ),
+            '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitRiderArtworkPreviewController':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/rider-artwork-preview-route.ts',
+                ),
             '@/actions/LBHurtado/XChange/Http/Controllers/PayCode/EstimatePayCodeController':
                 path.resolve(
                     __dirname,

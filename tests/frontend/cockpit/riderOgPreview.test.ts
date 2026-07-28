@@ -62,4 +62,32 @@ describe('rider OG preview helpers', () => {
         expect(document).toContain('overflow: hidden');
         expect(document).toContain('overflow-wrap: anywhere');
     });
+
+    it('renders resolved action link artwork as a full-bleed safe image', () => {
+        const preview = resolveRiderOgPreview({
+            source: 'url',
+            url: 'https://open.spotify.com/track/example',
+            urlArtwork: {
+                available: true,
+                source: 'spotify',
+                title: 'An Example Track',
+                description: 'Spotify',
+                image_url: 'https://i.scdn.co/image/example-artwork',
+                reference: 'Spotify',
+            },
+        });
+        const document = buildRiderOgPreviewDocument(preview, '');
+
+        expect(preview).toMatchObject({
+            title: 'An Example Track',
+            description: 'Spotify',
+            reference: 'Spotify',
+            imageUrl: 'https://i.scdn.co/image/example-artwork',
+        });
+        expect(document).toContain(
+            'src="https://i.scdn.co/image/example-artwork"',
+        );
+        expect(document).toContain('class="artwork-cover"');
+        expect(document).not.toContain('<iframe');
+    });
 });

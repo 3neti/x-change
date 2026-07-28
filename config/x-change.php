@@ -210,6 +210,50 @@ return [
                 'XCHANGE_COCKPIT_QUICK_GENERATE_LAST_INSTRUCTIONS_TTL_SECONDS',
                 604800,
             ),
+            'url_artwork' => [
+                'middleware' => [
+                    'throttle:12,1',
+                ],
+                'cache_ttl_seconds' => (int) env(
+                    'XCHANGE_COCKPIT_URL_ARTWORK_CACHE_TTL_SECONDS',
+                    3600,
+                ),
+                'connect_timeout_seconds' => (int) env(
+                    'XCHANGE_COCKPIT_URL_ARTWORK_CONNECT_TIMEOUT_SECONDS',
+                    3,
+                ),
+                'timeout_seconds' => (int) env(
+                    'XCHANGE_COCKPIT_URL_ARTWORK_TIMEOUT_SECONDS',
+                    6,
+                ),
+                'maximum_image_bytes' => (int) env(
+                    'XCHANGE_COCKPIT_URL_ARTWORK_MAXIMUM_IMAGE_BYTES',
+                    2097152,
+                ),
+                'maximum_document_bytes' => (int) env(
+                    'XCHANGE_COCKPIT_URL_ARTWORK_MAXIMUM_DOCUMENT_BYTES',
+                    524288,
+                ),
+                'providers' => [
+                    'spotify' => [
+                        'enabled' => (bool) env(
+                            'XCHANGE_COCKPIT_SPOTIFY_ARTWORK_ENABLED',
+                            true,
+                        ),
+                        'label' => 'Spotify',
+                        'page_hosts' => [
+                            'open.spotify.com',
+                        ],
+                        'path_pattern' => '#^/(track|album|playlist|episode|show|artist)/[A-Za-z0-9]+/?$#',
+                        'strip_query' => true,
+                        'image_hosts' => [
+                            'i.scdn.co',
+                            'image-cdn-ak.spotifycdn.com',
+                            'mosaic.scdn.co',
+                        ],
+                    ],
+                ],
+            ],
         ],
 
         'operator_issuance_activity' => [

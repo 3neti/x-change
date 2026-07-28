@@ -28,6 +28,7 @@ import type {
 } from '../types';
 import { usePayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
+import { useRiderUrlArtworkPreview } from '../composables/useRiderUrlArtworkPreview';
 import {
     buildRiderOgPreviewDocument,
     buildRiderSplashContent,
@@ -532,6 +533,11 @@ const riderSplashTimeout = ref('3');
 const riderSplashMetaSanitized = ref(true);
 const riderSplashMetaProfile = ref('');
 const riderOgSource = ref('');
+const {
+    preview: riderUrlArtworkPreview,
+    resolving: riderUrlArtworkResolving,
+    message: riderUrlArtworkMessage,
+} = useRiderUrlArtworkPreview(riderOgSource, riderUrl);
 const feedbackEmail = ref('');
 const feedbackMobile = ref(recipientReference.value);
 const feedbackWebhook = ref('');
@@ -2193,6 +2199,7 @@ const riderOgPreview = computed<RiderOgPreview>(() => {
         splashHeadline: riderSplashHeadline.value,
         splashBody: riderSplash.value,
         splashCta: riderSplashCtaText.value,
+        urlArtwork: riderUrlArtworkPreview.value,
     });
 });
 
@@ -5660,10 +5667,29 @@ function instructionRecord(
                                     />
                                     <p
                                         class="mt-2 text-[11px] text-sky-800 dark:text-sky-200"
+                                        data-testid="cockpit-quick-generate-rider-artwork-status"
                                     >
-                                        The selected source is subdued behind
-                                        the Pay Code details to preserve
-                                        readability.
+                                        <template
+                                            v-if="
+                                                riderOgSource === 'url' &&
+                                                riderUrlArtworkResolving
+                                            "
+                                        >
+                                            Loading Link Artwork…
+                                        </template>
+                                        <template
+                                            v-else-if="
+                                                riderOgSource === 'url' &&
+                                                riderUrlArtworkMessage
+                                            "
+                                        >
+                                            {{ riderUrlArtworkMessage }}
+                                        </template>
+                                        <template v-else>
+                                            The selected artwork remains
+                                            readable behind the Pay Code
+                                            details.
+                                        </template>
                                     </p>
                                 </template>
                             </div>

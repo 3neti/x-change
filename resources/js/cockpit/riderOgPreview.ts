@@ -6,6 +6,16 @@ export type RiderOgPreview = {
     title: string;
     description: string;
     reference: string;
+    imageUrl: string | null;
+};
+
+export type RiderUrlArtworkPreview = {
+    available: boolean;
+    source: string;
+    title: string;
+    description: string;
+    image_url: string | null;
+    reference: string;
 };
 
 export type RiderOgPreviewInput = {
@@ -15,6 +25,7 @@ export type RiderOgPreviewInput = {
     splashHeadline?: string | null;
     splashBody?: string | null;
     splashCta?: string | null;
+    urlArtwork?: RiderUrlArtworkPreview | null;
 };
 
 export function escapeHtml(value: string): string {
@@ -73,16 +84,24 @@ export function resolveRiderOgPreview(
             title: message === '' ? 'No Message Yet' : message,
             description: 'Preview based on the recipient message.',
             reference: 'Message',
+            imageUrl: null,
         };
     }
 
     if (source === 'url') {
+        const artwork =
+            input.urlArtwork?.available === true ? input.urlArtwork : null;
+
         return {
             source,
             label: 'Action Link Preview',
-            title: url === '' ? 'No Action URL Yet' : url,
-            description: 'Preview based on the selected action link.',
-            reference: 'Action URL',
+            title:
+                artwork?.title || (url === '' ? 'No Action URL Yet' : url),
+            description:
+                artwork?.description ||
+                'Preview based on the selected action link.',
+            reference: artwork?.reference || 'Action URL',
+            imageUrl: artwork?.image_url || null,
         };
     }
 
@@ -99,6 +118,7 @@ export function resolveRiderOgPreview(
                     ? splashBody || 'No Introduction Message Yet.'
                     : `${splashBody || 'No Introduction Message Yet.'} · ${splashCta}`,
             reference: 'Claim Introduction',
+            imageUrl: null,
         };
     }
 
@@ -114,6 +134,7 @@ export function resolveRiderOgPreview(
             message ||
             'Uses the first available message, link, or introduction.',
         reference: 'Automatic',
+        imageUrl: null,
     };
 }
 
@@ -131,6 +152,12 @@ export function buildRiderOgPreviewDocument(
     preview: RiderOgPreview,
     splashContent: string,
 ): string {
+    if (preview.source === 'url' && preview.imageUrl !== null) {
+        return buildSandboxedPreviewDocument(
+            `<img class="artwork-cover" src="${escapeHtml(preview.imageUrl)}" alt="" />`,
+        );
+    }
+
     return buildSandboxedPreviewDocument(
         shouldRenderRiderOgSplash(preview, splashContent)
             ? splashContent
@@ -153,6 +180,7 @@ export function buildSandboxedPreviewDocument(content: string): string {
 html, body { margin: 0; min-height: 100%; overflow: hidden; background: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 body { padding: 0; }
 img { max-width: 100%; height: auto; }
+.artwork-cover { display: block; width: 100%; height: 100vh; max-width: none; object-fit: cover; }
 h1, h2, h3, p { overflow-wrap: anywhere; }
 .text-center { text-align: center; }
 .mx-auto { margin-left: auto; margin-right: auto; }
