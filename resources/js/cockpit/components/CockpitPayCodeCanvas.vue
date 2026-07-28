@@ -51,15 +51,18 @@ const xChangeLogoUrl = '/vendor/x-change/images/logo-orange.png';
 
 const formattedAmount = computed<string>(() => {
     const value = Number(props.amount);
-
-    if (!Number.isFinite(value)) {
-        return `${props.currency || 'PHP'} 0.00`;
-    }
-
-    return `${props.currency || 'PHP'} ${value.toLocaleString('en-US', {
+    const amount = Number.isFinite(value) ? value : 0;
+    const formattedValue = amount.toLocaleString('en-PH', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-    })}`;
+    });
+    const currency = props.currency.trim().toUpperCase() || 'PHP';
+
+    if (currency === 'PHP') {
+        return `₱${formattedValue}`;
+    }
+
+    return `${currency} ${formattedValue}`;
 });
 
 const recipientLabel = computed<string>(() => {

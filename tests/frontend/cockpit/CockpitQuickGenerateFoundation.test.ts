@@ -97,7 +97,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-pay-code-canvas-tagline"]')
                 .text(),
         ).toContain('Money should adapt to people. Not the other way around.');
-        expect(wrapper.text()).toContain('PHP 50.00');
+        expect(wrapper.text()).toContain('₱50.00');
         expect(wrapper.text()).not.toContain('Digital Pay Code');
     });
 
@@ -134,7 +134,7 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('PHP 1,250.00');
+        expect(wrapper.text()).toContain('₱1,250.00');
         expect(wrapper.text()).toContain('Mobile ending 1987');
         expect(wrapper.text()).toContain('PAY CODE PREVIEW');
         const design = wrapper.find(
