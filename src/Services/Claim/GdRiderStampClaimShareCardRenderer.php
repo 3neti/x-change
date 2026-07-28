@@ -24,7 +24,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract
 {
-    private const string CacheVersion = 'v5';
+    private const string CacheVersion = 'v6';
 
     private const int Width = 1200;
 

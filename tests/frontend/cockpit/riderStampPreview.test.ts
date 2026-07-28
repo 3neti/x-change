@@ -112,6 +112,7 @@ describe('Rider Stamp preview helpers', () => {
                 <img src="https://example.test/rose.png" alt="A rose" />
                 <h2>i carry your heart with me</h2>
                 <p>(i carry it in my heart)</p>
+                <p>🤝 &nbsp; ❤️ &nbsp; ✌️ &nbsp; 🔫 &nbsp; ✈️ &nbsp; ⭐</p>
                 <p>&mdash; e.e. cummings</p>
             </div>
         `;
@@ -124,7 +125,8 @@ describe('Rider Stamp preview helpers', () => {
 
         expect(preview).toMatchObject({
             title: 'i carry your heart with me',
-            description: '(i carry it in my heart)',
+            description:
+                '(i carry it in my heart) · 🤝 ❤️ ✌️ 🔫 ✈️ ⭐ · — e.e. cummings',
         });
         expect(preview.title).not.toContain('<');
         expect(preview.description).not.toContain('<');

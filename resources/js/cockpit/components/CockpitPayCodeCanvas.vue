@@ -584,7 +584,8 @@ function stringValue(value: unknown): string | null {
                         </p>
                         <p
                             v-if="riderStamp?.description"
-                            class="mt-1 line-clamp-2 text-[0.65rem] leading-4 @md:text-xs"
+                            class="mt-1 line-clamp-3 text-[0.65rem] leading-4 @md:text-xs"
+                            data-testid="cockpit-pay-code-canvas-stamp-description"
                             :class="
                                 hasRiderDesign
                                     ? 'text-white/75'

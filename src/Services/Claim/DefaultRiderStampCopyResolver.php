@@ -145,7 +145,9 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
         }
 
         $title = $this->firstElementText($document, ['h1', 'h2', 'h3']);
-        $description = $this->firstElementText($document, ['p']);
+        $description = collect(
+            $this->elementTexts($document, ['p']),
+        )->unique()->implode(' · ');
         $plainText = $this->splashPlainText($splash);
 
         return [
@@ -172,17 +174,30 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
         DOMDocument $document,
         array $tagNames,
     ): ?string {
+        return $this->elementTexts($document, $tagNames)[0] ?? null;
+    }
+
+    /**
+     * @param  list<string>  $tagNames
+     * @return list<string>
+     */
+    private function elementTexts(
+        DOMDocument $document,
+        array $tagNames,
+    ): array {
+        $texts = [];
+
         foreach ($tagNames as $tagName) {
             foreach ($document->getElementsByTagName($tagName) as $element) {
                 $text = trim((string) $element->textContent);
 
                 if ($text !== '') {
-                    return $text;
+                    $texts[] = $text;
                 }
             }
         }
 
-        return null;
+        return $texts;
     }
 
     private function splashPlainText(?string $splash): string
@@ -207,7 +222,7 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
 
         try {
             if (! $document->loadHTML(
-                (string) $splash,
+                '<?xml encoding="UTF-8">'.(string) $splash,
                 LIBXML_NONET | LIBXML_NOWARNING | LIBXML_NOERROR,
             )) {
                 return null;

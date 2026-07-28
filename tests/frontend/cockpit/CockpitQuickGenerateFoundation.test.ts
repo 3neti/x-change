@@ -104,6 +104,40 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).not.toContain('Digital Pay Code');
     });
 
+    it('keeps all safe Rider Splash supporting copy on the canvas', () => {
+        const riderStamp = resolveRiderStampPreview({
+            source: 'splash',
+            splashBody: `
+                <h2>i carry your heart with me</h2>
+                <p>(i carry it in my heart)</p>
+                <p>🤝 &nbsp; ❤️ &nbsp; ✌️ &nbsp; 🔫 &nbsp; ✈️ &nbsp; ⭐</p>
+                <p>&mdash; e.e. cummings</p>
+            `,
+            artworkSource: 'splash',
+            copySource: 'splash',
+        });
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '55',
+                currency: 'PHP',
+                recipient: '',
+                purpose: 'Snacks',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                hasRiderDesign: true,
+                riderDesignSource: 'splash',
+                riderStamp,
+            },
+        });
+        const description = wrapper.get(
+            '[data-testid="cockpit-pay-code-canvas-stamp-description"]',
+        );
+
+        expect(description.text()).toContain('🤝 ❤️ ✌️ 🔫 ✈️ ⭐');
+        expect(description.text()).toContain('— e.e. cummings');
+        expect(description.classes()).toContain('line-clamp-3');
+    });
+
     it('opens the compact Front Design editor from the live canvas', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {

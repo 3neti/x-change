@@ -178,22 +178,41 @@ function resolveSplashCopy(
     }
 
     const heading = firstHtmlElementText(body, ['h1', 'h2', 'h3']);
-    const paragraph = firstHtmlElementText(body, ['p']);
+    const paragraphs = htmlElementTexts(body, ['p']);
     const plainText = htmlToPlainText(body);
+    const description = uniqueCopyParts([...paragraphs, cta]).join(' · ');
 
     return {
         title: headline || heading || plainText,
-        description: paragraph || cta || plainText,
+        description: description || plainText,
     };
 }
 
 function firstHtmlElementText(content: string, tagNames: string[]): string {
+    return htmlElementTexts(content, tagNames)[0] ?? '';
+}
+
+function htmlElementTexts(content: string, tagNames: string[]): string[] {
     const tags = tagNames.join('|');
-    const match = content.match(
-        new RegExp(`<(?:${tags})\\b[^>]*>([\\s\\S]*?)<\\/(?:${tags})>`, 'i'),
+    const matches = content.matchAll(
+        new RegExp(
+            `<(?:${tags})\\b[^>]*>([\\s\\S]*?)<\\/(?:${tags})>`,
+            'gi',
+        ),
     );
 
-    return htmlToPlainText(match?.[1] ?? '');
+    return Array.from(matches)
+        .map((match) => htmlToPlainText(match[1] ?? ''))
+        .filter((text) => text !== '');
+}
+
+function uniqueCopyParts(parts: string[]): string[] {
+    return parts
+        .map((part) => part.trim())
+        .filter(
+            (part, index, values) =>
+                part !== '' && values.indexOf(part) === index,
+        );
 }
 
 function htmlToPlainText(content: string): string {
@@ -213,7 +232,10 @@ function decodeHtmlEntities(value: string): string {
         amp: '&',
         apos: "'",
         gt: '>',
+        hellip: '…',
         lt: '<',
+        mdash: '—',
+        ndash: '–',
         nbsp: ' ',
         quot: '"',
     };

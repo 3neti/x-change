@@ -101,6 +101,33 @@ it('uses custom Stamp title and subtitle as copy overrides', function (): void {
         );
 });
 
+it('preserves every visible Rider Splash paragraph as safe Stamp copy', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'splash' => <<<'HTML'
+                <div>
+                    <h2>i carry your heart with me</h2>
+                    <p>(i carry it in my heart)</p>
+                    <p>🤝 &nbsp; ❤️ &nbsp; ✌️ &nbsp; 🔫 &nbsp; ✈️ &nbsp; ⭐</p>
+                    <p>&mdash; e.e. cummings</p>
+                </div>
+                HTML,
+            'stamp' => [
+                'version' => 2,
+                'source' => 'splash',
+                'copy_source' => 'splash',
+            ],
+        ],
+    ]));
+
+    $copy = app(RiderStampCopyResolverContract::class)->resolve($voucher);
+
+    expect($copy->title)->toBe('i carry your heart with me')
+        ->and($copy->description)->toBe(
+            '(i carry it in my heart) · 🤝 ❤️ ✌️ 🔫 ✈️ ⭐ · — e.e. cummings',
+        );
+});
+
 it('uses allow-listed Rider URL metadata when it is available', function (): void {
     Cache::clear();
     Http::preventStrayRequests();
