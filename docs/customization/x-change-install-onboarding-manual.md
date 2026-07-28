@@ -24,6 +24,20 @@ php artisan test
 
 During development, `npm run dev` can replace `npm run build`.
 
+Before the installer changes the database or publishes UI files, every required
+Treasury connection must pass both static configuration checks and a read-only
+live check. The live check authenticates and reads an authoritative provider
+balance. It does not move money. Diagnose the two levels independently with:
+
+```bash
+php artisan x-change:treasury:preflight --no-interaction
+php artisan x-change:treasury:preflight --live --no-interaction
+```
+
+The live command reports only sanitized failure codes. It never prints provider
+credentials, tokens, account numbers, authorization headers, raw response
+bodies, or sensitive URLs.
+
 ## What `x-change:install` Publishes
 
 The installer is intentionally broad. It publishes package-owned source into the host because Inertia, Fortify, routes, and the authenticated `User` model are host-owned in Laravel.
@@ -182,6 +196,9 @@ php artisan x-change:install --force
 
 Overwrite previously published files.
 
+`--force` does not bypass Treasury configuration, live provider readiness,
+opening reconciliation, or capitalization controls.
+
 ```bash
 php artisan x-change:install --no-auth
 ```
@@ -230,6 +247,15 @@ php artisan x-change:install --no-migrate
 
 Publish files without running migrations.
 
+```bash
+php artisan x-change:install --no-treasury --no-interaction
+```
+
+Explicitly defer Treasury initialization for a build or recovery workflow. The
+installer visibly reports the deferred state and skips provider preflight,
+Treasury Position provisioning, and opening reconciliation. It never selects
+this mode automatically after a provider failure.
+
 For a first deployment where the reconciled provider opening balance is
 confirmed to belong to the system principal:
 
@@ -258,6 +284,22 @@ XCHANGE_TREASURY_PAYNAMICS_OPENING_POLICY=unattributed
 ```
 
 Capitalization options cannot be combined with `--no-treasury`.
+
+The installer order is:
+
+1. static Treasury configuration preflight;
+2. live provider preflight;
+3. migration preparation and migrations;
+4. system principal and Treasury Position provisioning;
+5. authoritative opening-balance observation and reconciliation;
+6. optional, explicitly authorized capitalization; and
+7. UI and remaining asset publication.
+
+A failed required live connection stops before migrations and publication. A
+failed optional connection is reported but does not block healthy required
+connections; it receives no Treasury Positions. `--no-interaction` never
+prompts, silently skips a required provider, accepts an operator-entered
+balance, or falls back to manual capitalization.
 
 ## Runtime Auth Behavior
 

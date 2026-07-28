@@ -103,13 +103,31 @@ php artisan x-change:install --no-interaction
 
 The default installer:
 
-1. validates the durable Treasury identity before any publishing, migration, or provider call;
-2. publishes package assets and migrations;
-3. runs migrations;
-4. runs provider preflight as part of Treasury provisioning;
-5. resolves the system principal;
-6. idempotently provisions zero-balance Treasury Positions; and
-7. reads authoritative provider balances and performs opening reconciliation.
+1. validates static configuration and the durable Treasury identity;
+2. runs a read-only live provider preflight that authenticates and reads an
+   authoritative balance;
+3. stops before migrations, Treasury Positions, or UI publication when a
+   required connection fails;
+4. publishes migration prerequisites and runs migrations;
+5. resolves the system principal and idempotently provisions zero-balance
+   Treasury Positions only for connections that passed live preflight;
+6. reads authoritative provider balances again for opening reconciliation;
+7. applies an explicitly authorized opening capitalization policy, when
+   requested; and
+8. publishes the UI and remaining host assets only after Treasury succeeds.
+
+`--force` controls replacement of published files only. It never weakens
+Treasury configuration, live readiness, ownership confirmation, or
+reconciliation controls. `--no-interaction` never prompts, invents an opening
+amount, silently skips a required connection, or falls back to manual
+capitalization.
+
+Static and live readiness are deliberately separate. Static readiness verifies
+installed provider capabilities and required configuration names. Live
+readiness verifies DNS/TLS transport, provider authentication, the balance
+endpoint, and the authoritative response shape. It is read-only: it may obtain
+an access token and read a balance, but it does not register an account, create
+a transfer, or move money.
 
 Opening reconciliation deliberately attributes a new provider balance to
 `Legacy Unattributed`. It does not assume that the entire bank or EMI balance
@@ -159,12 +177,17 @@ allowlisting is optional but recommended.
 
 After changing environment configuration, run `php artisan optimize:clear` before retrying installation.
 
-Use `--no-treasury` only for build or recovery workflows where Treasury initialization is intentionally deferred.
+Use `--no-treasury` only for build or recovery workflows where Treasury
+initialization is intentionally deferred. The installer prints that deferred
+state visibly and does not run provider preflight, create Treasury Positions,
+or perform opening reconciliation. It is not an automatic fallback after a
+provider failure.
 
 The component commands remain available:
 
 ```bash
 php artisan x-change:treasury:preflight --no-interaction
+php artisan x-change:treasury:preflight --live --no-interaction
 php artisan x-change:treasury:provision --no-interaction
 php artisan x-change:treasury:reconcile-opening --no-interaction
 php artisan x-change:treasury:capitalize-opening \
@@ -177,7 +200,26 @@ The capitalization command is preview-only without `--commit`. A committed
 standalone run additionally requires `--authorization-reference` and
 `--confirm-system-ownership`. All Treasury commands accept
 `--connection=<reference>`; operational commands support `--json` where
-machine-readable output is useful.
+machine-readable output is useful. Preflight JSON reports `level`,
+`static_ready`, `live_ready`, combined `ready`, and sanitized `issues`.
+
+A failed required connection makes live preflight and installation fail closed.
+A failed optional connection remains visible but does not block healthy required
+connections, and no Treasury Position is provisioned for that optional
+connection.
+
+Provider transport and response failures use only this sanitized taxonomy:
+
+- `dns_resolution_failed`
+- `connection_timeout`
+- `tls_failure`
+- `authentication_failed`
+- `balance_endpoint_rejected`
+- `invalid_balance_response`
+- `provider_unavailable`
+
+These results never contain credentials, access tokens, account numbers,
+authorization headers, provider response bodies, or sensitive provider URLs.
 
 ## Opening reconciliation
 
