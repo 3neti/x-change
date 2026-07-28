@@ -815,7 +815,7 @@ function stringValue(value: unknown): string | null {
             :id="panelId('design')"
             role="tabpanel"
             :aria-labelledby="tabId('design')"
-            class="aspect-[1.72/1] min-h-72 overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
+            class="aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
             data-testid="cockpit-pay-code-canvas-design"
         >
             <slot name="design" />

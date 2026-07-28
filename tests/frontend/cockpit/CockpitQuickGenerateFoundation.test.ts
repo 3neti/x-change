@@ -190,6 +190,7 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(designPanel.attributes('role')).toBe('tabpanel');
+        expect(designPanel.classes()).toContain('w-full');
         expect(designPanel.text()).toContain('Rider editor');
         expect(
             wrapper
