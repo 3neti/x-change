@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Claim;
 
 use DOMDocument;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\Voucher\Models\Voucher;
@@ -206,6 +209,37 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
                     ),
                 ))
                 ->withoutRedirecting()
+                ->retry(
+                    max(
+                        1,
+                        (int) config(
+                            'x-change.claim.share.splash_artwork.retry_attempts',
+                            3,
+                        ),
+                    ),
+                    max(
+                        0,
+                        (int) config(
+                            'x-change.claim.share.splash_artwork.retry_sleep_milliseconds',
+                            150,
+                        ),
+                    ),
+                    static function (
+                        Throwable $exception,
+                        PendingRequest $request,
+                    ): bool {
+                        if ($exception instanceof ConnectionException) {
+                            return true;
+                        }
+
+                        return $exception instanceof RequestException
+                            && (
+                                $exception->response->serverError()
+                                || $exception->response->status() === 429
+                            );
+                    },
+                    throw: false,
+                )
                 ->get($url);
         } catch (Throwable) {
             return null;

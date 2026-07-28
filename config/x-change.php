@@ -1867,6 +1867,14 @@ return [
                     'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_TIMEOUT_SECONDS',
                     6,
                 ),
+                'retry_attempts' => (int) env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_RETRY_ATTEMPTS',
+                    3,
+                ),
+                'retry_sleep_milliseconds' => (int) env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_RETRY_SLEEP_MILLISECONDS',
+                    150,
+                ),
                 'maximum_image_bytes' => (int) env(
                     'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_MAXIMUM_IMAGE_BYTES',
                     2097152,

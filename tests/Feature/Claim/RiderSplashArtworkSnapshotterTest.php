@@ -69,6 +69,48 @@ it('captures validated remote Splash artwork into private content-addressed stor
     Http::assertSentCount(1);
 });
 
+it('retries transient remote failures before persisting Splash artwork', function (): void {
+    $image = imagecreatetruecolor(8, 8);
+    $blue = imagecolorallocate($image, 59, 130, 246);
+    imagefilledrectangle($image, 0, 0, 8, 8, $blue);
+    ob_start();
+    imagepng($image);
+    $contents = ob_get_clean();
+    imagedestroy($image);
+
+    expect($contents)->toBeString()->not->toBeEmpty();
+
+    config()->set(
+        'x-change.claim.share.splash_artwork.retry_sleep_milliseconds',
+        0,
+    );
+
+    Http::fake([
+        'https://raw.githubusercontent.com/example/art/main/blue.png' => Http::sequence()
+            ->push('temporarily unavailable', 503)
+            ->push($contents, 200, ['Content-Type' => 'image/png']),
+    ]);
+
+    $prepared = app(RiderSplashArtworkSnapshotterContract::class)
+        ->prepare(validVoucherInstructions(overrides: [
+            'rider' => [
+                'splash' => '<img src="https://github.com/example/art/blob/main/blue.png?raw=true">',
+                'stamp' => [
+                    'version' => 2,
+                    'artwork_source' => 'splash',
+                ],
+            ],
+        ])->toArray());
+    $snapshot = RiderSplashArtworkSnapshotData::fromArray(data_get(
+        $prepared,
+        'metadata.custom.rider_splash_artwork',
+    ));
+
+    expect($snapshot)->toBeInstanceOf(RiderSplashArtworkSnapshotData::class)
+        ->and($snapshot->sha256)->toBe(hash('sha256', $contents));
+    Http::assertSentCount(2);
+});
+
 it('replaces caller-supplied snapshot metadata with a server-derived descriptor', function (): void {
     $image = imagecreatetruecolor(8, 8);
     $yellow = imagecolorallocate($image, 250, 204, 21);
