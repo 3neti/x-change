@@ -607,6 +607,9 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(ledger.attributes('data-column-count')).toBe('3');
+        expect(ledger.classes()).toContain(
+            'grid-cols-[minmax(0,5fr)_minmax(0,5fr)_minmax(0,7fr)]',
+        );
         expect(columns).toHaveLength(3);
         expect(columns[0].text()).toContain('Charge 1');
         expect(columns[0].text()).toContain('Charge 6');
@@ -626,12 +629,17 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-pay-code-cost-label"]',
         );
 
-        expect(labels[0].classes()).toContain('line-clamp-2');
-        expect(labels[0].classes()).not.toContain('truncate');
+        expect(labels[0].classes()).toContain('whitespace-nowrap');
+        expect(labels[0].classes()).toContain('overflow-hidden');
+        expect(
+            labels[0]
+                .get('[data-testid="cockpit-pay-code-cost-label-text"]')
+                .classes(),
+        ).toContain('truncate');
         expect(labels[0].attributes('title')).toBe('Charge 1');
     });
 
-    it('gives long cost descriptions two compact lines in dense ledgers', async () => {
+    it('keeps long cost descriptions to one cropped line in dense ledgers', async () => {
         const longLabel = 'Monthly Gross Income Verification';
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {
@@ -665,9 +673,15 @@ describe('Cockpit Quick Generate foundation', () => {
                 .text(),
         ).toBe(longLabel);
         expect(label?.attributes('title')).toBe(longLabel);
-        expect(label?.classes()).toContain('line-clamp-2');
-        expect(label?.classes()).toContain('break-words');
-        expect(label?.classes()).not.toContain('truncate');
+        expect(label?.classes()).toContain('whitespace-nowrap');
+        expect(label?.classes()).toContain('overflow-hidden');
+        expect(
+            label
+                ?.get('[data-testid="cockpit-pay-code-cost-label-text"]')
+                .classes(),
+        ).toContain('truncate');
+        expect(label?.classes()).not.toContain('line-clamp-2');
+        expect(label?.classes()).not.toContain('break-words');
         expect(wrapper.text()).toContain('Total');
         expect(wrapper.text()).toContain('₱171.00');
     });

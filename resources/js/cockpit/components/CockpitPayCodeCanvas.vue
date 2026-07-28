@@ -772,7 +772,7 @@ function stringValue(value: unknown): string | null {
                         class="grid gap-y-3"
                         :class="
                             costLedgerColumnCount === 3
-                                ? 'grid-cols-3 gap-x-1.5'
+                                ? 'grid-cols-[minmax(0,5fr)_minmax(0,5fr)_minmax(0,7fr)] gap-x-1.5'
                                 : costLedgerColumnCount === 2
                                   ? 'grid-cols-2 gap-x-3'
                                   : 'grid-cols-1'
@@ -804,11 +804,11 @@ function stringValue(value: unknown): string | null {
                                 :key="item.key"
                             >
                                 <dt
-                                    class="flex min-w-0 items-start gap-1.5 break-words text-slate-300"
+                                    class="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-slate-300"
                                     :class="
-                                        costLedgerColumnCount > 1
-                                            ? 'line-clamp-2 text-pretty'
-                                            : 'whitespace-normal'
+                                        costLedgerColumnCount === 1
+                                            ? 'text-xs @sm:text-sm'
+                                            : ''
                                     "
                                     :title="item.label"
                                     data-testid="cockpit-pay-code-cost-label"
@@ -820,7 +820,7 @@ function stringValue(value: unknown): string | null {
                                         size="sm"
                                     />
                                     <span
-                                        class="min-w-0"
+                                        class="min-w-0 truncate"
                                         data-testid="cockpit-pay-code-cost-label-text"
                                     >
                                         {{ item.label }}
