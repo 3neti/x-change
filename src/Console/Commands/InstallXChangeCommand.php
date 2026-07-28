@@ -9,6 +9,8 @@ use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningCapitalizationPolicyResolver;
+use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
+use Throwable;
 
 class InstallXChangeCommand extends Command
 {
@@ -23,7 +25,7 @@ class InstallXChangeCommand extends Command
         {--no-rider : Skip x-rider asset publishing}
         {--no-x-ray : Skip x-ray asset publishing}
         {--no-migrate : Skip database migrations}
-        {--no-treasury : Skip Treasury provider preflight and zero-balance provisioning}
+        {--no-treasury : Explicitly defer Treasury preflight, provisioning, and reconciliation}
         {--treasury-opening-policy= : unattributed, system-capital, or configured}
         {--capitalization-authorization-reference= : Stable deployment or control authorization reference}
         {--confirm-system-ownership : Confirm that opening provider funds belong to the system principal}';
@@ -34,10 +36,12 @@ class InstallXChangeCommand extends Command
         PublishedAssetDriftDetector $publishedAssets,
         TreasuryConfigurationValidator $treasuryConfiguration,
         TreasuryOpeningCapitalizationPolicyResolver $capitalizationPolicies,
+        TreasuryPreflightService $treasuryPreflight,
     ): int {
         $this->components->info('Installing X-Change...');
 
         $capitalizationConnections = [];
+        $liveReadyConnections = [];
 
         if (
             (bool) $this->option('no-treasury')
@@ -93,147 +97,200 @@ class InstallXChangeCommand extends Command
 
                 return self::FAILURE;
             }
+
+            try {
+                $livePreflight = $treasuryPreflight->run(live: true);
+            } catch (Throwable) {
+                $this->components->error(
+                    'Treasury live preflight could not be completed [provider_unavailable].',
+                );
+
+                return self::FAILURE;
+            }
+
+            foreach ($livePreflight->connections as $connection) {
+                $reference = $connection->connection->reference;
+
+                if ($connection->ready) {
+                    $this->components->info(
+                        "Treasury live preflight ready [{$reference}].",
+                    );
+                    $liveReadyConnections[] = $reference;
+
+                    continue;
+                }
+
+                $issues = $connection->issues === []
+                    ? 'provider_unavailable'
+                    : implode(', ', $connection->issues);
+                $this->components->warn(
+                    "Treasury live preflight unavailable [{$reference}]: {$issues}.",
+                );
+            }
+
+            if (! $livePreflight->passes()) {
+                $this->components->error(
+                    'Required Treasury provider connections did not pass live preflight. '
+                    .'No migrations, Treasury positions, or UI assets were changed.',
+                );
+
+                return self::FAILURE;
+            }
+
+            $capitalizationConnections = array_values(array_intersect(
+                $capitalizationConnections,
+                $liveReadyConnections,
+            ));
+        } else {
+            $this->components->warn(
+                'Treasury initialization is explicitly deferred [--no-treasury]. '
+                .'No provider preflight, Treasury positions, or opening reconciliation will run.',
+            );
         }
 
         $force = (bool) $this->option('force');
 
-        $this->call('vendor:publish', [
-            '--tag' => 'x-change-form-flow-drivers',
-            '--force' => $this->option('force'),
-        ]);
-
-        // Publish UI (pages, components, layouts, composables)
-        $this->components->task('Publishing UI files', function () use ($force): void {
-            $this->callSilently('vendor:publish', [
-                '--tag' => 'x-change-ui',
-                '--force' => $force,
+        $publishResources = function () use ($force, $publishedAssets): void {
+            $this->call('vendor:publish', [
+                '--tag' => 'x-change-form-flow-drivers',
+                '--force' => $this->option('force'),
             ]);
-        });
 
-        $this->components->task('Stamping Cockpit published asset warnings', function () use ($publishedAssets): void {
-            $publishedAssets->applyGeneratedHeaders();
-        });
-
-        $this->publishOnboardingAssets($force);
-
-        if (! $this->option('no-auth')) {
-            $this->components->task('Publishing mobile-first auth scaffold', function () use ($force): void {
+            // Publish UI (pages, components, layouts, composables)
+            $this->components->task('Publishing UI files', function () use ($force): void {
                 $this->callSilently('vendor:publish', [
-                    '--tag' => 'x-change-auth',
+                    '--tag' => 'x-change-ui',
                     '--force' => $force,
                 ]);
             });
 
-            if (! $this->option('no-auth-tests')) {
-                $this->components->task('Publishing mobile-first auth tests', function () use ($force): void {
+            $this->components->task('Stamping Cockpit published asset warnings', function () use ($publishedAssets): void {
+                $publishedAssets->applyGeneratedHeaders();
+            });
+
+            $this->publishOnboardingAssets($force);
+
+            if (! $this->option('no-auth')) {
+                $this->components->task('Publishing mobile-first auth scaffold', function () use ($force): void {
                     $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-change-auth-tests',
+                        '--tag' => 'x-change-auth',
                         '--force' => $force,
                     ]);
                 });
-            } else {
-                $this->components->warn('Skipping mobile-first auth test scaffold publishing.');
-            }
-        } else {
-            $this->components->warn('Skipping mobile-first auth scaffold publishing.');
-        }
 
-        if (! $this->option('no-settings')) {
-            $this->components->task('Publishing mobile-first settings scaffold', function () use ($force): void {
-                $this->callSilently('vendor:publish', [
-                    '--tag' => 'x-change-settings',
-                    '--force' => $force,
-                ]);
-            });
-
-            if (! $this->option('no-settings-tests')) {
-                $this->components->task('Publishing mobile-first settings tests', function () use ($force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-change-settings-tests',
-                        '--force' => $force,
-                    ]);
-                });
-            } else {
-                $this->components->warn('Skipping mobile-first settings test scaffold publishing.');
-            }
-        } else {
-            $this->components->warn('Skipping mobile-first settings scaffold publishing.');
-        }
-
-        // Publish branding assets
-        if (! $this->option('no-assets')) {
-            $this->components->task('Publishing branding assets', function () use ($force): void {
-                $this->callSilently('vendor:publish', [
-                    '--tag' => 'x-change-assets',
-                    '--force' => $force,
-                ]);
-            });
-        }
-
-        // Publish form-flow and handler assets (if installed)
-        if (! $this->option('no-handlers')) {
-            $formFlowProviders = [
-                'LBHurtado\FormFlowManager\FormFlowServiceProvider',
-                'LBHurtado\FormHandlerKYC\KYCHandlerServiceProvider',
-                'LBHurtado\FormHandlerLocation\LocationHandlerServiceProvider',
-                'LBHurtado\FormHandlerOtp\OtpHandlerServiceProvider',
-                'LBHurtado\FormHandlerSelfie\SelfieHandlerServiceProvider',
-                'LBHurtado\FormHandlerSignature\SignatureHandlerServiceProvider',
-            ];
-
-            foreach ($formFlowProviders as $provider) {
-                if (class_exists($provider)) {
-                    $shortName = class_basename($provider);
-                    $this->components->task("Publishing {$shortName}", function () use ($provider, $force): void {
+                if (! $this->option('no-auth-tests')) {
+                    $this->components->task('Publishing mobile-first auth tests', function () use ($force): void {
                         $this->callSilently('vendor:publish', [
-                            '--provider' => $provider,
+                            '--tag' => 'x-change-auth-tests',
+                            '--force' => $force,
+                        ]);
+                    });
+                } else {
+                    $this->components->warn('Skipping mobile-first auth test scaffold publishing.');
+                }
+            } else {
+                $this->components->warn('Skipping mobile-first auth scaffold publishing.');
+            }
+
+            if (! $this->option('no-settings')) {
+                $this->components->task('Publishing mobile-first settings scaffold', function () use ($force): void {
+                    $this->callSilently('vendor:publish', [
+                        '--tag' => 'x-change-settings',
+                        '--force' => $force,
+                    ]);
+                });
+
+                if (! $this->option('no-settings-tests')) {
+                    $this->components->task('Publishing mobile-first settings tests', function () use ($force): void {
+                        $this->callSilently('vendor:publish', [
+                            '--tag' => 'x-change-settings-tests',
+                            '--force' => $force,
+                        ]);
+                    });
+                } else {
+                    $this->components->warn('Skipping mobile-first settings test scaffold publishing.');
+                }
+            } else {
+                $this->components->warn('Skipping mobile-first settings scaffold publishing.');
+            }
+
+            // Publish branding assets
+            if (! $this->option('no-assets')) {
+                $this->components->task('Publishing branding assets', function () use ($force): void {
+                    $this->callSilently('vendor:publish', [
+                        '--tag' => 'x-change-assets',
+                        '--force' => $force,
+                    ]);
+                });
+            }
+
+            // Publish form-flow and handler assets (if installed)
+            if (! $this->option('no-handlers')) {
+                $formFlowProviders = [
+                    'LBHurtado\FormFlowManager\FormFlowServiceProvider',
+                    'LBHurtado\FormHandlerKYC\KYCHandlerServiceProvider',
+                    'LBHurtado\FormHandlerLocation\LocationHandlerServiceProvider',
+                    'LBHurtado\FormHandlerOtp\OtpHandlerServiceProvider',
+                    'LBHurtado\FormHandlerSelfie\SelfieHandlerServiceProvider',
+                    'LBHurtado\FormHandlerSignature\SignatureHandlerServiceProvider',
+                ];
+
+                foreach ($formFlowProviders as $provider) {
+                    if (class_exists($provider)) {
+                        $shortName = class_basename($provider);
+                        $this->components->task("Publishing {$shortName}", function () use ($provider, $force): void {
+                            $this->callSilently('vendor:publish', [
+                                '--provider' => $provider,
+                                '--force' => $force,
+                            ]);
+                        });
+                    }
+                }
+            }
+
+            // Publish x-rider UI/components if installed
+            if (! $this->option('no-rider')) {
+                $provider = 'LBHurtado\\XRider\\XRiderServiceProvider';
+
+                if (class_exists($provider)) {
+                    $this->components->task('Publishing x-rider UI files', function () use ($force): void {
+                        $this->callSilently('vendor:publish', [
+                            '--tag' => 'x-rider-ui',
+                            '--force' => $force,
+                        ]);
+                    });
+
+                    $this->components->task('Publishing x-rider drivers', function () use ($force): void {
+                        $this->callSilently('vendor:publish', [
+                            '--tag' => 'x-rider-drivers',
                             '--force' => $force,
                         ]);
                     });
                 }
             }
-        }
 
-        // Publish x-rider UI/components if installed
-        if (! $this->option('no-rider')) {
-            $provider = 'LBHurtado\\XRider\\XRiderServiceProvider';
+            if (! $this->option('no-x-ray')) {
+                $provider = 'LBHurtado\\XRay\\XRayServiceProvider';
 
-            if (class_exists($provider)) {
-                $this->components->task('Publishing x-rider UI files', function () use ($force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-rider-ui',
-                        '--force' => $force,
-                    ]);
-                });
+                if (class_exists($provider)) {
+                    $this->components->task('Publishing x-ray config', function () use ($force): void {
+                        $this->callSilently('vendor:publish', [
+                            '--tag' => 'x-ray-config',
+                            '--force' => $force,
+                        ]);
+                    });
 
-                $this->components->task('Publishing x-rider drivers', function () use ($force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-rider-drivers',
-                        '--force' => $force,
-                    ]);
-                });
+                    $this->components->task('Publishing x-ray UI files', function () use ($force): void {
+                        $this->callSilently('vendor:publish', [
+                            '--tag' => 'x-ray-assets',
+                            '--force' => $force,
+                        ]);
+                    });
+                }
             }
-        }
+        };
 
-        if (! $this->option('no-x-ray')) {
-            $provider = 'LBHurtado\\XRay\\XRayServiceProvider';
-
-            if (class_exists($provider)) {
-                $this->components->task('Publishing x-ray config', function () use ($force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-ray-config',
-                        '--force' => $force,
-                    ]);
-                });
-
-                $this->components->task('Publishing x-ray UI files', function () use ($force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-ray-assets',
-                        '--force' => $force,
-                    ]);
-                });
-            }
-        }
+        $this->publishOnboardingMigrations($force);
 
         // Run migrations
         if (! $this->option('no-migrate')) {
@@ -244,8 +301,9 @@ class InstallXChangeCommand extends Command
             });
         }
 
-        if (! $this->option('no-treasury')) {
+        if (! $this->option('no-treasury') && $liveReadyConnections !== []) {
             $exitCode = $this->call('x-change:treasury:provision', [
+                '--connection' => $liveReadyConnections,
                 '--no-interaction' => true,
             ]);
 
@@ -256,6 +314,7 @@ class InstallXChangeCommand extends Command
             }
 
             $exitCode = $this->call('x-change:treasury:reconcile-opening', [
+                '--connection' => $liveReadyConnections,
                 '--no-interaction' => true,
             ]);
 
@@ -291,7 +350,13 @@ class InstallXChangeCommand extends Command
                     'Opening provider funds remain Legacy Unattributed; no system Account Funding Reserve was capitalized.',
                 );
             }
+        } elseif (! $this->option('no-treasury')) {
+            $this->components->warn(
+                'No Treasury connection passed live preflight; no Treasury positions were provisioned.',
+            );
         }
+
+        $publishResources();
 
         $this->newLine();
         $this->components->info('X-Change installed successfully.');
@@ -320,6 +385,15 @@ class InstallXChangeCommand extends Command
                 '--force' => $force,
             ]);
         });
+    }
+
+    protected function publishOnboardingMigrations(bool $force): void
+    {
+        $provider = 'LBHurtado\\Onboarding\\OnboardingServiceProvider';
+
+        if (! class_exists($provider)) {
+            return;
+        }
 
         $this->components->task('Publishing onboarding migrations', function () use ($force): void {
             $this->callSilently('vendor:publish', [
