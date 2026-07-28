@@ -1215,6 +1215,7 @@ return [
     ],
     'lifecycle' => [
         ...require __DIR__.'/lifecycle-scenarios.php',
+        'voucher_cancellation_middleware' => ['auth'],
         'synthetic_funding_environments' => ['local', 'testing'],
         'qrph_funding_simulation' => [
             'enabled' => (bool) env(

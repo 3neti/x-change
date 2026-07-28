@@ -23,6 +23,7 @@ final class FundingProjectionChanged implements ShouldBroadcastNow, ShouldRescue
         private readonly string $ownerId,
         private readonly string $receiptReference,
         private readonly string $occurredAt,
+        private readonly string $reason = 'account_funding_settled',
     ) {}
 
     public function broadcastOn(): PrivateChannel
@@ -48,7 +49,7 @@ final class FundingProjectionChanged implements ShouldBroadcastNow, ShouldRescue
         return [
             'schema' => 'x-change.funding-projection-changed.v1',
             'event_id' => hash('sha256', $this->receiptReference),
-            'reason' => 'account_funding_settled',
+            'reason' => $this->reason,
             'occurred_at' => $this->occurredAt,
         ];
     }

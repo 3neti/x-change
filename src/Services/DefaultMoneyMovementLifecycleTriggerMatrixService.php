@@ -12,6 +12,7 @@ class DefaultMoneyMovementLifecycleTriggerMatrixService implements MoneyMovement
     public function current(): MoneyMovementLifecycleTriggerMatrixData
     {
         return new MoneyMovementLifecycleTriggerMatrixData(
+            status: 'partially_operational',
             triggers: [
                 [
                     'event' => 'pay_code_issued',
@@ -47,11 +48,11 @@ class DefaultMoneyMovementLifecycleTriggerMatrixService implements MoneyMovement
                 ],
                 [
                     'event' => 'pay_code_cancelled',
-                    'current_effect' => 'voucher_excluded_from_outstanding_liability',
-                    'future_effect' => 'release_remaining_reserved_funds',
+                    'current_effect' => 'release_unclaimed_treasury_reserve_and_exclude_liability',
+                    'future_effect' => 'release_remaining_reserved_funds_for_additional_reservation_origins',
                     'owner' => 'x-change terminal lifecycle requests; wallet records',
                     'idempotency_key' => 'voucher-cancellation-release-idempotency-key',
-                    'enabled' => false,
+                    'enabled' => true,
                 ],
                 [
                     'event' => 'provider_disbursement_failed_after_capture',
@@ -64,9 +65,19 @@ class DefaultMoneyMovementLifecycleTriggerMatrixService implements MoneyMovement
             ],
             open_questions: [
                 'Should expiry releases run synchronously, by scheduled job, or by lifecycle reconciliation?',
-                'Should cancellation release be immediate or require approval for certain voucher types?',
+                'Which additional reservation origins require a terminal return operation?',
                 'How should failed provider disbursement after capture be reversed versus reconciled?',
                 'Which package owns the durable reservation ledger table and API?',
+            ],
+            redactions: [
+                'payloads' => 'trigger-matrix-only',
+                'wallet_payloads_exposed' => false,
+                'voucher_payloads_exposed' => false,
+                'mutates_wallets' => true,
+                'reserves_funds' => false,
+                'captures_funds' => false,
+                'releases_funds' => true,
+                'reverses_funds' => false,
             ],
         );
     }

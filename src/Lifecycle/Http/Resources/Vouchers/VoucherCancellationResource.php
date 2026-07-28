@@ -29,6 +29,10 @@ class VoucherCancellationResource extends JsonResource
                 'reason' => data_get($this->resource, 'reason') !== null
                     ? (string) data_get($this->resource, 'reason')
                     : null,
+                'treasury_release' => data_get(
+                    $this->resource,
+                    'treasury_release',
+                ),
                 'messages' => collect(data_get($this->resource, 'messages', []))
                     ->map(fn ($value) => (string) $value)
                     ->values()

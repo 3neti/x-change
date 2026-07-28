@@ -5,15 +5,22 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Brick\Money\Money;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Treasury\ReleasePayCodeTerminalReserve;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\VoucherClaim;
+use RuntimeException;
 
 class VoucherLifecycleService implements VoucherLifecycleServiceContract
 {
@@ -21,6 +28,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         protected VoucherAccessContract $vouchers,
         protected ?ClaimApprovalStatusResolver $approvalStatus = null,
         protected ?NamedVoucherSliceService $namedSlices = null,
+        protected ?ReleasePayCodeTerminalReserve $terminalReleases = null,
     ) {}
 
     public function list(array $filters = []): array
@@ -58,20 +66,77 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
     {
         $model = $this->vouchers->findOrFail($voucher);
 
-        // First-pass lifecycle mutation.
-        // Replace later with a dedicated action if cancellation rules become richer.
-        $model->state = VoucherState::CLOSED;
-        $model->closed_at = now();
-        $model->save();
+        return DB::transaction(function () use ($model, $payload): array {
+            $locked = Voucher::query()
+                ->with('owner')
+                ->lockForUpdate()
+                ->findOrFail($model->getKey());
 
-        return [
-            'voucher_id' => $model->id,
-            'code' => $model->code,
-            'status' => 'cancelled',
-            'cancelled' => true,
-            'reason' => $payload['reason'] ?? null,
-            'messages' => ['Voucher cancelled successfully.'],
-        ];
+            $this->authorizeCancellation($locked);
+            $this->assertUnclaimed($locked);
+
+            $release = $this->terminalReleaseAction()->handle(
+                $locked,
+                'cancelled',
+            );
+
+            $locked->state = VoucherState::CLOSED;
+            $locked->closed_at ??= now();
+            $locked->save();
+
+            return [
+                'voucher_id' => $locked->id,
+                'code' => $locked->code,
+                'status' => 'cancelled',
+                'cancelled' => true,
+                'reason' => $payload['reason'] ?? null,
+                'treasury_release' => $release->toArray(),
+                'messages' => ['Voucher cancelled successfully.'],
+            ];
+        }, attempts: 5);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    protected function authorizeCancellation(Voucher $voucher): void
+    {
+        $actor = Auth::user();
+
+        if (! $actor instanceof Model) {
+            return;
+        }
+
+        $owner = $voucher->owner;
+
+        if (! $owner instanceof Model || ! $owner->is($actor)) {
+            throw new AuthorizationException(
+                'Only the Pay Code owner may cancel it.',
+            );
+        }
+    }
+
+    protected function assertUnclaimed(Voucher $voucher): void
+    {
+        $claimed = $voucher->redeemed_at !== null
+            || VoucherClaim::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->exists()
+            || DisbursementReconciliation::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->exists();
+
+        if ($claimed) {
+            throw new RuntimeException(
+                "Claimed Pay Code [{$voucher->code}] cannot be cancelled or released.",
+            );
+        }
+    }
+
+    protected function terminalReleaseAction(): ReleasePayCodeTerminalReserve
+    {
+        return $this->terminalReleases
+            ?? app(ReleasePayCodeTerminalReserve::class);
     }
 
     protected function toSummaryArray(Voucher $voucher): array

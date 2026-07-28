@@ -1833,7 +1833,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 key: 'cancelled-liability',
                 label: 'Cancelled Amount',
                 value: $this->formatMinorMoney($summary->cancelled_minor, $summary->currency),
-                helper: $summary->cancelled_count.' cancelled Pay Codes excluded from outstanding liability; no wallet release is performed.',
+                helper: $summary->cancelled_count.' cancelled Pay Codes excluded from outstanding liability; eligible unclaimed Treasury reserves return to Client Funds exactly once.',
                 tone: $summary->cancelled_minor > 0 ? 'warning' : 'neutral',
             ),
             ...$this->moneyMovementDecisionMetrics(),

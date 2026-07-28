@@ -86,7 +86,12 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
         Route::get('{voucher}', ShowVoucherController::class)->name('vouchers.show');
         Route::get('code/{code}', ShowVoucherByCodeController::class)->name('vouchers.code.show');
         Route::get('{voucher}/status', ShowVoucherStatusController::class)->name('vouchers.status.show');
-        Route::post('{voucher}/cancel', CancelVoucherController::class)->name('vouchers.cancel');
+        Route::middleware(config(
+            'x-change.lifecycle.voucher_cancellation_middleware',
+            ['auth'],
+        ))
+            ->post('{voucher}/cancel', CancelVoucherController::class)
+            ->name('vouchers.cancel');
 
         Route::post('code/{code}/claim/start', StartVoucherClaimController::class)->name('vouchers.claim.start');
         Route::post('code/{code}/claim/submit', SubmitVoucherClaimController::class)->name('vouchers.claim.submit');

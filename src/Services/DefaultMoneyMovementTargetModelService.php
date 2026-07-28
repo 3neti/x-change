@@ -22,7 +22,7 @@ class DefaultMoneyMovementTargetModelService implements MoneyMovementTargetModel
             implementation_boundaries: [
                 'Target model selection does not change current issuance debit behavior.',
                 'Reservation creation must be owned by wallet or an explicitly approved wallet adapter.',
-                'Pay Code expiry and cancellation may request release only after idempotency and terminal-state guards exist.',
+                'Unclaimed cancellation releases eligible Client Funds reservations exactly once; expiry and additional reservation origins remain separately guarded.',
                 'Redemption may capture reserved funds only after partial-claim and overdraw semantics are protected by tests.',
                 'Cockpit remains read-only until mutation endpoints and authorization gates are separately approved.',
             ],

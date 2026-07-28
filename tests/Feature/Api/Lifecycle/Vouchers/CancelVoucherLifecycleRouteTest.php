@@ -5,6 +5,8 @@ declare(strict_types=1);
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 
 it('cancels a voucher through the lifecycle route surface', function () {
+    actingAsTestUser();
+
     $payload = [
         'reason' => 'customer_requested',
         'notes' => 'Requested by customer.',
@@ -39,6 +41,8 @@ it('cancels a voucher through the lifecycle route surface', function () {
 });
 
 it('validates required payload fields for voucher cancellation through the lifecycle route surface', function () {
+    actingAsTestUser();
+
     $response = $this->postJson('/api/x/v1/vouchers/99/cancel', []);
 
     $response
@@ -47,4 +51,10 @@ it('validates required payload fields for voucher cancellation through the lifec
             'success' => false,
             'code' => 'VALIDATION_ERROR',
         ]);
+});
+
+it('requires authentication for voucher cancellation', function () {
+    $this->postJson('/api/x/v1/vouchers/99/cancel', [
+        'reason' => 'customer_requested',
+    ])->assertUnauthorized();
 });
