@@ -145,6 +145,11 @@ snapshot boundary:
 - stores bytes by SHA-256; and
 - persists only a safe descriptor in Voucher instruction metadata.
 
+Issuance retries transient connection failures, provider rate limits, and
+server errors within a small configured budget. It does not retry permanent
+client errors. This makes remote artwork capture resilient without allowing
+the public claim or share-card request to contact the Rider source.
+
 The safe descriptor contains the schema, hash, MIME type, dimensions, and
 capture time. It never exposes a source URL, filesystem disk, or storage path.
 Caller-supplied descriptors are discarded during issuance.

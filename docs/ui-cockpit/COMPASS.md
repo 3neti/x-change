@@ -4775,6 +4775,24 @@ Current boundary:
   canonical claim destination, delivery, provider settlement, Treasury
   accounting, or money movement changed.
 
+# 2026-07-28 — Rider Splash Artwork Capture Resilience
+
+- Live YTK5 diagnosis confirmed that Stamp copy may remain correct when a
+  transient remote artwork fetch leaves no durable snapshot. The share-card
+  renderer correctly used x-change branding rather than fetching the source
+  during a crawler request.
+- YTK5 was backfilled explicitly with the package command. Its validated
+  1536 × 1024 PNG is now stored by SHA-256 and the canonical 1200 × 630 share
+  card renders the rose artwork, Stamp copy, recipient label, and claim QR.
+- New issuance now retries only transient connection failures, HTTP 429, and
+  server errors using a bounded, configurable budget. Permanent client errors
+  still fail closed to the x-change artwork fallback.
+- Public claim and share-card requests remain read-only and never fetch Rider
+  source URLs. The change cannot authorize claims, call a provider, post
+  Treasury entries, or move money.
+- Focused snapshot and issuance coverage passed with 10 tests and 78
+  assertions; Pint and `git diff --check` completed successfully.
+
 # 2026-07-28 — Rider Splash Supporting-Copy Parity
 
 - Rider Splash copy now preserves the first heading and every visible
