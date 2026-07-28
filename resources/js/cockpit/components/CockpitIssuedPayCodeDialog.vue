@@ -33,6 +33,7 @@ const props = withDefaults(
         riderDesignSource?: RiderStampPreviewSource;
         riderDesignDocument?: string;
         riderStamp?: RiderStampPreview | null;
+        claimQr?: string | null;
         claimUrl?: string | null;
         detailUrl?: string | null;
         costEstimate?: PayCodeCostEstimate | null;
@@ -48,6 +49,7 @@ const props = withDefaults(
         riderDesignSource: 'default',
         riderDesignDocument: '',
         riderStamp: null,
+        claimQr: null,
         claimUrl: null,
         detailUrl: null,
         costEstimate: null,
@@ -257,6 +259,7 @@ async function copyClaimLink(): Promise<void> {
                         :rider-design-source="riderDesignSource"
                         :rider-design-document="riderDesignDocument"
                         :rider-stamp="riderStamp"
+                        :claim-qr="claimQr"
                         :cost-estimate="costEstimate"
                         :quantity="quantity"
                         presentation="finalized"

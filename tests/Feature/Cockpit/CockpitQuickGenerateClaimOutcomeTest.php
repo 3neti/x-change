@@ -101,6 +101,10 @@ it('hands a canonical Account Funding claim policy to Quick Generate issuance', 
         ->assertJsonPath('result.claim.provider_payout', false)
         ->assertJsonPath('result.claim.account_funding', true)
         ->assertJsonPath(
+            'result.links.claim_qr',
+            fn (string $claimQr): bool => str_starts_with($claimQr, 'data:image/png;base64,'),
+        )
+        ->assertJsonPath(
             'post_issuance_navigation.items.4.key',
             'account_funding',
         )

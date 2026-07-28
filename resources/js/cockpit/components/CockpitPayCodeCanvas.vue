@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
     ArrowLeftRight,
+    QrCode,
     ReceiptText,
     ShieldCheck,
     UserRound,
@@ -30,6 +31,7 @@ const props = withDefaults(
         riderDesignSource?: RiderStampPreviewSource;
         riderDesignDocument?: string;
         riderStamp?: RiderStampPreview | null;
+        claimQr?: string | null;
         presentation?: 'live' | 'finalized';
         costEstimate?: PayCodeCostEstimate | null;
         costLoading?: boolean;
@@ -46,6 +48,7 @@ const props = withDefaults(
         riderDesignSource: 'default',
         riderDesignDocument: '',
         riderStamp: null,
+        claimQr: null,
         presentation: 'live',
         costEstimate: null,
         costLoading: false,
@@ -131,6 +134,27 @@ const showStampCopy = computed<boolean>(() => {
         ((props.riderStamp?.title.trim() ?? '') !== '' ||
             (props.riderStamp?.description.trim() ?? '') !== '')
     );
+});
+
+const showClaimQr = computed<boolean>(() => {
+    const marker = props.riderStamp?.composition.claimMarker;
+
+    return marker === 'qr' || marker === 'both';
+});
+
+const showClaimCode = computed<boolean>(() => {
+    const marker = props.riderStamp?.composition.claimMarker;
+
+    return props.riderStamp === null || marker === 'code' || marker === 'both';
+});
+
+const claimMarkerPositionClass = computed<string>(() => {
+    return {
+        top_left: 'top-5 left-6 items-start text-left',
+        top_right: 'top-5 right-5 items-end text-right',
+        bottom_left: 'bottom-5 left-6 items-start text-left',
+        bottom_right: 'right-5 bottom-5 items-end text-right',
+    }[props.riderStamp?.composition.claimMarkerPosition ?? 'bottom_right'];
 });
 
 const costCurrency = computed<string>(() => {
@@ -454,6 +478,35 @@ function stringValue(value: unknown): string | null {
                 class="absolute -right-16 -bottom-20 size-64 rounded-full border-[2rem] border-emerald-700/5"
                 aria-hidden="true"
             />
+            <div
+                v-if="riderStamp && (showClaimQr || showClaimCode)"
+                class="absolute z-20 flex flex-col gap-1.5"
+                :class="claimMarkerPositionClass"
+                data-testid="cockpit-pay-code-canvas-claim-marker"
+            >
+                <img
+                    v-if="showClaimQr && claimQr"
+                    :src="claimQr"
+                    :alt="`Claim ${displayedCode}`"
+                    class="size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg @md:size-20"
+                    data-testid="cockpit-pay-code-canvas-claim-qr"
+                />
+                <span
+                    v-else-if="showClaimQr"
+                    class="grid size-14 place-items-center rounded-lg border border-dashed border-current bg-white/85 text-slate-400 shadow-sm @md:size-16 dark:bg-slate-950/85"
+                    aria-label="Claim QR appears after issue"
+                    data-testid="cockpit-pay-code-canvas-claim-qr-placeholder"
+                >
+                    <QrCode class="size-8" aria-hidden="true" />
+                </span>
+                <span
+                    v-if="showClaimCode"
+                    class="rounded-md bg-slate-950/80 px-2 py-1 font-mono text-[0.6rem] font-black tracking-[0.12em] text-white shadow-sm"
+                    data-testid="cockpit-pay-code-canvas-claim-code"
+                >
+                    {{ displayedCode }}
+                </span>
+            </div>
 
             <div class="relative flex h-full flex-col justify-between gap-5">
                 <div class="flex items-start justify-between gap-4">
@@ -596,7 +649,7 @@ function stringValue(value: unknown): string | null {
                             {{ recipientLabel }}
                         </p>
                     </div>
-                    <div class="shrink-0 text-right">
+                    <div v-if="riderStamp === null" class="shrink-0 text-right">
                         <p
                             class="text-[0.6rem] font-semibold tracking-[0.18em] uppercase"
                             :class="

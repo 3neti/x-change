@@ -26,6 +26,7 @@ import {
     cockpitQuickGenerateTemplates,
     cockpitRuntimeInputs,
 } from '../../../resources/js/cockpit/quickGenerateDefaults';
+import { resolveRiderStampPreview } from '../../../resources/js/cockpit/riderStampPreview';
 
 vi.mock('@inertiajs/vue3', () => ({
     router: {
@@ -126,6 +127,58 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper.get('#quick-generate-front-design').attributes('open'),
         ).toBeDefined();
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-pay-code-canvas-claim-qr-placeholder"]',
+                )
+                .attributes('aria-label'),
+        ).toBe('Claim QR appears after issue');
+    });
+
+    it('renders only the server-issued canonical claim QR on a finalized canvas', () => {
+        const claimQr = 'data:image/png;base64,aXNzdWVkLWNsYWltLXFy';
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '50',
+                currency: 'PHP',
+                recipient: '',
+                purpose: 'Family support',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                issuedCode: 'PAY-QR-1',
+                presentation: 'finalized',
+                riderStamp: resolveRiderStampPreview({
+                    message: 'Family support',
+                    claimMarker: 'both',
+                    claimMarkerPosition: 'bottom_right',
+                }),
+                claimQr,
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-claim-qr"]')
+                .attributes('src'),
+        ).toBe(claimQr);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-claim-qr"]')
+                .attributes('alt'),
+        ).toBe('Claim PAY-QR-1');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-claim-code"]')
+                .text(),
+        ).toBe('PAY-QR-1');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-canvas-claim-qr-placeholder"]',
+                )
+                .exists(),
+        ).toBe(false);
     });
 
     it('renders a live front and back Pay Code canvas without a fake claim QR', async () => {

@@ -1601,6 +1601,12 @@ const beneficiaryRedeemPath = computed<string | null>(() => {
     );
 });
 
+const beneficiaryClaimQr = computed<string | null>(() => {
+    return stringValue(
+        dataGet(lastResponse.value, ['result', 'links', 'claim_qr']),
+    );
+});
+
 const beneficiaryClaimUrl = computed<string | null>(() => {
     if (beneficiaryRedeemUrl.value !== null) {
         return beneficiaryRedeemUrl.value;
@@ -4524,6 +4530,7 @@ function instructionRecord(
             :cost-estimate="issuedCostEstimate"
             :quantity="count"
             :claim-url="beneficiaryClaimUrl"
+            :claim-qr="beneficiaryClaimQr"
             :detail-url="cockpitDetailUrl"
             @close="issuedPayCodeDialogOpen = false"
         />

@@ -94,6 +94,7 @@ use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
+use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftAuditMetadataBuilderContract;
@@ -198,6 +199,7 @@ use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
+use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftAuditMetadataBuilder;
@@ -836,6 +838,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             VoucherPaymentQrRendererContract::class,
             fn ($app) => $app->make(VoucherPaymentQrRendererFactory::class)->make(),
+        );
+
+        $this->app->singleton(
+            ClaimUrlQrRendererContract::class,
+            Base64PngClaimUrlQrRenderer::class,
         );
 
         $this->app->bind(

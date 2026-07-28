@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
@@ -27,6 +28,10 @@ use Throwable;
 
 class CockpitQuickGenerateMutationRouteShellController extends Controller
 {
+    public function __construct(
+        private readonly ClaimUrlQrRendererContract $claimUrlQrRenderer,
+    ) {}
+
     public function __invoke(
         GeneratePayCodeRequest $request,
         GeneratePayCode $generatePayCode,
@@ -321,6 +326,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             'links' => [
                 'redeem' => $result->links->redeem,
                 'redeem_path' => $result->links->redeem_path,
+                'claim_qr' => $this->claimUrlQrRenderer->render($result->links->redeem),
                 'cockpit_detail' => Route::has('x-change.cockpit.pay-codes.show')
                     ? route('x-change.cockpit.pay-codes.show', ['code' => $result->code], false)
                     : null,
