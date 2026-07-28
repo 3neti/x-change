@@ -40,6 +40,7 @@ import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
+import CockpitRiderEditorDisclosure from './CockpitRiderEditorDisclosure.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
 
 const props = defineProps<{
@@ -2212,6 +2213,49 @@ const riderOgMetaPreviewDocument = computed<string>(() => {
 
 const usesRiderArtwork = computed<boolean>(() => {
     return ['message', 'url', 'splash'].includes(riderOgSource.value.trim());
+});
+
+const riderMessageDisclosureSummary = computed<string>(() => {
+    const message = purpose.value.trim();
+
+    return message === ''
+        ? 'Add an optional message for the recipient.'
+        : message.slice(0, 96);
+});
+
+const riderUrlDisclosureSummary = computed<string>(() => {
+    const value = riderUrl.value.trim();
+
+    if (value === '') {
+        return 'Add an optional destination after the claim.';
+    }
+
+    try {
+        return new URL(value).hostname;
+    } catch {
+        return value.slice(0, 96);
+    }
+});
+
+const riderSplashDisclosureSummary = computed<string>(() => {
+    const headline = riderSplashHeadline.value.trim();
+    const body = riderSplash.value.trim();
+
+    return (
+        headline ||
+        body.slice(0, 96) ||
+        'Design an optional introduction before the claim.'
+    );
+});
+
+const riderStampDisclosureSummary = computed<string>(() => {
+    const source = riderOgSource.value.trim();
+
+    if (source === '') {
+        return 'x-change design';
+    }
+
+    return `Projected from Rider ${source[0].toUpperCase()}${source.slice(1)}`;
 });
 
 const riderSummary = computed<Record<string, unknown>>(() => {
@@ -5396,39 +5440,45 @@ function instructionRecord(
                         </div>
                     </summary>
                     <div class="mt-4 grid gap-3">
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        <CockpitRiderEditorDisclosure
+                            title="Rider Message"
+                            description="Add an optional message for the recipient."
+                            :status="
+                                purpose.trim() === '' ? 'Empty' : 'Configured'
+                            "
+                            :summary="riderMessageDisclosureSummary"
+                            data-testid="cockpit-quick-generate-rider-message-editor"
                         >
-                            Rider Message
-                            <textarea
-                                v-model="purpose"
-                                rows="2"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-submit-purpose"
-                                :disabled="processing"
-                            />
-                        </label>
-                        <div
-                            class="grid gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Message
+                                <textarea
+                                    v-model="purpose"
+                                    rows="3"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-submit-purpose"
+                                    :disabled="processing"
+                                />
+                            </label>
+                        </CockpitRiderEditorDisclosure>
+                        <CockpitRiderEditorDisclosure
+                            title="Rider URL"
+                            description="Add an optional destination after the claim."
+                            :status="
+                                riderUrl.trim() === '' ? 'Empty' : 'Configured'
+                            "
+                            :summary="riderUrlDisclosureSummary"
                             data-testid="cockpit-quick-generate-rider-cta-section"
                         >
-                            <div>
-                                <p class="font-semibold">Rider URL</p>
-                                <p
-                                    class="mt-1 text-amber-800 dark:text-amber-200"
-                                >
-                                    Choose a URL preset or enter a custom Rider
-                                    URL.
-                                </p>
-                            </div>
                             <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
                                 <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-amber-950 dark:text-amber-100"
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     URL Preset
                                     <select
                                         v-model="riderUrlPreset"
-                                        class="w-full min-w-0 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-amber-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-rider-url-preset"
                                         :disabled="processing"
                                         @change="applyRiderUrlPreset"
@@ -5442,43 +5492,42 @@ function instructionRecord(
                                         </option>
                                     </select>
                                     <span
-                                        class="text-[11px] leading-snug font-normal text-amber-800 dark:text-amber-200"
+                                        class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                         data-testid="cockpit-quick-generate-rider-url-preset-helper"
                                     >
                                         {{ selectedRiderUrlPreset.helper }}
                                     </span>
                                 </label>
                                 <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-amber-950 dark:text-amber-100"
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Rider URL
                                     <input
                                         v-model="riderUrl"
                                         type="url"
-                                        class="w-full min-w-0 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-amber-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-rider-url"
                                         :disabled="processing"
                                     />
                                     <span
-                                        class="text-[11px] leading-snug font-normal text-amber-800 dark:text-amber-200"
+                                        class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                     >
                                         Open this destination during the claim.
                                     </span>
                                 </label>
                             </div>
-                        </div>
-                        <div
-                            class="grid gap-3 rounded-xl border border-orange-100 bg-orange-50 p-3 text-xs text-orange-950 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-100"
+                        </CockpitRiderEditorDisclosure>
+                        <CockpitRiderEditorDisclosure
+                            title="Rider Splash"
+                            description="Design an optional introduction before the claim."
+                            :status="
+                                riderSplash.trim() === ''
+                                    ? 'Empty'
+                                    : 'Configured'
+                            "
+                            :summary="riderSplashDisclosureSummary"
                             data-testid="cockpit-quick-generate-rider-splash-builder"
                         >
-                            <div>
-                                <p class="font-semibold">Rider Splash</p>
-                                <p
-                                    class="mt-1 text-orange-800 dark:text-orange-200"
-                                >
-                                    Design the splash shown before the claim.
-                                </p>
-                            </div>
                             <div class="grid gap-3 lg:grid-cols-3">
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
@@ -5557,27 +5606,25 @@ function instructionRecord(
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div
-                            class="grid gap-3 rounded-xl border border-sky-100 bg-sky-50 p-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100"
+                        </CockpitRiderEditorDisclosure>
+                        <CockpitRiderEditorDisclosure
+                            title="Rider Stamp"
+                            description="Choose the visual identity used on the Pay Code and share card."
+                            :status="
+                                riderOgSource.trim() === ''
+                                    ? 'x-change'
+                                    : 'Configured'
+                            "
+                            :summary="riderStampDisclosureSummary"
                             data-testid="cockpit-quick-generate-rider-og-preview"
                         >
                             <div
                                 class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"
                             >
-                                <div>
-                                    <p class="font-semibold">OG Meta</p>
-                                    <p
-                                        class="mt-1 text-sky-800 dark:text-sky-200"
-                                    >
-                                        Choose which Rider value supplies the
-                                        Pay Code and OG artwork.
-                                    </p>
-                                </div>
                                 <label
                                     class="grid min-w-48 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
                                 >
-                                    OG Meta Source
+                                    Stamp Source
                                     <select
                                         v-model="riderOgSource"
                                         class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
@@ -5630,7 +5677,7 @@ function instructionRecord(
                                         </span>
                                     </div>
                                     <CockpitRiderPreviewFrame
-                                        title="OG Meta Preview"
+                                        title="Rider Stamp Preview"
                                         surface="og-meta"
                                         class="mt-2 border-sky-200 dark:border-sky-900/60"
                                         data-testid="cockpit-quick-generate-rider-og-html-preview"
@@ -5664,7 +5711,7 @@ function instructionRecord(
                                     </p>
                                 </template>
                             </div>
-                        </div>
+                        </CockpitRiderEditorDisclosure>
                         <details
                             class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
                             data-testid="cockpit-quick-generate-rider-advanced"

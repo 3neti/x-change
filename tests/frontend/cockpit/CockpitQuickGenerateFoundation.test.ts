@@ -2794,8 +2794,8 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(instructionBuilderText).toContain('Rider Message');
         expect(instructionBuilderText).toContain('Rider URL');
         expect(instructionBuilderText).toContain('Rider Splash');
-        expect(instructionBuilderText).toContain('OG Meta');
-        expect(instructionBuilderText).toContain('OG Meta Source');
+        expect(instructionBuilderText).toContain('Rider Stamp');
+        expect(instructionBuilderText).toContain('Stamp Source');
         expect(instructionBuilderText).toContain('Rider Splash Preview');
         expect(instructionBuilderText).not.toContain('Claim Introduction');
         expect(instructionBuilderText).not.toContain('Action Link');
