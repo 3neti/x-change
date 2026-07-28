@@ -103,6 +103,31 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).not.toContain('Digital Pay Code');
     });
 
+    it('opens the compact Front Design editor from the live canvas', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-edit-front-button"]')
+            .trigger('click');
+
+        expect(
+            wrapper.get('#quick-generate-contract-rider').attributes('open'),
+        ).toBeDefined();
+        expect(
+            wrapper.get('#quick-generate-front-design').attributes('open'),
+        ).toBeDefined();
+    });
+
     it('renders a live front and back Pay Code canvas without a fake claim QR', async () => {
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {
@@ -2808,7 +2833,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(instructionBuilderText).toContain('Rider Splash');
         expect(instructionBuilderText).toContain('Front Design');
         expect(instructionBuilderText).toContain('Artwork');
-        expect(instructionBuilderText).toContain('Rider Splash Preview');
+        expect(instructionBuilderText).toContain('Claim Splash Preview');
         expect(instructionBuilderText).not.toContain('Claim Introduction');
         expect(instructionBuilderText).not.toContain('Action Link');
         expect(instructionBuilderText).not.toContain('Message Body');
