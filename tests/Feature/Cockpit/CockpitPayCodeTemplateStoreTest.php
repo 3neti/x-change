@@ -95,3 +95,120 @@ it('hydrates only the current owners saved pay code templates', function () {
         ->assertOk()
         ->assertJsonCount(0, 'props.saved_templates');
 });
+
+it('updates an owner template in place through the shared sanitizer', function () {
+    $operator = actingAsTestUser();
+
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $operator->getMorphClass(),
+        'owner_id' => (string) $operator->getKey(),
+        'name' => 'Weekly Allowance',
+        'base_template_key' => 'money-changer',
+        'instructions_ciphertext' => ['cash' => ['currency' => 'PHP']],
+        'include_amount' => false,
+        'include_purpose' => false,
+        'status' => 'active',
+    ]);
+
+    $this->patch(
+        route('x-change.cockpit.pay-code-templates.update', $template),
+        [
+            'name' => 'Monthly Allowance',
+            'description' => 'Updated for future Pay Codes.',
+            'base_template_key' => 'money-changer',
+            'include_amount' => false,
+            'include_purpose' => true,
+            'expected_updated_at' => $template->updated_at?->toIso8601String(),
+            'instructions' => [
+                'cash' => [
+                    'amount' => 750,
+                    'currency' => 'PHP',
+                    'validation' => [
+                        'mobile' => '09173011987',
+                        'secret' => 'never-store-this',
+                    ],
+                ],
+                'rider' => [
+                    'message' => 'Monthly allowance',
+                ],
+            ],
+        ],
+    )->assertRedirect();
+
+    $template->refresh();
+
+    expect(PayCodeTemplate::query()->count())->toBe(1)
+        ->and($template->name)->toBe('Monthly Allowance')
+        ->and($template->description)->toBe('Updated for future Pay Codes.')
+        ->and($template->include_purpose)->toBeTrue()
+        ->and(data_get($template->instructions_ciphertext, 'cash.amount'))->toBeNull()
+        ->and(data_get($template->instructions_ciphertext, 'cash.validation.mobile'))->toBeNull()
+        ->and(data_get($template->instructions_ciphertext, 'cash.validation.secret'))->toBeNull()
+        ->and(data_get($template->instructions_ciphertext, 'rider.message'))->toBe('Monthly allowance');
+});
+
+it('forbids updating another owners pay code template', function () {
+    $owner = actingAsTestUser();
+
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Private Template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => ['cash' => ['currency' => 'PHP']],
+        'include_amount' => false,
+        'include_purpose' => false,
+        'status' => 'active',
+    ]);
+
+    actingAsTestUser();
+
+    $this->patch(
+        route('x-change.cockpit.pay-code-templates.update', $template),
+        [
+            'name' => 'Changed Name',
+            'base_template_key' => 'blank-pay-code',
+            'instructions' => [],
+            'include_amount' => false,
+            'include_purpose' => false,
+            'expected_updated_at' => $template->updated_at?->toIso8601String(),
+        ],
+    )->assertForbidden();
+
+    expect($template->fresh()->name)->toBe('Private Template');
+});
+
+it('rejects a stale pay code template update', function () {
+    $operator = actingAsTestUser();
+
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $operator->getMorphClass(),
+        'owner_id' => (string) $operator->getKey(),
+        'name' => 'Branch Cash Out',
+        'base_template_key' => 'money-changer',
+        'instructions_ciphertext' => ['cash' => ['currency' => 'PHP']],
+        'include_amount' => false,
+        'include_purpose' => false,
+        'status' => 'active',
+    ]);
+    $staleUpdatedAt = $template->updated_at?->toIso8601String();
+
+    $template->forceFill([
+        'name' => 'Updated Elsewhere',
+        'updated_at' => $template->updated_at?->addSecond(),
+    ])->saveQuietly();
+
+    $this->patch(
+        route('x-change.cockpit.pay-code-templates.update', $template),
+        [
+            'name' => 'Overwrite Attempt',
+            'base_template_key' => 'money-changer',
+            'instructions' => ['cash' => ['currency' => 'PHP']],
+            'include_amount' => false,
+            'include_purpose' => false,
+            'expected_updated_at' => $staleUpdatedAt,
+        ],
+    )->assertSessionHasErrors('expected_updated_at');
+
+    expect($template->fresh()->name)->toBe('Updated Elsewhere');
+});

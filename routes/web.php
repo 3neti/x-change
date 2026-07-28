@@ -38,6 +38,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageCon
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingInspectionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateStoreController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateUpdateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
@@ -224,6 +225,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('pay-code-templates', CockpitPayCodeTemplateStoreController::class)
             ->middleware('throttle:20,1')
             ->name('x-change.cockpit.pay-code-templates.store');
+        Route::patch(
+            'pay-code-templates/{template:reference}',
+            CockpitPayCodeTemplateUpdateController::class,
+        )->middleware('throttle:20,1')
+            ->name('x-change.cockpit.pay-code-templates.update');
         Route::get('diagnostics/runtime-profile', CockpitRuntimeProfilePageController::class)->name('x-change.cockpit.diagnostics.runtime-profile');
         Route::prefix('pay-codes')->group(function (): void {
             Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');
