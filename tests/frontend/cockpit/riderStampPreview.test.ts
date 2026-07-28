@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
     buildRiderStampPreviewDocument,
     buildRiderSplashContent,
+    buildSandboxedPreviewDocument,
+    normalizeRiderArtworkUrl,
     normalizeRiderStampComposition,
     resolveRiderStampPreview,
 } from '../../../resources/js/cockpit/riderStampPreview';
@@ -150,6 +152,33 @@ describe('Rider Stamp preview helpers', () => {
         expect(markdown).toContain('<strong>Bold</strong>');
         expect(markdown).not.toContain('javascript:');
         expect(html).toBe('<strong>HTML</strong>');
+    });
+
+    it('normalizes GitHub Splash artwork for both the claim preview and canvas', () => {
+        const githubUrl =
+            'https://github.com/lbhurtado/failure-of-simultaneity/blob/main/planetary-rose.PNG?raw=true';
+        const rawUrl =
+            'https://raw.githubusercontent.com/lbhurtado/failure-of-simultaneity/main/planetary-rose.PNG';
+        const splash = buildRiderSplashContent({
+            body: `<img src="${githubUrl}" alt="Planetary rose">`,
+            format: 'html',
+        });
+        const claimPreview = buildSandboxedPreviewDocument(splash);
+        const canvas = buildRiderStampPreviewDocument(
+            resolveRiderStampPreview({
+                source: 'splash',
+                splashBody: splash,
+                artworkSource: 'splash',
+            }),
+            splash,
+            'canvas',
+        );
+
+        expect(normalizeRiderArtworkUrl(githubUrl)).toBe(rawUrl);
+        expect(splash).toContain(`src="${rawUrl}"`);
+        expect(claimPreview).toContain(`src="${rawUrl}"`);
+        expect(canvas).toContain(`src="${rawUrl}"`);
+        expect(claimPreview).not.toContain('github.com/lbhurtado');
     });
 
     it('renders URL artwork according to the Rider Stamp presentation contract', () => {

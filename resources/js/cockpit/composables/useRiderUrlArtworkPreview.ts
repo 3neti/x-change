@@ -13,7 +13,6 @@ type UseRiderUrlArtworkPreview = {
 };
 
 export function useRiderUrlArtworkPreview(
-    source: Ref<string>,
     url: Ref<string>,
     debounceMs = 350,
 ): UseRiderUrlArtworkPreview {
@@ -40,11 +39,7 @@ export function useRiderUrlArtworkPreview(
         message.value = null;
         resolving.value = false;
 
-        if (
-            typeof window === 'undefined' ||
-            source.value !== 'url' ||
-            url.value.trim() === ''
-        ) {
+        if (typeof window === 'undefined' || url.value.trim() === '') {
             return;
         }
 
@@ -108,7 +103,7 @@ export function useRiderUrlArtworkPreview(
         }
     }
 
-    watch([source, url], schedule, { immediate: true });
+    watch(url, schedule, { immediate: true });
 
     onUnmounted(() => {
         clearTimer();

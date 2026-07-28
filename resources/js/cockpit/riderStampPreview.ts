@@ -113,13 +113,55 @@ export function buildRiderSplashContent(input: {
               ? renderRiderContent(body, looksLikeHtml(body) ? 'html' : 'plain')
               : renderRiderContent(body, format);
 
-    return [
-        headline === '' ? null : `<h1>${escapeHtml(headline)}</h1>`,
-        renderedBody,
-        cta === '' ? null : `<p><strong>${escapeHtml(cta)}</strong></p>`,
-    ]
-        .filter((item): item is string => item !== null)
-        .join('\n');
+    return normalizeRiderArtworkSources(
+        [
+            headline === '' ? null : `<h1>${escapeHtml(headline)}</h1>`,
+            renderedBody,
+            cta === '' ? null : `<p><strong>${escapeHtml(cta)}</strong></p>`,
+        ]
+            .filter((item): item is string => item !== null)
+            .join('\n'),
+    );
+}
+
+export function normalizeRiderArtworkUrl(value: string): string {
+    const source = value.trim();
+
+    if (source === '') {
+        return source;
+    }
+
+    try {
+        const url = new URL(source);
+        const match = url.pathname.match(
+            /^\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+)$/,
+        );
+
+        if (
+            url.protocol !== 'https:' ||
+            url.hostname.toLowerCase() !== 'github.com' ||
+            match === null
+        ) {
+            return source;
+        }
+
+        return `https://raw.githubusercontent.com/${match[1]}/${match[2]}/${match[3]}/${match[4]}`;
+    } catch {
+        return source;
+    }
+}
+
+export function normalizeRiderArtworkSources(content: string): string {
+    return content.replace(
+        /(<img\b[^>]*\bsrc\s*=\s*)(["'])([^"']+)\2/gi,
+        (match, prefix: string, quote: string, source: string): string => {
+            const normalized = normalizeRiderArtworkUrl(source);
+
+            return normalized === source
+                ? match
+                : `${prefix}${quote}${escapeHtml(normalized)}${quote}`;
+        },
+    );
 }
 
 export function resolveRiderStampPreview(
@@ -521,7 +563,7 @@ function buildCanvasArtworkMarkup(
 
 function firstImageUrl(content: string): string | null {
     const match = content.match(/<img[^>]+src=["']([^"']+)["']/i);
-    const value = match?.[1]?.trim() ?? '';
+    const value = normalizeRiderArtworkUrl(match?.[1]?.trim() ?? '');
 
     return /^(https:|data:image\/)/i.test(value) ? value : null;
 }
@@ -636,8 +678,11 @@ function normalizeClaimMarkerPosition(
 }
 
 export function buildSandboxedPreviewDocument(content: string): string {
+    const normalizedContent = normalizeRiderArtworkSources(content);
     const body =
-        content.trim() === '' ? '<p>No Introduction Message Yet.</p>' : content;
+        normalizedContent.trim() === ''
+            ? '<p>No Introduction Message Yet.</p>'
+            : normalizedContent;
 
     return `<!doctype html>
 <html>

@@ -566,7 +566,7 @@ const {
     preview: riderUrlArtworkPreview,
     resolving: riderUrlArtworkResolving,
     message: riderUrlArtworkMessage,
-} = useRiderUrlArtworkPreview(riderStampArtworkSource, riderUrl);
+} = useRiderUrlArtworkPreview(riderUrl);
 const feedbackEmail = ref('');
 const feedbackMobile = ref(recipientReference.value);
 const feedbackWebhook = ref('');
@@ -2361,6 +2361,28 @@ const riderSplashInstructionContent = computed<string>(() => {
 
 const riderSplashPreviewDocument = computed<string>(() => {
     return buildSandboxedPreviewDocument(riderSplashContent.value);
+});
+
+const riderUrlPreview = computed<RiderStampPreview>(() => {
+    return resolveRiderStampPreview({
+        source: 'url',
+        url: riderUrl.value,
+        urlArtwork: riderUrlArtworkPreview.value,
+        artworkSource: 'url',
+        artworkTreatment: 'artwork',
+        copySource: 'url',
+        fit: 'contain',
+        position: 'center',
+        scrim: 18,
+        theme: 'automatic',
+        showLogo: false,
+        showTagline: false,
+        claimMarker: 'none',
+    });
+});
+
+const riderUrlPreviewDocument = computed<string>(() => {
+    return buildRiderStampPreviewDocument(riderUrlPreview.value, '', 'stamp');
 });
 
 const riderStampPreview = computed<RiderStampPreview>(() => {
@@ -5930,6 +5952,40 @@ function instructionRecord(
                                         Open this destination during the claim.
                                     </span>
                                 </label>
+                            </div>
+                            <div
+                                v-if="riderUrl.trim() !== ''"
+                                class="mt-3 rounded-xl border border-sky-200 bg-white p-3 dark:border-sky-900/60 dark:bg-slate-950"
+                                data-testid="cockpit-quick-generate-rider-url-preview"
+                            >
+                                <div
+                                    class="flex flex-wrap items-center justify-between gap-2"
+                                >
+                                    <p
+                                        class="text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
+                                    >
+                                        Rider URL Preview
+                                    </p>
+                                    <p
+                                        class="text-[11px] text-sky-700 dark:text-sky-300"
+                                        data-testid="cockpit-quick-generate-rider-url-preview-status"
+                                    >
+                                        {{
+                                            riderUrlArtworkResolving
+                                                ? 'Loading Artwork…'
+                                                : riderUrlArtworkMessage
+                                        }}
+                                    </p>
+                                </div>
+                                <div class="mt-2">
+                                    <CockpitRiderPreviewFrame
+                                        title="Rider URL Preview"
+                                        surface="stamp"
+                                        class="border-sky-200 dark:border-sky-900/60"
+                                        data-testid="cockpit-quick-generate-rider-url-artwork-preview"
+                                        :document="riderUrlPreviewDocument"
+                                    />
+                                </div>
                             </div>
                         </CockpitRiderEditorDisclosure>
                         <CockpitRiderEditorDisclosure

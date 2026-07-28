@@ -654,6 +654,27 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
+                    '[data-testid="cockpit-quick-generate-rider-url-preview"]',
+                )
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-url-artwork-preview"]',
+                )
+                .attributes('srcdoc'),
+        ).toContain('class="artwork-contain"');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-url-preview-status"]',
+                )
+                .text(),
+        ).toContain('Spotify artwork ready.');
+        expect(
+            wrapper
+                .find(
                     '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
                 .exists(),

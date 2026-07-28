@@ -261,6 +261,7 @@ return [
                             true,
                         ),
                         'label' => 'Spotify',
+                        'oembed_endpoint' => 'https://open.spotify.com/oembed',
                         'page_hosts' => [
                             'open.spotify.com',
                         ],

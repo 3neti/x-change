@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Cockpit;
 
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -39,7 +40,7 @@ final class RiderUrlArtworkPreviewResolver
             return $this->unavailable();
         }
 
-        $cacheKey = 'x-change:cockpit:rider-url-artwork:'.hash(
+        $cacheKey = 'x-change:cockpit:rider-url-artwork:v2:'.hash(
             'sha256',
             $provider['key'].'|'.$provider['url'],
         );
@@ -51,11 +52,21 @@ final class RiderUrlArtworkPreviewResolver
             ),
         );
 
-        return Cache::remember(
+        $cached = Cache::get($cacheKey);
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $resolved = $this->resolveProviderArtwork($provider);
+
+        Cache::put(
             $cacheKey,
-            $cacheTtl,
-            fn (): array => $this->resolveProviderArtwork($provider),
+            $resolved,
+            $resolved['available'] ? $cacheTtl : min(60, $cacheTtl),
         );
+
+        return $resolved;
     }
 
     /**
@@ -63,7 +74,8 @@ final class RiderUrlArtworkPreviewResolver
      *     key: string,
      *     label: string,
      *     url: string,
-     *     image_hosts: list<string>
+     *     image_hosts: list<string>,
+     *     oembed_endpoint: ?string
      * }  $provider
      * @return array{
      *     available: bool,
@@ -77,51 +89,7 @@ final class RiderUrlArtworkPreviewResolver
      */
     private function resolveProviderArtwork(array $provider): array
     {
-        try {
-            $response = Http::accept('text/html, application/xhtml+xml')
-                ->connectTimeout(max(
-                    1,
-                    (int) config(
-                        'x-change.cockpit.quick_generate.url_artwork.connect_timeout_seconds',
-                        3,
-                    ),
-                ))
-                ->timeout(max(
-                    1,
-                    (int) config(
-                        'x-change.cockpit.quick_generate.url_artwork.timeout_seconds',
-                        6,
-                    ),
-                ))
-                ->withoutRedirecting()
-                ->get($provider['url']);
-        } catch (Throwable) {
-            return $this->unavailable();
-        }
-
-        $contentType = strtolower(trim(explode(
-            ';',
-            (string) $response->header('Content-Type'),
-        )[0]));
-        $document = $response->body();
-        $maximumDocumentBytes = max(
-            1024,
-            (int) config(
-                'x-change.cockpit.quick_generate.url_artwork.maximum_document_bytes',
-                512 * 1024,
-            ),
-        );
-
-        if (
-            ! $response->successful()
-            || ! in_array($contentType, ['text/html', 'application/xhtml+xml'], true)
-            || $document === ''
-            || strlen($document) > $maximumDocumentBytes
-        ) {
-            return $this->unavailable();
-        }
-
-        $metadata = $this->openGraphMetadata($document);
+        $metadata = $this->providerMetadata($provider);
         $imageUrl = $this->safeArtworkUrl(
             $metadata['image'] ?? null,
             $provider['image_hosts'],
@@ -154,11 +122,130 @@ final class RiderUrlArtworkPreviewResolver
     }
 
     /**
+     * @param  array{
+     *     url: string,
+     *     oembed_endpoint: ?string
+     * }  $provider
+     * @return array{title?: string, description?: string, image?: string}
+     */
+    private function providerMetadata(array $provider): array
+    {
+        $oembedEndpoint = $provider['oembed_endpoint'];
+
+        if (is_string($oembedEndpoint) && $oembedEndpoint !== '') {
+            $metadata = $this->oembedMetadata(
+                $oembedEndpoint,
+                $provider['url'],
+            );
+
+            if (isset($metadata['image'])) {
+                return $metadata;
+            }
+        }
+
+        return $this->pageMetadata($provider['url']);
+    }
+
+    /**
+     * @return array{title?: string, description?: string, image?: string}
+     */
+    private function oembedMetadata(string $endpoint, string $url): array
+    {
+        try {
+            $response = $this->metadataRequest()
+                ->acceptJson()
+                ->get($endpoint, ['url' => $url]);
+        } catch (Throwable) {
+            return [];
+        }
+
+        if (
+            ! $response->successful()
+            || ! str_starts_with(
+                strtolower((string) $response->header('Content-Type')),
+                'application/json',
+            )
+        ) {
+            return [];
+        }
+
+        $payload = $response->json();
+
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        return [
+            'title' => $payload['title'] ?? null,
+            'description' => $payload['provider_name'] ?? null,
+            'image' => $payload['thumbnail_url'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array{title?: string, description?: string, image?: string}
+     */
+    private function pageMetadata(string $url): array
+    {
+        try {
+            $response = $this->metadataRequest()
+                ->accept('text/html, application/xhtml+xml')
+                ->get($url);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $contentType = strtolower(trim(explode(
+            ';',
+            (string) $response->header('Content-Type'),
+        )[0]));
+        $document = $response->body();
+        $maximumDocumentBytes = max(
+            1024,
+            (int) config(
+                'x-change.cockpit.quick_generate.url_artwork.maximum_document_bytes',
+                512 * 1024,
+            ),
+        );
+
+        if (
+            ! $response->successful()
+            || ! in_array($contentType, ['text/html', 'application/xhtml+xml'], true)
+            || $document === ''
+            || strlen($document) > $maximumDocumentBytes
+        ) {
+            return [];
+        }
+
+        return $this->openGraphMetadata($document);
+    }
+
+    private function metadataRequest(): PendingRequest
+    {
+        return Http::connectTimeout(max(
+            1,
+            (int) config(
+                'x-change.cockpit.quick_generate.url_artwork.connect_timeout_seconds',
+                3,
+            ),
+        ))
+            ->timeout(max(
+                1,
+                (int) config(
+                    'x-change.cockpit.quick_generate.url_artwork.timeout_seconds',
+                    6,
+                ),
+            ))
+            ->withoutRedirecting();
+    }
+
+    /**
      * @return null|array{
      *     key: string,
      *     label: string,
      *     url: string,
-     *     image_hosts: list<string>
+     *     image_hosts: list<string>,
+     *     oembed_endpoint: ?string
      * }
      */
     private function providerFor(string $url): ?array
@@ -221,10 +308,47 @@ final class RiderUrlArtworkPreviewResolver
                     $provider['image_hosts'] ?? [],
                     is_string(...),
                 )),
+                'oembed_endpoint' => $this->safeMetadataEndpoint(
+                    $provider['oembed_endpoint'] ?? null,
+                    $pageHosts,
+                ),
             ];
         }
 
         return null;
+    }
+
+    /**
+     * @param  list<string>  $approvedHosts
+     */
+    private function safeMetadataEndpoint(
+        mixed $value,
+        array $approvedHosts,
+    ): ?string {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $url = trim($value);
+        $parts = parse_url($url);
+
+        if (
+            $url === ''
+            || ! is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || ! in_array(
+                strtolower((string) ($parts['host'] ?? '')),
+                $approvedHosts,
+                true,
+            )
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || (isset($parts['port']) && (int) $parts['port'] !== 443)
+        ) {
+            return null;
+        }
+
+        return $url;
     }
 
     /**
