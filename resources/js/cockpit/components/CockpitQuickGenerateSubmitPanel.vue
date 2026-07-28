@@ -1949,6 +1949,28 @@ const canvasExpiryLabel = computed<string>(() => {
     return labels[expiryPreset.value] ?? expiryPreset.value;
 });
 
+const voucherKindLabel = computed<string>(() => {
+    const labels: Record<typeof voucherType.value, string> = {
+        redeemable: 'Disburseable',
+        payable: 'Payable',
+        settlement: 'Settlement',
+    };
+
+    return labels[voucherType.value];
+});
+
+const voucherKindTone = computed<string>(() => {
+    if (voucherType.value === 'payable') {
+        return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-200';
+    }
+
+    if (voucherType.value === 'settlement') {
+        return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200';
+    }
+
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200';
+});
+
 const normalizedPayee = computed<string>(() => {
     const normalized = recipientReference.value.trim();
 
@@ -4347,15 +4369,28 @@ function instructionRecord(
             <div
                 class="rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
             >
-                <h4
-                    class="text-lg font-semibold text-slate-950 dark:text-slate-50"
-                >
-                    Essentials
-                </h4>
-                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Amount, recipient, and purpose shape the Pay Code beside
-                    this form.
-                </p>
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h4
+                            class="text-lg font-semibold text-slate-950 dark:text-slate-50"
+                        >
+                            Essentials
+                        </h4>
+                        <p
+                            class="mt-1 text-sm text-slate-600 dark:text-slate-300"
+                        >
+                            Amount, recipient, and purpose shape the Pay Code
+                            beside this form.
+                        </p>
+                    </div>
+                    <span
+                        class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] uppercase"
+                        :class="voucherKindTone"
+                        data-testid="cockpit-quick-generate-voucher-kind"
+                    >
+                        {{ voucherKindLabel }}
+                    </span>
+                </div>
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
                     <label
                         class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"

@@ -122,13 +122,31 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe('Cost');
         expect(
             wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-header"]')
+                .get('p')
+                .text(),
+        ).toBe(
+            'Preview the Pay Code stamp or inspect its estimated issue cost.',
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-view-switch"]')
+                .attributes('aria-label'),
+        ).toBe('Pay Code view');
+        expect(
+            wrapper
                 .html()
-                .indexOf('data-testid="cockpit-pay-code-canvas-front"'),
+                .indexOf('data-testid="cockpit-pay-code-canvas-header"'),
         ).toBeLessThan(
             wrapper
                 .html()
-                .indexOf('data-testid="cockpit-pay-code-canvas-controls"'),
+                .indexOf('data-testid="cockpit-pay-code-canvas-front"'),
         );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-controls"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('keeps all safe Rider Splash supporting copy on the canvas', () => {
@@ -251,6 +269,34 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .attributes('aria-label'),
         ).toBe('Claim QR appears after issue');
+    });
+
+    it('keeps the selected Pay Code kind visible in Essentials', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+        const kind = wrapper.get(
+            '[data-testid="cockpit-quick-generate-voucher-kind"]',
+        );
+        const type = wrapper.get(
+            '[data-testid="cockpit-quick-generate-voucher-type"]',
+        );
+
+        expect(kind.text()).toBe('Disburseable');
+
+        await type.setValue('payable');
+        expect(kind.text()).toBe('Payable');
+
+        await type.setValue('settlement');
+        expect(kind.text()).toBe('Settlement');
     });
 
     it('renders only the server-issued canonical claim QR on a finalized canvas', () => {
@@ -3164,6 +3210,11 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(essentialsCanvas.text()).toContain('Essentials');
         expect(
             essentialsCanvas
+                .get('[data-testid="cockpit-quick-generate-voucher-kind"]')
+                .text(),
+        ).toBe('Disburseable');
+        expect(
+            essentialsCanvas
                 .find('[data-testid="cockpit-quick-generate-starting-point"]')
                 .exists(),
         ).toBe(true);
@@ -3187,9 +3238,24 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(canvasControls.text()).toContain('Edit Stamp');
         expect(canvasControls.text()).toContain('Issue Pay Code');
-        expect(canvasControls.text()).toContain('Stamp');
-        expect(canvasControls.text()).toContain('Cost');
+        expect(canvasControls.text()).not.toContain('Cost');
         expect(canvasControls.text()).not.toContain('Funding');
+        expect(
+            canvasControls
+                .find('[data-testid="cockpit-pay-code-canvas-front-button"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            canvasControls
+                .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
+                .exists(),
+        ).toBe(false);
+        const canvasHeader = essentialsCanvas.get(
+            '[data-testid="cockpit-pay-code-canvas-header"]',
+        );
+        expect(canvasHeader.text()).toContain('Stamp');
+        expect(canvasHeader.text()).toContain('Cost');
+        expect(canvasHeader.classes()).toContain('justify-between');
         expect(quickGenerateHeader.classes()).toContain('justify-between');
         expect(quickGenerateHeader.text()).toContain('Create Pay Code');
         expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');
@@ -3202,15 +3268,6 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(actionRail.classes()).toContain('flex-nowrap');
-        expect(
-            actionRailHtml.indexOf(
-                'data-testid="cockpit-pay-code-canvas-back-button"',
-            ),
-        ).toBeLessThan(
-            actionRailHtml.indexOf(
-                'data-testid="cockpit-quick-generate-edit-front-button"',
-            ),
-        );
         expect(
             actionRailHtml.indexOf(
                 'data-testid="cockpit-quick-generate-edit-front-button"',

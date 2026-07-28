@@ -442,18 +442,63 @@ function stringValue(value: unknown): string | null {
 
 <template>
     <section
-        class="@container rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80"
+        class="@container rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
         data-testid="cockpit-pay-code-canvas"
     >
-        <div v-if="presentation === 'finalized'" class="mb-3 px-1">
-            <p
-                class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+        <div
+            class="mb-4 flex items-start justify-between gap-3"
+            data-testid="cockpit-pay-code-canvas-header"
+        >
+            <div class="min-w-0">
+                <h4
+                    class="text-lg font-semibold text-slate-950 dark:text-slate-50"
+                >
+                    {{
+                        presentation === 'finalized'
+                            ? 'Issued Pay Code'
+                            : 'Stamp'
+                    }}
+                </h4>
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    {{
+                        presentation === 'finalized'
+                            ? 'Final design ready to share.'
+                            : 'Preview the Pay Code stamp or inspect its estimated issue cost.'
+                    }}
+                </p>
+            </div>
+            <div
+                class="inline-flex shrink-0 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
+                aria-label="Pay Code view"
+                data-testid="cockpit-pay-code-canvas-view-switch"
             >
-                Issued Pay Code
-            </p>
-            <p class="text-xs text-slate-600 dark:text-slate-300">
-                Final design ready to share.
-            </p>
+                <button
+                    type="button"
+                    class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    :class="
+                        visibleSide === 'front'
+                            ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                            : 'text-slate-500 dark:text-slate-400'
+                    "
+                    data-testid="cockpit-pay-code-canvas-front-button"
+                    @click="visibleSide = 'front'"
+                >
+                    Stamp
+                </button>
+                <button
+                    type="button"
+                    class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    :class="
+                        visibleSide === 'back'
+                            ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                            : 'text-slate-500 dark:text-slate-400'
+                    "
+                    data-testid="cockpit-pay-code-canvas-back-button"
+                    @click="visibleSide = 'back'"
+                >
+                    Cost
+                </button>
+            </div>
         </div>
 
         <article
@@ -881,6 +926,7 @@ function stringValue(value: unknown): string | null {
         </article>
 
         <footer
+            v-if="$slots.navigation || $slots.action"
             class="mt-3 flex flex-wrap items-center gap-2 px-1"
             data-testid="cockpit-pay-code-canvas-controls"
         >
@@ -891,37 +937,6 @@ function stringValue(value: unknown): string | null {
                 class="ml-auto flex shrink-0 flex-nowrap items-center justify-end gap-2"
                 data-testid="cockpit-pay-code-canvas-action-rail"
             >
-                <div
-                    class="inline-flex shrink-0 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
-                    aria-label="Pay Code view"
-                >
-                    <button
-                        type="button"
-                        class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
-                        :class="
-                            visibleSide === 'front'
-                                ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                                : 'text-slate-500 dark:text-slate-400'
-                        "
-                        data-testid="cockpit-pay-code-canvas-front-button"
-                        @click="visibleSide = 'front'"
-                    >
-                        Stamp
-                    </button>
-                    <button
-                        type="button"
-                        class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
-                        :class="
-                            visibleSide === 'back'
-                                ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                                : 'text-slate-500 dark:text-slate-400'
-                        "
-                        data-testid="cockpit-pay-code-canvas-back-button"
-                        @click="visibleSide = 'back'"
-                    >
-                        Cost
-                    </button>
-                </div>
                 <slot name="action" />
             </div>
         </footer>
