@@ -46,6 +46,37 @@ function quickGenerateEngineeringPreview(
 }
 
 describe('Cockpit Quick Generate foundation', () => {
+    it('brands a blank Pay Code canvas without inventing claim details', () => {
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '',
+                currency: 'PHP',
+                recipient: '',
+                purpose: '',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+            },
+        });
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-logo"]')
+                .attributes('src'),
+        ).toBe('/vendor/x-change/images/logo-orange.png');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-logo"]')
+                .attributes('alt'),
+        ).toBe('x-change logo');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-tagline"]')
+                .text(),
+        ).toContain('Money should adapt to people. Not the other way around.');
+        expect(wrapper.text()).toContain('PAY CODE PREVIEW');
+        expect(wrapper.find('canvas').exists()).toBe(false);
+    });
+
     it('renders a live front and back Pay Code canvas without a fake claim QR', async () => {
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {

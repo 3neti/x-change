@@ -47,6 +47,7 @@ const props = withDefaults(
 );
 
 const visibleSide = ref<'front' | 'back'>('front');
+const xChangeLogoUrl = '/vendor/x-change/images/logo-orange.png';
 
 const formattedAmount = computed<string>(() => {
     const value = Number(props.amount);
@@ -93,6 +94,16 @@ const capabilityLabel = computed<string>(() => {
 
 const displayedCode = computed<string>(() => {
     return props.issuedCode?.trim() || 'PAY CODE PREVIEW';
+});
+
+const isBlankCanvas = computed<boolean>(() => {
+    return (
+        String(props.amount).trim() === '' &&
+        props.recipient.trim() === '' &&
+        props.purpose.trim() === '' &&
+        !props.issuedCode?.trim() &&
+        !props.hasRiderDesign
+    );
 });
 
 const costCurrency = computed<string>(() => {
@@ -416,7 +427,35 @@ function stringValue(value: unknown): string | null {
 
             <div class="relative flex h-full flex-col justify-between gap-5">
                 <div class="flex items-start justify-between gap-4">
-                    <div>
+                    <div
+                        v-if="isBlankCanvas"
+                        class="flex min-w-0 items-center gap-2.5"
+                        data-testid="cockpit-pay-code-canvas-blank-brand"
+                    >
+                        <img
+                            :src="xChangeLogoUrl"
+                            alt="x-change logo"
+                            class="h-12 w-auto shrink-0 object-contain @md:h-14"
+                            data-testid="cockpit-pay-code-canvas-logo"
+                        />
+                        <div class="min-w-0">
+                            <p
+                                class="text-[0.65rem] font-black tracking-[0.22em] text-emerald-700 uppercase dark:text-emerald-300"
+                            >
+                                x-change
+                            </p>
+                            <p
+                                class="mt-1 max-w-52 text-[0.62rem] leading-4 font-semibold text-balance text-slate-600 @md:text-xs dark:text-amber-100/70"
+                                data-testid="cockpit-pay-code-canvas-tagline"
+                            >
+                                Money should adapt to people.
+                                <span class="block"
+                                    >Not the other way around.</span
+                                >
+                            </p>
+                        </div>
+                    </div>
+                    <div v-else>
                         <p
                             class="text-[0.65rem] font-black tracking-[0.22em] uppercase"
                             :class="
