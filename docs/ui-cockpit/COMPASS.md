@@ -4719,13 +4719,14 @@ Current boundary:
   Splash, Rider URL, then default copy.
 - Existing Front Copy, Front Title, and Front Subtitle controls remain
   authoritative. No parallel social-copy fields were introduced.
-- Added configurable default title and Message/URL/Splash helper phrases.
+- Added configurable default title and URL/Splash helper phrases. Rider
+  Message is intentionally title-only so its indicator and title do not repeat
+  the same purpose.
 - Added a defensive service binding for hosts with older published
   multi-dimensional x-change configuration; no host business logic or host
   config edit is required.
-- Live Pay Code `XFYC` acceptance confirmed `Snacks` and
-  `Prepared with a message for the recipient.` on both crawler metadata and
-  the generated Stamp image, with URL artwork and canonical claim QR retained.
+- New previews and issued Stamps render Rider Message once as the Stamp title,
+  with URL artwork and canonical claim QR retained.
 - This is presentation-only. It does not affect claim authorization, Voucher
   instructions, execution, provider settlement, Treasury accounting, or money
   movement.
@@ -4735,6 +4736,7 @@ Current boundary:
 - The issued Stamp share card now mirrors the canvas audience block with
   `Prepared for` and a privacy-safe `Mobile ending ####` label.
 - The public PNG never paints the complete recipient mobile number.
+- Payable vendor aliases remain visible as the prepared-for label.
 - Pay Codes without a stored mobile use `Anyone with this Pay Code`, matching
   the canvas fallback.
 - Recipient presentation is globally configurable and may be suppressed

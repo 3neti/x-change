@@ -127,8 +127,9 @@ it('uses the same automatic Rider Message copy as the Pay Code canvas', function
     $this->get(route('x-change.claim.show', ['code' => $voucher->code]))
         ->assertOk()
         ->assertSee('<meta property="og:title" content="Snacks">', false)
-        ->assertSee(
-            '<meta property="og:description" content="Prepared with a message for the recipient.">',
+        ->assertSee('<meta property="og:description" content="">', false)
+        ->assertDontSee(
+            'Prepared with a message for the recipient.',
             false,
         );
 

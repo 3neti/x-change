@@ -376,7 +376,7 @@ function resolveStampCopy(
             description:
                 sources.message === ''
                     ? 'Add a purpose to give this Pay Code context.'
-                    : 'Prepared with a message for the recipient.',
+                    : '',
         };
     }
 

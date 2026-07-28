@@ -1930,10 +1930,6 @@ return [
                     'XCHANGE_CLAIM_SHARE_DEFAULT_TITLE',
                     'Pay Code',
                 ),
-                'message_description' => env(
-                    'XCHANGE_CLAIM_SHARE_MESSAGE_DESCRIPTION',
-                    'Prepared with a message for the recipient.',
-                ),
                 'url_description' => env(
                     'XCHANGE_CLAIM_SHARE_URL_DESCRIPTION',
                     'Continue to this link after the claim.',

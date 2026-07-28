@@ -63,7 +63,7 @@ describe('Rider Stamp preview helpers', () => {
             source: 'default',
             label: 'Rider Stamp',
             title: 'Issuer message',
-            description: 'Prepared with a message for the recipient.',
+            description: '',
             reference: 'x-change',
         });
     });

@@ -149,6 +149,26 @@ const showStampCopy = computed<boolean>(() => {
     );
 });
 
+const showPurposeLine = computed<boolean>(() => {
+    const purpose = props.purpose.trim();
+
+    if (purpose === '' || props.riderDesignSource === 'message') {
+        return false;
+    }
+
+    if (!showStampCopy.value) {
+        return true;
+    }
+
+    const normalizedPurpose = purpose.toLowerCase();
+    const stampCopy = [
+        props.riderStamp?.title ?? '',
+        props.riderStamp?.description ?? '',
+    ].map((value) => value.trim().toLowerCase());
+
+    return !stampCopy.includes(normalizedPurpose);
+});
+
 const showClaimQr = computed<boolean>(() => {
     const marker = props.riderStamp?.composition.claimMarker;
 
@@ -631,13 +651,7 @@ function stringValue(value: unknown): string | null {
                         {{ formattedAmount }}
                     </p>
                     <p
-                        v-if="
-                            purpose &&
-                            riderDesignSource !== 'message' &&
-                            (!showStampCopy ||
-                                riderStamp?.composition.copySource !==
-                                    'message')
-                        "
+                        v-if="showPurposeLine"
                         class="mt-1 max-w-[80%] truncate text-xs"
                         :class="
                             hasRiderDesign
@@ -653,21 +667,26 @@ function stringValue(value: unknown): string | null {
                 <div class="flex items-end justify-between gap-4">
                     <div class="min-w-0">
                         <p
-                            class="flex items-center gap-1.5 text-[0.65rem] font-semibold"
+                            class="flex min-w-0 items-center gap-1.5 text-[0.65rem] font-semibold"
                             :class="
                                 hasRiderDesign
                                     ? 'text-white/65'
                                     : 'text-slate-500 dark:text-amber-100/60'
                             "
                         >
-                            <UserRound class="size-3.5" aria-hidden="true" />
-                            Prepared for
-                        </p>
-                        <p
-                            class="mt-1 truncate text-sm font-bold"
-                            data-testid="cockpit-pay-code-canvas-recipient"
-                        >
-                            {{ recipientLabel }}
+                            <UserRound
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <span class="shrink-0">Prepared for</span>
+                            <span aria-hidden="true">·</span>
+                            <span
+                                class="truncate text-sm font-bold"
+                                :title="recipientLabel"
+                                data-testid="cockpit-pay-code-canvas-recipient"
+                            >
+                                {{ recipientLabel }}
+                            </span>
                         </p>
                     </div>
                     <div v-if="riderStamp === null" class="shrink-0 text-right">

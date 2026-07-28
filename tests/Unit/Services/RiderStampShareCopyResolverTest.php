@@ -25,9 +25,7 @@ it('matches the canvas automatic copy priority by choosing Rider Message first',
     expect($copy->source)->toBe('message')
         ->and($copy->visible)->toBeTrue()
         ->and($copy->title)->toBe('Snacks')
-        ->and($copy->description)->toBe(
-            'Prepared with a message for the recipient.',
-        );
+        ->and($copy->description)->toBe('');
 });
 
 it('honors each explicit Rider Stamp copy source', function (
@@ -58,7 +56,7 @@ it('honors each explicit Rider Stamp copy source', function (
     'message' => [
         'message',
         'Snacks',
-        'Prepared with a message for the recipient.',
+        '',
     ],
     'url' => [
         'url',
@@ -173,12 +171,7 @@ it('uses allow-listed Rider URL metadata when it is available', function (): voi
     Http::assertSentCount(2);
 });
 
-it('allows package deployments to configure generated helper copy', function (): void {
-    config()->set(
-        'x-change.claim.share.copy.message_description',
-        'A note from the sender accompanies this Pay Code.',
-    );
-
+it('keeps Rider Message copy title-only when no custom subtitle is supplied', function (): void {
     $voucher = issueVoucher(validVoucherInstructions(overrides: [
         'rider' => [
             'message' => 'Snacks',
@@ -192,7 +185,7 @@ it('allows package deployments to configure generated helper copy', function ():
 
     $copy = app(RiderStampCopyResolverContract::class)->resolve($voucher);
 
-    expect($copy->description)->toBe(
-        'A note from the sender accompanies this Pay Code.',
-    );
+    expect($copy->title)->toBe('Snacks')
+        ->and($copy->description)->toBe('')
+        ->and($copy->rasterDescription)->toBe('');
 });

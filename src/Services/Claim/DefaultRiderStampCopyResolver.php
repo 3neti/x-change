@@ -31,11 +31,18 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
             'x-change.claim.share.default_description',
             'A Pay Code is ready to claim securely in X-Change.',
         );
-        $resolvedDescription = $this->safeText(
-            $rider->stamp?->description,
-            $description === '' ? $defaultDescription : $description,
-            240,
-        );
+        $stampDescription = is_string($rider->stamp?->description)
+            ? trim($rider->stamp->description)
+            : '';
+        $resolvedDescription = $stampDescription !== ''
+            ? $this->safeText($stampDescription, '', 240)
+            : ($source === 'message' && filled($rider->message)
+                ? ''
+                : $this->safeText(
+                    $description,
+                    $defaultDescription,
+                    240,
+                ));
 
         return new RiderStampCopyData(
             source: $source,
@@ -90,12 +97,7 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
         return match ($source) {
             'message' => [
                 $this->safeText($rider->message, 'Pay Code', 120),
-                filled($rider->message)
-                    ? (string) config(
-                        'x-change.claim.share.copy.message_description',
-                        'Prepared with a message for the recipient.',
-                    )
-                    : '',
+                '',
             ],
             'url' => $this->urlCopy($rider->url),
             'splash' => $this->splashCopy($rider->splash),

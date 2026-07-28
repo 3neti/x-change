@@ -34,6 +34,26 @@ it('uses the canvas fallback when no mobile recipient is stored', function (): v
         ->and($recipient->label)->toBe('Anyone with this Pay Code');
 });
 
+it('matches the canvas by preserving a vendor alias recipient', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'cash' => [
+            'validation' => [
+                'payable' => 'MERALCO-BILLER',
+            ],
+        ],
+        'feedback' => [
+            'mobile' => null,
+        ],
+    ]));
+
+    $recipient = app(RiderStampRecipientResolverContract::class)
+        ->resolve($voucher);
+
+    expect($recipient->visible)->toBeTrue()
+        ->and($recipient->eyebrow)->toBe('Prepared for')
+        ->and($recipient->label)->toBe('MERALCO-BILLER');
+});
+
 it('can suppress the recipient presentation without changing instructions', function (): void {
     config()->set('x-change.claim.share.recipient.enabled', false);
     $voucher = issueVoucher(validVoucherInstructions(overrides: [

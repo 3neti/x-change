@@ -165,6 +165,52 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(description.classes()).toContain('line-clamp-3');
     });
 
+    it('shows Rider Message once and keeps the recipient on the compact audience line', async () => {
+        const riderStamp = resolveRiderStampPreview({
+            message: 'Snacks',
+            splashBody: '<h2>A separate introduction</h2>',
+            artworkSource: 'splash',
+            copySource: 'automatic',
+        });
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '50',
+                currency: 'PHP',
+                recipient: '09173011987',
+                purpose: 'Snacks',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                hasRiderDesign: true,
+                riderDesignSource: 'splash',
+                riderStamp,
+            },
+        });
+
+        expect(wrapper.text().match(/Snacks/g)).toHaveLength(1);
+        expect(wrapper.text()).not.toContain(
+            'Prepared with a message for the recipient.',
+        );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-purpose"]')
+                .exists(),
+        ).toBe(false);
+        expect(wrapper.text()).toContain('Prepared for');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-recipient"]')
+                .text(),
+        ).toBe('Mobile ending 1987');
+
+        await wrapper.setProps({ recipient: 'MERALCO-BILLER' });
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-recipient"]')
+                .text(),
+        ).toBe('MERALCO-BILLER');
+    });
+
     it('opens the compact Stamp editor from the live canvas', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
