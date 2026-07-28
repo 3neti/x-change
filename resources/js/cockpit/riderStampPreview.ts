@@ -132,6 +132,11 @@ export function resolveRiderStampPreview(
     const splashHeadline = (input.splashHeadline ?? '').trim();
     const splashBody = (input.splashBody ?? '').trim();
     const splashCta = (input.splashCta ?? '').trim();
+    const splashCopy = resolveSplashCopy(
+        splashHeadline,
+        splashBody,
+        splashCta,
+    );
     const source = compositionPreviewSource(composition, legacySource);
     const presentation = {
         fit: normalizeFit(input.fit),
@@ -142,8 +147,8 @@ export function resolveRiderStampPreview(
     const copy = resolveStampCopy(input, composition, {
         message,
         url,
-        splashHeadline,
-        splashBody,
+        splashHeadline: splashCopy.title,
+        splashBody: splashCopy.description,
         splashCta,
     });
     const artwork = resolveStampArtwork(input, composition, url);
@@ -158,6 +163,81 @@ export function resolveRiderStampPreview(
         ...presentation,
         composition,
     };
+}
+
+function resolveSplashCopy(
+    headline: string,
+    body: string,
+    cta: string,
+): { title: string; description: string } {
+    if (!looksLikeHtml(body)) {
+        return {
+            title: headline || body,
+            description: cta || body,
+        };
+    }
+
+    const heading = firstHtmlElementText(body, ['h1', 'h2', 'h3']);
+    const paragraph = firstHtmlElementText(body, ['p']);
+    const plainText = htmlToPlainText(body);
+
+    return {
+        title: headline || heading || plainText,
+        description: paragraph || cta || plainText,
+    };
+}
+
+function firstHtmlElementText(content: string, tagNames: string[]): string {
+    const tags = tagNames.join('|');
+    const match = content.match(
+        new RegExp(`<(?:${tags})\\b[^>]*>([\\s\\S]*?)<\\/(?:${tags})>`, 'i'),
+    );
+
+    return htmlToPlainText(match?.[1] ?? '');
+}
+
+function htmlToPlainText(content: string): string {
+    const withoutExecutableContent = content
+        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ');
+    const withoutTags = withoutExecutableContent
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<\/(?:div|p|h[1-6]|li)>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ');
+
+    return decodeHtmlEntities(withoutTags).replace(/\s+/g, ' ').trim();
+}
+
+function decodeHtmlEntities(value: string): string {
+    const namedEntities: Record<string, string> = {
+        amp: '&',
+        apos: "'",
+        gt: '>',
+        lt: '<',
+        nbsp: ' ',
+        quot: '"',
+    };
+
+    return value
+        .replace(
+            /&#(x?[0-9a-f]+);/gi,
+            (_match, code: string): string => {
+                const radix = code.toLowerCase().startsWith('x') ? 16 : 10;
+                const numeric = Number.parseInt(
+                    radix === 16 ? code.slice(1) : code,
+                    radix,
+                );
+
+                return Number.isNaN(numeric)
+                    ? ''
+                    : String.fromCodePoint(numeric);
+            },
+        )
+        .replace(
+            /&([a-z]+);/gi,
+            (match, name: string): string =>
+                namedEntities[name.toLowerCase()] ?? match,
+        );
 }
 
 export function normalizeRiderStampComposition(

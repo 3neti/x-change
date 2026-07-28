@@ -106,6 +106,30 @@ describe('Rider Stamp preview helpers', () => {
         expect(document).toContain('overflow-wrap: anywhere');
     });
 
+    it('extracts safe Stamp copy from a reloaded HTML Splash', () => {
+        const splash = `
+            <div class="presentation">
+                <img src="https://example.test/rose.png" alt="A rose" />
+                <h2>i carry your heart with me</h2>
+                <p>(i carry it in my heart)</p>
+                <p>&mdash; e.e. cummings</p>
+            </div>
+        `;
+        const preview = resolveRiderStampPreview({
+            source: 'splash',
+            splashBody: splash,
+            artworkSource: 'splash',
+            copySource: 'splash',
+        });
+
+        expect(preview).toMatchObject({
+            title: 'i carry your heart with me',
+            description: '(i carry it in my heart)',
+        });
+        expect(preview.title).not.toContain('<');
+        expect(preview.description).not.toContain('<');
+    });
+
     it('renders explicit Rider Splash formats without guessing from content', () => {
         const plain = buildRiderSplashContent({
             body: '<strong>Plain</strong>',
