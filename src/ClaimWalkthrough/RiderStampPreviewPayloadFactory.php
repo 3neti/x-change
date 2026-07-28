@@ -13,6 +13,7 @@ final class RiderStampPreviewPayloadFactory
     public function make(array $fixture): array
     {
         $rider = data_get($fixture, 'rider', []);
+        $rider = is_array($rider) ? $rider : [];
         $source = $this->source(
             data_get($rider, 'stamp.source'),
             data_get($rider, 'og_source'),
@@ -21,6 +22,7 @@ final class RiderStampPreviewPayloadFactory
         $url = trim((string) data_get($rider, 'url', ''));
         $splash = trim((string) data_get($rider, 'splash', ''));
         $amount = (string) data_get($fixture, 'amount', '15.00');
+        $composition = $this->composition($rider, $source);
 
         $preview = match ($source) {
             'message' => [
@@ -74,6 +76,13 @@ final class RiderStampPreviewPayloadFactory
             'html' => $preview['render_mode'] === 'html' ? $splash : null,
             'stamp' => [
                 'source' => $source,
+                'artwork_source' => $composition['artwork_source'],
+                'artwork_treatment' => $composition['artwork_treatment'],
+                'copy_source' => $composition['copy_source'],
+                'show_logo' => $composition['show_logo'],
+                'show_tagline' => $composition['show_tagline'],
+                'claim_marker' => $composition['claim_marker'],
+                'claim_marker_position' => $composition['claim_marker_position'],
                 'fit' => $this->oneOf(data_get($rider, 'stamp.fit'), ['cover', 'contain'], 'cover'),
                 'position' => $this->oneOf(
                     data_get($rider, 'stamp.position'),
@@ -86,7 +95,7 @@ final class RiderStampPreviewPayloadFactory
                     ['automatic', 'light', 'dark'],
                     'automatic',
                 ),
-                'version' => 1,
+                'version' => $composition['version'],
                 'presentation_only' => true,
             ],
             'og_meta' => [
@@ -115,6 +124,62 @@ final class RiderStampPreviewPayloadFactory
         return in_array($source, ['message', 'url', 'splash'], true)
             ? (string) $source
             : 'automatic';
+    }
+
+    /**
+     * @param  array<string, mixed>  $rider
+     * @return array{
+     *     artwork_source: string,
+     *     artwork_treatment: string,
+     *     copy_source: string,
+     *     show_logo: bool,
+     *     show_tagline: bool,
+     *     claim_marker: string,
+     *     claim_marker_position: string,
+     *     version: int
+     * }
+     */
+    private function composition(array $rider, string $legacySource): array
+    {
+        $artworkSource = $this->oneOf(
+            data_get($rider, 'stamp.artwork_source'),
+            ['x_change', 'url', 'splash', 'none'],
+            match ($legacySource) {
+                'url', 'splash' => $legacySource,
+                default => 'x_change',
+            },
+        );
+        $copySource = $this->oneOf(
+            data_get($rider, 'stamp.copy_source'),
+            ['automatic', 'message', 'url', 'splash', 'custom', 'none'],
+            match ($legacySource) {
+                'message', 'url', 'splash' => $legacySource,
+                default => 'automatic',
+            },
+        );
+
+        return [
+            'artwork_source' => $artworkSource,
+            'artwork_treatment' => $this->oneOf(
+                data_get($rider, 'stamp.artwork_treatment'),
+                ['automatic', 'artwork', 'text'],
+                'automatic',
+            ),
+            'copy_source' => $copySource,
+            'show_logo' => data_get($rider, 'stamp.show_logo') !== false,
+            'show_tagline' => data_get($rider, 'stamp.show_tagline') !== false,
+            'claim_marker' => $this->oneOf(
+                data_get($rider, 'stamp.claim_marker'),
+                ['none', 'code', 'qr', 'both'],
+                'qr',
+            ),
+            'claim_marker_position' => $this->oneOf(
+                data_get($rider, 'stamp.claim_marker_position'),
+                ['top_left', 'top_right', 'bottom_left', 'bottom_right'],
+                'bottom_right',
+            ),
+            'version' => 2,
+        ];
     }
 
     private function splashTitle(string $splash, bool $allowFallback = true): string

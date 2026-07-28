@@ -8,6 +8,11 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use LBHurtado\Voucher\Data\RiderStampData;
 use LBHurtado\Voucher\Enums\RiderContentFormat;
+use LBHurtado\Voucher\Enums\RiderStampArtworkSource;
+use LBHurtado\Voucher\Enums\RiderStampArtworkTreatment;
+use LBHurtado\Voucher\Enums\RiderStampClaimMarker;
+use LBHurtado\Voucher\Enums\RiderStampClaimMarkerPosition;
+use LBHurtado\Voucher\Enums\RiderStampCopySource;
 use LBHurtado\Voucher\Enums\RiderStampFit;
 use LBHurtado\Voucher\Enums\RiderStampPosition;
 use LBHurtado\Voucher\Enums\RiderStampSource;
@@ -82,7 +87,17 @@ class GeneratePayCodeRequest extends FormRequest
             'rider.stamp.position' => ['nullable', Rule::enum(RiderStampPosition::class)],
             'rider.stamp.scrim' => ['nullable', 'integer', 'between:0,100'],
             'rider.stamp.theme' => ['nullable', Rule::enum(RiderStampTheme::class)],
-            'rider.stamp.version' => ['nullable', 'integer', Rule::in([RiderStampData::SCHEMA_VERSION])],
+            'rider.stamp.version' => ['nullable', 'integer', Rule::in([
+                RiderStampData::LEGACY_SCHEMA_VERSION,
+                RiderStampData::SCHEMA_VERSION,
+            ])],
+            'rider.stamp.artwork_source' => ['nullable', Rule::enum(RiderStampArtworkSource::class)],
+            'rider.stamp.artwork_treatment' => ['nullable', Rule::enum(RiderStampArtworkTreatment::class)],
+            'rider.stamp.copy_source' => ['nullable', Rule::enum(RiderStampCopySource::class)],
+            'rider.stamp.show_logo' => ['nullable', 'boolean'],
+            'rider.stamp.show_tagline' => ['nullable', 'boolean'],
+            'rider.stamp.claim_marker' => ['nullable', Rule::enum(RiderStampClaimMarker::class)],
+            'rider.stamp.claim_marker_position' => ['nullable', Rule::enum(RiderStampClaimMarkerPosition::class)],
 
             'count' => ['nullable', 'integer', 'min:1'],
             'provider' => ['nullable', 'string', 'max:80'],

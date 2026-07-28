@@ -6,6 +6,32 @@ export type RiderStampFit = 'cover' | 'contain';
 export type RiderStampPosition = 'center' | 'top' | 'bottom' | 'left' | 'right';
 export type RiderStampTheme = 'automatic' | 'light' | 'dark';
 export type RiderArtworkSurface = 'canvas' | 'stamp' | 'og-meta';
+export type RiderStampArtworkSource = 'x_change' | 'url' | 'splash' | 'none';
+export type RiderStampArtworkTreatment = 'automatic' | 'artwork' | 'text';
+export type RiderStampCopySource =
+    | 'automatic'
+    | 'message'
+    | 'url'
+    | 'splash'
+    | 'custom'
+    | 'none';
+export type RiderStampClaimMarker = 'none' | 'code' | 'qr' | 'both';
+export type RiderStampClaimMarkerPosition =
+    | 'top_left'
+    | 'top_right'
+    | 'bottom_left'
+    | 'bottom_right';
+
+export type RiderStampComposition = {
+    artworkSource: RiderStampArtworkSource;
+    artworkTreatment: RiderStampArtworkTreatment;
+    copySource: RiderStampCopySource;
+    showLogo: boolean;
+    showTagline: boolean;
+    claimMarker: RiderStampClaimMarker;
+    claimMarkerPosition: RiderStampClaimMarkerPosition;
+    version: 2;
+};
 
 export type RiderStampPreview = {
     source: RiderStampPreviewSource;
@@ -18,6 +44,7 @@ export type RiderStampPreview = {
     position: RiderStampPosition;
     scrim: number;
     theme: RiderStampTheme;
+    composition: RiderStampComposition;
 };
 
 /** @deprecated Use RiderStampPreviewSource. */
@@ -48,6 +75,13 @@ export type RiderStampPreviewInput = {
     position?: string | null;
     scrim?: number | string | null;
     theme?: string | null;
+    artworkSource?: string | null;
+    artworkTreatment?: string | null;
+    copySource?: string | null;
+    showLogo?: boolean | null;
+    showTagline?: boolean | null;
+    claimMarker?: string | null;
+    claimMarkerPosition?: string | null;
 };
 
 /** @deprecated Use RiderStampPreviewInput. */
@@ -92,6 +126,7 @@ export function resolveRiderStampPreview(
     input: RiderStampPreviewInput,
 ): RiderStampPreview {
     const source = normalizeSource(input.source);
+    const composition = normalizeRiderStampComposition(input);
     const message = (input.message ?? '').trim();
     const url = (input.url ?? '').trim();
     const splashHeadline = (input.splashHeadline ?? '').trim();
@@ -153,6 +188,29 @@ export function resolveRiderStampPreview(
         title: input.title?.trim() || preview.title,
         description: input.description?.trim() || preview.description,
         ...presentation,
+        composition,
+    };
+}
+
+export function normalizeRiderStampComposition(
+    input: RiderStampPreviewInput,
+): RiderStampComposition {
+    const legacySource = normalizeSource(input.source);
+
+    return {
+        artworkSource: normalizeArtworkSource(
+            input.artworkSource,
+            legacySource,
+        ),
+        artworkTreatment: normalizeArtworkTreatment(input.artworkTreatment),
+        copySource: normalizeCopySource(input.copySource, legacySource),
+        showLogo: input.showLogo !== false,
+        showTagline: input.showTagline !== false,
+        claimMarker: normalizeClaimMarker(input.claimMarker),
+        claimMarkerPosition: normalizeClaimMarkerPosition(
+            input.claimMarkerPosition,
+        ),
+        version: 2,
     };
 }
 
@@ -283,6 +341,71 @@ function normalizeScrim(value?: number | string | null): number {
 
 function normalizeTheme(value?: string | null): RiderStampTheme {
     return value === 'light' || value === 'dark' ? value : 'automatic';
+}
+
+function normalizeArtworkSource(
+    value: string | null | undefined,
+    legacySource: RiderStampPreviewSource,
+): RiderStampArtworkSource {
+    if (
+        value === 'x_change' ||
+        value === 'url' ||
+        value === 'splash' ||
+        value === 'none'
+    ) {
+        return value;
+    }
+
+    return legacySource === 'url' || legacySource === 'splash'
+        ? legacySource
+        : 'x_change';
+}
+
+function normalizeArtworkTreatment(
+    value?: string | null,
+): RiderStampArtworkTreatment {
+    return value === 'artwork' || value === 'text' ? value : 'automatic';
+}
+
+function normalizeCopySource(
+    value: string | null | undefined,
+    legacySource: RiderStampPreviewSource,
+): RiderStampCopySource {
+    if (
+        value === 'automatic' ||
+        value === 'message' ||
+        value === 'url' ||
+        value === 'splash' ||
+        value === 'custom' ||
+        value === 'none'
+    ) {
+        return value;
+    }
+
+    return legacySource === 'message' ||
+        legacySource === 'url' ||
+        legacySource === 'splash'
+        ? legacySource
+        : 'automatic';
+}
+
+function normalizeClaimMarker(value?: string | null): RiderStampClaimMarker {
+    return value === 'none' ||
+        value === 'code' ||
+        value === 'both' ||
+        value === 'qr'
+        ? value
+        : 'qr';
+}
+
+function normalizeClaimMarkerPosition(
+    value?: string | null,
+): RiderStampClaimMarkerPosition {
+    return value === 'top_left' ||
+        value === 'top_right' ||
+        value === 'bottom_left'
+        ? value
+        : 'bottom_right';
 }
 
 export function buildSandboxedPreviewDocument(content: string): string {

@@ -2,10 +2,52 @@ import { describe, expect, it } from 'vitest';
 import {
     buildRiderStampPreviewDocument,
     buildRiderSplashContent,
+    normalizeRiderStampComposition,
     resolveRiderStampPreview,
 } from '../../../resources/js/cockpit/riderStampPreview';
 
 describe('Rider Stamp preview helpers', () => {
+    it('normalizes layered Stamp composition independently of legacy source', () => {
+        expect(
+            normalizeRiderStampComposition({
+                source: 'splash',
+                artworkSource: 'url',
+                artworkTreatment: 'artwork',
+                copySource: 'message',
+                showLogo: false,
+                showTagline: true,
+                claimMarker: 'both',
+                claimMarkerPosition: 'top_right',
+            }),
+        ).toEqual({
+            artworkSource: 'url',
+            artworkTreatment: 'artwork',
+            copySource: 'message',
+            showLogo: false,
+            showTagline: true,
+            claimMarker: 'both',
+            claimMarkerPosition: 'top_right',
+            version: 2,
+        });
+    });
+
+    it('maps legacy Stamp sources into the v2 composition defaults', () => {
+        expect(
+            normalizeRiderStampComposition({
+                source: 'url',
+            }),
+        ).toMatchObject({
+            artworkSource: 'url',
+            artworkTreatment: 'automatic',
+            copySource: 'url',
+            showLogo: true,
+            showTagline: true,
+            claimMarker: 'qr',
+            claimMarkerPosition: 'bottom_right',
+            version: 2,
+        });
+    });
+
     it('resolves the default preview from splash, message, and URL inputs', () => {
         const preview = resolveRiderStampPreview({
             source: null,
