@@ -549,10 +549,7 @@ function buildCanvasArtworkMarkup(
         const splashImageUrl = firstImageUrl(splashContent);
 
         if (splashImageUrl !== null) {
-            return buildArtworkMarkup(
-                { ...preview, imageUrl: splashImageUrl },
-                false,
-            );
+            return buildSplashArtworkMarkup(preview, splashContent);
         }
 
         return '<div class="stamp-abstract stamp-abstract-splash"></div>';
@@ -561,11 +558,41 @@ function buildCanvasArtworkMarkup(
     return '<div class="stamp-abstract stamp-abstract-x-change"></div>';
 }
 
+function buildSplashArtworkMarkup(
+    preview: RiderStampPreview,
+    splashContent: string,
+): string {
+    const imageUrl = firstImageUrl(splashContent);
+
+    if (imageUrl === null) {
+        return '<div class="stamp-abstract stamp-abstract-splash"></div>';
+    }
+
+    const artwork = buildArtworkMarkup({ ...preview, imageUrl }, false);
+    const symbols = splashSymbolLine(splashContent);
+
+    if (symbols === null) {
+        return artwork;
+    }
+
+    return `<div class="splash-canvas-artwork">${artwork}<p class="splash-symbols">${escapeHtml(symbols)}</p></div>`;
+}
+
 function firstImageUrl(content: string): string | null {
     const match = content.match(/<img[^>]+src=["']([^"']+)["']/i);
     const value = normalizeRiderArtworkUrl(match?.[1]?.trim() ?? '');
 
     return /^(https:|data:image\/)/i.test(value) ? value : null;
+}
+
+function splashSymbolLine(content: string): string | null {
+    return (
+        htmlElementTexts(content, ['p']).find((text) => {
+            return (
+                (text.match(/\p{Extended_Pictographic}/gu)?.length ?? 0) >= 2
+            );
+        }) ?? null
+    );
 }
 
 function buildStampMarkup(content: string, preview: RiderStampPreview): string {
@@ -692,7 +719,7 @@ export function buildSandboxedPreviewDocument(content: string): string {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src data:; base-uri 'none'; form-action 'none';" />
 <style>
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; overflow: hidden; background: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+html, body { margin: 0; min-height: 100%; overflow: hidden; background: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
 body { padding: 0; }
 img { max-width: 100%; height: auto; }
 .stamp-root { position: relative; width: 100%; height: 100vh; overflow: hidden; background: #020617; color: #f8fafc; }
@@ -707,6 +734,8 @@ img { max-width: 100%; height: auto; }
 .artwork-safe { position: relative; width: 100%; height: 100vh; overflow: hidden; background: #020617; }
 .artwork-backdrop { position: absolute; inset: -6%; width: 112%; height: 112%; max-width: none; object-fit: cover; filter: blur(18px); opacity: .58; transform: scale(1.08); }
 .artwork-contain { position: relative; display: block; width: 100%; height: 100vh; max-width: none; object-fit: contain; }
+.splash-canvas-artwork { position: relative; width: 100%; height: 100vh; overflow: hidden; background: #020617; }
+.splash-symbols { position: absolute; z-index: 3; top: 54%; right: 6%; max-width: 56%; margin: 0; color: #fff; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", ui-sans-serif, system-ui, sans-serif; font-size: clamp(.9rem, 3.5vw, 1.75rem); line-height: 1.2; letter-spacing: .08em; text-align: right; text-shadow: 0 2px 16px rgba(2, 6, 23, .9); }
 .stamp-abstract { width: 100%; height: 100vh; }
 .stamp-abstract-x-change { background: radial-gradient(circle at 82% 16%, rgba(16, 185, 129, .2), transparent 28%), linear-gradient(135deg, #fffaf0, #f8fafc 55%, #ecfdf5); }
 .stamp-abstract-splash { background: radial-gradient(circle at 24% 22%, rgba(249, 115, 22, .55), transparent 30%), radial-gradient(circle at 82% 74%, rgba(16, 185, 129, .38), transparent 34%), linear-gradient(135deg, #0f172a, #1e293b); }
@@ -728,7 +757,7 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
 .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,.3), 0 4px 6px -4px rgba(0,0,0,.3); }
 .bg-black { background: #000; }
 .text-white { color: #fff; }
-.font-serif { font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif; }
+.font-serif { font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", serif; }
 .font-normal { font-weight: 400; }
 .italic { font-style: italic; }
 .tracking-wide { letter-spacing: .025em; }

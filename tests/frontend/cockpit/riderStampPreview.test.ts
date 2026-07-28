@@ -82,30 +82,50 @@ describe('Rider Stamp preview helpers', () => {
         });
     });
 
-    it('isolates Splash artwork from the copy composed by the canvas', () => {
+    it('keeps image-backed Splash icons in the canvas artwork layer', () => {
         const splash = buildRiderSplashContent({
             headline: 'Issuer <headline>',
-            body: 'Plain body & copy',
+            body: `
+                <div class="relative">
+                    <img src="https://example.test/rose.png" alt="A rose" />
+                    <p>🤝 ❤️ ✌️ 🔫 ✈️ ⭐</p>
+                </div>
+            `,
             cta: 'Continue <now>',
+            format: 'html',
         });
 
         expect(splash).toContain('Issuer &lt;headline&gt;');
-        expect(splash).toContain('Plain body &amp; copy');
 
         const document = buildRiderStampPreviewDocument(
             resolveRiderStampPreview({
                 source: 'splash',
                 splashHeadline: 'Issuer splash',
-                splashBody: 'Plain splash body',
+                splashBody: splash,
+                artworkSource: 'splash',
             }),
             splash,
         );
 
         expect(document).toContain('Content-Security-Policy');
-        expect(document).toContain('stamp-abstract-splash');
+        expect(document).toContain('class="splash-canvas-artwork"');
+        expect(document).toContain('class="splash-symbols"');
+        expect(document).toContain('🤝 ❤️ ✌️ 🔫 ✈️ ⭐');
+        expect(document).toContain('src="https://example.test/rose.png"');
         expect(document).not.toContain('Issuer &lt;headline&gt;');
         expect(document).toContain('overflow: hidden');
         expect(document).toContain('overflow-wrap: anywhere');
+    });
+
+    it('includes system color-emoji fallbacks in isolated Rider documents', () => {
+        const document = buildSandboxedPreviewDocument(
+            '<p>🤝 ❤️ ✌️ 🔫 ✈️ ⭐</p>',
+        );
+
+        expect(document).toContain('"Apple Color Emoji"');
+        expect(document).toContain('"Segoe UI Emoji"');
+        expect(document).toContain('"Noto Color Emoji"');
+        expect(document).toContain('🤝 ❤️ ✌️ 🔫 ✈️ ⭐');
     });
 
     it('extracts safe Stamp copy from a reloaded HTML Splash', () => {
