@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Data\Claim\RiderSplashArtworkSnapshotData;
+use LBHurtado\XChange\Exceptions\RiderStampArtworkUnavailable;
 use Throwable;
 
 final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSnapshotterContract
@@ -37,7 +38,7 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
         $snapshot = $this->snapshot((string) data_get($input, 'rider.splash', ''));
 
         if (! $snapshot instanceof RiderSplashArtworkSnapshotData) {
-            return $input;
+            throw new RiderStampArtworkUnavailable;
         }
 
         data_set(

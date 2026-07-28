@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Data\Claim\RiderSplashArtworkSnapshotData;
+use LBHurtado\XChange\Exceptions\RiderStampArtworkUnavailable;
 
 beforeEach(function (): void {
     Storage::fake('local');
@@ -109,6 +110,29 @@ it('retries transient remote failures before persisting Splash artwork', functio
     expect($snapshot)->toBeInstanceOf(RiderSplashArtworkSnapshotData::class)
         ->and($snapshot->sha256)->toBe(hash('sha256', $contents));
     Http::assertSentCount(2);
+});
+
+it('does not require an artwork snapshot for a non-Splash Stamp', function (): void {
+    $input = validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Dinner',
+            'splash' => '<img src="https://untrusted.example.test/image.png">',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'x_change',
+            ],
+        ],
+    ])->toArray();
+
+    $prepared = app(RiderSplashArtworkSnapshotterContract::class)
+        ->prepare($input);
+
+    expect($prepared)->toBe($input)
+        ->and(data_get(
+            $prepared,
+            'metadata.custom.rider_splash_artwork',
+        ))->toBeNull();
+    Http::assertNothingSent();
 });
 
 it('replaces caller-supplied snapshot metadata with a server-derived descriptor', function (): void {
@@ -217,7 +241,7 @@ it('backfills existing Pay Codes idempotently and reads only verified bytes', fu
     expect($snapshots->dataUrl($voucher))->toBeNull();
 });
 
-it('rejects unapproved hosts and forged image responses', function (
+it('blocks issuance for unapproved hosts and forged image responses', function (
     string $source,
     string $contentType,
 ): void {
@@ -236,13 +260,13 @@ it('rejects unapproved hosts and forged image responses', function (
             ],
         ],
     ])->toArray();
-    $prepared = app(RiderSplashArtworkSnapshotterContract::class)
-        ->prepare($input);
-
-    expect(data_get(
-        $prepared,
-        'metadata.custom.rider_splash_artwork',
-    ))->toBeNull();
+    expect(
+        fn (): array => app(RiderSplashArtworkSnapshotterContract::class)
+            ->prepare($input),
+    )->toThrow(
+        RiderStampArtworkUnavailable::class,
+        RiderStampArtworkUnavailable::Message,
+    );
 })->with([
     'unapproved host' => [
         'https://untrusted.example.test/image.png',

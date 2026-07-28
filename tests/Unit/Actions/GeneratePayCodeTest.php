@@ -20,6 +20,7 @@ use LBHurtado\XChange\Data\ProvisioningFlowDescriptorData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
+use LBHurtado\XChange\Exceptions\RiderStampArtworkUnavailable;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
@@ -214,6 +215,70 @@ it('throws when issuer cannot be resolved', function () {
 
     expect(fn () => $action->handle($input))
         ->toThrow(PayCodeIssuerNotResolved::class, 'Unable to resolve Pay Code issuer.');
+});
+
+it('stops before estimating, funding, or issuing when selected Stamp artwork is unavailable', function (): void {
+    $issuer = new User;
+    $issuer->id = 1;
+    $issuer->name = 'Issuer';
+
+    $input = [
+        'cash' => [
+            'amount' => 100.0,
+            'currency' => 'PHP',
+        ],
+        'inputs' => [
+            'fields' => [],
+        ],
+        'feedback' => [],
+        'rider' => [
+            'splash' => '<img src="https://example.test/unavailable.png">',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'splash',
+            ],
+        ],
+        'count' => 1,
+    ];
+    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
+        ->normalize($input);
+
+    $users = Mockery::mock(UserResolverContract::class);
+    $users->shouldReceive('resolve')
+        ->once()
+        ->with($normalizedInput)
+        ->andReturn($issuer);
+
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldNotReceive('resolveForUser');
+
+    $estimateAction = Mockery::mock(EstimatePayCodeCost::class);
+    $estimateAction->shouldNotReceive('handle');
+
+    $issuance = Mockery::mock(PayCodeIssuanceContract::class);
+    $issuance->shouldNotReceive('issue');
+
+    $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
+    $splashArtwork = Mockery::mock(RiderSplashArtworkSnapshotterContract::class);
+    $splashArtwork->shouldReceive('prepare')
+        ->once()
+        ->with($normalizedInput)
+        ->andThrow(new RiderStampArtworkUnavailable);
+
+    $action = new GeneratePayCode(
+        $users,
+        $wallets,
+        $estimateAction,
+        $issuance,
+        $allocator,
+        splashArtwork: $splashArtwork,
+    );
+
+    expect(fn (): GeneratePayCodeResultData => $action->handle($input))
+        ->toThrow(
+            RiderStampArtworkUnavailable::class,
+            RiderStampArtworkUnavailable::Message,
+        );
 });
 
 it('stops before issuance when wallet cannot afford the estimated cost', function () {
