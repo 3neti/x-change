@@ -2941,9 +2941,9 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-quick-generate-shell"]')
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Create a Pay Code');
+        expect(wrapper.text()).toContain('Create Pay Code');
         expect(wrapper.text()).toContain(
-            'Set the amount, recipient, and claim rules.',
+            'Set the value, recipient, and purpose. Add safeguards only when needed.',
         );
         const header = wrapper.find(
             '[data-testid="cockpit-quick-generate-header"]',
@@ -2952,12 +2952,9 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-header-progress"]',
         );
 
-        expect(header.classes()).toContain('py-3');
-        expect(header.classes()).not.toContain('p-6');
-        expect(headerProgress.text()).toContain('Create');
-        expect(headerProgress.text()).toContain('Design');
-        expect(headerProgress.text()).toContain('Review');
-        expect(headerProgress.text()).toContain('Issue');
+        expect(header.classes()).toContain('px-1');
+        expect(header.classes()).not.toContain('rounded-2xl');
+        expect(headerProgress.exists()).toBe(false);
         const referenceGuide = wrapper.find(
             '[data-testid="cockpit-quick-generate-reference-guide"]',
         );
@@ -2972,7 +2969,22 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-primary-workflow-stack"]',
         );
         expect(workflowStack.classes()).toContain('space-y-3');
-        expect(wrapper.text()).toContain('Starting Point');
+        const essentialsCanvas = wrapper.find(
+            '[data-testid="cockpit-quick-generate-essentials-canvas"]',
+        );
+        const reuseDesign = wrapper.find(
+            '[data-testid="cockpit-quick-generate-starting-point"]',
+        );
+
+        expect(essentialsCanvas.exists()).toBe(true);
+        expect(essentialsCanvas.text()).toContain('Essentials');
+        expect(reuseDesign.text()).toContain('Reuse A Design');
+        expect(wrapper.html().indexOf('cockpit-quick-generate-essentials-canvas'))
+            .toBeLessThan(
+                wrapper
+                    .html()
+                    .indexOf('cockpit-quick-generate-starting-point'),
+            );
         expect(wrapper.text()).toContain('Repeat Last Design');
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');

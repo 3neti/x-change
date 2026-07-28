@@ -1072,56 +1072,23 @@ function stringValue(value: unknown): string | null {
         active-navigation="quick-generate"
         :cockpit-header-read-model="props.cockpit_header_read_model"
     >
-        <section class="space-y-6" data-testid="cockpit-quick-generate-shell">
-            <div
-                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        <section class="space-y-4" data-testid="cockpit-quick-generate-shell">
+            <header
+                class="px-1"
                 data-testid="cockpit-quick-generate-header"
             >
-                <div
-                    class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-                    data-testid="cockpit-quick-generate-header-row"
+                <h2
+                    class="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
                 >
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <p
-                                class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
-                            >
-                                Create
-                            </p>
-                            <span
-                                class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200"
-                            >
-                                Pay Code
-                            </span>
-                        </div>
-                        <h2
-                            class="mt-1 text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
-                        >
-                            Create a Pay Code
-                        </h2>
-                        <p
-                            class="mt-0.5 text-sm leading-5 text-slate-600 dark:text-slate-300"
-                        >
-                            Set the amount, recipient, and claim rules.
-                        </p>
-                    </div>
-
-                    <div
-                        class="flex items-center gap-1.5 text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400"
-                        data-testid="cockpit-quick-generate-header-progress"
-                    >
-                        <span class="text-emerald-700 dark:text-emerald-300"
-                            >Create</span
-                        >
-                        <span aria-hidden="true">→</span>
-                        <span>Design</span>
-                        <span aria-hidden="true">→</span>
-                        <span>Review</span>
-                        <span aria-hidden="true">→</span>
-                        <span>Issue</span>
-                    </div>
-                </div>
-            </div>
+                    Create Pay Code
+                </h2>
+                <p
+                    class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"
+                >
+                    Set the value, recipient, and purpose. Add safeguards only
+                    when needed.
+                </p>
+            </header>
 
             <div
                 class="space-y-3"

@@ -4083,110 +4083,6 @@ function instructionRecord(
         data-testid="cockpit-quick-generate-submit-panel"
         @submit.prevent="submit"
     >
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <p
-                    class="text-xs font-semibold tracking-[0.22em] text-emerald-700 uppercase dark:text-emerald-300"
-                >
-                    Design your Pay Code
-                </p>
-                <h3
-                    class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50"
-                >
-                    Choose what it does and who can use it
-                </h3>
-                <p
-                    class="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300"
-                >
-                    Start with the essentials. Add safeguards and claim
-                    instructions only when you need them.
-                </p>
-            </div>
-            <span
-                class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800"
-                data-testid="cockpit-quick-generate-submit-status"
-            >
-                {{ lastStatus }}
-            </span>
-        </div>
-
-        <section
-            class="mt-4 rounded-2xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/70 dark:bg-slate-950/70"
-            data-testid="cockpit-quick-generate-starting-point"
-        >
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                    <p
-                        class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
-                    >
-                        Starting Point
-                    </p>
-                    <p
-                        class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
-                    >
-                        Begin blank, repeat your last design, or use a template.
-                    </p>
-                </div>
-                <span
-                    v-if="lastInstructionsLoaded"
-                    class="rounded-full bg-emerald-100 px-2.5 py-1 text-[0.68rem] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                    data-testid="cockpit-quick-generate-last-instructions"
-                >
-                    Last Design Loaded
-                </span>
-            </div>
-
-            <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <button
-                    type="button"
-                    :class="[
-                        'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition',
-                        startingPoint === 'blank'
-                            ? 'border-emerald-600 bg-emerald-600 text-white'
-                            : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
-                    ]"
-                    data-testid="cockpit-quick-generate-start-blank"
-                    @click="startBlank"
-                >
-                    <FilePlus2 class="size-4" aria-hidden="true" />
-                    Blank Pay Code
-                </button>
-                <button
-                    type="button"
-                    :disabled="!lastInstructions"
-                    :class="[
-                        'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-45',
-                        startingPoint === 'last'
-                            ? 'border-emerald-600 bg-emerald-600 text-white'
-                            : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
-                    ]"
-                    data-testid="cockpit-quick-generate-repeat-last"
-                    @click="repeatLastDesign"
-                >
-                    <RotateCcw class="size-4" aria-hidden="true" />
-                    Repeat Last Design
-                </button>
-                <button
-                    type="button"
-                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-                    data-testid="cockpit-quick-generate-choose-template"
-                    @click="templatePickerOpen = true"
-                >
-                    <LayoutTemplate class="size-4" aria-hidden="true" />
-                    Choose Template
-                </button>
-                <button
-                    type="button"
-                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-                    data-testid="cockpit-quick-generate-save-template"
-                    @click="saveTemplateOpen = true"
-                >
-                    <Save class="size-4" aria-hidden="true" />
-                    Save As Template
-                </button>
-            </div>
-        </section>
-
         <div
             v-if="templatePickerOpen"
             class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
@@ -4430,24 +4326,20 @@ function instructionRecord(
         </div>
 
         <div
-            class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.82fr)]"
+            class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.82fr)]"
+            data-testid="cockpit-quick-generate-essentials-canvas"
         >
             <div
                 class="rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
             >
-                <p
-                    class="text-xs font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
-                >
-                    Create
-                </p>
                 <h4
-                    class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50"
+                    class="text-lg font-semibold text-slate-950 dark:text-slate-50"
                 >
-                    Start with the essentials
+                    Essentials
                 </h4>
                 <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Amount, recipient, and purpose shape the Pay Code shown
-                    beside this form.
+                    Amount, recipient, and purpose shape the Pay Code beside
+                    this form.
                 </p>
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
                     <label
@@ -4552,6 +4444,84 @@ function instructionRecord(
                 </CockpitPayCodeCanvas>
             </div>
         </div>
+
+        <section
+            class="mt-4 rounded-2xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/70 dark:bg-slate-950/70"
+            data-testid="cockpit-quick-generate-starting-point"
+        >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <p
+                        class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
+                    >
+                        Reuse A Design
+                    </p>
+                    <p
+                        class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+                    >
+                        Start blank, repeat your last design, or choose a
+                        template.
+                    </p>
+                </div>
+                <span
+                    v-if="lastInstructionsLoaded"
+                    class="rounded-full bg-emerald-100 px-2.5 py-1 text-[0.68rem] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                    data-testid="cockpit-quick-generate-last-instructions"
+                >
+                    Last Design Loaded
+                </span>
+            </div>
+
+            <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <button
+                    type="button"
+                    :class="[
+                        'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition',
+                        startingPoint === 'blank'
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
+                    ]"
+                    data-testid="cockpit-quick-generate-start-blank"
+                    @click="startBlank"
+                >
+                    <FilePlus2 class="size-4" aria-hidden="true" />
+                    Blank Pay Code
+                </button>
+                <button
+                    type="button"
+                    :disabled="!lastInstructions"
+                    :class="[
+                        'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-45',
+                        startingPoint === 'last'
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
+                    ]"
+                    data-testid="cockpit-quick-generate-repeat-last"
+                    @click="repeatLastDesign"
+                >
+                    <RotateCcw class="size-4" aria-hidden="true" />
+                    Repeat Last Design
+                </button>
+                <button
+                    type="button"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                    data-testid="cockpit-quick-generate-choose-template"
+                    @click="templatePickerOpen = true"
+                >
+                    <LayoutTemplate class="size-4" aria-hidden="true" />
+                    Choose Template
+                </button>
+                <button
+                    type="button"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                    data-testid="cockpit-quick-generate-save-template"
+                    @click="saveTemplateOpen = true"
+                >
+                    <Save class="size-4" aria-hidden="true" />
+                    Save As Template
+                </button>
+            </div>
+        </section>
 
         <CockpitIssuedPayCodeDialog
             :open="issuedPayCodeDialogOpen"
