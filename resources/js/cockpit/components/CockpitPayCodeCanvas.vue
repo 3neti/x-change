@@ -811,7 +811,7 @@ function stringValue(value: unknown): string | null {
         </article>
 
         <section
-            v-else-if="visibleView === 'design' && hasDesignView"
+            v-show="visibleView === 'design' && hasDesignView"
             :id="panelId('design')"
             role="tabpanel"
             :aria-labelledby="tabId('design')"
@@ -822,7 +822,7 @@ function stringValue(value: unknown): string | null {
         </section>
 
         <article
-            v-else
+            v-if="visibleView === 'cost'"
             :id="panelId('cost')"
             role="tabpanel"
             :aria-labelledby="tabId('cost')"

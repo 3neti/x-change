@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { config, flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { router } from '@inertiajs/vue3';
 import { describe, expect, it, vi } from 'vitest';
@@ -37,6 +37,11 @@ vi.mock('@inertiajs/vue3', () => ({
         reload: vi.fn(),
     },
 }));
+
+config.global.stubs = {
+    ...config.global.stubs,
+    Teleport: true,
+};
 
 function quickGenerateEngineeringPreview(
     wrapper: VueWrapper,
@@ -294,7 +299,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe('MERALCO-BILLER');
     });
 
-    it('opens the compact Stamp editor from the live canvas', async () => {
+    it('opens the Rider editors inside the live Design view', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -307,33 +312,48 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
+        await flushPromises();
+
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-edit-front-button"]')
+            .get('[data-testid="cockpit-quick-generate-open-design-button"]')
             .trigger('click');
 
         expect(
             wrapper
-                .get('[data-testid="cockpit-quick-generate-edit-front-button"]')
-                .text(),
-        ).toContain('Edit Stamp');
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-voucher-instruction-builder"]')
-                .attributes('open'),
-        ).toBeDefined();
-        expect(
-            wrapper.get('#quick-generate-contract-rider').attributes('open'),
-        ).toBeDefined();
-        expect(
-            wrapper.get('#quick-generate-front-design').attributes('open'),
-        ).toBeDefined();
+                .get('[data-testid="cockpit-pay-code-canvas-design-button"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
         expect(
             wrapper
                 .get(
-                    '[data-testid="cockpit-pay-code-canvas-claim-qr-placeholder"]',
+                    '[data-testid="cockpit-quick-generate-rider-message-editor"]',
                 )
-                .attributes('aria-label'),
-        ).toBe('Claim QR appears after issue');
+                .text(),
+        ).toContain('Rider Message');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-rider-cta-section"]')
+                .text(),
+        ).toContain('Rider URL');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-rider-splash-builder"]',
+                )
+                .text(),
+        ).toContain('Rider Splash');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-rider-stamp-editor"]',
+                )
+                .text(),
+        ).toContain('Front Design');
+        expect(wrapper.get('#quick-generate-contract-rider').text()).toContain(
+            'Optional message, link, artwork, and Stamp presentation.',
+        );
+
+        wrapper.unmount();
     });
 
     it('keeps the selected Pay Code kind visible in Essentials', async () => {
@@ -3396,23 +3416,25 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(instructionBuilderText).not.toContain('maps to');
         expect(instructionBuilderText).not.toContain('payload preview');
         expect(instructionBuilderText).not.toContain('instruction metadata');
-        const instructionCards = [
+        const collapsibleInstructionCards = [
             '#quick-generate-contract-money',
             '#quick-generate-contract-inputs',
             '#quick-generate-contract-validation',
-            '#quick-generate-contract-rider',
             '#quick-generate-contract-feedback',
             '#quick-generate-contract-slices',
             '#quick-generate-contract-execution',
         ].map((selector) => wrapper.find(selector));
 
         expect(
-            instructionCards.every(
+            collapsibleInstructionCards.every(
                 (card) =>
                     card.element.tagName === 'DETAILS' &&
                     card.attributes('open') === undefined,
             ),
         ).toBe(true);
+        expect(
+            wrapper.get('#quick-generate-contract-rider').element.tagName,
+        ).toBe('SECTION');
         expect(wrapper.text()).toContain('Ready to issue');
     });
 });

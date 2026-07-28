@@ -627,7 +627,8 @@ const lastMessage = ref('Ready to issue when the design is complete.');
 const lastResponse = ref<Record<string, unknown> | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
-const riderSectionElement = ref<HTMLDetailsElement | null>(null);
+const canvasSectionElement = ref<HTMLElement | null>(null);
+const canvasView = ref<'stamp' | 'design' | 'cost'>('stamp');
 const startingPoint = ref<'blank' | 'last' | 'template'>(
     props.lastInstructions ? 'last' : 'template',
 );
@@ -796,30 +797,14 @@ function startBlank(): void {
     lastMessage.value = 'Blank Pay Code ready. Add only what this claim needs.';
 }
 
-async function openFrontDesignEditor(): Promise<void> {
+async function openDesignEditor(): Promise<void> {
+    canvasView.value = 'design';
     await nextTick();
 
-    const instructionBuilder = instructionBuilderElement.value;
-    const riderSection = riderSectionElement.value;
-    const frontDesign = riderSection?.querySelector<HTMLDetailsElement>(
-        '#quick-generate-front-design',
-    );
-
-    if (instructionBuilder !== null) {
-        instructionBuilder.open = true;
-    }
-
-    if (riderSection !== null) {
-        riderSection.open = true;
-    }
-
-    if (frontDesign !== null) {
-        frontDesign.open = true;
-        frontDesign.scrollIntoView?.({
-            behavior: 'smooth',
-            block: 'center',
-        });
-    }
+    canvasSectionElement.value?.scrollIntoView?.({
+        behavior: 'smooth',
+        block: 'center',
+    });
 }
 
 function hydrateLastInstructions(): void {
@@ -984,12 +969,9 @@ function saveTemplate(): void {
     } as RequestPayload;
     const options = {
         preserveScroll: true,
-        onSuccess: (page: {
-            props: Record<string, unknown>;
-        }): void => {
+        onSuccess: (page: { props: Record<string, unknown> }): void => {
             const savedTemplates = Array.isArray(page.props.saved_templates)
-                ? (page.props
-                      .saved_templates as CockpitSavedPayCodeTemplate[])
+                ? (page.props.saved_templates as CockpitSavedPayCodeTemplate[])
                 : (props.savedTemplates ?? []);
             const savedTemplate =
                 saveTemplateMode.value === 'update' && template !== null
@@ -4655,8 +4637,12 @@ function instructionRecord(
                 </section>
             </div>
 
-            <div class="xl:sticky xl:top-4 xl:self-start">
+            <div
+                ref="canvasSectionElement"
+                class="xl:sticky xl:top-4 xl:self-start"
+            >
                 <CockpitPayCodeCanvas
+                    v-model:view="canvasView"
                     :amount="amount"
                     :currency="currency"
                     :recipient="recipientReference"
@@ -4675,6 +4661,13 @@ function instructionRecord(
                     :cost-error="livePricingEstimateError"
                     :quantity="count"
                 >
+                    <template #design>
+                        <div
+                            id="quick-generate-rider-design-editor"
+                            class="max-h-[34rem] overflow-y-auto overscroll-contain pr-1"
+                            data-testid="cockpit-quick-generate-rider-design-editor"
+                        />
+                    </template>
                     <template #action>
                         <button
                             type="button"
@@ -5992,559 +5985,606 @@ function instructionRecord(
                     </div>
                 </details>
 
-                <details
-                    ref="riderSectionElement"
+                <section
                     id="quick-generate-contract-rider"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
-                    <summary
-                        class="flex cursor-pointer list-none items-center gap-3"
-                    >
-                        <span
-                            class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
-                            >4</span
-                        >
-                        <div>
-                            <h4
-                                class="text-sm font-semibold text-slate-950 dark:text-slate-50"
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-3">
+                            <span
+                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
+                                >4</span
                             >
-                                Rider
-                            </h4>
-                            <p
-                                class="text-xs text-slate-500 dark:text-slate-400"
-                            >
-                                Add a Rider Message, Rider URL, or Rider Splash
-                                for the recipient.
-                            </p>
+                            <div class="min-w-0">
+                                <h4
+                                    class="text-sm font-semibold text-slate-950 dark:text-slate-50"
+                                >
+                                    Rider Design
+                                </h4>
+                                <p
+                                    class="truncate text-xs text-slate-500 dark:text-slate-400"
+                                >
+                                    {{
+                                        purpose.trim() !== '' ||
+                                        riderUrl.trim() !== '' ||
+                                        riderSplash.trim() !== '' ||
+                                        hasRiderStampCustomization
+                                            ? 'Configured in the Pay Code canvas.'
+                                            : 'Optional message, link, artwork, and Stamp presentation.'
+                                    }}
+                                </p>
+                            </div>
                         </div>
-                    </summary>
-                    <div class="mt-4 grid gap-3">
-                        <CockpitRiderEditorDisclosure
-                            title="Rider Message"
-                            description="Add an optional message for the recipient."
-                            :status="
-                                purpose.trim() === '' ? 'Empty' : 'Configured'
-                            "
-                            :summary="riderMessageDisclosureSummary"
-                            data-testid="cockpit-quick-generate-rider-message-editor"
+                        <button
+                            type="button"
+                            class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                            data-testid="cockpit-quick-generate-open-design-button"
+                            :disabled="processing"
+                            @click="openDesignEditor"
                         >
-                            <CockpitRiderMessageEditor
-                                v-model:message="purpose"
-                                v-model:format="riderMessageFormat"
-                                :disabled="processing"
-                            />
-                        </CockpitRiderEditorDisclosure>
-                        <CockpitRiderEditorDisclosure
-                            title="Rider URL"
-                            description="Add an optional destination after the claim."
-                            :status="
-                                riderUrl.trim() === '' ? 'Empty' : 'Configured'
-                            "
-                            :summary="riderUrlDisclosureSummary"
-                            data-testid="cockpit-quick-generate-rider-cta-section"
-                        >
-                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    URL Preset
-                                    <select
-                                        v-model="riderUrlPreset"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-url-preset"
-                                        :disabled="processing"
-                                        @change="applyRiderUrlPreset"
-                                    >
-                                        <option
-                                            v-for="preset in riderUrlPresets"
-                                            :key="preset.value"
-                                            :value="preset.value"
-                                        >
-                                            {{ preset.label }}
-                                        </option>
-                                    </select>
-                                    <span
-                                        class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
-                                        data-testid="cockpit-quick-generate-rider-url-preset-helper"
-                                    >
-                                        {{ selectedRiderUrlPreset.helper }}
-                                    </span>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Redirect Delay (Seconds)
-                                    <input
-                                        v-model="riderRedirectTimeout"
-                                        type="number"
-                                        min="0"
-                                        max="300"
-                                        step="1"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-redirect-timeout"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Rider URL
-                                    <input
-                                        v-model="riderUrl"
-                                        type="url"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-url"
-                                        :disabled="processing"
-                                    />
-                                    <span
-                                        class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
-                                    >
-                                        Open this destination during the claim.
-                                    </span>
-                                </label>
-                            </div>
-                            <div
-                                v-if="riderUrl.trim() !== ''"
-                                class="mt-3 rounded-xl border border-sky-200 bg-white p-3 dark:border-sky-900/60 dark:bg-slate-950"
-                                data-testid="cockpit-quick-generate-rider-url-preview"
+                            <Palette class="size-3.5" aria-hidden="true" />
+                            Open Design
+                        </button>
+                    </div>
+                    <Teleport to="#quick-generate-rider-design-editor" defer>
+                        <div class="grid gap-3">
+                            <CockpitRiderEditorDisclosure
+                                title="Rider Message"
+                                description="Add an optional message for the recipient."
+                                :status="
+                                    purpose.trim() === ''
+                                        ? 'Empty'
+                                        : 'Configured'
+                                "
+                                :summary="riderMessageDisclosureSummary"
+                                data-testid="cockpit-quick-generate-rider-message-editor"
+                            >
+                                <CockpitRiderMessageEditor
+                                    v-model:message="purpose"
+                                    v-model:format="riderMessageFormat"
+                                    :disabled="processing"
+                                />
+                            </CockpitRiderEditorDisclosure>
+                            <CockpitRiderEditorDisclosure
+                                title="Rider URL"
+                                description="Add an optional destination after the claim."
+                                :status="
+                                    riderUrl.trim() === ''
+                                        ? 'Empty'
+                                        : 'Configured'
+                                "
+                                :summary="riderUrlDisclosureSummary"
+                                data-testid="cockpit-quick-generate-rider-cta-section"
                             >
                                 <div
-                                    class="flex flex-wrap items-center justify-between gap-2"
-                                >
-                                    <p
-                                        class="text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
-                                    >
-                                        Rider URL Preview
-                                    </p>
-                                    <p
-                                        class="text-[11px] text-sky-700 dark:text-sky-300"
-                                        data-testid="cockpit-quick-generate-rider-url-preview-status"
-                                    >
-                                        {{
-                                            riderUrlArtworkResolving
-                                                ? 'Loading Artwork…'
-                                                : riderUrlArtworkMessage
-                                        }}
-                                    </p>
-                                </div>
-                                <div class="mt-2">
-                                    <CockpitRiderPreviewFrame
-                                        title="Rider URL Preview"
-                                        surface="stamp"
-                                        class="border-sky-200 dark:border-sky-900/60"
-                                        data-testid="cockpit-quick-generate-rider-url-artwork-preview"
-                                        :document="riderUrlPreviewDocument"
-                                    />
-                                </div>
-                            </div>
-                        </CockpitRiderEditorDisclosure>
-                        <CockpitRiderEditorDisclosure
-                            title="Rider Splash"
-                            description="Design an optional introduction before the claim."
-                            :status="
-                                riderSplash.trim() === ''
-                                    ? 'Empty'
-                                    : 'Configured'
-                            "
-                            :summary="riderSplashDisclosureSummary"
-                            data-testid="cockpit-quick-generate-rider-splash-builder"
-                        >
-                            <div class="grid gap-3 lg:grid-cols-3">
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
-                                >
-                                    Format
-                                    <select
-                                        v-model="riderSplashFormat"
-                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-splash-format"
-                                        :disabled="processing"
-                                    >
-                                        <option value="plain">
-                                            Plain Text
-                                        </option>
-                                        <option value="markdown">
-                                            Markdown
-                                        </option>
-                                        <option value="html">HTML</option>
-                                    </select>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
-                                >
-                                    Splash Headline
-                                    <input
-                                        v-model="riderSplashHeadline"
-                                        type="text"
-                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-splash-headline"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
-                                >
-                                    Splash Button Label
-                                    <input
-                                        v-model="riderSplashCtaText"
-                                        type="text"
-                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-splash-cta-text"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 lg:col-span-3 dark:text-orange-100"
-                                >
-                                    Rider Splash Content
-                                    <textarea
-                                        v-model="riderSplash"
-                                        rows="3"
-                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-splash-body"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                                <div
-                                    class="grid gap-3 lg:col-span-3 lg:grid-cols-3"
+                                    class="grid grid-cols-1 gap-3 lg:grid-cols-3"
                                 >
                                     <label
-                                        class="grid min-w-0 content-start gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                     >
-                                        Splash Duration (Seconds)
+                                        URL Preset
+                                        <select
+                                            v-model="riderUrlPreset"
+                                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-url-preset"
+                                            :disabled="processing"
+                                            @change="applyRiderUrlPreset"
+                                        >
+                                            <option
+                                                v-for="preset in riderUrlPresets"
+                                                :key="preset.value"
+                                                :value="preset.value"
+                                            >
+                                                {{ preset.label }}
+                                            </option>
+                                        </select>
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                            data-testid="cockpit-quick-generate-rider-url-preset-helper"
+                                        >
+                                            {{ selectedRiderUrlPreset.helper }}
+                                        </span>
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Redirect Delay (Seconds)
                                         <input
-                                            v-model="riderSplashTimeout"
+                                            v-model="riderRedirectTimeout"
                                             type="number"
                                             min="0"
-                                            max="60"
+                                            max="300"
                                             step="1"
-                                            class="h-10 w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-redirect-timeout"
                                             :disabled="processing"
                                         />
                                     </label>
                                     <label
-                                        v-if="riderSplashFormat === 'html'"
-                                        class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                     >
-                                        HTML Profile
+                                        Rider URL
                                         <input
-                                            v-model="riderSplashMetaProfile"
-                                            type="text"
-                                            class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                            data-testid="cockpit-quick-generate-rider-splash-profile"
+                                            v-model="riderUrl"
+                                            type="url"
+                                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-url"
                                             :disabled="processing"
                                         />
-                                    </label>
-                                    <label
-                                        v-if="riderSplashFormat === 'html'"
-                                        class="flex items-center gap-2 self-end rounded-xl border border-orange-200 bg-white p-3 text-xs font-medium text-orange-950 dark:border-orange-900/60 dark:bg-slate-950 dark:text-orange-100"
-                                    >
-                                        <input
-                                            v-model="riderSplashMetaSanitized"
-                                            type="checkbox"
-                                            class="rounded border-orange-300"
-                                            :disabled="processing"
-                                        />
-                                        Sanitize Custom HTML
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                        >
+                                            Open this destination during the
+                                            claim.
+                                        </span>
                                     </label>
                                 </div>
                                 <div
-                                    class="rounded-xl border border-orange-200 bg-white p-3 lg:col-span-3 dark:border-orange-900/60 dark:bg-slate-950"
-                                    data-testid="cockpit-quick-generate-rider-splash-preview"
+                                    v-if="riderUrl.trim() !== ''"
+                                    class="mt-3 rounded-xl border border-sky-200 bg-white p-3 dark:border-sky-900/60 dark:bg-slate-950"
+                                    data-testid="cockpit-quick-generate-rider-url-preview"
                                 >
-                                    <p
-                                        class="text-[11px] font-semibold tracking-wide text-orange-700 uppercase dark:text-orange-300"
+                                    <div
+                                        class="flex flex-wrap items-center justify-between gap-2"
                                     >
-                                        Claim Splash Preview
-                                    </p>
-                                    <p
-                                        class="mt-1 text-[11px] leading-snug text-orange-800 dark:text-orange-200"
-                                    >
-                                        {{
-                                            riderSplashFormat === 'html'
-                                                ? 'Custom HTML is isolated inside this preview.'
-                                                : 'Formatting is rendered inside an isolated preview.'
-                                        }}
-                                    </p>
+                                        <p
+                                            class="text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
+                                        >
+                                            Rider URL Preview
+                                        </p>
+                                        <p
+                                            class="text-[11px] text-sky-700 dark:text-sky-300"
+                                            data-testid="cockpit-quick-generate-rider-url-preview-status"
+                                        >
+                                            {{
+                                                riderUrlArtworkResolving
+                                                    ? 'Loading Artwork…'
+                                                    : riderUrlArtworkMessage
+                                            }}
+                                        </p>
+                                    </div>
                                     <div class="mt-2">
                                         <CockpitRiderPreviewFrame
-                                            title="Claim Splash Preview"
-                                            surface="splash"
-                                            class="border-orange-200 dark:border-orange-900/60"
-                                            data-testid="cockpit-quick-generate-rider-splash-html-preview"
-                                            :document="
-                                                riderSplashPreviewDocument
-                                            "
+                                            title="Rider URL Preview"
+                                            surface="stamp"
+                                            class="border-sky-200 dark:border-sky-900/60"
+                                            data-testid="cockpit-quick-generate-rider-url-artwork-preview"
+                                            :document="riderUrlPreviewDocument"
                                         />
                                     </div>
                                 </div>
-                            </div>
-                        </CockpitRiderEditorDisclosure>
-                        <CockpitRiderEditorDisclosure
-                            id="quick-generate-front-design"
-                            title="Front Design"
-                            description="Compose the Pay Code front from Rider content."
-                            :status="
-                                hasRiderStampCustomization
-                                    ? 'Configured'
-                                    : 'x-change'
-                            "
-                            :summary="riderStampDisclosureSummary"
-                            data-testid="cockpit-quick-generate-rider-stamp-editor"
-                        >
-                            <div
-                                class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-                            >
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                >
-                                    Artwork
-                                    <select
-                                        v-model="riderStampArtworkSource"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-source"
-                                        :disabled="processing"
-                                    >
-                                        <option value="x_change">
-                                            x-change Design (Recommended)
-                                        </option>
-                                        <option value="url">Rider URL</option>
-                                        <option value="splash">
-                                            Rider Splash
-                                        </option>
-                                        <option value="none">No Artwork</option>
-                                    </select>
-                                </label>
-                                <label
-                                    v-if="
-                                        riderStampArtworkSource === 'url' ||
-                                        riderStampArtworkSource === 'splash'
-                                    "
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                >
-                                    Artwork Treatment
-                                    <select
-                                        v-model="riderStampArtworkTreatment"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-artwork-treatment"
-                                        :disabled="processing"
-                                    >
-                                        <option value="automatic">
-                                            Automatic
-                                        </option>
-                                        <option value="artwork">Artwork</option>
-                                        <option value="text">Text</option>
-                                    </select>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                >
-                                    Front Copy
-                                    <select
-                                        v-model="riderStampCopySource"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-copy-source"
-                                        :disabled="processing"
-                                    >
-                                        <option value="automatic">
-                                            Best Available
-                                        </option>
-                                        <option value="message">
-                                            Rider Message
-                                        </option>
-                                        <option value="url">Rider URL</option>
-                                        <option value="splash">
-                                            Rider Splash
-                                        </option>
-                                        <option value="custom">
-                                            Custom Copy
-                                        </option>
-                                        <option value="none">No Copy</option>
-                                    </select>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                >
-                                    Artwork Fit
-                                    <select
-                                        v-model="riderStampFit"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-fit"
-                                        :disabled="processing"
-                                    >
-                                        <option value="cover">Cover</option>
-                                        <option value="contain">Contain</option>
-                                    </select>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                >
-                                    Artwork Position
-                                    <select
-                                        v-model="riderStampPosition"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-position"
-                                        :disabled="processing"
-                                    >
-                                        <option value="center">Center</option>
-                                        <option value="top">Top</option>
-                                        <option value="bottom">Bottom</option>
-                                        <option value="left">Left</option>
-                                        <option value="right">Right</option>
-                                    </select>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                >
-                                    Theme
-                                    <select
-                                        v-model="riderStampTheme"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-theme"
-                                        :disabled="processing"
-                                    >
-                                        <option value="automatic">
-                                            Automatic
-                                        </option>
-                                        <option value="light">Light</option>
-                                        <option value="dark">Dark</option>
-                                    </select>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
-                                >
-                                    Front Title
-                                    <input
-                                        v-model="riderStampTitle"
-                                        type="text"
-                                        maxlength="120"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-title"
-                                        :disabled="processing"
-                                        placeholder="Use the selected Rider title"
-                                    />
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
-                                >
-                                    Front Subtitle
-                                    <input
-                                        v-model="riderStampDescription"
-                                        type="text"
-                                        maxlength="240"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-description"
-                                        :disabled="processing"
-                                        placeholder="Use the selected Rider description"
-                                    />
-                                </label>
-                                <label
-                                    class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
-                                >
-                                    <input
-                                        v-model="riderStampShowLogo"
-                                        type="checkbox"
-                                        class="rounded border-sky-300"
-                                        :disabled="processing"
-                                    />
-                                    Show x-change Logo
-                                </label>
-                                <label
-                                    class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
-                                >
-                                    <input
-                                        v-model="riderStampShowTagline"
-                                        type="checkbox"
-                                        class="rounded border-sky-300"
-                                        :disabled="processing"
-                                    />
-                                    Show Tagline
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                >
-                                    Claim Marker
-                                    <select
-                                        v-model="riderStampClaimMarker"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-claim-marker"
-                                        :disabled="processing"
-                                    >
-                                        <option value="qr">QR Code</option>
-                                        <option value="code">Pay Code</option>
-                                        <option value="both">Both</option>
-                                        <option value="none">None</option>
-                                    </select>
-                                </label>
-                                <label
-                                    v-if="riderStampClaimMarker !== 'none'"
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                >
-                                    Marker Position
-                                    <select
-                                        v-model="riderStampClaimMarkerPosition"
-                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-stamp-claim-marker-position"
-                                        :disabled="processing"
-                                    >
-                                        <option value="bottom_right">
-                                            Bottom Right
-                                        </option>
-                                        <option value="bottom_left">
-                                            Bottom Left
-                                        </option>
-                                        <option value="top_right">
-                                            Top Right
-                                        </option>
-                                        <option value="top_left">
-                                            Top Left
-                                        </option>
-                                    </select>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 lg:col-span-4 dark:text-sky-100"
-                                >
-                                    <span
-                                        class="flex items-center justify-between gap-3"
-                                    >
-                                        <span>Contrast</span>
-                                        <span>{{ riderStampScrim }}%</span>
-                                    </span>
-                                    <input
-                                        v-model="riderStampScrim"
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        data-testid="cockpit-quick-generate-rider-stamp-scrim"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                            </div>
-                            <p
-                                class="mt-2 text-[11px] text-sky-700 dark:text-sky-300"
-                            >
-                                The live Pay Code above is the complete front
-                                preview. Rider Stamp changes presentation only.
-                            </p>
-                            <div
-                                v-if="
-                                    riderStampArtworkSource === 'url' &&
-                                    (riderUrlArtworkResolving ||
-                                        riderUrlArtworkMessage)
+                            </CockpitRiderEditorDisclosure>
+                            <CockpitRiderEditorDisclosure
+                                title="Rider Splash"
+                                description="Design an optional introduction before the claim."
+                                :status="
+                                    riderSplash.trim() === ''
+                                        ? 'Empty'
+                                        : 'Configured'
                                 "
-                                class="mt-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-[11px] text-sky-800 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-200"
-                                data-testid="cockpit-quick-generate-rider-artwork-status"
+                                :summary="riderSplashDisclosureSummary"
+                                data-testid="cockpit-quick-generate-rider-splash-builder"
                             >
-                                {{
-                                    riderUrlArtworkResolving
-                                        ? 'Loading Rider URL Artwork…'
-                                        : riderUrlArtworkMessage
-                                }}
-                            </div>
-                        </CockpitRiderEditorDisclosure>
-                    </div>
-                </details>
+                                <div class="grid gap-3 lg:grid-cols-3">
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                    >
+                                        Format
+                                        <select
+                                            v-model="riderSplashFormat"
+                                            class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-splash-format"
+                                            :disabled="processing"
+                                        >
+                                            <option value="plain">
+                                                Plain Text
+                                            </option>
+                                            <option value="markdown">
+                                                Markdown
+                                            </option>
+                                            <option value="html">HTML</option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                    >
+                                        Splash Headline
+                                        <input
+                                            v-model="riderSplashHeadline"
+                                            type="text"
+                                            class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-splash-headline"
+                                            :disabled="processing"
+                                        />
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                    >
+                                        Splash Button Label
+                                        <input
+                                            v-model="riderSplashCtaText"
+                                            type="text"
+                                            class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-splash-cta-text"
+                                            :disabled="processing"
+                                        />
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 lg:col-span-3 dark:text-orange-100"
+                                    >
+                                        Rider Splash Content
+                                        <textarea
+                                            v-model="riderSplash"
+                                            rows="3"
+                                            class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-splash-body"
+                                            :disabled="processing"
+                                        />
+                                    </label>
+                                    <div
+                                        class="grid gap-3 lg:col-span-3 lg:grid-cols-3"
+                                    >
+                                        <label
+                                            class="grid min-w-0 content-start gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                        >
+                                            Splash Duration (Seconds)
+                                            <input
+                                                v-model="riderSplashTimeout"
+                                                type="number"
+                                                min="0"
+                                                max="60"
+                                                step="1"
+                                                class="h-10 w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                                :disabled="processing"
+                                            />
+                                        </label>
+                                        <label
+                                            v-if="riderSplashFormat === 'html'"
+                                            class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                        >
+                                            HTML Profile
+                                            <input
+                                                v-model="riderSplashMetaProfile"
+                                                type="text"
+                                                class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                                data-testid="cockpit-quick-generate-rider-splash-profile"
+                                                :disabled="processing"
+                                            />
+                                        </label>
+                                        <label
+                                            v-if="riderSplashFormat === 'html'"
+                                            class="flex items-center gap-2 self-end rounded-xl border border-orange-200 bg-white p-3 text-xs font-medium text-orange-950 dark:border-orange-900/60 dark:bg-slate-950 dark:text-orange-100"
+                                        >
+                                            <input
+                                                v-model="
+                                                    riderSplashMetaSanitized
+                                                "
+                                                type="checkbox"
+                                                class="rounded border-orange-300"
+                                                :disabled="processing"
+                                            />
+                                            Sanitize Custom HTML
+                                        </label>
+                                    </div>
+                                    <div
+                                        class="rounded-xl border border-orange-200 bg-white p-3 lg:col-span-3 dark:border-orange-900/60 dark:bg-slate-950"
+                                        data-testid="cockpit-quick-generate-rider-splash-preview"
+                                    >
+                                        <p
+                                            class="text-[11px] font-semibold tracking-wide text-orange-700 uppercase dark:text-orange-300"
+                                        >
+                                            Claim Splash Preview
+                                        </p>
+                                        <p
+                                            class="mt-1 text-[11px] leading-snug text-orange-800 dark:text-orange-200"
+                                        >
+                                            {{
+                                                riderSplashFormat === 'html'
+                                                    ? 'Custom HTML is isolated inside this preview.'
+                                                    : 'Formatting is rendered inside an isolated preview.'
+                                            }}
+                                        </p>
+                                        <div class="mt-2">
+                                            <CockpitRiderPreviewFrame
+                                                title="Claim Splash Preview"
+                                                surface="splash"
+                                                class="border-orange-200 dark:border-orange-900/60"
+                                                data-testid="cockpit-quick-generate-rider-splash-html-preview"
+                                                :document="
+                                                    riderSplashPreviewDocument
+                                                "
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </CockpitRiderEditorDisclosure>
+                            <CockpitRiderEditorDisclosure
+                                id="quick-generate-front-design"
+                                title="Front Design"
+                                description="Compose the Pay Code front from Rider content."
+                                :status="
+                                    hasRiderStampCustomization
+                                        ? 'Configured'
+                                        : 'x-change'
+                                "
+                                :summary="riderStampDisclosureSummary"
+                                data-testid="cockpit-quick-generate-rider-stamp-editor"
+                            >
+                                <div
+                                    class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                                >
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                    >
+                                        Artwork
+                                        <select
+                                            v-model="riderStampArtworkSource"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-source"
+                                            :disabled="processing"
+                                        >
+                                            <option value="x_change">
+                                                x-change Design (Recommended)
+                                            </option>
+                                            <option value="url">
+                                                Rider URL
+                                            </option>
+                                            <option value="splash">
+                                                Rider Splash
+                                            </option>
+                                            <option value="none">
+                                                No Artwork
+                                            </option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        v-if="
+                                            riderStampArtworkSource === 'url' ||
+                                            riderStampArtworkSource === 'splash'
+                                        "
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                    >
+                                        Artwork Treatment
+                                        <select
+                                            v-model="riderStampArtworkTreatment"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-artwork-treatment"
+                                            :disabled="processing"
+                                        >
+                                            <option value="automatic">
+                                                Automatic
+                                            </option>
+                                            <option value="artwork">
+                                                Artwork
+                                            </option>
+                                            <option value="text">Text</option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                    >
+                                        Front Copy
+                                        <select
+                                            v-model="riderStampCopySource"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-copy-source"
+                                            :disabled="processing"
+                                        >
+                                            <option value="automatic">
+                                                Best Available
+                                            </option>
+                                            <option value="message">
+                                                Rider Message
+                                            </option>
+                                            <option value="url">
+                                                Rider URL
+                                            </option>
+                                            <option value="splash">
+                                                Rider Splash
+                                            </option>
+                                            <option value="custom">
+                                                Custom Copy
+                                            </option>
+                                            <option value="none">
+                                                No Copy
+                                            </option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                    >
+                                        Artwork Fit
+                                        <select
+                                            v-model="riderStampFit"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-fit"
+                                            :disabled="processing"
+                                        >
+                                            <option value="cover">Cover</option>
+                                            <option value="contain">
+                                                Contain
+                                            </option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                    >
+                                        Artwork Position
+                                        <select
+                                            v-model="riderStampPosition"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-position"
+                                            :disabled="processing"
+                                        >
+                                            <option value="center">
+                                                Center
+                                            </option>
+                                            <option value="top">Top</option>
+                                            <option value="bottom">
+                                                Bottom
+                                            </option>
+                                            <option value="left">Left</option>
+                                            <option value="right">Right</option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                    >
+                                        Theme
+                                        <select
+                                            v-model="riderStampTheme"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-theme"
+                                            :disabled="processing"
+                                        >
+                                            <option value="automatic">
+                                                Automatic
+                                            </option>
+                                            <option value="light">Light</option>
+                                            <option value="dark">Dark</option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
+                                    >
+                                        Front Title
+                                        <input
+                                            v-model="riderStampTitle"
+                                            type="text"
+                                            maxlength="120"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-title"
+                                            :disabled="processing"
+                                            placeholder="Use the selected Rider title"
+                                        />
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
+                                    >
+                                        Front Subtitle
+                                        <input
+                                            v-model="riderStampDescription"
+                                            type="text"
+                                            maxlength="240"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-description"
+                                            :disabled="processing"
+                                            placeholder="Use the selected Rider description"
+                                        />
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
+                                    >
+                                        <input
+                                            v-model="riderStampShowLogo"
+                                            type="checkbox"
+                                            class="rounded border-sky-300"
+                                            :disabled="processing"
+                                        />
+                                        Show x-change Logo
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
+                                    >
+                                        <input
+                                            v-model="riderStampShowTagline"
+                                            type="checkbox"
+                                            class="rounded border-sky-300"
+                                            :disabled="processing"
+                                        />
+                                        Show Tagline
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                    >
+                                        Claim Marker
+                                        <select
+                                            v-model="riderStampClaimMarker"
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-claim-marker"
+                                            :disabled="processing"
+                                        >
+                                            <option value="qr">QR Code</option>
+                                            <option value="code">
+                                                Pay Code
+                                            </option>
+                                            <option value="both">Both</option>
+                                            <option value="none">None</option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        v-if="riderStampClaimMarker !== 'none'"
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                    >
+                                        Marker Position
+                                        <select
+                                            v-model="
+                                                riderStampClaimMarkerPosition
+                                            "
+                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-rider-stamp-claim-marker-position"
+                                            :disabled="processing"
+                                        >
+                                            <option value="bottom_right">
+                                                Bottom Right
+                                            </option>
+                                            <option value="bottom_left">
+                                                Bottom Left
+                                            </option>
+                                            <option value="top_right">
+                                                Top Right
+                                            </option>
+                                            <option value="top_left">
+                                                Top Left
+                                            </option>
+                                        </select>
+                                    </label>
+                                    <label
+                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 lg:col-span-4 dark:text-sky-100"
+                                    >
+                                        <span
+                                            class="flex items-center justify-between gap-3"
+                                        >
+                                            <span>Contrast</span>
+                                            <span>{{ riderStampScrim }}%</span>
+                                        </span>
+                                        <input
+                                            v-model="riderStampScrim"
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="1"
+                                            data-testid="cockpit-quick-generate-rider-stamp-scrim"
+                                            :disabled="processing"
+                                        />
+                                    </label>
+                                </div>
+                                <p
+                                    class="mt-2 text-[11px] text-sky-700 dark:text-sky-300"
+                                >
+                                    The live Pay Code above is the complete
+                                    front preview. Rider Stamp changes
+                                    presentation only.
+                                </p>
+                                <div
+                                    v-if="
+                                        riderStampArtworkSource === 'url' &&
+                                        (riderUrlArtworkResolving ||
+                                            riderUrlArtworkMessage)
+                                    "
+                                    class="mt-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-[11px] text-sky-800 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-200"
+                                    data-testid="cockpit-quick-generate-rider-artwork-status"
+                                >
+                                    {{
+                                        riderUrlArtworkResolving
+                                            ? 'Loading Rider URL Artwork…'
+                                            : riderUrlArtworkMessage
+                                    }}
+                                </div>
+                            </CockpitRiderEditorDisclosure>
+                        </div>
+                    </Teleport>
+                </section>
 
                 <details
                     id="quick-generate-contract-feedback"
