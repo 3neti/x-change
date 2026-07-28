@@ -815,7 +815,7 @@ function stringValue(value: unknown): string | null {
             :id="panelId('design')"
             role="tabpanel"
             :aria-labelledby="tabId('design')"
-            class="min-h-72 rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
+            class="aspect-[1.72/1] min-h-72 overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
             data-testid="cockpit-pay-code-canvas-design"
         >
             <slot name="design" />
@@ -1003,7 +1003,7 @@ function stringValue(value: unknown): string | null {
                 <slot name="navigation" />
             </div>
             <div
-                class="ml-auto flex shrink-0 flex-nowrap items-center justify-end gap-2"
+                class="ml-auto flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-2"
                 data-testid="cockpit-pay-code-canvas-action-rail"
             >
                 <slot name="action" />

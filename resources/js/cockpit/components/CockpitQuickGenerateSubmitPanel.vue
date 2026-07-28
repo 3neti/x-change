@@ -7,9 +7,11 @@ import {
     Clock3,
     FilePlus2,
     LayoutTemplate,
+    LoaderCircle,
     Palette,
     RotateCcw,
     Save,
+    TicketCheck,
     X,
 } from 'lucide-vue-next';
 import { computed, nextTick, ref, watch } from 'vue';
@@ -4664,27 +4666,29 @@ function instructionRecord(
                     <template #design>
                         <div
                             id="quick-generate-rider-design-editor"
-                            class="max-h-[34rem] overflow-y-auto overscroll-contain pr-1"
+                            class="h-full overflow-y-auto overscroll-contain pr-1"
                             data-testid="cockpit-quick-generate-rider-design-editor"
                         />
                     </template>
                     <template #action>
                         <button
-                            type="button"
-                            class="inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold whitespace-nowrap text-slate-700 shadow-sm transition hover:border-sky-400 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                            data-testid="cockpit-quick-generate-edit-front-button"
-                            :disabled="processing"
-                            @click="openFrontDesignEditor"
-                        >
-                            <Palette class="size-3.5" aria-hidden="true" />
-                            Edit Stamp
-                        </button>
-                        <button
                             type="submit"
-                            class="inline-flex w-32 shrink-0 items-center justify-center rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                            class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                             data-testid="cockpit-quick-generate-canvas-submit-button"
                             :disabled="!canSubmit || processing"
                         >
+                            <LoaderCircle
+                                v-if="processing"
+                                class="size-4 animate-spin"
+                                aria-hidden="true"
+                                data-testid="cockpit-quick-generate-issue-spinner"
+                            />
+                            <TicketCheck
+                                v-else
+                                class="size-4"
+                                aria-hidden="true"
+                                data-testid="cockpit-quick-generate-issue-icon"
+                            />
                             {{
                                 processing
                                     ? 'Issuing Pay Code…'
@@ -6300,8 +6304,8 @@ function instructionRecord(
                             </CockpitRiderEditorDisclosure>
                             <CockpitRiderEditorDisclosure
                                 id="quick-generate-front-design"
-                                title="Front Design"
-                                description="Compose the Pay Code front from Rider content."
+                                title="Stamp Appearance"
+                                description="Compose the Stamp from Rider content."
                                 :status="
                                     hasRiderStampCustomization
                                         ? 'Configured'
@@ -6559,13 +6563,6 @@ function instructionRecord(
                                         />
                                     </label>
                                 </div>
-                                <p
-                                    class="mt-2 text-[11px] text-sky-700 dark:text-sky-300"
-                                >
-                                    The live Pay Code above is the complete
-                                    front preview. Rider Stamp changes
-                                    presentation only.
-                                </p>
                                 <div
                                     v-if="
                                         riderStampArtworkSource === 'url' &&

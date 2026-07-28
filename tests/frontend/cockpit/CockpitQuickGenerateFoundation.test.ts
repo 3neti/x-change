@@ -348,7 +348,7 @@ describe('Cockpit Quick Generate foundation', () => {
                     '[data-testid="cockpit-quick-generate-rider-stamp-editor"]',
                 )
                 .text(),
-        ).toContain('Front Design');
+        ).toContain('Stamp Appearance');
         expect(wrapper.get('#quick-generate-contract-rider').text()).toContain(
             'Optional message, link, artwork, and Stamp presentation.',
         );
@@ -3326,8 +3326,8 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-funding-link"]',
         );
 
-        expect(canvasControls.text()).toContain('Edit Stamp');
         expect(canvasControls.text()).toContain('Issue Pay Code');
+        expect(canvasControls.text()).not.toContain('Edit Stamp');
         expect(canvasControls.text()).not.toContain('Cost');
         expect(canvasControls.text()).not.toContain('Funding');
         expect(
@@ -3352,23 +3352,27 @@ describe('Cockpit Quick Generate foundation', () => {
         const actionRail = canvasControls.get(
             '[data-testid="cockpit-pay-code-canvas-action-rail"]',
         );
-        const actionRailHtml = actionRail.html();
         const canvasSubmitButton = actionRail.get(
             '[data-testid="cockpit-quick-generate-canvas-submit-button"]',
         );
 
         expect(actionRail.classes()).toContain('flex-nowrap');
         expect(
-            actionRailHtml.indexOf(
-                'data-testid="cockpit-quick-generate-edit-front-button"',
-            ),
-        ).toBeLessThan(
-            actionRailHtml.indexOf(
-                'data-testid="cockpit-quick-generate-canvas-submit-button"',
-            ),
-        );
-        expect(canvasSubmitButton.classes()).toContain('w-32');
-        expect(canvasSubmitButton.classes()).toContain('shrink-0');
+            actionRail
+                .find(
+                    '[data-testid="cockpit-quick-generate-edit-front-button"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(actionRail.classes()).toContain('flex-1');
+        expect(canvasSubmitButton.classes()).toContain('w-full');
+        expect(canvasSubmitButton.classes()).toContain('min-h-12');
+        expect(canvasSubmitButton.classes()).toContain('rounded-xl');
+        expect(
+            canvasSubmitButton
+                .find('[data-testid="cockpit-quick-generate-issue-icon"]')
+                .exists(),
+        ).toBe(true);
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
@@ -3398,7 +3402,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(instructionBuilderText).toContain('Rider Message');
         expect(instructionBuilderText).toContain('Rider URL');
         expect(instructionBuilderText).toContain('Rider Splash');
-        expect(instructionBuilderText).toContain('Front Design');
+        expect(instructionBuilderText).toContain('Stamp Appearance');
         expect(instructionBuilderText).toContain('Artwork');
         expect(instructionBuilderText).toContain('Claim Splash Preview');
         expect(instructionBuilderText).not.toContain('Claim Introduction');
