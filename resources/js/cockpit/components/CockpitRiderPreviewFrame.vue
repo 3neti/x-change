@@ -5,7 +5,7 @@ const props = withDefaults(
     defineProps<{
         title: string;
         document: string;
-        surface?: 'splash' | 'og-meta';
+        surface?: 'splash' | 'stamp' | 'og-meta';
     }>(),
     {
         surface: 'splash',
@@ -13,7 +13,7 @@ const props = withDefaults(
 );
 
 const aspectClass = computed<string>(() => {
-    return props.surface === 'og-meta'
+    return props.surface === 'stamp' || props.surface === 'og-meta'
         ? 'aspect-[1200/630]'
         : 'aspect-[1.72/1]';
 });

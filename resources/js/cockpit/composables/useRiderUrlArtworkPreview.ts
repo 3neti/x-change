@@ -1,6 +1,6 @@
 import CockpitRiderArtworkPreviewController from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitRiderArtworkPreviewController';
 import { onUnmounted, ref, watch, type Ref } from 'vue';
-import type { RiderUrlArtworkPreview } from '../riderOgPreview';
+import type { RiderUrlArtworkPreview } from '../riderStampPreview';
 
 type ArtworkPreviewResponse = RiderUrlArtworkPreview & {
     schema: string;
@@ -147,8 +147,7 @@ function isArtworkPreviewResponse(
         typeof payload.source === 'string' &&
         typeof payload.title === 'string' &&
         typeof payload.description === 'string' &&
-        (typeof payload.image_url === 'string' ||
-            payload.image_url === null) &&
+        (typeof payload.image_url === 'string' || payload.image_url === null) &&
         typeof payload.reference === 'string'
     );
 }

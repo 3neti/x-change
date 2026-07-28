@@ -49,10 +49,22 @@ describe('Quick Generate last instructions', () => {
                         },
                         rider: {
                             message: 'School allowance',
+                            message_format: 'markdown',
                             url: 'https://example.test/instructions',
                             splash: '<h1>Ready for school</h1>',
+                            splash_format: 'html',
                             splash_timeout: 5,
-                            og_source: 'splash',
+                            og_source: 'message',
+                            stamp: {
+                                source: 'splash',
+                                title: 'Back to school',
+                                description: 'A Pay Code for school needs.',
+                                fit: 'contain',
+                                position: 'top',
+                                scrim: 12,
+                                theme: 'dark',
+                                version: 1,
+                            },
                         },
                         ttl: 'P3D',
                         claim: {
@@ -119,11 +131,33 @@ describe('Quick Generate last instructions', () => {
         });
         expect(preview.rider).toMatchObject({
             message: 'School allowance',
+            message_format: 'markdown',
             url: 'https://example.test/instructions',
             splash: '<h1>Ready for school</h1>',
+            splash_format: 'html',
             splash_timeout: 5,
             og_source: 'splash',
+            stamp: {
+                source: 'splash',
+                title: 'Back to school',
+                description: 'A Pay Code for school needs.',
+                fit: 'contain',
+                position: 'top',
+                scrim: 12,
+                theme: 'dark',
+                version: 1,
+            },
         });
+        expect(
+            wrapper.get<HTMLSelectElement>(
+                '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
+            ).element.value,
+        ).toBe('splash');
+        expect(
+            wrapper.get<HTMLSelectElement>(
+                '[data-testid="cockpit-quick-generate-rider-stamp-fit"]',
+            ).element.value,
+        ).toBe('contain');
 
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')

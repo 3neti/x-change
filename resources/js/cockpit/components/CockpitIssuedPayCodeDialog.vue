@@ -11,7 +11,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
-import type { RiderOgPreviewSource } from '../riderOgPreview';
+import type { RiderStampPreviewSource } from '../riderStampPreview';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 
 const props = withDefaults(
@@ -27,7 +27,7 @@ const props = withDefaults(
         expiry?: string;
         instructionLabels?: string[];
         hasRiderDesign?: boolean;
-        riderDesignSource?: RiderOgPreviewSource;
+        riderDesignSource?: RiderStampPreviewSource;
         riderDesignDocument?: string;
         claimUrl?: string | null;
         detailUrl?: string | null;

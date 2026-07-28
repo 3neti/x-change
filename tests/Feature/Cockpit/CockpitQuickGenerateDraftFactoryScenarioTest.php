@@ -24,6 +24,15 @@ it('characterizes quick generate payload to draft to GeneratePayCodeRequest comp
         ],
         'rider' => [
             'message' => 'Quick Generate Wave 10A characterization',
+            'message_format' => 'markdown',
+            'stamp' => [
+                'source' => 'message',
+                'fit' => 'contain',
+                'position' => 'top',
+                'scrim' => 18,
+                'theme' => 'dark',
+                'version' => 1,
+            ],
         ],
         'metadata' => [
             'custom' => [
@@ -48,6 +57,9 @@ it('characterizes quick generate payload to draft to GeneratePayCodeRequest comp
         ->and(data_get($payload, 'count'))->toBe(1)
         ->and(data_get($payload, 'feedback.mobile'))->toBe('09173011987')
         ->and(data_get($payload, 'rider.message'))->toBe('Quick Generate Wave 10A characterization')
+        ->and(data_get($payload, 'rider.message_format'))->toBe('markdown')
+        ->and(data_get($payload, 'rider.stamp.source'))->toBe('message')
+        ->and(data_get($payload, 'rider.stamp.fit'))->toBe('contain')
         ->and(data_get($payload, 'metadata.custom.cockpit.template_key'))->toBe('money-changer')
         ->and(data_get($payload, '_meta.idempotency_key'))->toBe('idem-wave-10a')
         ->and(data_get($payload, '_meta.correlation_id'))->toBe('corr-wave-10a')

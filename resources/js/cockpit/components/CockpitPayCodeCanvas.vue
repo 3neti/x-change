@@ -10,7 +10,7 @@ import type {
     PayCodeCostCharge,
     PayCodeCostEstimate,
 } from '../../composables/usePayCodeCostEstimate';
-import type { RiderOgPreviewSource } from '../riderOgPreview';
+import type { RiderStampPreviewSource } from '../riderStampPreview';
 
 const props = withDefaults(
     defineProps<{
@@ -24,7 +24,7 @@ const props = withDefaults(
         instructionLabels?: string[];
         issuedCode?: string | null;
         hasRiderDesign?: boolean;
-        riderDesignSource?: RiderOgPreviewSource;
+        riderDesignSource?: RiderStampPreviewSource;
         riderDesignDocument?: string;
         presentation?: 'live' | 'finalized';
         costEstimate?: PayCodeCostEstimate | null;

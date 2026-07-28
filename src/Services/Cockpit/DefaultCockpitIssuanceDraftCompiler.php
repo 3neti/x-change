@@ -65,12 +65,15 @@ class DefaultCockpitIssuanceDraftCompiler implements CockpitIssuanceDraftCompile
      */
     private function rider(CockpitIssuanceDraftData $draft, ?CockpitIssuanceTemplateProfileData $template): array
     {
-        return array_replace_recursive($template?->default_rider ?? [], [
-            'message' => $draft->rider['message'] ?? $draft->purpose ?? data_get($template?->default_rider, 'message'),
-            'url' => $draft->rider['url'] ?? null,
-            'splash' => $draft->rider['splash'] ?? null,
-            'splash_timeout' => $draft->rider['splash_timeout'] ?? null,
-        ]);
+        $rider = array_replace_recursive(
+            $template?->default_rider ?? [],
+            $draft->rider,
+        );
+        $rider['message'] = $draft->rider['message']
+            ?? $draft->purpose
+            ?? data_get($template?->default_rider, 'message');
+
+        return $rider;
     }
 
     /**

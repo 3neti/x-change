@@ -400,7 +400,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toHaveLength(4);
     });
 
-    it('keeps rider content on the x-change canvas until artwork is explicitly selected', async () => {
+    it('keeps Rider content on the x-change canvas until a Rider Stamp is explicitly selected', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -419,7 +419,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await wrapper
             .find('[data-testid="cockpit-quick-generate-submit-purpose"]')
-            .setValue('A purpose-led OG design');
+            .setValue('A purpose-led Rider Stamp');
 
         expect(
             wrapper
@@ -449,13 +449,13 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
-                    '[data-testid="cockpit-quick-generate-rider-og-html-preview"]',
+                    '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
                 .exists(),
         ).toBe(false);
 
         await wrapper
-            .find('[data-testid="cockpit-quick-generate-rider-og-source"]')
+            .find('[data-testid="cockpit-quick-generate-rider-stamp-source"]')
             .setValue('message');
 
         const design = wrapper.find(
@@ -466,19 +466,19 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
-                    '[data-testid="cockpit-quick-generate-rider-og-html-preview"]',
+                    '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
                 .exists(),
         ).toBe(true);
         expect(
             wrapper
                 .find(
-                    '[data-testid="cockpit-quick-generate-rider-og-html-preview"]',
+                    '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
                 .classes(),
         ).toContain('aspect-[1200/630]');
         expect(design.attributes('srcdoc')).toContain(
-            'A purpose-led OG design',
+            'A purpose-led Rider Stamp',
         );
     });
 
@@ -516,7 +516,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 'https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH?si=tracking',
             );
         await wrapper
-            .find('[data-testid="cockpit-quick-generate-rider-og-source"]')
+            .find('[data-testid="cockpit-quick-generate-rider-stamp-source"]')
             .setValue('url');
         await vi.advanceTimersByTimeAsync(351);
         await flushPromises();
@@ -538,7 +538,24 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
-                    '[data-testid="cockpit-quick-generate-rider-og-html-preview"]',
+                    '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
+                )
+                .attributes('srcdoc'),
+        ).toContain('class="artwork-cover"');
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-rider-stamp-fit"]')
+            .setValue('contain');
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
+                .attributes('srcdoc'),
+        ).toContain('class="artwork-contain"');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
                 .attributes('srcdoc'),
         ).toContain('class="artwork-contain"');

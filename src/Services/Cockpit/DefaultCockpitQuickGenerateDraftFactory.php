@@ -35,12 +35,7 @@ class DefaultCockpitQuickGenerateDraftFactory implements CockpitQuickGenerateDra
                 'mobile' => $this->string($payload, 'feedback.mobile'),
                 'webhook' => $this->string($payload, 'feedback.webhook'),
             ],
-            rider: [
-                'message' => $this->string($payload, 'rider.message'),
-                'url' => $this->string($payload, 'rider.url'),
-                'splash' => data_get($payload, 'rider.splash'),
-                'splash_timeout' => data_get($payload, 'rider.splash_timeout'),
-            ],
+            rider: $this->rider($payload),
             validation: (array) data_get($payload, 'cash.validation', []),
             input_fields: array_values((array) data_get($payload, 'inputs.fields', [])),
             metadata: $this->metadata($payload),
@@ -58,6 +53,28 @@ class DefaultCockpitQuickGenerateDraftFactory implements CockpitQuickGenerateDra
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function rider(array $payload): array
+    {
+        $rider = (array) data_get($payload, 'rider', []);
+        $allowed = [
+            'message',
+            'message_format',
+            'url',
+            'redirect_timeout',
+            'splash',
+            'splash_format',
+            'splash_timeout',
+            'splash_meta',
+            'og_source',
+            'stamp',
+        ];
+
+        return array_intersect_key($rider, array_flip($allowed));
     }
 
     /**

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-    buildRiderOgPreviewDocument,
+    buildRiderStampPreviewDocument,
     buildRiderSplashContent,
-    resolveRiderOgPreview,
-} from '../../../resources/js/cockpit/riderOgPreview';
+    resolveRiderStampPreview,
+} from '../../../resources/js/cockpit/riderStampPreview';
 
-describe('rider OG preview helpers', () => {
+describe('Rider Stamp preview helpers', () => {
     it('resolves the default preview from splash, message, and URL inputs', () => {
-        const preview = resolveRiderOgPreview({
+        const preview = resolveRiderStampPreview({
             source: null,
             message: 'Issuer message',
             url: 'https://example.test/rider',
@@ -17,7 +17,7 @@ describe('rider OG preview helpers', () => {
 
         expect(preview).toMatchObject({
             source: 'default',
-            label: 'OG Meta Preview',
+            label: 'Rider Stamp Preview',
             title: 'Splash headline',
             description: 'Splash body',
             reference: 'x-change',
@@ -25,14 +25,14 @@ describe('rider OG preview helpers', () => {
     });
 
     it('resolves explicit message previews', () => {
-        const preview = resolveRiderOgPreview({
+        const preview = resolveRiderStampPreview({
             source: 'message',
             message: 'The quick brown fox jumps over the lazy dog.',
         });
 
         expect(preview).toMatchObject({
             source: 'message',
-            label: 'OG Meta Preview',
+            label: 'Rider Stamp Preview',
             title: 'The quick brown fox jumps over the lazy dog.',
             reference: 'Rider Message',
         });
@@ -48,8 +48,8 @@ describe('rider OG preview helpers', () => {
         expect(splash).toContain('Issuer &lt;headline&gt;');
         expect(splash).toContain('Plain body &amp; copy');
 
-        const document = buildRiderOgPreviewDocument(
-            resolveRiderOgPreview({
+        const document = buildRiderStampPreviewDocument(
+            resolveRiderStampPreview({
                 source: 'splash',
                 splashHeadline: 'Issuer splash',
                 splashBody: 'Plain splash body',
@@ -83,10 +83,14 @@ describe('rider OG preview helpers', () => {
         expect(html).toBe('<strong>HTML</strong>');
     });
 
-    it('renders URL artwork full bleed on canvas and uncropped in OG Meta preview', () => {
-        const preview = resolveRiderOgPreview({
+    it('renders URL artwork according to the Rider Stamp presentation contract', () => {
+        const preview = resolveRiderStampPreview({
             source: 'url',
             url: 'https://open.spotify.com/track/example',
+            fit: 'contain',
+            position: 'top',
+            scrim: 24,
+            theme: 'dark',
             urlArtwork: {
                 available: true,
                 source: 'spotify',
@@ -96,15 +100,15 @@ describe('rider OG preview helpers', () => {
                 reference: 'Spotify',
             },
         });
-        const canvasDocument = buildRiderOgPreviewDocument(
+        const canvasDocument = buildRiderStampPreviewDocument(
             preview,
             '',
             'canvas',
         );
-        const ogMetaDocument = buildRiderOgPreviewDocument(
+        const stampDocument = buildRiderStampPreviewDocument(
             preview,
             '',
-            'og-meta',
+            'stamp',
         );
 
         expect(preview).toMatchObject({
@@ -116,11 +120,31 @@ describe('rider OG preview helpers', () => {
         expect(canvasDocument).toContain(
             'src="https://i.scdn.co/image/example-artwork"',
         );
-        expect(canvasDocument).toContain('class="artwork-cover"');
-        expect(canvasDocument).not.toContain('class="artwork-contain"');
-        expect(ogMetaDocument).toContain('class="artwork-backdrop"');
-        expect(ogMetaDocument).toContain('class="artwork-contain"');
-        expect(ogMetaDocument).not.toContain('class="artwork-cover"');
-        expect(ogMetaDocument).not.toContain('<iframe');
+        expect(canvasDocument).toContain('class="artwork-backdrop"');
+        expect(canvasDocument).toContain('class="artwork-contain"');
+        expect(canvasDocument).toContain('object-position: center top');
+        expect(stampDocument).toContain('class="stamp-copy"');
+        expect(stampDocument).toContain('opacity: 0.24');
+        expect(stampDocument).toContain('stamp-theme-dark');
+        expect(stampDocument).not.toContain('<iframe');
+    });
+
+    it('honors Rider Stamp copy overrides independently of the source', () => {
+        const preview = resolveRiderStampPreview({
+            source: 'message',
+            message: 'Source message',
+            title: 'Share title',
+            description: 'Share description',
+        });
+
+        expect(preview).toMatchObject({
+            source: 'message',
+            title: 'Share title',
+            description: 'Share description',
+            fit: 'cover',
+            position: 'center',
+            scrim: 18,
+            theme: 'automatic',
+        });
     });
 });

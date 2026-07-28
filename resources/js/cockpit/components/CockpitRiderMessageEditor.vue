@@ -2,7 +2,7 @@
 import { computed, nextTick, ref } from 'vue';
 import type { RiderContentFormat } from '../riderContent';
 import { renderRiderContent } from '../riderContent';
-import { buildSandboxedPreviewDocument } from '../riderOgPreview';
+import { buildSandboxedPreviewDocument } from '../riderStampPreview';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
 
 const props = withDefaults(
