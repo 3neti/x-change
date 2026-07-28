@@ -177,7 +177,7 @@ Best Available → Rider Message, then Rider Splash, then Rider URL
 Rider Message  → message plus the configured message helper
 Rider URL      → resolved allow-listed metadata when available, otherwise URL
                  copy plus the configured continuation helper
-Rider Splash   → first heading and paragraph from the introduction
+Rider Splash   → first heading and every visible paragraph from the introduction
 Custom Copy    → Stamp title and subtitle
 No Copy        → hide copy on the composed image
 ```
@@ -185,6 +185,14 @@ No Copy        → hide copy on the composed image
 `rider.stamp.title` and `rider.stamp.description` override the selected source.
 There are no separate “social copy” fields: canvas, share-card PNG, and
 crawler metadata consume the same stored Stamp decision.
+
+When Rider Splash supplies copy, its paragraphs remain ordered and are joined
+with quiet separators. The canvas provides three compact supporting-copy lines
+so short symbol and attribution rows remain visible. Browser surfaces and
+crawler text retain valid Unicode emoji. The bundled raster font cannot draw
+every emoji reliably, so the generated PNG substitutes readable names for
+known symbols and removes unsupported pictographs instead of emitting garbled
+byte glyphs.
 
 The package-owned claim root view emits Open Graph, Twitter Card, canonical,
 description, ordinary title, image MIME type, and 1200 × 630 dimensions. A

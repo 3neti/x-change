@@ -4774,3 +4774,20 @@ Current boundary:
 - Boundary remains unchanged for financial behavior: no claim authorization,
   canonical claim destination, delivery, provider settlement, Treasury
   accounting, or money movement changed.
+
+# 2026-07-28 — Rider Splash Supporting-Copy Parity
+
+- Rider Splash copy now preserves the first heading and every visible
+  paragraph instead of silently discarding paragraphs after the first.
+- The Pay Code canvas gives supporting copy three compact lines, retaining
+  short symbol and attribution rows without rendering raw Splash HTML.
+- Browser canvas and crawler metadata preserve valid Unicode emoji.
+- The generated PNG uses readable symbol names when its bundled raster font
+  cannot draw an emoji, preventing mojibake while retaining meaning.
+- Existing Pay Code `XV9D` passed live acceptance with the symbol sequence and
+  `— e.e. cummings` visible on the canvas. Its durable rose artwork was
+  backfilled, and the generated share card renders readable supporting copy.
+- Focused coverage passed with 52 frontend tests and 19 backend tests.
+- Boundary remains presentation-only: no Voucher value, claim authorization,
+  canonical claim destination, settlement, Treasury posting, or money movement
+  changed.
