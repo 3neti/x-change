@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Cache;
 use LBHurtado\Voucher\Data\RiderInstructionData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
-use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
+use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimShareCardData;
 use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 use ReflectionClass;
@@ -21,14 +21,14 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract
 {
-    private const string CacheVersion = 'v1';
+    private const string CacheVersion = 'v3';
 
     private const int Width = 1200;
 
     private const int Height = 630;
 
     public function __construct(
-        private ClaimShareMetadataResolverContract $metadata,
+        private RiderStampCopyResolverContract $copy,
         private ClaimUrlQrRendererContract $claimQr,
         private RiderUrlArtworkPreviewResolver $urlArtwork,
     ) {}
@@ -77,15 +77,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $this->paintScrim($canvas, $rider);
         }
 
-        $shareCardUrl = route(
-            'x-change.claim.share-card',
-            ['code' => $voucher->code],
-        );
-        $metadata = $this->metadata->resolve(
-            $voucher,
-            $claimUrl,
-            $shareCardUrl,
-        );
+        $copy = $this->copy->resolve($voucher);
         $darkText = $artwork === null
             && ($rider->stamp?->theme?->value ?? 'automatic') === 'light';
         $textColor = $darkText
@@ -99,11 +91,11 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         $this->paintCopy(
             $canvas,
             $voucher,
-            $metadata->title,
-            $metadata->description,
+            $copy->title,
+            $copy->description,
             $textColor,
             $mutedColor,
-            ($rider->stamp?->copy_source?->value ?? 'automatic') !== 'none',
+            $copy->visible,
         );
         $this->paintClaimMarker($canvas, $voucher, $claimUrl, $textColor);
 

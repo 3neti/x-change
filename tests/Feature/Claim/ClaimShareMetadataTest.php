@@ -108,3 +108,29 @@ it('escapes share copy and falls back to the configured public image', function 
 
     Http::assertNothingSent();
 });
+
+it('uses the same automatic Rider Message copy as the Pay Code canvas', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Snacks',
+            'url' => 'https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH',
+            'splash' => '<h2>A separate introduction</h2>',
+            'stamp' => [
+                'version' => 2,
+                'source' => 'url',
+                'artwork_source' => 'url',
+                'copy_source' => 'automatic',
+            ],
+        ],
+    ]));
+
+    $this->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertSee('<meta property="og:title" content="Snacks">', false)
+        ->assertSee(
+            '<meta property="og:description" content="Prepared with a message for the recipient.">',
+            false,
+        );
+
+    Http::assertNothingSent();
+});

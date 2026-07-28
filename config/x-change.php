@@ -22,6 +22,7 @@ use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningManagerContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
+use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
 use LBHurtado\XChange\Contracts\SystemAccountFundingPayCodeAuthorizationContract;
 use LBHurtado\XChange\Contracts\SystemWalletResolverContract;
 use LBHurtado\XChange\Contracts\TerminologyServiceContract;
@@ -38,6 +39,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
@@ -455,6 +457,7 @@ return [
         'claim_execution_factory' => DefaultClaimExecutionFactory::class,
         'claim_share_metadata' => RiderStampClaimShareMetadataResolver::class,
         'claim_share_card_renderer' => GdRiderStampClaimShareCardRenderer::class,
+        'rider_stamp_copy' => DefaultRiderStampCopyResolver::class,
         'redemption_context_resolver' => DefaultRedemptionContextResolverService::class,
         'redemption_validation' => DefaultRedemptionValidationService::class,
         'redemption_processor' => DefaultRedemptionProcessorService::class,
@@ -494,6 +497,7 @@ return [
         MinimumWithdrawalPolicyResolverContract::class => 'minimum_withdrawal_policy',
         WalletProvisioningContract::class => 'wallet_provisioning',
         IssuerResolverContract::class => 'issuer_resolver',
+        RiderStampCopyResolverContract::class => 'rider_stamp_copy',
     ],
 
     'minimum_withdrawal' => [
@@ -1825,6 +1829,24 @@ return [
                 'XCHANGE_CLAIM_SHARE_DEFAULT_DESCRIPTION',
                 'A Pay Code is ready to claim securely in X-Change.',
             ),
+            'copy' => [
+                'default_title' => env(
+                    'XCHANGE_CLAIM_SHARE_DEFAULT_TITLE',
+                    'Pay Code',
+                ),
+                'message_description' => env(
+                    'XCHANGE_CLAIM_SHARE_MESSAGE_DESCRIPTION',
+                    'Prepared with a message for the recipient.',
+                ),
+                'url_description' => env(
+                    'XCHANGE_CLAIM_SHARE_URL_DESCRIPTION',
+                    'Continue to this link after the claim.',
+                ),
+                'splash_description' => env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_DESCRIPTION',
+                    'An introduction appears before the claim.',
+                ),
+            ],
             'default_image' => env(
                 'XCHANGE_CLAIM_SHARE_DEFAULT_IMAGE',
                 '/vendor/x-change/images/logo-orange.png',
