@@ -23,7 +23,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract
 {
-    private const string CacheVersion = 'v8';
+    private const string CacheVersion = 'v10';
 
     private const int Width = 1200;
 
@@ -97,6 +97,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $canvas,
             $voucher,
             $copy->title,
+            $copy->description,
             $copy->rasterDescription,
             $textColor,
             $mutedColor,
@@ -395,12 +396,13 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         Voucher $voucher,
         string $title,
         string $description,
+        string $rasterDescription,
         int $textColor,
         int $mutedColor,
         bool $showCopy,
     ): void {
         $amount = $this->amounts->format($voucher);
-        $this->drawText($canvas, $amount, 46, 72, 254, $textColor);
+        $this->paintAmount($canvas, $amount, 72, 254, $textColor);
 
         if (! $showCopy) {
             return;
@@ -417,17 +419,314 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $textColor,
             2,
         );
-        $this->drawWrappedText(
-            $canvas,
-            $description,
-            18,
-            72,
-            $titleBottom + 24,
-            720,
-            30,
-            $mutedColor,
-            3,
+        $this->paintDescription(
+            canvas: $canvas,
+            description: $description,
+            rasterDescription: $rasterDescription,
+            x: 72,
+            y: $titleBottom + 24,
+            color: $mutedColor,
         );
+    }
+
+    private function paintAmount(
+        GdImage $canvas,
+        string $amount,
+        int $x,
+        int $baseline,
+        int $color,
+    ): void {
+        if (! str_starts_with($amount, '₱')) {
+            $this->drawText($canvas, $amount, 46, $x, $baseline, $color);
+
+            return;
+        }
+
+        $this->drawText($canvas, 'P', 46, $x, $baseline, $color);
+        imagesetthickness($canvas, 2);
+        imageline(
+            $canvas,
+            $x - 1,
+            $baseline - 28,
+            $x + 39,
+            $baseline - 28,
+            $color,
+        );
+        imageline(
+            $canvas,
+            $x - 1,
+            $baseline - 21,
+            $x + 39,
+            $baseline - 21,
+            $color,
+        );
+        imagesetthickness($canvas, 1);
+        $this->drawText(
+            $canvas,
+            mb_substr($amount, 1),
+            46,
+            $x + 43,
+            $baseline,
+            $color,
+        );
+    }
+
+    private function paintDescription(
+        GdImage $canvas,
+        string $description,
+        string $rasterDescription,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        if (! $this->containsKnownSymbols($description)) {
+            $this->drawWrappedText(
+                $canvas,
+                $rasterDescription,
+                18,
+                $x,
+                $y,
+                720,
+                30,
+                $color,
+                3,
+            );
+
+            return;
+        }
+
+        $segments = preg_split('/\s*·\s*/u', trim($description)) ?: [];
+        $line = 0;
+
+        foreach ($segments as $segment) {
+            if ($line >= 3) {
+                break;
+            }
+
+            $symbols = $this->knownSymbols($segment);
+
+            if ($symbols !== [] && $this->containsOnlyKnownSymbols($segment)) {
+                $this->paintSymbolRow(
+                    $canvas,
+                    $symbols,
+                    $x,
+                    $y + ($line * 30),
+                );
+                $line++;
+
+                continue;
+            }
+
+            $text = $this->rasterSafeText($segment);
+
+            if ($text === '') {
+                continue;
+            }
+
+            $this->drawWrappedText(
+                $canvas,
+                $text,
+                18,
+                $x,
+                $y + ($line * 30),
+                720,
+                30,
+                $color,
+                1,
+            );
+            $line++;
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function knownSymbols(string $text): array
+    {
+        preg_match_all(
+            '/🤝|❤️|❤|✌️|✌|🔫|✈️|✈|⭐/u',
+            $text,
+            $matches,
+        );
+
+        return array_values(array_map(
+            static fn (string $symbol): string => match ($symbol) {
+                '❤️', '❤' => 'heart',
+                '✌️', '✌' => 'peace',
+                '🔫' => 'water_pistol',
+                '✈️', '✈' => 'airplane',
+                '⭐' => 'star',
+                default => 'handshake',
+            },
+            $matches[0] ?? [],
+        ));
+    }
+
+    private function containsKnownSymbols(string $text): bool
+    {
+        return $this->knownSymbols($text) !== [];
+    }
+
+    private function containsOnlyKnownSymbols(string $text): bool
+    {
+        $withoutSymbols = preg_replace(
+            '/🤝|❤️|❤|✌️|✌|🔫|✈️|✈|⭐/u',
+            '',
+            $text,
+        ) ?? $text;
+        $withoutSpacing = preg_replace(
+            '/[\s\x{00A0}]+/u',
+            '',
+            $withoutSymbols,
+        ) ?? $withoutSymbols;
+
+        return $withoutSpacing === '';
+    }
+
+    private function rasterSafeText(string $text): string
+    {
+        $text = str_replace(
+            ['🤝', '❤️', '❤', '✌️', '✌', '🔫', '✈️', '✈', '⭐'],
+            [
+                'Handshake',
+                'Heart',
+                'Heart',
+                'Peace',
+                'Peace',
+                'Water pistol',
+                'Flight',
+                'Flight',
+                'Star',
+            ],
+            $text,
+        );
+
+        return trim(preg_replace(
+            '/[\x{1F000}-\x{1FAFF}\x{FE0F}\x{200D}]/u',
+            '',
+            $text,
+        ) ?? $text);
+    }
+
+    /**
+     * @param  list<string>  $symbols
+     */
+    private function paintSymbolRow(
+        GdImage $canvas,
+        array $symbols,
+        int $x,
+        int $baseline,
+    ): void {
+        $cursor = $x;
+
+        foreach ($symbols as $symbol) {
+            $this->paintSymbol($canvas, $symbol, $cursor, $baseline - 20);
+            $cursor += 40;
+        }
+    }
+
+    private function paintSymbol(
+        GdImage $canvas,
+        string $symbol,
+        int $x,
+        int $y,
+    ): void {
+        match ($symbol) {
+            'heart' => $this->paintHeart($canvas, $x, $y),
+            'peace' => $this->paintPeace($canvas, $x, $y),
+            'water_pistol' => $this->paintWaterPistol($canvas, $x, $y),
+            'airplane' => $this->paintAirplane($canvas, $x, $y),
+            'star' => $this->paintStar($canvas, $x, $y),
+            default => $this->paintHandshake($canvas, $x, $y),
+        };
+    }
+
+    private function paintHandshake(GdImage $canvas, int $x, int $y): void
+    {
+        $left = imagecolorallocate($canvas, 251, 191, 142);
+        $right = imagecolorallocate($canvas, 217, 154, 101);
+        $cuff = imagecolorallocate($canvas, 56, 189, 248);
+        imagesetthickness($canvas, 6);
+        imageline($canvas, $x + 3, $y + 7, $x + 15, $y + 18, $left);
+        imageline($canvas, $x + 27, $y + 7, $x + 16, $y + 18, $right);
+        imagesetthickness($canvas, 1);
+        imagefilledellipse($canvas, $x + 15, $y + 18, 10, 8, $left);
+        imagefilledrectangle($canvas, $x, $y + 3, $x + 6, $y + 10, $cuff);
+        imagefilledrectangle($canvas, $x + 24, $y + 3, $x + 30, $y + 10, $cuff);
+    }
+
+    private function paintHeart(GdImage $canvas, int $x, int $y): void
+    {
+        $red = imagecolorallocate($canvas, 244, 63, 94);
+        imagefilledellipse($canvas, $x + 10, $y + 9, 16, 16, $red);
+        imagefilledellipse($canvas, $x + 21, $y + 9, 16, 16, $red);
+        imagefilledpolygon($canvas, [
+            $x + 3, $y + 10,
+            $x + 28, $y + 10,
+            $x + 16, $y + 27,
+        ], $red);
+    }
+
+    private function paintPeace(GdImage $canvas, int $x, int $y): void
+    {
+        $green = imagecolorallocate($canvas, 52, 211, 153);
+        imagesetthickness($canvas, 3);
+        imageellipse($canvas, $x + 15, $y + 14, 25, 25, $green);
+        imageline($canvas, $x + 15, $y + 2, $x + 15, $y + 26, $green);
+        imageline($canvas, $x + 15, $y + 14, $x + 7, $y + 23, $green);
+        imageline($canvas, $x + 15, $y + 14, $x + 23, $y + 23, $green);
+        imagesetthickness($canvas, 1);
+    }
+
+    private function paintWaterPistol(
+        GdImage $canvas,
+        int $x,
+        int $y,
+    ): void {
+        $green = imagecolorallocate($canvas, 34, 197, 94);
+        $orange = imagecolorallocate($canvas, 251, 146, 60);
+        $blue = imagecolorallocate($canvas, 56, 189, 248);
+        imagefilledrectangle($canvas, $x + 2, $y + 5, $x + 21, $y + 14, $green);
+        imagefilledrectangle($canvas, $x + 20, $y + 7, $x + 30, $y + 11, $orange);
+        imagefilledpolygon($canvas, [
+            $x + 8, $y + 13,
+            $x + 19, $y + 13,
+            $x + 15, $y + 26,
+            $x + 10, $y + 26,
+        ], $blue);
+        imagefilledellipse($canvas, $x + 7, $y + 9, 5, 5, $orange);
+    }
+
+    private function paintAirplane(GdImage $canvas, int $x, int $y): void
+    {
+        $blue = imagecolorallocate($canvas, 56, 189, 248);
+        imagefilledpolygon($canvas, [
+            $x + 1, $y + 12,
+            $x + 12, $y + 10,
+            $x + 25, $y + 2,
+            $x + 29, $y + 4,
+            $x + 20, $y + 13,
+            $x + 29, $y + 21,
+            $x + 25, $y + 23,
+            $x + 12, $y + 16,
+            $x + 4, $y + 23,
+            $x + 7, $y + 15,
+        ], $blue);
+    }
+
+    private function paintStar(GdImage $canvas, int $x, int $y): void
+    {
+        $amber = imagecolorallocate($canvas, 250, 204, 21);
+        $points = [];
+
+        for ($index = 0; $index < 10; $index++) {
+            $radius = $index % 2 === 0 ? 14 : 6;
+            $angle = deg2rad(-90 + ($index * 36));
+            $points[] = (int) round($x + 15 + (cos($angle) * $radius));
+            $points[] = (int) round($y + 14 + (sin($angle) * $radius));
+        }
+
+        imagefilledpolygon($canvas, $points, $amber);
     }
 
     private function paintClaimMarker(

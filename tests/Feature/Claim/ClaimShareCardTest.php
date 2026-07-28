@@ -108,6 +108,72 @@ it('paints the masked recipient in the lower Stamp region', function (): void {
     Http::assertNothingSent();
 });
 
+it('paints known Rider emoji as a compact symbol row', function (): void {
+    config()->set('x-change.claim.share.recipient.enabled', false);
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'i carry your heart with me',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'x_change',
+                'copy_source' => 'message',
+                'title' => 'i carry your heart with me',
+                'description' => '(i carry it in my heart) · 🤝 ❤️ ✌️ 🔫 ✈️ ⭐ · — e.e. cummings',
+                'show_logo' => false,
+                'show_tagline' => false,
+                'claim_marker' => 'none',
+            ],
+        ],
+    ]));
+
+    $response = $this->get(
+        route('x-change.claim.share-card', ['code' => $voucher->code]),
+    )->assertOk();
+    $card = imagecreatefromstring((string) $response->getContent());
+
+    expect($card)->toBeInstanceOf(GdImage::class);
+
+    $redPixels = 0;
+    $greenPixels = 0;
+    $amberPixels = 0;
+
+    for ($y = 400; $y <= 445; $y++) {
+        for ($x = 60; $x <= 330; $x++) {
+            $color = imagecolorsforindex($card, imagecolorat($card, $x, $y));
+
+            if (
+                $color['red'] > 190
+                && $color['red'] > $color['green'] + 40
+            ) {
+                $redPixels++;
+            }
+
+            if (
+                $color['green'] > 160
+                && $color['green'] > $color['red'] + 30
+            ) {
+                $greenPixels++;
+            }
+
+            if (
+                $color['red'] > 210
+                && $color['green'] > 150
+                && $color['blue'] < 100
+            ) {
+                $amberPixels++;
+            }
+        }
+    }
+
+    imagedestroy($card);
+
+    expect($redPixels)->toBeGreaterThan(40)
+        ->and($greenPixels)->toBeGreaterThan(40)
+        ->and($amberPixels)->toBeGreaterThan(20);
+    Http::assertNothingSent();
+});
+
 it('uses allow-listed URL artwork without exposing the raw artwork as og image', function (): void {
     $artwork = base64_decode(
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nK0AAAAASUVORK5CYII=',
