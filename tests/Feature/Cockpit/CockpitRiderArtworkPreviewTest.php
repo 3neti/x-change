@@ -52,6 +52,10 @@ it('resolves and caches sanitized Spotify action link artwork', function () {
                 'image_url',
                 'data:image/jpeg;base64,'.base64_encode('fake-jpeg-bytes'),
             )
+            ->assertJsonPath(
+                'public_image_url',
+                'https://i.scdn.co/image/example-artwork',
+            )
             ->assertJsonMissingPath('html')
             ->assertHeader('Cache-Control', 'must-revalidate, no-cache, no-store, private');
     }
@@ -76,7 +80,8 @@ it('keeps unsupported action links on the safe text fallback', function () {
     )
         ->assertOk()
         ->assertJsonPath('available', false)
-        ->assertJsonPath('image_url', null);
+        ->assertJsonPath('image_url', null)
+        ->assertJsonPath('public_image_url', null);
 
     Http::assertNothingSent();
 });

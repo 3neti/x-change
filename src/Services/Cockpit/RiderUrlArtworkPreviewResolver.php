@@ -27,6 +27,7 @@ final class RiderUrlArtworkPreviewResolver
      *     title: string,
      *     description: string,
      *     image_url: ?string,
+     *     public_image_url: ?string,
      *     reference: string
      * }
      */
@@ -70,6 +71,7 @@ final class RiderUrlArtworkPreviewResolver
      *     title: string,
      *     description: string,
      *     image_url: ?string,
+     *     public_image_url: ?string,
      *     reference: string
      * }
      */
@@ -146,6 +148,7 @@ final class RiderUrlArtworkPreviewResolver
                 240,
             ),
             'image_url' => $imageDataUrl,
+            'public_image_url' => $imageUrl,
             'reference' => $provider['label'],
         ];
     }
@@ -370,6 +373,7 @@ final class RiderUrlArtworkPreviewResolver
      *     title: string,
      *     description: string,
      *     image_url: null,
+     *     public_image_url: null,
      *     reference: string
      * }
      */
@@ -381,6 +385,7 @@ final class RiderUrlArtworkPreviewResolver
             'title' => 'Action Link',
             'description' => 'Artwork is not available for this link.',
             'image_url' => null,
+            'public_image_url' => null,
             'reference' => 'Action URL',
         ];
     }

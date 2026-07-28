@@ -94,6 +94,7 @@ use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
+use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
@@ -201,6 +202,7 @@ use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftAuditMetadataBuilder;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftCompiler;
@@ -980,6 +982,7 @@ class XChangeServiceProvider extends ServiceProvider
     {
         $this->decorateOnboardingCompletionHook();
         $this->bootConfig();
+        $this->loadViewsFrom($this->packagePath('resources/views'), 'x-change');
         $this->bootFundingVerificationRateLimiter();
         $this->bootPaymentVerificationRateLimiter();
         $this->bootFundingVerificationSchedule();
@@ -1192,6 +1195,16 @@ class XChangeServiceProvider extends ServiceProvider
             $this->app->singleton($contract, function ($app) use ($serviceKey) {
                 return $app->make("x-change.services.{$serviceKey}");
             });
+        }
+
+        if (! $this->app->bound(ClaimShareMetadataResolverContract::class)) {
+            $this->app->singleton(
+                ClaimShareMetadataResolverContract::class,
+                fn ($app) => $app->make(config(
+                    'x-change.services.claim_share_metadata',
+                    RiderStampClaimShareMetadataResolver::class,
+                )),
+            );
         }
 
         if (! $this->app->bound(XChangeOnboardingGatewayContract::class)) {

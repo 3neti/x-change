@@ -38,6 +38,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
@@ -451,6 +452,7 @@ return [
         'redemption_completion_context' => DefaultRedemptionCompletionContextService::class,
         'redemption_completion_store' => NullRedemptionCompletionStore::class,
         'claim_execution_factory' => DefaultClaimExecutionFactory::class,
+        'claim_share_metadata' => RiderStampClaimShareMetadataResolver::class,
         'redemption_context_resolver' => DefaultRedemptionContextResolverService::class,
         'redemption_validation' => DefaultRedemptionValidationService::class,
         'redemption_processor' => DefaultRedemptionProcessorService::class,
@@ -1801,6 +1803,20 @@ return [
         ],
         'submission_lock_seconds' => 30,
         'submission_lock_wait_seconds' => 3,
+        'share' => [
+            'site_name' => env(
+                'XCHANGE_CLAIM_SHARE_SITE_NAME',
+                env('XCHANGE_BRAND_NAME', env('XCHANGE_PRODUCT_NAME', 'X-Change')),
+            ),
+            'default_description' => env(
+                'XCHANGE_CLAIM_SHARE_DEFAULT_DESCRIPTION',
+                'A Pay Code is ready to claim securely in X-Change.',
+            ),
+            'default_image' => env(
+                'XCHANGE_CLAIM_SHARE_DEFAULT_IMAGE',
+                '/vendor/x-change/images/logo-orange.png',
+            ),
+        ],
     ],
 
     'claim_preview' => [

@@ -9,6 +9,7 @@ use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Actions\Claim\ValidateCompiledClaimVoucher;
+use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 
@@ -18,6 +19,7 @@ class ClaimPageController extends Controller
         string $code,
         ValidateCompiledClaimVoucher $validator,
         VoucherFlowCapabilityResolverContract $capabilities,
+        ClaimShareMetadataResolverContract $shareMetadata,
         ClaimEntryResponseFactory $responses,
     ): Response {
         $code = strtoupper(trim($code));
@@ -50,6 +52,10 @@ class ClaimPageController extends Controller
             initialCode: $code,
             claimExperience: ResolveClaimExperience::run($voucher)->toArray(),
             provisioningRequirement: null,
+            shareMetadata: $shareMetadata->resolve(
+                $voucher,
+                route('x-change.claim.show', ['code' => $voucher->code]),
+            ),
         );
     }
 }
