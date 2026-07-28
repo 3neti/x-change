@@ -3187,6 +3187,35 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(canvasControls.text()).toContain('Stamp');
         expect(canvasControls.text()).toContain('Cost');
         expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');
+        const actionRail = canvasControls.get(
+            '[data-testid="cockpit-pay-code-canvas-action-rail"]',
+        );
+        const actionRailHtml = actionRail.html();
+        const canvasSubmitButton = actionRail.get(
+            '[data-testid="cockpit-quick-generate-canvas-submit-button"]',
+        );
+
+        expect(actionRail.classes()).toContain('flex-nowrap');
+        expect(
+            actionRailHtml.indexOf(
+                'data-testid="cockpit-pay-code-canvas-back-button"',
+            ),
+        ).toBeLessThan(
+            actionRailHtml.indexOf(
+                'data-testid="cockpit-quick-generate-edit-front-button"',
+            ),
+        );
+        expect(
+            actionRailHtml.indexOf(
+                'data-testid="cockpit-quick-generate-edit-front-button"',
+            ),
+        ).toBeLessThan(
+            actionRailHtml.indexOf(
+                'data-testid="cockpit-quick-generate-canvas-submit-button"',
+            ),
+        );
+        expect(canvasSubmitButton.classes()).toContain('w-32');
+        expect(canvasSubmitButton.classes()).toContain('shrink-0');
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(

@@ -4538,7 +4538,7 @@ function instructionRecord(
                         </button>
                         <button
                             type="submit"
-                            class="inline-flex items-center justify-center rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                            class="inline-flex w-32 shrink-0 items-center justify-center rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                             data-testid="cockpit-quick-generate-canvas-submit-button"
                             :disabled="!canSubmit || processing"
                         >

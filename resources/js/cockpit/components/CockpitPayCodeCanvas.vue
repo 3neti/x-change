@@ -887,10 +887,12 @@ function stringValue(value: unknown): string | null {
             <div class="mr-auto flex items-center">
                 <slot name="navigation" />
             </div>
-            <div class="flex flex-wrap items-center justify-end gap-2">
-                <slot name="action" />
+            <div
+                class="flex shrink-0 flex-nowrap items-center justify-end gap-2"
+                data-testid="cockpit-pay-code-canvas-action-rail"
+            >
                 <div
-                    class="inline-flex rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
+                    class="inline-flex shrink-0 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
                     aria-label="Pay Code view"
                 >
                     <button
@@ -920,6 +922,7 @@ function stringValue(value: unknown): string | null {
                         Cost
                     </button>
                 </div>
+                <slot name="action" />
             </div>
         </footer>
     </section>
