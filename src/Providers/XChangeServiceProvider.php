@@ -390,6 +390,7 @@ class XChangeServiceProvider extends ServiceProvider
                 $app->make(TreasuryProviderConnectionCatalog::class),
                 $app->make(SettlementProviderRegistryContract::class),
                 $app->tagged('emi.provider-readiness-probes'),
+                $app->tagged('emi.provider-live-preflight-probes'),
             ),
         );
         $this->app->singleton(TreasuryProvisioningService::class);

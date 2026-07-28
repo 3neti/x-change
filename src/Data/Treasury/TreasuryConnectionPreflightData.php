@@ -13,6 +13,8 @@ final readonly class TreasuryConnectionPreflightData
         public TreasuryProviderConnectionData $connection,
         public bool $ready,
         public array $issues = [],
+        public bool $staticReady = false,
+        public ?bool $liveReady = null,
     ) {}
 
     public function blocksProvisioning(): bool
