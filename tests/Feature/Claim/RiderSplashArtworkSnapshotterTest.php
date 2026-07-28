@@ -65,7 +65,9 @@ it('captures validated remote Splash artwork into private content-addressed stor
         'x-change/claim/splash-artwork/'.$snapshot->sha256.'.png',
     );
 
-    $voucher = issueVoucher($prepared);
+    $user = actingAsTestUser();
+    $issued = app(PayCodeIssuanceContract::class)->issue($user, $prepared);
+    $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
 
     expect(data_get(
         $voucher,

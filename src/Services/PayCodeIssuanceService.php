@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\Voucher\Data\VoucherMetadataData;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
@@ -31,6 +32,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
         $input = $this->withCollectionWalletContext($issuer, $input);
         $instructions = VoucherInstructionsData::createFromAttribs($input);
+        $this->restorePreparedSplashArtworkSnapshot($instructions, $input);
 
         /** @var Authenticatable|null $previousUser */
         $previousUser = Auth::user();
@@ -134,5 +136,32 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         }
 
         return $input;
+    }
+
+    /**
+     * Preserve the server-prepared descriptor that the Voucher DTO's validation
+     * boundary intentionally omits from arbitrary issuance input.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    protected function restorePreparedSplashArtworkSnapshot(
+        VoucherInstructionsData $instructions,
+        array $input,
+    ): void {
+        $snapshot = data_get(
+            $input,
+            'metadata.custom.rider_splash_artwork',
+        );
+
+        if (! is_array($snapshot) || $snapshot === []) {
+            return;
+        }
+
+        $metadata = $instructions->metadata
+            ?? VoucherMetadataData::from([]);
+        $custom = is_array($metadata->custom) ? $metadata->custom : [];
+        $custom['rider_splash_artwork'] = $snapshot;
+        $metadata->custom = $custom;
+        $instructions->metadata = $metadata;
     }
 }
