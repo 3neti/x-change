@@ -382,31 +382,28 @@ function stringValue(value: unknown): string | null {
         data-testid="cockpit-pay-code-canvas"
     >
         <div
-            class="mb-3 flex flex-wrap items-center justify-between gap-3 px-1"
+            class="mb-3 flex flex-wrap items-center gap-2 px-1"
+            :class="
+                presentation === 'finalized'
+                    ? 'justify-between'
+                    : 'justify-end'
+            "
         >
-            <div>
+            <div v-if="presentation === 'finalized'">
                 <p
                     class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                 >
-                    {{
-                        presentation === 'finalized'
-                            ? 'Issued Pay Code'
-                            : 'Editable Pay Code Preview'
-                    }}
+                    Issued Pay Code
                 </p>
                 <p class="text-xs text-slate-600 dark:text-slate-300">
-                    {{
-                        presentation === 'finalized'
-                            ? 'Final design ready to share.'
-                            : 'Changes appear here before issuance.'
-                    }}
+                    Final design ready to share.
                 </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center justify-end gap-2">
                 <slot name="action" />
                 <div
                     class="inline-flex rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
-                    aria-label="Pay Code side"
+                    aria-label="Pay Code view"
                 >
                     <button
                         type="button"
@@ -419,7 +416,7 @@ function stringValue(value: unknown): string | null {
                         data-testid="cockpit-pay-code-canvas-front-button"
                         @click="visibleSide = 'front'"
                     >
-                        Front
+                        Stamp
                     </button>
                     <button
                         type="button"
@@ -432,7 +429,7 @@ function stringValue(value: unknown): string | null {
                         data-testid="cockpit-pay-code-canvas-back-button"
                         @click="visibleSide = 'back'"
                     >
-                        Back
+                        Cost
                     </button>
                 </div>
             </div>

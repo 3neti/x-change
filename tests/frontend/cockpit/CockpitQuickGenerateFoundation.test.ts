@@ -102,6 +102,20 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('Money should adapt to people. Not the other way around.');
         expect(wrapper.text()).toContain('₱50.00');
         expect(wrapper.text()).not.toContain('Digital Pay Code');
+        expect(wrapper.text()).not.toContain('Editable Pay Code Preview');
+        expect(wrapper.text()).not.toContain(
+            'Changes appear here before issuance.',
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-front-button"]')
+                .text(),
+        ).toBe('Stamp');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
+                .text(),
+        ).toBe('Cost');
     });
 
     it('keeps all safe Rider Splash supporting copy on the canvas', () => {
@@ -138,7 +152,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(description.classes()).toContain('line-clamp-3');
     });
 
-    it('opens the compact Front Design editor from the live canvas', async () => {
+    it('opens the compact Stamp editor from the live canvas', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -155,6 +169,11 @@ describe('Cockpit Quick Generate foundation', () => {
             .get('[data-testid="cockpit-quick-generate-edit-front-button"]')
             .trigger('click');
 
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-edit-front-button"]')
+                .text(),
+        ).toContain('Edit Stamp');
         expect(
             wrapper
                 .get('[data-testid="cockpit-voucher-instruction-builder"]')
@@ -2978,14 +2997,21 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(essentialsCanvas.exists()).toBe(true);
         expect(essentialsCanvas.text()).toContain('Essentials');
+        expect(
+            essentialsCanvas
+                .find(
+                    '[data-testid="cockpit-quick-generate-starting-point"]',
+                )
+                .exists(),
+        ).toBe(true);
         expect(reuseDesign.text()).toContain('Reuse A Design');
-        expect(wrapper.html().indexOf('cockpit-quick-generate-essentials-canvas'))
-            .toBeLessThan(
-                wrapper
-                    .html()
-                    .indexOf('cockpit-quick-generate-starting-point'),
-            );
+        expect(reuseDesign.classes()).toContain('border-t');
+        expect(reuseDesign.classes()).not.toContain('rounded-2xl');
         expect(wrapper.text()).toContain('Repeat Last Design');
+        expect(wrapper.text()).not.toContain('Editable Pay Code Preview');
+        expect(wrapper.text()).not.toContain(
+            'Changes appear here before issuance.',
+        );
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
