@@ -9,6 +9,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
@@ -35,9 +36,14 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
             return $input;
         }
 
-        $snapshot = $this->snapshot((string) data_get($input, 'rider.splash', ''));
+        $snapshot = $this->snapshot(
+            (string) data_get($input, 'rider.splash', ''),
+            data_get($input, 'rider.splash_format'),
+        );
 
         if (! $snapshot instanceof RiderSplashArtworkSnapshotData) {
+            $this->logSnapshotFailure($input, 'pre_persistence');
+
             throw new RiderStampArtworkUnavailable;
         }
 
@@ -70,6 +76,7 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
 
         $snapshot = $this->snapshot(
             (string) $voucher->instructions->rider->splash,
+            $voucher->instructions->rider->splash_format?->value,
         );
 
         if (! $snapshot instanceof RiderSplashArtworkSnapshotData) {
@@ -126,14 +133,21 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
             ! $snapshot instanceof RiderSplashArtworkSnapshotData
             || $this->dataUrl($voucher) === null
         ) {
+            $this->logSnapshotFailure(
+                $voucher->instructions->toArray(),
+                'post_persistence',
+            );
+
             throw new RiderStampArtworkUnavailable;
         }
 
         return $snapshot;
     }
 
-    private function snapshot(string $splash): ?RiderSplashArtworkSnapshotData
-    {
+    private function snapshot(
+        string $splash,
+        mixed $format = null,
+    ): ?RiderSplashArtworkSnapshotData {
         if (
             ! config('x-change.claim.share.splash_artwork.enabled', true)
             || trim($splash) === ''
@@ -141,7 +155,7 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
             return null;
         }
 
-        $source = $this->firstImageSource($splash);
+        $source = $this->splashImageSource($splash, $format);
         $image = $source === null ? null : $this->resolveImage($source);
 
         if ($image === null) {
@@ -400,7 +414,39 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
             );
     }
 
-    private function firstImageSource(string $splash): ?string
+    private function splashImageSource(
+        string $splash,
+        mixed $format,
+    ): ?string {
+        $normalizedFormat = is_string($format)
+            ? strtolower(trim($format))
+            : null;
+
+        return match ($normalizedFormat) {
+            'plain' => null,
+            'markdown' => $this->markdownImageSource($splash)
+                ?? $this->htmlImageSource($splash),
+            default => $this->htmlImageSource($splash)
+                ?? $this->markdownImageSource($splash),
+        };
+    }
+
+    private function markdownImageSource(string $splash): ?string
+    {
+        if (preg_match(
+            '/!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s\)]+))(?:\s+["\'][^"\']*["\'])?\s*\)/u',
+            $splash,
+            $matches,
+        ) !== 1) {
+            return null;
+        }
+
+        $source = trim((string) ($matches[1] ?: ($matches[2] ?? '')));
+
+        return $source === '' ? null : $source;
+    }
+
+    private function htmlImageSource(string $splash): ?string
     {
         $document = new DOMDocument;
         $previous = libxml_use_internal_errors(true);
@@ -500,11 +546,68 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
         $artwork = data_get($instructions, 'rider.stamp.artwork_source');
 
         if (is_string($artwork)) {
-            return $artwork === 'splash';
+            if ($artwork !== 'splash') {
+                return false;
+            }
+        } elseif (
+            data_get($instructions, 'rider.stamp.source') !== 'splash'
+            && data_get($instructions, 'rider.og_source') !== 'splash'
+        ) {
+            return false;
         }
 
-        return data_get($instructions, 'rider.stamp.source') === 'splash'
-            || data_get($instructions, 'rider.og_source') === 'splash';
+        if (data_get($instructions, 'rider.stamp.artwork_treatment') === 'text') {
+            return false;
+        }
+
+        return $this->splashImageSource(
+            (string) data_get($instructions, 'rider.splash', ''),
+            data_get($instructions, 'rider.splash_format'),
+        ) !== null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     */
+    private function logSnapshotFailure(
+        array $instructions,
+        string $stage,
+    ): void {
+        $source = $this->splashImageSource(
+            (string) data_get($instructions, 'rider.splash', ''),
+            data_get($instructions, 'rider.splash_format'),
+        );
+        $normalizedSource = is_string($source)
+            ? $this->normalizeGitHubUrl($source)
+            : null;
+
+        Log::warning('[RiderStampArtworkPreflight] Splash snapshot unavailable', [
+            'stage' => $stage,
+            'artwork_source' => 'splash',
+            'artwork_treatment' => data_get(
+                $instructions,
+                'rider.stamp.artwork_treatment',
+                'automatic',
+            ),
+            'splash_format' => data_get(
+                $instructions,
+                'rider.splash_format',
+            ),
+            'image_source_type' => match (true) {
+                ! is_string($source) => 'missing',
+                str_starts_with($source, 'data:image/') => 'embedded',
+                str_starts_with($source, 'https://') => 'remote_https',
+                default => 'unsupported',
+            },
+            'source_allowed' => is_string($source)
+                && (
+                    str_starts_with($source, 'data:image/')
+                    || (
+                        is_string($normalizedSource)
+                        && $this->safeRemoteUrl($normalizedSource) !== null
+                    )
+                ),
+        ]);
     }
 
     private function snapshotFor(

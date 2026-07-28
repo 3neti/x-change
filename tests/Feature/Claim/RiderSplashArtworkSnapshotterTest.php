@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
+use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Data\Claim\RiderSplashArtworkSnapshotData;
 use LBHurtado\XChange\Exceptions\RiderStampArtworkUnavailable;
 
@@ -72,6 +74,102 @@ it('captures validated remote Splash artwork into private content-addressed stor
         ->and(app(RiderSplashArtworkSnapshotterContract::class)
             ->assertStored($voucher)?->sha256)
         ->toBe($snapshot->sha256);
+    Http::assertSentCount(1);
+});
+
+it('issues a Splash-selected Stamp with generated artwork when no image is supplied', function (): void {
+    $user = actingAsTestUser();
+    $input = validVoucherInstructions(overrides: [
+        'rider' => [
+            'splash' => '<h1>Welcome</h1><p>Prepared for you.</p>',
+            'splash_format' => 'html',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'splash',
+                'artwork_treatment' => 'automatic',
+            ],
+        ],
+    ])->toArray();
+    $prepared = app(RiderSplashArtworkSnapshotterContract::class)
+        ->prepare($input);
+    $issued = app(PayCodeIssuanceContract::class)->issue($user, $prepared);
+    $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
+
+    expect(data_get(
+        $prepared,
+        'metadata.custom.rider_splash_artwork',
+    ))->toBeNull()
+        ->and(app(RiderSplashArtworkSnapshotterContract::class)
+            ->assertStored($voucher))
+        ->toBeNull()
+        ->and(app(RiderStampArtifactStoreContract::class)
+            ->read($voucher))
+        ->not->toBeNull();
+
+    Http::assertNothingSent();
+});
+
+it('does not snapshot Splash images when the Stamp requests text treatment', function (): void {
+    $input = validVoucherInstructions(overrides: [
+        'rider' => [
+            'splash' => '<img src="https://untrusted.example.test/image.png">',
+            'splash_format' => 'html',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'splash',
+                'artwork_treatment' => 'text',
+            ],
+        ],
+    ])->toArray();
+
+    $prepared = app(RiderSplashArtworkSnapshotterContract::class)
+        ->prepare($input);
+
+    expect($prepared)->toBe($input)
+        ->and(data_get(
+            $prepared,
+            'metadata.custom.rider_splash_artwork',
+        ))->toBeNull();
+    Http::assertNothingSent();
+});
+
+it('captures a Markdown Splash image used by the canvas', function (): void {
+    $image = imagecreatetruecolor(8, 8);
+    $orange = imagecolorallocate($image, 249, 115, 22);
+    imagefilledrectangle($image, 0, 0, 8, 8, $orange);
+    ob_start();
+    imagepng($image);
+    $contents = ob_get_clean();
+    imagedestroy($image);
+
+    expect($contents)->toBeString()->not->toBeEmpty();
+
+    Http::fake([
+        'https://raw.githubusercontent.com/example/art/main/markdown.png' => Http::response(
+            $contents,
+            200,
+            ['Content-Type' => 'image/png'],
+        ),
+    ]);
+
+    $prepared = app(RiderSplashArtworkSnapshotterContract::class)
+        ->prepare(validVoucherInstructions(overrides: [
+            'rider' => [
+                'splash' => '![A rose](https://github.com/example/art/blob/main/markdown.png?raw=true)',
+                'splash_format' => 'markdown',
+                'stamp' => [
+                    'version' => 2,
+                    'artwork_source' => 'splash',
+                ],
+            ],
+        ])->toArray());
+    $snapshot = RiderSplashArtworkSnapshotData::fromArray(data_get(
+        $prepared,
+        'metadata.custom.rider_splash_artwork',
+    ));
+
+    expect($snapshot)->toBeInstanceOf(RiderSplashArtworkSnapshotData::class)
+        ->and($snapshot->sha256)->toBe(hash('sha256', $contents));
     Http::assertSentCount(1);
 });
 
@@ -383,3 +481,39 @@ it('blocks issuance for unapproved hosts and forged image responses', function (
         'image/png',
     ],
 ]);
+
+it('writes a sanitized diagnostic when selected artwork cannot be secured', function (): void {
+    Log::shouldReceive('warning')
+        ->once()
+        ->with(
+            '[RiderStampArtworkPreflight] Splash snapshot unavailable',
+            Mockery::on(
+                static fn (array $context): bool => $context === [
+                    'stage' => 'pre_persistence',
+                    'artwork_source' => 'splash',
+                    'artwork_treatment' => 'automatic',
+                    'splash_format' => 'html',
+                    'image_source_type' => 'remote_https',
+                    'source_allowed' => false,
+                ],
+            ),
+        );
+
+    $input = validVoucherInstructions(overrides: [
+        'rider' => [
+            'splash' => '<img src="https://untrusted.example.test/image.png">',
+            'splash_format' => 'html',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'splash',
+                'artwork_treatment' => 'automatic',
+            ],
+        ],
+    ])->toArray();
+
+    expect(
+        fn (): array => app(RiderSplashArtworkSnapshotterContract::class)
+            ->prepare($input),
+    )->toThrow(RiderStampArtworkUnavailable::class);
+    Http::assertNothingSent();
+});
