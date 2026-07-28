@@ -56,8 +56,11 @@ flowchart LR
     Brand["x-change logo<br/>tagline and theme"] --> Stamp
     Claim["Canonical claim URL<br/>available after issue"] --> Stamp
     Stamp --> Front["Pay Code canvas<br/>front"]
-    Stamp --> Share["Claim-share metadata<br/>server resolver"]
-    Share --> Head["Server-rendered<br/>OG and Twitter tags"]
+    Stamp --> Card["ClaimShareCardRenderer<br/>1200 × 630 PNG"]
+    Stamp --> Share["ClaimShareMetadataResolver<br/>safe copy and canonical URLs"]
+    Card --> Image["/x/claim/{code}/share-card.png"]
+    Image --> Head["Server-rendered<br/>OG and Twitter tags"]
+    Share --> Head
     Head --> RichLink["iMessage and social<br/>rich-link preview"]
     Pricing["Issue-cost estimate"] --> Back["Pay Code canvas<br/>back"]
 ```
@@ -103,30 +106,60 @@ resolver maps Rider Stamp instructions into:
 - a safe title and description;
 - the canonical claim URL;
 - the x-change site name;
-- an allow-listed public Rider URL artwork URL when available;
-- the first safe Rider Splash image as a fallback; or
-- the configured x-change image when no Rider artwork is usable.
+- and the canonical package-owned share-card URL.
 
-The server never publishes a canvas data URI as `og:image`. HTML copy is
-reduced to plain text and Blade escapes every metadata value. URL artwork
-remains subject to the existing provider and image-host allowlists.
+`ClaimShareCardRendererContract` is the separate image replacement boundary.
+The default renderer generates a deterministic 1200 × 630 PNG from the stored
+Rider Stamp composition. It may use safely resolved, allow-listed Rider URL
+artwork as an input, but the external image is never published as `og:image`.
+The canonical image is:
+
+```text
+/x/claim/{code}/share-card.png
+```
+
+Artwork fallback follows the Stamp—not the availability of unrelated Rider
+content:
+
+```text
+Stamp selects Rider URL
+    resolved URL artwork → compose it into the card
+    unavailable artwork  → compose x-change branding
+    never                → fall through to Rider Splash
+
+Stamp selects Rider Splash
+    safely renderable Splash artwork → compose it into the card
+    otherwise                         → compose x-change branding
+```
+
+The local renderer accepts embedded `data:image` artwork from an explicitly
+selected Splash. It does not server-fetch arbitrary image URLs found in Splash
+HTML. A future remote-Splash adapter must apply the same HTTPS host allowlist,
+redirect, MIME, byte-limit, and timeout controls as the Rider URL resolver.
+
+The server never publishes a canvas data URI, raw Rider URL artwork, or raw
+Rider Splash artwork as `og:image`. HTML copy is reduced to plain text and
+Blade escapes every metadata value. The PNG response is stateless, throttled,
+publicly cacheable, ETag-addressable, and marked `nosniff`.
 
 The package-owned claim root view emits Open Graph, Twitter Card, canonical,
-description, and ordinary title elements. A future `3neti/og-meta` adapter may
-replace the resolver and provide deterministic generated social cards without
-changing the claim controller or root view.
+description, ordinary title, image MIME type, and 1200 × 630 dimensions. A
+future `3neti/og-meta` adapter may replace the renderer and metadata resolver
+without changing the public claim or image controllers.
 
 The default presentation may be configured with:
 
 ```text
 XCHANGE_CLAIM_SHARE_SITE_NAME
 XCHANGE_CLAIM_SHARE_DEFAULT_DESCRIPTION
-XCHANGE_CLAIM_SHARE_DEFAULT_IMAGE
+XCHANGE_CLAIM_SHARE_CACHE_TTL_SECONDS
+XCHANGE_CLAIM_SHARE_MAXIMUM_ARTWORK_PIXELS
 ```
 
-A rich-link preview still requires a publicly reachable HTTPS claim URL and a
-publicly reachable HTTPS image. Herd `.test` addresses and locally trusted
-certificates cannot be fetched by iMessage or social-platform crawlers.
+A rich-link preview requires the receiving crawler or device to reach and
+trust both the claim URL and the share-card URL. Production sharing therefore
+requires public HTTPS. A Herd `.test` address may work on a locally connected
+and trusting device, but it is not a production-reachable address.
 
 ## Starting Point
 
@@ -238,7 +271,12 @@ Acceptance requires:
 - no fake scannable QR before issuance;
 - a server-rendered canonical claim QR after issuance;
 - server-rendered OG and Twitter metadata on the canonical claim route;
-- an absolute public share image URL rather than a data URI;
+- a canonical package-owned 1200 × 630 PNG share-card URL rather than a raw
+  Rider image or data URI;
+- URL-artwork failure falls back to x-change branding and never to unrelated
+  Rider Splash content;
+- public cache headers, deterministic ETag, conditional 304, and `nosniff` on
+  the share-card response;
 - no Rider-controlled claim destination or remote-page embedding;
 - one complete front preview, with Claim Splash kept visibly separate;
 - Rider Stamp version 1 read compatibility and version 2 submission;

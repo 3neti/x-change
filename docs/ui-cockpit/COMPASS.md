@@ -4675,12 +4675,36 @@ Current boundary:
   canonical, description, and title elements in the first HTML response.
 - Added `ClaimShareMetadataResolverContract` so a future `3neti/og-meta`
   adapter can replace the local resolver without changing claim routes.
-- The default resolver uses Rider Stamp copy, allow-listed Rider URL artwork,
-  safe Rider Splash artwork, and the configured x-change fallback image.
+- The default resolver uses Rider Stamp copy and canonical claim/share-card
+  URLs. External Rider artwork is never the published `og:image`.
 - Confirmed Pay Code `HRSW` now returns crawler-visible metadata without
   executing Vue or hydrating Inertia.
-- Recorded that a public HTTPS host remains mandatory; Herd `.test` URLs
-  cannot be fetched by iMessage preview infrastructure.
+- Production sharing requires public HTTPS. A Herd `.test` URL may work only
+  when the receiving device can reach and trust that local host.
 - Boundary remains unchanged: share metadata cannot authorize a claim, alter
   the canonical claim URL, expose a canvas data URI, embed a remote page,
   mutate a Voucher, call a settlement provider, or move money.
+
+# 2026-07-28 — Rider Stamp Share-Card Correction
+
+- Added the package-owned
+  `/x/claim/{code}/share-card.png` endpoint and
+  `ClaimShareCardRendererContract`.
+- The default renderer composes a deterministic 1200 × 630 PNG from Rider
+  Stamp artwork, copy, branding flags, amount, Pay Code, and canonical claim
+  marker.
+- Rider URL artwork remains constrained by the existing provider/page/image
+  allowlists, redirect denial, MIME checks, byte limits, timeouts, and cache.
+- If selected Rider URL artwork is unavailable, the renderer falls back to
+  x-change branding. It never substitutes Rider Splash.
+- Rider Splash artwork participates only when the Stamp explicitly selects
+  Splash. The local renderer accepts embedded image data and does not
+  server-fetch arbitrary URLs found in Splash HTML.
+- Share-card responses are stateless, throttled, publicly cacheable,
+  ETag-addressable, conditionally return 304, and use `nosniff`.
+- The claim HTML now publishes the canonical PNG URL with `image/png` and
+  1200 × 630 Open Graph dimensions. Live HRSW acceptance confirmed Spotify
+  artwork, Stamp copy, amount, and canonical claim QR in the composed image.
+- The renderer remains replaceable by the planned `3neti/og-meta` adapter.
+  No claim authorization, Voucher mutation, provider settlement, Treasury
+  posting, or money movement was added.
