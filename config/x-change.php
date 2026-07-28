@@ -40,6 +40,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
+use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
@@ -458,6 +459,7 @@ return [
         'claim_share_metadata' => RiderStampClaimShareMetadataResolver::class,
         'claim_share_card_renderer' => GdRiderStampClaimShareCardRenderer::class,
         'rider_stamp_copy' => DefaultRiderStampCopyResolver::class,
+        'rider_stamp_recipient' => DefaultRiderStampRecipientResolver::class,
         'redemption_context_resolver' => DefaultRedemptionContextResolverService::class,
         'redemption_validation' => DefaultRedemptionValidationService::class,
         'redemption_processor' => DefaultRedemptionProcessorService::class,
@@ -1821,6 +1823,20 @@ return [
                 'XCHANGE_CLAIM_SHARE_MAXIMUM_ARTWORK_PIXELS',
                 16000000,
             ),
+            'recipient' => [
+                'enabled' => (bool) env(
+                    'XCHANGE_CLAIM_SHARE_SHOW_RECIPIENT',
+                    true,
+                ),
+                'eyebrow' => env(
+                    'XCHANGE_CLAIM_SHARE_RECIPIENT_EYEBROW',
+                    'Prepared for',
+                ),
+                'fallback_label' => env(
+                    'XCHANGE_CLAIM_SHARE_RECIPIENT_FALLBACK',
+                    'Anyone with this Pay Code',
+                ),
+            ],
             'site_name' => env(
                 'XCHANGE_CLAIM_SHARE_SITE_NAME',
                 env('XCHANGE_BRAND_NAME', env('XCHANGE_PRODUCT_NAME', 'X-Change')),

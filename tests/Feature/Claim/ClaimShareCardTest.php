@@ -60,6 +60,52 @@ it('renders and conditionally caches a deterministic Rider Stamp PNG', function 
     Http::assertNothingSent();
 });
 
+it('paints the masked recipient in the lower Stamp region', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'feedback' => [
+            'mobile' => '+639467438575',
+        ],
+        'rider' => [
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'x_change',
+                'copy_source' => 'none',
+                'show_logo' => false,
+                'show_tagline' => false,
+                'claim_marker' => 'none',
+            ],
+        ],
+    ]));
+
+    $response = $this->get(
+        route('x-change.claim.share-card', ['code' => $voucher->code]),
+    )->assertOk();
+    $card = imagecreatefromstring((string) $response->getContent());
+
+    expect($card)->toBeInstanceOf(GdImage::class);
+
+    $lightPixels = 0;
+
+    for ($y = 495; $y <= 565; $y += 2) {
+        for ($x = 60; $x <= 430; $x += 2) {
+            $color = imagecolorsforindex($card, imagecolorat($card, $x, $y));
+
+            if (
+                $color['red'] > 180
+                && $color['green'] > 180
+                && $color['blue'] > 180
+            ) {
+                $lightPixels++;
+            }
+        }
+    }
+
+    imagedestroy($card);
+
+    expect($lightPixels)->toBeGreaterThan(100);
+    Http::assertNothingSent();
+});
+
 it('uses allow-listed URL artwork without exposing the raw artwork as og image', function (): void {
     $artwork = base64_decode(
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nK0AAAAASUVORK5CYII=',

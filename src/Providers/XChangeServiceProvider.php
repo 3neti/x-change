@@ -152,6 +152,7 @@ use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
 use LBHurtado\XChange\Contracts\RedemptionValidationContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
+use LBHurtado\XChange\Contracts\RiderStampRecipientResolverContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Contracts\SettlementFlowPreparationContract;
@@ -205,6 +206,7 @@ use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
+use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
@@ -1207,6 +1209,16 @@ class XChangeServiceProvider extends ServiceProvider
                 fn ($app) => $app->make(config(
                     'x-change.services.rider_stamp_copy',
                     DefaultRiderStampCopyResolver::class,
+                )),
+            );
+        }
+
+        if (! $this->app->bound(RiderStampRecipientResolverContract::class)) {
+            $this->app->singleton(
+                RiderStampRecipientResolverContract::class,
+                fn ($app) => $app->make(config(
+                    'x-change.services.rider_stamp_recipient',
+                    DefaultRiderStampRecipientResolver::class,
                 )),
             );
         }

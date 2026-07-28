@@ -14,14 +14,16 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
+use LBHurtado\XChange\Contracts\RiderStampRecipientResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimShareCardData;
+use LBHurtado\XChange\Data\Claim\RiderStampRecipientData;
 use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 use ReflectionClass;
 use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract
 {
-    private const string CacheVersion = 'v3';
+    private const string CacheVersion = 'v4';
 
     private const int Width = 1200;
 
@@ -29,6 +31,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
 
     public function __construct(
         private RiderStampCopyResolverContract $copy,
+        private RiderStampRecipientResolverContract $recipient,
         private ClaimUrlQrRendererContract $claimQr,
         private RiderUrlArtworkPreviewResolver $urlArtwork,
     ) {}
@@ -96,6 +99,13 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $textColor,
             $mutedColor,
             $copy->visible,
+        );
+        $this->paintRecipient(
+            $canvas,
+            $voucher,
+            $this->recipient->resolve($voucher),
+            $textColor,
+            $mutedColor,
         );
         $this->paintClaimMarker($canvas, $voucher, $claimUrl, $textColor);
 
@@ -472,6 +482,43 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         }
     }
 
+    private function paintRecipient(
+        GdImage $canvas,
+        Voucher $voucher,
+        RiderStampRecipientData $recipient,
+        int $textColor,
+        int $mutedColor,
+    ): void {
+        if (! $recipient->visible) {
+            return;
+        }
+
+        $markerPosition = $voucher->instructions->rider->stamp
+            ?->claim_marker_position?->value ?? 'bottom_right';
+        $marker = $voucher->instructions->rider->stamp
+            ?->claim_marker?->value ?? 'qr';
+        $x = $marker !== 'none' && $markerPosition === 'bottom_left'
+            ? 330
+            : 72;
+
+        $this->drawText(
+            $canvas,
+            $recipient->eyebrow,
+            14,
+            $x,
+            525,
+            $mutedColor,
+        );
+        $this->drawText(
+            $canvas,
+            $recipient->label,
+            20,
+            $x,
+            558,
+            $textColor,
+        );
+    }
+
     /**
      * @return array{0: int, 1: int}
      */
@@ -621,6 +668,9 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 (string) $voucher->updated_at?->toJSON(),
                 $claimUrl,
                 $instructions,
+                config('x-change.claim.share.recipient.enabled', true)
+                    ? 'recipient-visible'
+                    : 'recipient-hidden',
             ]),
         );
     }

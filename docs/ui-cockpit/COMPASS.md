@@ -4729,3 +4729,17 @@ Current boundary:
 - This is presentation-only. It does not affect claim authorization, Voucher
   instructions, execution, provider settlement, Treasury accounting, or money
   movement.
+
+# 2026-07-28 — Rider Stamp Recipient Parity
+
+- The issued Stamp share card now mirrors the canvas audience block with
+  `Prepared for` and a privacy-safe `Mobile ending ####` label.
+- The public PNG never paints the complete recipient mobile number.
+- Pay Codes without a stored mobile use `Anyone with this Pay Code`, matching
+  the canvas fallback.
+- Recipient presentation is globally configurable and may be suppressed
+  without altering Voucher instructions.
+- Lower-left recipient copy moves away from a lower-left claim marker, and the
+  renderer cache version prevents older pre-parity images from lingering.
+- This remains presentation-only and does not change claim authorization,
+  delivery, settlement, Treasury accounting, or money movement.

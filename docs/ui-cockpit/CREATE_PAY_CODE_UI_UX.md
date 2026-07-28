@@ -175,7 +175,15 @@ XCHANGE_CLAIM_SHARE_DEFAULT_TITLE
 XCHANGE_CLAIM_SHARE_MESSAGE_DESCRIPTION
 XCHANGE_CLAIM_SHARE_URL_DESCRIPTION
 XCHANGE_CLAIM_SHARE_SPLASH_DESCRIPTION
+XCHANGE_CLAIM_SHARE_SHOW_RECIPIENT
+XCHANGE_CLAIM_SHARE_RECIPIENT_EYEBROW
+XCHANGE_CLAIM_SHARE_RECIPIENT_FALLBACK
 ```
+
+The share card mirrors the canvas audience block by default. Mobile recipients
+are rendered only as `Mobile ending ####`; the complete mobile number is never
+painted into the public image. Hosts may suppress this presentation globally
+without changing the Voucher instructions.
 
 A rich-link preview requires the receiving crawler or device to reach and
 trust both the claim URL and the share-card URL. Production sharing therefore
