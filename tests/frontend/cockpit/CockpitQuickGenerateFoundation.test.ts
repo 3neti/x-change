@@ -126,7 +126,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('p')
                 .text(),
         ).toBe(
-            'Preview the Pay Code stamp or inspect its estimated issue cost.',
+            'Preview the Stamp, shape its Rider design, or inspect issue cost.',
         );
         expect(
             wrapper
@@ -147,6 +147,71 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-pay-code-canvas-controls"]')
                 .exists(),
         ).toBe(false);
+    });
+
+    it('adds an accessible Design view only to the editable canvas', async () => {
+        const props = {
+            amount: '50',
+            currency: 'PHP',
+            recipient: '',
+            purpose: '',
+            claimOutcome: 'provider_disbursement' as const,
+            voucherType: 'redeemable' as const,
+        };
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props,
+            slots: {
+                design: '<div data-testid="rider-design-editor">Rider editor</div>',
+            },
+        });
+        const tabList = wrapper.get(
+            '[data-testid="cockpit-pay-code-canvas-view-switch"]',
+        );
+
+        expect(tabList.attributes('role')).toBe('tablist');
+        expect(tabList.findAll('[role="tab"]')).toHaveLength(3);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-front-button"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+
+        await wrapper
+            .get('[data-testid="cockpit-pay-code-canvas-design-button"]')
+            .trigger('click');
+
+        const designPanel = wrapper.get(
+            '[data-testid="cockpit-pay-code-canvas-design"]',
+        );
+
+        expect(designPanel.attributes('role')).toBe('tabpanel');
+        expect(designPanel.text()).toContain('Rider editor');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-design-button"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+
+        const finalized = mount(CockpitPayCodeCanvas, {
+            props: {
+                ...props,
+                presentation: 'finalized',
+            },
+            slots: {
+                design: '<div>Rider editor</div>',
+            },
+        });
+
+        expect(
+            finalized
+                .find('[data-testid="cockpit-pay-code-canvas-design-button"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            finalized
+                .get('[data-testid="cockpit-pay-code-canvas-view-switch"]')
+                .findAll('[role="tab"]'),
+        ).toHaveLength(2);
     });
 
     it('keeps all safe Rider Splash supporting copy on the canvas', () => {

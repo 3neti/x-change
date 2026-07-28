@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import {
     ArrowLeftRight,
+    Palette,
     QrCode,
     ReceiptText,
     UserRound,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, useId, useSlots, watchEffect } from 'vue';
 import type {
     PayCodeCostCharge,
     PayCodeCostEstimate,
@@ -61,8 +62,31 @@ const props = withDefaults(
     },
 );
 
-const visibleSide = ref<'front' | 'back'>('front');
+type PayCodeCanvasView = 'stamp' | 'design' | 'cost';
+
+const visibleView = defineModel<PayCodeCanvasView>('view', {
+    default: 'stamp',
+});
+const slots = useSlots();
+const viewId = useId();
+const hasDesignView = computed<boolean>(() => {
+    return props.presentation === 'live' && slots.design !== undefined;
+});
 const xChangeLogoUrl = '/vendor/x-change/images/logo-orange.png';
+
+watchEffect(() => {
+    if (visibleView.value === 'design' && !hasDesignView.value) {
+        visibleView.value = 'stamp';
+    }
+});
+
+function tabId(view: PayCodeCanvasView): string {
+    return `${viewId}-${view}-tab`;
+}
+
+function panelId(view: PayCodeCanvasView): string {
+    return `${viewId}-${view}-panel`;
+}
 
 const formattedAmount = computed<string>(() => {
     const value = Number(props.amount);
@@ -463,38 +487,66 @@ function stringValue(value: unknown): string | null {
                     {{
                         presentation === 'finalized'
                             ? 'Final design ready to share.'
-                            : 'Preview the Pay Code stamp or inspect its estimated issue cost.'
+                            : 'Preview the Stamp, shape its Rider design, or inspect issue cost.'
                     }}
                 </p>
             </div>
             <div
                 class="inline-flex shrink-0 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
                 aria-label="Pay Code view"
+                role="tablist"
                 data-testid="cockpit-pay-code-canvas-view-switch"
             >
                 <button
+                    :id="tabId('stamp')"
                     type="button"
+                    role="tab"
                     class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
                     :class="
-                        visibleSide === 'front'
+                        visibleView === 'stamp'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
                             : 'text-slate-500 dark:text-slate-400'
                     "
+                    :aria-selected="visibleView === 'stamp'"
+                    :aria-controls="panelId('stamp')"
                     data-testid="cockpit-pay-code-canvas-front-button"
-                    @click="visibleSide = 'front'"
+                    @click="visibleView = 'stamp'"
                 >
                     Stamp
                 </button>
                 <button
+                    v-if="hasDesignView"
+                    :id="tabId('design')"
                     type="button"
-                    class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    role="tab"
+                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
                     :class="
-                        visibleSide === 'back'
+                        visibleView === 'design'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
                             : 'text-slate-500 dark:text-slate-400'
                     "
+                    :aria-selected="visibleView === 'design'"
+                    :aria-controls="panelId('design')"
+                    data-testid="cockpit-pay-code-canvas-design-button"
+                    @click="visibleView = 'design'"
+                >
+                    <Palette class="size-3" aria-hidden="true" />
+                    Design
+                </button>
+                <button
+                    :id="tabId('cost')"
+                    type="button"
+                    role="tab"
+                    class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    :class="
+                        visibleView === 'cost'
+                            ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                            : 'text-slate-500 dark:text-slate-400'
+                    "
+                    :aria-selected="visibleView === 'cost'"
+                    :aria-controls="panelId('cost')"
                     data-testid="cockpit-pay-code-canvas-back-button"
-                    @click="visibleSide = 'back'"
+                    @click="visibleView = 'cost'"
                 >
                     Cost
                 </button>
@@ -502,7 +554,10 @@ function stringValue(value: unknown): string | null {
         </div>
 
         <article
-            v-if="visibleSide === 'front'"
+            v-if="visibleView === 'stamp'"
+            :id="panelId('stamp')"
+            role="tabpanel"
+            :aria-labelledby="tabId('stamp')"
             class="relative aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10 @md:p-7"
             :class="
                 hasRiderDesign
@@ -755,8 +810,22 @@ function stringValue(value: unknown): string | null {
             </div>
         </article>
 
+        <section
+            v-else-if="visibleView === 'design' && hasDesignView"
+            :id="panelId('design')"
+            role="tabpanel"
+            :aria-labelledby="tabId('design')"
+            class="min-h-72 rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
+            data-testid="cockpit-pay-code-canvas-design"
+        >
+            <slot name="design" />
+        </section>
+
         <article
             v-else
+            :id="panelId('cost')"
+            role="tabpanel"
+            :aria-labelledby="tabId('cost')"
             class="relative aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20 @lg:p-6"
             data-testid="cockpit-pay-code-canvas-back"
         >
