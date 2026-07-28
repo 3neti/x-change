@@ -1613,6 +1613,12 @@ const beneficiaryClaimQr = computed<string | null>(() => {
     );
 });
 
+const beneficiaryShareCardUrl = computed<string | null>(() => {
+    return stringValue(
+        dataGet(lastResponse.value, ['result', 'links', 'share_card']),
+    );
+});
+
 const beneficiaryClaimUrl = computed<string | null>(() => {
     if (beneficiaryRedeemUrl.value !== null) {
         return beneficiaryRedeemUrl.value;
@@ -4537,6 +4543,7 @@ function instructionRecord(
             :quantity="count"
             :claim-url="beneficiaryClaimUrl"
             :claim-qr="beneficiaryClaimQr"
+            :share-card-url="beneficiaryShareCardUrl"
             :detail-url="cockpitDetailUrl"
             @close="issuedPayCodeDialogOpen = false"
         />

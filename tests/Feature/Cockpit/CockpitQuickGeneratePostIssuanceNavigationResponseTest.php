@@ -22,6 +22,10 @@ it('hydrates quick generate post issuance navigation links without adding side e
         ->post(route('x-change.cockpit.quick-generate.store'), cockpitWave34cPayload())
         ->assertCreated()
         ->assertJsonPath('result.code', 'PC-WAVE-34C')
+        ->assertJsonPath(
+            'result.links.share_card',
+            route('x-change.claim.share-card', ['code' => 'PC-WAVE-34C']),
+        )
         ->assertJsonPath('result.links.cockpit_detail', '/x/cockpit/pay-codes/PC-WAVE-34C')
         ->assertJsonPath('result.links.cockpit_distribution', '/x/cockpit/pay-codes/PC-WAVE-34C/distribution')
         ->assertJsonPath('post_issuance_navigation.schema', 'x-change.cockpit.quick-generate-post-issuance-navigation.v1')

@@ -9,5 +9,6 @@ final readonly class ClaimShareCardData
     public function __construct(
         public string $contents,
         public string $etag,
+        public bool $immutable = false,
     ) {}
 }

@@ -327,6 +327,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'redeem' => $result->links->redeem,
                 'redeem_path' => $result->links->redeem_path,
                 'claim_qr' => $this->claimUrlQrRenderer->render($result->links->redeem),
+                'share_card' => Route::has('x-change.claim.share-card')
+                    ? route('x-change.claim.share-card', ['code' => $result->code])
+                    : null,
                 'cockpit_detail' => Route::has('x-change.cockpit.pay-codes.show')
                     ? route('x-change.cockpit.pay-codes.show', ['code' => $result->code], false)
                     : null,

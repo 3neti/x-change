@@ -103,6 +103,7 @@ final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifac
         return new ClaimShareCardData(
             contents: $contents,
             etag: '"'.$artifact->sha256.'"',
+            immutable: true,
         );
     }
 

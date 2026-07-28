@@ -33,7 +33,7 @@ final class ClaimShareCardController extends Controller
             $voucher,
             route('x-change.claim.show', ['code' => $voucher->code]),
         );
-        $headers = $this->headers($card->etag);
+        $headers = $this->headers($card->etag, $card->immutable);
 
         if ($request->header('If-None-Match') === $card->etag) {
             return response('', 304, $headers);
@@ -45,16 +45,29 @@ final class ClaimShareCardController extends Controller
     /**
      * @return array<string, string>
      */
-    private function headers(string $etag): array
+    private function headers(string $etag, bool $immutable): array
     {
-        $maxAge = max(
-            60,
-            (int) config('x-change.claim.share.cache_ttl_seconds', 300),
-        );
+        $maxAge = $immutable
+            ? max(
+                86400,
+                (int) config(
+                    'x-change.claim.share.artifact.cache_ttl_seconds',
+                    31536000,
+                ),
+            )
+            : max(
+                60,
+                (int) config('x-change.claim.share.cache_ttl_seconds', 300),
+            );
+        $cacheControl = "public, max-age={$maxAge}, s-maxage={$maxAge}";
+
+        if ($immutable) {
+            $cacheControl .= ', immutable';
+        }
 
         return [
             'Content-Type' => 'image/png',
-            'Cache-Control' => "public, max-age={$maxAge}, s-maxage={$maxAge}",
+            'Cache-Control' => $cacheControl,
             'ETag' => $etag,
             'X-Content-Type-Options' => 'nosniff',
         ];

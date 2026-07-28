@@ -6,7 +6,10 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
+use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 
 beforeEach(function (): void {
     Cache::clear();
@@ -60,6 +63,28 @@ it('renders and conditionally caches a deterministic Rider Stamp PNG', function 
         ->assertHeader('ETag', $etag);
 
     Http::assertNothingSent();
+});
+
+it('serves the exact immutable artifact materialized during issuance', function (): void {
+    Storage::fake('local');
+    $user = actingAsTestUser();
+    $issued = app(PayCodeIssuanceContract::class)->issue(
+        $user,
+        validVoucherInstructions()->toArray(),
+    );
+    $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
+    $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
+
+    expect($artifact)->not->toBeNull();
+
+    $response = $this->get(
+        route('x-change.claim.share-card', ['code' => $voucher->code]),
+    )->assertOk()
+        ->assertHeader('ETag', $artifact?->etag ?? '');
+
+    expect($response->getContent())->toBe($artifact?->contents)
+        ->and((string) $response->headers->get('Cache-Control'))
+        ->toContain('immutable');
 });
 
 it('paints the masked recipient in the lower Stamp region', function (): void {

@@ -32,7 +32,8 @@ it('materializes and verifies an immutable content-addressed Stamp artifact', fu
         ->toBe(RiderStampArtifactData::ManifestVersion)
         ->and($card)->toBeInstanceOf(ClaimShareCardData::class)
         ->and(hash('sha256', $card?->contents ?? ''))->toBe($artifact->sha256)
-        ->and($card?->etag)->toBe('"'.$artifact->sha256.'"');
+        ->and($card?->etag)->toBe('"'.$artifact->sha256.'"')
+        ->and($card?->immutable)->toBeTrue();
 
     Storage::disk('local')->assertExists(
         'x-change/claim/stamp-artifacts/'.$artifact->sha256.'.png',

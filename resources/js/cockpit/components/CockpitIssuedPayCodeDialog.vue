@@ -35,6 +35,7 @@ const props = withDefaults(
         riderStamp?: RiderStampPreview | null;
         claimQr?: string | null;
         claimUrl?: string | null;
+        shareCardUrl?: string | null;
         detailUrl?: string | null;
         costEstimate?: PayCodeCostEstimate | null;
         quantity?: string | number;
@@ -51,6 +52,7 @@ const props = withDefaults(
         riderStamp: null,
         claimQr: null,
         claimUrl: null,
+        shareCardUrl: null,
         detailUrl: null,
         costEstimate: null,
         quantity: 1,
@@ -68,6 +70,11 @@ let returnFocus: HTMLElement | null = null;
 const normalizedCode = computed<string>(() => props.code?.trim() || 'Pay Code');
 const normalizedClaimUrl = computed<string | null>(() => {
     const value = props.claimUrl?.trim();
+
+    return value ? value : null;
+});
+const normalizedShareCardUrl = computed<string | null>(() => {
+    const value = props.shareCardUrl?.trim();
 
     return value ? value : null;
 });
@@ -245,7 +252,37 @@ async function copyClaimLink(): Promise<void> {
                 <div
                     class="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_17rem]"
                 >
+                    <div
+                        v-if="normalizedShareCardUrl"
+                        class="rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80"
+                        data-testid="cockpit-issued-pay-code-artifact"
+                    >
+                        <div class="mb-3 px-1">
+                            <p
+                                class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                            >
+                                Finalized Stamp
+                            </p>
+                            <p
+                                class="text-xs text-slate-600 dark:text-slate-300"
+                            >
+                                Exact image used when the claim link is shared.
+                            </p>
+                        </div>
+                        <img
+                            :src="normalizedShareCardUrl"
+                            :alt="`Finalized Pay Code ${normalizedCode}`"
+                            class="aspect-[1200/630] w-full rounded-[1.4rem] bg-slate-950 object-contain shadow-xl shadow-slate-900/20"
+                            width="1200"
+                            height="630"
+                            loading="eager"
+                            decoding="async"
+                            data-testid="cockpit-issued-pay-code-artifact-image"
+                        />
+                    </div>
+
                     <CockpitPayCodeCanvas
+                        v-else
                         :amount="amount"
                         :currency="currency"
                         :recipient="recipient"

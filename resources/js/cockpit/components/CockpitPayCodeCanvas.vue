@@ -391,14 +391,14 @@ function stringValue(value: unknown): string | null {
                     {{
                         presentation === 'finalized'
                             ? 'Issued Pay Code'
-                            : 'Live Pay Code'
+                            : 'Editable Pay Code Preview'
                     }}
                 </p>
                 <p class="text-xs text-slate-600 dark:text-slate-300">
                     {{
                         presentation === 'finalized'
                             ? 'Final design ready to share.'
-                            : 'Updates as you design.'
+                            : 'Changes appear here before issuance.'
                     }}
                 </p>
             </div>

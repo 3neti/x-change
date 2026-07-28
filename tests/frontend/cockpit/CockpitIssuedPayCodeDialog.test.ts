@@ -249,6 +249,8 @@ describe('issued Pay Code dialog', () => {
                     links: {
                         redeem: 'https://example.test/x/claim/PAY-MODAL-1/experience',
                         redeem_path: '/x/claim/PAY-MODAL-1/experience',
+                        share_card:
+                            'https://example.test/x/claim/PAY-MODAL-1/share-card.png',
                         cockpit_detail: '/x/cockpit/pay-codes/PAY-MODAL-1',
                     },
                 },
@@ -294,16 +296,16 @@ describe('issued Pay Code dialog', () => {
                 .get('[data-testid="cockpit-issued-pay-code-detail"]')
                 .attributes('href'),
         ).toBe('/x/cockpit/pay-codes/PAY-MODAL-1');
-
-        await wrapper
-            .findAll('[data-testid="cockpit-pay-code-canvas-back-button"]')
-            .at(-1)
-            ?.trigger('click');
-
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-artifact-image"]')
+                .attributes('src'),
+        ).toBe('https://example.test/x/claim/PAY-MODAL-1/share-card.png');
         expect(
             wrapper
                 .get('[data-testid="cockpit-issued-pay-code-dialog"]')
-                .text(),
-        ).toContain('₱12.00');
+                .find('[data-testid="cockpit-pay-code-canvas"]')
+                .exists(),
+        ).toBe(false);
     });
 });

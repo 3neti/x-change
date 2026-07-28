@@ -45,6 +45,7 @@ use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
+use LBHurtado\XChange\Services\Claim\StoredRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
@@ -459,7 +460,7 @@ return [
         'redemption_completion_store' => NullRedemptionCompletionStore::class,
         'claim_execution_factory' => DefaultClaimExecutionFactory::class,
         'claim_share_metadata' => RiderStampClaimShareMetadataResolver::class,
-        'claim_share_card_renderer' => GdRiderStampClaimShareCardRenderer::class,
+        'claim_share_card_renderer' => StoredRiderStampClaimShareCardRenderer::class,
         'rider_stamp_copy' => DefaultRiderStampCopyResolver::class,
         'rider_stamp_recipient' => DefaultRiderStampRecipientResolver::class,
         'rider_splash_artwork_snapshotter' => DefaultRiderSplashArtworkSnapshotter::class,
@@ -1836,6 +1837,10 @@ return [
                 'rendering_manifest_version' => env(
                     'XCHANGE_CLAIM_SHARE_RENDERING_MANIFEST_VERSION',
                     'x-change.rider-stamp-render-manifest.v1',
+                ),
+                'cache_ttl_seconds' => (int) env(
+                    'XCHANGE_CLAIM_SHARE_ARTIFACT_CACHE_TTL_SECONDS',
+                    31536000,
                 ),
             ],
             'maximum_artwork_pixels' => (int) env(
