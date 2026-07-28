@@ -47,6 +47,66 @@ it('materializes and verifies an immutable content-addressed Stamp artifact', fu
     ))->toMatchArray($artifact->toArray());
 });
 
+it('renders instruction indicators into newly materialized version two Stamps', function (): void {
+    $plainVoucher = issueVoucher(validVoucherInstructions(overrides: [
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]));
+    $selfieVoucher = issueVoucher(validVoucherInstructions(overrides: [
+        'inputs' => [
+            'fields' => ['selfie'],
+            'requirements' => ['selfie'],
+        ],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]));
+    $artifacts = app(RiderStampArtifactStoreContract::class);
+
+    $plain = $artifacts->materialize(
+        $plainVoucher,
+        'https://example.test/x/claim/'.$plainVoucher->code,
+    );
+    $selfie = $artifacts->materialize(
+        $selfieVoucher,
+        'https://example.test/x/claim/'.$selfieVoucher->code,
+    );
+
+    expect($plain->renderingManifestVersion)
+        ->toBe('x-change.rider-stamp-render-manifest.v2')
+        ->and($selfie->renderingManifestVersion)
+        ->toBe('x-change.rider-stamp-render-manifest.v2')
+        ->and($selfie->sha256)->not->toBe($plain->sha256);
+});
+
+it('continues reading immutable version one artifact descriptors', function (): void {
+    $voucher = issueVoucher();
+    $artifacts = app(RiderStampArtifactStoreContract::class);
+    $artifact = $artifacts->materialize(
+        $voucher,
+        'https://example.test/x/claim/'.$voucher->code,
+    );
+    $metadata = $voucher->metadata;
+
+    data_set(
+        $metadata,
+        'instructions.metadata.custom.rider_stamp_artifact.rendering_manifest_version',
+        'x-change.rider-stamp-render-manifest.v1',
+    );
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $voucher->refresh();
+
+    expect($artifacts->descriptor($voucher)?->renderingManifestVersion)
+        ->toBe('x-change.rider-stamp-render-manifest.v1')
+        ->and($artifacts->read($voucher)?->etag)
+        ->toBe('"'.$artifact->sha256.'"');
+});
+
 it('refuses Stamp bytes that no longer match their persisted descriptor', function (): void {
     $voucher = issueVoucher();
     $artifacts = app(RiderStampArtifactStoreContract::class);

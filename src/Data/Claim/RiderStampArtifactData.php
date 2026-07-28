@@ -14,7 +14,7 @@ final readonly class RiderStampArtifactData
 
     public const int Height = 630;
 
-    public const string ManifestVersion = 'x-change.rider-stamp-render-manifest.v1';
+    public const string ManifestVersion = 'x-change.rider-stamp-render-manifest.v2';
 
     public function __construct(
         public string $sha256,

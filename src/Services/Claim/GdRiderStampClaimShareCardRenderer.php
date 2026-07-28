@@ -24,7 +24,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v10';
+    private const string CacheVersion = 'v11';
 
     private const int Width = 1200;
 
@@ -37,6 +37,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         private ClaimUrlQrRendererContract $claimQr,
         private RiderUrlArtworkPreviewResolver $urlArtwork,
         private ClaimShareCardAmountFormatter $amounts,
+        private PayCodeStampIndicatorResolver $indicators,
     ) {}
 
     public function render(Voucher $voucher, string $claimUrl): ClaimShareCardData
@@ -106,6 +107,11 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             : imagecolorallocate($canvas, 226, 232, 240);
 
         $this->paintBrand($canvas, $rider, $textColor, $mutedColor);
+        $this->paintIndicators(
+            $canvas,
+            $voucher,
+            $this->indicators->resolve($voucher),
+        );
         $this->paintCopy(
             $canvas,
             $voucher,
@@ -402,6 +408,280 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 $mutedColor,
             );
         }
+    }
+
+    /**
+     * @param  list<string>  $indicatorKeys
+     */
+    private function paintIndicators(
+        GdImage $canvas,
+        Voucher $voucher,
+        array $indicatorKeys,
+    ): void {
+        if ($indicatorKeys === []) {
+            return;
+        }
+
+        $diameter = 38;
+        $gap = 10;
+        $markerPosition = $voucher->instructions->rider->stamp
+            ?->claim_marker_position?->value ?? 'bottom_right';
+        $marker = $voucher->instructions->rider->stamp
+            ?->claim_marker?->value ?? 'qr';
+        $rightEdge = $marker !== 'none' && $markerPosition === 'top_right'
+            ? self::Width - 264
+            : self::Width - 62;
+        $x = $rightEdge - count($indicatorKeys) * ($diameter + $gap) + $gap;
+        $y = 66;
+
+        foreach ($indicatorKeys as $indicatorKey) {
+            $this->paintIndicator($canvas, $indicatorKey, $x, $y, $diameter);
+            $x += $diameter + $gap;
+        }
+    }
+
+    private function paintIndicator(
+        GdImage $canvas,
+        string $indicatorKey,
+        int $x,
+        int $y,
+        int $diameter,
+    ): void {
+        $background = imagecolorallocate($canvas, 4, 120, 87);
+        $foreground = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledellipse(
+            $canvas,
+            $x + (int) round($diameter / 2),
+            $y + (int) round($diameter / 2),
+            $diameter,
+            $diameter,
+            $background,
+        );
+        imagesetthickness($canvas, 2);
+
+        match (true) {
+            $indicatorKey === 'outcome.account_funding' => $this->paintLandmarkIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            $indicatorKey === 'outcome.collect_payment' => $this->paintCoinIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            $indicatorKey === 'outcome.settlement' => $this->paintSettlementIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            str_contains($indicatorKey, 'mobile') => $this->paintMobileIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            str_contains($indicatorKey, 'otp') => $this->paintKeyIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            str_contains($indicatorKey, 'identity')
+                || str_contains($indicatorKey, 'kyc') => $this->paintCheckIndicator(
+                    $canvas,
+                    $x,
+                    $y,
+                    $foreground,
+                ),
+            str_contains($indicatorKey, 'selfie') => $this->paintFaceIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            str_contains($indicatorKey, 'signature') => $this->paintPenIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            str_contains($indicatorKey, 'location') => $this->paintLocationIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            str_contains($indicatorKey, 'time')
+                || str_contains($indicatorKey, 'birth_date') => $this->paintClockIndicator(
+                    $canvas,
+                    $x,
+                    $y,
+                    $foreground,
+                ),
+            $indicatorKey === 'claim.multiple' => $this->paintSplitIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            default => $this->paintBanknoteIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+        };
+
+        imagesetthickness($canvas, 1);
+    }
+
+    private function paintBanknoteIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imagerectangle($canvas, $x + 9, $y + 12, $x + 29, $y + 26, $color);
+        imageellipse($canvas, $x + 19, $y + 19, 7, 7, $color);
+    }
+
+    private function paintLandmarkIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageline($canvas, $x + 8, $y + 15, $x + 19, $y + 8, $color);
+        imageline($canvas, $x + 19, $y + 8, $x + 30, $y + 15, $color);
+        imageline($canvas, $x + 9, $y + 29, $x + 29, $y + 29, $color);
+
+        foreach ([12, 19, 26] as $pillarX) {
+            imageline(
+                $canvas,
+                $x + $pillarX,
+                $y + 17,
+                $x + $pillarX,
+                $y + 26,
+                $color,
+            );
+        }
+    }
+
+    private function paintCoinIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageellipse($canvas, $x + 20, $y + 17, 13, 13, $color);
+        imageline($canvas, $x + 9, $y + 26, $x + 16, $y + 22, $color);
+        imageline($canvas, $x + 16, $y + 22, $x + 28, $y + 25, $color);
+    }
+
+    private function paintSettlementIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageline($canvas, $x + 9, $y + 14, $x + 28, $y + 14, $color);
+        imageline($canvas, $x + 24, $y + 10, $x + 28, $y + 14, $color);
+        imageline($canvas, $x + 24, $y + 18, $x + 28, $y + 14, $color);
+        imageline($canvas, $x + 29, $y + 25, $x + 10, $y + 25, $color);
+        imageline($canvas, $x + 14, $y + 21, $x + 10, $y + 25, $color);
+        imageline($canvas, $x + 14, $y + 29, $x + 10, $y + 25, $color);
+    }
+
+    private function paintMobileIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imagerectangle($canvas, $x + 13, $y + 7, $x + 25, $y + 31, $color);
+        imagefilledellipse($canvas, $x + 19, $y + 27, 2, 2, $color);
+    }
+
+    private function paintKeyIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageellipse($canvas, $x + 14, $y + 16, 10, 10, $color);
+        imageline($canvas, $x + 18, $y + 20, $x + 29, $y + 29, $color);
+        imageline($canvas, $x + 25, $y + 25, $x + 29, $y + 21, $color);
+    }
+
+    private function paintCheckIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageline($canvas, $x + 10, $y + 20, $x + 17, $y + 27, $color);
+        imageline($canvas, $x + 17, $y + 27, $x + 29, $y + 11, $color);
+    }
+
+    private function paintFaceIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageellipse($canvas, $x + 19, $y + 17, 11, 11, $color);
+        imagearc($canvas, $x + 19, $y + 31, 20, 14, 190, 350, $color);
+    }
+
+    private function paintPenIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageline($canvas, $x + 10, $y + 28, $x + 27, $y + 11, $color);
+        imageline($canvas, $x + 13, $y + 30, $x + 30, $y + 13, $color);
+        imageline($canvas, $x + 10, $y + 28, $x + 13, $y + 30, $color);
+    }
+
+    private function paintLocationIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageellipse($canvas, $x + 19, $y + 16, 14, 14, $color);
+        imagefilledellipse($canvas, $x + 19, $y + 16, 3, 3, $color);
+        imageline($canvas, $x + 14, $y + 21, $x + 19, $y + 30, $color);
+        imageline($canvas, $x + 24, $y + 21, $x + 19, $y + 30, $color);
+    }
+
+    private function paintClockIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageellipse($canvas, $x + 19, $y + 19, 20, 20, $color);
+        imageline($canvas, $x + 19, $y + 19, $x + 19, $y + 12, $color);
+        imageline($canvas, $x + 19, $y + 19, $x + 25, $y + 23, $color);
+    }
+
+    private function paintSplitIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageline($canvas, $x + 12, $y + 9, $x + 12, $y + 19, $color);
+        imageline($canvas, $x + 12, $y + 19, $x + 27, $y + 28, $color);
+        imageline($canvas, $x + 12, $y + 19, $x + 27, $y + 10, $color);
+        imagefilledellipse($canvas, $x + 28, $y + 10, 4, 4, $color);
+        imagefilledellipse($canvas, $x + 28, $y + 28, 4, 4, $color);
     }
 
     private function paintCopy(

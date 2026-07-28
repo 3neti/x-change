@@ -1851,7 +1851,7 @@ return [
                 ),
                 'rendering_manifest_version' => env(
                     'XCHANGE_CLAIM_SHARE_RENDERING_MANIFEST_VERSION',
-                    'x-change.rider-stamp-render-manifest.v1',
+                    'x-change.rider-stamp-render-manifest.v2',
                 ),
                 'cache_ttl_seconds' => (int) env(
                     'XCHANGE_CLAIM_SHARE_ARTIFACT_CACHE_TTL_SECONDS',
