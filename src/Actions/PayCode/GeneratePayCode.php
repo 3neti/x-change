@@ -11,6 +11,7 @@ use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
+use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
@@ -46,6 +47,7 @@ class GeneratePayCode
         protected ?ProviderFundingPolicyContract $funding = null,
         protected ?PayCodeCommercialSaleService $commercialSales = null,
         protected ?PreparePayCodeAccountFundingIssuance $accountFunding = null,
+        protected ?RiderSplashArtworkSnapshotterContract $splashArtwork = null,
     ) {}
 
     /**
@@ -100,6 +102,7 @@ class GeneratePayCode
             }
         }
 
+        $input = $this->splashArtwork()->prepare($input);
         $wallet = $this->wallets->resolveForUser($issuer);
         $estimate = $this->estimatePayCodeCost->handle($input);
 
@@ -152,6 +155,12 @@ class GeneratePayCode
                 allocations: $allocation['allocations'] ?? [],
             );
         });
+    }
+
+    protected function splashArtwork(): RiderSplashArtworkSnapshotterContract
+    {
+        return $this->splashArtwork
+            ?? app(RiderSplashArtworkSnapshotterContract::class);
     }
 
     /**

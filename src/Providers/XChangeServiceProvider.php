@@ -48,6 +48,7 @@ use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
+use LBHurtado\XChange\Console\Commands\Claim\SnapshotRiderSplashArtworkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
@@ -151,6 +152,7 @@ use LBHurtado\XChange\Contracts\RedemptionExecutionContract;
 use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
 use LBHurtado\XChange\Contracts\RedemptionValidationContract;
+use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
 use LBHurtado\XChange\Contracts\RiderStampRecipientResolverContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
@@ -205,6 +207,7 @@ use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
@@ -1009,6 +1012,7 @@ class XChangeServiceProvider extends ServiceProvider
                 PreparePayCodeRedemptionFlowCommand::class,
                 LoadPayCodeRedemptionCompletionContextCommand::class,
                 SubmitPayCodeClaimCommand::class,
+                SnapshotRiderSplashArtworkCommand::class,
                 CheckDisbursementStatusCommand::class,
                 AttestAccountFundingPayCodeJournalIntegrityCommand::class,
                 ApproveFundingRequestCommand::class,
@@ -1219,6 +1223,16 @@ class XChangeServiceProvider extends ServiceProvider
                 fn ($app) => $app->make(config(
                     'x-change.services.rider_stamp_recipient',
                     DefaultRiderStampRecipientResolver::class,
+                )),
+            );
+        }
+
+        if (! $this->app->bound(RiderSplashArtworkSnapshotterContract::class)) {
+            $this->app->singleton(
+                RiderSplashArtworkSnapshotterContract::class,
+                fn ($app) => $app->make(config(
+                    'x-change.services.rider_splash_artwork_snapshotter',
+                    DefaultRiderSplashArtworkSnapshotter::class,
                 )),
             );
         }

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 
 beforeEach(function (): void {
     Cache::clear();
@@ -232,6 +234,65 @@ it('uses Rider Splash artwork only when the Stamp explicitly selects it', functi
         ->and($center['red'])->toBeGreaterThan($center['blue']);
 
     Http::assertNothingSent();
+});
+
+it('renders a validated remote Rider Splash snapshot without fetching at share time', function (): void {
+    Storage::fake('local');
+    config()->set(
+        'x-change.claim.share.splash_artwork.allowed_hosts',
+        ['raw.githubusercontent.com'],
+    );
+    $splashImage = imagecreatetruecolor(8, 8);
+    $red = imagecolorallocate($splashImage, 244, 63, 94);
+    imagefilledrectangle($splashImage, 0, 0, 8, 8, $red);
+    ob_start();
+    imagepng($splashImage);
+    $splashContents = ob_get_clean();
+    imagedestroy($splashImage);
+
+    expect($splashContents)->toBeString()->not->toBeEmpty();
+
+    Http::fake([
+        'https://raw.githubusercontent.com/example/art/main/rose.png' => Http::response(
+            $splashContents,
+            200,
+            ['Content-Type' => 'image/png'],
+        ),
+    ]);
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'A rose-colored introduction',
+            'splash' => '<img src="https://github.com/example/art/blob/main/rose.png?raw=true">',
+            'stamp' => [
+                'version' => 2,
+                'source' => 'splash',
+                'artwork_source' => 'splash',
+                'copy_source' => 'message',
+                'show_logo' => false,
+                'show_tagline' => false,
+                'scrim' => 0,
+            ],
+        ],
+    ]));
+
+    app(RiderSplashArtworkSnapshotterContract::class)->capture($voucher);
+
+    $response = $this->get(
+        route('x-change.claim.share-card', ['code' => $voucher->code]),
+    )->assertOk();
+    $card = imagecreatefromstring((string) $response->getContent());
+
+    expect($card)->toBeInstanceOf(GdImage::class);
+
+    $center = imagecolorsforindex($card, imagecolorat($card, 600, 315));
+    imagedestroy($card);
+
+    expect($center['red'])
+        ->toBeGreaterThan($center['green'])
+        ->and($center['red'])->toBeGreaterThan($center['blue']);
+
+    Http::assertSentCount(1);
 });
 
 it('does not expose a share card for an unknown Pay Code', function (): void {

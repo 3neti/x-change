@@ -13,6 +13,7 @@ use LBHurtado\Voucher\Data\RiderInstructionData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
+use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
 use LBHurtado\XChange\Contracts\RiderStampRecipientResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimShareCardData;
@@ -23,7 +24,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract
 {
-    private const string CacheVersion = 'v4';
+    private const string CacheVersion = 'v5';
 
     private const int Width = 1200;
 
@@ -32,6 +33,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
     public function __construct(
         private RiderStampCopyResolverContract $copy,
         private RiderStampRecipientResolverContract $recipient,
+        private RiderSplashArtworkSnapshotterContract $splashArtwork,
         private ClaimUrlQrRendererContract $claimQr,
         private RiderUrlArtworkPreviewResolver $urlArtwork,
     ) {}
@@ -72,7 +74,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         $this->paintBrandBackground($canvas);
 
         $rider = $voucher->instructions->rider;
-        $artwork = $this->resolveArtwork($rider);
+        $artwork = $this->resolveArtwork($voucher);
 
         if ($artwork instanceof GdImage) {
             $this->paintArtwork($canvas, $artwork, $rider);
@@ -138,8 +140,9 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         imagefilledellipse($canvas, 80, 660, 520, 430, $emerald);
     }
 
-    private function resolveArtwork(RiderInstructionData $rider): ?GdImage
+    private function resolveArtwork(Voucher $voucher): ?GdImage
     {
+        $rider = $voucher->instructions->rider;
         $stamp = $rider->stamp;
         $artworkSource = $stamp?->artwork_source?->value
             ?? match ($stamp?->source?->value ?? $rider->og_source) {
@@ -159,7 +162,8 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             'url' => filled($rider->url)
                 ? $this->urlArtwork->resolve((string) $rider->url)['image_url']
                 : null,
-            'splash' => $this->embeddedSplashImage($rider->splash),
+            'splash' => $this->embeddedSplashImage($rider->splash)
+                ?? $this->splashArtwork->dataUrl($voucher),
             default => null,
         };
 

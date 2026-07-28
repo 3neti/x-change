@@ -8,6 +8,7 @@ use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
+use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
@@ -23,6 +24,7 @@ use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
+use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('generates a pay code by resolving issuer, estimating cost, allocating revenue, and issuing voucher', function () {
@@ -38,6 +40,9 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
         'cash' => [
             'amount' => 100.0,
             'currency' => 'PHP',
+            'validation' => [
+                'country' => 'PH',
+            ],
         ],
         'inputs' => [
             'fields' => ['selfie'],
@@ -59,7 +64,10 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
             'idempotency_key' => 'idem-123',
             'correlation_id' => 'corr-456',
         ],
+        'count' => 1,
     ];
+    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
+        ->normalize($input);
 
     $estimate = new PricingEstimateData(
         currency: 'PHP',
@@ -85,7 +93,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')
         ->once()
-        ->with($input)
+        ->with($normalizedInput)
         ->andReturn($issuer);
 
     $wallets = Mockery::mock(WalletAccessContract::class);
@@ -107,13 +115,13 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     $estimateAction = Mockery::mock(EstimatePayCodeCost::class);
     $estimateAction->shouldReceive('handle')
         ->once()
-        ->with($input)
+        ->with($normalizedInput)
         ->andReturn($estimate);
 
     $issuance = Mockery::mock(PayCodeIssuanceContract::class);
     $issuance->shouldReceive('issue')
         ->once()
-        ->with($issuer, $input)
+        ->with($issuer, $normalizedInput)
         ->andReturn($issued);
 
     $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
@@ -122,7 +130,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     $commercialSales = Mockery::mock(PayCodeCommercialSaleService::class);
     $commercialSales->shouldReceive('post')
         ->once()
-        ->with($issuer, $input, $issued, 'manual')
+        ->with($issuer, $normalizedInput, $issued, 'manual')
         ->andReturn([
             'debit' => [
                 'id' => 501,
@@ -130,6 +138,12 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
             ],
             'allocations' => [],
         ]);
+
+    $splashArtwork = Mockery::mock(RiderSplashArtworkSnapshotterContract::class);
+    $splashArtwork->shouldReceive('prepare')
+        ->once()
+        ->with($normalizedInput)
+        ->andReturn($normalizedInput);
 
     $funding = Mockery::mock(ProviderFundingPolicyContract::class);
     $funding->shouldReceive('assertCanIssue')
@@ -152,6 +166,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
         $allocator,
         funding: $funding,
         commercialSales: $commercialSales,
+        splashArtwork: $splashArtwork,
     );
 
     $result = $action->handle($input);
@@ -175,11 +190,13 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
 
 it('throws when issuer cannot be resolved', function () {
     $input = ['cash' => ['amount' => 100.0, 'currency' => 'PHP']];
+    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
+        ->normalize($input);
 
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')
         ->once()
-        ->with($input)
+        ->with($normalizedInput)
         ->andReturn(null);
 
     $wallets = Mockery::mock(WalletAccessContract::class);
@@ -214,6 +231,8 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
         'feedback' => [],
         'rider' => [],
     ];
+    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
+        ->normalize($input);
 
     $estimate = new PricingEstimateData(
         currency: 'PHP',
@@ -225,7 +244,7 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')
         ->once()
-        ->with($input)
+        ->with($normalizedInput)
         ->andReturn($issuer);
 
     $wallets = Mockery::mock(WalletAccessContract::class);
@@ -251,7 +270,7 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
     $estimateAction = Mockery::mock(EstimatePayCodeCost::class);
     $estimateAction->shouldReceive('handle')
         ->once()
-        ->with($input)
+        ->with($normalizedInput)
         ->andReturn($estimate);
 
     $issuance = Mockery::mock(PayCodeIssuanceContract::class);
@@ -289,11 +308,13 @@ it('throws provisioning required when issuer provider wallet is missing', functi
         'feedback' => [],
         'rider' => [],
     ];
+    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
+        ->normalize($input);
 
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')
         ->once()
-        ->with($input)
+        ->with($normalizedInput)
         ->andReturn($issuer);
 
     $wallets = Mockery::mock(WalletAccessContract::class);

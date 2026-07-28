@@ -39,6 +39,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
@@ -460,6 +461,7 @@ return [
         'claim_share_card_renderer' => GdRiderStampClaimShareCardRenderer::class,
         'rider_stamp_copy' => DefaultRiderStampCopyResolver::class,
         'rider_stamp_recipient' => DefaultRiderStampRecipientResolver::class,
+        'rider_splash_artwork_snapshotter' => DefaultRiderSplashArtworkSnapshotter::class,
         'redemption_context_resolver' => DefaultRedemptionContextResolverService::class,
         'redemption_validation' => DefaultRedemptionValidationService::class,
         'redemption_processor' => DefaultRedemptionProcessorService::class,
@@ -1835,6 +1837,39 @@ return [
                 'fallback_label' => env(
                     'XCHANGE_CLAIM_SHARE_RECIPIENT_FALLBACK',
                     'Anyone with this Pay Code',
+                ),
+            ],
+            'splash_artwork' => [
+                'enabled' => (bool) env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_ENABLED',
+                    true,
+                ),
+                'disk' => env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_DISK',
+                    'local',
+                ),
+                'directory' => env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_DIRECTORY',
+                    'x-change/claim/splash-artwork',
+                ),
+                'allowed_hosts' => array_values(array_filter(array_map(
+                    'trim',
+                    explode(',', (string) env(
+                        'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_HOSTS',
+                        'raw.githubusercontent.com',
+                    )),
+                ))),
+                'connect_timeout_seconds' => (int) env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_CONNECT_TIMEOUT_SECONDS',
+                    3,
+                ),
+                'timeout_seconds' => (int) env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_TIMEOUT_SECONDS',
+                    6,
+                ),
+                'maximum_image_bytes' => (int) env(
+                    'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_MAXIMUM_IMAGE_BYTES',
+                    2097152,
                 ),
             ],
             'site_name' => env(
