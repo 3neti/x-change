@@ -133,9 +133,36 @@ Stamp selects Rider Splash
 ```
 
 The local renderer accepts embedded `data:image` artwork from an explicitly
-selected Splash. It does not server-fetch arbitrary image URLs found in Splash
-HTML. A future remote-Splash adapter must apply the same HTTPS host allowlist,
-redirect, MIME, byte-limit, and timeout controls as the Rider URL resolver.
+selected Splash. For an allowed remote Splash image, issuance first creates a
+validated, content-addressed snapshot on a private filesystem disk. The
+snapshot boundary:
+
+- accepts HTTPS only;
+- requires an exact configured host match;
+- refuses redirects and URL credentials;
+- enforces connect, response-time, byte, MIME, dimension, and pixel limits;
+- verifies the decoded image rather than trusting its filename;
+- stores bytes by SHA-256; and
+- persists only a safe descriptor in Voucher instruction metadata.
+
+The safe descriptor contains the schema, hash, MIME type, dimensions, and
+capture time. It never exposes a source URL, filesystem disk, or storage path.
+Caller-supplied descriptors are discarded during issuance.
+
+The public share-card request reads only the validated snapshot. It never
+fetches a remote Splash URL, mutates the Voucher, or turns a crawler request
+into an outbound network request. Missing or invalid snapshots fall back to
+x-change branding.
+
+Existing Pay Codes may be backfilled explicitly:
+
+```shell
+php artisan x-change:claim:snapshot-splash-artwork CODE --json
+```
+
+This is a presentation-only metadata operation. It cannot authorize a claim,
+change a claim destination, call a settlement provider, post Treasury entries,
+or move money.
 
 The server never publishes a canvas data URI, raw Rider URL artwork, or raw
 Rider Splash artwork as `og:image`. HTML copy is reduced to plain text and
@@ -178,6 +205,13 @@ XCHANGE_CLAIM_SHARE_SPLASH_DESCRIPTION
 XCHANGE_CLAIM_SHARE_SHOW_RECIPIENT
 XCHANGE_CLAIM_SHARE_RECIPIENT_EYEBROW
 XCHANGE_CLAIM_SHARE_RECIPIENT_FALLBACK
+XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_ENABLED
+XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_DISK
+XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_DIRECTORY
+XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_HOSTS
+XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_CONNECT_TIMEOUT_SECONDS
+XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_TIMEOUT_SECONDS
+XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_MAXIMUM_IMAGE_BYTES
 ```
 
 The share card mirrors the canvas audience block by default. Mobile recipients
@@ -306,6 +340,10 @@ Acceptance requires:
   Rider Splash content;
 - automatic and explicit Stamp copy sources resolve consistently between the
   live canvas, crawler metadata, and generated share card;
+- reloaded Splash HTML is reduced to visible heading and paragraph copy instead
+  of appearing as literal markup on the Pay Code canvas;
+- selected remote Splash artwork is captured before issuance or explicitly
+  backfilled, and share-card requests never perform a remote Splash fetch;
 - public cache headers, deterministic ETag, conditional 304, and `nosniff` on
   the share-card response;
 - no Rider-controlled claim destination or remote-page embedding;

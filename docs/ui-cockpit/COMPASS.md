@@ -4743,3 +4743,34 @@ Current boundary:
   renderer cache version prevents older pre-parity images from lingering.
 - This remains presentation-only and does not change claim authorization,
   delivery, settlement, Treasury accounting, or money movement.
+
+# 2026-07-28 — Durable Rider Splash Artwork
+
+- Reloaded Rider Splash HTML is now reduced to its visible heading and first
+  paragraph before it is used as canvas copy. The original sanitized HTML
+  remains the Claim Splash introduction and artwork source; it is no longer
+  printed as literal markup on the Pay Code front.
+- Added `RiderSplashArtworkSnapshotterContract` as the package-owned boundary
+  for durable remote Splash artwork.
+- New issuance captures selected remote Splash artwork before the issuance
+  transaction, validates HTTPS host, redirects, credentials, response time,
+  bytes, MIME, dimensions, and pixel count, then stores the original bytes by
+  SHA-256 on a private disk.
+- Voucher instructions persist only a safe snapshot descriptor. Caller-supplied
+  descriptors are discarded, and public payloads never expose the source URL,
+  disk, or storage path.
+- Share-card requests read and hash-verify the stored snapshot. They never
+  fetch a remote Splash URL or mutate a Voucher at crawler request time.
+- Existing Pay Codes may be backfilled with
+  `x-change:claim:snapshot-splash-artwork {code}`. This operation changes only
+  presentation metadata and cannot authorize claims or move money.
+- Live ZU3L acceptance captured the 1536 × 1024 rose artwork, generated the
+  canonical 1200 × 630 share card, retained Rider Splash copy and the claim QR,
+  and confirmed the reloaded Quick Generate canvas contains no literal
+  `<div>` or `<img>` snippets.
+- Focused backend coverage passed with 31 tests and 182 assertions; focused
+  frontend copy coverage passed with 9 tests; Pint, the production build, and
+  `git diff --check` completed successfully.
+- Boundary remains unchanged for financial behavior: no claim authorization,
+  canonical claim destination, delivery, provider settlement, Treasury
+  accounting, or money movement changed.
