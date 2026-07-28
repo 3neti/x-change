@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Claim;
 
-use Brick\Money\Money;
 use DOMDocument;
 use Endroid\QrCode\Builder\Builder;
 use GdImage;
@@ -24,7 +23,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract
 {
-    private const string CacheVersion = 'v7';
+    private const string CacheVersion = 'v8';
 
     private const int Width = 1200;
 
@@ -36,6 +35,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         private RiderSplashArtworkSnapshotterContract $splashArtwork,
         private ClaimUrlQrRendererContract $claimQr,
         private RiderUrlArtworkPreviewResolver $urlArtwork,
+        private ClaimShareCardAmountFormatter $amounts,
     ) {}
 
     public function render(Voucher $voucher, string $claimUrl): ClaimShareCardData
@@ -399,7 +399,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         int $mutedColor,
         bool $showCopy,
     ): void {
-        $amount = $this->formattedAmount($voucher);
+        $amount = $this->amounts->format($voucher);
         $this->drawText($canvas, $amount, 46, 72, 254, $textColor);
 
         if (! $showCopy) {
@@ -542,19 +542,6 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 self::Height - $height - $margin,
             ],
         };
-    }
-
-    private function formattedAmount(Voucher $voucher): string
-    {
-        $amount = data_get($voucher, 'cash.amount');
-        $currency = (string) data_get($voucher, 'cash.currency', 'PHP');
-        $value = $amount instanceof Money
-            ? $amount->getAmount()->toFloat()
-            : (is_numeric($amount) ? (float) $amount : 0.0);
-
-        return strtoupper($currency) === 'PHP'
-            ? 'PHP '.number_format($value, 2)
-            : strtoupper($currency).' '.number_format($value, 2);
     }
 
     private function drawText(
