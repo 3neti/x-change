@@ -291,6 +291,9 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(kind.text()).toBe('Disburseable');
+        expect(kind.classes()).toContain('font-semibold');
+        expect(kind.classes()).toContain('normal-case');
+        expect(kind.classes()).not.toContain('uppercase');
 
         await type.setValue('payable');
         expect(kind.text()).toBe('Payable');

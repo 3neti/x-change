@@ -4384,7 +4384,7 @@ function instructionRecord(
                         </p>
                     </div>
                     <span
-                        class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] uppercase"
+                        class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
                         :class="voucherKindTone"
                         data-testid="cockpit-quick-generate-voucher-kind"
                     >
