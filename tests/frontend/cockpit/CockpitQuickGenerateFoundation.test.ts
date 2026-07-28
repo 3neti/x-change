@@ -1706,6 +1706,65 @@ describe('Cockpit Quick Generate foundation', () => {
         vi.unstubAllGlobals();
     });
 
+    it('presents database contention as retryable issuance state without raw details', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: false,
+            json: vi.fn().mockResolvedValue({
+                success: false,
+                code: 'PAY_CODE_ISSUANCE_BUSY',
+                message:
+                    'Pay Code issuance is temporarily busy. No Pay Code was issued. Please try again.',
+                errors: {
+                    submission: [
+                        'Pay Code issuance is temporarily busy. No Pay Code was issued. Please try again.',
+                    ],
+                },
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetchMock);
+        vi.stubGlobal('crypto', {
+            randomUUID: () => 'cockpit-ui-idempotency-busy',
+        });
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                draftContract: {
+                    template_key: 'money-changer',
+                    amount: '25',
+                    currency: 'PHP',
+                    recipient_reference: '',
+                    purpose: '',
+                },
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['GET', 'POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-submit-panel"]')
+            .trigger('submit');
+        await flushPromises();
+
+        const errors = wrapper.get(
+            '[data-testid="cockpit-quick-generate-submission-errors"]',
+        );
+
+        expect(errors.text()).toContain('Issuance is temporarily busy');
+        expect(errors.text()).toContain('No Pay Code was issued');
+        expect(errors.text()).not.toContain('SQLSTATE');
+        expect(wrapper.text()).toContain(
+            'No Pay Code was issued or charged. Please try again.',
+        );
+
+        vi.unstubAllGlobals();
+    });
+
     it('keeps one instruction hierarchy with a secondary engineering preview', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {

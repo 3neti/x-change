@@ -645,6 +645,7 @@ const activeSavedTemplate = ref<{
 } | null>(null);
 const applyingStartingPoint = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
+const submissionErrorHeading = ref('Fix these fields before issuing');
 
 hydrateLastInstructions();
 
@@ -2988,6 +2989,7 @@ async function submit(): Promise<void> {
     lastMessage.value =
         'Submitting through the idempotency-protected issuance handoff.';
     submissionErrors.value = [];
+    submissionErrorHeading.value = 'Fix these fields before issuing';
 
     const idempotencyKey = generateIdempotencyKey();
     const payload = buildPayload();
@@ -3012,12 +3014,19 @@ async function submit(): Promise<void> {
 
         if (!response.ok) {
             const normalizedErrors = normalizeSubmissionErrors(body);
+            const issuanceIsBusy =
+                stringValue(body.code) === 'PAY_CODE_ISSUANCE_BUSY';
+
             lastStatus.value = 'failed';
-            lastMessage.value =
-                normalizedErrors.length > 0
-                    ? 'Your Pay Code needs a few corrections before it can be issued.'
-                    : (stringValue(body.message) ??
-                      'The Pay Code could not be issued.');
+            lastMessage.value = issuanceIsBusy
+                ? 'No Pay Code was issued or charged. Please try again.'
+                : normalizedErrors.length > 0
+                  ? 'Your Pay Code needs a few corrections before it can be issued.'
+                  : (stringValue(body.message) ??
+                    'The Pay Code could not be issued.');
+            submissionErrorHeading.value = issuanceIsBusy
+                ? 'Issuance is temporarily busy'
+                : 'Fix these fields before issuing';
             submissionErrors.value =
                 normalizedErrors.length > 0
                     ? normalizedErrors
@@ -3040,6 +3049,7 @@ async function submit(): Promise<void> {
                 ? 'Idempotent replay returned the existing operator-safe result.'
                 : 'Pay Code issued through the existing x-change issuance handoff.';
         submissionErrors.value = [];
+        submissionErrorHeading.value = 'Fix these fields before issuing';
         lastResponse.value = body;
         issuedPayCodeDialogOpen.value = resultCode.value !== null;
         emit('submitSuccess', body);
@@ -3053,6 +3063,7 @@ async function submit(): Promise<void> {
 
         lastStatus.value = 'failed';
         lastMessage.value = body.message;
+        submissionErrorHeading.value = 'Connection issue';
         submissionErrors.value = [
             {
                 field: 'Network',
@@ -7419,7 +7430,7 @@ function instructionRecord(
             class="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100"
             data-testid="cockpit-quick-generate-submission-errors"
         >
-            <p class="font-semibold">Fix these fields before issuing</p>
+            <p class="font-semibold">{{ submissionErrorHeading }}</p>
             <ul class="mt-2 space-y-1">
                 <li
                     v-for="error in submissionErrors"

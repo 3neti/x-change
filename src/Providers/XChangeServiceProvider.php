@@ -193,6 +193,7 @@ use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Exceptions\FundingProviderUnavailable;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceBusy;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
@@ -1717,6 +1718,25 @@ class XChangeServiceProvider extends ServiceProvider
                 [],
                 500,
             );
+        });
+
+        $exceptions->renderable(function (PayCodeIssuanceBusy $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()
+                ->error(
+                    $e->getMessage(),
+                    'PAY_CODE_ISSUANCE_BUSY',
+                    [
+                        'submission' => [
+                            $e->getMessage(),
+                        ],
+                    ],
+                    503,
+                )
+                ->header('Retry-After', '1');
         });
 
         $exceptions->renderable(function (ProviderProvisioningRequired $e, Request $request) {

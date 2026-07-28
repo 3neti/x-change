@@ -9,6 +9,7 @@ use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceBusy;
 
 it('adds operator safe pricing preflight metadata before quick generate issuance', function () {
     app()->instance(EstimatePayCodeCost::class, new class extends EstimatePayCodeCost
@@ -75,6 +76,37 @@ it('keeps quick generate issuance non blocking when pricing preflight is unavail
         ->assertJsonPath('preflight.pricing.source', 'EstimatePayCodeCost')
         ->assertJsonPath('preflight.pricing.reason', RuntimeException::class)
         ->assertJsonPath('result.code', 'PC-WAVE-10D-FALLBACK');
+});
+
+it('keeps database contention details out of the quick generate response', function (): void {
+    $action = Mockery::mock(GeneratePayCode::class);
+    $action->shouldReceive('handle')
+        ->once()
+        ->andThrow(new PayCodeIssuanceBusy);
+
+    app()->instance(GeneratePayCode::class, $action);
+
+    actingAsTestUser();
+
+    $response = $this->withHeaders([
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'quick-generate-database-contention',
+    ])->post(
+        route('x-change.cockpit.quick-generate.store'),
+        cockpitWave10PricingPayload(),
+    );
+
+    $response
+        ->assertServiceUnavailable()
+        ->assertHeader('Retry-After', '1')
+        ->assertJsonPath('code', 'PAY_CODE_ISSUANCE_BUSY')
+        ->assertJsonPath('message', PayCodeIssuanceBusy::Message)
+        ->assertJsonPath('errors.submission.0', PayCodeIssuanceBusy::Message);
+
+    expect($response->getContent())
+        ->not->toContain('SQLSTATE')
+        ->not->toContain('insert into')
+        ->not->toContain('rider');
 });
 
 function cockpitWave10PricingGeneratePayCodeFake(string $code): GeneratePayCode

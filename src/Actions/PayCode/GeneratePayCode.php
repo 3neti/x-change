@@ -6,7 +6,6 @@ namespace LBHurtado\XChange\Actions\PayCode;
 
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
@@ -27,6 +26,7 @@ use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Funding\PreparePayCodeAccountFundingIssuance;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
+use LBHurtado\XChange\Services\PayCodeIssuanceTransaction;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 use RuntimeException;
@@ -105,21 +105,19 @@ class GeneratePayCode
         $input = $this->splashArtwork()->prepare($input);
         $wallet = $this->wallets->resolveForUser($issuer);
         $estimate = $this->estimatePayCodeCost->handle($input);
+        $balanceBefore = $this->wallets->getBalance($wallet);
+        $funding = $this->fundingPolicy()->assertCanIssue(
+            owner: $issuer,
+            localWallet: $wallet,
+            amount: $this->requiredIssuanceAmount($input, $estimate),
+            context: [
+                'provider' => data_get($input, 'provider'),
+                'currency' => $estimate->currency,
+                'cash_amount' => data_get($input, 'cash.amount'),
+            ],
+        );
 
-        return DB::transaction(function () use ($issuer, $wallet, $input, $estimate): GeneratePayCodeResultData {
-            $balanceBefore = $this->wallets->getBalance($wallet);
-
-            $funding = $this->fundingPolicy()->assertCanIssue(
-                owner: $issuer,
-                localWallet: $wallet,
-                amount: $this->requiredIssuanceAmount($input, $estimate),
-                context: [
-                    'provider' => data_get($input, 'provider'),
-                    'currency' => $estimate->currency,
-                    'cash_amount' => data_get($input, 'cash.amount'),
-                ],
-            );
-
+        return app(PayCodeIssuanceTransaction::class)->run(function () use ($issuer, $wallet, $input, $estimate, $balanceBefore, $funding): GeneratePayCodeResultData {
             $issued = $this->issuance->issue($issuer, $input);
             $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
                 ? $this->allocateCommercialRevenue($issuer, $input, $issued, $estimate, $funding)

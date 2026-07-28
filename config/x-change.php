@@ -175,6 +175,17 @@ return [
         'default_country' => env('XCHANGE_DEFAULT_COUNTRY', 'PH'),
     ],
 
+    'pay_code_issuance' => [
+        'transaction_attempts' => (int) env(
+            'XCHANGE_PAY_CODE_ISSUANCE_TRANSACTION_ATTEMPTS',
+            5,
+        ),
+        'sqlite_busy_timeout_milliseconds' => (int) env(
+            'XCHANGE_PAY_CODE_ISSUANCE_SQLITE_BUSY_TIMEOUT_MILLISECONDS',
+            5000,
+        ),
+    ],
+
     'branding' => [
         'name' => env('XCHANGE_BRAND_NAME', env('XCHANGE_PRODUCT_NAME', 'X-Change')),
         'logo_light' => env('XCHANGE_LOGO_LIGHT', '/vendor/x-change/images/logo-orange.png'),
