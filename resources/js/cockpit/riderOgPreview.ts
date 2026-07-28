@@ -1,4 +1,5 @@
 export type RiderOgPreviewSource = 'default' | 'message' | 'url' | 'splash';
+export type RiderArtworkSurface = 'canvas' | 'og-meta';
 
 export type RiderOgPreview = {
     source: RiderOgPreviewSource;
@@ -149,10 +150,13 @@ export function shouldRenderRiderOgSplash(
 export function buildRiderOgPreviewDocument(
     preview: RiderOgPreview,
     splashContent: string,
+    surface: RiderArtworkSurface = 'canvas',
 ): string {
     if (preview.source === 'url' && preview.imageUrl !== null) {
         return buildSandboxedPreviewDocument(
-            `<img class="artwork-cover" src="${escapeHtml(preview.imageUrl)}" alt="" />`,
+            surface === 'og-meta'
+                ? buildSafeArtworkMarkup(preview.imageUrl)
+                : `<img class="artwork-cover" src="${escapeHtml(preview.imageUrl)}" alt="" />`,
         );
     }
 
@@ -161,6 +165,15 @@ export function buildRiderOgPreviewDocument(
             ? splashContent
             : `<h1>${escapeHtml(preview.title)}</h1><p>${escapeHtml(preview.description)}</p>`,
     );
+}
+
+function buildSafeArtworkMarkup(imageUrl: string): string {
+    const safeImageUrl = escapeHtml(imageUrl);
+
+    return `<div class="artwork-safe">
+<img class="artwork-backdrop" src="${safeImageUrl}" alt="" />
+<img class="artwork-contain" src="${safeImageUrl}" alt="" />
+</div>`;
 }
 
 export function buildSandboxedPreviewDocument(content: string): string {
@@ -179,6 +192,9 @@ html, body { margin: 0; min-height: 100%; overflow: hidden; background: #020617;
 body { padding: 0; }
 img { max-width: 100%; height: auto; }
 .artwork-cover { display: block; width: 100%; height: 100vh; max-width: none; object-fit: cover; }
+.artwork-safe { position: relative; width: 100%; height: 100vh; overflow: hidden; background: #020617; }
+.artwork-backdrop { position: absolute; inset: -6%; width: 112%; height: 112%; max-width: none; object-fit: cover; filter: blur(18px); opacity: .58; transform: scale(1.08); }
+.artwork-contain { position: relative; display: block; width: 100%; height: 100vh; max-width: none; object-fit: contain; }
 h1, h2, h3, p { overflow-wrap: anywhere; }
 .text-center { text-align: center; }
 .mx-auto { margin-left: auto; margin-right: auto; }

@@ -63,7 +63,7 @@ describe('rider OG preview helpers', () => {
         expect(document).toContain('overflow-wrap: anywhere');
     });
 
-    it('renders resolved action link artwork as a full-bleed safe image', () => {
+    it('renders URL artwork full bleed on canvas and uncropped in OG Meta preview', () => {
         const preview = resolveRiderOgPreview({
             source: 'url',
             url: 'https://open.spotify.com/track/example',
@@ -76,7 +76,16 @@ describe('rider OG preview helpers', () => {
                 reference: 'Spotify',
             },
         });
-        const document = buildRiderOgPreviewDocument(preview, '');
+        const canvasDocument = buildRiderOgPreviewDocument(
+            preview,
+            '',
+            'canvas',
+        );
+        const ogMetaDocument = buildRiderOgPreviewDocument(
+            preview,
+            '',
+            'og-meta',
+        );
 
         expect(preview).toMatchObject({
             title: 'An Example Track',
@@ -84,10 +93,14 @@ describe('rider OG preview helpers', () => {
             reference: 'Spotify',
             imageUrl: 'https://i.scdn.co/image/example-artwork',
         });
-        expect(document).toContain(
+        expect(canvasDocument).toContain(
             'src="https://i.scdn.co/image/example-artwork"',
         );
-        expect(document).toContain('class="artwork-cover"');
-        expect(document).not.toContain('<iframe');
+        expect(canvasDocument).toContain('class="artwork-cover"');
+        expect(canvasDocument).not.toContain('class="artwork-contain"');
+        expect(ogMetaDocument).toContain('class="artwork-backdrop"');
+        expect(ogMetaDocument).toContain('class="artwork-contain"');
+        expect(ogMetaDocument).not.toContain('class="artwork-cover"');
+        expect(ogMetaDocument).not.toContain('<iframe');
     });
 });

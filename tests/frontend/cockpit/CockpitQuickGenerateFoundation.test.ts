@@ -437,8 +437,14 @@ describe('Cockpit Quick Generate foundation', () => {
                     '[data-testid="cockpit-quick-generate-rider-artwork-default"]',
                 )
                 .text(),
-        ).toContain(
-            'Messages, action links, and claim introductions remain active',
+        ).toContain('Rider Message, Rider URL, and Rider Splash remain active');
+        const splashPreview = wrapper.find(
+            '[data-testid="cockpit-quick-generate-rider-splash-html-preview"]',
+        );
+        expect(splashPreview.exists()).toBe(true);
+        expect(splashPreview.classes()).toContain('aspect-[1.72/1]');
+        expect(splashPreview.attributes('srcdoc')).toContain(
+            'A distinct beneficiary splash',
         );
         expect(
             wrapper
@@ -464,6 +470,13 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .exists(),
         ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-og-html-preview"]',
+                )
+                .classes(),
+        ).toContain('aspect-[1200/630]');
         expect(design.attributes('srcdoc')).toContain(
             'A purpose-led OG design',
         );
@@ -521,7 +534,14 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
                 .attributes('srcdoc'),
-        ).toContain('https://i.scdn.co/image/example-artwork');
+        ).toContain('class="artwork-cover"');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-og-html-preview"]',
+                )
+                .attributes('srcdoc'),
+        ).toContain('class="artwork-contain"');
         expect(
             wrapper
                 .find(

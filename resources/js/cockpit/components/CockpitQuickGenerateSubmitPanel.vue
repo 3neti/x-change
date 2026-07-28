@@ -33,8 +33,6 @@ import {
     buildRiderOgPreviewDocument,
     buildRiderSplashContent,
     buildSandboxedPreviewDocument,
-    escapeHtml,
-    looksLikeHtml,
     resolveRiderOgPreview,
 } from '../riderOgPreview';
 import type { RiderOgPreview } from '../riderOgPreview';
@@ -42,6 +40,7 @@ import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
+import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
 
 const props = defineProps<{
     mutationContract?: CockpitQuickGenerateMutationContract;
@@ -2179,16 +2178,8 @@ const riderSplashContent = computed<string>(() => {
     });
 });
 
-const riderSplashPreviewIsHtml = computed<boolean>(() => {
-    return looksLikeHtml(riderSplash.value.trim());
-});
-
 const riderSplashPreviewDocument = computed<string>(() => {
-    const body = riderSplashPreviewIsHtml.value
-        ? riderSplashContent.value
-        : `<p>${escapeHtml(riderSplashContent.value || 'No Introduction Message Yet.')}</p>`;
-
-    return buildSandboxedPreviewDocument(body);
+    return buildSandboxedPreviewDocument(riderSplashContent.value);
 });
 
 const riderOgPreview = computed<RiderOgPreview>(() => {
@@ -2203,10 +2194,19 @@ const riderOgPreview = computed<RiderOgPreview>(() => {
     });
 });
 
-const riderOgPreviewDocument = computed<string>(() => {
+const riderCanvasArtworkDocument = computed<string>(() => {
     return buildRiderOgPreviewDocument(
         riderOgPreview.value,
         riderSplashContent.value,
+        'canvas',
+    );
+});
+
+const riderOgMetaPreviewDocument = computed<string>(() => {
+    return buildRiderOgPreviewDocument(
+        riderOgPreview.value,
+        riderSplashContent.value,
+        'og-meta',
     );
 });
 
@@ -4061,7 +4061,7 @@ function instructionRecord(
                     :issued-code="resultCode"
                     :has-rider-design="usesRiderArtwork"
                     :rider-design-source="riderOgPreview.source"
-                    :rider-design-document="riderOgPreviewDocument"
+                    :rider-design-document="riderCanvasArtworkDocument"
                     :cost-estimate="livePricingEstimate"
                     :cost-loading="livePricingEstimating"
                     :cost-error="livePricingEstimateError"
@@ -4102,7 +4102,7 @@ function instructionRecord(
             :instruction-labels="canvasInstructionLabels"
             :has-rider-design="usesRiderArtwork"
             :rider-design-source="riderOgPreview.source"
-            :rider-design-document="riderOgPreviewDocument"
+            :rider-design-document="riderCanvasArtworkDocument"
             :cost-estimate="issuedCostEstimate"
             :quantity="count"
             :claim-url="beneficiaryClaimUrl"
@@ -5544,43 +5544,16 @@ function instructionRecord(
                                         Custom HTML is isolated inside this
                                         preview.
                                     </p>
-                                    <div class="mt-2 grid gap-1">
-                                        <iframe
-                                            v-if="riderSplashPreviewIsHtml"
+                                    <div class="mt-2">
+                                        <CockpitRiderPreviewFrame
                                             title="Rider Splash Preview"
-                                            sandbox=""
-                                            class="h-80 w-full rounded-lg border border-orange-200 bg-slate-950 dark:border-orange-900/60"
+                                            surface="splash"
+                                            class="border-orange-200 dark:border-orange-900/60"
                                             data-testid="cockpit-quick-generate-rider-splash-html-preview"
-                                            :srcdoc="riderSplashPreviewDocument"
+                                            :document="
+                                                riderSplashPreviewDocument
+                                            "
                                         />
-                                        <template v-else>
-                                            <p
-                                                v-if="
-                                                    riderSplashHeadline.trim() !==
-                                                    ''
-                                                "
-                                                class="text-sm font-bold text-slate-950 dark:text-slate-50"
-                                            >
-                                                {{ riderSplashHeadline }}
-                                            </p>
-                                            <p
-                                                class="text-xs leading-snug whitespace-pre-line text-slate-700 dark:text-slate-300"
-                                            >
-                                                {{
-                                                    riderSplash.trim() ||
-                                                    'No Introduction Message Yet.'
-                                                }}
-                                            </p>
-                                            <p
-                                                v-if="
-                                                    riderSplashCtaText.trim() !==
-                                                    ''
-                                                "
-                                                class="mt-2 inline-flex w-fit rounded-full bg-orange-100 px-3 py-1 text-[11px] font-semibold text-orange-800 dark:bg-orange-900/60 dark:text-orange-100"
-                                            >
-                                                {{ riderSplashCtaText }}
-                                            </p>
-                                        </template>
                                     </div>
                                 </div>
                             </div>
@@ -5640,9 +5613,9 @@ function instructionRecord(
                                     <p
                                         class="mt-1 text-[11px] leading-snug text-emerald-700 dark:text-emerald-300"
                                     >
-                                        Messages, action links, and claim
-                                        introductions remain active without
-                                        replacing the Pay Code canvas.
+                                        Rider Message, Rider URL, and Rider
+                                        Splash remain active without replacing
+                                        the Pay Code canvas.
                                     </p>
                                 </div>
                                 <template v-else>
@@ -5656,12 +5629,12 @@ function instructionRecord(
                                             {{ riderOgPreview.reference }}
                                         </span>
                                     </div>
-                                    <iframe
+                                    <CockpitRiderPreviewFrame
                                         title="OG Meta Preview"
-                                        sandbox=""
-                                        class="mt-2 h-64 w-full rounded-lg border border-sky-200 bg-slate-950 dark:border-sky-900/60"
+                                        surface="og-meta"
+                                        class="mt-2 border-sky-200 dark:border-sky-900/60"
                                         data-testid="cockpit-quick-generate-rider-og-html-preview"
-                                        :srcdoc="riderOgPreviewDocument"
+                                        :document="riderOgMetaPreviewDocument"
                                     />
                                     <p
                                         class="mt-2 text-[11px] text-sky-800 dark:text-sky-200"
