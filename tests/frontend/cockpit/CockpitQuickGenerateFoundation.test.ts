@@ -29,6 +29,10 @@ import {
 import { resolveRiderStampPreview } from '../../../resources/js/cockpit/riderStampPreview';
 
 vi.mock('@inertiajs/vue3', () => ({
+    Link: {
+        props: ['href'],
+        template: '<a :href="href?.url ?? href"><slot /></a>',
+    },
     router: {
         reload: vi.fn(),
     },
@@ -116,6 +120,15 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
                 .text(),
         ).toBe('Cost');
+        expect(
+            wrapper
+                .html()
+                .indexOf('data-testid="cockpit-pay-code-canvas-front"'),
+        ).toBeLessThan(
+            wrapper
+                .html()
+                .indexOf('data-testid="cockpit-pay-code-canvas-controls"'),
+        );
     });
 
     it('keeps all safe Rider Splash supporting copy on the canvas', () => {
@@ -3012,6 +3025,18 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).not.toContain(
             'Changes appear here before issuance.',
         );
+        const canvasControls = essentialsCanvas.find(
+            '[data-testid="cockpit-pay-code-canvas-controls"]',
+        );
+        const fundingLink = canvasControls.find(
+            '[data-testid="cockpit-quick-generate-funding-link"]',
+        );
+
+        expect(canvasControls.text()).toContain('Edit Stamp');
+        expect(canvasControls.text()).toContain('Issue Pay Code');
+        expect(canvasControls.text()).toContain('Stamp');
+        expect(canvasControls.text()).toContain('Cost');
+        expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(

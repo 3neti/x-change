@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import CockpitPayCodeTemplateStoreController from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateStoreController';
-import { router } from '@inertiajs/vue3';
+import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
+import { Link, router } from '@inertiajs/vue3';
 import {
     Clock3,
     FilePlus2,
+    Landmark,
     LayoutTemplate,
     Palette,
     RotateCcw,
@@ -4500,10 +4502,21 @@ function instructionRecord(
                     :cost-error="livePricingEstimateError"
                     :quantity="count"
                 >
+                    <template #navigation>
+                        <Link
+                            :href="fundingIndex()"
+                            prefetch
+                            class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
+                            data-testid="cockpit-quick-generate-funding-link"
+                        >
+                            <Landmark class="size-3.5" aria-hidden="true" />
+                            Funding
+                        </Link>
+                    </template>
                     <template #action>
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-sky-400 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                            class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-sky-400 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                             data-testid="cockpit-quick-generate-edit-front-button"
                             :disabled="processing"
                             @click="openFrontDesignEditor"
@@ -4513,7 +4526,7 @@ function instructionRecord(
                         </button>
                         <button
                             type="submit"
-                            class="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                            class="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                             data-testid="cockpit-quick-generate-canvas-submit-button"
                             :disabled="!canSubmit || processing"
                         >

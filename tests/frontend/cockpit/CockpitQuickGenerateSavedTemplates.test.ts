@@ -8,6 +8,10 @@ const { post } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
+    Link: {
+        props: ['href'],
+        template: '<a :href="href?.url ?? href"><slot /></a>',
+    },
     router: {
         post,
         reload: vi.fn(),

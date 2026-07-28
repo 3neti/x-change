@@ -171,6 +171,10 @@ export default defineConfig({
                     __dirname,
                     'tests/frontend/stubs/funding-reconciliation-request-route.ts',
                 ),
+            '@/routes/x-change/cockpit/funding': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/funding-index-route.ts',
+            ),
             '@/routes/x-change/claim/flows': path.resolve(
                 __dirname,
                 'tests/frontend/stubs/claim-flow-route.ts',

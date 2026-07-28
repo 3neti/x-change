@@ -5,6 +5,10 @@ import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/compo
 import { cockpitQuickGenerateTemplates } from '../../../resources/js/cockpit/quickGenerateDefaults';
 
 vi.mock('@inertiajs/vue3', () => ({
+    Link: {
+        props: ['href'],
+        template: '<a :href="href?.url ?? href"><slot /></a>',
+    },
     router: {
         reload: vi.fn(),
     },
