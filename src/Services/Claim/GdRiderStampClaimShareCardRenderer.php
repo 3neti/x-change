@@ -478,6 +478,36 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 $y,
                 $foreground,
             ),
+            $indicatorKey === 'input.name' => $this->paintPersonIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            $indicatorKey === 'input.email' => $this->paintEnvelopeIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            $indicatorKey === 'input.address' => $this->paintLocationIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            $indicatorKey === 'input.gross_monthly_income' => $this->paintCoinIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
+            $indicatorKey === 'input.reference_code' => $this->paintHashIndicator(
+                $canvas,
+                $x,
+                $y,
+                $foreground,
+            ),
             str_contains($indicatorKey, 'mobile') => $this->paintMobileIndicator(
                 $canvas,
                 $x,
@@ -604,6 +634,39 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
     ): void {
         imagerectangle($canvas, $x + 13, $y + 7, $x + 25, $y + 31, $color);
         imagefilledellipse($canvas, $x + 19, $y + 27, 2, 2, $color);
+    }
+
+    private function paintPersonIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageellipse($canvas, $x + 19, $y + 14, 9, 9, $color);
+        imagearc($canvas, $x + 19, $y + 29, 20, 15, 190, 350, $color);
+    }
+
+    private function paintEnvelopeIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imagerectangle($canvas, $x + 8, $y + 11, $x + 30, $y + 27, $color);
+        imageline($canvas, $x + 8, $y + 12, $x + 19, $y + 21, $color);
+        imageline($canvas, $x + 30, $y + 12, $x + 19, $y + 21, $color);
+    }
+
+    private function paintHashIndicator(
+        GdImage $canvas,
+        int $x,
+        int $y,
+        int $color,
+    ): void {
+        imageline($canvas, $x + 14, $y + 8, $x + 11, $y + 30, $color);
+        imageline($canvas, $x + 25, $y + 8, $x + 22, $y + 30, $color);
+        imageline($canvas, $x + 8, $y + 15, $x + 29, $y + 15, $color);
+        imageline($canvas, $x + 7, $y + 23, $x + 28, $y + 23, $color);
     }
 
     private function paintKeyIndicator(

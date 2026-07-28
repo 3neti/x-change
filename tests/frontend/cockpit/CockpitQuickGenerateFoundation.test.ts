@@ -411,6 +411,52 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('grid-cols-[minmax(0,1fr)_auto]');
     });
 
+    it('keeps a compact Stamp rail and explains overflowed instructions', () => {
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: '100',
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                instructionKeys: [
+                    'input.mobile',
+                    'input.name',
+                    'input.email',
+                    'validation.mobile',
+                    'validation.otp',
+                    'validation.identity',
+                    'validation.location',
+                    'claim.multiple',
+                ],
+            },
+        });
+
+        const indicators = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-stamp-indicators"] [data-testid="cockpit-pay-code-indicator"]',
+        );
+        const overflow = wrapper.get(
+            '[data-testid="cockpit-pay-code-stamp-indicator-overflow"]',
+        );
+
+        expect(indicators).toHaveLength(6);
+        expect(
+            indicators.every(
+                (indicator) =>
+                    indicator.get('[role="img"]').attributes('tabindex') ===
+                        '0' &&
+                    indicator
+                        .get('[role="img"]')
+                        .attributes('aria-describedby') !== undefined,
+            ),
+        ).toBe(true);
+        expect(overflow.text()).toContain('+3');
+        expect(overflow.attributes('tabindex')).toBe('0');
+        expect(overflow.attributes('aria-label')).toBe('3 more instructions');
+        expect(overflow.get('[role="tooltip"]').text()).toBe(
+            'Identity Check, Location Validation, Multiple Claims',
+        );
+    });
+
     it('splits eight priced instructions and keeps the total in the second ledger column', async () => {
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {
