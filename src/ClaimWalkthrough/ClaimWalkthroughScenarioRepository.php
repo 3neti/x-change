@@ -47,6 +47,7 @@ final class ClaimWalkthroughScenarioRepository
             'feedback' => false,
         ];
         $riderPreviewFixture['og_preview'] = (new RiderOgPreviewPayloadFactory)->make($riderPreviewFixture);
+        $riderPreviewFixture['stamp_preview'] = (new RiderStampPreviewPayloadFactory)->make($riderPreviewFixture);
 
         return [
             'claim_basic_15_no_inputs_no_riders_no_feedbacks' => [

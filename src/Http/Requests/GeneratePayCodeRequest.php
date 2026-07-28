@@ -6,6 +6,12 @@ namespace LBHurtado\XChange\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use LBHurtado\Voucher\Data\RiderStampData;
+use LBHurtado\Voucher\Enums\RiderContentFormat;
+use LBHurtado\Voucher\Enums\RiderStampFit;
+use LBHurtado\Voucher\Enums\RiderStampPosition;
+use LBHurtado\Voucher\Enums\RiderStampSource;
+use LBHurtado\Voucher\Enums\RiderStampTheme;
 use LBHurtado\XChange\Http\Requests\Concerns\SanitizesRiderSplashHtml;
 use LBHurtado\XChange\Http\Requests\Concerns\ValidatesMinimumWithdrawalPolicy;
 
@@ -66,6 +72,17 @@ class GeneratePayCodeRequest extends FormRequest
             'rider.splash_meta.sanitized' => ['nullable', 'boolean'],
             'rider.splash_meta.html_profile' => ['nullable', 'string'],
             'rider.og_source' => ['nullable'],
+            'rider.message_format' => ['nullable', Rule::enum(RiderContentFormat::class)],
+            'rider.splash_format' => ['nullable', Rule::enum(RiderContentFormat::class)],
+            'rider.stamp' => ['nullable', 'array'],
+            'rider.stamp.source' => ['nullable', Rule::enum(RiderStampSource::class)],
+            'rider.stamp.title' => ['nullable', 'string', 'max:120'],
+            'rider.stamp.description' => ['nullable', 'string', 'max:240'],
+            'rider.stamp.fit' => ['nullable', Rule::enum(RiderStampFit::class)],
+            'rider.stamp.position' => ['nullable', Rule::enum(RiderStampPosition::class)],
+            'rider.stamp.scrim' => ['nullable', 'integer', 'between:0,100'],
+            'rider.stamp.theme' => ['nullable', Rule::enum(RiderStampTheme::class)],
+            'rider.stamp.version' => ['nullable', 'integer', Rule::in([RiderStampData::SCHEMA_VERSION])],
 
             'count' => ['nullable', 'integer', 'min:1'],
             'provider' => ['nullable', 'string', 'max:80'],
