@@ -158,6 +158,45 @@ describe('issued Pay Code dialog', () => {
         });
     });
 
+    it('preserves explicit rider artwork composition in the finalized canvas', () => {
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'PAY-ART-1',
+                amount: 50,
+                currency: 'PHP',
+                purpose: 'Family support',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                hasRiderDesign: true,
+                riderDesignSource: 'message',
+                riderDesignDocument:
+                    '<!doctype html><html><body><h1>Family support</h1></body></html>',
+            },
+            global: {
+                stubs: {
+                    Teleport: true,
+                },
+            },
+        });
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-purpose"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-rider-scrim"]')
+                .exists(),
+        ).toBe(true);
+    });
+
     it('shows quantity math on the finalized Pay Code cost total', async () => {
         const wrapper = mount(CockpitIssuedPayCodeDialog, {
             props: {

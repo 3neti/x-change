@@ -59,5 +59,7 @@ describe('rider OG preview helpers', () => {
 
         expect(document).toContain('Content-Security-Policy');
         expect(document).toContain('Issuer &lt;headline&gt;');
+        expect(document).toContain('overflow: hidden');
+        expect(document).toContain('overflow-wrap: anywhere');
     });
 });

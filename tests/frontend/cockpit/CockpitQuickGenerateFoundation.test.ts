@@ -113,6 +113,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 expiry: '1 day',
                 instructionLabels: ['Mobile verified', 'OTP'],
                 hasRiderDesign: true,
+                riderDesignSource: 'message',
                 riderDesignDocument:
                     '<!doctype html><html><body><h1>Family support</h1></body></html>',
                 costEstimate: {
@@ -143,6 +144,24 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(design.exists()).toBe(true);
         expect(design.attributes('sandbox')).toBe('');
+        expect(design.classes()).toContain('opacity-60');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-canvas-rider-scrim"]',
+                )
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-purpose"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-tagline"]')
+                .classes(),
+        ).toContain('text-white/80');
         expect(design.attributes('class')).not.toContain('opacity-45');
         expect(design.attributes('srcdoc')).toContain('Family support');
         expect(

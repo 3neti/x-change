@@ -150,9 +150,10 @@ export function buildSandboxedPreviewDocument(content: string): string {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src data:; base-uri 'none'; form-action 'none';" />
 <style>
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; background: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+html, body { margin: 0; min-height: 100%; overflow: hidden; background: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 body { padding: 0; }
 img { max-width: 100%; height: auto; }
+h1, h2, h3, p { overflow-wrap: anywhere; }
 .text-center { text-align: center; }
 .mx-auto { margin-left: auto; margin-right: auto; }
 .relative { position: relative; }

@@ -10,6 +10,7 @@ import type {
     PayCodeCostCharge,
     PayCodeCostEstimate,
 } from '../../composables/usePayCodeCostEstimate';
+import type { RiderOgPreviewSource } from '../riderOgPreview';
 
 const props = withDefaults(
     defineProps<{
@@ -23,6 +24,7 @@ const props = withDefaults(
         instructionLabels?: string[];
         issuedCode?: string | null;
         hasRiderDesign?: boolean;
+        riderDesignSource?: RiderOgPreviewSource;
         riderDesignDocument?: string;
         presentation?: 'live' | 'finalized';
         costEstimate?: PayCodeCostEstimate | null;
@@ -37,6 +39,7 @@ const props = withDefaults(
         instructionLabels: () => [],
         issuedCode: null,
         hasRiderDesign: false,
+        riderDesignSource: 'default',
         riderDesignDocument: '',
         presentation: 'live',
         costEstimate: null,
@@ -398,14 +401,15 @@ function stringValue(value: unknown): string | null {
                 sandbox=""
                 tabindex="-1"
                 aria-hidden="true"
-                class="pointer-events-none absolute inset-0 h-full w-full border-0"
+                class="pointer-events-none absolute inset-0 h-full w-full border-0 opacity-60"
                 data-testid="cockpit-pay-code-canvas-rider-og-design"
                 :srcdoc="riderDesignDocument"
             />
             <div
                 v-if="hasRiderDesign"
-                class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/10"
+                class="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/55"
                 aria-hidden="true"
+                data-testid="cockpit-pay-code-canvas-rider-scrim"
             />
             <div
                 class="absolute inset-y-0 left-0 w-2 bg-emerald-600"
@@ -435,12 +439,22 @@ function stringValue(value: unknown): string | null {
                         />
                         <div class="min-w-0">
                             <p
-                                class="text-[0.65rem] font-black tracking-[0.22em] text-emerald-700 uppercase dark:text-emerald-300"
+                                class="text-[0.65rem] font-black tracking-[0.22em] uppercase"
+                                :class="
+                                    hasRiderDesign
+                                        ? 'text-emerald-300'
+                                        : 'text-emerald-700 dark:text-emerald-300'
+                                "
                             >
                                 x-change
                             </p>
                             <p
-                                class="mt-1 max-w-52 text-[0.62rem] leading-4 font-semibold text-balance text-slate-600 @md:text-xs dark:text-amber-100/70"
+                                class="mt-1 max-w-52 text-[0.62rem] leading-4 font-semibold text-balance @md:text-xs"
+                                :class="
+                                    hasRiderDesign
+                                        ? 'text-white/80'
+                                        : 'text-slate-600 dark:text-amber-100/70'
+                                "
                                 data-testid="cockpit-pay-code-canvas-tagline"
                             >
                                 Money should adapt to people.
@@ -497,13 +511,18 @@ function stringValue(value: unknown): string | null {
                         {{ formattedAmount }}
                     </p>
                     <p
-                        v-if="purpose"
+                        v-if="
+                            purpose &&
+                            (!hasRiderDesign ||
+                                riderDesignSource !== 'message')
+                        "
                         class="mt-1 max-w-[80%] truncate text-xs"
                         :class="
                             hasRiderDesign
                                 ? 'text-white/75'
                                 : 'text-slate-600 dark:text-amber-100/70'
-                        "
+                            "
+                        data-testid="cockpit-pay-code-canvas-purpose"
                     >
                         {{ purpose }}
                     </p>
