@@ -49,6 +49,32 @@ it('backfills a durable Rider Splash artwork snapshot by Pay Code', function ():
     expect(data_get(
         $voucher,
         'instructions.metadata.custom.rider_splash_artwork.schema',
-    ))->toBe('x-change.rider-splash-artwork-snapshot.v1');
+    ))->toBe('x-change.rider-splash-artwork-snapshot.v1')
+        ->and(data_get(
+            $voucher,
+            'instructions.metadata.custom.rider_stamp_artifact.schema',
+        ))->toBe('x-change.rider-stamp-artifact.v1')
+        ->and(data_get(
+            $voucher,
+            'instructions.metadata.custom.rider_stamp_artifact.width',
+        ))->toBe(1200)
+        ->and(data_get(
+            $voucher,
+            'instructions.metadata.custom.rider_stamp_artifact.height',
+        ))->toBe(630)
+        ->and(data_get(
+            $voucher,
+            'instructions.metadata.custom.rider_stamp_artifact.mime_type',
+        ))->toBe('image/png');
+
+    $sha256 = data_get(
+        $voucher,
+        'instructions.metadata.custom.rider_stamp_artifact.sha256',
+    );
+
+    expect($sha256)->toBeString()->toHaveLength(64);
+    Storage::disk('local')->assertExists(
+        "x-change/claim/stamp-artifacts/{$sha256}.png",
+    );
     Http::assertSentCount(1);
 });

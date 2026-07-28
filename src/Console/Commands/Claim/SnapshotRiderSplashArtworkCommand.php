@@ -7,6 +7,8 @@ namespace LBHurtado\XChange\Console\Commands\Claim;
 use Illuminate\Console\Command;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
+use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
+use LBHurtado\XChange\Exceptions\RiderStampArtifactUnavailable;
 
 final class SnapshotRiderSplashArtworkCommand extends Command
 {
@@ -15,10 +17,11 @@ final class SnapshotRiderSplashArtworkCommand extends Command
         {--force : Replace an existing valid snapshot}
         {--json : Emit a machine-readable result}';
 
-    protected $description = 'Capture validated Rider Splash artwork for a durable claim share card';
+    protected $description = 'Capture trusted Rider Splash artwork and materialize its immutable Stamp image';
 
     public function handle(
         RiderSplashArtworkSnapshotterContract $snapshots,
+        RiderStampArtifactStoreContract $artifacts,
     ): int {
         $code = strtoupper(trim((string) $this->argument('code')));
         $voucher = Voucher::query()->where('code', $code)->first();
@@ -46,12 +49,29 @@ final class SnapshotRiderSplashArtworkCommand extends Command
             ], self::FAILURE);
         }
 
+        try {
+            $artifact = $artifacts->materialize(
+                $voucher,
+                route('x-change.claim.show', ['code' => $voucher->code]),
+                (bool) $this->option('force'),
+            );
+        } catch (RiderStampArtifactUnavailable) {
+            return $this->renderResult([
+                'schema' => 'x-change.rider-splash-artwork-snapshot-command.v1',
+                'success' => false,
+                'status' => 'artifact_unavailable',
+                'pay_code' => $code,
+                'snapshot' => $snapshot->toArray(),
+            ], self::FAILURE);
+        }
+
         return $this->renderResult([
             'schema' => 'x-change.rider-splash-artwork-snapshot-command.v1',
             'success' => true,
             'status' => 'ready',
             'pay_code' => $code,
             'snapshot' => $snapshot->toArray(),
+            'artifact' => $artifact->toArray(),
             'external_artwork_fetch_possible' => true,
             'money_changed' => false,
         ], self::SUCCESS);
@@ -72,7 +92,7 @@ final class SnapshotRiderSplashArtworkCommand extends Command
         }
 
         if ($payload['success']) {
-            $this->info('Rider Splash artwork snapshot ready.');
+            $this->info('Rider Splash artwork snapshot and immutable Stamp ready.');
         } else {
             $this->error('Rider Splash artwork snapshot unavailable.');
         }
