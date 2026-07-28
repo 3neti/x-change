@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Data\Claim\RiderSplashArtworkSnapshotData;
 use LBHurtado\XChange\Exceptions\RiderStampArtworkUnavailable;
@@ -66,8 +68,52 @@ it('captures validated remote Splash artwork into private content-addressed stor
     expect(data_get(
         $voucher,
         'instructions.metadata.custom.rider_splash_artwork.sha256',
-    ))->toBe($snapshot->sha256);
+    ))->toBe($snapshot->sha256)
+        ->and(app(RiderSplashArtworkSnapshotterContract::class)
+            ->assertStored($voucher)?->sha256)
+        ->toBe($snapshot->sha256);
     Http::assertSentCount(1);
+});
+
+it('rejects persisted Splash artwork without a trusted stored snapshot', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'splash' => '<img src="https://github.com/example/art/blob/main/missing.png?raw=true">',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'splash',
+            ],
+        ],
+    ]));
+
+    expect(fn () => app(RiderSplashArtworkSnapshotterContract::class)
+        ->assertStored($voucher))
+        ->toThrow(
+            RiderStampArtworkUnavailable::class,
+            RiderStampArtworkUnavailable::Message,
+        );
+});
+
+it('rolls back issuance when the persisted Splash snapshot invariant fails', function (): void {
+    $user = actingAsTestUser();
+    $voucherCount = Voucher::query()->count();
+    $input = validVoucherInstructions(overrides: [
+        'rider' => [
+            'splash' => '<img src="https://github.com/example/art/blob/main/missing.png?raw=true">',
+            'stamp' => [
+                'version' => 2,
+                'artwork_source' => 'splash',
+            ],
+        ],
+    ])->toArray();
+
+    expect(fn () => app(PayCodeIssuanceContract::class)->issue($user, $input))
+        ->toThrow(
+            RiderStampArtworkUnavailable::class,
+            RiderStampArtworkUnavailable::Message,
+        );
+
+    expect(Voucher::query()->count())->toBe($voucherCount);
 });
 
 it('retries transient remote failures before persisting Splash artwork', function (): void {

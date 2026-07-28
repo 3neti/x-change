@@ -23,5 +23,12 @@ interface RiderSplashArtworkSnapshotterContract
         bool $force = false,
     ): ?RiderSplashArtworkSnapshotData;
 
+    /**
+     * @throws RiderStampArtworkUnavailable when persisted Splash artwork is missing or invalid
+     */
+    public function assertStored(
+        Voucher $voucher,
+    ): ?RiderSplashArtworkSnapshotData;
+
     public function dataUrl(Voucher $voucher): ?string;
 }

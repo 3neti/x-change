@@ -6,14 +6,20 @@ namespace LBHurtado\XChange\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
+use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 
 class PayCodeIssuanceService implements PayCodeIssuanceContract
 {
+    public function __construct(
+        protected RiderSplashArtworkSnapshotterContract $splashArtwork,
+    ) {}
+
     public function issue(mixed $issuer, array $input): array
     {
         if (! $issuer instanceof Authenticatable) {
@@ -30,34 +36,32 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         try {
             Auth::setUser($issuer);
 
-            $issued = app(GeneratesVouchers::class)->handle($instructions)->first();
+            return DB::transaction(function () use ($input, $instructions): array {
+                $issued = app(GeneratesVouchers::class)->handle($instructions)->first();
 
-            if (! $issued) {
-                throw new PayCodeIssuanceFailed('Pay Code issuance did not return a voucher.');
-            }
+                if (! $issued) {
+                    throw new PayCodeIssuanceFailed('Pay Code issuance did not return a voucher.');
+                }
 
-            $this->persistNamedSliceMetadata($issued, $input);
+                $this->splashArtwork->assertStored($issued);
+                $this->persistNamedSliceMetadata($issued, $input);
 
-            $code = (string) $issued->code;
-            $redeemPath = $this->redeemPath($code);
+                $code = (string) $issued->code;
+                $redeemPath = $this->redeemPath($code);
 
-            return [
-                'voucher_id' => $issued->id,
-                'code' => $code,
-                'issued_at' => $issued->created_at?->toRfc3339String() ?? now()->toRfc3339String(),
-                'amount' => data_get($instructions->toArray(), 'cash.amount'),
-                'currency' => data_get($instructions->toArray(), 'cash.currency'),
-                'links' => [
-                    'redeem' => $this->redeemUrl($redeemPath),
-                    'redeem_path' => $redeemPath,
-                ],
-                'metadata' => $issued->metadata ?? null,
-            ];
-        } catch (\Throwable $e) {
-            dump($e::class);
-            dump($e->getMessage());
-            dump($e->getTraceAsString());
-            throw $e;
+                return [
+                    'voucher_id' => $issued->id,
+                    'code' => $code,
+                    'issued_at' => $issued->created_at?->toRfc3339String() ?? now()->toRfc3339String(),
+                    'amount' => data_get($instructions->toArray(), 'cash.amount'),
+                    'currency' => data_get($instructions->toArray(), 'cash.currency'),
+                    'links' => [
+                        'redeem' => $this->redeemUrl($redeemPath),
+                        'redeem_path' => $redeemPath,
+                    ],
+                    'metadata' => $issued->metadata ?? null,
+                ];
+            });
         } finally {
             if ($previousUser instanceof Authenticatable) {
                 Auth::setUser($previousUser);

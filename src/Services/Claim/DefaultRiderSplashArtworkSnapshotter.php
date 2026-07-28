@@ -113,6 +113,25 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
         return 'data:'.$snapshot->mimeType.';base64,'.base64_encode($contents);
     }
 
+    public function assertStored(
+        Voucher $voucher,
+    ): ?RiderSplashArtworkSnapshotData {
+        if (! $this->usesSplashArtwork($voucher->instructions->toArray())) {
+            return null;
+        }
+
+        $snapshot = $this->snapshotFor($voucher);
+
+        if (
+            ! $snapshot instanceof RiderSplashArtworkSnapshotData
+            || $this->dataUrl($voucher) === null
+        ) {
+            throw new RiderStampArtworkUnavailable;
+        }
+
+        return $snapshot;
+    }
+
     private function snapshot(string $splash): ?RiderSplashArtworkSnapshotData
     {
         if (
