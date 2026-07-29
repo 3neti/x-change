@@ -1380,6 +1380,19 @@ export type CockpitQuickGenerateAuthorization = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateClaimPreviewContract = {
+    schema?: string | null;
+    status?: string | null;
+    route?: string | null;
+    route_url?: string | null;
+    source?: string | null;
+    artifact_contract?: string | null;
+    preview_cache?: boolean | null;
+    money_movement?: boolean | null;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateReadModel = {
     status: string;
     authorized?: boolean;
@@ -1398,6 +1411,7 @@ export type CockpitQuickGenerateReadModel = {
     campaign_context?: CockpitQuickGenerateCampaignContext;
     authorization?: CockpitQuickGenerateAuthorization;
     post_issuance_navigation?: CockpitQuickGeneratePostIssuanceNavigation;
+    claim_preview_contract?: CockpitQuickGenerateClaimPreviewContract;
     action?: {
         enabled?: boolean;
         reason?: string;

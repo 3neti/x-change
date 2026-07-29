@@ -22,6 +22,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
+    CockpitQuickGenerateClaimPreviewContract,
     CockpitQuickGenerateDraftContract,
     CockpitQuickGenerateFeedbackDefaults,
     CockpitQuickGenerateLastInstructions,
@@ -70,6 +71,7 @@ import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
 const props = defineProps<{
     clientFundsMinor?: number | null;
     mutationContract?: CockpitQuickGenerateMutationContract;
+    claimPreviewContract?: CockpitQuickGenerateClaimPreviewContract;
     draftContract?: CockpitQuickGenerateDraftContract;
     campaignContext?: CockpitQuickGenerateCampaignContext;
     feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
@@ -646,6 +648,12 @@ const processing = ref(false);
 const lastStatus = ref('ready');
 const lastMessage = ref('Ready to issue when the design is complete.');
 const lastResponse = ref<Record<string, unknown> | null>(null);
+const previewProcessing = ref(false);
+const previewStatus = ref<'idle' | 'ready' | 'failed'>('idle');
+const previewMessage = ref(
+    'Generate a no-money walkthrough from the current Pay Code design.',
+);
+const previewResult = ref<Record<string, unknown> | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
 const canvasSectionElement = ref<HTMLElement | null>(null);
@@ -1571,6 +1579,9 @@ const routeUrl = computed<string | null>(() =>
 const routeName = computed<string>(
     () => stringValue(props.mutationContract?.route) ?? 'not-loaded',
 );
+const claimPreviewRouteUrl = computed<string | null>(() =>
+    stringValue(props.claimPreviewContract?.route_url),
+);
 const allowedMethods = computed<string[]>(() => {
     if (!Array.isArray(props.mutationContract?.allowed_methods)) {
         return [];
@@ -1672,6 +1683,36 @@ const canSubmit = computed<boolean>(() => {
         claimRecipientError.value === null &&
         (!isAccountFundingClaim.value || sliceMode.value === 'whole')
     );
+});
+
+const canGenerateClaimPreview = computed<boolean>(() => {
+    const normalizedAmount = Number(amount.value);
+
+    return (
+        claimPreviewRouteUrl.value !== null &&
+        !previewProcessing.value &&
+        Number.isFinite(normalizedAmount) &&
+        normalizedAmount > 0 &&
+        feedbackValid.value &&
+        namedClaimSliceValidationMessage.value === null &&
+        claimRecipientError.value === null
+    );
+});
+
+const previewArtifacts = computed<Record<string, any>>(() => {
+    const artifacts = dataGet(previewResult.value, ['artifacts']);
+
+    return typeof artifacts === 'object' && artifacts !== null
+        ? (artifacts as Record<string, any>)
+        : {};
+});
+
+const previewViewOptions = computed<Record<string, any>>(() => {
+    const options = dataGet(previewArtifacts.value, ['view_options']);
+
+    return typeof options === 'object' && options !== null
+        ? (options as Record<string, any>)
+        : {};
 });
 
 const isAccountFundingClaim = computed<boolean>(
@@ -3355,6 +3396,63 @@ async function submit(): Promise<void> {
         emit('submitError', body);
     } finally {
         processing.value = false;
+    }
+}
+
+async function generateClaimPreview(refreshPreview = false): Promise<void> {
+    if (!canGenerateClaimPreview.value || claimPreviewRouteUrl.value === null) {
+        return;
+    }
+
+    previewProcessing.value = true;
+    previewStatus.value = 'idle';
+    previewMessage.value = refreshPreview
+        ? 'Refreshing the claim walkthrough preview.'
+        : 'Rendering the claim walkthrough preview.';
+
+    try {
+        const response = await fetch(claimPreviewRouteUrl.value, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...csrfHeader(),
+            },
+            body: JSON.stringify({
+                ...buildPayload(),
+                refresh_preview: refreshPreview,
+                preview_profile: 'issuer',
+            }),
+        });
+        const body = await safeJson(response);
+
+        if (!response.ok) {
+            previewStatus.value = 'failed';
+            previewMessage.value =
+                stringValue(body.message) ??
+                'The claim walkthrough preview could not be generated.';
+            previewResult.value = body;
+
+            return;
+        }
+
+        previewStatus.value = 'ready';
+        previewMessage.value =
+            body.cache_hit === true
+                ? 'Cached claim walkthrough preview is ready.'
+                : 'Claim walkthrough preview is ready.';
+        previewResult.value = body;
+    } catch (error) {
+        previewStatus.value = 'failed';
+        previewMessage.value =
+            error instanceof Error
+                ? error.message
+                : 'The claim walkthrough preview could not be generated.';
+        previewResult.value = null;
+    } finally {
+        previewProcessing.value = false;
     }
 }
 
@@ -8437,6 +8535,114 @@ function instructionRecord(
                 >{{ sanitizedInstructionPayloadJson }}</pre
             >
         </details>
+
+        <section
+            class="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-xs text-cyan-950 shadow-sm dark:border-cyan-900/70 dark:bg-cyan-950/30 dark:text-cyan-100"
+            data-testid="cockpit-quick-generate-claim-preview-panel"
+        >
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div class="min-w-0">
+                    <p
+                        class="text-[11px] font-semibold tracking-[0.18em] text-cyan-700 uppercase dark:text-cyan-300"
+                    >
+                        Claim experience preview
+                    </p>
+                    <h3
+                        class="mt-1 text-base font-semibold text-cyan-950 dark:text-cyan-50"
+                    >
+                        Walk through the redeemer journey
+                    </h3>
+                    <p class="mt-1 max-w-2xl leading-5 text-cyan-800 dark:text-cyan-200">
+                        Render screenshots, an HTML storyboard, and a PDF from
+                        the current Pay Code design. This preview is cached and
+                        does not submit a claim.
+                    </p>
+                    <p class="mt-2 leading-5 text-cyan-800 dark:text-cyan-200">
+                        {{ previewMessage }}
+                    </p>
+                </div>
+                <div class="flex shrink-0 flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-cyan-700 px-3 py-2 font-semibold text-white shadow-sm transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-cyan-400 dark:text-cyan-950 dark:hover:bg-cyan-300"
+                        data-testid="cockpit-quick-generate-claim-preview-button"
+                        :disabled="!canGenerateClaimPreview"
+                        @click="generateClaimPreview(false)"
+                    >
+                        <LoaderCircle
+                            v-if="previewProcessing"
+                            class="size-3.5 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <FilePlus2
+                            v-else
+                            class="size-3.5"
+                            aria-hidden="true"
+                        />
+                        {{
+                            previewProcessing
+                                ? 'Rendering...'
+                                : 'Generate preview'
+                        }}
+                    </button>
+                    <button
+                        v-if="previewStatus === 'ready'"
+                        type="button"
+                        class="rounded-lg border border-cyan-300 bg-white px-3 py-2 font-semibold text-cyan-800 transition hover:border-cyan-500 hover:text-cyan-950 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-200"
+                        data-testid="cockpit-quick-generate-claim-preview-refresh"
+                        :disabled="previewProcessing"
+                        @click="generateClaimPreview(true)"
+                    >
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div
+                v-if="previewStatus === 'ready'"
+                class="mt-3 grid gap-2 sm:grid-cols-3"
+                data-testid="cockpit-quick-generate-claim-preview-links"
+            >
+                <a
+                    v-if="previewViewOptions.default?.url"
+                    :href="previewViewOptions.default.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="rounded-lg border border-cyan-200 bg-white px-3 py-2 font-semibold text-cyan-800 transition hover:border-cyan-500 dark:border-cyan-900/70 dark:bg-slate-950 dark:text-cyan-200"
+                    data-testid="cockpit-quick-generate-claim-preview-pdf"
+                >
+                    Open PDF
+                </a>
+                <a
+                    v-if="previewViewOptions.html?.url"
+                    :href="previewViewOptions.html.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="rounded-lg border border-cyan-200 bg-white px-3 py-2 font-semibold text-cyan-800 transition hover:border-cyan-500 dark:border-cyan-900/70 dark:bg-slate-950 dark:text-cyan-200"
+                    data-testid="cockpit-quick-generate-claim-preview-html"
+                >
+                    Open HTML
+                </a>
+                <a
+                    v-if="previewViewOptions.folder?.url"
+                    :href="previewViewOptions.folder.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="rounded-lg border border-cyan-200 bg-white px-3 py-2 font-semibold text-cyan-800 transition hover:border-cyan-500 dark:border-cyan-900/70 dark:bg-slate-950 dark:text-cyan-200"
+                    data-testid="cockpit-quick-generate-claim-preview-folder"
+                >
+                    Open folder
+                </a>
+            </div>
+
+            <p
+                v-if="previewStatus === 'failed'"
+                class="mt-3 rounded-lg border border-rose-200 bg-white px-3 py-2 font-semibold text-rose-700 dark:border-rose-900/70 dark:bg-slate-950 dark:text-rose-200"
+                data-testid="cockpit-quick-generate-claim-preview-error"
+            >
+                {{ previewMessage }}
+            </p>
+        </section>
 
         <button
             type="submit"

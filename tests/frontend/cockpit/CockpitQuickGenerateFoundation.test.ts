@@ -3866,4 +3866,91 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe('SECTION');
         expect(wrapper.text()).toContain('Ready to issue');
     });
+
+    it('requests a no-money claim experience preview from the current draft', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    schema: 'x-change.claim-experience-preview.result.v1',
+                    status: 'ready',
+                    cache_hit: false,
+                    artifacts: {
+                        view_options: {
+                            default: {
+                                label: 'Default PDF',
+                                url: 'file:///tmp/walkthrough-storyboard.pdf',
+                            },
+                            html: {
+                                label: 'HTML storyboard',
+                                url: 'file:///tmp/claim-walkthrough-storyboard.html',
+                            },
+                            folder: {
+                                label: 'Artifact folder',
+                                url: 'file:///tmp/claim-preview',
+                            },
+                        },
+                    },
+                }),
+                {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                },
+            ),
+        );
+
+        vi.stubGlobal('fetch', fetchMock);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['GET', 'POST'],
+                },
+                claimPreviewContract: {
+                    status: 'registered',
+                    route: 'x-change.cockpit.quick-generate.claim-previews.store',
+                    route_url: '/x/cockpit/quick-generate/claim-previews',
+                    money_movement: false,
+                    preview_cache: true,
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-submit-amount"]')
+            .setValue('25');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-claim-preview-button"]')
+            .trigger('click');
+        await flushPromises();
+
+        const previewCall = fetchMock.mock.calls.find(
+            ([url]) => url === '/x/cockpit/quick-generate/claim-previews',
+        );
+
+        if (!previewCall) {
+            throw new Error('Preview request was not sent.');
+        }
+
+        const [url, options] = previewCall;
+        const payload = JSON.parse(options.body);
+
+        expect(url).toBe('/x/cockpit/quick-generate/claim-previews');
+        expect(options.method).toBe('POST');
+        expect(payload.cash.amount).toBe(25);
+        expect(payload.preview_profile).toBe('issuer');
+        expect(wrapper.text()).toContain(
+            'Claim walkthrough preview is ready.',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-claim-preview-pdf"]',
+                )
+                .exists(),
+        ).toBe(true);
+    });
 });

@@ -33,6 +33,7 @@ class CockpitQuickGenerateReadModelData extends Data
         public readonly CockpitQuickGenerateActionData $action = new CockpitQuickGenerateActionData,
         public readonly CockpitQuickGeneratePostIssuanceNavigationData $post_issuance_navigation = new CockpitQuickGeneratePostIssuanceNavigationData,
         public readonly CockpitQuickGenerateCampaignContextData $campaign_context = new CockpitQuickGenerateCampaignContextData,
+        public readonly CockpitQuickGenerateClaimPreviewContractData $claim_preview_contract = new CockpitQuickGenerateClaimPreviewContractData,
         public readonly array $redactions = ['payloads' => 'not-loaded'],
     ) {}
 }

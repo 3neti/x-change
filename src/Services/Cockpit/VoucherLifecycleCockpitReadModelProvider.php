@@ -34,6 +34,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateCampaignContextData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateClaimPreviewContractData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateDraftContractData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateData;
@@ -892,6 +893,23 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'action_payload',
                         'feedback_payload',
                         'raw_payload',
+                    ],
+                ],
+            ),
+            claim_preview_contract: new CockpitQuickGenerateClaimPreviewContractData(
+                status: 'registered',
+                route: 'x-change.cockpit.quick-generate.claim-previews.store',
+                route_url: Route::has('x-change.cockpit.quick-generate.claim-previews.store')
+                    ? route('x-change.cockpit.quick-generate.claim-previews.store', [], false)
+                    : null,
+                redactions: [
+                    'payloads' => 'voucher-instructions-preview-contract-only',
+                    'excluded' => [
+                        'provider_payload',
+                        'wallet',
+                        'debit',
+                        'raw_browser_trace',
+                        'submitted_claim',
                     ],
                 ],
             ),

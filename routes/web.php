@@ -40,6 +40,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingInspecti
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateStoreController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateUpdateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
@@ -215,6 +216,10 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         )->name('x-change.cockpit.funding.reconciliations.approve');
         Route::get('quick-generate', CockpitQuickGeneratePageController::class)->name('x-change.cockpit.quick-generate');
         Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->name('x-change.cockpit.quick-generate.store');
+        Route::post(
+            'quick-generate/claim-previews',
+            CockpitQuickGenerateClaimPreviewController::class,
+        )->middleware('throttle:6,1')->name('x-change.cockpit.quick-generate.claim-previews.store');
         Route::post(
             'quick-generate/artwork-previews',
             CockpitRiderArtworkPreviewController::class,

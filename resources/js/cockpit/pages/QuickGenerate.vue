@@ -26,6 +26,7 @@ import {
 import type {
     CockpitPricingFundingSummary as CockpitPricingFundingSummaryType,
     CockpitQuickGenerateCampaignContext,
+    CockpitQuickGenerateClaimPreviewContract,
     CockpitQuickGenerateAuthorization,
     CockpitQuickGenerateAuthorizationGate,
     CockpitQuickGenerateDraftContract,
@@ -503,6 +504,27 @@ const mutationContract = computed<CockpitQuickGenerateMutationContract>(() => {
         },
     };
 });
+
+const claimPreviewContract =
+    computed<CockpitQuickGenerateClaimPreviewContract>(() => {
+        const contract = props.quick_generate_read_model?.claim_preview_contract;
+
+        if (
+            !readModelAvailable.value ||
+            typeof contract !== 'object' ||
+            contract === null
+        ) {
+            return {
+                schema: 'x-change.cockpit.quick-generate-claim-preview.v1',
+                status: 'unavailable',
+                route_url: null,
+                preview_cache: true,
+                money_movement: false,
+            };
+        }
+
+        return contract;
+    });
 
 function defaultDraftContract(): CockpitQuickGenerateDraftContract {
     return {
@@ -1121,6 +1143,7 @@ function stringValue(value: unknown): string | null {
                 <CockpitQuickGenerateSubmitPanel
                     :client-funds-minor="clientFundsMinor"
                     :mutation-contract="mutationContract"
+                    :claim-preview-contract="claimPreviewContract"
                     :draft-contract="draftContract"
                     :campaign-context="campaignContext"
                     :feedback-defaults="props.feedback_defaults"
