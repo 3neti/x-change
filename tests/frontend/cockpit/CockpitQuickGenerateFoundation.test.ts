@@ -3770,7 +3770,13 @@ describe('Cockpit Quick Generate foundation', () => {
         );
         expect(canvasHeader.text()).toContain('Stamp');
         expect(canvasHeader.text()).toContain('Cost');
-        expect(canvasHeader.classes()).toContain('justify-between');
+        expect(canvasHeader.classes()).toContain('flex-col');
+        expect(canvasHeader.classes()).toContain('@md:flex-row');
+        expect(
+            canvasHeader
+                .get('[data-testid="cockpit-pay-code-canvas-view-switch"]')
+                .classes(),
+        ).toContain('w-full');
         expect(quickGenerateHeader.classes()).toContain('justify-between');
         expect(quickGenerateHeader.text()).toContain('Create Pay Code');
         expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');
@@ -3979,6 +3985,22 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Claim Experience Preview');
         expect(wrapper.text()).toContain('Preview Only');
         expect(wrapper.text()).toContain('Open Pay Code');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-claim"]')
+                .classes(),
+        ).toContain('h-[46rem]');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-experience-preview"]')
+                .classes(),
+        ).toContain('min-w-0');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-experience-preview"]')
+                .find('ol')
+                .classes(),
+        ).toContain('flex');
         expect(
             wrapper
                 .find('[data-testid="cockpit-claim-experience-frame"]')

@@ -66,7 +66,7 @@ function selectNextStep(): void {
 
 <template>
     <section
-        class="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.15rem] bg-slate-950 text-white"
+        class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[1.15rem] bg-slate-950 text-white"
         data-testid="cockpit-claim-experience-preview"
     >
         <div
@@ -155,22 +155,28 @@ function selectNextStep(): void {
 
         <div
             v-else
-            class="grid min-h-0 flex-1 gap-3 p-3 @lg:grid-cols-[minmax(11rem,0.65fr)_minmax(0,1.35fr)]"
+            class="grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3 p-3 @lg:grid-cols-[minmax(11rem,0.65fr)_minmax(0,1.35fr)] @lg:grid-rows-1"
         >
             <aside
-                class="flex min-h-0 flex-col rounded-xl border border-white/10 bg-white/5 p-3"
+                class="flex min-h-0 min-w-0 flex-col rounded-xl border border-white/10 bg-white/5 p-3"
             >
-                <div class="min-h-0 flex-1 overflow-y-auto">
+                <div
+                    class="min-h-0 flex-1 overflow-x-auto @lg:overflow-x-hidden @lg:overflow-y-auto"
+                >
                     <p
                         class="text-[0.65rem] font-semibold tracking-[0.16em] text-slate-500 uppercase"
                     >
                         Recipient Journey
                     </p>
-                    <ol class="mt-2 space-y-1.5">
-                        <li v-for="(step, index) in steps" :key="step.key">
+                    <ol class="mt-2 flex gap-1.5 @lg:block @lg:space-y-1.5">
+                        <li
+                            v-for="(step, index) in steps"
+                            :key="step.key"
+                            class="shrink-0 @lg:shrink"
+                        >
                             <button
                                 type="button"
-                                class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition"
+                                class="flex w-max min-w-32 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition @lg:w-full @lg:min-w-0"
                                 :class="
                                     index === currentStepIndex
                                         ? 'bg-cyan-300 text-slate-950'
@@ -228,7 +234,7 @@ function selectNextStep(): void {
 
             <article
                 v-if="currentStep"
-                class="relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-slate-900"
+                class="relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-slate-900"
             >
                 <div
                     class="flex items-start justify-between gap-3 border-b border-white/10 px-3 py-2"
@@ -285,7 +291,7 @@ function selectNextStep(): void {
 
         <div
             v-if="status === 'ready' && manifest"
-            class="flex items-center justify-between gap-3 border-t border-white/10 px-4 py-2 text-[0.65rem] text-slate-500"
+            class="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-4 py-2 text-[0.65rem] text-slate-500"
         >
             <span>No claim submission, provider call, or money movement.</span>
             <div class="flex shrink-0 items-center gap-2">

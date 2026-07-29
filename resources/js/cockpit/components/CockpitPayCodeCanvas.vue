@@ -506,7 +506,7 @@ function stringValue(value: unknown): string | null {
         data-testid="cockpit-pay-code-canvas"
     >
         <div
-            class="mb-4 flex items-start justify-between gap-3"
+            class="mb-4 flex flex-col gap-3 @md:flex-row @md:items-start @md:justify-between"
             data-testid="cockpit-pay-code-canvas-header"
         >
             <div class="min-w-0">
@@ -528,7 +528,7 @@ function stringValue(value: unknown): string | null {
                 </p>
             </div>
             <div
-                class="inline-flex shrink-0 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
+                class="flex w-full shrink-0 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm @md:w-auto dark:border-slate-700 dark:bg-slate-950"
                 aria-label="Pay Code view"
                 role="tablist"
                 data-testid="cockpit-pay-code-canvas-view-switch"
@@ -537,7 +537,7 @@ function stringValue(value: unknown): string | null {
                     :id="tabId('stamp')"
                     type="button"
                     role="tab"
-                    class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    class="flex-1 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition @md:flex-none"
                     :class="
                         visibleView === 'stamp'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
@@ -555,7 +555,7 @@ function stringValue(value: unknown): string | null {
                     :id="tabId('design')"
                     type="button"
                     role="tab"
-                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition @md:flex-none"
                     :class="
                         visibleView === 'design'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
@@ -574,7 +574,7 @@ function stringValue(value: unknown): string | null {
                     :id="tabId('claim')"
                     type="button"
                     role="tab"
-                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition @md:flex-none"
                     :class="
                         visibleView === 'claim'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
@@ -592,7 +592,7 @@ function stringValue(value: unknown): string | null {
                     :id="tabId('cost')"
                     type="button"
                     role="tab"
-                    class="rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    class="flex-1 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition @md:flex-none"
                     :class="
                         visibleView === 'cost'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
@@ -881,7 +881,7 @@ function stringValue(value: unknown): string | null {
             :id="panelId('claim')"
             role="tabpanel"
             :aria-labelledby="tabId('claim')"
-            class="aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-2 dark:border-slate-800 dark:bg-slate-900/70"
+            class="h-[46rem] min-h-[46rem] w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-2 @md:aspect-[1.72/1] @md:h-auto @md:min-h-72 dark:border-slate-800 dark:bg-slate-900/70"
             data-testid="cockpit-pay-code-canvas-claim"
         >
             <slot name="claim" />
