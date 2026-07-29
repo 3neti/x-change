@@ -5,15 +5,29 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 
 final class ClaimPreviewScenarioFactory
 {
+    public function __construct(
+        private readonly ClaimExperienceCompiler $claimExperience,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
     public function fromInstructions(VoucherInstructionsData $instructions): array
     {
         $payload = $instructions->toArray();
+        $experience = $this->claimExperience
+            ->compile((new Voucher)->forceFill([
+                'code' => 'PREVIEW',
+                'metadata' => [
+                    'instructions' => $payload,
+                ],
+            ]))
+            ->toArray();
         $fixture = [
             'amount' => (string) data_get($payload, 'cash.amount', '0.00'),
             'money_movement' => false,
@@ -40,6 +54,7 @@ final class ClaimPreviewScenarioFactory
                 ?? data_get($payload, 'metadata.slices')
                 ?? data_get($payload, 'slices'),
             'instructions' => $payload,
+            'claim_experience' => $experience,
         ];
         $fixture['og_preview'] = (new RiderOgPreviewPayloadFactory)->make($fixture);
         $fixture['stamp_preview'] = (new RiderStampPreviewPayloadFactory)->make($fixture);
@@ -50,7 +65,7 @@ final class ClaimPreviewScenarioFactory
             'label' => 'Claim experience preview',
             'description' => 'Issuer preview generated from the current VoucherInstructionsData contract.',
             'fixture' => $fixture,
-            'checkpoints' => $this->checkpoints($fixture),
+            'checkpoints' => $this->checkpoints($fixture, $experience),
         ];
     }
 
@@ -60,7 +75,11 @@ final class ClaimPreviewScenarioFactory
     private function hasHandler(array $payload, string $handler): bool
     {
         return (bool) data_get($payload, "metadata.handlers.{$handler}", false)
-            || (bool) data_get($payload, "metadata.claim_experience.handlers.{$handler}", false);
+            || (bool) data_get($payload, "metadata.claim_experience.handlers.{$handler}", false)
+            || (bool) data_get($payload, "metadata.custom.handlers.{$handler}", false)
+            || (bool) data_get($payload, "metadata.custom.claim_experience.handlers.{$handler}", false)
+            || in_array($handler, (array) data_get($payload, 'inputs.requirements', []), true)
+            || (bool) data_get($payload, "validation.{$handler}.required", false);
     }
 
     /**
@@ -77,7 +96,7 @@ final class ClaimPreviewScenarioFactory
      * @param  array<string, mixed>  $fixture
      * @return array<int, array<string, mixed>>
      */
-    private function checkpoints(array $fixture): array
+    private function checkpoints(array $fixture, array $experience): array
     {
         $checkpoints = [
             [
@@ -89,7 +108,7 @@ final class ClaimPreviewScenarioFactory
                 'screenshot' => 'screenshots/00-og-social-preview.png',
             ],
             [
-                'key' => 'claim-entry-empty',
+                'key' => 'claim-entry',
                 'title' => 'Claim entry',
                 'route' => '/x/claim',
                 'actor' => 'redeemer',
@@ -117,14 +136,36 @@ final class ClaimPreviewScenarioFactory
             ];
         }
 
+        if ($this->hasNamedSliceSelector($experience)) {
+            $checkpoints[] = [
+                'key' => 'named-slice-selection',
+                'title' => 'Choose claim portions',
+                'route' => '/x/claim',
+                'actor' => 'redeemer',
+                'expected' => 'Redeemer selects the available scheduled portions to claim.',
+                'screenshot' => 'screenshots/04-named-slice-selection.png',
+            ];
+        }
+
+        $isAccountFunding = data_get(
+            $fixture,
+            'instructions.claim.default_outcome',
+        ) === 'account_funding';
         $checkpoints[] = [
-            'key' => 'generic-payout-form',
-            'title' => 'Generic payout form',
+            'key' => $isAccountFunding ? 'account-funding-details' : 'generic-payout-form',
+            'title' => $isAccountFunding ? 'Account funding details' : 'Claim details',
             'route' => '/form-flow/{flow_id}',
             'actor' => 'redeemer',
-            'expected' => 'Redeemer enters mobile number, bank or wallet, and account number.',
+            'expected' => $isAccountFunding
+                ? 'Redeemer reviews the Account that will receive the claimed value.'
+                : 'Redeemer enters the required recipient and payout details.',
             'screenshot' => 'screenshots/04-generic-payout-form.png',
         ];
+
+        foreach ($this->validationCheckpoints($fixture) as $checkpoint) {
+            $checkpoints[] = $checkpoint;
+        }
+
         $checkpoints[] = [
             'key' => 'confirmation',
             'title' => 'Claim confirmation',
@@ -162,5 +203,77 @@ final class ClaimPreviewScenarioFactory
         }
 
         return $checkpoints;
+    }
+
+    /**
+     * @param  array<string, mixed>  $experience
+     */
+    private function hasNamedSliceSelector(array $experience): bool
+    {
+        return collect(data_get($experience, 'phases', []))
+            ->where('key', 'form_flow')
+            ->flatMap(fn (array $phase): array => $phase['fields'] ?? [])
+            ->contains(fn (array $field): bool => ($field['type'] ?? null) === 'slice_selector');
+    }
+
+    /**
+     * @param  array<string, mixed>  $fixture
+     * @return array<int, array<string, mixed>>
+     */
+    private function validationCheckpoints(array $fixture): array
+    {
+        $instructions = (array) ($fixture['instructions'] ?? []);
+        $requirements = collect(data_get($instructions, 'inputs.requirements', []))
+            ->filter(fn (mixed $requirement): bool => is_string($requirement))
+            ->map(fn (string $requirement): string => strtolower(trim($requirement)));
+        $structured = collect(array_keys(
+            (array) data_get($instructions, 'validation', [])
+        ));
+        $cashValidation = collect(array_keys(
+            (array) data_get($instructions, 'cash.validation', [])
+        ));
+        $keys = $requirements
+            ->merge($structured)
+            ->merge($cashValidation->map(
+                fn (string $key): string => $key === 'mobile_verification' ? 'otp' : $key
+            ))
+            ->merge(
+                collect((array) ($fixture['handlers'] ?? []))
+                    ->filter(fn (mixed $enabled): bool => $enabled === true)
+                    ->keys()
+            )
+            ->filter()
+            ->unique()
+            ->values();
+        $labels = [
+            'kyc' => ['Identity verification', 'Redeemer completes the configured identity verification.'],
+            'otp' => ['Mobile verification', 'Redeemer verifies control of the configured mobile number.'],
+            'selfie' => ['Selfie verification', 'Redeemer captures the required selfie evidence.'],
+            'face_match' => ['Face match', 'Redeemer completes the configured face-match check.'],
+            'signature' => ['Signature', 'Redeemer provides the required signature.'],
+            'location' => ['Location check', 'Redeemer permits the configured location verification.'],
+            'time' => ['Claim timing', 'Redeemer continues within the configured claim window.'],
+            'secret' => ['Claim secret', 'Redeemer supplies the configured claim secret.'],
+            'mobile' => ['Recipient match', 'Redeemer confirms the intended mobile recipient.'],
+            'payable' => ['Payee verification', 'Redeemer confirms the configured payee or vendor alias.'],
+            'country' => ['Country check', 'Redeemer satisfies the configured country rule.'],
+        ];
+
+        return $keys
+            ->filter(fn (string $key): bool => isset($labels[$key]))
+            ->map(function (string $key) use ($labels): array {
+                [$title, $expected] = $labels[$key];
+
+                return [
+                    'key' => 'validation-'.$key,
+                    'title' => $title,
+                    'route' => '/form-flow/{flow_id}',
+                    'actor' => 'redeemer',
+                    'expected' => $expected,
+                    'screenshot' => "screenshots/validation-{$key}.png",
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

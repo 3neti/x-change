@@ -28,6 +28,7 @@ use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
+use LBHurtado\XChange\Support\Claim\ClaimPreviewExecutionGuard;
 use LBHurtado\XChange\Support\Claim\PendingPaynamicsOtpClaimResult;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Throwable;
@@ -50,6 +51,7 @@ class SubmitPayCodeClaim
         protected ?BuildProvisioningFlowDescriptor $descriptors = null,
         protected ?ResumeProviderProvisioningFromOnboarding $onboardingProvisioning = null,
         protected ?NamedVoucherSliceService $namedSlices = null,
+        protected ?ClaimPreviewExecutionGuard $previewExecutionGuard = null,
     ) {}
 
     /**
@@ -57,6 +59,8 @@ class SubmitPayCodeClaim
      */
     public function handle(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData|ClaimApprovalInitiationResultData
     {
+        $this->previewExecutionGuard()->assertExecutable($voucher);
+
         $payload = $this->namedSlices()->enrichClaimPayload($voucher, $payload);
 
         $this->guardClaimantProvisioning($voucher, $payload);
@@ -129,6 +133,11 @@ class SubmitPayCodeClaim
     protected function namedSlices(): NamedVoucherSliceService
     {
         return $this->namedSlices ??= app(NamedVoucherSliceService::class);
+    }
+
+    protected function previewExecutionGuard(): ClaimPreviewExecutionGuard
+    {
+        return $this->previewExecutionGuard ??= app(ClaimPreviewExecutionGuard::class);
     }
 
     /**

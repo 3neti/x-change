@@ -28,6 +28,35 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 
+it('blocks preview Pay Codes before selecting an execution path', function (): void {
+    $voucher = (new Voucher)->forceFill([
+        'code' => 'PV1234',
+        'metadata' => [
+            'instructions' => [
+                'metadata' => [
+                    'custom' => [
+                        'walkthrough' => [
+                            'preview' => true,
+                            'money_movement' => false,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+    $factory = Mockery::mock(ClaimExecutionFactoryContract::class);
+    $factory->shouldNotReceive('make');
+    $recordVoucherClaim = Mockery::mock(RecordVoucherClaim::class);
+    $recordVoucherClaim->shouldNotReceive('handle');
+    $action = new SubmitPayCodeClaim($factory, $recordVoucherClaim);
+
+    expect(fn () => $action->handle($voucher, []))
+        ->toThrow(
+            RuntimeException::class,
+            'Claim experience preview Pay Codes cannot be executed.',
+        );
+});
+
 it('submits a claim through the selected executor and normalizes redeem result', function () {
     $voucher = new Voucher;
     $voucher->code = 'TEST-1234';

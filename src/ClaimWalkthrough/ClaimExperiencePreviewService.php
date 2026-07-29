@@ -18,6 +18,8 @@ final class ClaimExperiencePreviewService
         private readonly ClaimWalkthroughStoryboardBuilder $storyboards,
         private readonly ClaimWalkthroughRecorder $recorder,
         private readonly PayCodeIssuanceContract $issuance,
+        private readonly ClaimPreviewJourneyManifestFactory $journeys,
+        private readonly ClaimPreviewVoucherDisposer $previewVouchers,
     ) {}
 
     /**
@@ -35,7 +37,7 @@ final class ClaimExperiencePreviewService
         $context = $this->cache->context($scenario, [
             'profile' => $options->profile,
             'dry_run' => $options->dryRun,
-            'submit_claim' => $options->submitClaim,
+            'submit_claim' => false,
             'mobile' => $options->mobile,
             'bank_code' => $options->bankCode,
             'account_number' => $options->accountNumber,
@@ -45,7 +47,11 @@ final class ClaimExperiencePreviewService
             $cached = $this->cache->find($context['fingerprint']);
 
             if ($cached !== null) {
-                return $this->normalizeReport($this->cache->reportFor($cached), true);
+                return $this->normalizeReport(
+                    $this->cache->reportFor($cached),
+                    true,
+                    $scenario,
+                );
             }
         }
 
@@ -55,64 +61,74 @@ final class ClaimExperiencePreviewService
         );
         $baseUrl = rtrim($options->baseUrl ?? (string) config('app.url', 'http://localhost'), '/');
         $payCode = null;
+        $previewVoucherId = null;
 
-        if (! $options->dryRun) {
-            $issued = $this->issuance->issue(
-                $options->issuer,
-                $this->payloads->make($instructions, $options->issuer),
-            );
-            $payCode = (string) $issued['code'];
-        }
+        try {
+            if (! $options->dryRun) {
+                $issued = $this->issuance->issue(
+                    $options->issuer,
+                    $this->payloads->make($instructions, $options->issuer),
+                );
+                $previewVoucherId = $issued['voucher_id'] ?? null;
+                $payCode = (string) $issued['code'];
+            }
 
-        $report = $options->dryRun
-            ? $this->storyboards->build($scenario, $run, [[
-                'sequence' => 1,
-                'event' => 'dry-run',
-                'status' => 'passed',
-                'message' => 'Storyboard scaffold created without launching a browser.',
-            ]], [
-                'dry_run' => true,
-                'base_url' => $baseUrl,
-                'money_movement' => false,
-                'source' => 'ClaimExperiencePreviewService',
-            ])
-            : $this->recorder->record(
+            $report = $options->dryRun
+                ? $this->storyboards->build($scenario, $run, [[
+                    'sequence' => 1,
+                    'event' => 'dry-run',
+                    'status' => 'passed',
+                    'message' => 'Storyboard scaffold created without launching a browser.',
+                ]], [
+                    'dry_run' => true,
+                    'base_url' => $baseUrl,
+                    'money_movement' => false,
+                    'source' => 'ClaimExperiencePreviewService',
+                ])
+                : $this->recorder->record(
+                    scenario: $scenario,
+                    baseUrl: $baseUrl,
+                    artifactDirectory: $run['root'],
+                    headed: $options->headed,
+                    slowMotion: $options->slowMotion,
+                    options: [
+                        'pay_code' => $payCode,
+                        'mobile' => $options->mobile,
+                        'bank_code' => $options->bankCode,
+                        'account_number' => $options->accountNumber,
+                        'submit_claim' => false,
+                    ],
+                );
+
+            $artifact = $this->cache->rememberRendered(
                 scenario: $scenario,
-                baseUrl: $baseUrl,
-                artifactDirectory: $run['root'],
-                headed: $options->headed,
-                slowMotion: $options->slowMotion,
-                options: [
-                    'pay_code' => $payCode,
-                    'mobile' => $options->mobile,
-                    'bank_code' => $options->bankCode,
-                    'account_number' => $options->accountNumber,
-                    'submit_claim' => $options->submitClaim,
-                ],
+                fingerprint: $context['fingerprint'],
+                relativePath: $context['relative_path'],
+                profile: $options->profile,
+                payload: $context['payload'],
+                report: $report,
             );
 
-        $artifact = $this->cache->rememberRendered(
-            scenario: $scenario,
-            fingerprint: $context['fingerprint'],
-            relativePath: $context['relative_path'],
-            profile: $options->profile,
-            payload: $context['payload'],
-            report: $report,
-        );
+            data_set($report, 'cache.hit', false);
+            data_set($report, 'cache.artifact_reference', $artifact->reference);
+            data_set($report, 'cache.artifact_fingerprint', $context['fingerprint']);
 
-        data_set($report, 'cache.hit', false);
-        data_set($report, 'cache.artifact_reference', $artifact->reference);
-        data_set($report, 'cache.artifact_fingerprint', $context['fingerprint']);
-
-        return $this->normalizeReport($report, false);
+            return $this->normalizeReport($report, false, $scenario);
+        } finally {
+            $this->previewVouchers->dispose($previewVoucherId);
+        }
     }
 
     /**
      * @param  array<string, mixed>  $report
      * @return array<string, mixed>
      */
-    private function normalizeReport(array $report, bool $cacheHit): array
+    private function normalizeReport(array $report, bool $cacheHit, ?array $scenario = null): array
     {
+        $scenario ??= is_array($report['scenario_manifest'] ?? null)
+            ? $report['scenario_manifest']
+            : [];
+
         return [
             'schema' => 'x-change.claim-experience-preview.result.v1',
             'status' => 'ready',
@@ -122,6 +138,7 @@ final class ClaimExperiencePreviewService
             'scenario' => $report['scenario'] ?? null,
             'dry_run' => (bool) ($report['dry_run'] ?? false),
             'artifacts' => $report['artifacts'] ?? [],
+            'journey' => $this->journeys->fromReport($report, $scenario),
             'report' => $report,
         ];
     }

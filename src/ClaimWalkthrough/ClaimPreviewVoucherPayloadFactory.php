@@ -18,9 +18,9 @@ final class ClaimPreviewVoucherPayloadFactory
 
         data_set($payload, 'count', 1);
         data_set($payload, 'metadata.issuer_id', (string) $issuer->getAuthIdentifier());
-        data_set($payload, 'metadata.walkthrough.preview', true);
-        data_set($payload, 'metadata.walkthrough.purpose', 'claim-experience-preview');
-        data_set($payload, 'metadata.walkthrough.money_movement', false);
+        data_set($payload, 'metadata.custom.walkthrough.preview', true);
+        data_set($payload, 'metadata.custom.walkthrough.purpose', 'claim-experience-preview');
+        data_set($payload, 'metadata.custom.walkthrough.money_movement', false);
 
         if (blank(data_get($payload, 'prefix'))) {
             data_set($payload, 'prefix', 'PV');
