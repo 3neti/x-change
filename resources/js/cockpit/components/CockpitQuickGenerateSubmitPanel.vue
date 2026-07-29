@@ -20,7 +20,7 @@ import {
     Type,
     X,
 } from 'lucide-vue-next';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
@@ -641,6 +641,7 @@ const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
 const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<'stamp' | 'design' | 'cost'>('stamp');
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
+const riderDesignTeleportReady = ref(false);
 const startingPoint = ref<'blank' | 'last' | 'template'>(
     props.lastInstructions ? 'last' : 'template',
 );
@@ -659,6 +660,10 @@ const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 const submissionErrorHeading = ref('Fix these fields before issuing');
 
 hydrateLastInstructions();
+
+onMounted((): void => {
+    riderDesignTeleportReady.value = true;
+});
 
 watch(
     selectedTemplate,
@@ -6075,7 +6080,11 @@ function instructionRecord(
                             Open Design
                         </button>
                     </div>
-                    <Teleport to="#quick-generate-rider-design-editor" defer>
+                    <Teleport
+                        v-if="riderDesignTeleportReady"
+                        to="#quick-generate-rider-design-editor"
+                        defer
+                    >
                         <div class="grid gap-3">
                             <div
                                 role="tablist"

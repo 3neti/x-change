@@ -936,6 +936,8 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
+        await flushPromises();
+
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-splash-body"]')
             .setValue('A distinct beneficiary splash');
@@ -1115,6 +1117,8 @@ describe('Cockpit Quick Generate foundation', () => {
                 },
             },
         });
+
+        await flushPromises();
 
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-url"]')
@@ -2647,6 +2651,8 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
+        await wrapper.vm.$nextTick();
+
         expect(
             wrapper
                 .find(
@@ -3427,8 +3433,10 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(true);
     });
 
-    it('renders the full Quick Generate page with active navigation and no side effects', () => {
+    it('renders the full Quick Generate page with active navigation and no side effects', async () => {
         const wrapper = mount(QuickGenerate);
+
+        await flushPromises();
 
         expect(
             wrapper
