@@ -14,6 +14,7 @@ use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\VoucherFlow\VoucherFlowCapabilitiesData;
 use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
+use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use Mockery\Exception\BadMethodCallException;
 
 class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
@@ -29,6 +30,10 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
         $capabilities = $this->flowResolver->resolve($voucher);
 
         if ($capabilities->type->isSettlement()) {
+            if ($this->executionDriver($voucher) === 'campaign_worksheet_authorization') {
+                return $this->container->make(CampaignWorksheetAuthorizationExecutionService::class);
+            }
+
             return $this->container->make(SettlementExecutionContract::class);
         }
 
@@ -47,6 +52,11 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
         }
 
         return $this->redeemExecutor;
+    }
+
+    private function executionDriver(Voucher $voucher): ?string
+    {
+        return data_get($voucher->metadata, 'instructions.execution.driver');
     }
 
     /**
