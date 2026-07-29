@@ -4776,13 +4776,12 @@ function instructionRecord(
                         <h4
                             class="text-lg font-semibold text-slate-950 dark:text-slate-50"
                         >
-                            Essentials
+                            Order
                         </h4>
                         <p
                             class="mt-1 text-sm text-slate-600 dark:text-slate-300"
                         >
-                            Amount, recipient, and purpose shape the Pay Code
-                            beside this form.
+                            Set the value, payee, and purpose.
                         </p>
                     </div>
                     <span
@@ -4872,7 +4871,7 @@ function instructionRecord(
                     <label
                         class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                     >
-                        Recipient
+                        Pay To
                         <input
                             v-model="recipientReference"
                             type="text"
@@ -5154,12 +5153,12 @@ function instructionRecord(
             >
                 <span class="flex items-center justify-between gap-3">
                     <span>
-                        Instructions And Safeguards
+                        Claim Experience
                         <span
                             class="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400"
                         >
-                            Optional claim requirements, recipient checks,
-                            updates, and advanced rules
+                            Optional requirements, checks, rider content, and
+                            advanced rules
                         </span>
                     </span>
                     <span

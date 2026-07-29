@@ -516,14 +516,14 @@ function stringValue(value: unknown): string | null {
                     {{
                         presentation === 'finalized'
                             ? 'Issued Pay Code'
-                            : 'Stamp'
+                            : 'Pay Code'
                     }}
                 </h4>
                 <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
                     {{
                         presentation === 'finalized'
                             ? 'Final design ready to share.'
-                            : 'Preview the Stamp, shape its design, walk through its claim, or inspect cost.'
+                            : 'Preview its Stamp, shape its design, walk through its claim, or inspect cost.'
                     }}
                 </p>
             </div>

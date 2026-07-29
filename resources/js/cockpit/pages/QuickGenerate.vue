@@ -1121,8 +1121,7 @@ function stringValue(value: unknown): string | null {
                     <p
                         class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"
                     >
-                        Set the value, recipient, and purpose. Add safeguards
-                        only when needed.
+                        Create a Pay Code for someone to claim.
                     </p>
                 </div>
                 <Link

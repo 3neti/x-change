@@ -131,7 +131,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('p')
                 .text(),
         ).toBe(
-            'Preview the Stamp, shape its design, walk through its claim, or inspect cost.',
+            'Preview its Stamp, shape its design, walk through its claim, or inspect cost.',
         );
         expect(
             wrapper
@@ -483,7 +483,7 @@ describe('Cockpit Quick Generate foundation', () => {
         wrapper.unmount();
     });
 
-    it('keeps the selected Pay Code kind visible in Essentials', async () => {
+    it('keeps the selected Pay Code kind visible in the Order', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -3681,7 +3681,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(true);
         expect(wrapper.text()).toContain('Create Pay Code');
         expect(wrapper.text()).toContain(
-            'Set the value, recipient, and purpose. Add safeguards only when needed.',
+            'Create a Pay Code for someone to claim.',
         );
         const header = wrapper.find(
             '[data-testid="cockpit-quick-generate-header"]',
@@ -3720,7 +3720,8 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(essentialsCanvas.exists()).toBe(true);
-        expect(essentialsCanvas.text()).toContain('Essentials');
+        expect(essentialsCanvas.text()).toContain('Order');
+        expect(essentialsCanvas.text()).toContain('Pay To');
         expect(
             essentialsCanvas
                 .get('[data-testid="cockpit-quick-generate-voucher-kind"]')
@@ -3768,6 +3769,7 @@ describe('Cockpit Quick Generate foundation', () => {
         const canvasHeader = essentialsCanvas.get(
             '[data-testid="cockpit-pay-code-canvas-header"]',
         );
+        expect(canvasHeader.text()).toContain('Pay Code');
         expect(canvasHeader.text()).toContain('Stamp');
         expect(canvasHeader.text()).toContain('Cost');
         expect(canvasHeader.classes()).toContain('flex-col');
@@ -3825,7 +3827,7 @@ describe('Cockpit Quick Generate foundation', () => {
         );
         const instructionBuilderText = instructionBuilder.text();
 
-        expect(instructionBuilderText).toContain('Instructions And Safeguards');
+        expect(instructionBuilderText).toContain('Claim Experience');
         expect(instructionBuilderText).toContain('Issuance Details');
         expect(instructionBuilderText).toContain('Claim Requirements');
         expect(instructionBuilderText).toContain('Validation And Verification');
