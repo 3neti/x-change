@@ -80,6 +80,7 @@ class CockpitCampaignWorksheetController extends Controller
                     'name' => $validated['name'] ?: null,
                     'mobile' => $validated['mobile'] ?: null,
                     'bank_account' => $validated['bank_account'] ?: null,
+                    'bank_code' => $validated['bank_code'] ?: null,
                     'email' => $validated['email'] ?: null,
                     'remarks' => $validated['remarks'] ?: null,
                     'external_reference' => $validated['external_reference'] ?: null,
