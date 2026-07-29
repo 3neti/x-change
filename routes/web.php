@@ -18,6 +18,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetImportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
@@ -111,6 +112,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/{worksheet}/rows', [CockpitCampaignWorksheetController::class, 'addRow'])
             ->middleware('throttle:60,1')
             ->name('x-change.cockpit.campaigns.rows.store');
+        Route::post('campaigns/{worksheet}/imports/csv', CockpitCampaignWorksheetImportController::class)
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.imports.csv.store');
         Route::get('accounts', CockpitAccountPageController::class)
             ->middleware('verified')
             ->name('x-change.cockpit.accounts.index');
