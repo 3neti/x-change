@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use Illuminate\Support\Facades\Process;
 use RuntimeException;
+use Symfony\Component\Process\ExecutableFinder;
 
 final class ClaimWalkthroughRecorder
 {
@@ -38,7 +39,7 @@ final class ClaimWalkthroughRecorder
                 'XCHANGE_CLAIM_WALKTHROUGH_SUBMIT_CLAIM' => ($options['submit_claim'] ?? false) ? '1' : '0',
                 'XCHANGE_CLAIM_WALKTHROUGH_OG_PREVIEW' => json_encode(data_get($scenario, 'fixture.og_preview', []), JSON_UNESCAPED_SLASHES) ?: '{}',
             ])
-            ->run(['node', $script]);
+            ->run([$this->nodeBinary(), $script]);
 
         if ($result->failed()) {
             throw new RuntimeException(trim($result->errorOutput()) ?: 'Claim walkthrough recorder failed.');
@@ -51,5 +52,67 @@ final class ClaimWalkthroughRecorder
         }
 
         return $payload;
+    }
+
+    protected function nodeBinary(): string
+    {
+        $configured = trim((string) config('x-change.claim_preview.recorder.node_binary'));
+
+        if ($configured !== '') {
+            return $configured;
+        }
+
+        $finder = new ExecutableFinder;
+        $node = $finder->find('node');
+
+        if (is_string($node) && $node !== '') {
+            return $node;
+        }
+
+        foreach ($this->localNodeDirectories() as $directory) {
+            $node = $finder->find('node', null, [$directory]);
+
+            if (is_string($node) && $node !== '') {
+                return $node;
+            }
+        }
+
+        return 'node';
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function localNodeDirectories(): array
+    {
+        $home = trim((string) ($_SERVER['HOME'] ?? getenv('HOME') ?: ''));
+
+        if ($home === '') {
+            return ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin'];
+        }
+
+        return [
+            ...$this->matchingDirectories($home.'/Library/Application Support/Herd/config/nvm/versions/node/*/bin'),
+            ...$this->matchingDirectories($home.'/.nvm/versions/node/*/bin'),
+            '/opt/homebrew/bin',
+            '/usr/local/bin',
+            '/usr/bin',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function matchingDirectories(string $pattern): array
+    {
+        $directories = glob($pattern, GLOB_ONLYDIR);
+
+        if (! is_array($directories)) {
+            return [];
+        }
+
+        rsort($directories, SORT_NATURAL);
+
+        return array_values($directories);
     }
 }

@@ -30,6 +30,10 @@ on every keystroke. After the draft changes, **Update Preview** performs the
 explicit refresh. The old standalone preview panel does not coexist with this
 canvas view.
 
+The recorder resolves Node from the current runtime, Laravel Herd, and common
+NVM locations. Deployments with a dedicated binary path may set
+`XCHANGE_CLAIM_PREVIEW_NODE_BINARY`; the configured path takes precedence.
+
 ## Safety invariants
 
 Preview execution is not issuance and is not a claim:

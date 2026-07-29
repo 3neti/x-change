@@ -1947,6 +1947,9 @@ return [
     ],
 
     'claim_preview' => [
+        'recorder' => [
+            'node_binary' => env('XCHANGE_CLAIM_PREVIEW_NODE_BINARY'),
+        ],
         'rider' => [
             'message' => env(
                 'XCHANGE_CLAIM_PREVIEW_RIDER_MESSAGE',
