@@ -6,8 +6,6 @@ import { Link, router } from '@inertiajs/vue3';
 import {
     Clock3,
     FilePlus2,
-    Image,
-    ImageOff,
     LayoutTemplate,
     Link2,
     LoaderCircle,
@@ -44,6 +42,7 @@ import {
     buildRiderStampPreviewDocument,
     buildRiderSplashContent,
     buildSandboxedPreviewDocument,
+    firstRiderArtworkImageUrl,
     resolveRiderStampPreview,
 } from '../riderStampPreview';
 import type {
@@ -63,6 +62,7 @@ import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
 import CockpitRiderArtworkInspector from './CockpitRiderArtworkInspector.vue';
+import CockpitRiderArtworkThumbnail from './CockpitRiderArtworkThumbnail.vue';
 import CockpitRiderEditorDisclosure from './CockpitRiderEditorDisclosure.vue';
 import CockpitRiderMessageEditor from './CockpitRiderMessageEditor.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
@@ -106,6 +106,15 @@ type RiderUrlPreset = {
     label: string;
     url: string;
     helper: string;
+};
+
+type RiderArtworkSourceOption = {
+    value: RiderStampArtworkSource;
+    label: string;
+    imageUrl: string | null;
+    title: string;
+    description: string;
+    resolving: boolean;
 };
 
 type FeedbackChannel = 'email' | 'mobile' | 'webhook';
@@ -2535,6 +2544,73 @@ const riderUrlPreview = computed<RiderStampPreview>(() => {
 
 const riderUrlPreviewDocument = computed<string>(() => {
     return buildRiderStampPreviewDocument(riderUrlPreview.value, '', 'stamp');
+});
+
+const riderSplashThumbnailPreview = computed<RiderStampPreview>(() => {
+    return resolveRiderStampPreview({
+        source: 'splash',
+        splashHeadline: riderSplashHeadline.value,
+        splashBody: riderSplash.value,
+        splashCta: riderSplashCtaText.value,
+        artworkSource: 'splash',
+        artworkTreatment: 'artwork',
+        copySource: 'splash',
+        fit: riderStampFit.value,
+        position: riderStampPosition.value,
+        scrim: riderStampScrim.value,
+        theme: riderStampTheme.value,
+        showLogo: false,
+        showTagline: false,
+        claimMarker: 'none',
+    });
+});
+
+const riderArtworkSourceOptions = computed<RiderArtworkSourceOption[]>(() => {
+    const urlArtwork = riderUrlArtworkPreview.value;
+    const splashPreview = riderSplashThumbnailPreview.value;
+
+    return [
+        {
+            value: 'x_change',
+            label: 'x-change',
+            imageUrl: null,
+            title: 'x-change',
+            description: 'Money should adapt to people.',
+            resolving: false,
+        },
+        {
+            value: 'url',
+            label: 'Rider Link',
+            imageUrl: urlArtwork?.image_url ?? null,
+            title: urlArtwork?.title || riderUrl.value.trim() || 'Rider Link',
+            description:
+                urlArtwork?.description ||
+                (riderUrl.value.trim() === ''
+                    ? 'Add a Rider Link to preview it.'
+                    : 'Link artwork preview'),
+            resolving: riderUrlArtworkResolving.value,
+        },
+        {
+            value: 'splash',
+            label: 'Rider Splash',
+            imageUrl: firstRiderArtworkImageUrl(riderSplashContent.value),
+            title: splashPreview.title || 'Rider Splash',
+            description:
+                splashPreview.description ||
+                (riderSplash.value.trim() === ''
+                    ? 'Add Rider Splash content to preview it.'
+                    : 'Splash artwork preview'),
+            resolving: false,
+        },
+        {
+            value: 'none',
+            label: 'None',
+            imageUrl: null,
+            title: 'No Artwork',
+            description: 'Text-only Stamp',
+            resolving: false,
+        },
+    ];
 });
 
 const riderStampPreview = computed<RiderStampPreview>(() => {
@@ -6393,35 +6469,14 @@ function instructionRecord(
                                                     class="grid grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-900/80"
                                                 >
                                                     <label
-                                                        v-for="option in [
-                                                            {
-                                                                value: 'x_change',
-                                                                label: 'x-change',
-                                                                icon: Image,
-                                                            },
-                                                            {
-                                                                value: 'url',
-                                                                label: 'Rider Link',
-                                                                icon: Link2,
-                                                            },
-                                                            {
-                                                                value: 'splash',
-                                                                label: 'Rider Splash',
-                                                                icon: Sparkles,
-                                                            },
-                                                            {
-                                                                value: 'none',
-                                                                label: 'None',
-                                                                icon: ImageOff,
-                                                            },
-                                                        ]"
+                                                        v-for="option in riderArtworkSourceOptions"
                                                         :key="option.value"
-                                                        class="group relative grid h-9 min-w-0 cursor-pointer place-items-center rounded-lg border transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                        class="group relative grid min-w-0 cursor-pointer place-items-center rounded-lg border p-1 transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
                                                         :class="[
                                                             riderStampArtworkSource ===
                                                             option.value
-                                                                ? 'border-sky-600 bg-sky-600 text-white shadow-sm dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950'
-                                                                : 'border-transparent bg-white text-slate-500 hover:border-sky-300 hover:text-sky-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-sky-800 dark:hover:text-sky-300',
+                                                                ? 'border-sky-600 bg-sky-100 shadow-sm ring-2 ring-sky-500/25 dark:border-sky-400 dark:bg-sky-950/70'
+                                                                : 'border-transparent bg-white hover:border-sky-300 dark:bg-slate-950 dark:hover:border-sky-800',
                                                             (option.value ===
                                                                 'url' &&
                                                                 riderUrl.trim() ===
@@ -6473,11 +6528,34 @@ function instructionRecord(
                                                                 markRiderStampArtworkSourceSelection
                                                             "
                                                         />
-                                                        <component
-                                                            :is="option.icon"
-                                                            class="size-4"
-                                                            aria-hidden="true"
+                                                        <CockpitRiderArtworkThumbnail
+                                                            :source="
+                                                                option.value
+                                                            "
+                                                            :image-url="
+                                                                option.imageUrl
+                                                            "
+                                                            :title="
+                                                                option.title
+                                                            "
+                                                            :description="
+                                                                option.description
+                                                            "
+                                                            :resolving="
+                                                                option.resolving
+                                                            "
                                                         />
+                                                        <span
+                                                            v-if="
+                                                                riderStampArtworkSource ===
+                                                                option.value
+                                                            "
+                                                            class="absolute top-1.5 right-1.5 grid size-4 place-items-center rounded-full bg-sky-600 text-[9px] font-black text-white shadow-sm dark:bg-sky-400 dark:text-slate-950"
+                                                            aria-hidden="true"
+                                                            data-testid="cockpit-quick-generate-rider-artwork-selected"
+                                                        >
+                                                            ✓
+                                                        </span>
                                                         <span
                                                             :id="`rider-stamp-artwork-tooltip-${option.value}`"
                                                             role="tooltip"

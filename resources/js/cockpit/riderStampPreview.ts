@@ -174,11 +174,7 @@ export function resolveRiderStampPreview(
     const splashHeadline = (input.splashHeadline ?? '').trim();
     const splashBody = (input.splashBody ?? '').trim();
     const splashCta = (input.splashCta ?? '').trim();
-    const splashCopy = resolveSplashCopy(
-        splashHeadline,
-        splashBody,
-        splashCta,
-    );
+    const splashCopy = resolveSplashCopy(splashHeadline, splashBody, splashCta);
     const source = compositionPreviewSource(composition, legacySource);
     const presentation = {
         fit: normalizeFit(input.fit),
@@ -237,10 +233,7 @@ function firstHtmlElementText(content: string, tagNames: string[]): string {
 function htmlElementTexts(content: string, tagNames: string[]): string[] {
     const tags = tagNames.join('|');
     const matches = content.matchAll(
-        new RegExp(
-            `<(?:${tags})\\b[^>]*>([\\s\\S]*?)<\\/(?:${tags})>`,
-            'gi',
-        ),
+        new RegExp(`<(?:${tags})\\b[^>]*>([\\s\\S]*?)<\\/(?:${tags})>`, 'gi'),
     );
 
     return Array.from(matches)
@@ -283,20 +276,15 @@ function decodeHtmlEntities(value: string): string {
     };
 
     return value
-        .replace(
-            /&#(x?[0-9a-f]+);/gi,
-            (_match, code: string): string => {
-                const radix = code.toLowerCase().startsWith('x') ? 16 : 10;
-                const numeric = Number.parseInt(
-                    radix === 16 ? code.slice(1) : code,
-                    radix,
-                );
+        .replace(/&#(x?[0-9a-f]+);/gi, (_match, code: string): string => {
+            const radix = code.toLowerCase().startsWith('x') ? 16 : 10;
+            const numeric = Number.parseInt(
+                radix === 16 ? code.slice(1) : code,
+                radix,
+            );
 
-                return Number.isNaN(numeric)
-                    ? ''
-                    : String.fromCodePoint(numeric);
-            },
-        )
+            return Number.isNaN(numeric) ? '' : String.fromCodePoint(numeric);
+        })
         .replace(
             /&([a-z]+);/gi,
             (match, name: string): string =>
@@ -546,7 +534,7 @@ function buildCanvasArtworkMarkup(
     }
 
     if (preview.composition.artworkSource === 'splash') {
-        const splashImageUrl = firstImageUrl(splashContent);
+        const splashImageUrl = firstRiderArtworkImageUrl(splashContent);
 
         if (splashImageUrl !== null) {
             return buildSplashArtworkMarkup(preview, splashContent);
@@ -562,7 +550,7 @@ function buildSplashArtworkMarkup(
     preview: RiderStampPreview,
     splashContent: string,
 ): string {
-    const imageUrl = firstImageUrl(splashContent);
+    const imageUrl = firstRiderArtworkImageUrl(splashContent);
 
     if (imageUrl === null) {
         return '<div class="stamp-abstract stamp-abstract-splash"></div>';
@@ -578,7 +566,7 @@ function buildSplashArtworkMarkup(
     return `<div class="splash-canvas-artwork">${artwork}<p class="splash-symbols">${escapeHtml(symbols)}</p></div>`;
 }
 
-function firstImageUrl(content: string): string | null {
+export function firstRiderArtworkImageUrl(content: string): string | null {
     const match = content.match(/<img[^>]+src=["']([^"']+)["']/i);
     const value = normalizeRiderArtworkUrl(match?.[1]?.trim() ?? '');
 

@@ -3,12 +3,25 @@ import {
     buildRiderStampPreviewDocument,
     buildRiderSplashContent,
     buildSandboxedPreviewDocument,
+    firstRiderArtworkImageUrl,
     normalizeRiderArtworkUrl,
     normalizeRiderStampComposition,
     resolveRiderStampPreview,
 } from '../../../resources/js/cockpit/riderStampPreview';
 
 describe('Rider Stamp preview helpers', () => {
+    it('extracts only trusted thumbnail image schemes from Rider content', () => {
+        expect(
+            firstRiderArtworkImageUrl(
+                '<img src="https://example.test/stamp.jpg" alt="">',
+            ),
+        ).toBe('https://example.test/stamp.jpg');
+        expect(
+            firstRiderArtworkImageUrl('<img src="javascript:alert(1)" alt="">'),
+        ).toBeNull();
+        expect(firstRiderArtworkImageUrl('<p>No artwork</p>')).toBeNull();
+    });
+
     it('normalizes layered Stamp composition independently of legacy source', () => {
         expect(
             normalizeRiderStampComposition({

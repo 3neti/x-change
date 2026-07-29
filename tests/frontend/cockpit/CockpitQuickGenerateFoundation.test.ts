@@ -370,6 +370,17 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             artworkRadios.map((radio) => radio.attributes('aria-label')),
         ).toEqual(['x-change', 'Rider Link', 'Rider Splash', 'None']);
+        expect(
+            artworkSource.findAll(
+                '[data-testid="cockpit-rider-artwork-thumbnail"]',
+            ),
+        ).toHaveLength(4);
+        expect(artworkSource.find('iframe').exists()).toBe(false);
+        expect(
+            artworkSource.findAll(
+                '[data-testid="cockpit-quick-generate-rider-artwork-selected"]',
+            ),
+        ).toHaveLength(1);
         const artworkTooltips = artworkSource.findAll('[role="tooltip"]');
 
         expect(artworkTooltips).toHaveLength(4);
