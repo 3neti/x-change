@@ -17,6 +17,8 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetImportData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetSummaryData;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
+use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
+use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 
@@ -60,6 +62,8 @@ class CockpitCampaignWorksheetController extends Controller
             'worksheet' => $this->worksheetFor($worksheet, $request->user()),
             'imports' => $this->importsFor($worksheet, $request->user()),
             'fulfillment_summary' => $this->fulfillmentSummaryFor($worksheet, $request->user()),
+            'authorization' => $this->authorizationFor($worksheet, $request->user()),
+            'fulfillments' => $this->fulfillmentsFor($worksheet, $request->user()),
         ]);
     }
 
@@ -192,5 +196,67 @@ class CockpitCampaignWorksheetController extends Controller
             ->latest('id')
             ->first()
             ?->only(['planned_count', 'issued_count', 'provider_ready_count', 'fallback_count']) ?? [];
+    }
+
+    /** @return array<string, int|string|null> */
+    private function authorizationFor(string $reference, mixed $owner): array
+    {
+        $authorization = $this->authorization($reference, $owner);
+
+        if (! $authorization instanceof CampaignWorksheetAuthorization) {
+            return [];
+        }
+
+        return [
+            'reference' => (string) $authorization->reference,
+            'status' => (string) $authorization->status,
+            'approval_pay_code' => $authorization->approval_pay_code,
+            'beneficiary_count' => (int) $authorization->beneficiary_count,
+            'principal_minor' => (int) $authorization->principal_minor,
+        ];
+    }
+
+    /** @return array<int, array<string, int|string|null>> */
+    private function fulfillmentsFor(string $reference, mixed $owner): array
+    {
+        $authorization = $this->authorization($reference, $owner);
+
+        if (! $authorization instanceof CampaignWorksheetAuthorization) {
+            return [];
+        }
+
+        return $authorization->fulfillments()
+            ->with('row')
+            ->orderBy('id')
+            ->limit(100)
+            ->get()
+            ->map(function (CampaignWorksheetFulfillment $fulfillment): array {
+                $beneficiary = $fulfillment->row?->beneficiary_ciphertext ?? [];
+
+                return [
+                    'reference' => (string) $fulfillment->reference,
+                    'ordinal' => (int) ($fulfillment->row?->ordinal ?? 0),
+                    'beneficiary' => (string) ($beneficiary['name'] ?? $beneficiary['mobile'] ?? $beneficiary['bank_account'] ?? 'Beneficiary'),
+                    'amount_minor' => (int) ($fulfillment->row?->amount_minor ?? 0),
+                    'mode' => (string) $fulfillment->mode,
+                    'status' => (string) $fulfillment->status,
+                    'provider_transfer_reference' => $fulfillment->provider_transfer_reference,
+                    'pay_code' => $fulfillment->pay_code,
+                ];
+            })
+            ->all();
+    }
+
+    private function authorization(string $reference, mixed $owner): ?CampaignWorksheetAuthorization
+    {
+        $worksheet = CampaignWorksheet::query()
+            ->where('reference', $reference)
+            ->where('owner_type', $this->ownerType($owner))
+            ->where('owner_id', (string) $owner->getAuthIdentifier())
+            ->first();
+
+        return $worksheet instanceof CampaignWorksheet
+            ? $worksheet->authorizations()->latest('id')->first()
+            : null;
     }
 }

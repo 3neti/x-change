@@ -50,7 +50,11 @@ final class IssueCampaignWorksheetApprovalPayCode
                 'rules' => ['min_payment' => 0, 'max_payment' => 0, 'allow_overpayment' => false, 'auto_close_on_full_payment' => false],
                 'execution' => ['driver' => 'campaign_worksheet_authorization', 'mode' => 'officer_approval', 'metadata' => ['authorization_reference' => $authorization->reference, 'worksheet_reference' => $worksheet->reference, 'manifest_hash' => $worksheet->rows_hash, 'beneficiary_count' => $authorization->beneficiary_count, 'principal_minor' => $authorization->principal_minor, 'currency' => $worksheet->currency]],
                 'claim' => ['outcomes' => [['key' => 'authorize_campaign']], 'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'authorize_campaign', 'onboarding' => ['mode' => 'never'], 'claimant' => ['mode' => 'unbound'], 'profile' => 'voucher.claim.v1'],
-                'metadata' => ['flow_type' => 'campaign_worksheet_authorization', 'issuer_id' => (string) $owner->getKey()],
+                'metadata' => [
+                    'flow_type' => 'settlement',
+                    'campaign_execution' => 'campaign_worksheet_authorization',
+                    'issuer_id' => (string) $owner->getKey(),
+                ],
             ]))->first();
 
             if (! $voucher instanceof Voucher) {

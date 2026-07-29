@@ -25,6 +25,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetExpor
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFallbackController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFulfillmentController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetImportController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetResultsExportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
@@ -127,6 +128,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::get('campaigns/{worksheet}/exports/pay-codes.csv', CockpitCampaignWorksheetExportController::class)
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.exports.pay-codes');
+        Route::get('campaigns/{worksheet}/exports/results.csv', CockpitCampaignWorksheetResultsExportController::class)
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.exports.results');
         Route::post('campaigns/{worksheet}/fulfillments/bank-transfers', [CockpitCampaignWorksheetBankTransferDispatchController::class, 'store'])
             ->middleware('throttle:2,1')
             ->name('x-change.cockpit.campaigns.fulfillments.bank-transfers.store');
