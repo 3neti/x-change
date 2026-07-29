@@ -17,11 +17,12 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetImportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFulfillmentController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferDispatchController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetExportController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFulfillmentController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetImportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
@@ -124,6 +125,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::get('campaigns/{worksheet}/exports/pay-codes.csv', CockpitCampaignWorksheetExportController::class)
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.exports.pay-codes');
+        Route::post('campaigns/{worksheet}/fulfillments/bank-transfers', [CockpitCampaignWorksheetBankTransferDispatchController::class, 'store'])
+            ->middleware('throttle:2,1')
+            ->name('x-change.cockpit.campaigns.fulfillments.bank-transfers.store');
         Route::post('campaigns/{worksheet}/imports', [CockpitCampaignWorksheetImportController::class, 'stage'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.imports.store');
