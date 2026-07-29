@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
@@ -10,6 +11,7 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
+use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
 
 it('shows only the authenticated owner campaign worksheet summaries', function () {
     $owner = actingAsTestUser();
@@ -93,7 +95,9 @@ it('lets only the worksheet owner add a draft beneficiary with a mobile or bank 
         ->assertJsonPath('component', 'x-change/cockpit/CampaignWorksheet')
         ->assertJsonPath('props.worksheet.rows.0.beneficiary.mobile', '09173011987')
         ->assertJsonPath('props.worksheet.rows.0.amount_minor', 12_500)
-        ->assertJsonPath('props.direct_bank_transfer_enabled', false);
+        ->assertJsonPath('props.direct_bank_transfer_enabled', false)
+        ->assertJsonPath('props.delivery.channels.sms', false)
+        ->assertJsonPath('props.delivery.channels.email', false);
 
     actingAsTestUser();
 
@@ -273,4 +277,108 @@ it('records an explicit export as an immutable append-only delivery attempt', fu
         ->toThrow(LogicException::class, 'Campaign delivery attempts are append-only.')
         ->and(fn () => $attempt->events->first()->delete())
         ->toThrow(LogicException::class, 'Campaign delivery attempt events are append-only.');
+});
+
+it('sends campaign email only through an enabled explicit action and records blocked routes', function () {
+    Mail::fake();
+    config()->set('x-change.campaigns.delivery.email.enabled', true);
+    $owner = actingAsTestUser();
+    $officer = actingAsTestUser();
+    $officer->forceFill(['mobile' => '09173011987'])->save();
+    $repository = app(CampaignWorksheetRepository::class);
+
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-explicit-email-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'assistance',
+        name: 'Explicit Email Assistance',
+        fulfillmentMode: 'pay_code_distribution',
+        rows: [
+            new CampaignWorksheetRowData(null, 1, ['name' => 'Maria Santos', 'email' => 'maria@example.test'], 1_000),
+            new CampaignWorksheetRowData(null, 2, ['name' => 'No Email', 'mobile' => '09179998888'], 2_000),
+        ],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+
+    $this->actingAs($owner);
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+    $this->actingAs($officer);
+    app(CampaignWorksheetAuthorizationExecutionService::class)->execute(
+        Voucher::query()->where('code', $authorization->approval_pay_code)->sole(),
+        ['mobile' => '09173011987'],
+    );
+    $this->actingAs($owner)
+        ->post(route('x-change.cockpit.campaigns.fulfillments.pay-codes.store', $worksheet->reference))
+        ->assertRedirect();
+
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(0);
+    Mail::assertNothingSent();
+
+    $this->post(route('x-change.cockpit.campaigns.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'channel' => 'email',
+    ]))
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', 'EMAIL delivery: 1 sent, 0 failed, 1 blocked, 0 already attempted.');
+
+    Mail::assertSent(FeedbackEmailMessage::class, 1);
+
+    expect(CampaignDeliveryAttempt::query()->where('channel', 'email')->count())->toBe(2)
+        ->and(CampaignDeliveryAttempt::query()
+            ->with('events')
+            ->get()
+            ->map(fn (CampaignDeliveryAttempt $attempt): string => (string) $attempt->events->last()?->event_type)
+            ->sort()
+            ->values()
+            ->all())
+        ->toBe(['blocked', 'completed']);
+
+    $this->post(route('x-change.cockpit.campaigns.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'channel' => 'email',
+    ]))
+        ->assertSessionHas('campaign_notice', 'EMAIL delivery: 0 sent, 0 failed, 0 blocked, 2 already attempted.');
+
+    Mail::assertSent(FeedbackEmailMessage::class, 1);
+    expect(CampaignDeliveryAttempt::query()->where('channel', 'email')->count())->toBe(2);
+
+    $blocked = CampaignDeliveryAttempt::query()
+        ->whereHas('events', fn ($query) => $query->where('event_type', 'blocked'))
+        ->sole();
+
+    $this->post(route('x-change.cockpit.campaigns.deliveries.retries.store', [
+        'worksheet' => $worksheet->reference,
+        'attempt' => $blocked->reference,
+    ]))
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', 'EMAIL delivery retry finished: blocked.');
+
+    $retry = CampaignDeliveryAttempt::query()
+        ->where('retry_of_reference', $blocked->reference)
+        ->with('events')
+        ->sole();
+
+    expect($retry->attempt_number)->toBe(3)
+        ->and($retry->events->pluck('event_type')->all())->toBe(['requested', 'blocked'])
+        ->and(CampaignDeliveryAttempt::query()->where('channel', 'email')->count())->toBe(3);
+});
+
+it('rejects campaign messaging while its explicit runtime gate is disabled', function () {
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-disabled-message-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Disabled Messaging',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'channel' => 'sms',
+    ]))->assertForbidden();
+
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(0);
 });

@@ -7,6 +7,8 @@ defineProps<{
     fulfillment_summary: Record<string, number>;
     authorization: Record<string, unknown>;
     fulfillments: Array<Record<string, unknown>>;
+    direct_bank_transfer_enabled: boolean;
+    delivery: Record<string, unknown>;
     cockpit_header_read_model?: Record<string, unknown>;
 }>();
 </script>

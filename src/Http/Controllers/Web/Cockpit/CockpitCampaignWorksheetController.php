@@ -21,6 +21,7 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
+use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 
 class CockpitCampaignWorksheetController extends Controller
 {
@@ -65,6 +66,7 @@ class CockpitCampaignWorksheetController extends Controller
             'authorization' => $this->authorizationFor($worksheet, $request->user()),
             'fulfillments' => $this->fulfillmentsFor($worksheet, $request->user()),
             'direct_bank_transfer_enabled' => (bool) config('x-change.campaigns.netbank_dispatch.enabled', false),
+            'delivery' => $this->deliveryFor($worksheet, $request->user()),
         ]);
     }
 
@@ -259,5 +261,52 @@ class CockpitCampaignWorksheetController extends Controller
         return $worksheet instanceof CampaignWorksheet
             ? $worksheet->authorizations()->latest('id')->first()
             : null;
+    }
+
+    /** @return array<string, mixed> */
+    private function deliveryFor(string $reference, mixed $owner): array
+    {
+        $authorization = $this->authorization($reference, $owner);
+
+        if (! $authorization instanceof CampaignWorksheetAuthorization) {
+            return [
+                'channels' => ['sms' => false, 'email' => false],
+                'attempts' => [],
+            ];
+        }
+
+        $attempts = CampaignDeliveryAttempt::query()
+            ->with(['events', 'fulfillment.row'])
+            ->where('campaign_worksheet_authorization_id', $authorization->getKey())
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->map(function (CampaignDeliveryAttempt $attempt): array {
+                $lastEvent = $attempt->events->last();
+                $beneficiary = (array) ($attempt->fulfillment?->row?->beneficiary_ciphertext ?? []);
+
+                return [
+                    'reference' => (string) $attempt->reference,
+                    'channel' => (string) $attempt->channel,
+                    'attempt_number' => (int) $attempt->attempt_number,
+                    'retry_of_reference' => $attempt->retry_of_reference,
+                    'beneficiary' => (string) ($beneficiary['name'] ?? 'Batch export'),
+                    'pay_code' => $attempt->fulfillment?->pay_code,
+                    'status' => (string) ($lastEvent?->event_type ?? 'requested'),
+                    'safe_error_code' => $lastEvent?->safe_error_code,
+                    'requested_at' => $attempt->requested_at?->toIso8601String(),
+                    'can_retry' => in_array($lastEvent?->event_type, ['failed', 'blocked'], true)
+                        && (bool) config("x-change.campaigns.delivery.{$attempt->channel}.enabled", false),
+                ];
+            })
+            ->all();
+
+        return [
+            'channels' => [
+                'sms' => (bool) config('x-change.campaigns.delivery.sms.enabled', false),
+                'email' => (bool) config('x-change.campaigns.delivery.email.enabled', false),
+            ],
+            'attempts' => $attempts,
+        ];
     }
 }

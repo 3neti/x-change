@@ -71,5 +71,10 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('Beneficiaries Ready To Issue');
         expect(page).toContain('No Pay Codes, delivery, or bank transfers have started.');
         expect(page).toContain('v-if="plannedCount() > 0"');
+        expect(page).toContain('data-testid="campaign-delivery-controls"');
+        expect(page).toContain('Issuance never sends messages.');
+        expect(page).toContain('Download CSV');
+        expect(page).toContain('SMS Disabled');
+        expect(page).toContain('Email Disabled');
     });
 });

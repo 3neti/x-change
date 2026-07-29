@@ -388,6 +388,15 @@ return [
         'netbank_dispatch' => [
             'enabled' => (bool) env('XCHANGE_CAMPAIGNS_NETBANK_DISPATCH_ENABLED', false),
         ],
+        'delivery' => [
+            'batch_size' => (int) env('XCHANGE_CAMPAIGNS_DELIVERY_BATCH_SIZE', 100),
+            'sms' => [
+                'enabled' => (bool) env('XCHANGE_CAMPAIGNS_SMS_DELIVERY_ENABLED', false),
+            ],
+            'email' => [
+                'enabled' => (bool) env('XCHANGE_CAMPAIGNS_EMAIL_DELIVERY_ENABLED', false),
+            ],
+        ],
     ],
 
     'terminology' => [
