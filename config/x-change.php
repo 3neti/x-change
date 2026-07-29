@@ -384,6 +384,12 @@ return [
         ),
     ],
 
+    'campaigns' => [
+        'netbank_dispatch' => [
+            'enabled' => (bool) env('XCHANGE_CAMPAIGNS_NETBANK_DISPATCH_ENABLED', false),
+        ],
+    ],
+
     'terminology' => [
         'voucher' => env('XCHANGE_TERM_VOUCHER', 'Pay Code'),
         'voucher_code' => env('XCHANGE_TERM_VOUCHER_CODE', 'Pay Code'),

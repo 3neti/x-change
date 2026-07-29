@@ -212,6 +212,7 @@ use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Campaigns\NetbankCampaignBankTransferDispatcher;
 use LBHurtado\XChange\Services\Campaigns\NullCampaignBankTransferDispatcher;
 use LBHurtado\XChange\Services\Claim\DefaultClaimShareCardUrlResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
@@ -802,10 +803,11 @@ class XChangeServiceProvider extends ServiceProvider
             DefaultSettlementExecutionService::class,
         );
 
-        $this->app->bind(
-            CampaignBankTransferDispatcherContract::class,
-            NullCampaignBankTransferDispatcher::class,
-        );
+        $this->app->bind(CampaignBankTransferDispatcherContract::class, function ($app) {
+            return config('x-change.campaigns.netbank_dispatch.enabled', false)
+                ? $app->make(NetbankCampaignBankTransferDispatcher::class)
+                : $app->make(NullCampaignBankTransferDispatcher::class);
+        });
 
         $this->app->bind(
             ClaimApprovalWorkflowStoreContract::class,
