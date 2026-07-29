@@ -333,20 +333,34 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(designTabs.findAll('[role="tab"]')).toHaveLength(4);
         expect(appearanceTab.attributes('aria-selected')).toBe('true');
+        const appearanceLayout = wrapper.get(
+            '[data-testid="cockpit-quick-generate-rider-appearance-layout"]',
+        );
+        const artworkInspector = appearanceLayout.get(
+            '[data-testid="cockpit-quick-generate-rider-artwork-inspector"]',
+        );
+
+        expect(artworkInspector.classes()).toContain('lg:sticky');
+        expect(artworkInspector.classes()).toContain('lg:top-14');
+        expect(artworkInspector.classes()).not.toContain('hidden');
         expect(
-            wrapper
-                .get(
-                    '[data-testid="cockpit-quick-generate-rider-artwork-inspector"]',
-                )
-                .classes(),
-        ).toContain('lg:sticky');
+            appearanceLayout.findAll(
+                '[data-testid="cockpit-quick-generate-rider-artwork-inspector"]',
+            ),
+        ).toHaveLength(1);
         expect(
-            wrapper
-                .get(
-                    '[data-testid="cockpit-quick-generate-rider-artwork-inspector-mobile"]',
-                )
-                .classes(),
-        ).toContain('lg:hidden');
+            appearanceLayout
+                .html()
+                .indexOf(
+                    'data-testid="cockpit-quick-generate-rider-artwork-inspector"',
+                ),
+        ).toBeLessThan(
+            appearanceLayout
+                .html()
+                .indexOf(
+                    'data-testid="cockpit-quick-generate-rider-stamp-source"',
+                ),
+        );
         expect(
             wrapper
                 .get(

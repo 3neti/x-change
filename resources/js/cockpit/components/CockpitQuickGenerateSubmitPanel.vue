@@ -6375,9 +6375,28 @@ function instructionRecord(
                                 data-testid="cockpit-quick-generate-rider-stamp-editor"
                             >
                                 <div
-                                    class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,0.85fr)] lg:items-start"
+                                    class="grid gap-5"
+                                    data-testid="cockpit-quick-generate-rider-appearance-layout"
                                 >
                                     <div class="grid min-w-0 gap-5">
+                                        <CockpitRiderArtworkInspector
+                                            class="w-full lg:sticky lg:top-14 lg:z-20 lg:justify-self-center lg:shadow-xl lg:ring-1 lg:ring-sky-200/70 lg:dark:ring-sky-900/60"
+                                            data-testid="cockpit-quick-generate-rider-artwork-inspector"
+                                            :artwork-source="
+                                                riderStampArtworkSource
+                                            "
+                                            :fit="riderStampFit"
+                                            :position="riderStampPosition"
+                                            :preview-document="
+                                                riderCanvasArtworkDocument
+                                            "
+                                            :url-artwork-resolving="
+                                                riderUrlArtworkResolving
+                                            "
+                                            :url-artwork-message="
+                                                riderUrlArtworkMessage
+                                            "
+                                        />
                                         <fieldset
                                             class="grid gap-2"
                                             data-testid="cockpit-quick-generate-rider-stamp-source"
@@ -6500,25 +6519,6 @@ function instructionRecord(
                                                 </label>
                                             </div>
                                         </fieldset>
-                                        <CockpitRiderArtworkInspector
-                                            class="lg:hidden"
-                                            data-testid="cockpit-quick-generate-rider-artwork-inspector-mobile"
-                                            preview-test-id="cockpit-quick-generate-rider-stamp-preview-mobile"
-                                            :artwork-source="
-                                                riderStampArtworkSource
-                                            "
-                                            :fit="riderStampFit"
-                                            :position="riderStampPosition"
-                                            :preview-document="
-                                                riderCanvasArtworkDocument
-                                            "
-                                            :url-artwork-resolving="
-                                                riderUrlArtworkResolving
-                                            "
-                                            :url-artwork-message="
-                                                riderUrlArtworkMessage
-                                            "
-                                        />
                                         <fieldset
                                             v-if="
                                                 riderStampArtworkSource ===
@@ -7050,24 +7050,6 @@ function instructionRecord(
                                             </div>
                                         </details>
                                     </div>
-                                    <CockpitRiderArtworkInspector
-                                        class="hidden lg:sticky lg:top-12 lg:block"
-                                        data-testid="cockpit-quick-generate-rider-artwork-inspector"
-                                        :artwork-source="
-                                            riderStampArtworkSource
-                                        "
-                                        :fit="riderStampFit"
-                                        :position="riderStampPosition"
-                                        :preview-document="
-                                            riderCanvasArtworkDocument
-                                        "
-                                        :url-artwork-resolving="
-                                            riderUrlArtworkResolving
-                                        "
-                                        :url-artwork-message="
-                                            riderUrlArtworkMessage
-                                        "
-                                    />
                                 </div>
                             </CockpitRiderEditorDisclosure>
                         </div>
