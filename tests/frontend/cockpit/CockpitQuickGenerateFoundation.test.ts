@@ -3982,14 +3982,14 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(options.method).toBe('POST');
         expect(payload.cash.amount).toBe(25);
         expect(payload.preview_profile).toBe('issuer');
-        expect(wrapper.text()).toContain('Claim Experience Preview');
-        expect(wrapper.text()).toContain('Preview Only');
-        expect(wrapper.text()).toContain('Open Pay Code');
+        expect(wrapper.text()).not.toContain('Claim Experience Preview');
+        expect(wrapper.text()).not.toContain('Preview Only');
+        expect(wrapper.text()).not.toContain('Recipient Journey');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-canvas-claim"]')
                 .classes(),
-        ).toContain('h-[46rem]');
+        ).toContain('aspect-[1.72/1]');
         expect(
             wrapper
                 .get('[data-testid="cockpit-claim-experience-preview"]')
@@ -3999,8 +3999,8 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .get('[data-testid="cockpit-claim-experience-preview"]')
                 .find('ol')
-                .classes(),
-        ).toContain('flex');
+                .exists(),
+        ).toBe(false);
         expect(
             wrapper
                 .find('[data-testid="cockpit-claim-experience-frame"]')
@@ -4013,7 +4013,6 @@ describe('Cockpit Quick Generate foundation', () => {
             .get('[data-testid="cockpit-claim-experience-next"]')
             .trigger('click');
 
-        expect(wrapper.text()).toContain('Receive Confirmation');
         expect(
             wrapper
                 .find('[data-testid="cockpit-claim-experience-concept"]')

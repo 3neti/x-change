@@ -881,7 +881,7 @@ function stringValue(value: unknown): string | null {
             :id="panelId('claim')"
             role="tabpanel"
             :aria-labelledby="tabId('claim')"
-            class="h-[46rem] min-h-[46rem] w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-2 @md:aspect-[1.72/1] @md:h-auto @md:min-h-72 dark:border-slate-800 dark:bg-slate-900/70"
+            class="aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-2 dark:border-slate-800 dark:bg-slate-900/70"
             data-testid="cockpit-pay-code-canvas-claim"
         >
             <slot name="claim" />
