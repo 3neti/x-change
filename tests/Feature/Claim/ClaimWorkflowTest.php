@@ -74,6 +74,7 @@ it('removes destination collection from a campaign officer authorization workflo
         ->and($workflow->requires_destination)->toBeFalse()
         ->and($workflow->requires_authenticated_officer)->toBeTrue()
         ->and($walletStep['title'])->toBe('Campaign Officer Authorization')
+        ->and($instructions->toArray()['metadata']['claim_workflow']['confirmation_label'])->toBe('Authorize Campaign')
         ->and($walletStep['auto_sync']['enabled'])->toBeFalse()
         ->and($fieldNames)->toBe(['mobile'])
         ->and($walletStep['fields'][0]['default'])->toBe('09173011987')

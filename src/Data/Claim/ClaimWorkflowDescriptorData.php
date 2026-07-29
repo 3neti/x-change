@@ -19,6 +19,7 @@ final class ClaimWorkflowDescriptorData extends Data
         public bool $requires_authenticated_officer,
         public string $title,
         public string $description,
+        public string $confirmation_label,
         public array $review = [],
     ) {}
 }

@@ -23,6 +23,7 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
                 requires_authenticated_officer: true,
                 title: 'Campaign Officer Authorization',
                 description: $this->campaignDescription($voucher),
+                confirmation_label: 'Authorize Campaign',
                 review: [
                     'authorization_reference' => data_get($metadata, 'instructions.execution.metadata.authorization_reference'),
                     'worksheet_reference' => data_get($metadata, 'instructions.execution.metadata.worksheet_reference'),
@@ -41,6 +42,7 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
             requires_authenticated_officer: false,
             title: 'Disbursement Details',
             description: 'Provide the destination for this Pay Code.',
+            confirmation_label: 'Confirm Redemption',
         );
     }
 

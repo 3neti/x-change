@@ -40,6 +40,7 @@ final class FormFlowClaimWorkflowMutator
                 'requires_destination' => $workflow->requires_destination,
                 'requires_amount' => $workflow->requires_amount,
                 'requires_authenticated_officer' => $workflow->requires_authenticated_officer,
+                'confirmation_label' => $workflow->confirmation_label,
                 'review' => $workflow->review,
             ],
         ]);
