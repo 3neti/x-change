@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use BackedEnum;
 use Illuminate\Support\Arr;
+use UnitEnum;
 
 class VoucherIssuancePayloadNormalizer
 {
     public function normalize(array $input): array
     {
+        $input = $this->normalizeEnumValues($input);
         $input = app(NamedVoucherSliceService::class)->normalizeIssuancePayload($input);
         $cashValidation = Arr::get($input, 'cash.validation');
 
@@ -35,5 +38,25 @@ class VoucherIssuancePayloadNormalizer
         Arr::set($input, 'cash.amount', 0);
 
         return $input;
+    }
+
+    protected function normalizeEnumValues(mixed $value): mixed
+    {
+        if ($value instanceof BackedEnum) {
+            return $value->value;
+        }
+
+        if ($value instanceof UnitEnum) {
+            return $value->name;
+        }
+
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        return array_map(
+            fn (mixed $item): mixed => $this->normalizeEnumValues($item),
+            $value,
+        );
     }
 }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 
 it('moves collectible cash amount into target amount and zeroes cash amount', function () {
@@ -57,4 +58,23 @@ it('preserves configured cash validation while normalizing legacy empty values',
 
     expect(data_get($configured, 'cash.validation'))->toBe(['country' => 'PH'])
         ->and(data_get($legacy, 'cash.validation'))->toBe([]);
+});
+
+it('normalizes nested voucher enum values at the issuance boundary', function (): void {
+    $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize([
+        'cash' => [
+            'amount' => 100,
+        ],
+        'inputs' => [
+            'fields' => [
+                VoucherInputField::MOBILE,
+                VoucherInputField::EMAIL,
+            ],
+        ],
+    ]);
+
+    expect(data_get($normalized, 'inputs.fields'))->toBe([
+        'mobile',
+        'email',
+    ]);
 });
