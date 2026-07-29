@@ -6,9 +6,14 @@ namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 
 final class ClaimPreviewVoucherPayloadFactory
 {
+    public function __construct(
+        private readonly RiderSplashArtworkSnapshotterContract $splashArtwork,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -30,6 +35,6 @@ final class ClaimPreviewVoucherPayloadFactory
             data_set($payload, 'mask', '****');
         }
 
-        return $payload;
+        return $this->splashArtwork->prepare($payload);
     }
 }
