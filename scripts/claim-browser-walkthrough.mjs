@@ -21,6 +21,7 @@ const bankCode =
 const accountNumber =
     process.env.XCHANGE_CLAIM_WALKTHROUGH_ACCOUNT_NUMBER ?? '09173011987';
 const submitClaim = process.env.XCHANGE_CLAIM_WALKTHROUGH_SUBMIT_CLAIM === '1';
+const riderUrl = (process.env.XCHANGE_CLAIM_WALKTHROUGH_RIDER_URL ?? '').trim();
 const ogPreview = parseJson(
     process.env.XCHANGE_CLAIM_WALKTHROUGH_OG_PREVIEW,
     {},
@@ -281,6 +282,80 @@ async function capture(key, title, expected, details = {}) {
     });
 
     return checkpoint;
+}
+
+function externalHttpUrl(value) {
+    try {
+        const url = new URL(value);
+
+        return ['http:', 'https:'].includes(url.protocol) ? url : null;
+    } catch {
+        return null;
+    }
+}
+
+async function captureRiderHandoff() {
+    const target = externalHttpUrl(riderUrl);
+
+    if (target === null) {
+        return false;
+    }
+
+    const destination = await browser.newPage({ viewport: mobileViewport });
+
+    try {
+        await destination.goto(target.toString(), {
+            waitUntil: 'domcontentloaded',
+            timeout: 15000,
+        });
+        await destination.waitForTimeout(1000);
+
+        const screenshotPath = path.join(
+            artifactDirectory,
+            'screenshots',
+            `${String(checkpoints.length + 1).padStart(2, '0')}-rider-url.png`,
+        );
+
+        await destination.screenshot({ path: screenshotPath, fullPage: true });
+
+        const checkpoint = {
+            key: 'rider-url',
+            title: 'Rider destination',
+            route: routeFromUrl(destination.url()),
+            actor: 'redeemer',
+            expected: 'The browser reaches the configured Rider Link after the claim handoff.',
+            status: 'captured',
+            screenshot_path: screenshotPath,
+            feature: 'rider_redirect',
+            phase: 'redirect',
+            destination_url: destination.url(),
+        };
+
+        checkpoints.push(checkpoint);
+        actions.push({
+            sequence: actions.length + 1,
+            event: 'capture:rider-url',
+            status: 'captured',
+            url: destination.url(),
+            screenshot_path: screenshotPath,
+        });
+
+        features.rider_redirect = true;
+
+        return true;
+    } catch (error) {
+        actions.push({
+            sequence: actions.length + 1,
+            event: 'capture:rider-url',
+            status: 'not_captured',
+            url: target.toString(),
+            reason: error instanceof Error ? error.message : 'Navigation failed.',
+        });
+
+        return false;
+    } finally {
+        await destination.close();
+    }
 }
 
 async function clickVisibleButton(names) {
@@ -829,15 +904,9 @@ try {
             .catch(() => {});
         await page.waitForLoadState('networkidle').catch(() => {});
         await page.waitForTimeout(1000);
-        features.rider_redirect = !page
-            .url()
-            .includes(`/x/claim/${payCode}/success`);
-        await capture(
-            'rider-url',
-            'Rider URL',
-            'The browser reaches the configured rider URL when redirect is enabled.',
-            { feature: 'rider_redirect', phase: 'redirect' },
-        );
+        await captureRiderHandoff();
+    } else if (riderUrl !== '') {
+        await captureRiderHandoff();
     }
 
     const artifacts = {

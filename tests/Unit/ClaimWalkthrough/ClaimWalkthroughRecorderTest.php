@@ -17,7 +17,14 @@ it('uses the configured node binary for walkthrough recording', function (): voi
     ]);
 
     $result = app(ClaimWalkthroughRecorder::class)->record(
-        scenario: ['key' => 'claim-preview'],
+        scenario: [
+            'key' => 'claim-preview',
+            'fixture' => [
+                'rider' => [
+                    'url' => 'https://open.spotify.com/track/example',
+                ],
+            ],
+        ],
         baseUrl: 'https://x-change.test',
         artifactDirectory: storage_path('framework/testing/claim-preview'),
         headed: false,
@@ -28,6 +35,7 @@ it('uses the configured node binary for walkthrough recording', function (): voi
 
     Process::assertRan(
         fn (PendingProcess $process, ProcessResult $processResult): bool => $process->command[0] === '/runtime/node'
-            && str_ends_with($process->command[1], '/scripts/claim-browser-walkthrough.mjs'),
+            && str_ends_with($process->command[1], '/scripts/claim-browser-walkthrough.mjs')
+            && ($process->environment['XCHANGE_CLAIM_WALKTHROUGH_RIDER_URL'] ?? null) === 'https://open.spotify.com/track/example',
     );
 });
