@@ -20,6 +20,8 @@ export type PayCodeCostEstimate = {
     components?: Record<string, number>;
     charges?: PayCodeCostCharge[];
     total?: number;
+    pay_code_value?: number | null;
+    account_debit?: number | null;
     [key: string]: unknown;
 };
 

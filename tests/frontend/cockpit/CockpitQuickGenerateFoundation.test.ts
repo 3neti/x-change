@@ -514,6 +514,111 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(kind.text()).toBe('Settlement');
     });
 
+    it('shows the authoritative Account debit beneath the Pay Code amount', async () => {
+        vi.useFakeTimers();
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                success: true,
+                data: {
+                    currency: 'PHP',
+                    base_fee: 12,
+                    components: {
+                        selfie: 5,
+                    },
+                    charges: [
+                        {
+                            label: 'Pay Code Generation',
+                            price: 12,
+                            currency: 'PHP',
+                        },
+                        {
+                            label: 'Selfie Verification',
+                            price: 5,
+                            currency: 'PHP',
+                        },
+                    ],
+                    total: 17,
+                    pay_code_value: 50,
+                    account_debit: 67,
+                },
+            }),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+        const debit = wrapper.get(
+            '[data-testid="cockpit-quick-generate-account-debit"]',
+        );
+
+        expect(debit.text()).toContain('Estimated Account Debit');
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+            .setValue('50');
+
+        expect(
+            debit
+                .find(
+                    '[data-testid="cockpit-quick-generate-account-debit-loading"]',
+                )
+                .exists(),
+        ).toBe(true);
+
+        await vi.advanceTimersByTimeAsync(501);
+        await flushPromises();
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            '/api/x/v1/pay-codes/estimate',
+            expect.objectContaining({
+                method: 'POST',
+            }),
+        );
+        expect(
+            debit
+                .get(
+                    '[data-testid="cockpit-quick-generate-account-debit-amount"]',
+                )
+                .text(),
+        ).toBe('₱67.00');
+        expect(
+            debit
+                .get(
+                    '[data-testid="cockpit-quick-generate-account-debit-breakdown"]',
+                )
+                .text(),
+        ).toBe('₱50.00 Pay Code value + ₱17.00 issue cost.');
+        expect(debit.text()).toContain(
+            'Deducted from Client Funds when issued.',
+        );
+
+        await debit
+            .get(
+                '[data-testid="cockpit-quick-generate-account-debit-view-cost"]',
+            )
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+
+        wrapper.unmount();
+        vi.unstubAllGlobals();
+        vi.useRealTimers();
+    });
+
     it('renders only the server-issued canonical claim QR on a finalized canvas', () => {
         const claimQr = 'data:image/png;base64,aXNzdWVkLWNsYWltLXFy';
         const wrapper = mount(CockpitPayCodeCanvas, {
