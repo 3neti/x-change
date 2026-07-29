@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewOptions;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewService;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherDisposer;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherPayloadFactory;
+use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 
 it('renders and caches preview artifacts from voucher instructions', function (): void {
@@ -168,4 +171,27 @@ it('deletes only temporary preview vouchers after capture', function (): void {
 
     expect($preview->fresh())->toBeNull()
         ->and($regular->fresh())->not->toBeNull();
+});
+
+it('preserves the preview-only marker through real issuance and cleanup', function (): void {
+    $issuer = actingAsTestUser();
+    $instructions = validVoucherInstructions(10.00);
+    $payload = app(ClaimPreviewVoucherPayloadFactory::class)->make(
+        $instructions,
+        $issuer,
+    );
+
+    $issued = app(PayCodeIssuanceContract::class)->issue($issuer, $payload);
+    $voucher = Voucher::query()->findOrFail(
+        $issued['voucher_id'],
+    );
+
+    expect(data_get(
+        $voucher->metadata,
+        'instructions.metadata.custom.walkthrough.preview',
+    ))->toBeTrue();
+
+    app(ClaimPreviewVoucherDisposer::class)->dispose($voucher->getKey());
+
+    expect($voucher->fresh())->toBeNull();
 });

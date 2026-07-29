@@ -32,6 +32,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
         $input = $this->withCollectionWalletContext($issuer, $input);
         $instructions = VoucherInstructionsData::createFromAttribs($input);
+        $this->restoreCustomMetadata($instructions, $input);
         $this->restorePreparedSplashArtworkSnapshot($instructions, $input);
 
         /** @var Authenticatable|null $previousUser */
@@ -99,6 +100,29 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         ])->save();
 
         $voucher->refresh();
+    }
+
+    /**
+     * Preserve extension metadata accepted by the issuance contract but omitted
+     * while the nested Voucher metadata DTO is reconstructed.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    protected function restoreCustomMetadata(
+        VoucherInstructionsData $instructions,
+        array $input,
+    ): void {
+        $custom = data_get($input, 'metadata.custom');
+
+        if (! is_array($custom) || $custom === []) {
+            return;
+        }
+
+        $instructions->metadata ??= VoucherMetadataData::from([]);
+        $existing = is_array($instructions->metadata->custom)
+            ? $instructions->metadata->custom
+            : [];
+        $instructions->metadata->custom = array_replace_recursive($existing, $custom);
     }
 
     protected function redeemPath(string $code): string
