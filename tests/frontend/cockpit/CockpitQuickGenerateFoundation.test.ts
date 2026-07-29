@@ -343,6 +343,13 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .get(
+                    '[data-testid="cockpit-quick-generate-rider-artwork-inspector-mobile"]',
+                )
+                .classes(),
+        ).toContain('lg:hidden');
+        expect(
+            wrapper
+                .get(
                     '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
                 )
                 .findAll('input[type="radio"]'),
