@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ClaimWidget from '@/components/x-change/ClaimWidget.vue';
+import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import ProvisioningSetup from '../../../components/x-change/ProvisioningSetup.vue';
 import {
     normalizeProvisioningRequirement,
@@ -71,10 +72,8 @@ function resetCompiledFormSubmitState(): void {
 
 <template>
     <Head title="Claim Pay Code" />
-    <div
-        class="flex min-h-svh flex-col items-center justify-center gap-6 bg-gradient-to-b from-primary/5 via-background to-background p-6 md:p-10"
-    >
-        <div class="w-full max-w-md space-y-4">
+    <ClaimStepShell>
+        <div class="space-y-4">
             <ProvisioningSetup
                 :requirement="provisioningRequirement"
                 resume-label="Continue setup"
@@ -90,5 +89,5 @@ function resetCompiledFormSubmitState(): void {
                 @submit:compiled-form="submitCompiledForm"
             />
         </div>
-    </div>
+    </ClaimStepShell>
 </template>

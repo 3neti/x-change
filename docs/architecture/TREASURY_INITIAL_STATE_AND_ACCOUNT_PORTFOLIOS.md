@@ -104,23 +104,69 @@ php artisan x-change:install --no-interaction
 The default installer:
 
 1. validates static configuration and the durable Treasury identity;
-2. runs a read-only live provider preflight that authenticates and reads an
-   authoritative balance;
-3. stops before migrations, Treasury Positions, or UI publication when a
-   required connection fails;
-4. publishes migration prerequisites and runs migrations;
-5. resolves the system principal and idempotently provisions zero-balance
-   Treasury Positions only for connections that passed live preflight;
-6. reads authoritative provider balances again for opening reconciliation;
-7. applies an explicitly authorized opening capitalization policy, when
+2. classifies each active Treasury connection from its durable local topology;
+3. runs a read-only live provider preflight only for a fresh or safely resumable
+   connection;
+4. stops before migrations, Treasury Positions, or UI publication when a
+   required fresh or resumable connection fails;
+5. publishes migration prerequisites and runs migrations;
+6. resolves the system principal and idempotently provisions zero-balance
+   Treasury Positions only for fresh or resumable connections that passed live
+   preflight;
+7. reads authoritative provider balances again for their one-time opening
+   reconciliation;
+8. applies an explicitly authorized opening capitalization policy, when
    requested; and
-8. publishes the UI and remaining host assets only after Treasury succeeds.
+9. publishes the UI and remaining host assets only after initialization
+   succeeds.
+
+### Installer lifecycle classification
+
+`x-change:install` is both a first-deployment command and an idempotent package
+republish command. It must not treat an operating Treasury as though it were
+opening again.
+
+Before provider access, every active connection is assigned one lifecycle
+state:
+
+- **fresh or resumable** — the canonical topology is absent, or only an exact,
+  non-conflicting subset of the ten system Treasury Positions exists and the
+  provider Inventory has not yet been registered. The installer runs the
+  fail-closed live preflight, idempotently completes provisioning, and performs
+  opening reconciliation.
+- **initialized** — all ten canonical active system Treasury Positions match
+  the configured principal, mandate, provider, connection, currency,
+  settlement resource, custody mode, legal profile, and reconciliation
+  reference, and the matching active provider Inventory exists. The installer
+  does not call the provider, provision Positions, reconcile an opening
+  balance, or run opening capitalization for that connection.
+- **incomplete or conflicting** — an existing Position or Inventory conflicts
+  with the immutable configured topology, or an Inventory exists without the
+  complete canonical Position set. The installer fails before migrations,
+  Treasury writes, or UI publication. This state requires an explicit
+  accounting or configuration repair; it is never guessed into another state.
+
+The Inventory is the important completion boundary. Position provisioning can
+be interrupted and resumed safely, while opening reconciliation registers the
+Inventory even when the authoritative opening balance is zero. Balance amounts
+and operation history are deliberately not used as initialization markers.
+
+For an initialized connection, the expected reinstall message is:
+
+```text
+Treasury already initialized [netbank-primary]; skipping opening live preflight and reconciliation.
+```
+
+This separation makes asset republishing deterministic during provider downtime
+and prevents an operating balance difference from being reinterpreted as
+opening capital.
 
 `--force` controls replacement of published files only. It never weakens
-Treasury configuration, live readiness, ownership confirmation, or
-reconciliation controls. `--no-interaction` never prompts, invents an opening
-amount, silently skips a required connection, or falls back to manual
-capitalization.
+Treasury configuration, topology validation, ownership confirmation, or the
+first-deployment live readiness and reconciliation controls. It does not force
+an initialized connection through the opening workflow. `--no-interaction`
+never prompts, invents an opening amount, silently skips a required fresh
+connection, or falls back to manual capitalization.
 
 Static and live readiness are deliberately separate. Static readiness verifies
 installed provider capabilities and required configuration names. Live
@@ -204,9 +250,12 @@ machine-readable output is useful. Preflight JSON reports `level`,
 `static_ready`, `live_ready`, combined `ready`, and sanitized `issues`.
 
 A failed required connection makes live preflight and installation fail closed.
-A failed optional connection remains visible but does not block healthy required
-connections, and no Treasury Position is provisioned for that optional
-connection.
+This applies to a fresh or resumable connection that still requires opening
+initialization. A failed optional connection remains visible but does not block
+healthy required connections, and no Treasury Position is provisioned for that
+optional connection. An initialized connection is not live-probed by the
+installer; provider availability and balance drift are operational health
+concerns, not package-installation gates.
 
 Provider transport and response failures use only this sanitized taxonomy:
 
@@ -511,6 +560,22 @@ For the current NetBank contract, each slice derecognizes only the amount sent t
 
 A provider balance can be below internal Treasury attribution when an older, already-settled system-owned disbursement reached the provider but predates the append-only Treasury outflow posting. Opening reconciliation remains fail-closed and never guesses that this is the cause.
 
+This is operational drift, not evidence that installation is incomplete. A
+routine reinstall must not call opening reconciliation or attempt to repair the
+difference. In particular, do not use repeated `x-change:install --force` runs
+or opening capitalization to resolve
+`provider-balance-below-internal-attribution`.
+
+Check provider availability independently:
+
+```bash
+php artisan x-change:treasury:preflight --live --no-interaction
+```
+
+A sanitized `connection_timeout` means the provider could not be observed at
+that moment. It does not invalidate a complete local Treasury topology and does
+not block an asset-republish install.
+
 First run the dedicated inspection command:
 
 ```bash
@@ -528,6 +593,14 @@ Inspection is the default and performs no writes. A repair is eligible only when
 - no matching Inventory or Position posting already exists;
 - candidate principal totals exactly equal the provider-to-Treasury deficit; and
 - the system's Legacy Unattributed Position can cover that exact principal total.
+
+If inspection returns `status=rejected` with
+`No authoritative missing disbursement postings explain the Treasury deficit.`,
+no safe repair exists from the evidence currently available. Do not fabricate
+reconciliation IDs, force a write-off, or seed another opening balance. Compare
+the provider statement and authoritative settled transactions with append-only
+Inventory and Position operations, then resolve the missing evidence or use an
+approved accounting correction workflow.
 
 Review the returned reconciliation IDs, then repeat them explicitly:
 

@@ -8,19 +8,24 @@ use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionProvisioningContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionDefinitionData;
-use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Data\Treasury\TreasuryProvisioningData;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Exceptions\TreasuryPreflightFailed;
 
 final readonly class TreasuryProvisioningService
 {
+    private TreasurySystemPositionCatalog $systemPositions;
+
     public function __construct(
         private TreasuryPreflightService $preflight,
         private TreasuryConfigurationValidator $configuration,
         private SystemUserResolverContract $systemPrincipal,
         private TreasuryPositionProvisioningContract $positions,
-    ) {}
+        ?TreasurySystemPositionCatalog $systemPositions = null,
+    ) {
+        $this->systemPositions = $systemPositions
+            ?? new TreasurySystemPositionCatalog;
+    }
 
     /**
      * @param  list<string>  $connectionReferences
@@ -66,18 +71,7 @@ final readonly class TreasuryProvisioningService
                 continue;
             }
 
-            foreach ([
-                [TreasuryPositionPurpose::TreasuryClearing, 'clearing'],
-                [TreasuryPositionPurpose::LegacyUnattributed, 'unattributed'],
-                [TreasuryPositionPurpose::AccountFundingReserve, 'account-funding-reserve'],
-                [TreasuryPositionPurpose::CommercialClearing, 'commercial-clearing'],
-                [TreasuryPositionPurpose::ProviderCostPayable, 'provider-cost-payable'],
-                [TreasuryPositionPurpose::ProductRevenue, 'product-revenue'],
-                [TreasuryPositionPurpose::PartnerCommissionPayable, 'partner-commission-payable'],
-                [TreasuryPositionPurpose::RoyaltyPayable, 'royalty-payable'],
-                [TreasuryPositionPurpose::TaxPayable, 'tax-payable'],
-                [TreasuryPositionPurpose::CommercialRevenue, 'commercial-revenue'],
-            ] as [$purpose, $suffix]) {
+            foreach ($this->systemPositions->all() as $suffix => $purpose) {
                 $positionReference = implode(':', [
                     'position',
                     'system',

@@ -70,6 +70,9 @@ describe('ClaimEntryPage', () => {
             },
         });
 
+        expect(wrapper.find('[data-testid="claim-step-shell"]').exists()).toBe(
+            true,
+        );
         expect(wrapper.text()).toContain('Add payout destination');
         expect(wrapper.find('[data-testid="claim-widget"]').exists()).toBe(
             false,

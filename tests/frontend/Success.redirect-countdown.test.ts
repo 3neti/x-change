@@ -94,9 +94,18 @@ describe('claim Success redirect countdown rendering', () => {
             props: baseProps,
         });
 
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('5');
-        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
+        expect(wrapper.find('[data-testid="claim-step-shell"]').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe(
+            '5',
+        );
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe(
+            '/x/claim/TEST123/redirect',
+        );
     });
 
     it('does not render RiderCountdown when compiled redirect countdown is disabled', () => {
@@ -117,7 +126,9 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            false,
+        );
     });
 
     it('does not render RiderCountdown when redirect endpoint is missing', () => {
@@ -128,7 +139,9 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            false,
+        );
     });
 
     it('lets rider redirect take precedence over compiled redirect', () => {
@@ -152,8 +165,12 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('9');
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe(
+            '9',
+        );
     });
 
     it('passes redirectEndpoint to RiderCountdown instead of raw rider url', () => {
@@ -172,9 +189,15 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
-        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).not.toBe('https://rider.example.com/raw-target');
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe(
+            '/x/claim/TEST123/redirect',
+        );
+        expect(
+            wrapper.find('[data-testid="countdown-endpoint"]').text(),
+        ).not.toBe('https://rider.example.com/raw-target');
     });
 
     it('passes the redirect gate endpoint to RiderCountdown for final navigation', () => {
@@ -193,9 +216,15 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
-        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).not.toBe('https://example.com/raw-rider-url');
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe(
+            '/x/claim/TEST123/redirect',
+        );
+        expect(
+            wrapper.find('[data-testid="countdown-endpoint"]').text(),
+        ).not.toBe('https://example.com/raw-rider-url');
     });
 
     it('renders success visual stages together with redirect countdown when both exist', () => {
@@ -221,7 +250,9 @@ describe('claim Success redirect countdown rendering', () => {
         });
 
         expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
     });
 
     it('renders countdown when there are no success visual stages', () => {
@@ -229,8 +260,12 @@ describe('claim Success redirect countdown rendering', () => {
             props: baseProps,
         });
 
-        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(
+            false,
+        );
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
     });
 
     it('renders fallback success message when no stages and no countdown exist', () => {
@@ -251,14 +286,18 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(
+            false,
+        );
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            false,
+        );
         expect(wrapper.text()).toContain('Disbursed to your account');
     });
 
     // Product decision:
-// Success rider stages and redirect countdown render together.
-// Success stages communicate outcome; countdown communicates upcoming navigation.
+    // Success rider stages and redirect countdown render together.
+    // Success stages communicate outcome; countdown communicates upcoming navigation.
     it('renders success visual stages together with redirect countdown when both exist', () => {
         const wrapper = mount(Success, {
             props: {
@@ -287,9 +326,15 @@ describe('claim Success redirect countdown rendering', () => {
         });
 
         expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('5');
-        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe(
+            '5',
+        );
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe(
+            '/x/claim/TEST123/redirect',
+        );
     });
 
     it('does not let success visual stages suppress redirect countdown', () => {
@@ -315,7 +360,9 @@ describe('claim Success redirect countdown rendering', () => {
         });
 
         expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
     });
 
     it('does not render compiled countdown when redirect owner is not claim-widget', () => {
@@ -330,7 +377,9 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            false,
+        );
     });
 
     it('renders success rider stages inside a dedicated success stage region', () => {
@@ -355,8 +404,16 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="success-stage-region"] [data-testid="rider-stage"]').exists()).toBe(true);
+        expect(
+            wrapper.find('[data-testid="success-stage-region"]').exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="success-stage-region"] [data-testid="rider-stage"]',
+                )
+                .exists(),
+        ).toBe(true);
     });
 
     it('renders redirect countdown inside a dedicated countdown region', () => {
@@ -364,8 +421,16 @@ describe('claim Success redirect countdown rendering', () => {
             props: baseProps,
         });
 
-        expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="redirect-countdown-region"] [data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(
+            wrapper.find('[data-testid="redirect-countdown-region"]').exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="redirect-countdown-region"] [data-testid="rider-countdown"]',
+                )
+                .exists(),
+        ).toBe(true);
     });
 
     it('renders fallback success region only when there are no success stages and no countdown', () => {
@@ -386,9 +451,15 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="fallback-success-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="fallback-success-region"]').exists(),
+        ).toBe(true);
+        expect(
+            wrapper.find('[data-testid="success-stage-region"]').exists(),
+        ).toBe(false);
+        expect(
+            wrapper.find('[data-testid="redirect-countdown-region"]').exists(),
+        ).toBe(false);
     });
 
     it('prefers compiled success_rider stages over rider success fallback stages', () => {
@@ -591,10 +662,18 @@ describe('claim Success redirect countdown rendering', () => {
         expect(stages).toContain('compiled-success-rider-stage');
         expect(stages).not.toContain('legacy-success-rider-stage');
 
-        expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('5');
+        expect(
+            wrapper.find('[data-testid="success-stage-region"]').exists(),
+        ).toBe(true);
+        expect(
+            wrapper.find('[data-testid="redirect-countdown-region"]').exists(),
+        ).toBe(true);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe(
+            '5',
+        );
     });
 
     it('does not render redirect countdown when compiled redirect is owned by x-rider', () => {
@@ -623,8 +702,12 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="redirect-countdown-region"]').exists(),
+        ).toBe(false);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            false,
+        );
     });
 
     it('normalizes redirect countdown delay from compiled redirect payload', () => {
@@ -639,9 +722,14 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('12');
-        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe(
+            '12',
+        );
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe(
+            '/x/claim/TEST123/redirect',
+        );
     });
 });
-

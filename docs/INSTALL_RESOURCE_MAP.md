@@ -54,6 +54,7 @@ Published by `XChangeServiceProvider`. These are the package-owned Vue source fi
 | `resources/js/components/x-change/RecentActivity.vue` | same | Dashboard recent activity table |
 | `resources/js/components/x-change/BalanceWidget.vue` | same | Balance display card |
 | `resources/js/components/x-change/ReconciliationStatusCard.vue` | same | Reconciliation status display |
+| `resources/js/components/x-change/ClaimStepShell.vue` | same | Shared public claim page frame for entry, approval, success, and error states |
 | `resources/js/components/x-change/ClaimWidget.vue` | same | Code entry form with live voucher x-ray (adapted from redeem-x RedeemWidget) |
 | `resources/js/components/x-change/VoucherInstructionsDisplay.vue` | same | Voucher instructions x-ray (amount, inputs, validation, rider) |
 | `resources/js/components/x-change/VoucherStatusStamp.vue` | same | Redeemed/expired status stamp overlay |

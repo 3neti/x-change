@@ -24,10 +24,12 @@ php artisan test
 
 During development, `npm run dev` can replace `npm run build`.
 
-Before the installer changes the database or publishes UI files, every required
-Treasury connection must pass both static configuration checks and a read-only
-live check. The live check authenticates and reads an authoritative provider
-balance. It does not move money. Diagnose the two levels independently with:
+Before the installer changes the database or publishes UI files, every fresh or
+safely resumable required Treasury connection must pass both static
+configuration checks and a read-only live check. The live check authenticates
+and reads an authoritative provider balance. It does not move money. An already
+initialized connection is not live-probed during a reinstall. Diagnose provider
+readiness independently with:
 
 ```bash
 php artisan x-change:treasury:preflight --no-interaction
@@ -186,6 +188,43 @@ Unless skipped, the installer runs:
 php artisan migrate --force
 ```
 
+## First Install Versus Reinstall
+
+The installer classifies every active Treasury connection before contacting a
+provider:
+
+- **Fresh or resumable:** no Treasury topology exists, or an exact partial
+  Position topology exists without its Inventory. Live preflight, idempotent
+  provisioning, opening reconciliation, and any authorized opening
+  capitalization run.
+- **Initialized:** the ten canonical system Positions and matching Inventory
+  are complete and agree with configuration. The installer skips provider
+  access and every opening-balance action.
+- **Incomplete or conflicting:** existing topology disagrees with immutable
+  configuration, or an Inventory exists without the complete Position set. The
+  installer fails before migrations or publication.
+
+The routine reinstall and asset-republish path is:
+
+```bash
+php artisan x-change:install --force && php artisan optimize:clear && npm run dev
+```
+
+For an initialized NetBank Treasury, expect:
+
+```text
+Treasury already initialized [netbank-primary]; skipping opening live preflight and reconciliation.
+```
+
+That message means the command does not call the provider, does not rerun
+Treasury provisioning, does not reinterpret operational balance drift as an
+opening balance, and does not capitalize funds. Migrations and requested asset
+publication continue normally.
+
+This is deliberately different from `--no-treasury`. An initialized reinstall
+still validates local Treasury configuration and canonical topology.
+`--no-treasury` explicitly defers all Treasury checks and initialization work.
+
 ## Installer Options
 
 Use these options to narrow or defer installation work:
@@ -196,8 +235,11 @@ php artisan x-change:install --force
 
 Overwrite previously published files.
 
-`--force` does not bypass Treasury configuration, live provider readiness,
-opening reconciliation, or capitalization controls.
+`--force` controls replacement of published files. It does not bypass Treasury
+configuration or topology validation. Fresh and resumable connections still
+require live provider readiness, opening reconciliation, and capitalization
+controls. Initialized connections skip those one-time opening steps because
+their durable topology proves initialization is complete.
 
 ```bash
 php artisan x-change:install --no-auth
@@ -287,19 +329,58 @@ Capitalization options cannot be combined with `--no-treasury`.
 
 The installer order is:
 
-1. static Treasury configuration preflight;
-2. live provider preflight;
-3. migration preparation and migrations;
-4. system principal and Treasury Position provisioning;
-5. authoritative opening-balance observation and reconciliation;
-6. optional, explicitly authorized capitalization; and
-7. UI and remaining asset publication.
+1. static Treasury configuration and canonical topology classification;
+2. fail immediately on incomplete or conflicting local topology;
+3. live provider preflight only for fresh or resumable connections;
+4. migration preparation and migrations;
+5. system principal and Treasury Position provisioning only for live-ready
+   fresh or resumable connections;
+6. their authoritative opening-balance observation and reconciliation;
+7. optional, explicitly authorized opening capitalization; and
+8. UI and remaining asset publication.
 
-A failed required live connection stops before migrations and publication. A
-failed optional connection is reported but does not block healthy required
-connections; it receives no Treasury Positions. `--no-interaction` never
-prompts, silently skips a required provider, accepts an operator-entered
-balance, or falls back to manual capitalization.
+A failed required live connection that still needs initialization stops before
+migrations and publication. A failed optional fresh connection is reported but
+does not block healthy required connections; it receives no Treasury Positions.
+An initialized connection neither calls the live probe nor the balance reader
+during install. `--no-interaction` never prompts, silently skips a required
+fresh provider, accepts an operator-entered balance, or falls back to manual
+capitalization.
+
+## Operational Treasury Drift Is Not Installation
+
+Once the installer reports `Treasury already initialized`, provider balance
+differences belong to operational reconciliation. Reinstalling, clearing
+caches, or republishing UI files must not mutate them.
+
+For provider connectivity:
+
+```bash
+php artisan x-change:treasury:preflight --live --no-interaction
+```
+
+`connection_timeout` is a sanitized provider-read failure. Retry the health
+check when the provider is reachable; it should not send an initialized
+Treasury back through opening reconciliation.
+
+When the provider balance is below internal Inventory and Positions with
+`provider-balance-below-internal-attribution`, inspect the narrowly controlled
+historical repair:
+
+```bash
+php artisan x-change:treasury:repair-missing-disbursement-postings \
+    --connection=netbank-primary \
+    --json \
+    --no-interaction
+```
+
+The default is read-only. Commit only the exact reconciliation IDs returned by
+an eligible inspection. If it returns `status=rejected` and
+`No authoritative missing disbursement postings explain the Treasury deficit.`,
+stop: there is no evidence-backed automatic repair. Do not invent IDs, seed a
+new opening balance, rerun opening capitalization, or write off the difference
+through the installer. Reconcile the provider statement against the append-only
+Treasury operations and use an approved accounting correction workflow.
 
 ## Runtime Auth Behavior
 

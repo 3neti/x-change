@@ -11,7 +11,9 @@ use LBHurtado\EmiCore\Data\Providers\ProviderBalanceRequestData;
 use LBHurtado\EmiCore\Data\Providers\ProviderLivePreflightRequestData;
 use LBHurtado\EmiCore\Data\Providers\ProviderLivePreflightResultData;
 use LBHurtado\EmiCore\Enums\ProviderLivePreflightFailureCode;
+use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -114,6 +116,170 @@ it('continues with healthy required connections and skips a failed optional conn
         )->toBe(0);
 });
 
+it('skips provider access and opening reconciliation for an initialized Treasury', function () {
+    enableNetbankTreasuryForTests();
+    $providerAmountMinor = 70_000;
+    $liveProbeCalls = 0;
+    $balanceReaderCalls = 0;
+    bindInstallerLiveProbe(
+        static function (
+            ProviderLivePreflightRequestData $request,
+        ) use (
+            &$liveProbeCalls,
+            &$providerAmountMinor,
+        ): ProviderLivePreflightResultData {
+            $liveProbeCalls++;
+            $observation = installerObservation(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                settlementResourceReference: $request->settlementResourceReference,
+                currency: $request->currency,
+                amountMinor: $providerAmountMinor,
+            );
+
+            return new ProviderLivePreflightResultData(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                ready: true,
+                checkedAt: $observation->observedAt,
+                observation: $observation,
+            );
+        },
+    );
+    bindInstallerBalanceReader(
+        static function (
+            ProviderBalanceRequestData $request,
+        ) use (
+            &$balanceReaderCalls,
+            &$providerAmountMinor,
+        ): ProviderBalanceObservationData {
+            $balanceReaderCalls++;
+
+            return installerObservation(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                settlementResourceReference: $request->settlementResourceReference,
+                currency: $request->currency,
+                amountMinor: $providerAmountMinor,
+            );
+        },
+    );
+
+    $this->artisan('x-change:install', installerTestOptions())
+        ->assertSuccessful();
+
+    expect(TreasuryInventoryOperation::query()->count())->toBe(1);
+
+    $providerAmountMinor = 0;
+    $liveProbeCalls = 0;
+    $balanceReaderCalls = 0;
+    $commands = [];
+    Event::listen(
+        CommandStarting::class,
+        function (CommandStarting $event) use (&$commands): void {
+            $commands[] = $event->command;
+        },
+    );
+
+    $this->artisan('x-change:install', installerTestOptions())
+        ->expectsOutputToContain(
+            'Treasury already initialized [netbank-primary]; '
+            .'skipping opening live preflight and reconciliation.',
+        )
+        ->expectsOutputToContain('X-Change installed successfully.')
+        ->assertSuccessful();
+
+    expect($liveProbeCalls)->toBe(0)
+        ->and($balanceReaderCalls)->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and($commands)->not->toContain('x-change:treasury:provision')
+        ->not->toContain('x-change:treasury:reconcile-opening');
+});
+
+it('resumes an exact partial Treasury topology through the opening workflow', function () {
+    enableNetbankTreasuryForTests();
+    bindInstallerLiveProbe(
+        static function (
+            ProviderLivePreflightRequestData $request,
+        ): ProviderLivePreflightResultData {
+            $observation = installerObservation(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                settlementResourceReference: $request->settlementResourceReference,
+                currency: $request->currency,
+            );
+
+            return new ProviderLivePreflightResultData(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                ready: true,
+                checkedAt: $observation->observedAt,
+                observation: $observation,
+            );
+        },
+    );
+    bindInstallerBalanceReader();
+
+    $this->artisan('x-change:treasury:provision', [
+        '--connection' => ['netbank-primary'],
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+
+    $this->artisan('x-change:install', installerTestOptions())
+        ->expectsOutputToContain(
+            'Treasury live preflight ready [netbank-primary].',
+        )
+        ->expectsOutputToContain('X-Change installed successfully.')
+        ->assertSuccessful();
+
+    expect(
+        app(TreasuryInitializationStateService::class)->inspect()->initialized,
+    )->toBe(['netbank-primary']);
+});
+
+it('fails before provider access when existing Treasury topology conflicts', function () {
+    enableNetbankTreasuryForTests();
+    $liveProbeCalls = 0;
+    bindInstallerLiveProbe(
+        static function (
+            ProviderLivePreflightRequestData $request,
+        ) use (&$liveProbeCalls): ProviderLivePreflightResultData {
+            $liveProbeCalls++;
+            $observation = installerObservation(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                settlementResourceReference: $request->settlementResourceReference,
+                currency: $request->currency,
+            );
+
+            return new ProviderLivePreflightResultData(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                ready: true,
+                checkedAt: $observation->observedAt,
+                observation: $observation,
+            );
+        },
+    );
+    bindInstallerBalanceReader();
+
+    $this->artisan('x-change:install', installerTestOptions())
+        ->assertSuccessful();
+
+    TreasuryPosition::query()
+        ->where('position_reference', 'position:system:netbank:netbank-primary:php:clearing')
+        ->update(['status' => 'suspended']);
+    $liveProbeCalls = 0;
+
+    $this->artisan('x-change:install', installerTestOptions())
+        ->expectsOutputToContain(
+            'Treasury topology is incomplete or conflicts with configuration [netbank-primary].',
+        )
+        ->assertFailed();
+
+    expect($liveProbeCalls)->toBe(0);
+});
+
 it('makes deferred Treasury installation explicit and visible', function () {
     $this->artisan('x-change:install', [
         ...installerTestOptions(),
@@ -151,10 +317,12 @@ function bindInstallerLiveProbe(Closure $result): void
     forgetInstallerTreasuryServices();
 }
 
-function bindInstallerBalanceReader(): void
+function bindInstallerBalanceReader(?Closure $result = null): void
 {
-    $reader = new class implements ProviderBalanceReader
+    $reader = new class($result) implements ProviderBalanceReader
     {
+        public function __construct(private readonly ?Closure $result) {}
+
         public function providerCode(): string
         {
             return 'netbank';
@@ -163,6 +331,10 @@ function bindInstallerBalanceReader(): void
         public function readBalance(
             ProviderBalanceRequestData $request,
         ): ProviderBalanceObservationData {
+            if ($this->result instanceof Closure) {
+                return ($this->result)($request);
+            }
+
             return installerObservation(
                 provider: $request->provider,
                 connectionReference: $request->connectionReference,
@@ -181,6 +353,7 @@ function forgetInstallerTreasuryServices(): void
 {
     foreach ([
         TreasuryProviderConnectionCatalog::class,
+        TreasuryInitializationStateService::class,
         TreasuryPreflightService::class,
         TreasuryProvisioningService::class,
         TreasuryOpeningBalanceReconciliationService::class,
@@ -212,12 +385,13 @@ function installerObservation(
     string $connectionReference,
     string $settlementResourceReference,
     string $currency,
+    int $amountMinor = 0,
 ): ProviderBalanceObservationData {
     return new ProviderBalanceObservationData(
         provider: $provider,
         connectionReference: $connectionReference,
         settlementResourceReference: $settlementResourceReference,
-        amountMinor: 0,
+        amountMinor: $amountMinor,
         currency: $currency,
         observedAt: new DateTimeImmutable,
         evidenceReference: 'evidence:installer-test',

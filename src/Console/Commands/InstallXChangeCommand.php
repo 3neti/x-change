@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
+use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningCapitalizationPolicyResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use Throwable;
@@ -35,13 +36,16 @@ class InstallXChangeCommand extends Command
     public function handle(
         PublishedAssetDriftDetector $publishedAssets,
         TreasuryConfigurationValidator $treasuryConfiguration,
+        TreasuryInitializationStateService $treasuryInitialization,
         TreasuryOpeningCapitalizationPolicyResolver $capitalizationPolicies,
         TreasuryPreflightService $treasuryPreflight,
     ): int {
         $this->components->info('Installing X-Change...');
 
         $capitalizationConnections = [];
-        $liveReadyConnections = [];
+        $initializedConnections = [];
+        $liveReadyOpeningConnections = [];
+        $openingConnections = [];
 
         if (
             (bool) $this->option('no-treasury')
@@ -61,10 +65,29 @@ class InstallXChangeCommand extends Command
         if (! $this->option('no-treasury')) {
             try {
                 $treasuryConfiguration->assertConfigured();
+                $initialization = $treasuryInitialization->inspect();
+                $initializedConnections = $initialization->initialized;
+                $openingConnections = $initialization->uninitialized;
+
+                if ($initialization->incomplete !== []) {
+                    $references = implode(', ', $initialization->incomplete);
+
+                    $this->components->error(
+                        "Treasury topology is incomplete or conflicts with configuration [{$references}]. "
+                        .'No migrations, Treasury positions, or UI assets were changed.',
+                    );
+
+                    return self::FAILURE;
+                }
+
                 $capitalizationConnections = $capitalizationPolicies
                     ->connectionReferences(
                         $this->option('treasury-opening-policy'),
                     );
+                $capitalizationConnections = array_values(array_intersect(
+                    $capitalizationConnections,
+                    $openingConnections,
+                ));
             } catch (TreasuryConfigurationException $exception) {
                 $this->components->error($exception->getMessage());
                 $this->components->warn(
@@ -98,48 +121,62 @@ class InstallXChangeCommand extends Command
                 return self::FAILURE;
             }
 
-            try {
-                $livePreflight = $treasuryPreflight->run(live: true);
-            } catch (Throwable) {
-                $this->components->error(
-                    'Treasury live preflight could not be completed [provider_unavailable].',
-                );
-
-                return self::FAILURE;
-            }
-
-            foreach ($livePreflight->connections as $connection) {
-                $reference = $connection->connection->reference;
-
-                if ($connection->ready) {
-                    $this->components->info(
-                        "Treasury live preflight ready [{$reference}].",
+            if ($openingConnections !== []) {
+                try {
+                    $livePreflight = $treasuryPreflight->run(
+                        $openingConnections,
+                        live: true,
                     );
-                    $liveReadyConnections[] = $reference;
+                } catch (Throwable) {
+                    $this->components->error(
+                        'Treasury live preflight could not be completed [provider_unavailable].',
+                    );
 
-                    continue;
+                    return self::FAILURE;
                 }
 
-                $issues = $connection->issues === []
-                    ? 'provider_unavailable'
-                    : implode(', ', $connection->issues);
-                $this->components->warn(
-                    "Treasury live preflight unavailable [{$reference}]: {$issues}.",
-                );
+                foreach ($livePreflight->connections as $connection) {
+                    $reference = $connection->connection->reference;
+
+                    if ($connection->ready) {
+                        $this->components->info(
+                            "Treasury live preflight ready [{$reference}].",
+                        );
+                        $liveReadyOpeningConnections[] = $reference;
+
+                        continue;
+                    }
+
+                    $issues = $connection->issues === []
+                        ? 'provider_unavailable'
+                        : implode(', ', $connection->issues);
+                    $this->components->warn(
+                        "Treasury live preflight unavailable [{$reference}]: {$issues}.",
+                    );
+                }
+
+                if (! $livePreflight->passes()) {
+                    $this->components->error(
+                        'Required Treasury provider connections did not pass live preflight. '
+                        .'No migrations, Treasury positions, or UI assets were changed.',
+                    );
+
+                    return self::FAILURE;
+                }
             }
 
-            if (! $livePreflight->passes()) {
-                $this->components->error(
-                    'Required Treasury provider connections did not pass live preflight. '
-                    .'No migrations, Treasury positions, or UI assets were changed.',
-                );
-
-                return self::FAILURE;
+            if ($initializedConnections !== []) {
+                foreach ($initializedConnections as $reference) {
+                    $this->components->info(
+                        "Treasury already initialized [{$reference}]; "
+                        .'skipping opening live preflight and reconciliation.',
+                    );
+                }
             }
 
             $capitalizationConnections = array_values(array_intersect(
                 $capitalizationConnections,
-                $liveReadyConnections,
+                $liveReadyOpeningConnections,
             ));
         } else {
             $this->components->warn(
@@ -301,9 +338,9 @@ class InstallXChangeCommand extends Command
             });
         }
 
-        if (! $this->option('no-treasury') && $liveReadyConnections !== []) {
+        if (! $this->option('no-treasury') && $liveReadyOpeningConnections !== []) {
             $exitCode = $this->call('x-change:treasury:provision', [
-                '--connection' => $liveReadyConnections,
+                '--connection' => $liveReadyOpeningConnections,
                 '--no-interaction' => true,
             ]);
 
@@ -314,7 +351,7 @@ class InstallXChangeCommand extends Command
             }
 
             $exitCode = $this->call('x-change:treasury:reconcile-opening', [
-                '--connection' => $liveReadyConnections,
+                '--connection' => $liveReadyOpeningConnections,
                 '--no-interaction' => true,
             ]);
 
@@ -350,7 +387,10 @@ class InstallXChangeCommand extends Command
                     'Opening provider funds remain Legacy Unattributed; no system Account Funding Reserve was capitalized.',
                 );
             }
-        } elseif (! $this->option('no-treasury')) {
+        } elseif (
+            ! $this->option('no-treasury')
+            && $openingConnections !== []
+        ) {
             $this->components->warn(
                 'No Treasury connection passed live preflight; no Treasury positions were provisioned.',
             );

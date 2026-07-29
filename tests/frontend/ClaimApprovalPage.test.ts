@@ -43,9 +43,12 @@ vi.mock('lucide-vue-next', () => ({
 
 const submitApprovalOtp = vi.fn();
 
-vi.mock('../../resources/js/components/x-change/approvalOtpSubmitAdapter', () => ({
-    submitApprovalOtp: (...args: unknown[]) => submitApprovalOtp(...args),
-}));
+vi.mock(
+    '../../resources/js/components/x-change/approvalOtpSubmitAdapter',
+    () => ({
+        submitApprovalOtp: (...args: unknown[]) => submitApprovalOtp(...args),
+    }),
+);
 
 beforeEach(() => {
     post.mockClear();
@@ -65,17 +68,34 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-clock-icon"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe('Approval session unavailable');
+        expect(wrapper.find('[data-testid="claim-step-shell"]').exists()).toBe(
+            true,
+        );
+        expect(
+            wrapper.find('[data-testid="approval-clock-icon"]').exists(),
+        ).toBe(true);
+        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe(
+            'Approval session unavailable',
+        );
         expect(wrapper.find('[data-testid="approval-message"]').text()).toBe(
             'We could not find the approval session for this claim. Please restart the claim flow or try again from your voucher.',
         );
-        expect(wrapper.find('[data-testid="approval-voucher-code"]').text()).toBe('TEST123');
-        expect(wrapper.find('[data-testid="approval-amount"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="approval-messages"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="approval-voucher-code"]').text(),
+        ).toBe('TEST123');
+        expect(wrapper.find('[data-testid="approval-amount"]').exists()).toBe(
+            false,
+        );
+        expect(wrapper.find('[data-testid="approval-messages"]').exists()).toBe(
+            false,
+        );
 
-        expect(wrapper.find('[data-testid="approval-missing-context"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="approval-missing-context"]').exists(),
+        ).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(
+            false,
+        );
     });
 
     it('renders pending compiled claim result details', () => {
@@ -100,11 +120,21 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe('Claim submitted for processing');
-        expect(wrapper.find('[data-testid="approval-message"]').text()).toBe('Please wait while your claim is reviewed.');
-        expect(wrapper.find('[data-testid="approval-voucher-code"]').text()).toBe('TEST123');
-        expect(wrapper.find('[data-testid="approval-amount"]').text()).toBe('PHP 1,000.00');
-        expect(wrapper.find('[data-testid="approval-messages"]').text()).toContain('Approval required.');
+        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe(
+            'Claim submitted for processing',
+        );
+        expect(wrapper.find('[data-testid="approval-message"]').text()).toBe(
+            'Please wait while your claim is reviewed.',
+        );
+        expect(
+            wrapper.find('[data-testid="approval-voucher-code"]').text(),
+        ).toBe('TEST123');
+        expect(wrapper.find('[data-testid="approval-amount"]').text()).toBe(
+            'PHP 1,000.00',
+        );
+        expect(
+            wrapper.find('[data-testid="approval-messages"]').text(),
+        ).toContain('Approval required.');
     });
 
     it('renders redeemer waiting copy and hides OTP form by default when OTP is required', () => {
@@ -123,21 +153,31 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').text()).toContain(
-            'Your claim is awaiting payout approval.',
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(
+            false,
         );
-        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').text()).toContain(
+        expect(
+            wrapper.find('[data-testid="approval-redeemer-waiting"]').text(),
+        ).toContain('Your claim is awaiting payout approval.');
+        expect(
+            wrapper.find('[data-testid="approval-redeemer-waiting"]').text(),
+        ).toContain(
             'The voucher issuer has been asked to approve this payout.',
         );
-        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').text()).toContain(
-            'You do not need to enter an OTP here.',
-        );
-        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').text()).toContain(
-            'We will continue processing once approval is completed.',
-        );
-        expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="approval-redeemer-waiting"]').text(),
+        ).toContain('You do not need to enter an OTP here.');
+        expect(
+            wrapper.find('[data-testid="approval-redeemer-waiting"]').text(),
+        ).toContain('We will continue processing once approval is completed.');
+        expect(
+            wrapper.find('[data-testid="approval-polling-notice"]').exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="approval-manual-review-notice"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('renders OTP approval form in issuer entry mode when OTP is required', () => {
@@ -157,12 +197,26 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-otp-input"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verify OTP');
-        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(
+            true,
+        );
+        expect(
+            wrapper.find('[data-testid="approval-otp-input"]').exists(),
+        ).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe(
+            'Verify OTP',
+        );
+        expect(
+            wrapper.find('[data-testid="approval-redeemer-waiting"]').exists(),
+        ).toBe(false);
+        expect(
+            wrapper.find('[data-testid="approval-polling-notice"]').exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="approval-manual-review-notice"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('renders polling notice when polling is required', () => {
@@ -182,9 +236,17 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="approval-polling-notice"]').exists(),
+        ).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(
+            false,
+        );
+        expect(
+            wrapper
+                .find('[data-testid="approval-manual-review-notice"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('renders manual review notice when manual review is required', () => {
@@ -204,9 +266,17 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="approval-manual-review-notice"]')
+                .exists(),
+        ).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(
+            false,
+        );
+        expect(
+            wrapper.find('[data-testid="approval-polling-notice"]').exists(),
+        ).toBe(false);
     });
 
     it('emits OTP submission payload when OTP form is submitted', async () => {
@@ -280,7 +350,9 @@ describe('Claim approval page', () => {
             .trigger('submit');
 
         expect(wrapper.emitted('submit:otp')).toBeUndefined();
-        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('OTP is required.');
+        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe(
+            'OTP is required.',
+        );
         expect(submitApprovalOtp).not.toHaveBeenCalled();
     });
 
@@ -304,9 +376,13 @@ describe('Claim approval page', () => {
             },
         });
 
-        await wrapper.find('[data-testid="approval-otp-submit"]').trigger('submit');
+        await wrapper
+            .find('[data-testid="approval-otp-submit"]')
+            .trigger('submit');
 
-        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('OTP is required.');
+        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe(
+            'OTP is required.',
+        );
         expect(wrapper.emitted('submit:otp')).toBeUndefined();
         expect(submitApprovalOtp).not.toHaveBeenCalled();
     });
@@ -331,8 +407,12 @@ describe('Claim approval page', () => {
             },
         });
 
-        await wrapper.find('[data-testid="approval-otp-input"]').setValue('123456');
-        await wrapper.find('[data-testid="approval-otp-form"]').trigger('submit');
+        await wrapper
+            .find('[data-testid="approval-otp-input"]')
+            .setValue('123456');
+        await wrapper
+            .find('[data-testid="approval-otp-form"]')
+            .trigger('submit');
 
         expect(wrapper.emitted('submit:otp')?.[0]?.[0]).toEqual({
             otp: '123456',
@@ -377,7 +457,9 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('Invalid OTP.');
+        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe(
+            'Invalid OTP.',
+        );
     });
 
     it('disables OTP form while submission is processing', async () => {
@@ -404,19 +486,47 @@ describe('Claim approval page', () => {
             },
         });
 
-        await wrapper.find('[data-testid="approval-otp-input"]').setValue('123456');
-        await wrapper.find('[data-testid="approval-otp-form"]').trigger('submit');
+        await wrapper
+            .find('[data-testid="approval-otp-input"]')
+            .setValue('123456');
+        await wrapper
+            .find('[data-testid="approval-otp-form"]')
+            .trigger('submit');
 
-        expect((wrapper.find('[data-testid="approval-otp-input"]').element as HTMLInputElement).disabled).toBe(true);
-        expect((wrapper.find('[data-testid="approval-otp-submit"]').element as HTMLButtonElement).disabled).toBe(true);
-        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verifying...');
+        expect(
+            (
+                wrapper.find('[data-testid="approval-otp-input"]')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(true);
+        expect(
+            (
+                wrapper.find('[data-testid="approval-otp-submit"]')
+                    .element as HTMLButtonElement
+            ).disabled,
+        ).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe(
+            'Verifying...',
+        );
 
         finish?.();
         await wrapper.vm.$nextTick();
 
-        expect((wrapper.find('[data-testid="approval-otp-input"]').element as HTMLInputElement).disabled).toBe(false);
-        expect((wrapper.find('[data-testid="approval-otp-submit"]').element as HTMLButtonElement).disabled).toBe(false);
-        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verify OTP');
+        expect(
+            (
+                wrapper.find('[data-testid="approval-otp-input"]')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(false);
+        expect(
+            (
+                wrapper.find('[data-testid="approval-otp-submit"]')
+                    .element as HTMLButtonElement
+            ).disabled,
+        ).toBe(false);
+        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe(
+            'Verify OTP',
+        );
     });
 
     it('keeps OTP retry form visible after failed OTP result', () => {
@@ -445,10 +555,18 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-reference-id"]').text()).toContain('AUTH-123');
-        expect(wrapper.find('[data-testid="approval-messages"]').text()).toContain('Invalid OTP.');
-        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verify OTP');
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(
+            true,
+        );
+        expect(
+            wrapper.find('[data-testid="approval-reference-id"]').text(),
+        ).toContain('AUTH-123');
+        expect(
+            wrapper.find('[data-testid="approval-messages"]').text(),
+        ).toContain('Invalid OTP.');
+        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe(
+            'Verify OTP',
+        );
     });
 
     it('dismisses server-side OTP error when user edits OTP', async () => {
@@ -475,11 +593,17 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('Invalid OTP.');
+        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe(
+            'Invalid OTP.',
+        );
 
-        await wrapper.find('[data-testid="approval-otp-input"]').setValue('123456');
+        await wrapper
+            .find('[data-testid="approval-otp-input"]')
+            .setValue('123456');
 
-        expect(wrapper.find('[data-testid="approval-otp-error"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="approval-otp-error"]').exists(),
+        ).toBe(false);
     });
 
     it('shows missing context when approval payload is not required and compiled result is missing', () => {
@@ -501,8 +625,14 @@ describe('Claim approval page', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe('Approval session unavailable');
-        expect(wrapper.find('[data-testid="approval-missing-context"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe(
+            'Approval session unavailable',
+        );
+        expect(
+            wrapper.find('[data-testid="approval-missing-context"]').exists(),
+        ).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(
+            false,
+        );
     });
 });
