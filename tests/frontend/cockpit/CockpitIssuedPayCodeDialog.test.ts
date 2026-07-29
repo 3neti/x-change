@@ -111,8 +111,13 @@ describe('issued Pay Code dialog', () => {
         expect(wrapper.text()).toContain('₱12.00');
         expect(wrapper.text()).toContain('Selfie Verification');
         expect(wrapper.text()).toContain('5.00');
+        expect(wrapper.text()).toContain('Instruction Subtotal');
+        expect(wrapper.text()).toContain('Pay Code Value');
+        expect(wrapper.text()).toContain('Total Estimated Cost');
         expect(wrapper.text()).toContain('₱17.00');
-        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
+        expect(wrapper.text()).toContain('₱125.50');
+        expect(wrapper.text()).toContain('₱142.50');
+        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(4);
 
         await wrapper
             .get('[data-testid="cockpit-issued-pay-code-copy"]')
@@ -228,8 +233,18 @@ describe('issued Pay Code dialog', () => {
             .trigger('click');
 
         expect(
-            wrapper.get('[data-testid="cockpit-pay-code-cost-total"]').text(),
+            wrapper
+                .get('[data-testid="cockpit-pay-code-cost-subtotal"]')
+                .text(),
         ).toBe('2 × ₱65.30 = ₱130.60');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-cost-pay-code-value"]')
+                .text(),
+        ).toBe('₱100.00');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-cost-total"]').text(),
+        ).toBe('₱230.60');
     });
 
     it('opens automatically with the canonical result after issuance', async () => {

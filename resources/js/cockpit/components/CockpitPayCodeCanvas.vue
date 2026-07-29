@@ -326,6 +326,34 @@ const formattedCostTotal = computed<string>(() => {
     return `${normalizedQuantity.value} × ${formattedCost(unitCost)} = ${formattedCost(extendedCostTotal.value ?? 0)}`;
 });
 
+const payCodeValue = computed<number | null>(() => {
+    return (
+        normalizedOptionalCost(props.costEstimate?.pay_code_value) ??
+        normalizedOptionalCost(props.amount)
+    );
+});
+
+const accountDebit = computed<number | null>(() => {
+    const authoritativeDebit = normalizedOptionalCost(
+        props.costEstimate?.account_debit,
+    );
+
+    if (authoritativeDebit !== null) {
+        return authoritativeDebit;
+    }
+
+    if (payCodeValue.value === null || extendedCostTotal.value === null) {
+        return null;
+    }
+
+    return (
+        Math.round(
+            (payCodeValue.value + extendedCostTotal.value + Number.EPSILON) *
+                100,
+        ) / 100
+    );
+});
+
 const hasCostEstimate = computed<boolean>(() => {
     return props.costEstimate !== null && costTotal.value !== null;
 });
@@ -860,7 +888,7 @@ function stringValue(value: unknown): string | null {
                     </div>
                 </div>
 
-                <div class="mt-3 min-h-0 flex-1">
+                <div class="mt-3 flex min-h-0 flex-1 flex-col">
                     <p
                         v-if="costLoading && !hasCostEstimate"
                         class="rounded-xl border border-white/10 bg-white/5 px-3 py-4 text-sm text-slate-300"
@@ -963,33 +991,58 @@ function stringValue(value: unknown): string | null {
                             >
                                 No priced instructions.
                             </dt>
-
-                            <template
-                                v-if="
-                                    costLedgerColumnCount === 1 ||
-                                    columnIndex === costLedgerColumns.length - 1
-                                "
-                            >
-                                <div
-                                    class="col-span-2 my-1 border-t border-dashed border-white/25"
-                                    aria-hidden="true"
-                                />
-                                <dt class="font-bold text-white">Total</dt>
-                                <dd
-                                    class="text-right font-black whitespace-nowrap text-emerald-300 tabular-nums"
-                                    :class="
-                                        normalizedQuantity > 1
-                                            ? 'text-[0.625rem] leading-4 @sm:text-xs'
-                                            : 'text-base @sm:text-lg'
-                                    "
-                                    data-testid="cockpit-pay-code-cost-total"
-                                    :data-quantity="normalizedQuantity"
-                                >
-                                    {{ formattedCostTotal }}
-                                </dd>
-                            </template>
                         </dl>
                     </div>
+
+                    <dl
+                        v-if="hasCostEstimate"
+                        class="mt-auto grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 border-t border-white/20 pt-2 text-[0.6875rem] leading-4 @sm:text-xs"
+                        data-testid="cockpit-pay-code-cost-summary"
+                    >
+                        <dt class="text-slate-300">Instruction Subtotal</dt>
+                        <dd
+                            class="text-right font-semibold whitespace-nowrap text-white tabular-nums"
+                            :class="
+                                normalizedQuantity > 1
+                                    ? 'text-[0.625rem] @sm:text-[0.6875rem]'
+                                    : ''
+                            "
+                            data-testid="cockpit-pay-code-cost-subtotal"
+                            :data-quantity="normalizedQuantity"
+                        >
+                            {{ formattedCostTotal }}
+                        </dd>
+
+                        <dt class="text-slate-300">Pay Code Value</dt>
+                        <dd
+                            class="text-right font-semibold whitespace-nowrap text-white tabular-nums"
+                            data-testid="cockpit-pay-code-cost-pay-code-value"
+                        >
+                            {{
+                                payCodeValue === null
+                                    ? '—'
+                                    : formattedCost(payCodeValue)
+                            }}
+                        </dd>
+
+                        <div
+                            class="col-span-2 my-1 border-t border-dashed border-white/25"
+                            aria-hidden="true"
+                        />
+                        <dt class="font-bold text-white">
+                            Total Estimated Cost
+                        </dt>
+                        <dd
+                            class="text-right text-sm font-black whitespace-nowrap text-emerald-300 tabular-nums @sm:text-base"
+                            data-testid="cockpit-pay-code-cost-total"
+                        >
+                            {{
+                                accountDebit === null
+                                    ? '—'
+                                    : formattedCost(accountDebit)
+                            }}
+                        </dd>
+                    </dl>
                 </div>
             </div>
         </article>

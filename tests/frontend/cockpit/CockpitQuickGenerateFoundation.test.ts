@@ -615,6 +615,19 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
                 .attributes('aria-selected'),
         ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-cost-subtotal"]')
+                .text(),
+        ).toBe('₱17.00');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-cost-pay-code-value"]')
+                .text(),
+        ).toBe('₱50.00');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-cost-total"]').text(),
+        ).toBe('₱67.00');
 
         wrapper.unmount();
         vi.unstubAllGlobals();
@@ -786,9 +799,13 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('₱12.00');
         expect(wrapper.text()).toContain('Selfie Verification');
         expect(wrapper.text()).toContain('5.00');
-        expect(wrapper.text()).toContain('Total');
+        expect(wrapper.text()).toContain('Instruction Subtotal');
+        expect(wrapper.text()).toContain('Pay Code Value');
+        expect(wrapper.text()).toContain('Total Estimated Cost');
         expect(wrapper.text()).toContain('₱17.00');
-        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
+        expect(wrapper.text()).toContain('₱1,250.00');
+        expect(wrapper.text()).toContain('₱1,267.00');
+        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(4);
         const costIndicators = wrapper.findAll(
             '[data-testid="cockpit-pay-code-cost-label"] [data-testid="cockpit-pay-code-indicator"]',
         );
@@ -902,12 +919,24 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(columns[0].text()).toContain('Charge 1');
         expect(columns[0].text()).toContain('Charge 4');
         expect(columns[0].text()).not.toContain('Charge 5');
-        expect(columns[0].text()).not.toContain('Total');
+        expect(columns[0].text()).not.toContain('Instruction Subtotal');
         expect(columns[1].text()).toContain('Charge 5');
         expect(columns[1].text()).toContain('Charge 8');
-        expect(columns[1].text()).toContain('Total');
-        expect(columns[1].text()).toContain('₱36.00');
-        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
+        expect(columns[1].text()).not.toContain('Instruction Subtotal');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-cost-subtotal"]')
+                .text(),
+        ).toBe('₱36.00');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-cost-pay-code-value"]')
+                .text(),
+        ).toBe('₱100.00');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-cost-total"]').text(),
+        ).toBe('₱136.00');
+        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(4);
     });
 
     it('extends the unit issue cost when more than one Pay Code is requested', async () => {
@@ -935,13 +964,21 @@ describe('Cockpit Quick Generate foundation', () => {
             .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
             .trigger('click');
 
-        const total = wrapper.get(
-            '[data-testid="cockpit-pay-code-cost-total"]',
+        const subtotal = wrapper.get(
+            '[data-testid="cockpit-pay-code-cost-subtotal"]',
         );
 
-        expect(total.text()).toBe('2 × ₱65.30 = ₱130.60');
-        expect(total.attributes('data-quantity')).toBe('2');
-        expect(total.classes()).toContain('text-[0.625rem]');
+        expect(subtotal.text()).toBe('2 × ₱65.30 = ₱130.60');
+        expect(subtotal.attributes('data-quantity')).toBe('2');
+        expect(subtotal.classes()).toContain('text-[0.625rem]');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-cost-pay-code-value"]')
+                .text(),
+        ).toBe('₱100.00');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-cost-total"]').text(),
+        ).toBe('₱230.60');
     });
 
     it('splits eighteen priced instructions across three compact columns without losing the total', async () => {
@@ -982,16 +1019,23 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(columns[0].text()).toContain('Charge 1');
         expect(columns[0].text()).toContain('Charge 6');
         expect(columns[0].text()).toContain('₱1.00');
-        expect(columns[0].text()).not.toContain('Total');
+        expect(columns[0].text()).not.toContain('Instruction Subtotal');
         expect(columns[1].text()).toContain('Charge 7');
         expect(columns[1].text()).toContain('Charge 12');
         expect(columns[1].text()).not.toContain('₱');
-        expect(columns[1].text()).not.toContain('Total');
+        expect(columns[1].text()).not.toContain('Instruction Subtotal');
         expect(columns[2].text()).toContain('Charge 13');
         expect(columns[2].text()).toContain('Charge 18');
-        expect(columns[2].text()).toContain('Total');
-        expect(columns[2].text()).toContain('₱171.00');
-        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(2);
+        expect(columns[2].text()).not.toContain('Instruction Subtotal');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-cost-subtotal"]')
+                .text(),
+        ).toBe('₱171.00');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-cost-total"]').text(),
+        ).toBe('₱271.00');
+        expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(4);
 
         const labels = wrapper.findAll(
             '[data-testid="cockpit-pay-code-cost-label"]',
