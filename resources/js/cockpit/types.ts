@@ -18,6 +18,7 @@ export type CockpitBalanceMetric = {
     value: string;
     helper?: string;
     tone?: 'neutral' | 'healthy' | 'warning' | 'critical';
+    amount_minor?: number | null;
 };
 
 export type CockpitShellContext = {

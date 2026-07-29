@@ -47,6 +47,7 @@ it('binds a read-only cockpit header balance read model with safe provider fallb
         ->and($readModel['balances'][0]['key'])->toBe('internal')
         ->and($readModel['balances'][0]['label'])->toBe('Client Funds')
         ->and($readModel['balances'][0]['value'])->toContain('123.45')
+        ->and($readModel['balances'][0]['amount_minor'])->toBe(12345)
         ->and($readModel['balances'][1]['key'])->toBe('outstanding')
         ->and($readModel['balances'][1]['value'])->toBe('Not connected')
         ->and($readModel['balances'][2]['key'])->toBe('issuance')

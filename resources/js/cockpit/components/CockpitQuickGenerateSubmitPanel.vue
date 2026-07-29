@@ -68,6 +68,7 @@ import CockpitRiderMessageEditor from './CockpitRiderMessageEditor.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
 
 const props = defineProps<{
+    clientFundsMinor?: number | null;
     mutationContract?: CockpitQuickGenerateMutationContract;
     draftContract?: CockpitQuickGenerateDraftContract;
     campaignContext?: CockpitQuickGenerateCampaignContext;
@@ -3239,6 +3240,26 @@ const liveAccountDebitPending = computed<boolean>(
         liveAccountDebit.value === null &&
         livePricingEstimateError.value === null,
 );
+const liveAccountDebitAffordability = computed<
+    'unknown' | 'affordable' | 'insufficient-client-funds'
+>(() => {
+    if (
+        liveAccountDebit.value === null ||
+        typeof props.clientFundsMinor !== 'number' ||
+        !Number.isFinite(props.clientFundsMinor)
+    ) {
+        return 'unknown';
+    }
+
+    const accountDebitMinor = Math.round(liveAccountDebit.value * 100);
+
+    return accountDebitMinor > Math.round(props.clientFundsMinor)
+        ? 'insufficient-client-funds'
+        : 'affordable';
+});
+const liveAccountDebitExceedsClientFunds = computed<boolean>(
+    () => liveAccountDebitAffordability.value === 'insufficient-client-funds',
+);
 
 async function submit(): Promise<void> {
     if (!canSubmit.value || processing.value || routeUrl.value === null) {
@@ -4692,11 +4713,22 @@ function instructionRecord(
                         <div
                             class="mt-1 flex min-h-5 items-baseline justify-between gap-3 px-0.5 text-[0.7rem] leading-5"
                             data-testid="cockpit-quick-generate-account-debit"
+                            :data-affordability="liveAccountDebitAffordability"
+                            :title="
+                                liveAccountDebitExceedsClientFunds
+                                    ? 'Estimated Cost exceeds Client Funds.'
+                                    : undefined
+                            "
                             aria-live="polite"
                         >
                             <button
                                 type="button"
-                                class="font-medium text-slate-500 underline-offset-2 hover:text-emerald-700 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300"
+                                class="underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
+                                :class="
+                                    liveAccountDebitExceedsClientFunds
+                                        ? 'font-semibold text-rose-600 hover:text-rose-700 focus-visible:outline-rose-600 dark:text-rose-300 dark:hover:text-rose-200'
+                                        : 'font-medium text-slate-500 hover:text-emerald-700 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300'
+                                "
                                 data-testid="cockpit-quick-generate-account-debit-view-cost"
                                 @click="canvasView = 'cost'"
                             >
@@ -4704,7 +4736,12 @@ function instructionRecord(
                             </button>
                             <span
                                 v-if="liveAccountDebit !== null"
-                                class="shrink-0 font-semibold text-slate-700 tabular-nums dark:text-slate-200"
+                                class="shrink-0 font-semibold tabular-nums"
+                                :class="
+                                    liveAccountDebitExceedsClientFunds
+                                        ? 'text-rose-600 dark:text-rose-300'
+                                        : 'text-slate-700 dark:text-slate-200'
+                                "
                                 data-testid="cockpit-quick-generate-account-debit-amount"
                             >
                                 {{ formatAccountMoney(liveAccountDebit) }}

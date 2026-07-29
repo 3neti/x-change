@@ -14,5 +14,6 @@ class CockpitDashboardMetricData extends Data
         public readonly string $value,
         public readonly ?string $helper = null,
         public readonly string $tone = 'neutral',
+        public readonly ?int $amount_minor = null,
     ) {}
 }

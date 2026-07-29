@@ -97,6 +97,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                         value: $this->formatMoney($positionBalanceMinor),
                         helper: $this->termDescription('internal_balance'),
                         tone: 'healthy',
+                        amount_minor: $positionBalanceMinor,
                     ),
                     'minor' => $positionBalanceMinor,
                 ];
@@ -112,6 +113,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                     value: $this->formatMoney($balanceMinor),
                     helper: 'Read from the authenticated account compatibility ledger.',
                     tone: 'healthy',
+                    amount_minor: $balanceMinor,
                 ),
                 'minor' => $balanceMinor,
             ];

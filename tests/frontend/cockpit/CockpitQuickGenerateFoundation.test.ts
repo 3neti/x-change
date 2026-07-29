@@ -548,6 +548,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
+                clientFundsMinor: 6000,
                 templates: cockpitQuickGenerateTemplates,
                 mutationContract: {
                     runtime_enabled: true,
@@ -594,6 +595,36 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .text(),
         ).toBe('₱67.00');
+        expect(debit.attributes('data-affordability')).toBe(
+            'insufficient-client-funds',
+        );
+        expect(
+            debit
+                .get(
+                    '[data-testid="cockpit-quick-generate-account-debit-view-cost"]',
+                )
+                .classes(),
+        ).toContain('text-rose-600');
+        expect(
+            debit
+                .get(
+                    '[data-testid="cockpit-quick-generate-account-debit-amount"]',
+                )
+                .classes(),
+        ).toContain('text-rose-600');
+
+        await wrapper.setProps({
+            clientFundsMinor: 6700,
+        });
+
+        expect(debit.attributes('data-affordability')).toBe('affordable');
+        expect(
+            debit
+                .get(
+                    '[data-testid="cockpit-quick-generate-account-debit-amount"]',
+                )
+                .classes(),
+        ).not.toContain('text-rose-600');
         expect(
             debit
                 .find(
@@ -3626,7 +3657,20 @@ describe('Cockpit Quick Generate foundation', () => {
     });
 
     it('renders the full Quick Generate page with active navigation and no side effects', async () => {
-        const wrapper = mount(QuickGenerate);
+        const wrapper = mount(QuickGenerate, {
+            props: {
+                cockpit_header_read_model: {
+                    balances: [
+                        {
+                            key: 'internal',
+                            label: 'Client Funds',
+                            value: '₱56.50',
+                            amount_minor: 5650,
+                        },
+                    ],
+                },
+            },
+        });
 
         await flushPromises();
 
@@ -3663,6 +3707,11 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-primary-workflow-stack"]',
         );
         expect(workflowStack.classes()).toContain('space-y-3');
+        expect(
+            wrapper
+                .getComponent(CockpitQuickGenerateSubmitPanel)
+                .props('clientFundsMinor'),
+        ).toBe(5650);
         const essentialsCanvas = wrapper.find(
             '[data-testid="cockpit-quick-generate-essentials-canvas"]',
         );

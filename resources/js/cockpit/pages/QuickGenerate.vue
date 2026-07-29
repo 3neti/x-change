@@ -51,6 +51,16 @@ import type {
 
 const props = defineProps<CockpitQuickGeneratePageProps>();
 
+const clientFundsMinor = computed<number | null>(() => {
+    const amount = props.cockpit_header_read_model?.balances?.find(
+        (balance) => balance.key === 'internal',
+    )?.amount_minor;
+
+    return typeof amount === 'number' && Number.isFinite(amount)
+        ? Math.round(amount)
+        : null;
+});
+
 const readModelAvailable = computed<boolean>(() => {
     return (
         props.quick_generate_read_model?.status === 'available' &&
@@ -1109,6 +1119,7 @@ function stringValue(value: unknown): string | null {
                 data-testid="cockpit-quick-generate-primary-workflow-stack"
             >
                 <CockpitQuickGenerateSubmitPanel
+                    :client-funds-minor="clientFundsMinor"
                     :mutation-contract="mutationContract"
                     :draft-contract="draftContract"
                     :campaign-context="campaignContext"
