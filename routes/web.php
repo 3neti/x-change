@@ -21,6 +21,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetContr
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetImportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFulfillmentController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetExportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
@@ -120,6 +121,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/{worksheet}/fulfillments/pay-codes', [CockpitCampaignWorksheetFulfillmentController::class, 'store'])
             ->middleware('throttle:3,1')
             ->name('x-change.cockpit.campaigns.fulfillments.pay-codes.store');
+        Route::get('campaigns/{worksheet}/exports/pay-codes.csv', CockpitCampaignWorksheetExportController::class)
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.exports.pay-codes');
         Route::post('campaigns/{worksheet}/imports', [CockpitCampaignWorksheetImportController::class, 'stage'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.imports.store');
