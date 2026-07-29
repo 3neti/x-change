@@ -11,7 +11,6 @@ import {
     LoaderCircle,
     MessageSquareText,
     Palette,
-    ReceiptText,
     RotateCcw,
     Save,
     Sparkles,
@@ -3231,12 +3230,6 @@ const {
 const liveAccountDebit = computed<number | null>(() =>
     optionalMoney(livePricingEstimate.value?.account_debit),
 );
-const livePayCodeValue = computed<number | null>(() =>
-    optionalMoney(livePricingEstimate.value?.pay_code_value),
-);
-const liveIssueCost = computed<number | null>(() =>
-    optionalMoney(livePricingEstimate.value?.total),
-);
 const livePricingCurrency = computed<string>(
     () => livePricingEstimate.value?.currency?.trim() || currency.value,
 );
@@ -4697,98 +4690,39 @@ function instructionRecord(
                             />
                         </div>
                         <div
-                            class="mt-1 flex min-h-14 items-start gap-2.5 rounded-lg bg-slate-50/90 px-2.5 py-2 text-slate-600 ring-1 ring-slate-200/70 dark:bg-slate-900/70 dark:text-slate-300 dark:ring-slate-800"
+                            class="mt-1 flex min-h-5 items-baseline justify-between gap-3 px-0.5 text-[0.7rem] leading-5"
                             data-testid="cockpit-quick-generate-account-debit"
                             aria-live="polite"
                         >
-                            <ReceiptText
-                                class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0 flex-1">
-                                <div
-                                    class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5"
-                                >
-                                    <span
-                                        class="text-[0.68rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                                    >
-                                        Estimated Account Debit
-                                    </span>
-                                    <span
-                                        v-if="liveAccountDebit !== null"
-                                        class="text-sm font-bold text-slate-800 tabular-nums dark:text-slate-100"
-                                        data-testid="cockpit-quick-generate-account-debit-amount"
-                                    >
-                                        {{
-                                            formatAccountMoney(liveAccountDebit)
-                                        }}
-                                    </span>
-                                    <span
-                                        v-else-if="liveAccountDebitPending"
-                                        class="h-4 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700"
-                                        data-testid="cockpit-quick-generate-account-debit-loading"
-                                        aria-label="Calculating Account debit"
-                                    />
-                                    <span
-                                        v-else
-                                        class="text-xs font-semibold text-slate-500 dark:text-slate-400"
-                                        data-testid="cockpit-quick-generate-account-debit-unavailable"
-                                    >
-                                        Not available
-                                    </span>
-                                </div>
-                                <p
-                                    v-if="
-                                        liveAccountDebit !== null &&
-                                        livePayCodeValue !== null &&
-                                        liveIssueCost !== null
-                                    "
-                                    class="mt-0.5 text-[0.68rem] leading-4 font-normal text-slate-500 dark:text-slate-400"
-                                    data-testid="cockpit-quick-generate-account-debit-breakdown"
-                                >
-                                    {{ formatAccountMoney(livePayCodeValue) }}
-                                    Pay Code value +
-                                    {{ formatAccountMoney(liveIssueCost) }}
-                                    issue cost.
-                                </p>
-                                <p
-                                    v-else-if="liveAccountDebitPending"
-                                    class="mt-0.5 text-[0.68rem] leading-4 font-normal text-slate-500 dark:text-slate-400"
-                                >
-                                    Calculating from the selected instructions…
-                                </p>
-                                <p
-                                    v-else-if="livePricingEstimateError"
-                                    class="mt-0.5 text-[0.68rem] leading-4 font-normal text-amber-700 dark:text-amber-300"
-                                >
-                                    Pricing could not be confirmed. Issuance
-                                    will check it again.
-                                </p>
-                                <p
-                                    v-else
-                                    class="mt-0.5 text-[0.68rem] leading-4 font-normal text-slate-500 dark:text-slate-400"
-                                >
-                                    Enter an amount to calculate the debit.
-                                </p>
-                                <div
-                                    v-if="liveAccountDebit !== null"
-                                    class="mt-0.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
-                                >
-                                    <span
-                                        class="text-[0.68rem] leading-4 font-normal text-slate-500 dark:text-slate-400"
-                                    >
-                                        Deducted from Client Funds when issued.
-                                    </span>
-                                    <button
-                                        type="button"
-                                        class="text-[0.68rem] font-semibold text-emerald-700 underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:text-emerald-300"
-                                        data-testid="cockpit-quick-generate-account-debit-view-cost"
-                                        @click="canvasView = 'cost'"
-                                    >
-                                        View Cost
-                                    </button>
-                                </div>
-                            </div>
+                            <button
+                                type="button"
+                                class="font-medium text-slate-500 underline-offset-2 hover:text-emerald-700 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300"
+                                data-testid="cockpit-quick-generate-account-debit-view-cost"
+                                @click="canvasView = 'cost'"
+                            >
+                                Estimated Cost
+                            </button>
+                            <span
+                                v-if="liveAccountDebit !== null"
+                                class="shrink-0 font-semibold text-slate-700 tabular-nums dark:text-slate-200"
+                                data-testid="cockpit-quick-generate-account-debit-amount"
+                            >
+                                {{ formatAccountMoney(liveAccountDebit) }}
+                            </span>
+                            <span
+                                v-else-if="liveAccountDebitPending"
+                                class="shrink-0 text-slate-400 dark:text-slate-500"
+                                data-testid="cockpit-quick-generate-account-debit-loading"
+                            >
+                                Calculating…
+                            </span>
+                            <span
+                                v-else
+                                class="shrink-0 text-slate-400 dark:text-slate-500"
+                                data-testid="cockpit-quick-generate-account-debit-unavailable"
+                            >
+                                —
+                            </span>
                         </div>
                     </div>
                     <label

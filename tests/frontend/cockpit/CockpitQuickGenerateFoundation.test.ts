@@ -514,7 +514,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(kind.text()).toBe('Settlement');
     });
 
-    it('shows the authoritative Account debit beneath the Pay Code amount', async () => {
+    it('shows the authoritative estimated cost beneath the Pay Code amount', async () => {
         vi.useFakeTimers();
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,
@@ -561,7 +561,10 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-account-debit"]',
         );
 
-        expect(debit.text()).toContain('Estimated Account Debit');
+        expect(debit.text()).toContain('Estimated Cost');
+        expect(debit.classes()).not.toContain('rounded-lg');
+        expect(debit.classes()).not.toContain('bg-slate-50/90');
+        expect(debit.classes()).not.toContain('ring-1');
 
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-amount"]')
@@ -593,14 +596,13 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe('₱67.00');
         expect(
             debit
-                .get(
+                .find(
                     '[data-testid="cockpit-quick-generate-account-debit-breakdown"]',
                 )
-                .text(),
-        ).toBe('₱50.00 Pay Code value + ₱17.00 issue cost.');
-        expect(debit.text()).toContain(
-            'Deducted from Client Funds when issued.',
-        );
+                .exists(),
+        ).toBe(false);
+        expect(debit.text()).not.toContain('Pay Code value');
+        expect(debit.text()).not.toContain('Deducted from Client Funds');
 
         await debit
             .get(
