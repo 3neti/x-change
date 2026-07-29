@@ -51,6 +51,22 @@ function peso(minor: number): string {
     }).format(minor / 100);
 }
 
+function activityLabel(): string {
+    if (props.worksheets.length === 0) {
+        return 'No worksheets';
+    }
+
+    const authorized = props.worksheets.filter((worksheet) => worksheet.status === 'authorized').length;
+
+    if (authorized > 0) {
+        return authorized === props.worksheets.length
+            ? 'Authorized'
+            : `${authorized} authorized`;
+    }
+
+    return 'Draft only';
+}
+
 function dateTime(value: string | null): string {
     if (!value) {
         return '—';
@@ -107,7 +123,7 @@ function dateTime(value: string | null): string {
                             <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Your Worksheets</p>
                             <h2 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">Campaign Activity</h2>
                         </div>
-                        <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">Draft only</span>
+                        <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ activityLabel() }}</span>
                     </div>
 
                     <div v-if="props.worksheets.length === 0" class="flex min-h-64 flex-col items-center justify-center px-6 text-center">

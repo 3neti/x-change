@@ -34,6 +34,17 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).not.toContain('Maria Santos');
     });
 
+    it('labels authorized activity accurately instead of calling it draft only', () => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [{ ...worksheet, status: 'authorized' }],
+            },
+        });
+
+        expect(wrapper.text()).toContain('Authorized');
+        expect(wrapper.text()).not.toContain('Draft only');
+    });
+
     it('keeps the host Inertia adapter aligned with the package page', () => {
         const wrapper = mount(CampaignsRouteAdapter, {
             props: {
@@ -52,8 +63,13 @@ describe('Cockpit campaign worksheets', () => {
         );
 
         expect(page).toContain('data-testid="campaign-fulfillment-readiness"');
+        expect(page).toContain('Authorized Beneficiaries');
+        expect(page).toContain("v-if=\"isDraft()\"");
+        expect(page).toContain('Pay Codes Issued');
+        expect(page).toContain('Direct Bank Transfer Is Not Enabled');
+        expect(page).toContain('props.direct_bank_transfer_enabled');
         expect(page).toContain('Beneficiaries Ready To Issue');
         expect(page).toContain('No Pay Codes, delivery, or bank transfers have started.');
-        expect(page).toContain(':disabled="plannedCount() === 0 || fulfillmentForm.processing"');
+        expect(page).toContain('v-if="plannedCount() > 0"');
     });
 });

@@ -91,7 +91,8 @@ it('lets only the worksheet owner add a draft beneficiary with a mobile or bank 
         ->assertOk()
         ->assertJsonPath('component', 'x-change/cockpit/CampaignWorksheet')
         ->assertJsonPath('props.worksheet.rows.0.beneficiary.mobile', '09173011987')
-        ->assertJsonPath('props.worksheet.rows.0.amount_minor', 12_500);
+        ->assertJsonPath('props.worksheet.rows.0.amount_minor', 12_500)
+        ->assertJsonPath('props.direct_bank_transfer_enabled', false);
 
     actingAsTestUser();
 
