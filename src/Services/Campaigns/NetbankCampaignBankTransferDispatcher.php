@@ -31,7 +31,7 @@ final readonly class NetbankCampaignBankTransferDispatcher implements CampaignBa
             amount: ($fulfillment->row?->amount_minor ?? 0) / 100,
             account_number: (string) $beneficiary['bank_account'],
             bank_code: (string) $beneficiary['bank_code'],
-            settlement_rail: (string) ($beneficiary['settlement_rail'] ?? 'INSTAPAY'),
+            settlement_rail: $this->settlementRail((int) ($fulfillment->row?->amount_minor ?? 0)),
             currency: (string) ($fulfillment->row?->currency ?? 'PHP'),
             external_id: $fulfillment->reference,
             mobile: $beneficiary['mobile'] ?? null,
@@ -43,5 +43,10 @@ final readonly class NetbankCampaignBankTransferDispatcher implements CampaignBa
             $result->transaction_id,
             $result->status->getLabel(),
         );
+    }
+
+    private function settlementRail(int $amountMinor): string
+    {
+        return $amountMinor < 5_000_000 ? 'INSTAPAY' : 'PESONET';
     }
 }
