@@ -1,4 +1,6 @@
 import { mount } from '@vue/test-utils';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import Campaigns from '../../../resources/js/cockpit/pages/Campaigns.vue';
 import CampaignsRouteAdapter from '../../../resources/js/pages/x-change/cockpit/Campaigns.vue';
@@ -41,5 +43,17 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(wrapper.find('[data-testid="cockpit-campaigns-page"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Create A Worksheet');
+    });
+
+    it('makes the planned post-approval state explicit before beneficiary issuance', () => {
+        const page = readFileSync(
+            resolve(import.meta.dirname, '../../../resources/js/cockpit/pages/CampaignWorksheet.vue'),
+            'utf8',
+        );
+
+        expect(page).toContain('data-testid="campaign-fulfillment-readiness"');
+        expect(page).toContain('Beneficiaries Ready To Issue');
+        expect(page).toContain('No Pay Codes, delivery, or bank transfers have started.');
+        expect(page).toContain(':disabled="plannedCount() === 0 || fulfillmentForm.processing"');
     });
 });
