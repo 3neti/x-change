@@ -209,8 +209,8 @@ it('rejects capitalization controls when treasury installation is skipped', func
         ->assertExitCode(Command::FAILURE);
 });
 
-it('disables destructive fresh database installation in production', function () {
-    config()->set('app.env', 'production');
+it('limits destructive fresh database installation to local and testing environments', function (string $environment) {
+    config()->set('app.env', $environment);
 
     $this->artisan('x-change:install', [
         '--fresh-database' => true,
@@ -219,10 +219,10 @@ it('disables destructive fresh database installation in production', function ()
         '--no-interaction' => true,
     ])
         ->expectsOutputToContain(
-            'Fresh database installation is disabled in production.',
+            'Fresh database installation is limited to local and testing environments.',
         )
         ->assertExitCode(Command::FAILURE);
-});
+})->with(['production', 'staging']);
 
 it('fails installation before side effects when treasury identity is missing', function () {
     enableNetbankTreasuryForTests();

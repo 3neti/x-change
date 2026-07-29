@@ -175,11 +175,11 @@ php artisan x-change:install \
     --no-interaction
 ```
 
-This is not the routine reinstall path. `--fresh-database` is disabled in
-production, cannot be combined with `--no-migrate` or `--no-treasury`, and
-does nothing unless `--confirm-database-reset` and an explicit host bootstrap
-`--seeder` are supplied. Existing `--force` is not destructive consent; it
-continues to mean published-file replacement only.
+This is not the routine reinstall path. `--fresh-database` is limited to
+`local` and `testing`, cannot be combined with `--no-migrate` or
+`--no-treasury`, and does nothing unless `--confirm-database-reset` and an
+explicit host bootstrap `--seeder` are supplied. Existing `--force` is not
+destructive consent; it continues to mean published-file replacement only.
 
 The fresh-database sequence is deliberately fail-closed:
 

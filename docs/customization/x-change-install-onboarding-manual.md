@@ -322,7 +322,7 @@ php artisan x-change:install \
 ```
 
 Reset every database table and simulate a first installation. This
-non-production-only option requires a named host bootstrap seeder, rejects
+local/testing-only option requires a named host bootstrap seeder, rejects
 `--no-migrate` and `--no-treasury`, and runs live Treasury preflight before
 the destructive reset. Existing `--force` still controls published files only;
 it is never permission to reset the database.

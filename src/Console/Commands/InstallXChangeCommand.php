@@ -82,12 +82,16 @@ class InstallXChangeCommand extends Command
         if (
             $freshDatabase
             && (
-                app()->environment('production')
-                || config('app.env') === 'production'
+                ! app()->environment(['local', 'testing'])
+                || ! in_array(
+                    mb_strtolower((string) config('app.env')),
+                    ['local', 'testing'],
+                    true,
+                )
             )
         ) {
             $this->components->error(
-                'Fresh database installation is disabled in production.',
+                'Fresh database installation is limited to local and testing environments.',
             );
 
             return self::FAILURE;
