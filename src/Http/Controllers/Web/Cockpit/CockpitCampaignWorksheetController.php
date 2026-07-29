@@ -12,8 +12,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
+use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetSummaryData;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
+use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 
 class CockpitCampaignWorksheetController extends Controller
 {
@@ -46,6 +48,43 @@ class CockpitCampaignWorksheetController extends Controller
             ->with('campaign_notice', sprintf('%s is ready for beneficiary entries.', $worksheet->name));
     }
 
+    public function show(Request $request, string $worksheet): Response
+    {
+        return Inertia::render('x-change/cockpit/CampaignWorksheet', [
+            'worksheet' => $this->worksheetFor($worksheet, $request->user()),
+        ]);
+    }
+
+    public function addRow(
+        CreateCampaignWorksheetRowRequest $request,
+        string $worksheet,
+    ): RedirectResponse {
+        $owner = $request->user();
+        $validated = $request->validated();
+        $campaign = $this->worksheets->appendRow(
+            $worksheet,
+            $this->ownerType($owner),
+            (string) $owner->getAuthIdentifier(),
+            new CampaignWorksheetRowData(
+                reference: null,
+                ordinal: 0,
+                beneficiary: array_filter([
+                    'name' => $validated['name'] ?: null,
+                    'mobile' => $validated['mobile'] ?: null,
+                    'bank_account' => $validated['bank_account'] ?: null,
+                    'email' => $validated['email'] ?: null,
+                    'remarks' => $validated['remarks'] ?: null,
+                    'external_reference' => $validated['external_reference'] ?: null,
+                ]),
+                amountMinor: $validated['amount_minor'],
+                deliveryPreference: $validated['delivery_preference'],
+            ),
+        );
+
+        return to_route('x-change.cockpit.campaigns.show', $campaign->reference)
+            ->with('campaign_notice', 'Beneficiary added to the draft worksheet.');
+    }
+
     /**
      * @return array<int, array<string, int|string|null|array<int, string>>>
      */
@@ -74,5 +113,37 @@ class CockpitCampaignWorksheetController extends Controller
     private function ownerType(mixed $owner): string
     {
         return $owner instanceof Model ? $owner->getMorphClass() : $owner::class;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function worksheetFor(string $reference, mixed $owner): array
+    {
+        $worksheet = $this->worksheets->findForOwner(
+            $reference,
+            $this->ownerType($owner),
+            (string) $owner->getAuthIdentifier(),
+        );
+
+        abort_unless($worksheet instanceof CampaignWorksheetData, 404);
+
+        return [
+            'reference' => $worksheet->reference,
+            'profile' => $worksheet->profile,
+            'name' => $worksheet->name,
+            'currency' => $worksheet->currency,
+            'status' => $worksheet->status,
+            'fulfillment_mode' => $worksheet->fulfillmentMode,
+            'delivery_plan' => $worksheet->deliveryPlan,
+            'rows' => array_map(fn (CampaignWorksheetRowData $row): array => [
+                'reference' => $row->reference,
+                'ordinal' => $row->ordinal,
+                'beneficiary' => $row->beneficiary,
+                'amount_minor' => $row->amountMinor,
+                'delivery_preference' => $row->deliveryPreference,
+                'status' => $row->status,
+            ], $worksheet->rows),
+        ];
     }
 }

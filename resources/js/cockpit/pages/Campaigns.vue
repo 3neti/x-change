@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { ClipboardList, Plus, Send, Users } from 'lucide-vue-next';
-import { store } from '@/routes/x-change/cockpit/campaigns';
+import { show, store } from '@/routes/x-change/cockpit/campaigns';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type { CockpitHeaderPageProps } from '../types';
 
@@ -120,7 +120,7 @@ function dateTime(value: string | null): string {
                         <article v-for="worksheet in props.worksheets" :key="worksheet.reference" class="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <h3 class="truncate font-semibold text-slate-950 dark:text-slate-50">{{ worksheet.name }}</h3>
+                                    <a :href="show(worksheet.reference).url" class="truncate font-semibold text-slate-950 hover:underline dark:text-slate-50">{{ worksheet.name }}</a>
                                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ display(worksheet.profile) }}</span>
                                     <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{{ display(worksheet.status) }}</span>
                                 </div>
