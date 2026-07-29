@@ -8,6 +8,7 @@ use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
+use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 
 it('shows only the authenticated owner campaign worksheet summaries', function () {
@@ -206,4 +207,70 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
 
     expect($authorization->fulfillments()->where('status', 'issued')->count())->toBe(2)
         ->and($authorization->fulfillments()->whereNotNull('pay_code')->count())->toBe(2);
+});
+
+it('records an explicit export as an immutable append-only delivery attempt', function () {
+    $owner = actingAsTestUser();
+    $officer = actingAsTestUser();
+    $officer->forceFill(['mobile' => '09173011987'])->save();
+    $repository = app(CampaignWorksheetRepository::class);
+
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-explicit-export-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Explicit Export Payroll',
+        fulfillmentMode: 'pay_code_distribution',
+        rows: [
+            new CampaignWorksheetRowData(null, 1, [
+                'name' => 'Maria Santos',
+                'mobile' => '09178889999',
+                'email' => 'maria@example.test',
+            ], 12_500),
+        ],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+
+    $this->actingAs($owner);
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+
+    $this->actingAs($officer);
+    app(CampaignWorksheetAuthorizationExecutionService::class)->execute(
+        Voucher::query()->where('code', $authorization->approval_pay_code)->sole(),
+        ['mobile' => '09173011987'],
+    );
+
+    $this->actingAs($owner)
+        ->post(route('x-change.cockpit.campaigns.fulfillments.pay-codes.store', $worksheet->reference))
+        ->assertRedirect();
+
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(0);
+
+    $response = $this->actingAs($owner)
+        ->get(route('x-change.cockpit.campaigns.exports.pay-codes', $worksheet->reference))
+        ->assertOk()
+        ->assertHeader('cache-control', 'no-store, private');
+
+    expect($response->streamedContent())
+        ->toContain('Maria Santos')
+        ->toContain('maria@example.test');
+
+    $attempt = CampaignDeliveryAttempt::query()->with('events')->sole();
+
+    expect($attempt->channel)->toBe('export')
+        ->and($attempt->campaign_worksheet_fulfillment_id)->toBeNull()
+        ->and($attempt->metadata)->toMatchArray([
+            'format' => 'csv',
+            'export_type' => 'pay_codes',
+            'record_count' => 1,
+        ])
+        ->and($attempt->events->pluck('event_type')->all())->toBe(['requested', 'completed'])
+        ->and($this->fakeAuditLogger()->hasEvent('campaign.delivery.requested'))->toBeTrue()
+        ->and($this->fakeAuditLogger()->hasEvent('campaign.delivery.completed'))->toBeTrue();
+
+    expect(fn () => $attempt->update(['channel' => 'sms']))
+        ->toThrow(LogicException::class, 'Campaign delivery attempts are append-only.')
+        ->and(fn () => $attempt->events->first()->delete())
+        ->toThrow(LogicException::class, 'Campaign delivery attempt events are append-only.');
 });
