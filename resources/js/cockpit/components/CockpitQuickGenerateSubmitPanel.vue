@@ -6485,7 +6485,7 @@ function instructionRecord(
                                                                     'url') ||
                                                             (option.value ===
                                                                 'splash' &&
-                                                                riderSplash.trim() ===
+                                                                riderSplashContent.trim() ===
                                                                     '' &&
                                                                 riderStampArtworkSource !==
                                                                     'splash')
@@ -6519,7 +6519,7 @@ function instructionRecord(
                                                                         'url') ||
                                                                 (option.value ===
                                                                     'splash' &&
-                                                                    riderSplash.trim() ===
+                                                                    riderSplashContent.trim() ===
                                                                         '' &&
                                                                     riderStampArtworkSource !==
                                                                         'splash')
