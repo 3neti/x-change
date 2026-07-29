@@ -43,10 +43,13 @@ final class IssueCampaignWorksheetApprovalPayCode
                 'currency' => $worksheet->currency,
             ]);
 
+            $requiresOtp = (bool) data_get($worksheet->metadata, 'officer_authorization.require_otp', false);
+
             $voucher = GenerateVouchers::run(VoucherInstructionsData::from([
                 'cash' => ['amount' => 0, 'currency' => $worksheet->currency, 'validation' => ['country' => 'PH']],
-                'inputs' => ['fields' => []], 'feedback' => [], 'rider' => ['message' => 'Campaign officer approval'],
+                'inputs' => ['fields' => $requiresOtp ? ['otp'] : []], 'feedback' => [], 'rider' => ['message' => 'Campaign officer approval'],
                 'count' => 1, 'prefix' => 'APPR', 'mask' => '****', 'voucher_type' => VoucherType::SETTLEMENT->value, 'target_amount' => 0,
+                'validation' => $requiresOtp ? ['otp' => ['required' => true, 'on_failure' => 'block']] : null,
                 'rules' => ['min_payment' => 0, 'max_payment' => 0, 'allow_overpayment' => false, 'auto_close_on_full_payment' => false],
                 'execution' => ['driver' => 'campaign_worksheet_authorization', 'mode' => 'officer_approval', 'metadata' => ['authorization_reference' => $authorization->reference, 'worksheet_reference' => $worksheet->reference, 'manifest_hash' => $worksheet->rows_hash, 'beneficiary_count' => $authorization->beneficiary_count, 'principal_minor' => $authorization->principal_minor, 'currency' => $worksheet->currency]],
                 'claim' => ['outcomes' => [['key' => 'authorize_campaign']], 'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'authorize_campaign', 'onboarding' => ['mode' => 'never'], 'claimant' => ['mode' => 'unbound'], 'profile' => 'voucher.claim.v1'],

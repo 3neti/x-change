@@ -17,10 +17,12 @@ use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaimSubmission;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Actions\Claim\StorePreparedCompiledClaim;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
+use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
+use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
@@ -36,6 +38,8 @@ class ClaimStartController extends Controller
         protected BuildProvisioningRequirementViewData $provisioning,
         protected NamedVoucherSliceService $namedSlices,
         protected VoucherFlowCapabilityResolverContract $capabilities,
+        protected ClaimWorkflowResolverContract $claimWorkflows,
+        protected FormFlowClaimWorkflowMutator $formFlowWorkflows,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -144,6 +148,27 @@ class ClaimStartController extends Controller
             );
         }
 
+        $workflow = $this->claimWorkflows->resolve($voucher);
+        $authenticatedMobile = null;
+
+        if ($workflow->requires_authenticated_officer) {
+            $officer = $request->user();
+
+            if ($officer === null) {
+                $request->session()->put('url.intended', route('x-change.claim.show', ['code' => $code]));
+
+                return redirect()->route('login');
+            }
+
+            $authenticatedMobile = $officer->getAttribute('mobile');
+
+            if (! is_string($authenticatedMobile) || trim($authenticatedMobile) === '') {
+                return back()->withErrors([
+                    'code' => 'Your authenticated officer profile needs a verified mobile number before it can authorize a campaign.',
+                ]);
+            }
+        }
+
         if ($this->namedSlices->hasNamedSlices($voucher)) {
             if ($this->namedSlices->allSlicesClaimed($voucher)) {
                 return $this->claimEntryResponse()->error(
@@ -211,7 +236,11 @@ class ClaimStartController extends Controller
 
         $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructionPayload);
 
-        $instructions = FormFlowInstructionsData::from($instructionPayload);
+        $instructions = $this->formFlowWorkflows->apply(
+            FormFlowInstructionsData::from($instructionPayload),
+            $workflow,
+            $authenticatedMobile,
+        );
 
         $state = $this->formFlowService->startFlow($instructions);
 

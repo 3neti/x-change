@@ -24,6 +24,13 @@ final class ApproveCampaignWorksheetAuthorization
                 throw new RuntimeException('Campaign approval Pay Code was not found.');
             }
 
+            if (
+                $authorization->worksheet->owner_type === $officer->getMorphClass()
+                && (string) $authorization->worksheet->owner_id === (string) $officer->getKey()
+            ) {
+                throw new RuntimeException('The worksheet issuer cannot authorize their own campaign.');
+            }
+
             if ($authorization->status === 'authorized') {
                 return $authorization;
             }
