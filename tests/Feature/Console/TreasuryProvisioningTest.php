@@ -152,7 +152,10 @@ it('registers treasury commands and keeps installation safe when no connection i
     $signature = (new ReflectionClass(InstallXChangeCommand::class))
         ->getDefaultProperties()['signature'];
 
-    expect($signature)->toContain('{--no-treasury')
+    expect($signature)->toContain('{--fresh-database')
+        ->and($signature)->toContain('{--confirm-database-reset')
+        ->and($signature)->toContain('{--seeder=')
+        ->and($signature)->toContain('{--no-treasury')
         ->and($signature)->toContain('{--treasury-opening-policy=')
         ->and($signature)->toContain('{--capitalization-authorization-reference=')
         ->and($signature)->toContain('{--confirm-system-ownership');
@@ -202,6 +205,21 @@ it('rejects capitalization controls when treasury installation is skipped', func
     ])
         ->expectsOutputToContain(
             'Treasury opening capitalization options cannot be combined with [--no-treasury].',
+        )
+        ->assertExitCode(Command::FAILURE);
+});
+
+it('disables destructive fresh database installation in production', function () {
+    config()->set('app.env', 'production');
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--confirm-database-reset' => true,
+        '--seeder' => 'LBHurtado\\Instruction\\Database\\Seeders\\InstructionItemSeeder',
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain(
+            'Fresh database installation is disabled in production.',
         )
         ->assertExitCode(Command::FAILURE);
 });

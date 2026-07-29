@@ -225,6 +225,31 @@ This is deliberately different from `--no-treasury`. An initialized reinstall
 still validates local Treasury configuration and canonical topology.
 `--no-treasury` explicitly defers all Treasury checks and initialization work.
 
+For an intentionally disposable non-production database, the explicit
+fresh-install path is:
+
+```bash
+php artisan x-change:install \
+    --fresh-database \
+    --confirm-database-reset \
+    --seeder='Database\Seeders\DatabaseSeeder' \
+    --force \
+    --no-interaction
+```
+
+It first proves live provider readiness, then drops every table, migrates,
+runs the named bootstrap seeder, verifies that the seeder did not create
+Treasury topology, and performs opening reconciliation from zero. A failed
+preflight leaves the existing database untouched.
+
+Use a dedicated bootstrap seeder that creates the configured system principal
+and any required identities without funding Accounts or creating Treasury
+balances. With the default `unattributed` policy, provider liquidity becomes
+Treasury Inventory and `Legacy Unattributed`; the Account Funding Reserve,
+every other Treasury Position, and every Account remain zero unless the named
+seeder explicitly funded an Account. The provider balance is not the system
+user's Account balance.
+
 ## Installer Options
 
 Use these options to narrow or defer installation work:
@@ -288,6 +313,19 @@ php artisan x-change:install --no-migrate
 ```
 
 Publish files without running migrations.
+
+```bash
+php artisan x-change:install \
+    --fresh-database \
+    --confirm-database-reset \
+    --seeder='Database\Seeders\DatabaseSeeder'
+```
+
+Reset every database table and simulate a first installation. This
+non-production-only option requires a named host bootstrap seeder, rejects
+`--no-migrate` and `--no-treasury`, and runs live Treasury preflight before
+the destructive reset. Existing `--force` still controls published files only;
+it is never permission to reset the database.
 
 ```bash
 php artisan x-change:install --no-treasury --no-interaction

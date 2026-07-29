@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningCapitalizationPolicyResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use Throwable;
 
 class InstallXChangeCommand extends Command
@@ -26,6 +28,9 @@ class InstallXChangeCommand extends Command
         {--no-rider : Skip x-rider asset publishing}
         {--no-x-ray : Skip x-ray asset publishing}
         {--no-migrate : Skip database migrations}
+        {--fresh-database : Drop all database tables after live preflight and rebuild them}
+        {--confirm-database-reset : Explicitly authorize the destructive fresh database operation}
+        {--seeder= : Host bootstrap seeder to run after a fresh database migration}
         {--no-treasury : Explicitly defer Treasury preflight, provisioning, and reconciliation}
         {--treasury-opening-policy= : unattributed, system-capital, or configured}
         {--capitalization-authorization-reference= : Stable deployment or control authorization reference}
@@ -39,13 +44,91 @@ class InstallXChangeCommand extends Command
         TreasuryInitializationStateService $treasuryInitialization,
         TreasuryOpeningCapitalizationPolicyResolver $capitalizationPolicies,
         TreasuryPreflightService $treasuryPreflight,
+        TreasuryProviderConnectionCatalog $treasuryConnections,
     ): int {
         $this->components->info('Installing X-Change...');
 
         $capitalizationConnections = [];
+        $freshDatabase = (bool) $this->option('fresh-database');
         $initializedConnections = [];
         $liveReadyOpeningConnections = [];
         $openingConnections = [];
+        $seeder = trim((string) $this->option('seeder'));
+
+        if ($freshDatabase && (bool) $this->option('no-migrate')) {
+            $this->components->error(
+                'Fresh database installation cannot be combined with [--no-migrate].',
+            );
+
+            return self::FAILURE;
+        }
+
+        if ($freshDatabase && (bool) $this->option('no-treasury')) {
+            $this->components->error(
+                'Fresh database installation cannot be combined with [--no-treasury].',
+            );
+
+            return self::FAILURE;
+        }
+
+        if ($freshDatabase && ! (bool) $this->option('confirm-database-reset')) {
+            $this->components->error(
+                'Fresh database installation requires [--confirm-database-reset].',
+            );
+
+            return self::FAILURE;
+        }
+
+        if (
+            $freshDatabase
+            && (
+                app()->environment('production')
+                || config('app.env') === 'production'
+            )
+        ) {
+            $this->components->error(
+                'Fresh database installation is disabled in production.',
+            );
+
+            return self::FAILURE;
+        }
+
+        if ($freshDatabase && $seeder === '') {
+            $this->components->error(
+                'Fresh database installation requires an explicit [--seeder] class.',
+            );
+
+            return self::FAILURE;
+        }
+
+        if (
+            $freshDatabase
+            && (
+                ! class_exists($seeder)
+                || ! is_subclass_of($seeder, Seeder::class)
+            )
+        ) {
+            $this->components->error(
+                "Fresh database seeder [{$seeder}] must exist and extend "
+                .Seeder::class.'.',
+            );
+
+            return self::FAILURE;
+        }
+
+        if (
+            ! $freshDatabase
+            && (
+                (bool) $this->option('confirm-database-reset')
+                || $seeder !== ''
+            )
+        ) {
+            $this->components->error(
+                'Database reset options require [--fresh-database].',
+            );
+
+            return self::FAILURE;
+        }
 
         if (
             (bool) $this->option('no-treasury')
@@ -65,19 +148,27 @@ class InstallXChangeCommand extends Command
         if (! $this->option('no-treasury')) {
             try {
                 $treasuryConfiguration->assertConfigured();
-                $initialization = $treasuryInitialization->inspect();
-                $initializedConnections = $initialization->initialized;
-                $openingConnections = $initialization->uninitialized;
 
-                if ($initialization->incomplete !== []) {
-                    $references = implode(', ', $initialization->incomplete);
-
-                    $this->components->error(
-                        "Treasury topology is incomplete or conflicts with configuration [{$references}]. "
-                        .'No migrations, Treasury positions, or UI assets were changed.',
+                if ($freshDatabase) {
+                    $openingConnections = array_map(
+                        static fn ($connection): string => $connection->reference,
+                        $treasuryConnections->active(),
                     );
+                } else {
+                    $initialization = $treasuryInitialization->inspect();
+                    $initializedConnections = $initialization->initialized;
+                    $openingConnections = $initialization->uninitialized;
 
-                    return self::FAILURE;
+                    if ($initialization->incomplete !== []) {
+                        $references = implode(', ', $initialization->incomplete);
+
+                        $this->components->error(
+                            "Treasury topology is incomplete or conflicts with configuration [{$references}]. "
+                            .'No migrations, Treasury positions, or UI assets were changed.',
+                        );
+
+                        return self::FAILURE;
+                    }
                 }
 
                 $capitalizationConnections = $capitalizationPolicies
@@ -156,9 +247,13 @@ class InstallXChangeCommand extends Command
                 }
 
                 if (! $livePreflight->passes()) {
+                    $unchangedResources = $freshDatabase
+                        ? 'No migrations, Treasury positions, seeders, or UI assets were changed.'
+                        : 'No migrations, Treasury positions, or UI assets were changed.';
+
                     $this->components->error(
                         'Required Treasury provider connections did not pass live preflight. '
-                        .'No migrations, Treasury positions, or UI assets were changed.',
+                        .$unchangedResources,
                     );
 
                     return self::FAILURE;
@@ -331,11 +426,67 @@ class InstallXChangeCommand extends Command
 
         // Run migrations
         if (! $this->option('no-migrate')) {
-            $this->components->task('Running migrations', function (): void {
-                $this->callSilently('migrate', [
-                    '--force' => true,
-                ]);
+            $migrationExitCode = self::FAILURE;
+            $migrationTask = $freshDatabase
+                ? 'Resetting and migrating database'
+                : 'Running migrations';
+
+            $this->components->task($migrationTask, function () use (
+                $freshDatabase,
+                &$migrationExitCode,
+            ): bool {
+                $migrationExitCode = $this->callSilently(
+                    $freshDatabase ? 'migrate:fresh' : 'migrate',
+                    ['--force' => true],
+                );
+
+                return $migrationExitCode === self::SUCCESS;
             });
+
+            if ($migrationExitCode !== self::SUCCESS) {
+                $this->components->error('Database migration failed; X-Change installation is incomplete.');
+
+                return self::FAILURE;
+            }
+        }
+
+        if ($freshDatabase) {
+            $seedExitCode = self::FAILURE;
+            $this->components->task(
+                "Running bootstrap seeder [{$seeder}]",
+                function () use ($seeder, &$seedExitCode): bool {
+                    $seedExitCode = $this->callSilently('db:seed', [
+                        '--class' => $seeder,
+                        '--force' => true,
+                    ]);
+
+                    return $seedExitCode === self::SUCCESS;
+                },
+            );
+
+            if ($seedExitCode !== self::SUCCESS) {
+                $this->components->error('Bootstrap seeding failed; X-Change installation is incomplete.');
+
+                return self::FAILURE;
+            }
+
+            $initialization = $treasuryInitialization->inspect();
+
+            if (
+                $initialization->initialized !== []
+                || $initialization->incomplete !== []
+                || array_values(array_diff(
+                    $openingConnections,
+                    $initialization->uninitialized,
+                )) !== []
+            ) {
+                $this->components->error(
+                    'Bootstrap seeder created or conflicted with Treasury topology. '
+                    .'Fresh installation requires Treasury to begin uninitialized.',
+                );
+
+                return self::FAILURE;
+            }
         }
 
         if (! $this->option('no-treasury') && $liveReadyOpeningConnections !== []) {

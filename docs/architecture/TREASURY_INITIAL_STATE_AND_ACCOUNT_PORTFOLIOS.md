@@ -161,6 +161,67 @@ This separation makes asset republishing deterministic during provider downtime
 and prevents an operating balance difference from being reinterpreted as
 opening capital.
 
+### Explicit disposable fresh-database mode
+
+For a disposable non-production host that intentionally shares a development
+provider account, use the destructive mode explicitly:
+
+```bash
+php artisan x-change:install \
+    --fresh-database \
+    --confirm-database-reset \
+    --seeder='Database\Seeders\DatabaseSeeder' \
+    --force \
+    --no-interaction
+```
+
+This is not the routine reinstall path. `--fresh-database` is disabled in
+production, cannot be combined with `--no-migrate` or `--no-treasury`, and
+does nothing unless `--confirm-database-reset` and an explicit host bootstrap
+`--seeder` are supplied. Existing `--force` is not destructive consent; it
+continues to mean published-file replacement only.
+
+The fresh-database sequence is deliberately fail-closed:
+
+1. validate destructive options, Treasury configuration, opening policy, and
+   the seeder class;
+2. run the read-only live provider preflight for every active connection;
+3. stop without changing the database, running a seeder, or publishing assets
+   if a required connection fails;
+4. publish migration prerequisites and run `migrate:fresh --force`;
+5. run only the explicitly named bootstrap seeder;
+6. reject a seeder that pre-creates or conflicts with Treasury topology;
+7. provision the ten zero-balance system Positions and reconcile the current
+   provider balance as a new opening snapshot; and
+8. publish the UI and remaining assets only after Treasury succeeds.
+
+Use a dedicated bootstrap seeder that creates required identities, including
+the configured system principal, but does not fund an Account or create
+Treasury balances. The generic `DatabaseSeeder` is acceptable only when its
+contents satisfy that constraint.
+
+With the default `unattributed` opening policy, a successful fresh snapshot has
+these balances:
+
+```text
+Provider liquidity = Treasury Inventory = total Treasury Positions
+Legacy Unattributed = Provider liquidity
+Account Funding Reserve = 0
+Every other system Treasury Position = 0
+Every system or user Account = 0, unless the explicit bootstrap seeder funded it
+```
+
+The provider balance does not become the system user's Account balance.
+Recognizing provider liquidity and allocating Account value are separate
+accounting actions. Capitalization or Account allocation still requires its
+own evidence and authorization.
+
+A fresh snapshot only restores equality at that instant. If another deployment
+later uses the same provider account, this Treasury instance will drift again.
+The production rule remains: **one provider corporate account belongs to one
+Treasury instance**. Disposable database resets are a temporary development
+workflow, not a shared-account reconciliation strategy.
+
 `--force` controls replacement of published files only. It never weakens
 Treasury configuration, topology validation, ownership confirmation, or the
 first-deployment live readiness and reconciliation controls. It does not force

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Event;
 use LBHurtado\EmiCore\Contracts\ProviderBalanceReader;
 use LBHurtado\EmiCore\Contracts\ProviderLivePreflightProbe;
@@ -11,13 +13,17 @@ use LBHurtado\EmiCore\Data\Providers\ProviderBalanceRequestData;
 use LBHurtado\EmiCore\Data\Providers\ProviderLivePreflightRequestData;
 use LBHurtado\EmiCore\Data\Providers\ProviderLivePreflightResultData;
 use LBHurtado\EmiCore\Enums\ProviderLivePreflightFailureCode;
+use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
+use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 it('stops a forced non-interactive install before every side effect when required live preflight fails', function () {
     enableNetbankTreasuryForTests();
@@ -53,6 +59,216 @@ it('stops a forced non-interactive install before every side effect when require
         ->not->toContain('vendor:publish')
         ->not->toContain('x-change:treasury:provision')
         ->not->toContain('x-change:treasury:reconcile-opening');
+});
+
+it('requires explicit destructive consent and a bootstrap seeder before a fresh database install', function () {
+    enableNetbankTreasuryForTests();
+    $liveProbeCalls = 0;
+    bindInstallerLiveProbe(
+        static function (
+            ProviderLivePreflightRequestData $request,
+        ) use (&$liveProbeCalls): ProviderLivePreflightResultData {
+            $liveProbeCalls++;
+
+            return new ProviderLivePreflightResultData(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                ready: false,
+                checkedAt: new DateTimeImmutable,
+                failureCode: ProviderLivePreflightFailureCode::ConnectionTimeout,
+            );
+        },
+    );
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--seeder' => 'LBHurtado\\Instruction\\Database\\Seeders\\InstructionItemSeeder',
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain(
+            'Fresh database installation requires [--confirm-database-reset].',
+        )
+        ->assertFailed();
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--confirm-database-reset' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain(
+            'Fresh database installation requires an explicit [--seeder] class.',
+        )
+        ->assertFailed();
+
+    expect($liveProbeCalls)->toBe(0);
+});
+
+it('rejects incompatible fresh database options before provider access', function (array $options, string $message) {
+    enableNetbankTreasuryForTests();
+    $liveProbeCalls = 0;
+    bindInstallerLiveProbe(
+        static function (
+            ProviderLivePreflightRequestData $request,
+        ) use (&$liveProbeCalls): ProviderLivePreflightResultData {
+            $liveProbeCalls++;
+
+            return new ProviderLivePreflightResultData(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                ready: false,
+                checkedAt: new DateTimeImmutable,
+                failureCode: ProviderLivePreflightFailureCode::ConnectionTimeout,
+            );
+        },
+    );
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--confirm-database-reset' => true,
+        '--seeder' => 'LBHurtado\\Instruction\\Database\\Seeders\\InstructionItemSeeder',
+        '--no-interaction' => true,
+        ...$options,
+    ])
+        ->expectsOutputToContain($message)
+        ->assertFailed();
+
+    expect($liveProbeCalls)->toBe(0);
+})->with([
+    'migration skipped' => [
+        ['--no-migrate' => true],
+        'Fresh database installation cannot be combined with [--no-migrate].',
+    ],
+    'Treasury skipped' => [
+        ['--no-treasury' => true],
+        'Fresh database installation cannot be combined with [--no-treasury].',
+    ],
+]);
+
+it('runs fresh database live preflight before any destructive command', function () {
+    enableNetbankTreasuryForTests();
+    bindInstallerLiveProbe(
+        static fn (ProviderLivePreflightRequestData $request): ProviderLivePreflightResultData => new ProviderLivePreflightResultData(
+            provider: $request->provider,
+            connectionReference: $request->connectionReference,
+            ready: false,
+            checkedAt: new DateTimeImmutable,
+            failureCode: ProviderLivePreflightFailureCode::ConnectionTimeout,
+        ),
+    );
+    $commands = [];
+    Event::listen(
+        CommandStarting::class,
+        function (CommandStarting $event) use (&$commands): void {
+            $commands[] = $event->command;
+        },
+    );
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--confirm-database-reset' => true,
+        '--seeder' => 'LBHurtado\\Instruction\\Database\\Seeders\\InstructionItemSeeder',
+        '--force' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('connection_timeout')
+        ->expectsOutputToContain(
+            'No migrations, Treasury positions, seeders, or UI assets were changed.',
+        )
+        ->assertFailed();
+
+    expect($commands)->not->toContain('migrate:fresh')
+        ->not->toContain('db:seed')
+        ->not->toContain('vendor:publish');
+});
+
+it('resets initialized Treasury and recognizes the current provider balance from a clean topology', function () {
+    enableNetbankTreasuryForTests();
+    $providerAmountMinor = 70_000;
+    bindInstallerLiveProbe(
+        static function (
+            ProviderLivePreflightRequestData $request,
+        ) use (&$providerAmountMinor): ProviderLivePreflightResultData {
+            $observation = installerObservation(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                settlementResourceReference: $request->settlementResourceReference,
+                currency: $request->currency,
+                amountMinor: $providerAmountMinor,
+            );
+
+            return new ProviderLivePreflightResultData(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                ready: true,
+                checkedAt: $observation->observedAt,
+                observation: $observation,
+            );
+        },
+    );
+    bindInstallerBalanceReader(
+        static function (
+            ProviderBalanceRequestData $request,
+        ) use (&$providerAmountMinor): ProviderBalanceObservationData {
+            return installerObservation(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                settlementResourceReference: $request->settlementResourceReference,
+                currency: $request->currency,
+                amountMinor: $providerAmountMinor,
+            );
+        },
+    );
+
+    $this->artisan('x-change:install', installerTestOptions())
+        ->assertSuccessful();
+
+    expect(TreasuryInventoryOperation::query()->sum('amount_minor'))->toBe(70_000);
+
+    app()->instance(
+        SystemUserResolverContract::class,
+        new class implements SystemUserResolverContract
+        {
+            public function resolve(): Wallet
+            {
+                return User::query()
+                    ->where('email', FreshInstallerBootstrapSeeder::SYSTEM_EMAIL)
+                    ->firstOrFail();
+            }
+        },
+    );
+    forgetInstallerTreasuryServices();
+    $providerAmountMinor = 95_632;
+    app('migrator')->path(Orchestra\Testbench\default_migration_path());
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--confirm-database-reset' => true,
+        '--seeder' => '\\'.FreshInstallerBootstrapSeeder::class,
+        '--force' => true,
+        '--no-auth' => true,
+        '--no-settings' => true,
+        '--no-assets' => true,
+        '--no-handlers' => true,
+        '--no-rider' => true,
+        '--no-x-ray' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('Treasury live preflight ready [netbank-primary].')
+        ->expectsOutputToContain('X-Change installed successfully.')
+        ->assertSuccessful();
+
+    $unattributed = TreasuryPosition::query()
+        ->where('position_reference', 'position:system:netbank:netbank-primary:php:unattributed')
+        ->firstOrFail();
+
+    expect(TreasuryPosition::query()->count())->toBe(10)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(TreasuryInventoryOperation::query()->sum('amount_minor'))->toBe(95_632)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(95_632)
+        ->and(TreasuryPositionOperation::query()->count())->toBe(1)
+        ->and(TreasuryPositionOperation::query()->sole()->destination_position_id)
+        ->toBe($unattributed->getKey())
+        ->and(TreasuryPositionOperation::query()->sole()->amount_minor)->toBe(95_632);
 });
 
 it('continues with healthy required connections and skips a failed optional connection', function () {
@@ -396,4 +612,18 @@ function installerObservation(
         observedAt: new DateTimeImmutable,
         evidenceReference: 'evidence:installer-test',
     );
+}
+
+final class FreshInstallerBootstrapSeeder extends Seeder
+{
+    public const string SYSTEM_EMAIL = 'fresh-installer-system@example.com';
+
+    public function run(): void
+    {
+        User::query()->create([
+            'name' => 'Fresh Installer System',
+            'email' => self::SYSTEM_EMAIL,
+            'password' => 'not-a-login-credential',
+        ]);
+    }
 }
