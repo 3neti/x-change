@@ -6,6 +6,7 @@ use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
+use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
 use Tests\TestCase;
@@ -22,6 +23,23 @@ it('requires an authenticated officer before campaign authorization can execute'
     expect(fn () => app(CampaignWorksheetAuthorizationExecutionService::class)->execute($voucher, [
         'mobile' => '09173011987',
     ]))->toThrow('An authenticated officer is required to approve a campaign worksheet.');
+});
+
+it('suppresses host default rider introductions for campaign officer authorization', function () {
+    $voucher = (new Voucher)->forceFill([
+        'metadata' => [
+            'instructions' => [
+                'cash' => ['amount' => 0, 'currency' => 'PHP'],
+                'rider' => [],
+                'execution' => ['driver' => 'campaign_worksheet_authorization'],
+            ],
+        ],
+    ]);
+
+    $experience = app(ClaimExperienceCompiler::class)->compile($voucher)->toArray();
+
+    expect($experience['entry']['mode'])->toBe('form_first')
+        ->and($experience['options']['suppress_legacy_pre_claim_stages'])->toBeTrue();
 });
 
 it('removes destination collection from a campaign officer authorization workflow', function () {
@@ -73,8 +91,10 @@ it('removes destination collection from a campaign officer authorization workflo
         ->and($workflow->requires_mobile)->toBeTrue()
         ->and($workflow->requires_destination)->toBeFalse()
         ->and($workflow->requires_authenticated_officer)->toBeTrue()
+        ->and($workflow->skip_form_flow_splash)->toBeTrue()
         ->and($walletStep['title'])->toBe('Campaign Officer Authorization')
         ->and($instructions->toArray()['metadata']['claim_workflow']['confirmation_label'])->toBe('Authorize Campaign')
+        ->and($instructions->toArray()['metadata']['claim_workflow']['skip_form_flow_splash'])->toBeTrue()
         ->and($walletStep['auto_sync']['enabled'])->toBeFalse()
         ->and($fieldNames)->toBe(['mobile'])
         ->and($walletStep['fields'][0]['default'])->toBe('09173011987')

@@ -26,6 +26,7 @@ class ClaimExperienceCompiler
         $hasRiderSplash = filled(data_get($rider, 'splash'));
         $hasRiderMessage = filled(data_get($rider, 'message'));
         $redirectUrl = data_get($rider, 'redirect_url') ?? data_get($rider, 'url');
+        $isOfficerAuthorization = $this->isOfficerAuthorization($instructions);
 
         $phases = [];
 
@@ -128,6 +129,7 @@ class ClaimExperienceCompiler
             options: [
                 'skip_consumed_splash' => $hasRiderSplash,
                 'show_redirect_countdown' => filled($redirectUrl),
+                'suppress_legacy_pre_claim_stages' => $isOfficerAuthorization,
             ],
             phases: new DataCollection(ClaimPhaseData::class, $phases),
             consumed: [
@@ -151,6 +153,18 @@ class ClaimExperienceCompiler
         $metadata = $voucher->metadata ?? [];
 
         return (array) data_get($metadata, 'instructions', []);
+    }
+
+    /**
+     * An officer approval is a purpose-built authorization claim, not an
+     * issuer-authored recipient experience. It must not inherit a configured
+     * default Rider introduction from the host application.
+     *
+     * @param  array<string, mixed>  $instructions
+     */
+    private function isOfficerAuthorization(array $instructions): bool
+    {
+        return data_get($instructions, 'execution.driver') === 'campaign_worksheet_authorization';
     }
 
     /**

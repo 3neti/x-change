@@ -24,6 +24,7 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
                 title: 'Campaign Officer Authorization',
                 description: $this->campaignDescription($voucher),
                 confirmation_label: 'Authorize Campaign',
+                skip_form_flow_splash: true,
                 review: [
                     'authorization_reference' => data_get($metadata, 'instructions.execution.metadata.authorization_reference'),
                     'worksheet_reference' => data_get($metadata, 'instructions.execution.metadata.worksheet_reference'),

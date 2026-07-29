@@ -70,6 +70,24 @@ it('keeps splash steps when consumed splash should not be skipped', function () 
     expect(app(FormFlowSplashSkipPolicy::class)->apply($payload))->toBe($payload);
 });
 
+it('removes generic splash steps for an officer authorization workflow', function () {
+    $payload = [
+        'steps' => [
+            ['handler' => 'splash'],
+            ['handler' => 'form'],
+        ],
+        'metadata' => [
+            'claim_workflow' => [
+                'skip_form_flow_splash' => true,
+            ],
+        ],
+    ];
+
+    expect(app(FormFlowSplashSkipPolicy::class)->apply($payload)['steps'])->toBe([
+        ['handler' => 'form'],
+    ]);
+});
+
 it('keeps payload unchanged when claim experience is missing', function () {
     $payload = [
         'steps' => [

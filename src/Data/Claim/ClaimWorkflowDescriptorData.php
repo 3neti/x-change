@@ -20,6 +20,7 @@ final class ClaimWorkflowDescriptorData extends Data
         public string $title,
         public string $description,
         public string $confirmation_label,
+        public bool $skip_form_flow_splash = false,
         public array $review = [],
     ) {}
 }

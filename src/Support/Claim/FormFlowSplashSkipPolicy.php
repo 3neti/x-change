@@ -28,7 +28,8 @@ final class FormFlowSplashSkipPolicy
 
     private function shouldSkipConsumedSplash(array $payload): bool
     {
-        return data_get($payload, 'metadata.claim_experience.options.skip_consumed_splash') === true;
+        return data_get($payload, 'metadata.claim_experience.options.skip_consumed_splash') === true
+            || data_get($payload, 'metadata.claim_workflow.skip_form_flow_splash') === true;
     }
 
     private function isSplashStep(mixed $step): bool

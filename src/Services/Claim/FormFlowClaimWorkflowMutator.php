@@ -41,6 +41,7 @@ final class FormFlowClaimWorkflowMutator
                 'requires_amount' => $workflow->requires_amount,
                 'requires_authenticated_officer' => $workflow->requires_authenticated_officer,
                 'confirmation_label' => $workflow->confirmation_label,
+                'skip_form_flow_splash' => $workflow->skip_form_flow_splash,
                 'review' => $workflow->review,
             ],
         ]);

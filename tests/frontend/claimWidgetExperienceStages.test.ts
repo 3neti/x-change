@@ -68,6 +68,25 @@ describe('claim widget experience stage orchestration', () => {
         ]);
     });
 
+    it('suppresses host default pre-claim stages for officer authorization', () => {
+        const stages = resolveClaimWidgetExperienceStages({
+            claimExperience: {
+                options: {
+                    suppress_legacy_pre_claim_stages: true,
+                },
+            },
+            legacyStages: [
+                {
+                    key: 'demo-modal',
+                    type: 'splash',
+                    phase: 'pre_claim',
+                },
+            ],
+        });
+
+        expect(stages.preClaimVisualStages).toEqual([]);
+    });
+
     it('prefers compiled runtime over legacy runtime stages', () => {
         const stages = resolveClaimWidgetExperienceStages({
             claimExperience: {

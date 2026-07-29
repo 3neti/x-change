@@ -29,6 +29,13 @@ function compiledPhase(
     return activeClaimExperiencePhase(claimExperience, key);
 }
 
+function suppressLegacyPreClaimStages(
+    claimExperience: Record<string, unknown> | null | undefined,
+): boolean {
+    return (claimExperience?.options as Record<string, unknown> | undefined)
+        ?.suppress_legacy_pre_claim_stages === true;
+}
+
 export function resolveClaimWidgetExperienceStages(
     input: ClaimWidgetExperienceStagesInput,
 ): ClaimWidgetExperienceStages {
@@ -36,9 +43,9 @@ export function resolveClaimWidgetExperienceStages(
         compiledPhase(input.claimExperience, 'rider_intro'),
     ).filter(isVisualPreviewStage);
 
-    const legacyPreClaimVisualStages = resolveLegacyPreClaimVisualStages(
-        input.legacyStages,
-    );
+    const legacyPreClaimVisualStages = suppressLegacyPreClaimStages(input.claimExperience)
+        ? []
+        : resolveLegacyPreClaimVisualStages(input.legacyStages);
 
     const compiledRuntimeStages = resolveCompiledRuntimeStages(
         compiledPhase(input.claimExperience, 'runtime'),

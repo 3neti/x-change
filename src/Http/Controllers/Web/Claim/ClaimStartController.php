@@ -234,13 +234,15 @@ class ClaimStartController extends Controller
             data_set($instructionPayload, 'metadata.onboarding_reference', $onboardingReference);
         }
 
-        $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructionPayload);
-
         $instructions = $this->formFlowWorkflows->apply(
             FormFlowInstructionsData::from($instructionPayload),
             $workflow,
             $authenticatedMobile,
         );
+
+        $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructions->toArray());
+
+        $instructions = FormFlowInstructionsData::from($instructionPayload);
 
         $state = $this->formFlowService->startFlow($instructions);
 
