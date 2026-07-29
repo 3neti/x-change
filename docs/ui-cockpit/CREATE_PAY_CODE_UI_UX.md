@@ -23,7 +23,7 @@ The first working surface contains:
 - amount;
 - recipient;
 - purpose; and
-- a live front/back Pay Code canvas.
+- a live Pay Code canvas with Stamp, Design, Claim, and Cost views.
 
 The canvas is a digital credential preview, not a bank cheque. It must not use
 MICR lines, account routing, signature lines, or “pay to the order of”
@@ -34,6 +34,16 @@ identity. The **Cost** side presents the itemized x-commerce estimate and its
 extended total. Before issuance the Stamp uses an explicitly non-scannable
 placeholder. After issuance the immutable Stamp artifact displays the real
 claim credential.
+
+The **Design** view edits Rider Stamp composition without displacing the
+credential. The **Claim** view is a protected, preview-only walkthrough of the
+recipient experience. It uses the compiled claim stages and captured browser
+frames, never an interactive claim iframe.
+
+The walkthrough is generated on first use and explicitly refreshed after the
+draft changes. It cannot submit a claim, call a provider, move funds, expose a
+temporary Pay Code, or return local artifact paths. Its frames and exports are
+owner-authorized and `no-store`.
 
 ## Instruction icons and tooltips
 
@@ -381,8 +391,8 @@ is not authorization.
 
 Desktop presents essentials and the credential side by side, with the canvas
 sticky while editing. Narrow layouts stack the form and canvas, preserve the
-front/back control, avoid horizontal scrolling, and keep all touch controls at
-comfortable sizes.
+Stamp/Design/Claim/Cost control, avoid horizontal scrolling, and keep all
+touch controls at comfortable sizes.
 
 ## Acceptance
 
@@ -412,6 +422,10 @@ Acceptance requires:
 - no Rider-controlled claim destination or remote-page embedding;
 - one complete front preview, with Claim Splash kept visibly separate;
 - Rider Stamp version 1 read compatibility and version 2 submission;
+- an owner-protected Claim Experience walkthrough inside the canvas;
+- no claim submission, provider call, financial mutation, raw path, or
+  cross-owner artifact access from preview;
+- deterministic recipient-step navigation and explicit stale-preview refresh;
 - unchanged sanitized issuance payload semantics;
 - structured validation errors;
 - duplicate-submit prevention;
