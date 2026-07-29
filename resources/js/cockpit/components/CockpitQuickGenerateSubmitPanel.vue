@@ -6379,93 +6379,49 @@ function instructionRecord(
                                     data-testid="cockpit-quick-generate-rider-appearance-layout"
                                 >
                                     <div class="grid min-w-0 gap-5">
-                                        <CockpitRiderArtworkInspector
-                                            class="static w-full"
-                                            data-testid="cockpit-quick-generate-rider-artwork-inspector"
-                                            :artwork-source="
-                                                riderStampArtworkSource
-                                            "
-                                            :fit="riderStampFit"
-                                            :position="riderStampPosition"
-                                            :preview-document="
-                                                riderCanvasArtworkDocument
-                                            "
-                                            :url-artwork-resolving="
-                                                riderUrlArtworkResolving
-                                            "
-                                            :url-artwork-message="
-                                                riderUrlArtworkMessage
-                                            "
-                                        />
-                                        <fieldset
+                                        <div
                                             class="grid gap-2"
-                                            data-testid="cockpit-quick-generate-rider-stamp-source"
+                                            data-testid="cockpit-quick-generate-rider-artwork-picker"
                                         >
-                                            <legend
-                                                class="text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                            <fieldset
+                                                data-testid="cockpit-quick-generate-rider-stamp-source"
                                             >
-                                                Artwork
-                                            </legend>
-                                            <div
-                                                class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2"
-                                            >
-                                                <label
-                                                    v-for="option in [
-                                                        {
-                                                            value: 'x_change',
-                                                            label: 'x-change',
-                                                            icon: Image,
-                                                        },
-                                                        {
-                                                            value: 'url',
-                                                            label: 'Rider Link',
-                                                            icon: Link2,
-                                                        },
-                                                        {
-                                                            value: 'splash',
-                                                            label: 'Rider Splash',
-                                                            icon: Sparkles,
-                                                        },
-                                                        {
-                                                            value: 'none',
-                                                            label: 'None',
-                                                            icon: ImageOff,
-                                                        },
-                                                    ]"
-                                                    :key="option.value"
-                                                    class="relative flex min-h-16 cursor-pointer flex-col justify-between gap-2 rounded-xl border p-3 transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                    :class="[
-                                                        riderStampArtworkSource ===
-                                                        option.value
-                                                            ? 'border-sky-600 bg-sky-50 text-sky-950 shadow-sm dark:border-sky-400 dark:bg-sky-950/50 dark:text-sky-100'
-                                                            : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50/50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-800',
-                                                        (option.value ===
-                                                            'url' &&
-                                                            riderUrl.trim() ===
-                                                                '' &&
-                                                            riderStampArtworkSource !==
-                                                                'url') ||
-                                                        (option.value ===
-                                                            'splash' &&
-                                                            riderSplash.trim() ===
-                                                                '' &&
-                                                            riderStampArtworkSource !==
-                                                                'splash')
-                                                            ? 'cursor-not-allowed opacity-45'
-                                                            : '',
-                                                    ]"
+                                                <legend class="sr-only">
+                                                    Artwork
+                                                </legend>
+                                                <div
+                                                    class="grid grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-900/80"
                                                 >
-                                                    <input
-                                                        v-model="
-                                                            riderStampArtworkSource
-                                                        "
-                                                        type="radio"
-                                                        class="sr-only"
-                                                        name="rider-stamp-artwork-source"
-                                                        :value="option.value"
-                                                        :data-testid="`cockpit-quick-generate-rider-stamp-source-${option.value}`"
-                                                        :disabled="
-                                                            processing ||
+                                                    <label
+                                                        v-for="option in [
+                                                            {
+                                                                value: 'x_change',
+                                                                label: 'x-change',
+                                                                icon: Image,
+                                                            },
+                                                            {
+                                                                value: 'url',
+                                                                label: 'Rider Link',
+                                                                icon: Link2,
+                                                            },
+                                                            {
+                                                                value: 'splash',
+                                                                label: 'Rider Splash',
+                                                                icon: Sparkles,
+                                                            },
+                                                            {
+                                                                value: 'none',
+                                                                label: 'None',
+                                                                icon: ImageOff,
+                                                            },
+                                                        ]"
+                                                        :key="option.value"
+                                                        class="group relative grid h-9 min-w-0 cursor-pointer place-items-center rounded-lg border transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                        :class="[
+                                                            riderStampArtworkSource ===
+                                                            option.value
+                                                                ? 'border-sky-600 bg-sky-600 text-white shadow-sm dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950'
+                                                                : 'border-transparent bg-white text-slate-500 hover:border-sky-300 hover:text-sky-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-sky-800 dark:hover:text-sky-300',
                                                             (option.value ===
                                                                 'url' &&
                                                                 riderUrl.trim() ===
@@ -6478,47 +6434,79 @@ function instructionRecord(
                                                                     '' &&
                                                                 riderStampArtworkSource !==
                                                                     'splash')
-                                                        "
-                                                        @change="
-                                                            markRiderStampArtworkSourceSelection
-                                                        "
-                                                    />
-                                                    <component
-                                                        :is="option.icon"
-                                                        class="size-4"
-                                                        aria-hidden="true"
-                                                    />
-                                                    <span
-                                                        class="text-xs font-semibold"
-                                                        >{{
-                                                            option.label
-                                                        }}</span
+                                                                ? 'cursor-not-allowed opacity-40'
+                                                                : '',
+                                                        ]"
+                                                        :title="option.label"
                                                     >
-                                                    <span
-                                                        v-if="
-                                                            option.value ===
-                                                                'url' ||
-                                                            option.value ===
-                                                                'splash'
-                                                        "
-                                                        class="absolute top-2 right-2 size-1.5 rounded-full"
-                                                        :class="
-                                                            (option.value ===
-                                                                'url' &&
-                                                                riderUrl.trim() !==
-                                                                    '') ||
-                                                            (option.value ===
-                                                                'splash' &&
-                                                                riderSplash.trim() !==
-                                                                    '')
-                                                                ? 'bg-emerald-500'
-                                                                : 'bg-slate-300 dark:bg-slate-700'
-                                                        "
-                                                        aria-hidden="true"
-                                                    />
-                                                </label>
-                                            </div>
-                                        </fieldset>
+                                                        <input
+                                                            v-model="
+                                                                riderStampArtworkSource
+                                                            "
+                                                            type="radio"
+                                                            class="sr-only"
+                                                            name="rider-stamp-artwork-source"
+                                                            :value="
+                                                                option.value
+                                                            "
+                                                            :aria-label="
+                                                                option.label
+                                                            "
+                                                            :aria-describedby="`rider-stamp-artwork-tooltip-${option.value}`"
+                                                            :data-testid="`cockpit-quick-generate-rider-stamp-source-${option.value}`"
+                                                            :disabled="
+                                                                processing ||
+                                                                (option.value ===
+                                                                    'url' &&
+                                                                    riderUrl.trim() ===
+                                                                        '' &&
+                                                                    riderStampArtworkSource !==
+                                                                        'url') ||
+                                                                (option.value ===
+                                                                    'splash' &&
+                                                                    riderSplash.trim() ===
+                                                                        '' &&
+                                                                    riderStampArtworkSource !==
+                                                                        'splash')
+                                                            "
+                                                            @change="
+                                                                markRiderStampArtworkSourceSelection
+                                                            "
+                                                        />
+                                                        <component
+                                                            :is="option.icon"
+                                                            class="size-4"
+                                                            aria-hidden="true"
+                                                        />
+                                                        <span
+                                                            :id="`rider-stamp-artwork-tooltip-${option.value}`"
+                                                            role="tooltip"
+                                                            class="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2 rounded-md bg-slate-950 px-2 py-1 text-[10px] font-semibold whitespace-nowrap text-white opacity-0 shadow-lg transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 dark:bg-white dark:text-slate-950"
+                                                        >
+                                                            {{ option.label }}
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            </fieldset>
+                                            <CockpitRiderArtworkInspector
+                                                class="static w-full"
+                                                data-testid="cockpit-quick-generate-rider-artwork-inspector"
+                                                :artwork-source="
+                                                    riderStampArtworkSource
+                                                "
+                                                :fit="riderStampFit"
+                                                :position="riderStampPosition"
+                                                :preview-document="
+                                                    riderCanvasArtworkDocument
+                                                "
+                                                :url-artwork-resolving="
+                                                    riderUrlArtworkResolving
+                                                "
+                                                :url-artwork-message="
+                                                    riderUrlArtworkMessage
+                                                "
+                                            />
+                                        </div>
                                         <fieldset
                                             v-if="
                                                 riderStampArtworkSource ===

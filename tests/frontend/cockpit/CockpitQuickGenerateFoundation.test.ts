@@ -339,6 +339,10 @@ describe('Cockpit Quick Generate foundation', () => {
         const artworkInspector = appearanceLayout.get(
             '[data-testid="cockpit-quick-generate-rider-artwork-inspector"]',
         );
+        const artworkSource = appearanceLayout.get(
+            '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
+        );
+        const artworkRadios = artworkSource.findAll('input[type="radio"]');
 
         expect(artworkInspector.classes()).toContain('static');
         expect(artworkInspector.classes()).not.toContain('lg:sticky');
@@ -353,22 +357,33 @@ describe('Cockpit Quick Generate foundation', () => {
             appearanceLayout
                 .html()
                 .indexOf(
-                    'data-testid="cockpit-quick-generate-rider-artwork-inspector"',
+                    'data-testid="cockpit-quick-generate-rider-stamp-source"',
                 ),
         ).toBeLessThan(
             appearanceLayout
                 .html()
                 .indexOf(
-                    'data-testid="cockpit-quick-generate-rider-stamp-source"',
+                    'data-testid="cockpit-quick-generate-rider-artwork-inspector"',
                 ),
         );
+        expect(artworkRadios).toHaveLength(4);
         expect(
-            wrapper
-                .get(
-                    '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
-                )
-                .findAll('input[type="radio"]'),
-        ).toHaveLength(4);
+            artworkRadios.map((radio) => radio.attributes('aria-label')),
+        ).toEqual(['x-change', 'Rider Link', 'Rider Splash', 'None']);
+        const artworkTooltips = artworkSource.findAll('[role="tooltip"]');
+
+        expect(artworkTooltips).toHaveLength(4);
+        expect(
+            artworkTooltips.every(
+                (tooltip) =>
+                    tooltip.classes().includes('group-hover:opacity-100') &&
+                    tooltip
+                        .classes()
+                        .includes('group-focus-within:opacity-100'),
+            ),
+        ).toBe(true);
+        expect(artworkSource.get('legend').classes()).toContain('sr-only');
+        expect(artworkSource.get('.grid').classes()).toContain('grid-cols-4');
         expect(
             wrapper
                 .get(
