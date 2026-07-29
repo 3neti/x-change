@@ -16,6 +16,7 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetImportData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetSummaryData;
+use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 
@@ -58,6 +59,7 @@ class CockpitCampaignWorksheetController extends Controller
         return Inertia::render('x-change/cockpit/CampaignWorksheet', [
             'worksheet' => $this->worksheetFor($worksheet, $request->user()),
             'imports' => $this->importsFor($worksheet, $request->user()),
+            'fulfillment_summary' => $this->fulfillmentSummaryFor($worksheet, $request->user()),
         ]);
     }
 
@@ -165,5 +167,29 @@ class CockpitCampaignWorksheetController extends Controller
             'validation_errors' => $import->validationErrors,
             'mapping' => $import->mapping,
         ], $this->imports->forOwner($reference, $this->ownerType($owner), (string) $owner->getAuthIdentifier()));
+    }
+
+    /** @return array<string, int> */
+    private function fulfillmentSummaryFor(string $reference, mixed $owner): array
+    {
+        $worksheet = CampaignWorksheet::query()
+            ->where('reference', $reference)
+            ->where('owner_type', $this->ownerType($owner))
+            ->where('owner_id', (string) $owner->getAuthIdentifier())
+            ->first();
+        if (! $worksheet instanceof CampaignWorksheet) {
+            return [];
+        }
+
+        return $worksheet->authorizations()
+            ->withCount([
+                'fulfillments as planned_count' => fn ($query) => $query->where('status', 'planned'),
+                'fulfillments as issued_count' => fn ($query) => $query->where('status', 'issued'),
+                'fulfillments as provider_ready_count' => fn ($query) => $query->where('status', 'awaiting_provider_dispatch'),
+                'fulfillments as fallback_count' => fn ($query) => $query->where('status', 'fallback_planned'),
+            ])
+            ->latest('id')
+            ->first()
+            ?->only(['planned_count', 'issued_count', 'provider_ready_count', 'fallback_count']) ?? [];
     }
 }
