@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Http\UploadedFile;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
+use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 
 it('shows only the authenticated owner campaign worksheet summaries', function () {
     $owner = actingAsTestUser();
@@ -156,4 +158,51 @@ it('issues one zero-value settlement approval Pay Code for a frozen worksheet', 
         ->and($second->getKey())->toBe($first->getKey())
         ->and($first->beneficiary_count)->toBe(1)
         ->and($first->principal_minor)->toBe(12_500);
+});
+
+it('issues a planned campaign batch once through the owner Cockpit control', function () {
+    $owner = actingAsTestUser();
+    $officer = actingAsTestUser();
+    $officer->forceFill(['mobile' => '09173011987'])->save();
+    $repository = app(CampaignWorksheetRepository::class);
+
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-cockpit-issuance-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Cockpit Issuance Payroll',
+        fulfillmentMode: 'pay_code_distribution',
+        rows: [
+            new CampaignWorksheetRowData(null, 1, ['mobile' => '09178889999'], 12_500),
+            new CampaignWorksheetRowData(null, 2, ['mobile' => '09179998888'], 7_500),
+        ],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+
+    $this->actingAs($owner);
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+
+    $this->actingAs($officer);
+    app(CampaignWorksheetAuthorizationExecutionService::class)->execute(
+        Voucher::query()->where('code', $authorization->approval_pay_code)->sole(),
+        ['mobile' => '09173011987'],
+    );
+
+    $this->actingAs($owner)
+        ->post(route('x-change.cockpit.campaigns.fulfillments.pay-codes.store', $worksheet->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', '2 beneficiary Pay Codes issued. No messages or transfers were sent.');
+
+    $authorization->refresh();
+
+    expect($authorization->fulfillments()->where('status', 'issued')->count())->toBe(2)
+        ->and($authorization->fulfillments()->whereNotNull('pay_code')->count())->toBe(2);
+
+    $this->post(route('x-change.cockpit.campaigns.fulfillments.pay-codes.store', $worksheet->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', '0 beneficiary Pay Codes issued. No messages or transfers were sent.');
+
+    expect($authorization->fulfillments()->where('status', 'issued')->count())->toBe(2)
+        ->and($authorization->fulfillments()->whereNotNull('pay_code')->count())->toBe(2);
 });

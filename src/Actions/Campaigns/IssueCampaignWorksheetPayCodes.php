@@ -43,7 +43,7 @@ final class IssueCampaignWorksheetPayCodes
                 $beneficiary = $locked->row->beneficiary_ciphertext;
                 $voucher = GenerateVouchers::run(VoucherInstructionsData::from([
                     'cash' => ['amount' => $locked->row->amount_minor / 100, 'currency' => $locked->row->currency, 'validation' => ['country' => 'PH', 'mobile' => $beneficiary['mobile'] ?? null]],
-                    'inputs' => ['fields' => []], 'feedback' => [], 'rider' => ['message' => $authorization->worksheet?->name],
+                    'inputs' => ['fields' => []], 'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null], 'rider' => ['message' => $authorization->worksheet?->name],
                     'count' => 1, 'prefix' => 'CAMP', 'mask' => '****', 'voucher_type' => VoucherType::REDEEMABLE->value,
                     'claim' => ['outcomes' => [['key' => 'provider_disbursement']], 'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'provider_disbursement', 'onboarding' => ['mode' => 'if_required'], 'claimant' => ['mode' => 'unbound'], 'profile' => 'voucher.claim.v1'],
                     'metadata' => ['flow_type' => 'campaign_fulfillment', 'issuer_id' => (string) auth()->id(), 'campaign' => ['authorization_reference' => $authorization->reference, 'fulfillment_reference' => $locked->reference, 'manifest_hash' => $authorization->manifest_hash]],
