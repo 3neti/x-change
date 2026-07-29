@@ -416,7 +416,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             'Search, filter, and open read-only Pay Code workspaces.',
         );
         expect(header.text()).not.toContain('does not mutate vouchers');
-        expect(header.text()).toContain('Create Pay Code');
+        expect(header.text()).toContain('Create');
         expect(header.text()).toContain('Read-only');
         expect(facts.exists()).toBe(true);
         expect(facts.classes()).toContain('xl:w-[32rem]');

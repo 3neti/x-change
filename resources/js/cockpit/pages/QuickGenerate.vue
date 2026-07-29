@@ -1116,7 +1116,7 @@ function stringValue(value: unknown): string | null {
                     <h2
                         class="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
                     >
-                        Create Pay Code
+                        Pay Code Issuance
                     </h2>
                     <p
                         class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"

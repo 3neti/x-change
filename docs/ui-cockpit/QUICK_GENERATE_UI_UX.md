@@ -1,4 +1,4 @@
-# Quick Generate UI/UX Guide
+# Pay Code Issuance UI/UX Guide
 
 - Status: accepted product and implementation contract
 - Route: `/x/cockpit/quick-generate`
@@ -7,7 +7,7 @@
 
 ## Purpose
 
-Quick Generate lets an Account holder create a Pay Code without first learning
+Pay Code Issuance lets an Account holder create a Pay Code without first learning
 the underlying voucher instruction model. The page uses familiar payment and
 check language while preserving the precise instruction contract behind the
 existing issuance handoff.
@@ -21,7 +21,8 @@ The page answers three questions in order:
 ## Page Anatomy
 
 ```text
-Create Pay Code
+Create
+Pay Code Issuance
 Create a Pay Code for someone to claim.
 
 Order                              Pay Code
@@ -86,6 +87,9 @@ The expanded section remains explicit about its advanced nature.
 
 | Prefer | Avoid in this surface | Reason |
 | --- | --- | --- |
+| **Create** | Create Pay Code in navigation | Keeps the primary navigation compact beside Funding and Pay Codes. |
+| **Pay Code Issuance** | Create Pay Code as the page heading | States the financial operation precisely without making navigation formal. |
+| **Issue Pay Code** | Generate Pay Code as the primary action | Makes the irreversible issuance step explicit. |
 | **Order** | Essentials | Tells a new user what the first card is for. |
 | **Pay To** | Recipient in the primary card | Uses familiar payment language while retaining recipient terminology in technical controls and persisted contracts. |
 | **Pay Code** | Canvas or card front | Names the product, not the implementation. |
@@ -98,7 +102,9 @@ and accounting semantics remain unchanged.
 
 ## Acceptance Contract
 
-- The page header says: **Create a Pay Code for someone to claim.**
+- The navigation item says **Create** and the page heading says **Pay Code
+  Issuance**.
+- The page header explains: **Create a Pay Code for someone to claim.**
 - The left authoring card is **Order** and visibly includes **Amount**, **Pay
   To**, and **Purpose**.
 - The right preview card remains **Pay Code** with the tab order **Stamp**,

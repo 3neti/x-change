@@ -3679,7 +3679,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-quick-generate-shell"]')
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Create Pay Code');
+        expect(wrapper.text()).toContain('Pay Code Issuance');
         expect(wrapper.text()).toContain(
             'Create a Pay Code for someone to claim.',
         );
@@ -3780,7 +3780,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .classes(),
         ).toContain('w-full');
         expect(quickGenerateHeader.classes()).toContain('justify-between');
-        expect(quickGenerateHeader.text()).toContain('Create Pay Code');
+        expect(quickGenerateHeader.text()).toContain('Pay Code Issuance');
         expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');
         const actionRail = canvasControls.get(
             '[data-testid="cockpit-pay-code-canvas-action-rail"]',
@@ -3809,7 +3809,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
-            'Create Pay Code',
+            'Create',
         );
         expect(wrapper.text()).not.toContain('Review your Pay Code');
         expect(wrapper.text()).not.toContain('Design status');

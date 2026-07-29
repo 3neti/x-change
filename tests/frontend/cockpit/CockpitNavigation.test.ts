@@ -9,7 +9,7 @@ describe('Cockpit navigation baseline', () => {
     it('defines the primary and secondary Cockpit navigation model', () => {
         expect(cockpitPrimaryNavigation.map((item) => item.label)).toEqual([
             'Dashboard',
-            'Create Pay Code',
+            'Create',
             'Funding',
             'Pay Codes',
             'Templates',

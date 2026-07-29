@@ -700,7 +700,7 @@ function integrationBadge(
                         data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"
                     >
                         <TicketPlus aria-hidden="true" class="size-4" />
-                        Create Pay Code
+                        Create
                     </a>
                 </div>
 
