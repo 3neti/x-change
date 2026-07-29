@@ -6380,7 +6380,7 @@ function instructionRecord(
                                 >
                                     <div class="grid min-w-0 gap-5">
                                         <CockpitRiderArtworkInspector
-                                            class="w-full lg:sticky lg:top-14 lg:z-20 lg:justify-self-center lg:shadow-xl lg:ring-1 lg:ring-sky-200/70 lg:dark:ring-sky-900/60"
+                                            class="static w-full"
                                             data-testid="cockpit-quick-generate-rider-artwork-inspector"
                                             :artwork-source="
                                                 riderStampArtworkSource

@@ -340,8 +340,9 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-rider-artwork-inspector"]',
         );
 
-        expect(artworkInspector.classes()).toContain('lg:sticky');
-        expect(artworkInspector.classes()).toContain('lg:top-14');
+        expect(artworkInspector.classes()).toContain('static');
+        expect(artworkInspector.classes()).not.toContain('lg:sticky');
+        expect(artworkInspector.classes()).not.toContain('lg:top-14');
         expect(artworkInspector.classes()).not.toContain('hidden');
         expect(
             appearanceLayout.findAll(
