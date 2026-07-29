@@ -31,10 +31,12 @@ final class IssueCampaignWorksheetPayCodes
         }
 
         $issued = 0;
-        foreach ($authorization->fulfillments->where('mode', 'pay_code_distribution')->where('status', 'planned')->take(max(1, min($limit, 500))) as $fulfillment) {
+        foreach ($authorization->fulfillments->filter(fn (CampaignWorksheetFulfillment $fulfillment): bool => (
+            $fulfillment->mode === 'pay_code_distribution' && $fulfillment->status === 'planned'
+        ) || $fulfillment->status === 'fallback_planned')->take(max(1, min($limit, 500))) as $fulfillment) {
             DB::transaction(function () use ($fulfillment, $authorization, &$issued): void {
                 $locked = CampaignWorksheetFulfillment::query()->with('row')->lockForUpdate()->findOrFail($fulfillment->getKey());
-                if ($locked->status !== 'planned' || $locked->pay_code !== null || $locked->row === null) {
+                if (! in_array($locked->status, ['planned', 'fallback_planned'], true) || $locked->pay_code !== null || $locked->row === null) {
                     return;
                 }
 
