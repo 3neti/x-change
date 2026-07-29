@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Http\UploadedFile;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
+use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
+use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 
 it('shows only the authenticated owner campaign worksheet summaries', function () {
     $owner = actingAsTestUser();
@@ -136,4 +138,22 @@ it('stages import errors without adding any beneficiary', function () {
         ->assertJsonPath('props.imports.0.valid_count', 0)
         ->assertJsonPath('props.imports.0.validation_errors.0.row', 2)
         ->assertJsonPath('props.worksheet.rows', []);
+});
+
+it('issues one zero-value settlement approval Pay Code for a frozen worksheet', function () {
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-approval-01', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Approval Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09173011987'], 12_500)],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+
+    $first = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+    $second = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+
+    expect($first->approval_pay_code)->not->toBeNull()
+        ->and($second->getKey())->toBe($first->getKey())
+        ->and($first->beneficiary_count)->toBe(1)
+        ->and($first->principal_minor)->toBe(12_500);
 });

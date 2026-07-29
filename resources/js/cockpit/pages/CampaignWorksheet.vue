@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, Check, FileSpreadsheet, Plus, Upload, Users, XCircle } from 'lucide-vue-next';
+import { ArrowLeft, Check, FileSpreadsheet, LockKeyhole, Plus, Upload, Users, XCircle } from 'lucide-vue-next';
 import { index } from '@/routes/x-change/cockpit/campaigns';
 import rows from '@/routes/x-change/cockpit/campaigns/rows';
 import imports from '@/routes/x-change/cockpit/campaigns/imports';
+import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type { CockpitHeaderPageProps } from '../types';
 
@@ -14,10 +15,12 @@ type Props = CockpitHeaderPageProps & { worksheet: Worksheet; imports: Import[] 
 const props = defineProps<Props>();
 const form = useForm({ amount_minor: null as number | null, name: '', mobile: '', bank_account: '', email: '', remarks: '', external_reference: '', delivery_preference: 'manual' });
 const importForm = useForm({ file: null as File | null });
+const authorizationForm = useForm({});
 const peso = (minor: number) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(minor / 100);
 const add = (): void => form.post(rows.store(props.worksheet.reference), { preserveScroll: true, onSuccess: () => form.reset() });
 const stage = (): void => importForm.post(imports.store(props.worksheet.reference), { preserveScroll: true, onSuccess: () => importForm.reset() });
 const apply = (reference: string): void => importForm.post(imports.apply({ worksheet: props.worksheet.reference, import: reference }), { preserveScroll: true });
+const authorize = (): void => authorizationForm.post(authorizations.store(props.worksheet.reference), { preserveScroll: true });
 </script>
 
 <template>
@@ -46,6 +49,10 @@ const apply = (reference: string): void => importForm.post(imports.apply({ works
                     <button type="submit" :disabled="form.processing" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950">{{ form.processing ? 'Adding…' : 'Add Beneficiary' }}</button>
                     <p class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">Draft only. This does not authorize, issue, deliver, or transfer funds.</p>
                 </form>
+            </section>
+
+            <section v-if="props.worksheet.status === 'draft'" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div class="flex items-center gap-2"><LockKeyhole class="size-4 text-slate-500" /><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Officer Authorization</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">Freeze And Create Approval Pay Code</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Locks this worksheet and creates one zero-value Settlement Pay Code. It does not issue, deliver, or transfer beneficiary funds.</p></div></div><button type="button" :disabled="props.worksheet.rows.length === 0 || authorizationForm.processing" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950" @click="authorize"><LockKeyhole class="size-4" /> {{ authorizationForm.processing ? 'Creating…' : 'Create Approval Pay Code' }}</button></div>
             </section>
 
             <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
