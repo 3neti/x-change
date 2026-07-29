@@ -87,6 +87,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositC
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
+use LBHurtado\XChange\Contracts\CampaignBankTransferDispatcherContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\ClaimApprovalExecutionContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
@@ -211,6 +212,7 @@ use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Campaigns\NullCampaignBankTransferDispatcher;
 use LBHurtado\XChange\Services\Claim\DefaultClaimShareCardUrlResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampArtifactStore;
@@ -798,6 +800,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             SettlementExecutionContract::class,
             DefaultSettlementExecutionService::class,
+        );
+
+        $this->app->bind(
+            CampaignBankTransferDispatcherContract::class,
+            NullCampaignBankTransferDispatcher::class,
         );
 
         $this->app->bind(
