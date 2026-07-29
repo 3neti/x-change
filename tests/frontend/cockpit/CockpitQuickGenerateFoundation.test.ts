@@ -3912,15 +3912,20 @@ describe('Cockpit Quick Generate foundation', () => {
                             },
                             {
                                 sequence: 2,
-                                key: 'claim-success',
-                                phase: 'completion',
-                                title: 'Receive Confirmation',
-                                description:
-                                    'The recipient sees the configured outcome.',
+                                key: 'xray-preview',
+                                phase: 'entry',
+                                title: 'Pay Code x-ray preview',
+                                description: 'Internal recorder overlay.',
                                 actor: 'redeemer',
-                                render_kind: 'experience_card',
-                                status: 'pending_capture',
-                                frame: null,
+                                render_kind: 'captured_frame',
+                                status: 'captured',
+                                frame: {
+                                    url: '/x/cockpit/quick-generate/claim-previews/preview-01/frames/xray-preview',
+                                    mime_type: 'image/png',
+                                    sha256: 'xray-frame-hash',
+                                    width: 390,
+                                    height: 844,
+                                },
                             },
                         ],
                     },
@@ -4009,15 +4014,16 @@ describe('Cockpit Quick Generate foundation', () => {
             '/x/cockpit/quick-generate/claim-previews/preview-01/frames/claim-entry',
         );
 
-        await wrapper
-            .get('[data-testid="cockpit-claim-experience-next"]')
-            .trigger('click');
-
         expect(
             wrapper
                 .find('[data-testid="cockpit-claim-experience-concept"]')
                 .exists(),
-        ).toBe(true);
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-experience-next"]')
+                .attributes('disabled'),
+        ).toBeDefined();
         expect(
             wrapper
                 .find(

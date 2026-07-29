@@ -61,6 +61,7 @@ final class ClaimPreviewJourneyManifestFactory
             ->filter(
                 fn (mixed $checkpoint): bool => is_array($checkpoint)
                     && ($checkpoint['actor'] ?? 'redeemer') === 'redeemer'
+                    && ! $this->isInternalCheckpoint($checkpoint)
             )
             ->map(function (array $checkpoint): array {
                 $key = $this->canonicalKey((string) ($checkpoint['key'] ?? ''));
@@ -77,6 +78,19 @@ final class ClaimPreviewJourneyManifestFactory
             ->unique('key')
             ->values()
             ->all();
+    }
+
+    /**
+     * Keep recorder-only diagnostic overlays out of the issuer's recipient
+     * walkthrough. They are useful while developing the claim experience, but
+     * do not explain an action the recipient takes.
+     *
+     * @param  array<string, mixed>  $checkpoint
+     */
+    private function isInternalCheckpoint(array $checkpoint): bool
+    {
+        return $this->canonicalKey((string) ($checkpoint['key'] ?? ''))
+            === 'xray-preview';
     }
 
     /**
@@ -178,7 +192,7 @@ final class ClaimPreviewJourneyManifestFactory
     private function phase(string $key): string
     {
         return match (true) {
-            in_array($key, ['claim-entry', 'xray-preview', 'named-slice-selection'], true) => 'entry',
+            in_array($key, ['claim-entry', 'named-slice-selection'], true) => 'entry',
             str_contains($key, 'splash') => 'introduction',
             str_contains($key, 'payout-form'), str_contains($key, 'claim-details') => 'inputs',
             str_starts_with($key, 'validation-') => 'validation',

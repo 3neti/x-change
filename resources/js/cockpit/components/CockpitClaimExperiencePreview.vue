@@ -26,7 +26,11 @@ const emit = defineEmits<{
 
 const currentStepIndex = ref(0);
 
-const steps = computed(() => props.manifest?.journey.steps ?? []);
+const steps = computed(() =>
+    (props.manifest?.journey.steps ?? []).filter(
+        (step) => step.key !== 'xray-preview' && step.frame !== null,
+    ),
+);
 const currentStep = computed(() => steps.value[currentStepIndex.value] ?? null);
 
 watch(

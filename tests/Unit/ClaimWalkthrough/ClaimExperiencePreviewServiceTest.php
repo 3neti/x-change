@@ -135,7 +135,6 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
     expect($steps->pluck('key')->all())
         ->toContain(
             'claim-entry',
-            'xray-preview',
             'pre-claim-rider-splash',
             'validation-kyc',
             'validation-otp',
@@ -147,7 +146,7 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
             'rider-redirect-countdown',
             'rider-url',
         )
-        ->not->toContain('og-social-preview')
+        ->not->toContain('og-social-preview', 'xray-preview')
         ->and($steps->pluck('sequence')->all())
         ->toBe(range(1, $steps->count()));
 });

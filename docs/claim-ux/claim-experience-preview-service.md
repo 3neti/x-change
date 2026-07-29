@@ -18,8 +18,7 @@ Stamp → Design → Claim → Cost
 - preserves the same canvas footprint as Stamp, Design, and Cost;
 - presents the journey in recipient order;
 - uses a protected captured frame when one exists;
-- uses a clearly labeled experience card for a step not captured by the
-  browser recorder;
+- shows only protected captured screens that demonstrate a recipient action;
 - supports direct step selection and Previous/Next navigation;
 - marks itself out of date when the Pay Code draft changes;
 - provides protected PDF and HTML exports; and
@@ -81,9 +80,8 @@ Each public step contains only:
 - title;
 - plain-language description;
 - actor;
-- render kind;
 - capture status; and
-- an optional protected frame descriptor.
+- a protected frame descriptor.
 
 ## Service API
 
