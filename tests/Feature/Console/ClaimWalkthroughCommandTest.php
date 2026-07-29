@@ -169,7 +169,8 @@ it('caches deterministic no money claim preview artifacts', function (): void {
     expect($artifact)->not->toBeNull()
         ->and($artifact?->profile)->toBe('issuer')
         ->and($artifact?->artifact_path)->toStartWith('x-change/claim-previews/')
-        ->and(data_get($artifact?->metadata, 'fingerprint_payload.dry_run'))->toBeTrue();
+        ->and(data_get($artifact?->metadata, 'renderer.dry_run'))->toBeTrue()
+        ->and(data_get($artifact?->metadata, 'fingerprint_payload'))->toBeNull();
 
     $exitCode = Artisan::call('xchange:claim-walkthrough', [
         'scenario' => 'claim_basic_15_no_inputs_no_riders_no_feedbacks',
@@ -215,7 +216,7 @@ it('scaffolds the default rider preview fixture into the artifact contract', fun
         ->and($storyboard['scenario']['fixture']['og_preview']['source'])->toBe('default')
         ->and($storyboard['scenario']['fixture']['og_preview']['og_meta']['headline'])->toBe('{code}')
         ->and(collect($storyboard['checkpoints'])->pluck('key')->first())->toBe('og-social-preview')
-        ->and(data_get($artifact?->metadata, 'fingerprint_payload.fixture.rider.message'))->toBe('The quick brown fox jumps over the lazy dog.');
+        ->and(data_get($artifact?->metadata, 'fingerprint_payload'))->toBeNull();
 });
 
 it('allows claim preview rider defaults to be overridden through config', function (): void {

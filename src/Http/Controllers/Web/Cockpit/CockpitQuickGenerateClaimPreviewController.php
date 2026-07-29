@@ -10,11 +10,13 @@ use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewOptions;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewService;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewWebManifestPresenter;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftValidationResultData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
+use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
 use LBHurtado\XChange\Services\IdempotencyService;
 
@@ -28,6 +30,7 @@ final class CockpitQuickGenerateClaimPreviewController extends Controller
         CockpitIssuanceDraftCompilerContract $draftCompiler,
         CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
         ClaimExperiencePreviewService $previews,
+        ClaimPreviewWebManifestPresenter $presenter,
     ): JsonResponse {
         $payload = $this->normalizePayloadForIssuance($request->validated());
         $key = $idempotency->extractKey($request);
@@ -60,13 +63,16 @@ final class CockpitQuickGenerateClaimPreviewController extends Controller
                 accountNumber: (string) $request->input('preview_account_number', '09173011987'),
             ),
         );
+        $artifact = ClaimPreviewArtifact::query()
+            ->where('reference', $result['reference'])
+            ->firstOrFail();
 
-        return response()->json([
-            ...$result,
-            'source' => 'cockpit.quick-generate',
-            'money_movement' => false,
-            'provider_calls' => false,
-        ])->withHeaders([
+        return response()->json(
+            $presenter->present(
+                $artifact,
+                (bool) ($result['cache_hit'] ?? false),
+            ),
+        )->withHeaders([
             'Cache-Control' => 'no-store, no-cache, must-revalidate, private',
             'Pragma' => 'no-cache',
             'Expires' => '0',

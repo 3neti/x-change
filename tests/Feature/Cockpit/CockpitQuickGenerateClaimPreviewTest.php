@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
+use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 
 it('exposes the claim preview contract on the quick generate read model', function (): void {
     expect(Route::has('x-change.cockpit.quick-generate.claim-previews.store'))->toBeTrue();
@@ -48,14 +50,134 @@ it('renders a dry-run claim preview from quick generate instructions', function 
 
     $response
         ->assertSuccessful()
-        ->assertJsonPath('schema', 'x-change.claim-experience-preview.result.v1')
+        ->assertJsonPath('schema', 'x-change.claim-experience-preview.manifest.v1')
         ->assertJsonPath('status', 'ready')
-        ->assertJsonPath('source', 'cockpit.quick-generate')
-        ->assertJsonPath('money_movement', false)
-        ->assertJsonPath('provider_calls', false)
+        ->assertJsonPath('safety.preview_only', true)
+        ->assertJsonPath('safety.money_movement', false)
+        ->assertJsonPath('safety.provider_calls', false)
+        ->assertJsonPath('safety.claim_submission', false)
         ->assertJsonPath('cache_hit', false)
-        ->assertJsonPath('artifacts.view_options.default.label', 'Default PDF');
+        ->assertJsonPath('journey.steps.0.key', 'claim-entry');
 
-    expect($response->json('artifacts.storyboard_pdf'))->toBeFile()
-        ->and($response->json('artifacts.storyboard_html'))->toBeFile();
+    $body = $response->getContent();
+
+    expect($body)
+        ->not->toContain('/Users/')
+        ->not->toContain('storage/app')
+        ->not->toContain('file://')
+        ->not->toContain('open_command')
+        ->not->toContain('pay_code')
+        ->not->toContain('09173011987');
+});
+
+it('serves claim preview manifests and frames only to their owner', function (): void {
+    $owner = actingAsTestUser();
+    $root = 'x-change/claim-previews/test-owned-frame';
+    $absoluteRoot = storage_path('app/'.$root);
+    File::ensureDirectoryExists($absoluteRoot.'/screenshots');
+    $bytes = base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        true,
+    );
+    File::put($absoluteRoot.'/screenshots/01-claim-entry.png', $bytes);
+    File::put($absoluteRoot.'/walkthrough-storyboard.pdf', '%PDF-1.4 test');
+    File::put($absoluteRoot.'/walkthrough-storyboard.html', '<!doctype html><title>Preview</title>');
+
+    $artifact = ClaimPreviewArtifact::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => $owner->getKey(),
+        'artifact_fingerprint' => hash('sha256', 'owned-frame'),
+        'scenario_key' => 'claim_instructions_preview',
+        'scenario_version' => 1,
+        'profile' => 'issuer',
+        'status' => 'ready',
+        'artifact_disk' => 'local',
+        'artifact_path' => $root,
+        'metadata' => [
+            'journey' => [
+                'schema' => 'x-change.claim-experience-preview.journey.v1',
+                'step_count' => 1,
+                'steps' => [[
+                    'sequence' => 1,
+                    'key' => 'claim-entry',
+                    'phase' => 'entry',
+                    'title' => 'Claim entry',
+                    'description' => 'Redeemer opens the Pay Code.',
+                    'actor' => 'redeemer',
+                    'render_kind' => 'captured_frame',
+                    'status' => 'captured',
+                    'frame' => [
+                        'artifact' => 'screenshots/01-claim-entry.png',
+                        'mime_type' => 'image/png',
+                        'sha256' => hash('sha256', $bytes),
+                        'width' => 1,
+                        'height' => 1,
+                    ],
+                ]],
+            ],
+        ],
+        'generated_at' => now(),
+    ]);
+
+    $this->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.show',
+        $artifact,
+    ))
+        ->assertSuccessful()
+        ->assertJsonPath('journey.steps.0.frame.mime_type', 'image/png')
+        ->assertJsonPath(
+            'journey.steps.0.frame.url',
+            "/x/cockpit/quick-generate/claim-previews/{$artifact->reference}/frames/claim-entry",
+        );
+
+    $frame = $this->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.frames.show',
+        [$artifact, 'step' => 'claim-entry'],
+    ));
+
+    $frame
+        ->assertSuccessful()
+        ->assertHeader('content-type', 'image/png')
+        ->assertHeader('x-content-type-options', 'nosniff');
+    expect(file_get_contents(
+        $frame->baseResponse->getFile()->getPathname()
+    ))->toBe($bytes);
+
+    $other = actingAsTestUser();
+    expect($other->is($owner))->toBeFalse();
+
+    $this->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.show',
+        $artifact,
+    ))->assertNotFound();
+    $this->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.frames.show',
+        [$artifact, 'step' => 'claim-entry'],
+    ))->assertNotFound();
+});
+
+it('rejects unknown claim preview frames and exports', function (): void {
+    $owner = actingAsTestUser();
+    $artifact = ClaimPreviewArtifact::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => $owner->getKey(),
+        'artifact_fingerprint' => hash('sha256', 'missing-frame'),
+        'scenario_key' => 'claim_instructions_preview',
+        'scenario_version' => 1,
+        'profile' => 'issuer',
+        'status' => 'ready',
+        'artifact_disk' => 'local',
+        'artifact_path' => 'x-change/claim-previews/missing-frame',
+        'metadata' => ['journey' => ['steps' => []]],
+        'generated_at' => now(),
+    ]);
+
+    $this->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.frames.show',
+        [$artifact, 'step' => 'unknown'],
+    ))->assertNotFound();
+    $this->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.exports.show',
+        [$artifact, 'format' => 'pdf'],
+    ))->assertNotFound();
 });

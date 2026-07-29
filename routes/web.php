@@ -41,6 +41,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateStoreCo
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateUpdateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewExportController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewFrameController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewShowController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
@@ -220,6 +223,20 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             'quick-generate/claim-previews',
             CockpitQuickGenerateClaimPreviewController::class,
         )->middleware('throttle:6,1')->name('x-change.cockpit.quick-generate.claim-previews.store');
+        Route::get(
+            'quick-generate/claim-previews/{claimPreviewArtifact:reference}',
+            CockpitQuickGenerateClaimPreviewShowController::class,
+        )->name('x-change.cockpit.quick-generate.claim-previews.show');
+        Route::get(
+            'quick-generate/claim-previews/{claimPreviewArtifact:reference}/frames/{step}',
+            CockpitQuickGenerateClaimPreviewFrameController::class,
+        )->where('step', '[a-z0-9][a-z0-9-]*')
+            ->name('x-change.cockpit.quick-generate.claim-previews.frames.show');
+        Route::get(
+            'quick-generate/claim-previews/{claimPreviewArtifact:reference}/exports/{format}',
+            CockpitQuickGenerateClaimPreviewExportController::class,
+        )->whereIn('format', ['pdf', 'html'])
+            ->name('x-change.cockpit.quick-generate.claim-previews.exports.show');
         Route::post(
             'quick-generate/artwork-previews',
             CockpitRiderArtworkPreviewController::class,

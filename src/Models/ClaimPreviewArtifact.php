@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Models;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 
 class ClaimPreviewArtifact extends Model
@@ -13,6 +15,8 @@ class ClaimPreviewArtifact extends Model
 
     protected $fillable = [
         'reference',
+        'owner_type',
+        'owner_id',
         'artifact_fingerprint',
         'scenario_key',
         'scenario_version',
@@ -34,6 +38,23 @@ class ClaimPreviewArtifact extends Model
         static::creating(function (self $artifact): void {
             $artifact->reference ??= (string) Str::ulid();
         });
+    }
+
+    public function owner(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'reference';
+    }
+
+    public function isOwnedBy(Authenticatable $owner): bool
+    {
+        return $owner instanceof Model
+            && $this->owner_type === $owner->getMorphClass()
+            && (string) $this->owner_id === (string) $owner->getKey();
     }
 
     protected function casts(): array

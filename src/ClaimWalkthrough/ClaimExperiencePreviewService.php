@@ -44,7 +44,10 @@ final class ClaimExperiencePreviewService
         ]);
 
         if (! $options->refresh) {
-            $cached = $this->cache->find($context['fingerprint']);
+            $cached = $this->cache->find(
+                $context['fingerprint'],
+                $options->issuer,
+            );
 
             if ($cached !== null) {
                 return $this->normalizeReport(
@@ -100,6 +103,7 @@ final class ClaimExperiencePreviewService
                     ],
                 );
 
+            $journey = $this->journeys->fromReport($report, $scenario);
             $artifact = $this->cache->rememberRendered(
                 scenario: $scenario,
                 fingerprint: $context['fingerprint'],
@@ -107,11 +111,15 @@ final class ClaimExperiencePreviewService
                 profile: $options->profile,
                 payload: $context['payload'],
                 report: $report,
+                journey: $journey,
+                owner: $options->issuer,
             );
 
             data_set($report, 'cache.hit', false);
             data_set($report, 'cache.artifact_reference', $artifact->reference);
             data_set($report, 'cache.artifact_fingerprint', $context['fingerprint']);
+
+            data_set($report, 'preview.journey', $journey);
 
             return $this->normalizeReport($report, false, $scenario);
         } finally {
@@ -138,7 +146,8 @@ final class ClaimExperiencePreviewService
             'scenario' => $report['scenario'] ?? null,
             'dry_run' => (bool) ($report['dry_run'] ?? false),
             'artifacts' => $report['artifacts'] ?? [],
-            'journey' => $this->journeys->fromReport($report, $scenario),
+            'journey' => data_get($report, 'preview.journey')
+                ?: $this->journeys->fromReport($report, $scenario),
             'report' => $report,
         ];
     }
