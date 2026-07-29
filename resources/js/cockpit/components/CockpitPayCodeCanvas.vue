@@ -551,25 +551,6 @@ function stringValue(value: unknown): string | null {
                     Stamp
                 </button>
                 <button
-                    v-if="hasClaimView"
-                    :id="tabId('claim')"
-                    type="button"
-                    role="tab"
-                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
-                    :class="
-                        visibleView === 'claim'
-                            ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                            : 'text-slate-500 dark:text-slate-400'
-                    "
-                    :aria-selected="visibleView === 'claim'"
-                    :aria-controls="panelId('claim')"
-                    data-testid="cockpit-pay-code-canvas-claim-button"
-                    @click="visibleView = 'claim'"
-                >
-                    <Route class="size-3" aria-hidden="true" />
-                    Claim
-                </button>
-                <button
                     v-if="hasDesignView"
                     :id="tabId('design')"
                     type="button"
@@ -587,6 +568,25 @@ function stringValue(value: unknown): string | null {
                 >
                     <Palette class="size-3" aria-hidden="true" />
                     Design
+                </button>
+                <button
+                    v-if="hasClaimView"
+                    :id="tabId('claim')"
+                    type="button"
+                    role="tab"
+                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    :class="
+                        visibleView === 'claim'
+                            ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                            : 'text-slate-500 dark:text-slate-400'
+                    "
+                    :aria-selected="visibleView === 'claim'"
+                    :aria-controls="panelId('claim')"
+                    data-testid="cockpit-pay-code-canvas-claim-button"
+                    @click="visibleView = 'claim'"
+                >
+                    <Route class="size-3" aria-hidden="true" />
+                    Claim
                 </button>
                 <button
                     :id="tabId('cost')"
