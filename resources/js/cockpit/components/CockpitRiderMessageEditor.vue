@@ -59,23 +59,36 @@ function addList(): void {
 
 <template>
     <div class="grid gap-3">
-        <div
-            class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-        >
-            <label
-                class="grid min-w-40 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <fieldset
+                class="flex items-center gap-1"
+                data-testid="cockpit-rider-message-format"
             >
-                Format
-                <select
-                    v-model="format"
-                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                    data-testid="cockpit-rider-message-format"
-                    :disabled="disabled"
+                <legend class="sr-only">Message format</legend>
+                <label
+                    v-for="option in [
+                        { value: 'plain', label: 'Text' },
+                        { value: 'markdown', label: 'Rich Text' },
+                    ]"
+                    :key="option.value"
+                    class="cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600"
+                    :class="
+                        format === option.value
+                            ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                    "
                 >
-                    <option value="plain">Plain Text</option>
-                    <option value="markdown">Rich Text</option>
-                </select>
-            </label>
+                    <input
+                        v-model="format"
+                        type="radio"
+                        class="sr-only"
+                        name="rider-message-format"
+                        :value="option.value"
+                        :disabled="disabled"
+                    />
+                    {{ option.label }}
+                </label>
+            </fieldset>
             <div
                 class="flex flex-wrap gap-1"
                 aria-label="Rider Message formatting"

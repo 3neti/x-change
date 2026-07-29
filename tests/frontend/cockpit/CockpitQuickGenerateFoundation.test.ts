@@ -324,6 +324,29 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('[data-testid="cockpit-pay-code-canvas-design-button"]')
                 .attributes('aria-selected'),
         ).toBe('true');
+        const designTabs = wrapper.get(
+            '[data-testid="cockpit-quick-generate-rider-design-tabs"]',
+        );
+        const appearanceTab = designTabs.get(
+            '[data-testid="cockpit-quick-generate-rider-design-appearance-tab"]',
+        );
+
+        expect(designTabs.findAll('[role="tab"]')).toHaveLength(4);
+        expect(appearanceTab.attributes('aria-selected')).toBe('true');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-rider-artwork-inspector"]',
+                )
+                .classes(),
+        ).toContain('lg:sticky');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
+                )
+                .findAll('input[type="radio"]'),
+        ).toHaveLength(4);
         expect(
             wrapper
                 .get(
@@ -350,6 +373,61 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .text(),
         ).toContain('Stamp Appearance');
+        const designEditor = wrapper.get(
+            '[data-testid="cockpit-quick-generate-rider-design-editor"]',
+        );
+        const riderBehavior = wrapper.get(
+            '[data-testid="cockpit-quick-generate-rider-behavior"]',
+        );
+
+        expect(
+            designEditor
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-redirect-timeout"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(
+            designEditor
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-splash-timeout"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(
+            riderBehavior
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-redirect-timeout"]',
+                )
+                .exists(),
+        ).toBe(true);
+        expect(
+            riderBehavior
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-splash-timeout"]',
+                )
+                .exists(),
+        ).toBe(true);
+
+        await designTabs
+            .get(
+                '[data-testid="cockpit-quick-generate-rider-design-message-tab"]',
+            )
+            .trigger('click');
+        await flushPromises();
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-rider-design-appearance-tab"]',
+                )
+                .attributes('aria-selected'),
+        ).toBe('false');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-rider-message-format"]')
+                .findAll('input[type="radio"]'),
+        ).toHaveLength(2);
         expect(wrapper.get('#quick-generate-contract-rider').text()).toContain(
             'Optional message, link, artwork, and Stamp presentation.',
         );
@@ -891,8 +969,10 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(false);
 
         await wrapper
-            .find('[data-testid="cockpit-quick-generate-rider-stamp-source"]')
-            .setValue('splash');
+            .find(
+                '[data-testid="cockpit-quick-generate-rider-stamp-source-splash"]',
+            )
+            .setValue();
 
         const design = wrapper.find(
             '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
@@ -905,7 +985,7 @@ describe('Cockpit Quick Generate foundation', () => {
                     '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
                 .exists(),
-        ).toBe(false);
+        ).toBe(true);
         expect(design.attributes('srcdoc')).toContain('stamp-abstract-splash');
         expect(design.attributes('srcdoc')).not.toContain(
             'A purpose-led Rider Stamp',
@@ -935,7 +1015,8 @@ describe('Cockpit Quick Generate foundation', () => {
             .trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-rider-splash-format"]')
-            .setValue('html');
+            .get('input[value="html"]')
+            .setValue();
         await wrapper
             .get('[data-testid="cockpit-quick-generate-rider-splash-body"]')
             .setValue(
@@ -945,8 +1026,8 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             (
                 wrapper.get(
-                    '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
-                ).element as HTMLSelectElement
+                    '[data-testid="cockpit-quick-generate-rider-stamp-source"] input:checked',
+                ).element as HTMLInputElement
             ).value,
         ).toBe('splash');
         expect(
@@ -972,19 +1053,27 @@ describe('Cockpit Quick Generate foundation', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
-        const artworkSource = wrapper.get(
-            '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
-        );
-
-        await artworkSource.setValue('none');
-        await artworkSource.setValue('x_change');
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-rider-stamp-source-none"]',
+            )
+            .setValue();
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-rider-stamp-source-x_change"]',
+            )
+            .setValue();
         await wrapper
             .get('[data-testid="cockpit-quick-generate-rider-splash-body"]')
             .setValue('Introduction only');
 
-        expect((artworkSource.element as HTMLSelectElement).value).toBe(
-            'x_change',
-        );
+        expect(
+            (
+                wrapper.get(
+                    '[data-testid="cockpit-quick-generate-rider-stamp-source"] input:checked',
+                ).element as HTMLInputElement
+            ).value,
+        ).toBe('x_change');
         expect(
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
@@ -1026,8 +1115,10 @@ describe('Cockpit Quick Generate foundation', () => {
                 'https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH?si=tracking',
             );
         await wrapper
-            .find('[data-testid="cockpit-quick-generate-rider-stamp-source"]')
-            .setValue('url');
+            .find(
+                '[data-testid="cockpit-quick-generate-rider-stamp-source-url"]',
+            )
+            .setValue();
         await vi.advanceTimersByTimeAsync(351);
         await flushPromises();
 
@@ -1072,11 +1163,13 @@ describe('Cockpit Quick Generate foundation', () => {
                     '[data-testid="cockpit-quick-generate-rider-stamp-preview"]',
                 )
                 .exists(),
-        ).toBe(false);
+        ).toBe(true);
 
         await wrapper
-            .find('[data-testid="cockpit-quick-generate-rider-stamp-fit"]')
-            .setValue('contain');
+            .find(
+                '[data-testid="cockpit-quick-generate-rider-stamp-fit-contain"]',
+            )
+            .setValue();
 
         expect(
             wrapper
