@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\UploadedFile;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
+use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 
 it('shows only the authenticated owner campaign worksheet summaries', function () {
     $owner = actingAsTestUser();
@@ -91,4 +93,47 @@ it('lets only the worksheet owner add a draft beneficiary with a mobile or bank 
 
     $this->get(route('x-change.cockpit.campaigns.show', $worksheet->reference))
         ->assertNotFound();
+});
+
+it('stages a campaign import for review and applies only a fully valid staged import once', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-01', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Import Payroll',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-01'), [
+        'file' => UploadedFile::fake()->createWithContent('beneficiaries.csv', "name,mobile,amount\nMaria,09173011987,1250.00\n"),
+    ])->assertRedirect(route('x-change.cockpit.campaigns.show', 'campaign-import-01'));
+
+    $response = $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.campaigns.show', 'campaign-import-01'));
+    $response->assertOk()
+        ->assertJsonPath('props.imports.0.status', 'staged')
+        ->assertJsonPath('props.imports.0.valid_count', 1)
+        ->assertJsonPath('props.imports.0.mapping.amount', 'amount');
+
+    $reference = $response->json('props.imports.0.reference');
+    $this->post(route('x-change.cockpit.campaigns.imports.apply', ['worksheet' => 'campaign-import-01', 'import' => $reference]))
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', 'campaign-import-01'));
+
+    expect(app(CampaignWorksheetRepository::class)->findForOwner('campaign-import-01', $owner->getMorphClass(), (string) $owner->getKey())?->rows)
+        ->toHaveCount(1);
+
+    $this->post(route('x-change.cockpit.campaigns.imports.apply', ['worksheet' => 'campaign-import-01', 'import' => $reference]))
+        ->assertSessionHas('campaign_notice', 'Campaign worksheet import has already been applied or is unavailable.');
+});
+
+it('stages import errors without adding any beneficiary', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-errors', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'assistance', name: 'Import Errors',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-errors'), [
+        'file' => UploadedFile::fake()->createWithContent('beneficiaries.csv', "name,amount\nMaria,1250.00\n"),
+    ])->assertRedirect();
+
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.campaigns.show', 'campaign-import-errors'))
+        ->assertJsonPath('props.imports.0.valid_count', 0)
+        ->assertJsonPath('props.imports.0.validation_errors.0.row', 2)
+        ->assertJsonPath('props.worksheet.rows', []);
 });

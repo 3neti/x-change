@@ -112,9 +112,12 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/{worksheet}/rows', [CockpitCampaignWorksheetController::class, 'addRow'])
             ->middleware('throttle:60,1')
             ->name('x-change.cockpit.campaigns.rows.store');
-        Route::post('campaigns/{worksheet}/imports/csv', CockpitCampaignWorksheetImportController::class)
+        Route::post('campaigns/{worksheet}/imports', [CockpitCampaignWorksheetImportController::class, 'stage'])
             ->middleware('throttle:12,1')
-            ->name('x-change.cockpit.campaigns.imports.csv.store');
+            ->name('x-change.cockpit.campaigns.imports.store');
+        Route::post('campaigns/{worksheet}/imports/{import}/apply', [CockpitCampaignWorksheetImportController::class, 'apply'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.imports.apply');
         Route::get('accounts', CockpitAccountPageController::class)
             ->middleware('verified')
             ->name('x-change.cockpit.accounts.index');

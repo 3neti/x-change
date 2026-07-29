@@ -10,8 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
+use LBHurtado\XCampaign\Data\CampaignWorksheetImportData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetSummaryData;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
@@ -19,7 +21,10 @@ use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowReques
 
 class CockpitCampaignWorksheetController extends Controller
 {
-    public function __construct(private readonly CampaignWorksheetRepository $worksheets) {}
+    public function __construct(
+        private readonly CampaignWorksheetRepository $worksheets,
+        private readonly CampaignWorksheetImportRepository $imports,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -52,6 +57,7 @@ class CockpitCampaignWorksheetController extends Controller
     {
         return Inertia::render('x-change/cockpit/CampaignWorksheet', [
             'worksheet' => $this->worksheetFor($worksheet, $request->user()),
+            'imports' => $this->importsFor($worksheet, $request->user()),
         ]);
     }
 
@@ -145,5 +151,19 @@ class CockpitCampaignWorksheetController extends Controller
                 'status' => $row->status,
             ], $worksheet->rows),
         ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function importsFor(string $reference, mixed $owner): array
+    {
+        return array_map(fn (CampaignWorksheetImportData $import): array => [
+            'reference' => $import->reference,
+            'status' => $import->status,
+            'source_format' => $import->sourceFormat,
+            'row_count' => $import->rowCount,
+            'valid_count' => count($import->validRows),
+            'validation_errors' => $import->validationErrors,
+            'mapping' => $import->mapping,
+        ], $this->imports->forOwner($reference, $this->ownerType($owner), (string) $owner->getAuthIdentifier()));
     }
 }
