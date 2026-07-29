@@ -29,17 +29,19 @@ final readonly class CampaignWorksheetAuthorizationExecutionService implements S
         $this->assertRequiredOtp($voucher, $payload);
 
         $authorization = $this->authorizations->handle((string) $voucher->code, $officer);
+        $plannedCount = $authorization->fulfillments()->count();
 
         return new SettlementExecutionResultData(
             voucher_code: (string) $voucher->code,
             status: 'authorized',
-            message: 'Campaign worksheet authorized. Beneficiary issuance has not started.',
+            message: 'Campaign worksheet authorized. Beneficiary fulfillment is planned; issuance has not started.',
             meta: [
                 'authorization_reference' => $authorization->reference,
                 'worksheet_reference' => $authorization->worksheet?->reference,
                 'beneficiary_count' => $authorization->beneficiary_count,
                 'principal_minor' => $authorization->principal_minor,
                 'currency' => $authorization->currency,
+                'planned_count' => $plannedCount,
             ],
         );
     }

@@ -47,7 +47,9 @@ final class IssueCampaignWorksheetApprovalPayCode
 
             $voucher = GenerateVouchers::run(VoucherInstructionsData::from([
                 'cash' => ['amount' => 0, 'currency' => $worksheet->currency, 'validation' => ['country' => 'PH']],
-                'inputs' => ['fields' => $requiresOtp ? ['otp'] : []], 'feedback' => [], 'rider' => ['message' => 'Campaign officer approval'],
+                'inputs' => ['fields' => $requiresOtp ? ['otp'] : []],
+                'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
+                'rider' => ['message' => 'Campaign officer approval'],
                 'count' => 1, 'prefix' => 'APPR', 'mask' => '****', 'voucher_type' => VoucherType::SETTLEMENT->value, 'target_amount' => 0,
                 'validation' => $requiresOtp ? ['otp' => ['required' => true, 'on_failure' => 'block']] : null,
                 'rules' => ['min_payment' => 0, 'max_payment' => 0, 'allow_overpayment' => false, 'auto_close_on_full_payment' => false],

@@ -11,6 +11,10 @@ use RuntimeException;
 
 final class ApproveCampaignWorksheetAuthorization
 {
+    public function __construct(
+        private readonly PlanCampaignWorksheetFulfillment $fulfillmentPlanner,
+    ) {}
+
     public function handle(string $approvalPayCode, Model $officer): CampaignWorksheetAuthorization
     {
         return DB::transaction(function () use ($approvalPayCode, $officer): CampaignWorksheetAuthorization {
@@ -32,6 +36,8 @@ final class ApproveCampaignWorksheetAuthorization
             }
 
             if ($authorization->status === 'authorized') {
+                $this->fulfillmentPlanner->handle((string) $authorization->reference);
+
                 return $authorization;
             }
 
@@ -50,6 +56,7 @@ final class ApproveCampaignWorksheetAuthorization
                 'approved_at' => now(),
             ])->save();
             $authorization->worksheet->forceFill(['status' => 'authorized'])->save();
+            $this->fulfillmentPlanner->handle((string) $authorization->reference);
 
             return $authorization->refresh();
         });
