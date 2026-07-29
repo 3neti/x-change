@@ -19,6 +19,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferDispatchController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferReconciliationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetExportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFulfillmentController;
@@ -128,6 +129,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/{worksheet}/fulfillments/bank-transfers', [CockpitCampaignWorksheetBankTransferDispatchController::class, 'store'])
             ->middleware('throttle:2,1')
             ->name('x-change.cockpit.campaigns.fulfillments.bank-transfers.store');
+        Route::post('campaigns/{worksheet}/fulfillments/bank-transfers/reconciliations', [CockpitCampaignWorksheetBankTransferReconciliationController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.campaigns.fulfillments.bank-transfers.reconciliations.store');
         Route::post('campaigns/{worksheet}/imports', [CockpitCampaignWorksheetImportController::class, 'stage'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.imports.store');
