@@ -30,6 +30,13 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         description: 'Pay Code explorer',
     },
     {
+        key: 'campaigns',
+        label: 'Campaigns',
+        href: '/x/cockpit/campaigns',
+        group: 'primary',
+        description: 'Batch Pay Code worksheets',
+    },
+    {
         key: 'templates',
         label: 'Templates',
         href: '/x/cockpit/templates',
