@@ -18,5 +18,7 @@ class PricingEstimateData extends Data
         public array $components = [],
         public float $total = 0.0,
         public array $charges = [],
+        public ?float $pay_code_value = null,
+        public ?float $account_debit = null,
     ) {}
 }

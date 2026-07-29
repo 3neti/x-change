@@ -301,7 +301,8 @@ class GeneratePayCode
 
     protected function requiredIssuanceAmount(array $input, PricingEstimateData $estimate): float
     {
-        return (float) data_get($input, 'cash.amount', 0) + $estimate->total;
+        return $estimate->account_debit
+            ?? (float) data_get($input, 'cash.amount', 0) + $estimate->total;
     }
 
     /**

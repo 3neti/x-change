@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
-use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 
 it('returns pricing estimate from voucher instructions input', function () {
@@ -83,4 +83,66 @@ it('returns pricing estimate from voucher instructions input', function () {
     expect($result->base_fee)->toBe(0.0);
     expect($result->components['selfie'])->toBe(5.0);
     expect($result->total)->toBe(5.0);
+    expect($result->pay_code_value)->toBe(100.0);
+    expect($result->account_debit)->toBe(105.0);
+});
+
+it('excludes a collectible target from the account debit', function () {
+    $input = [
+        'cash' => [
+            'amount' => 1000.0,
+            'currency' => 'PHP',
+            'validation' => [
+                'secret' => null,
+                'mobile' => null,
+                'payable' => null,
+                'country' => 'PH',
+                'location' => null,
+                'radius' => null,
+            ],
+        ],
+        'inputs' => [
+            'fields' => [],
+        ],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+        'rider' => [
+            'message' => null,
+            'url' => null,
+            'redirect_timeout' => null,
+            'splash' => null,
+            'splash_timeout' => null,
+            'og_source' => null,
+        ],
+        'count' => 1,
+        'target_amount' => 1000.0,
+        'metadata' => [
+            'flow_type' => 'collectible',
+        ],
+    ];
+
+    $pricing = Mockery::mock(PricingServiceContract::class);
+    $pricing->shouldReceive('estimate')
+        ->once()
+        ->with(Mockery::on(function ($instructions) {
+            expect((float) $instructions->cash->amount)->toBe(0.0);
+            expect((float) $instructions->target_amount)->toBe(1000.0);
+
+            return true;
+        }))
+        ->andReturn([
+            'currency' => 'PHP',
+            'base_fee' => 0.0,
+            'components' => ['collectible' => 15.0],
+            'total' => 15.0,
+        ]);
+
+    $result = (new EstimatePayCodeCost($pricing))->handle($input);
+
+    expect($result->pay_code_value)->toBe(0.0);
+    expect($result->total)->toBe(15.0);
+    expect($result->account_debit)->toBe(15.0);
 });

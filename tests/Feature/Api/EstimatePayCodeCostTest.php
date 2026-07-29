@@ -47,7 +47,9 @@ it('returns a pricing estimate via api', function () {
         currency: 'PHP',
         base_fee: 0.0,
         components: [],
-        total: 0.0,
+        total: 5.0,
+        pay_code_value: 100.0,
+        account_debit: 105.0,
     );
 
     $validatedPayload = $payload;
@@ -72,6 +74,8 @@ it('returns a pricing estimate via api', function () {
                 'base_fee',
                 'components',
                 'total',
+                'pay_code_value',
+                'account_debit',
             ],
             'meta',
         ])

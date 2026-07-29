@@ -24,13 +24,20 @@ class EstimatePayCodeCost
         $instructions = VoucherInstructionsData::from($input);
 
         $estimate = $this->pricing->estimate($instructions);
+        $payCodeValue = round(
+            (float) data_get($input, 'cash.amount', 0),
+            2,
+        );
+        $issueCost = round((float) ($estimate['total'] ?? 0), 2);
 
         return new PricingEstimateData(
             currency: (string) ($estimate['currency'] ?? config('x-change.pricing.currency', 'PHP')),
             base_fee: (float) ($estimate['base_fee'] ?? 0),
             components: (array) ($estimate['components'] ?? []),
-            total: (float) ($estimate['total'] ?? 0),
+            total: $issueCost,
             charges: (array) ($estimate['charges'] ?? []),
+            pay_code_value: $payCodeValue,
+            account_debit: round($payCodeValue + $issueCost, 2),
         );
     }
 }
