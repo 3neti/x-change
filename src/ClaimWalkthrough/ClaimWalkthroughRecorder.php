@@ -39,6 +39,7 @@ final class ClaimWalkthroughRecorder
                 'XCHANGE_CLAIM_WALKTHROUGH_SUBMIT_CLAIM' => ($options['submit_claim'] ?? false) ? '1' : '0',
                 'XCHANGE_CLAIM_WALKTHROUGH_OG_PREVIEW' => json_encode(data_get($scenario, 'fixture.og_preview', []), JSON_UNESCAPED_SLASHES) ?: '{}',
                 'XCHANGE_CLAIM_WALKTHROUGH_RIDER_URL' => (string) data_get($scenario, 'fixture.rider.url', ''),
+                'XCHANGE_CLAIM_WALKTHROUGH_RIDER_HANDOFF_PREVIEW' => json_encode(data_get($scenario, 'fixture.rider_handoff_preview', []), JSON_UNESCAPED_SLASHES) ?: '{}',
             ])
             ->run([$this->nodeBinary(), $script]);
 

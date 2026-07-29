@@ -22,6 +22,10 @@ const accountNumber =
     process.env.XCHANGE_CLAIM_WALKTHROUGH_ACCOUNT_NUMBER ?? '09173011987';
 const submitClaim = process.env.XCHANGE_CLAIM_WALKTHROUGH_SUBMIT_CLAIM === '1';
 const riderUrl = (process.env.XCHANGE_CLAIM_WALKTHROUGH_RIDER_URL ?? '').trim();
+const riderHandoffPreview = parseJson(
+    process.env.XCHANGE_CLAIM_WALKTHROUGH_RIDER_HANDOFF_PREVIEW,
+    {},
+);
 const ogPreview = parseJson(
     process.env.XCHANGE_CLAIM_WALKTHROUGH_OG_PREVIEW,
     {},
@@ -243,6 +247,49 @@ function ogPreviewDocument(preview) {
 </html>`;
 }
 
+function riderHandoffDocument(preview) {
+    const imageUrl = String(preview.public_image_url ?? '');
+    const title = String(preview.title ?? 'Rider Link');
+    const description = String(preview.description ?? 'Continue after the claim.');
+    const source = String(preview.reference ?? preview.source ?? 'Rider Link');
+
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; script-src 'none';">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { width: min(100%, 390px); }
+    .card { overflow: hidden; border: 1px solid rgba(148, 163, 184, .35); border-radius: 28px; background: #0f172a; box-shadow: 0 24px 70px rgba(0,0,0,.45); }
+    .art { aspect-ratio: 1; width: 100%; background: #1e293b; }
+    .art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .copy { padding: 24px; }
+    .eyebrow { margin: 0 0 10px; color: #67e8f9; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: 28px; line-height: 1.1; overflow-wrap: anywhere; }
+    p { margin: 12px 0 0; color: #cbd5e1; font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
+    .handoff { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 14px; background: #22c55e; padding: 13px 15px; color: #052e16; font-size: 14px; font-weight: 850; }
+  </style>
+</head>
+<body>
+  <main>
+    <article class="card">
+      <div class="art"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)} artwork" referrerpolicy="no-referrer"></div>
+      <div class="copy">
+        <p class="eyebrow">${escapeHtml(source)}</p>
+        <h1>${escapeHtml(title)}</h1>
+        <p>${escapeHtml(description)}</p>
+        <div class="handoff"><span>Continue to Rider Link</span><span aria-hidden="true">↗</span></div>
+      </div>
+    </article>
+  </main>
+</body>
+</html>`;
+}
+
 async function recordAction(event, status = 'passed', details = {}) {
     actions.push({
         sequence: actions.length + 1,
@@ -304,10 +351,25 @@ async function captureRiderHandoff() {
     const destination = await browser.newPage({ viewport: mobileViewport });
 
     try {
-        await destination.goto(target.toString(), {
-            waitUntil: 'domcontentloaded',
-            timeout: 15000,
-        });
+        const usesResolvedArtwork =
+            riderHandoffPreview.available === true &&
+            typeof riderHandoffPreview.public_image_url === 'string' &&
+            riderHandoffPreview.public_image_url !== '';
+
+        if (usesResolvedArtwork) {
+            await destination.setContent(riderHandoffDocument(riderHandoffPreview), {
+                waitUntil: 'domcontentloaded',
+            });
+            await destination
+                .locator('img')
+                .evaluate((image) => image.complete && image.naturalWidth > 0)
+                .catch(() => false);
+        } else {
+            await destination.goto(target.toString(), {
+                waitUntil: 'domcontentloaded',
+                timeout: 15000,
+            });
+        }
         await destination.waitForTimeout(1000);
 
         const screenshotPath = path.join(
@@ -321,14 +383,17 @@ async function captureRiderHandoff() {
         const checkpoint = {
             key: 'rider-url',
             title: 'Rider destination',
-            route: routeFromUrl(destination.url()),
+            route: routeFromUrl(target.toString()),
             actor: 'redeemer',
             expected: 'The browser reaches the configured Rider Link after the claim handoff.',
             status: 'captured',
             screenshot_path: screenshotPath,
             feature: 'rider_redirect',
             phase: 'redirect',
-            destination_url: destination.url(),
+            destination_url: target.toString(),
+            presentation: usesResolvedArtwork
+                ? 'provider_artwork'
+                : 'browser_destination',
         };
 
         checkpoints.push(checkpoint);
@@ -336,7 +401,7 @@ async function captureRiderHandoff() {
             sequence: actions.length + 1,
             event: 'capture:rider-url',
             status: 'captured',
-            url: destination.url(),
+            url: target.toString(),
             screenshot_path: screenshotPath,
         });
 

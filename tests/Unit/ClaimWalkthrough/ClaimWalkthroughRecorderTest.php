@@ -23,6 +23,10 @@ it('uses the configured node binary for walkthrough recording', function (): voi
                 'rider' => [
                     'url' => 'https://open.spotify.com/track/example',
                 ],
+                'rider_handoff_preview' => [
+                    'available' => true,
+                    'public_image_url' => 'https://i.scdn.co/image/example-artwork',
+                ],
             ],
         ],
         baseUrl: 'https://x-change.test',
@@ -36,6 +40,10 @@ it('uses the configured node binary for walkthrough recording', function (): voi
     Process::assertRan(
         fn (PendingProcess $process, ProcessResult $processResult): bool => $process->command[0] === '/runtime/node'
             && str_ends_with($process->command[1], '/scripts/claim-browser-walkthrough.mjs')
-            && ($process->environment['XCHANGE_CLAIM_WALKTHROUGH_RIDER_URL'] ?? null) === 'https://open.spotify.com/track/example',
+            && ($process->environment['XCHANGE_CLAIM_WALKTHROUGH_RIDER_URL'] ?? null) === 'https://open.spotify.com/track/example'
+            && str_contains(
+                (string) ($process->environment['XCHANGE_CLAIM_WALKTHROUGH_RIDER_HANDOFF_PREVIEW'] ?? ''),
+                'https://i.scdn.co/image/example-artwork',
+            ),
     );
 });

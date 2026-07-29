@@ -7,11 +7,13 @@ namespace LBHurtado\XChange\ClaimWalkthrough;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
+use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 
 final class ClaimPreviewScenarioFactory
 {
     public function __construct(
         private readonly ClaimExperienceCompiler $claimExperience,
+        private readonly RiderUrlArtworkPreviewResolver $urlArtwork,
     ) {}
 
     /**
@@ -58,6 +60,9 @@ final class ClaimPreviewScenarioFactory
         ];
         $fixture['og_preview'] = (new RiderOgPreviewPayloadFactory)->make($fixture);
         $fixture['stamp_preview'] = (new RiderStampPreviewPayloadFactory)->make($fixture);
+        $fixture['rider_handoff_preview'] = $this->riderHandoffPreview(
+            (string) data_get($fixture, 'rider.url', ''),
+        );
 
         return [
             'key' => 'claim_instructions_preview',
@@ -90,6 +95,30 @@ final class ClaimPreviewScenarioFactory
         return filled(data_get($payload, 'feedback.email'))
             || filled(data_get($payload, 'feedback.mobile'))
             || filled(data_get($payload, 'feedback.webhook'));
+    }
+
+    /**
+     * @return array{
+     *     available: bool,
+     *     source: string,
+     *     title: string,
+     *     description: string,
+     *     public_image_url: ?string,
+     *     reference: string
+     * }
+     */
+    private function riderHandoffPreview(string $url): array
+    {
+        $resolved = $this->urlArtwork->resolve($url);
+
+        return [
+            'available' => $resolved['available'],
+            'source' => $resolved['source'],
+            'title' => $resolved['title'],
+            'description' => $resolved['description'],
+            'public_image_url' => $resolved['public_image_url'],
+            'reference' => $resolved['reference'],
+        ];
     }
 
     /**
