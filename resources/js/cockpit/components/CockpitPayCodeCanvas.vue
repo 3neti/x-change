@@ -4,6 +4,7 @@ import {
     Palette,
     QrCode,
     ReceiptText,
+    Route,
     UserRound,
 } from 'lucide-vue-next';
 import { computed, useId, useSlots, watchEffect } from 'vue';
@@ -62,7 +63,7 @@ const props = withDefaults(
     },
 );
 
-type PayCodeCanvasView = 'stamp' | 'design' | 'cost';
+type PayCodeCanvasView = 'stamp' | 'design' | 'claim' | 'cost';
 
 const visibleView = defineModel<PayCodeCanvasView>('view', {
     default: 'stamp',
@@ -72,10 +73,17 @@ const viewId = useId();
 const hasDesignView = computed<boolean>(() => {
     return props.presentation === 'live' && slots.design !== undefined;
 });
+const hasClaimView = computed<boolean>(() => {
+    return props.presentation === 'live' && slots.claim !== undefined;
+});
 const xChangeLogoUrl = '/vendor/x-change/images/logo-orange.png';
 
 watchEffect(() => {
     if (visibleView.value === 'design' && !hasDesignView.value) {
+        visibleView.value = 'stamp';
+    }
+
+    if (visibleView.value === 'claim' && !hasClaimView.value) {
         visibleView.value = 'stamp';
     }
 });
@@ -515,7 +523,7 @@ function stringValue(value: unknown): string | null {
                     {{
                         presentation === 'finalized'
                             ? 'Final design ready to share.'
-                            : 'Preview the Stamp, shape its Rider design, or inspect issue cost.'
+                            : 'Preview the Stamp, shape its design, walk through its claim, or inspect cost.'
                     }}
                 </p>
             </div>
@@ -541,6 +549,25 @@ function stringValue(value: unknown): string | null {
                     @click="visibleView = 'stamp'"
                 >
                     Stamp
+                </button>
+                <button
+                    v-if="hasClaimView"
+                    :id="tabId('claim')"
+                    type="button"
+                    role="tab"
+                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition"
+                    :class="
+                        visibleView === 'claim'
+                            ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                            : 'text-slate-500 dark:text-slate-400'
+                    "
+                    :aria-selected="visibleView === 'claim'"
+                    :aria-controls="panelId('claim')"
+                    data-testid="cockpit-pay-code-canvas-claim-button"
+                    @click="visibleView = 'claim'"
+                >
+                    <Route class="size-3" aria-hidden="true" />
+                    Claim
                 </button>
                 <button
                     v-if="hasDesignView"
@@ -847,6 +874,17 @@ function stringValue(value: unknown): string | null {
             data-testid="cockpit-pay-code-canvas-design"
         >
             <slot name="design" />
+        </section>
+
+        <section
+            v-show="visibleView === 'claim' && hasClaimView"
+            :id="panelId('claim')"
+            role="tabpanel"
+            :aria-labelledby="tabId('claim')"
+            class="aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-2 dark:border-slate-800 dark:bg-slate-900/70"
+            data-testid="cockpit-pay-code-canvas-claim"
+        >
+            <slot name="claim" />
         </section>
 
         <article

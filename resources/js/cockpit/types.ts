@@ -1393,6 +1393,50 @@ export type CockpitQuickGenerateClaimPreviewContract = {
     [key: string]: unknown;
 };
 
+export type CockpitClaimExperiencePreviewFrame = {
+    url: string;
+    mime_type: string;
+    sha256: string;
+    width: number;
+    height: number;
+};
+
+export type CockpitClaimExperiencePreviewStep = {
+    sequence: number;
+    key: string;
+    phase: string;
+    title: string;
+    description: string;
+    actor: string;
+    render_kind: 'captured_frame' | 'experience_card';
+    status: 'captured' | 'pending_capture';
+    frame: CockpitClaimExperiencePreviewFrame | null;
+};
+
+export type CockpitClaimExperiencePreviewManifest = {
+    schema: string;
+    status: 'ready';
+    reference: string;
+    fingerprint: string;
+    generated_at: string;
+    cache_hit: boolean;
+    safety: {
+        preview_only: boolean;
+        interactive: boolean;
+        money_movement: boolean;
+        provider_calls: boolean;
+        claim_submission: boolean;
+    };
+    journey: {
+        step_count: number;
+        steps: CockpitClaimExperiencePreviewStep[];
+    };
+    exports: {
+        pdf_url?: string | null;
+        html_url?: string | null;
+    };
+};
+
 export type CockpitQuickGenerateReadModel = {
     status: string;
     authorized?: boolean;

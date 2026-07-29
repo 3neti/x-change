@@ -131,7 +131,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('p')
                 .text(),
         ).toBe(
-            'Preview the Stamp, shape its Rider design, or inspect issue cost.',
+            'Preview the Stamp, shape its design, walk through its claim, or inspect cost.',
         );
         expect(
             wrapper
@@ -3867,28 +3867,62 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Ready to issue');
     });
 
-    it('requests a no-money claim experience preview from the current draft', async () => {
+    it('walks through the protected claim experience inside the canvas', async () => {
         const fetchMock = vi.fn().mockResolvedValue(
             new Response(
                 JSON.stringify({
-                    schema: 'x-change.claim-experience-preview.result.v1',
+                    schema: 'x-change.claim-experience-preview.manifest.v1',
                     status: 'ready',
+                    reference: 'preview-01',
+                    fingerprint: 'preview-fingerprint',
+                    generated_at: '2026-07-29T12:00:00+08:00',
                     cache_hit: false,
-                    artifacts: {
-                        view_options: {
-                            default: {
-                                label: 'Default PDF',
-                                url: 'file:///tmp/walkthrough-storyboard.pdf',
+                    safety: {
+                        preview_only: true,
+                        interactive: false,
+                        money_movement: false,
+                        provider_calls: false,
+                        claim_submission: false,
+                    },
+                    journey: {
+                        step_count: 2,
+                        steps: [
+                            {
+                                sequence: 1,
+                                key: 'claim-entry',
+                                phase: 'entry',
+                                title: 'Open Pay Code',
+                                description: 'The recipient opens the claim.',
+                                actor: 'redeemer',
+                                render_kind: 'captured_frame',
+                                status: 'captured',
+                                frame: {
+                                    url: '/x/cockpit/quick-generate/claim-previews/preview-01/frames/claim-entry',
+                                    mime_type: 'image/png',
+                                    sha256: 'frame-hash',
+                                    width: 390,
+                                    height: 844,
+                                },
                             },
-                            html: {
-                                label: 'HTML storyboard',
-                                url: 'file:///tmp/claim-walkthrough-storyboard.html',
+                            {
+                                sequence: 2,
+                                key: 'claim-success',
+                                phase: 'completion',
+                                title: 'Receive Confirmation',
+                                description:
+                                    'The recipient sees the configured outcome.',
+                                actor: 'redeemer',
+                                render_kind: 'experience_card',
+                                status: 'pending_capture',
+                                frame: null,
                             },
-                            folder: {
-                                label: 'Artifact folder',
-                                url: 'file:///tmp/claim-preview',
-                            },
-                        },
+                        ],
+                    },
+                    exports: {
+                        pdf_url:
+                            '/x/cockpit/quick-generate/claim-previews/preview-01/exports/pdf',
+                        html_url:
+                            '/x/cockpit/quick-generate/claim-previews/preview-01/exports/html',
                     },
                 }),
                 {
@@ -3923,7 +3957,7 @@ describe('Cockpit Quick Generate foundation', () => {
             .find('[data-testid="cockpit-quick-generate-submit-amount"]')
             .setValue('25');
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-claim-preview-button"]')
+            .get('[data-testid="cockpit-pay-code-canvas-claim-button"]')
             .trigger('click');
         await flushPromises();
 
@@ -3942,15 +3976,34 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(options.method).toBe('POST');
         expect(payload.cash.amount).toBe(25);
         expect(payload.preview_profile).toBe('issuer');
-        expect(wrapper.text()).toContain(
-            'Claim walkthrough preview is ready.',
+        expect(wrapper.text()).toContain('Claim Experience Preview');
+        expect(wrapper.text()).toContain('Preview Only');
+        expect(wrapper.text()).toContain('Open Pay Code');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-experience-frame"]')
+                .attributes('src'),
+        ).toBe(
+            '/x/cockpit/quick-generate/claim-previews/preview-01/frames/claim-entry',
         );
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-experience-next"]')
+            .trigger('click');
+
+        expect(wrapper.text()).toContain('Receive Confirmation');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-experience-concept"]')
+                .exists(),
+        ).toBe(true);
         expect(
             wrapper
                 .find(
-                    '[data-testid="cockpit-quick-generate-claim-preview-pdf"]',
+                    '[data-testid="cockpit-quick-generate-claim-preview-panel"]',
                 )
                 .exists(),
-        ).toBe(true);
+        ).toBe(false);
+        expect(wrapper.html()).not.toContain('file://');
     });
 });
