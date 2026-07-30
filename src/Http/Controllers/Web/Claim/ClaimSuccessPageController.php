@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
+use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
 use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
@@ -22,6 +23,7 @@ class ClaimSuccessPageController
         RiderExperienceResolverContract $riders,
         XChangeRiderSubjectFactory $subjects,
         XChangeRiderOutcomeResolver $outcomes,
+        VoucherRiderFallbackPolicy $riderFallbacks,
     ): Response|JsonResponse {
         $voucher = Voucher::query()
             ->where('code', $code)
@@ -30,15 +32,18 @@ class ClaimSuccessPageController
         $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
         $subject = $subjects->fromVoucher($voucher);
         $state = $outcomes->forVoucher($voucher);
+        $instructions = $voucher->instructions?->toArray() ?? [];
 
-        $experience = $riders->resolve($subject, [
-            'state' => $state->value,
-            'rider' => data_get($voucher->instructions?->toArray() ?? [], 'rider', []),
-            'meta' => [
-                'source' => 'x-change',
-                'route' => 'claim.success',
-            ],
-        ]);
+        $experience = $riderFallbacks->shouldResolve($instructions)
+            ? $riders->resolve($subject, [
+                'state' => $state->value,
+                'rider' => data_get($instructions, 'rider', []),
+                'meta' => [
+                    'source' => 'x-change',
+                    'route' => 'claim.success',
+                ],
+            ])
+            : null;
 
         $props = [
             'voucher' => [
@@ -47,7 +52,7 @@ class ClaimSuccessPageController
                 'currency' => data_get($voucher, 'cash.currency'),
             ],
             'claimOutcome' => $state->value,
-            'rider' => $experience->toArray(),
+            'rider' => $experience?->toArray(),
             'redirectEndpoint' => route('x-change.claim.redirect', [
                 'code' => $voucher->code,
             ]),

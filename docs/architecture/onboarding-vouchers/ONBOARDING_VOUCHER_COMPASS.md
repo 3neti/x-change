@@ -130,6 +130,15 @@ assets. It does not own onboarding business logic.
 
 ## Slice Log
 
+### 2026-07-30 — Slice 14 completed
+
+- The same authored-Rider policy now governs preview, success, and redirect
+  surfaces.
+- A neutral onboarding Voucher renders the ordinary claim success experience
+  without inheriting a host demonstration message or redirect.
+- Authored onboarding Rider content remains supported, and ordinary Voucher
+  Rider resolution remains unchanged.
+
 ### 2026-07-30 — Slice 13 completed
 
 - Browser forensics confirmed the Voucher persisted a neutral Rider, while

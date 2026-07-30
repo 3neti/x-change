@@ -4,6 +4,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 
 use Illuminate\Http\RedirectResponse;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
 use LBHurtado\XChange\Support\Rider\XChangeRiderSubjectFactory;
 use LBHurtado\XRider\Contracts\RiderAnalyticsRecorderContract;
@@ -20,6 +21,7 @@ class ClaimRedirectController
         RiderAnalyticsRecorderContract $analytics,
         XChangeRiderSubjectFactory $subjects,
         XChangeRiderOutcomeResolver $outcomes,
+        VoucherRiderFallbackPolicy $riderFallbacks,
     ): RedirectResponse {
         $voucher = Voucher::query()
             ->where('code', $code)
@@ -27,10 +29,13 @@ class ClaimRedirectController
 
         $subject = $subjects->fromVoucher($voucher);
         $state = $outcomes->forVoucher($voucher);
+        $instructions = $voucher->instructions?->toArray() ?? [];
+
+        abort_unless($riderFallbacks->shouldResolve($instructions), 404);
 
         $experience = $riders->resolve($subject, [
             'state' => $state->value,
-            'rider' => data_get($voucher->instructions?->toArray() ?? [], 'rider', []),
+            'rider' => data_get($instructions, 'rider', []),
             'meta' => [
                 'source' => 'x-change',
                 'route' => 'claim.redirect',

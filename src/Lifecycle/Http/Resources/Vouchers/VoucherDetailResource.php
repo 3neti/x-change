@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Lifecycle\Http\Resources\Vouchers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
 use LBHurtado\XRider\Data\RiderSubjectData;
 use LBHurtado\XRider\Enums\RiderOutcomeState;
@@ -74,10 +75,7 @@ class VoucherDetailResource extends JsonResource
                 return null;
             }
 
-            if (
-                data_get($instructions, 'execution.driver') === 'onboarding_account_provisioning'
-                && ! $this->hasAuthoredRider($rider)
-            ) {
+            if (! app(VoucherRiderFallbackPolicy::class)->shouldResolve($instructions)) {
                 return null;
             }
 
@@ -112,16 +110,5 @@ class VoucherDetailResource extends JsonResource
         } catch (\Throwable) {
             return null;
         }
-    }
-
-    /**
-     * @param  array<string, mixed>  $rider
-     */
-    protected function hasAuthoredRider(array $rider): bool
-    {
-        return filled(data_get($rider, 'message'))
-            || filled(data_get($rider, 'url'))
-            || filled(data_get($rider, 'splash'))
-            || (array) data_get($rider, 'stages', []) !== [];
     }
 }

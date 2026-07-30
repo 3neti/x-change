@@ -5,12 +5,12 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
 use LBHurtado\XRider\Data\RiderExperienceData;
 use LBHurtado\XRider\Data\RiderStageCollectionData;
 use LBHurtado\XRider\Data\RiderSubjectData;
 use LBHurtado\XRider\Enums\RiderOutcomeState;
-use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 beforeEach(function () {
     $viewsPath = __DIR__.'/../../Fixtures/views';
@@ -146,6 +146,32 @@ it('passes claim experience to success page payload', function () {
             'claim_experience',
             'redirect',
         ]);
+});
+
+it('does not apply a default Rider after an onboarding claim without authored Rider content', function (): void {
+    $resolver = Mockery::mock(RiderExperienceResolverContract::class);
+    $resolver->shouldNotReceive('resolve');
+    $this->app->instance(RiderExperienceResolverContract::class, $resolver);
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'onboarding' => true,
+            'execution' => [
+                'driver' => 'onboarding_account_provisioning',
+            ],
+            'rider' => [
+                'message' => null,
+                'url' => null,
+                'splash' => null,
+            ],
+        ],
+    ));
+
+    $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('rider', null);
 });
 
 it('passes compiled claim result to success page payload when present in session', function () {
