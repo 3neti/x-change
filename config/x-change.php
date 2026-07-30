@@ -1168,6 +1168,9 @@ return [
         'mobile_first_auth' => env('XCHANGE_MOBILE_FIRST_AUTH', true),
         'email_required' => env('XCHANGE_AUTH_EMAIL_REQUIRED', false),
         'auth_enforcement' => env('XCHANGE_ONBOARDING_AUTH_ENFORCEMENT', 'scaffold'),
+        'voucher' => [
+            'require_otp' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_OTP', true),
+        ],
         'mobile_verification' => [
             'enabled' => (bool) env('XCHANGE_MOBILE_VERIFICATION_ENABLED', true),
             'ttl_minutes' => (int) env('XCHANGE_MOBILE_VERIFICATION_TTL_MINUTES', 10),

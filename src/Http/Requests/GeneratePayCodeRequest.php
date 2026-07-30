@@ -110,6 +110,7 @@ class GeneratePayCodeRequest extends FormRequest
             'target_amount' => ['nullable', 'numeric', 'min:0'],
             'rules' => ['nullable', 'array'],
             'rules.auto_close_on_full_payment' => ['nullable', 'boolean'],
+            'onboarding' => ['nullable', 'boolean'],
             'validation' => ['nullable', 'array'],
             'validation.*' => ['nullable'],
             'execution' => ['nullable', 'array'],

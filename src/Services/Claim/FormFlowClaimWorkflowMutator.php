@@ -54,13 +54,20 @@ final class FormFlowClaimWorkflowMutator
         ClaimWorkflowDescriptorData $workflow,
         ?string $authenticatedMobile,
     ): array {
+        $step['config'] = (array) ($step['config'] ?? []);
+        $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
+
         if (($step['config']['step_name'] ?? null) !== 'wallet_info') {
+            $step['config']['fields'] = $this->markRequiredFields(
+                (array) ($step['config']['fields'] ?? []),
+                $workflow,
+            );
+
             return $step;
         }
 
         $step['config']['title'] = $workflow->title;
         $step['config']['description'] = $workflow->description;
-        $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
         $step['config']['ui_variant'] = config(
             'x-change.claim.experience_ui.variant',
             config('form-flow.ui.variant', 'default'),
@@ -76,6 +83,26 @@ final class FormFlowClaimWorkflowMutator
         ));
 
         return $step;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $fields
+     * @return list<array<string, mixed>>
+     */
+    private function markRequiredFields(
+        array $fields,
+        ClaimWorkflowDescriptorData $workflow,
+    ): array {
+        return array_values(array_map(
+            static function (array $field) use ($workflow): array {
+                if (in_array($field['name'] ?? null, $workflow->required_claim_fields, true)) {
+                    $field['required'] = true;
+                }
+
+                return $field;
+            },
+            $fields,
+        ));
     }
 
     /**
@@ -100,6 +127,10 @@ final class FormFlowClaimWorkflowMutator
         ClaimWorkflowDescriptorData $workflow,
         ?string $authenticatedMobile,
     ): array {
+        if (in_array($field['name'] ?? null, $workflow->required_claim_fields, true)) {
+            $field['required'] = true;
+        }
+
         if (
             ($field['name'] ?? null) === 'mobile'
             && $workflow->requires_authenticated_officer
@@ -126,6 +157,8 @@ final class FormFlowClaimWorkflowMutator
             'requires_destination' => $workflow->requires_destination,
             'requires_amount' => $workflow->requires_amount,
             'requires_authenticated_officer' => $workflow->requires_authenticated_officer,
+            'authentication_mode' => $workflow->authentication_mode->value,
+            'required_claim_fields' => $workflow->required_claim_fields,
             'confirmation_label' => $workflow->confirmation_label,
             'skip_form_flow_splash' => $workflow->skip_form_flow_splash,
             'review' => $workflow->review,

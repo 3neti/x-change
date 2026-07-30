@@ -10,10 +10,16 @@ use UnitEnum;
 
 class VoucherIssuancePayloadNormalizer
 {
+    public function __construct(
+        private readonly NamedVoucherSliceService $namedSlices,
+        private readonly OnboardingVoucherInstructionPolicy $onboarding,
+    ) {}
+
     public function normalize(array $input): array
     {
         $input = $this->normalizeEnumValues($input);
-        $input = app(NamedVoucherSliceService::class)->normalizeIssuancePayload($input);
+        $input = $this->namedSlices->normalizeIssuancePayload($input);
+        $input = $this->onboarding->normalize($input);
         $cashValidation = Arr::get($input, 'cash.validation');
 
         if (! is_array($cashValidation)) {

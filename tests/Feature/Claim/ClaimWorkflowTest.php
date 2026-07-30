@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
+use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
@@ -92,6 +93,7 @@ it('removes destination collection from a campaign officer authorization workflo
         ->and($workflow->requires_mobile)->toBeTrue()
         ->and($workflow->requires_destination)->toBeFalse()
         ->and($workflow->requires_authenticated_officer)->toBeTrue()
+        ->and($workflow->authentication_mode)->toBe(ClaimAuthenticationMode::AuthenticatedOfficer)
         ->and($workflow->skip_form_flow_splash)->toBeTrue()
         ->and($walletStep['title'])->toBe('Campaign Officer Authorization')
         ->and($walletStep['claim_workflow']['key'])->toBe('campaign.officer-authorization.v1')
@@ -106,6 +108,78 @@ it('removes destination collection from a campaign officer authorization workflo
         ->and($fieldNames)->toBe(['mobile'])
         ->and($walletStep['fields'][0]['default'])->toBe('09173011987')
         ->and($walletStep['fields'][0]['readonly'])->toBeTrue();
+});
+
+it('compiles onboarding account provisioning without payout fields or route guessing', function () {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'instructions' => [
+            'onboarding' => true,
+            'execution' => [
+                'driver' => 'onboarding_account_provisioning',
+                'metadata' => [
+                    'onboarding' => [
+                        'workflow_key' => 'onboarding.account-provisioning.v1',
+                        'mobile_verification_required' => false,
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
+    $instructions = (new FormFlowClaimWorkflowMutator)->apply(
+        FormFlowInstructionsData::from([
+            'reference_id' => 'claim-workflow-onboarding-01',
+            'steps' => [
+                [
+                    'handler' => 'form',
+                    'config' => [
+                        'step_name' => 'wallet_info',
+                        'fields' => [
+                            ['name' => 'amount'],
+                            ['name' => 'settlement_rail'],
+                            ['name' => 'mobile', 'required' => false],
+                            ['name' => 'bank_code'],
+                            ['name' => 'account_number'],
+                        ],
+                    ],
+                ],
+                [
+                    'handler' => 'form',
+                    'config' => [
+                        'step_name' => 'bio_fields',
+                        'fields' => [
+                            ['name' => 'full_name', 'required' => false],
+                            ['name' => 'email', 'required' => false],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+        $workflow,
+    );
+
+    $payload = $instructions->toArray();
+    $walletStep = $payload['steps'][0]['config'];
+    $bioStep = $payload['steps'][1]['config'];
+
+    expect($workflow->key)->toBe('onboarding.account-provisioning.v1')
+        ->and($workflow->requires_mobile)->toBeTrue()
+        ->and($workflow->requires_destination)->toBeFalse()
+        ->and($workflow->requires_amount)->toBeFalse()
+        ->and($workflow->requires_authenticated_officer)->toBeFalse()
+        ->and($workflow->authentication_mode)->toBe(ClaimAuthenticationMode::ClaimantHandoff)
+        ->and($workflow->required_claim_fields)->toBe(['full_name', 'email', 'mobile'])
+        ->and($workflow->review['mobile_verification_required'])->toBeFalse()
+        ->and(array_column($walletStep['fields'], 'name'))->toBe(['mobile'])
+        ->and($walletStep['fields'][0]['required'])->toBeTrue()
+        ->and($walletStep['claim_workflow']['authentication_mode'])->toBe('claimant_handoff')
+        ->and($bioStep['fields'][0]['required'])->toBeTrue()
+        ->and($bioStep['fields'][1]['required'])->toBeTrue()
+        ->and($bioStep['claim_workflow']['key'])->toBe('onboarding.account-provisioning.v1')
+        ->and($payload['metadata']['claim_workflow']['confirmation_label'])
+        ->toBe('Create My Account');
 });
 
 it('keeps destination collection for an ordinary disbursement workflow', function () {
@@ -140,6 +214,7 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
 
     expect($workflow->key)->toBe('disbursement.v1')
         ->and($workflow->requires_destination)->toBeTrue()
+        ->and($workflow->authentication_mode)->toBe(ClaimAuthenticationMode::None)
         ->and($walletStep['claim_workflow']['key'])->toBe('disbursement.v1')
         ->and($walletStep['claim_workflow']['confirmation_label'])->toBe('Confirm Redemption')
         ->and($walletStep['ui_variant'])->toBe('immersive')

@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Slice 3 — Explicit Claim Workflow Descriptor
-Status: Slice 2 complete; Slice 3 in progress
+Current slice: Slice 4 — Generic Claim Authentication Handoff
+Status: Slice 3 complete; Slice 4 in progress
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -34,8 +34,8 @@ Last updated: 2026-07-30
 | 0 | Compass and Boundary Lock | Completed |
 | 1 | Minimal Voucher Instruction Contract | Completed |
 | 2 | Commercial Catalog and Instruction Product | Completed |
-| 3 | Explicit Claim Workflow Descriptor | In progress |
-| 4 | Generic Claim Authentication Handoff | Pending |
+| 3 | Explicit Claim Workflow Descriptor | Completed |
+| 4 | Generic Claim Authentication Handoff | In progress |
 | 5 | Account-Provisioning Execution Driver | Pending |
 | 6 | Issuance Dependency UX | Pending |
 | 7 | Template and Campaign Propagation | Pending |
@@ -165,3 +165,22 @@ assets. It does not own onboarding business logic.
   - x-commerce: 6 tests and 25 assertions;
   - instruction product projection: 2 tests and 6 assertions;
   - x-change pricing: 8 tests and 33 assertions.
+
+### 2026-07-30 — Slice 3 completed
+
+- Added the generic claim authentication modes `none`,
+  `authenticated_officer`, and `claimant_handoff`.
+- Added one issuance dependency policy that compiles canonical onboarding
+  intent into `onboarding_account_provisioning`.
+- The policy derives Name, Email, Mobile, and effective OTP requirements before
+  validation, pricing, preview, persistence, and execution.
+- Local OTP bypass omits OTP; a specific-mobile restriction still forces it.
+- Added the explicit `onboarding.account-provisioning.v1` descriptor with no
+  editable amount or external payout destination.
+- Form Flow now receives the descriptor in top-level metadata and every step,
+  with required claimant fields marked from the descriptor rather than Vue
+  guesses.
+- Ordinary disbursement and campaign officer authorization remain unchanged.
+- Focused verification passes:
+  - normalization and commercial regression: 16 tests and 58 assertions;
+  - claim workflow regression: 6 tests and 48 assertions.

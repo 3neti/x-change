@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current status: Onboarding Voucher Slice 2 complete; explicit claim workflow slice in progress
+Current status: Onboarding Voucher Slice 3 complete; generic claim authentication slice in progress
 Last updated: 2026-07-30
 
 | Wave | Workstream | Role | Status | Compass |
@@ -44,7 +44,7 @@ Last updated: 2026-07-30
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Secure Accounts and provider-verified Funding implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
-| 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 2 complete; Slice 3 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
+| 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
 
 ## Package Map
 

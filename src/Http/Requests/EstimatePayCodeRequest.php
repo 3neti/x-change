@@ -94,6 +94,7 @@ class EstimatePayCodeRequest extends FormRequest
             'rider.stamp.claim_marker_position' => ['nullable', Rule::enum(RiderStampClaimMarkerPosition::class)],
 
             'count' => ['nullable', 'integer', 'min:1'],
+            'onboarding' => ['nullable', 'boolean'],
             'provider' => ['nullable', 'string', 'max:80'],
             'prefix' => ['nullable', 'string'],
             'mask' => ['nullable', 'string'],
