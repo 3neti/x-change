@@ -62,7 +62,7 @@ final class IssueCampaignWorksheetApprovalPayCode
                 'count' => 1, 'prefix' => 'APPR', 'mask' => '****', 'voucher_type' => VoucherType::SETTLEMENT->value, 'target_amount' => 0,
                 'validation' => $requiresOtp ? ['otp' => ['required' => true, 'on_failure' => 'block']] : null,
                 'rules' => ['min_payment' => 0, 'max_payment' => 0, 'allow_overpayment' => false, 'auto_close_on_full_payment' => false],
-                'execution' => ['driver' => 'campaign_worksheet_authorization', 'mode' => 'officer_approval', 'metadata' => ['authorization_reference' => $authorization->reference, 'worksheet_reference' => $worksheet->reference, 'manifest_hash' => $worksheet->manifest_hash, 'rows_hash' => $worksheet->rows_hash, 'instruction_blueprint_hash' => $worksheet->instruction_blueprint_hash, 'beneficiary_count' => $authorization->beneficiary_count, 'principal_minor' => $authorization->principal_minor, 'currency' => $worksheet->currency]],
+                'execution' => ['driver' => 'campaign_worksheet_authorization', 'mode' => 'officer_approval', 'metadata' => ['authorization_reference' => $authorization->reference, 'worksheet_reference' => $worksheet->reference, 'manifest_hash' => $worksheet->manifest_hash, 'rows_hash' => $worksheet->rows_hash, 'instruction_blueprint_hash' => $worksheet->instruction_blueprint_hash, 'instruction_summary' => $this->instructionSummary($worksheet->instruction_blueprint_ciphertext ?? []), 'beneficiary_count' => $authorization->beneficiary_count, 'principal_minor' => $authorization->principal_minor, 'currency' => $worksheet->currency]],
                 'claim' => ['outcomes' => [['key' => 'authorize_campaign']], 'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'authorize_campaign', 'onboarding' => ['mode' => 'never'], 'claimant' => ['mode' => 'unbound'], 'profile' => 'voucher.claim.v1'],
                 'metadata' => [
                     'flow_type' => 'settlement',
@@ -79,5 +79,26 @@ final class IssueCampaignWorksheetApprovalPayCode
 
             return $authorization->refresh();
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $blueprint
+     * @return array<string, mixed>
+     */
+    private function instructionSummary(array $blueprint): array
+    {
+        return [
+            'purpose' => data_get($blueprint, 'rider.message'),
+            'has_link' => filled(data_get($blueprint, 'rider.url')),
+            'has_splash' => filled(data_get($blueprint, 'rider.splash')),
+            'input_fields' => data_get($blueprint, 'inputs.fields', []),
+            'feedback_channels' => data_get($blueprint, 'feedback.channels', []),
+            'validations' => array_keys(array_filter(
+                data_get($blueprint, 'validation', []),
+                fn (mixed $value): bool => data_get($value, 'required') === true,
+            )),
+            'onboarding_mode' => data_get($blueprint, 'claim.onboarding.mode', 'if_required'),
+            'expiry_days' => (int) data_get($blueprint, 'expiry_days', 7),
+        ];
     }
 }

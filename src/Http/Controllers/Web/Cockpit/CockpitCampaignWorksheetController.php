@@ -219,6 +219,12 @@ class CockpitCampaignWorksheetController extends Controller
             'status' => $worksheet->status,
             'fulfillment_mode' => $worksheet->fulfillmentMode,
             'delivery_plan' => $worksheet->deliveryPlan,
+            'pay_code_template_reference' => $worksheet->payCodeTemplateReference,
+            'instruction_blueprint' => $worksheet->instructionBlueprint,
+            'instruction_blueprint_hash' => $worksheet->instructionBlueprintHash,
+            'instruction_blueprint_schema' => $worksheet->instructionBlueprintSchema,
+            'instruction_blueprint_revision' => $worksheet->instructionBlueprintRevision,
+            'manifest_hash' => $worksheet->manifestHash,
             'rows' => array_map(fn (CampaignWorksheetRowData $row): array => [
                 'reference' => $row->reference,
                 'ordinal' => $row->ordinal,
@@ -311,6 +317,32 @@ class CockpitCampaignWorksheetController extends Controller
             'approval_pay_code' => $authorization->approval_pay_code,
             'beneficiary_count' => (int) $authorization->beneficiary_count,
             'principal_minor' => (int) $authorization->principal_minor,
+            'manifest_hash' => (string) $authorization->manifest_hash,
+            'instruction_blueprint_hash' => $authorization->instruction_blueprint_hash,
+            'instruction_summary' => $this->instructionSummary(
+                $authorization->instruction_blueprint_ciphertext ?? [],
+            ),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $blueprint
+     * @return array<string, mixed>
+     */
+    private function instructionSummary(array $blueprint): array
+    {
+        return [
+            'purpose' => data_get($blueprint, 'rider.message'),
+            'has_link' => filled(data_get($blueprint, 'rider.url')),
+            'has_splash' => filled(data_get($blueprint, 'rider.splash')),
+            'input_fields' => data_get($blueprint, 'inputs.fields', []),
+            'feedback_channels' => data_get($blueprint, 'feedback.channels', []),
+            'validations' => array_keys(array_filter(
+                data_get($blueprint, 'validation', []),
+                fn (mixed $value): bool => data_get($value, 'required') === true,
+            )),
+            'onboarding_mode' => data_get($blueprint, 'claim.onboarding.mode', 'if_required'),
+            'expiry_days' => (int) data_get($blueprint, 'expiry_days', 7),
         ];
     }
 

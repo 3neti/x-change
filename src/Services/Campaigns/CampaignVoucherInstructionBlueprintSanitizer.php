@@ -6,10 +6,15 @@ namespace LBHurtado\XChange\Services\Campaigns;
 
 use Illuminate\Support\Arr;
 use LBHurtado\Voucher\Enums\VoucherInputField;
+use LBHurtado\XRider\Support\RiderHtmlSanitizer;
 
 final class CampaignVoucherInstructionBlueprintSanitizer
 {
     public const SCHEMA = 'x-change.campaign-voucher-blueprint.v1';
+
+    public function __construct(
+        private readonly RiderHtmlSanitizer $htmlSanitizer,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $input
@@ -32,6 +37,42 @@ final class CampaignVoucherInstructionBlueprintSanitizer
                 'stamp',
             ],
         );
+        $rider['stamp'] = Arr::only(
+            is_array($rider['stamp'] ?? null) ? $rider['stamp'] : [],
+            [
+                'source',
+                'title',
+                'description',
+                'fit',
+                'position',
+                'scrim',
+                'theme',
+                'version',
+                'artwork_source',
+                'artwork_treatment',
+                'copy_source',
+                'show_logo',
+                'show_tagline',
+                'claim_marker',
+                'claim_marker_position',
+            ],
+        );
+
+        if (
+            filled($rider['splash'] ?? null)
+            && ! in_array($rider['splash_format'] ?? null, ['plain', 'markdown'], true)
+        ) {
+            $rider['splash'] = $this->htmlSanitizer->sanitizeSplash((string) $rider['splash']);
+            $rider['splash_meta'] = [
+                'sanitized' => true,
+                'html_profile' => 'rider_splash',
+            ];
+        } else {
+            $rider['splash_meta'] = Arr::only(
+                is_array($rider['splash_meta'] ?? null) ? $rider['splash_meta'] : [],
+                ['sanitized', 'html_profile'],
+            );
+        }
 
         $fields = collect(data_get($input, 'inputs.fields', []))
             ->filter(fn (mixed $field): bool => is_string($field))

@@ -6,6 +6,7 @@ use Bavix\Wallet\Models\Wallet;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -103,6 +104,90 @@ it('shows only the authenticated owner campaign worksheet summaries', function (
         ->assertJsonPath('props.worksheets.0.name', 'July Payroll')
         ->assertJsonPath('props.worksheets.0.beneficiary_count', 0)
         ->assertJsonMissingPath('props.worksheets.0.beneficiary');
+});
+
+it('lets only the draft owner save one encrypted Pay Code experience for every beneficiary', function () {
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-blueprint-cockpit-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Blueprint Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, [
+            'name' => 'Maria Santos',
+            'mobile' => '09173011987',
+            'email' => 'maria@example.test',
+        ], 12_500)],
+    ));
+
+    $this->put(route('x-change.cockpit.campaigns.voucher-blueprint.update', $worksheet->reference), [
+        'expected_revision' => 0,
+        'blueprint' => [
+            'cash' => ['amount' => 9_999_999],
+            'execution' => ['driver' => 'unsafe'],
+            'inputs' => ['fields' => ['name', 'reference_code']],
+            'feedback' => ['channels' => ['mobile', 'email']],
+            'rider' => [
+                'message' => 'July salary',
+                'url' => 'https://example.test/payroll',
+                'splash' => '<div onclick="alert(1)">Welcome<script>alert(1)</script></div>',
+                'splash_format' => 'html',
+                'stamp' => [
+                    'source' => 'automatic',
+                    'artwork_source' => 'splash',
+                    'fit' => 'cover',
+                    'position' => 'center',
+                    'theme' => 'automatic',
+                    'scrim' => 18,
+                    'show_logo' => true,
+                    'show_tagline' => true,
+                    'claim_marker' => 'qr',
+                    'claim_marker_position' => 'bottom_right',
+                    'version' => 2,
+                ],
+            ],
+            'validation' => [
+                'otp' => ['required' => true, 'on_failure' => 'block'],
+                'selfie' => ['required' => false, 'on_failure' => 'block'],
+                'signature' => ['required' => false, 'on_failure' => 'block'],
+            ],
+            'claim' => ['onboarding' => ['mode' => 'if_required']],
+            'expiry_days' => 14,
+        ],
+    ])->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', 'The common Pay Code experience was saved for every beneficiary.');
+
+    $stored = $repository->findForOwner(
+        (string) $worksheet->reference,
+        $owner->getMorphClass(),
+        (string) $owner->getKey(),
+    );
+    $ciphertext = DB::table('campaign_worksheets')
+        ->where('reference', $worksheet->reference)
+        ->value('instruction_blueprint_ciphertext');
+
+    expect($stored?->instructionBlueprintRevision)->toBe(1)
+        ->and($stored?->instructionBlueprint['rider']['message'])->toBe('July salary')
+        ->and($stored?->instructionBlueprint)->not->toHaveKeys(['cash', 'execution'])
+        ->and($stored?->instructionBlueprint['rider']['splash'])->not->toContain('<script')
+        ->and($stored?->instructionBlueprint['rider']['splash'])->not->toContain('onclick')
+        ->and($ciphertext)->not->toContain('July salary');
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertOk()
+        ->assertJsonPath('props.worksheet.instruction_blueprint.rider.message', 'July salary')
+        ->assertJsonPath('props.worksheet.instruction_blueprint_revision', 1);
+
+    $otherOwner = actingAsTestUser();
+    $this->actingAs($otherOwner)
+        ->put(route('x-change.cockpit.campaigns.voucher-blueprint.update', $worksheet->reference), [
+            'expected_revision' => 1,
+            'blueprint' => [],
+        ])
+        ->assertForbidden();
 });
 
 it('scrutinizes a worksheet before creating a campaign and converts selected valid rows', function () {
@@ -630,15 +715,36 @@ it('issues one zero-value settlement approval Pay Code for a frozen worksheet', 
         reference: 'campaign-approval-01', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Approval Payroll',
         rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09173011987'], 12_500)],
     ));
+    $repository->updateInstructionBlueprint(
+        (string) $worksheet->reference,
+        $owner->getMorphClass(),
+        (string) $owner->getKey(),
+        [
+            'rider' => ['message' => 'Officer-approved salary experience'],
+            'inputs' => ['fields' => ['name']],
+            'feedback' => ['channels' => []],
+            'validation' => ['otp' => ['required' => true, 'on_failure' => 'block']],
+            'claim' => ['onboarding' => ['mode' => 'if_required']],
+            'expiry_days' => 7,
+        ],
+        'x-change.campaign-voucher-blueprint.v1',
+        0,
+    );
     $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
 
     $first = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
     $second = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
 
+    $approvalVoucher = Voucher::query()->where('code', $first->approval_pay_code)->sole();
+
     expect($first->approval_pay_code)->not->toBeNull()
         ->and($second->getKey())->toBe($first->getKey())
         ->and($first->beneficiary_count)->toBe(1)
-        ->and($first->principal_minor)->toBe(12_500);
+        ->and($first->principal_minor)->toBe(12_500)
+        ->and($first->instruction_blueprint_ciphertext['rider']['message'])->toBe('Officer-approved salary experience')
+        ->and(data_get($approvalVoucher->instructions, 'execution.metadata.instruction_summary.purpose'))
+        ->toBe('Officer-approved salary experience')
+        ->and(Voucher::query()->count())->toBe(1);
 });
 
 it('issues a planned campaign batch once through the owner Cockpit control', function () {

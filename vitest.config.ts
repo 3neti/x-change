@@ -188,6 +188,11 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/campaign-authorization-route.ts',
             ),
+            '@/routes/x-change/cockpit/campaigns/voucher-blueprint':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/campaign-voucher-blueprint-route.ts',
+                ),
             '@/routes/x-change/cockpit/campaigns': path.resolve(
                 __dirname,
                 'tests/frontend/stubs/campaign-worksheet-route.ts',

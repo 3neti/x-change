@@ -19,6 +19,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignApprovalDeliveryController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignVoucherBlueprintController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferDispatchController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferReconciliationController;
@@ -139,6 +140,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/{worksheet}/rows', [CockpitCampaignWorksheetController::class, 'addRow'])
             ->middleware('throttle:60,1')
             ->name('x-change.cockpit.campaigns.rows.store');
+        Route::put('campaigns/{worksheet}/voucher-blueprint', CockpitCampaignVoucherBlueprintController::class)
+            ->middleware('throttle:30,1')
+            ->name('x-change.cockpit.campaigns.voucher-blueprint.update');
         Route::post('campaigns/{worksheet}/authorizations', [CockpitCampaignWorksheetAuthorizationController::class, 'store'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.campaigns.authorizations.store');

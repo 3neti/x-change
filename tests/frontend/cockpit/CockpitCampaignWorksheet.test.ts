@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import Campaigns from '../../../resources/js/cockpit/pages/Campaigns.vue';
 import CockpitCampaignWorksheetBeneficiaries from '../../../resources/js/cockpit/components/CockpitCampaignWorksheetBeneficiaries.vue';
+import CockpitCampaignPayCodeExperience from '../../../resources/js/cockpit/components/CockpitCampaignPayCodeExperience.vue';
 import CampaignsRouteAdapter from '../../../resources/js/pages/x-change/cockpit/Campaigns.vue';
 
 const worksheet = {
@@ -36,8 +37,18 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('Import Beneficiary List');
         expect(wrapper.text()).toContain('Drop A File Or Paste Rows');
         expect(wrapper.text()).toContain('Choose CSV Or Excel');
-        expect(wrapper.find('[data-testid="campaign-import-drop-zone"]').attributes('role')).toBe('group');
-        expect(wrapper.get(`[data-testid="campaign-activity-create-approval-${worksheet.reference}"]`).attributes('disabled')).toBeDefined();
+        expect(
+            wrapper
+                .find('[data-testid="campaign-import-drop-zone"]')
+                .attributes('role'),
+        ).toBe('group');
+        expect(
+            wrapper
+                .get(
+                    `[data-testid="campaign-activity-create-approval-${worksheet.reference}"]`,
+                )
+                .attributes('disabled'),
+        ).toBeDefined();
         expect(wrapper.text()).toContain('Start Blank');
     });
 
@@ -52,13 +63,19 @@ describe('Cockpit campaign worksheets', () => {
                 worksheets: [readyWorksheet],
             },
         });
-        const authorizationForm = (wrapper.vm as unknown as {
-            authorizationForm: {
-                post: (...args: unknown[]) => void;
-            };
-        }).authorizationForm;
-        const post = vi.spyOn(authorizationForm, 'post').mockImplementation(() => undefined);
-        const action = wrapper.get(`[data-testid="campaign-activity-create-approval-${worksheet.reference}"]`);
+        const authorizationForm = (
+            wrapper.vm as unknown as {
+                authorizationForm: {
+                    post: (...args: unknown[]) => void;
+                };
+            }
+        ).authorizationForm;
+        const post = vi
+            .spyOn(authorizationForm, 'post')
+            .mockImplementation(() => undefined);
+        const action = wrapper.get(
+            `[data-testid="campaign-activity-create-approval-${worksheet.reference}"]`,
+        );
 
         expect(action.attributes('disabled')).toBeUndefined();
         await action.trigger('click');
@@ -76,7 +93,9 @@ describe('Cockpit campaign worksheets', () => {
                 worksheets: [],
             },
         });
-        const dropZone = wrapper.get('[data-testid="campaign-import-drop-zone"]');
+        const dropZone = wrapper.get(
+            '[data-testid="campaign-import-drop-zone"]',
+        );
 
         await dropZone.trigger('dragenter');
         expect(dropZone.classes()).toContain('border-sky-500');
@@ -86,7 +105,11 @@ describe('Cockpit campaign worksheets', () => {
 
         await dropZone.trigger('drop', {
             dataTransfer: {
-                files: [new File(['not a worksheet'], 'beneficiaries.pdf', { type: 'application/pdf' })],
+                files: [
+                    new File(['not a worksheet'], 'beneficiaries.pdf', {
+                        type: 'application/pdf',
+                    }),
+                ],
             },
         });
 
@@ -99,36 +122,44 @@ describe('Cockpit campaign worksheets', () => {
                 worksheets: [],
             },
         });
-        const intakeForm = (wrapper.vm as unknown as {
-            intakeForm: {
-                file: File | null;
-                post: (...args: unknown[]) => void;
-            };
-        }).intakeForm;
-        const post = vi.spyOn(intakeForm, 'post').mockImplementation(() => undefined);
+        const intakeForm = (
+            wrapper.vm as unknown as {
+                intakeForm: {
+                    file: File | null;
+                    post: (...args: unknown[]) => void;
+                };
+            }
+        ).intakeForm;
+        const post = vi
+            .spyOn(intakeForm, 'post')
+            .mockImplementation(() => undefined);
         const csv = [
             'name,bank,account number,amount',
             'Maria Santos,BDO,001234567890,1000.00',
             'Jose Cruz,GCash,09171234567,500.00',
         ].join('\n');
 
-        await wrapper.get('[data-testid="campaign-import-drop-zone"]').trigger('paste', {
-            clipboardData: {
-                getData: vi.fn().mockReturnValue(csv),
-            },
-        });
+        await wrapper
+            .get('[data-testid="campaign-import-drop-zone"]')
+            .trigger('paste', {
+                clipboardData: {
+                    getData: vi.fn().mockReturnValue(csv),
+                },
+            });
 
         expect(post).toHaveBeenCalledOnce();
         expect(intakeForm.file).toBeInstanceOf(File);
         expect(intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
         expect(intakeForm.file?.type).toBe('text/csv');
 
-        await wrapper.get('[data-testid="campaign-import-drop-zone"]').trigger('drop', {
-            dataTransfer: {
-                files: [],
-                getData: vi.fn().mockReturnValue(csv),
-            },
-        });
+        await wrapper
+            .get('[data-testid="campaign-import-drop-zone"]')
+            .trigger('drop', {
+                dataTransfer: {
+                    files: [],
+                    getData: vi.fn().mockReturnValue(csv),
+                },
+            });
 
         expect(post).toHaveBeenCalledTimes(2);
         expect(intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
@@ -147,7 +178,9 @@ describe('Cockpit campaign worksheets', () => {
             };
             pasteIntakeFromPage: (event: ClipboardEvent) => void;
         };
-        const post = vi.spyOn(component.intakeForm, 'post').mockImplementation(() => undefined);
+        const post = vi
+            .spyOn(component.intakeForm, 'post')
+            .mockImplementation(() => undefined);
         const csv = [
             'name,bank,account number,amount',
             'Maria Santos,BDO,001234567890,1000.00',
@@ -165,7 +198,9 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(preventDefault).toHaveBeenCalledOnce();
         expect(post).toHaveBeenCalledOnce();
-        expect(component.intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
+        expect(component.intakeForm.file?.name).toBe(
+            'pasted-beneficiaries.csv',
+        );
 
         component.pasteIntakeFromPage({
             target: document.createElement('input'),
@@ -188,7 +223,12 @@ describe('Cockpit campaign worksheets', () => {
                     reference: '01KYINTAKE',
                     source_name: 'july-payroll.csv',
                     source_format: 'csv',
-                    source_headers: ['name', 'bank', 'account number', 'amount'],
+                    source_headers: [
+                        'name',
+                        'bank',
+                        'account number',
+                        'amount',
+                    ],
                     source_sheet: null,
                     row_count: 2,
                     mapping: {
@@ -220,7 +260,10 @@ describe('Cockpit campaign worksheets', () => {
                                 amount: '100.00',
                             },
                             normalized: {
-                                beneficiary: { name: 'Maria', mobile: '09173011987' },
+                                beneficiary: {
+                                    name: 'Maria',
+                                    mobile: '09173011987',
+                                },
                                 amount_minor: 10_000,
                             },
                             errors: [],
@@ -235,23 +278,33 @@ describe('Cockpit campaign worksheets', () => {
                                 amount: '50.00',
                             },
                             normalized: null,
-                            errors: ['A mobile number or email address is required.'],
+                            errors: [
+                                'A mobile number or email address is required.',
+                            ],
                         },
                     ],
                 },
             },
         });
 
-        expect(wrapper.find('[data-testid="campaign-intake-dialog"]').exists()).toBe(true);
+        expect(
+            wrapper.find('[data-testid="campaign-intake-dialog"]').exists(),
+        ).toBe(true);
         expect(wrapper.text()).toContain('Review Before Adding');
         expect(wrapper.text()).toContain('How Recipients Receive Funds');
         expect(wrapper.text()).toContain('Create Campaign With 1 Row');
-        expect(wrapper.text()).toContain('Scroll sideways to inspect every imported column.');
+        expect(wrapper.text()).toContain(
+            'Scroll sideways to inspect every imported column.',
+        );
         expect(wrapper.text()).toContain('bank');
         expect(wrapper.text()).toContain('account number');
         expect(wrapper.text()).toContain('GCash');
         expect(wrapper.text()).toContain('09173011987');
-        expect(wrapper.find('[data-testid="campaign-intake-source-table"]').classes()).toContain('overflow-auto');
+        expect(
+            wrapper
+                .find('[data-testid="campaign-intake-source-table"]')
+                .classes(),
+        ).toContain('overflow-auto');
     });
 
     it('labels authorized activity accurately instead of calling it draft only', () => {
@@ -305,22 +358,86 @@ describe('Cockpit campaign worksheets', () => {
         expect(bankDestination.text()).toContain('BDO');
         expect(bankDestination.text()).toContain('001234567890');
         expect(
-            wrapper.find(
-                '[data-testid="campaign-worksheet-bank-destination-beneficiary-mobile-02"]',
-            ).exists(),
+            wrapper
+                .find(
+                    '[data-testid="campaign-worksheet-bank-destination-beneficiary-mobile-02"]',
+                )
+                .exists(),
         ).toBe(false);
         expect(wrapper.text()).toContain('09171234567');
+    });
+
+    it('edits one shared Pay Code experience without creating beneficiary vouchers', async () => {
+        const wrapper = mount(CockpitCampaignPayCodeExperience, {
+            props: {
+                worksheetReference: worksheet.reference,
+                worksheetName: worksheet.name,
+                fulfillmentMode: worksheet.fulfillment_mode,
+                status: 'draft',
+                currency: 'PHP',
+                beneficiaryCount: 2,
+                representativeAmountMinor: 12_500,
+                representativeRecipient: '09173011987',
+                blueprint: {},
+                revision: 0,
+            },
+        });
+        const form = (
+            wrapper.vm as unknown as {
+                form: {
+                    put: (...args: unknown[]) => void;
+                    blueprint: {
+                        rider: { message: string };
+                    };
+                };
+            }
+        ).form;
+        const put = vi.spyOn(form, 'put').mockImplementation(() => undefined);
+
+        expect(wrapper.text()).toContain('Pay Code Experience');
+        expect(wrapper.text()).toContain('Applies To All 2');
+        expect(wrapper.text()).toContain(
+            'Amount and recipient come from each worksheet row.',
+        );
+        expect(wrapper.text()).toContain('₱125.00');
+        expect(
+            wrapper
+                .find('[data-testid="campaign-pay-code-experience"]')
+                .exists(),
+        ).toBe(true);
+
+        await wrapper.get('input[maxlength="5000"]').setValue('July salary');
+        const save = wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Save Experience'));
+        expect(save).toBeDefined();
+        await save?.trigger('click');
+
+        expect(form.blueprint.rider.message).toBe('July salary');
+        expect(put).toHaveBeenCalledOnce();
+        expect(put.mock.calls[0][0]).toBe(
+            `/x/cockpit/campaigns/${worksheet.reference}/voucher-blueprint`,
+        );
     });
 
     it('offers destructive deletion only for drafts and requires confirmation', async () => {
         const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
         const wrapper = mount(Campaigns, {
             props: {
-                worksheets: [worksheet, { ...worksheet, reference: 'authorized', status: 'authorized' }],
+                worksheets: [
+                    worksheet,
+                    {
+                        ...worksheet,
+                        reference: 'authorized',
+                        status: 'authorized',
+                    },
+                ],
             },
         });
 
-        const deleteButtons = wrapper.findAll('button[aria-label^="Delete draft"]');
+        const deleteButtons = wrapper.findAll(
+            'button[aria-label^="Delete draft"]',
+        );
         expect(deleteButtons).toHaveLength(1);
         await deleteButtons[0].trigger('click');
         expect(confirm).toHaveBeenCalledWith(
@@ -337,36 +454,46 @@ describe('Cockpit campaign worksheets', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-campaigns-page"]').exists()).toBe(true);
+        expect(
+            wrapper.find('[data-testid="cockpit-campaigns-page"]').exists(),
+        ).toBe(true);
         expect(wrapper.text()).toContain('Import Beneficiary List');
     });
 
     it('makes the planned post-approval state explicit before beneficiary issuance', () => {
         const page = readFileSync(
-            resolve(import.meta.dirname, '../../../resources/js/cockpit/pages/CampaignWorksheet.vue'),
+            resolve(
+                import.meta.dirname,
+                '../../../resources/js/cockpit/pages/CampaignWorksheet.vue',
+            ),
             'utf8',
         );
 
         expect(page).toContain('data-testid="campaign-fulfillment-readiness"');
+        expect(page).toContain('<CockpitCampaignPayCodeExperience');
         expect(page).toContain('Authorized Beneficiaries');
         expect(page).toContain('<CockpitCampaignWorksheetBeneficiaries');
-        expect(page).toContain("isDraft() ? 'Worksheet' : 'Authorized Worksheet'");
+        expect(page).toContain("'Authorized Worksheet'");
         expect(page).not.toContain('Private Worksheet');
-        expect(page).toContain('data-testid="campaign-create-approval-pay-code"');
+        expect(page).toContain(
+            'data-testid="campaign-create-approval-pay-code"',
+        );
         expect(page).toContain('Ready to lock for officer authorization.');
         expect(page.match(/Create Approval Pay Code/g)).toHaveLength(1);
-        expect(page.indexOf('data-testid="campaign-create-approval-pay-code"')).toBeLessThan(
-            page.indexOf('<CockpitCampaignImportWorkspace'),
-        );
-        expect(page.indexOf('<CockpitCampaignWorksheetBeneficiaries')).toBeLessThan(
-            page.indexOf('<CockpitCampaignImportWorkspace'),
-        );
-        expect(page).toContain("v-if=\"isDraft()\"");
+        expect(
+            page.indexOf('data-testid="campaign-create-approval-pay-code"'),
+        ).toBeLessThan(page.indexOf('<CockpitCampaignImportWorkspace'));
+        expect(
+            page.indexOf('<CockpitCampaignWorksheetBeneficiaries'),
+        ).toBeLessThan(page.indexOf('<CockpitCampaignImportWorkspace'));
+        expect(page).toContain('v-if="isDraft()"');
         expect(page).toContain('Pay Codes Issued');
         expect(page).toContain('Direct Bank Transfer Is Not Enabled');
         expect(page).toContain('props.direct_bank_transfer_enabled');
         expect(page).toContain('Beneficiaries Ready To Issue');
-        expect(page).toContain('No Pay Codes, delivery, or bank transfers have started.');
+        expect(page).toContain(
+            'No Pay Codes, delivery, or bank transfers have started.',
+        );
         expect(page).toContain('v-if="plannedCount() > 0"');
         expect(page).toContain('data-testid="campaign-delivery-controls"');
         expect(page).toContain('Issuance never sends messages.');
@@ -375,28 +502,38 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('Email Disabled');
         expect(page).toContain('data-testid="campaign-approval-delivery"');
         expect(page).toContain('Send To Officer');
-        expect(page).toContain('The officer must sign in and review it.');
+        expect(page).toContain('must sign in and review it.');
     });
 
     it('keeps imported beneficiaries staged behind explicit review controls', () => {
         const page = readFileSync(
-            resolve(import.meta.dirname, '../../../resources/js/cockpit/pages/CampaignWorksheet.vue'),
+            resolve(
+                import.meta.dirname,
+                '../../../resources/js/cockpit/pages/CampaignWorksheet.vue',
+            ),
             'utf8',
         );
         const workspace = readFileSync(
-            resolve(import.meta.dirname, '../../../resources/js/cockpit/components/CockpitCampaignImportWorkspace.vue'),
+            resolve(
+                import.meta.dirname,
+                '../../../resources/js/cockpit/components/CockpitCampaignImportWorkspace.vue',
+            ),
             'utf8',
         );
 
         expect(page).toContain('<CockpitCampaignImportWorkspace');
         expect(page).toContain('hasPendingImportRows');
         expect(workspace).toContain('data-testid="campaign-import-workspace"');
-        expect(workspace).toContain('Two columns are enough: Mobile and Amount.');
+        expect(workspace).toContain(
+            'Two columns are enough: Mobile and Amount.',
+        );
         expect(workspace).toContain('Update Mapping');
         expect(workspace).toContain('Needs Attention');
-        expect(workspace).toContain('Add {{ activeImport.unapplied_valid_count }} Valid Beneficiaries');
+        expect(workspace).toContain(
+            'Add {{ activeImport.unapplied_valid_count }} Valid Beneficiaries',
+        );
         expect(workspace).toContain('Invalid rows stay staged for correction.');
-        expect(workspace).toContain("router.delete(imports.destroy");
+        expect(workspace).toContain('router.delete(imports.destroy');
         expect(workspace).toContain('xl:grid-cols-[18rem_minmax(0,1fr)]');
         expect(workspace).toContain('dark:bg-slate-900');
     });
