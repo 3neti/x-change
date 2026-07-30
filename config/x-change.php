@@ -385,6 +385,16 @@ return [
     ],
 
     'campaigns' => [
+        'pay_code_issuance' => [
+            'connection' => env(
+                'XCHANGE_CAMPAIGNS_PAY_CODE_TREASURY_CONNECTION',
+                'netbank-primary',
+            ),
+            'ttl_days' => (int) env(
+                'XCHANGE_CAMPAIGNS_PAY_CODE_TTL_DAYS',
+                7,
+            ),
+        ],
         'netbank_dispatch' => [
             'enabled' => (bool) env('XCHANGE_CAMPAIGNS_NETBANK_DISPATCH_ENABLED', false),
         ],

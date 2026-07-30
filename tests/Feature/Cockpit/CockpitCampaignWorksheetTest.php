@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Bavix\Wallet\Models\Wallet;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Http\UploadedFile;
@@ -9,12 +10,16 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\ConvergeCampaignFeedbackDelivery;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Jobs\Campaigns\ConvergeCampaignFeedbackDeliveryJob;
 use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
@@ -25,6 +30,25 @@ use LBHurtado\XFeedback\Drivers\SmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+
+function fundCampaignOwnerClientFunds(
+    mixed $owner,
+    int $amountMinor,
+    string $evidenceReference,
+): void {
+    enableNetbankTreasuryForTests();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $owner,
+        ['netbank-primary'],
+    );
+    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
+        accountReference: 'wallet:'.$owner->wallet->uuid,
+        provider: 'netbank',
+        amountMinor: $amountMinor,
+        currency: 'PHP',
+        evidenceReference: $evidenceReference,
+    );
+}
 
 it('keeps campaign messaging behind the encrypted x-change feedback queue boundary', function () {
     config()->set('x-change.redemption.feedback.queue', 'default');
@@ -198,7 +222,23 @@ it('issues one zero-value settlement approval Pay Code for a frozen worksheet', 
 });
 
 it('issues a planned campaign batch once through the owner Cockpit control', function () {
-    $owner = actingAsTestUser();
+    $owner = actingAsTestUser(0);
+    fundCampaignOwnerClientFunds(
+        $owner,
+        20_000,
+        'netbank:campaign-test-client-funds',
+    );
+    $positions = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $owner)
+        ->where('connection_reference', 'netbank-primary')
+        ->get()
+        ->keyBy('purpose');
+    $clientFunds = $positions->get(
+        TreasuryPositionPurpose::ClientFunds->value,
+    );
+    $payCodeReserve = $positions->get(
+        TreasuryPositionPurpose::PayCodeReserve->value,
+    );
     $officer = actingAsTestUser();
     $officer->forceFill(['mobile' => '09173011987'])->save();
     $repository = app(CampaignWorksheetRepository::class);
@@ -234,7 +274,10 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
     $authorization->refresh();
 
     expect($authorization->fulfillments()->where('status', 'issued')->count())->toBe(2)
-        ->and($authorization->fulfillments()->whereNotNull('pay_code')->count())->toBe(2);
+        ->and($authorization->fulfillments()->whereNotNull('pay_code')->count())->toBe(2)
+        ->and((int) $owner->wallet()->where('slug', 'platform')->sole()->balance)->toBe(0)
+        ->and(Wallet::query()->findOrFail($clientFunds->internal_ledger_id)->getBalanceIntAttribute())->toBe(0)
+        ->and(Wallet::query()->findOrFail($payCodeReserve->internal_ledger_id)->getBalanceIntAttribute())->toBe(20_000);
 
     $this->post(route('x-change.cockpit.campaigns.fulfillments.pay-codes.store', $worksheet->reference))
         ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
@@ -244,8 +287,95 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
         ->and($authorization->fulfillments()->whereNotNull('pay_code')->count())->toBe(2);
 });
 
+it('rolls back campaign Pay Code issuance when Client Funds are insufficient', function () {
+    $owner = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $owner,
+        ['netbank-primary'],
+    );
+    $officer = actingAsTestUser();
+    $officer->forceFill(['mobile' => '09173011987'])->save();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-cockpit-insufficient-client-funds-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Insufficient Client Funds Payroll',
+        fulfillmentMode: 'pay_code_distribution',
+        rows: [
+            new CampaignWorksheetRowData(
+                null,
+                1,
+                ['mobile' => '09178889999'],
+                12_500,
+            ),
+        ],
+    ));
+    $repository->freeze(
+        (string) $worksheet->reference,
+        $owner->getMorphClass(),
+        (string) $owner->getKey(),
+    );
+
+    $this->actingAs($owner);
+    $authorization = app(
+        IssueCampaignWorksheetApprovalPayCode::class,
+    )->handle((string) $worksheet->reference, $owner);
+
+    $this->actingAs($officer);
+    app(CampaignWorksheetAuthorizationExecutionService::class)->execute(
+        Voucher::query()
+            ->where('code', $authorization->approval_pay_code)
+            ->sole(),
+        ['mobile' => '09173011987'],
+    );
+    $voucherCountBefore = Voucher::query()->count();
+
+    $this->actingAs($owner)
+        ->post(route(
+            'x-change.cockpit.campaigns.fulfillments.pay-codes.store',
+            $worksheet->reference,
+        ))
+        ->assertRedirect(route(
+            'x-change.cockpit.campaigns.show',
+            $worksheet->reference,
+        ))
+        ->assertSessionHas(
+            'campaign_notice',
+            'Campaign Pay Codes could not be issued because Client Funds are insufficient.',
+        );
+
+    $fulfillment = $authorization->refresh()->fulfillments()->sole();
+    $positions = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $owner)
+        ->where('connection_reference', 'netbank-primary')
+        ->get()
+        ->keyBy('purpose');
+
+    expect(Voucher::query()->count())->toBe($voucherCountBefore)
+        ->and($fulfillment->status)->toBe('planned')
+        ->and($fulfillment->pay_code)->toBeNull()
+        ->and(Wallet::query()->findOrFail(
+            $positions->get(
+                TreasuryPositionPurpose::ClientFunds->value,
+            )->internal_ledger_id,
+        )->getBalanceIntAttribute())->toBe(0)
+        ->and(Wallet::query()->findOrFail(
+            $positions->get(
+                TreasuryPositionPurpose::PayCodeReserve->value,
+            )->internal_ledger_id,
+        )->getBalanceIntAttribute())->toBe(0);
+});
+
 it('records an explicit export as an immutable append-only delivery attempt', function () {
     $owner = actingAsTestUser();
+    fundCampaignOwnerClientFunds(
+        $owner,
+        100_000,
+        'netbank:campaign-explicit-export',
+    );
     $officer = actingAsTestUser();
     $officer->forceFill(['mobile' => '09173011987'])->save();
     $repository = app(CampaignWorksheetRepository::class);
@@ -322,6 +452,11 @@ it('queues campaign email on x-change-feedback and records blocked routes', func
     config()->set('x-change.campaigns.delivery.email.enabled', true);
     config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
     $owner = actingAsTestUser();
+    fundCampaignOwnerClientFunds(
+        $owner,
+        100_000,
+        'netbank:campaign-explicit-email',
+    );
     $officer = actingAsTestUser();
     $officer->forceFill(['mobile' => '09173011987'])->save();
     $repository = app(CampaignWorksheetRepository::class);
@@ -450,6 +585,11 @@ it('uses the canonical claim path in beneficiary Pay Code sms', function () {
     config()->set('x-change.campaigns.delivery.sms.enabled', true);
     config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
     $owner = actingAsTestUser();
+    fundCampaignOwnerClientFunds(
+        $owner,
+        100_000,
+        'netbank:campaign-beneficiary-sms-claim-url',
+    );
     $officer = actingAsTestUser();
     $officer->forceFill(['mobile' => '09173011987'])->save();
     $repository = app(CampaignWorksheetRepository::class);
