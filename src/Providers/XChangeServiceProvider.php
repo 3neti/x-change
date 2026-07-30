@@ -370,6 +370,12 @@ class XChangeServiceProvider extends ServiceProvider
         );
         $this->mergeLifecycleScenarioDefaults();
 
+        if ($this->mobileFirstAuthEnabled()) {
+            $this->app['config']->set('fortify.username', 'mobile');
+            $this->app['config']->set('fortify.lowercase_usernames', false);
+            $this->app['config']->set('fortify.home', '/x/cockpit');
+        }
+
         $this->alignWalletDefaults();
         $this->alignVoucherDefaults();
         $this->alignAccountSystemUser();
@@ -1636,10 +1642,6 @@ class XChangeServiceProvider extends ServiceProvider
         }
 
         $this->app->booted(function (): void {
-            $this->app['config']->set('fortify.username', 'mobile');
-            $this->app['config']->set('fortify.lowercase_usernames', false);
-            $this->app['config']->set('fortify.home', '/x/cockpit');
-
             Fortify::authenticateUsing($this->app->make(AuthenticateMobileFirstUser::class));
             Fortify::createUsersUsing(CreateNewMobileFirstUser::class);
             Fortify::resetUserPasswordsUsing(ResetMobileFirstPin::class);
