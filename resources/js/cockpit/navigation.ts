@@ -34,7 +34,7 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         label: 'Campaigns',
         href: '/x/cockpit/campaigns',
         group: 'primary',
-        description: 'Batch Pay Code worksheets',
+        description: 'Payments to many recipients',
     },
     {
         key: 'templates',

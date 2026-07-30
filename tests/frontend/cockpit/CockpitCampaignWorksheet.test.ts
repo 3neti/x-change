@@ -28,7 +28,12 @@ describe('Cockpit campaign worksheets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Campaign Activity');
+        expect(wrapper.text()).toContain('Batch Payments');
+        expect(wrapper.text()).toContain(
+            'Prepare one approved payment batch for multiple recipients.',
+        );
+        expect(wrapper.text()).toContain('Batches');
+        expect(wrapper.text()).toContain('Recipients');
         expect(wrapper.text()).toContain('July Payroll');
         expect(wrapper.text()).toContain('0');
         expect(wrapper.text()).toContain('₱0.00');
