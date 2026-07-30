@@ -34,9 +34,9 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('Draft only');
         expect(wrapper.text()).not.toContain('Maria Santos');
         expect(wrapper.text()).toContain('Import Beneficiary List');
-        expect(wrapper.text()).toContain('Drop CSV Or Excel Here');
+        expect(wrapper.text()).toContain('Drop A File Or Paste Rows');
         expect(wrapper.text()).toContain('Choose CSV Or Excel');
-        expect(wrapper.find('[data-testid="campaign-import-drop-zone"]').attributes('role')).toBe('button');
+        expect(wrapper.find('[data-testid="campaign-import-drop-zone"]').attributes('role')).toBe('group');
         expect(wrapper.text()).toContain('Start Blank');
     });
 
@@ -61,6 +61,47 @@ describe('Cockpit campaign worksheets', () => {
         });
 
         expect(wrapper.text()).toContain('Choose a CSV or XLSX file.');
+    });
+
+    it('turns pasted or dragged CSV rows into an intake upload', async () => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+            },
+        });
+        const intakeForm = (wrapper.vm as unknown as {
+            intakeForm: {
+                file: File | null;
+                post: (...args: unknown[]) => void;
+            };
+        }).intakeForm;
+        const post = vi.spyOn(intakeForm, 'post').mockImplementation(() => undefined);
+        const csv = [
+            'name,bank,account number,amount',
+            'Maria Santos,BDO,001234567890,1000.00',
+            'Jose Cruz,GCash,09171234567,500.00',
+        ].join('\n');
+
+        await wrapper.get('[data-testid="campaign-import-drop-zone"]').trigger('paste', {
+            clipboardData: {
+                getData: vi.fn().mockReturnValue(csv),
+            },
+        });
+
+        expect(post).toHaveBeenCalledOnce();
+        expect(intakeForm.file).toBeInstanceOf(File);
+        expect(intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
+        expect(intakeForm.file?.type).toBe('text/csv');
+
+        await wrapper.get('[data-testid="campaign-import-drop-zone"]').trigger('drop', {
+            dataTransfer: {
+                files: [],
+                getData: vi.fn().mockReturnValue(csv),
+            },
+        });
+
+        expect(post).toHaveBeenCalledTimes(2);
+        expect(intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
     });
 
     it('opens an explicit intake review with suggested choices and row controls', () => {

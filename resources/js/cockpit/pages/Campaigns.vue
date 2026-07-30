@@ -77,6 +77,12 @@ function openIntakeFilePicker(): void {
     }
 }
 
+function focusIntakeDropZone(event: MouseEvent): void {
+    if (!intakeForm.processing) {
+        (event.currentTarget as HTMLElement).focus();
+    }
+}
+
 function beginIntakeDrag(): void {
     if (intakeForm.processing) {
         return;
@@ -94,6 +100,30 @@ function endIntakeDrag(): void {
     }
 }
 
+function submitPastedIntake(text: string): void {
+    const csv = text.trim();
+
+    if (csv === '' || !csv.includes('\n')) {
+        intakeFileError.value = 'Paste CSV rows with a header and at least one beneficiary.';
+
+        return;
+    }
+
+    submitIntakeFile(new File(
+        [`${csv}\n`],
+        'pasted-beneficiaries.csv',
+        { type: 'text/csv' },
+    ));
+}
+
+function pasteIntake(event: ClipboardEvent): void {
+    if (intakeForm.processing) {
+        return;
+    }
+
+    submitPastedIntake(event.clipboardData?.getData('text/plain') ?? '');
+}
+
 function dropIntake(event: DragEvent): void {
     intakeDragDepth.value = 0;
     isDraggingIntake.value = false;
@@ -104,15 +134,19 @@ function dropIntake(event: DragEvent): void {
 
     const files = Array.from(event.dataTransfer?.files ?? []);
 
-    if (files.length !== 1) {
-        intakeFileError.value = files.length > 1
-            ? 'Choose one beneficiary file at a time.'
-            : 'Choose a CSV or XLSX file.';
+    if (files.length > 1) {
+        intakeFileError.value = 'Choose one beneficiary file at a time.';
 
         return;
     }
 
-    submitIntakeFile(files[0]);
+    if (files.length === 1) {
+        submitIntakeFile(files[0]);
+
+        return;
+    }
+
+    submitPastedIntake(event.dataTransfer?.getData('text/plain') ?? '');
 }
 
 function createWorksheet(): void {
@@ -271,38 +305,48 @@ function dateTime(value: string | null): string {
                                 <h2 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">Import Beneficiary List</h2>
                             </div>
                         </div>
-                        <p class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300">Upload CSV or Excel. We’ll suggest the purpose and recipient method before creating anything.</p>
+                        <p class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300">Upload a file or paste copied CSV rows. We’ll suggest the purpose and recipient method before creating anything.</p>
                         <div
                             data-testid="campaign-import-drop-zone"
-                            role="button"
+                            role="group"
                             :tabindex="intakeForm.processing ? -1 : 0"
                             :aria-disabled="intakeForm.processing"
-                            aria-label="Import beneficiary list from CSV or Excel"
+                            aria-label="Import beneficiary list from CSV, Excel, or pasted rows"
                             class="mt-4 flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-6 text-center transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
                             :class="
                                 isDraggingIntake
                                     ? 'border-sky-500 bg-sky-50 ring-4 ring-sky-100 dark:border-sky-400 dark:bg-sky-950/40 dark:ring-sky-950'
                                     : 'border-slate-300 bg-slate-50/70 hover:border-sky-400 hover:bg-sky-50/60 dark:border-slate-700 dark:bg-slate-950/60 dark:hover:border-sky-500 dark:hover:bg-sky-950/30'
                             "
-                            @click="openIntakeFilePicker"
+                            @click="focusIntakeDropZone"
                             @keydown.enter.prevent="openIntakeFilePicker"
                             @keydown.space.prevent="openIntakeFilePicker"
                             @dragenter.prevent="beginIntakeDrag"
                             @dragover.prevent
                             @dragleave.prevent="endIntakeDrag"
                             @drop.prevent="dropIntake"
+                            @paste.prevent="pasteIntake"
                         >
                             <span class="inline-flex size-10 items-center justify-center rounded-full bg-white text-sky-600 shadow-sm dark:bg-slate-900 dark:text-sky-300">
                                 <Upload class="size-5" aria-hidden="true" />
                             </span>
                             <p class="mt-3 text-sm font-semibold text-slate-950 dark:text-slate-50">
-                                {{ intakeForm.processing ? 'Inspecting Beneficiaries…' : isDraggingIntake ? 'Drop To Inspect' : 'Drop CSV Or Excel Here' }}
+                                {{ intakeForm.processing ? 'Inspecting Beneficiaries…' : isDraggingIntake ? 'Drop To Inspect' : 'Drop A File Or Paste Rows' }}
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {{ intakeForm.processing ? 'Preparing a private review. Nothing is added yet.' : 'or Choose CSV Or Excel' }}
+                                {{ intakeForm.processing ? 'Preparing a private review. Nothing is added yet.' : 'Click here and press Ctrl/⌘ + V' }}
                             </p>
+                            <button
+                                v-if="!intakeForm.processing"
+                                type="button"
+                                class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+                                @click.stop="openIntakeFilePicker"
+                            >
+                                <Upload class="size-3.5" aria-hidden="true" />
+                                Choose CSV Or Excel
+                            </button>
                             <p class="mt-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                                CSV · XLSX · One File At A Time
+                                CSV · XLSX · Copied Rows
                             </p>
                         </div>
                         <input
