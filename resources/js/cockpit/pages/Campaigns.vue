@@ -279,7 +279,7 @@ function statusClasses(status: string): string {
         return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300';
     }
 
-    if (status === 'awaiting_officer') {
+    if (status === 'awaiting_officer' || status === 'awaiting_authorization') {
         return 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300';
     }
 
@@ -293,7 +293,10 @@ function batchActionLabel(worksheet: CampaignWorksheet): string {
             : 'Continue';
     }
 
-    if (worksheet.status === 'awaiting_officer') {
+    if (
+        worksheet.status === 'awaiting_officer' ||
+        worksheet.status === 'awaiting_authorization'
+    ) {
         return 'View Approval';
     }
 

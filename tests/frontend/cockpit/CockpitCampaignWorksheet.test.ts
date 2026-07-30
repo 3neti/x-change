@@ -323,6 +323,24 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).not.toContain('Draft only');
     });
 
+    it('directs batches awaiting authorization to their approval workspace', () => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [
+                    {
+                        ...worksheet,
+                        status: 'awaiting_authorization',
+                        beneficiary_count: 2,
+                    },
+                ],
+            },
+        });
+
+        expect(wrapper.text()).toContain('Awaiting Authorization');
+        expect(wrapper.text()).toContain('View Approval');
+        expect(wrapper.text()).not.toContain('View Results');
+    });
+
     it('shows the bank and account number in the owner private worksheet when available', () => {
         const wrapper = mount(CockpitCampaignWorksheetBeneficiaries, {
             props: {
