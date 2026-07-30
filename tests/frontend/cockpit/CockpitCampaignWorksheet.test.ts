@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import Campaigns from '../../../resources/js/cockpit/pages/Campaigns.vue';
+import CockpitCampaignWorksheetBeneficiaries from '../../../resources/js/cockpit/components/CockpitCampaignWorksheetBeneficiaries.vue';
 import CampaignsRouteAdapter from '../../../resources/js/pages/x-change/cockpit/Campaigns.vue';
 
 const worksheet = {
@@ -122,6 +123,53 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).not.toContain('Draft only');
     });
 
+    it('shows the bank and account number in the owner private worksheet when available', () => {
+        const wrapper = mount(CockpitCampaignWorksheetBeneficiaries, {
+            props: {
+                draft: true,
+                rows: [
+                    {
+                        reference: 'beneficiary-bank-01',
+                        ordinal: 1,
+                        beneficiary: {
+                            name: 'Maria Santos',
+                            institution: 'BDO',
+                            bank_code: 'BNORPHMMXXX',
+                            bank_account: '001234567890',
+                        },
+                        amount_minor: 100_000,
+                        delivery_preference: 'manual',
+                        status: 'draft',
+                    },
+                    {
+                        reference: 'beneficiary-mobile-02',
+                        ordinal: 2,
+                        beneficiary: {
+                            name: 'Jose Cruz',
+                            mobile: '09171234567',
+                        },
+                        amount_minor: 50_000,
+                        delivery_preference: 'sms',
+                        status: 'draft',
+                    },
+                ],
+            },
+        });
+
+        const bankDestination = wrapper.get(
+            '[data-testid="campaign-worksheet-bank-destination-beneficiary-bank-01"]',
+        );
+
+        expect(bankDestination.text()).toContain('BDO');
+        expect(bankDestination.text()).toContain('001234567890');
+        expect(
+            wrapper.find(
+                '[data-testid="campaign-worksheet-bank-destination-beneficiary-mobile-02"]',
+            ).exists(),
+        ).toBe(false);
+        expect(wrapper.text()).toContain('09171234567');
+    });
+
     it('offers destructive deletion only for drafts and requires confirmation', async () => {
         const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
         const wrapper = mount(Campaigns, {
@@ -159,6 +207,7 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(page).toContain('data-testid="campaign-fulfillment-readiness"');
         expect(page).toContain('Authorized Beneficiaries');
+        expect(page).toContain('<CockpitCampaignWorksheetBeneficiaries');
         expect(page).toContain("v-if=\"isDraft()\"");
         expect(page).toContain('Pay Codes Issued');
         expect(page).toContain('Direct Bank Transfer Is Not Enabled');

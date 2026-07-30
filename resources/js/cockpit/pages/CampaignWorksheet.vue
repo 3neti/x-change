@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { ArrowLeft, Download, LockKeyhole, Mail, MessageSquare, Plus, RotateCcw, Send, Users } from 'lucide-vue-next';
+import { ArrowLeft, Download, LockKeyhole, Mail, MessageSquare, Plus, RotateCcw, Send } from 'lucide-vue-next';
 import { index } from '@/routes/x-change/cockpit/campaigns';
 import rows from '@/routes/x-change/cockpit/campaigns/rows';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
@@ -10,11 +10,13 @@ import exports from '@/routes/x-change/cockpit/campaigns/exports';
 import deliveries from '@/routes/x-change/cockpit/campaigns/deliveries';
 import { show as claimShow } from '@/routes/x-change/claim';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
+import CockpitCampaignWorksheetBeneficiaries, {
+    type CampaignWorksheetBeneficiaryRow,
+} from '../components/CockpitCampaignWorksheetBeneficiaries.vue';
 import CockpitCampaignImportWorkspace, { type CampaignImport } from '../components/CockpitCampaignImportWorkspace.vue';
 import type { CockpitHeaderPageProps } from '../types';
 
-type Row = { reference: string; ordinal: number; beneficiary: Record<string, string>; amount_minor: number; delivery_preference: string; status: string };
-type Worksheet = { reference: string; profile: string; name: string; status: string; fulfillment_mode: string; rows: Row[] };
+type Worksheet = { reference: string; profile: string; name: string; status: string; fulfillment_mode: string; rows: CampaignWorksheetBeneficiaryRow[] };
 type Authorization = { reference?: string; status?: string; approval_pay_code?: string | null; beneficiary_count?: number; principal_minor?: number };
 type Fulfillment = { reference: string; ordinal: number; beneficiary: string; amount_minor: number; mode: string; status: string; provider_transfer_reference: string | null; pay_code: string | null };
 type DeliveryAttempt = { reference: string; channel: string; attempt_number: number; retry_of_reference: string | null; purpose: string; beneficiary: string; pay_code: string | null; status: string; safe_error_code: string | null; requested_at: string | null; can_retry: boolean };
@@ -95,8 +97,10 @@ const sendApproval = (): void => {
             <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                 <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800"><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{{ isDraft() ? 'Draft Beneficiaries' : 'Authorized Beneficiaries' }}</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ isDraft() ? 'Private Worksheet' : 'Authorized Worksheet' }}</h2></div>
-                    <div v-if="props.worksheet.rows.length === 0" class="flex min-h-64 flex-col items-center justify-center text-center"><Users class="size-8 text-slate-300 dark:text-slate-700" /><p class="mt-3 font-semibold text-slate-950 dark:text-slate-50">No beneficiaries yet</p><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ isDraft() ? 'Add the first recipient from the form.' : 'This authorized worksheet has no beneficiaries.' }}</p></div>
-                    <div v-else class="divide-y divide-slate-200 dark:divide-slate-800"><article v-for="row in props.worksheet.rows" :key="row.reference" class="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><div><p class="font-semibold text-slate-950 dark:text-slate-50">{{ row.beneficiary.name || row.beneficiary.mobile || row.beneficiary.bank_account }}</p><p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ row.beneficiary.mobile || row.beneficiary.bank_account }} · {{ row.delivery_preference }}</p></div><p class="font-semibold text-slate-950 dark:text-slate-50">{{ peso(row.amount_minor) }}</p></article></div>
+                    <CockpitCampaignWorksheetBeneficiaries
+                        :rows="props.worksheet.rows"
+                        :draft="isDraft()"
+                    />
                 </div>
 
                 <form v-if="isDraft()" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900" @submit.prevent="add">
