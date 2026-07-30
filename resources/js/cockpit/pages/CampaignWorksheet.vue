@@ -145,38 +145,44 @@ const fulfillmentReadinessDescription = (): string => {
     );
 };
 const add = (): void =>
-    form.post(rows.store(props.worksheet.reference), {
+    form.post(rows.store(props.worksheet.reference).url, {
         preserveScroll: true,
         onSuccess: () => form.reset(),
     });
 const authorize = (): void =>
-    authorizationForm.post(authorizations.store(props.worksheet.reference), {
-        preserveScroll: true,
-    });
+    authorizationForm.post(
+        authorizations.store(props.worksheet.reference).url,
+        {
+            preserveScroll: true,
+        },
+    );
 const issue = (): void =>
     fulfillmentForm.post(
-        fulfillments.payCodes.store(props.worksheet.reference),
+        fulfillments.payCodes.store(props.worksheet.reference).url,
         { preserveScroll: true },
     );
 const dispatchTransfers = (): void =>
     transferForm.post(
-        fulfillments.bankTransfers.store(props.worksheet.reference),
+        fulfillments.bankTransfers.store(props.worksheet.reference).url,
         { preserveScroll: true },
     );
 const reconcileTransfers = (): void =>
     reconciliationForm.post(
         fulfillments.bankTransfers.reconciliations.store(
             props.worksheet.reference,
-        ),
+        ).url,
         { preserveScroll: true },
     );
 const planFallbacks = (): void =>
-    fallbackForm.post(fulfillments.fallbacks.store(props.worksheet.reference), {
-        preserveScroll: true,
-    });
+    fallbackForm.post(
+        fulfillments.fallbacks.store(props.worksheet.reference).url,
+        {
+            preserveScroll: true,
+        },
+    );
 const deliver = (channel: 'sms' | 'email'): void =>
     deliveryForm.post(
-        deliveries.store({ worksheet: props.worksheet.reference, channel }),
+        deliveries.store({ worksheet: props.worksheet.reference, channel }).url,
         { preserveScroll: true },
     );
 const retryDelivery = (reference: string): void =>
@@ -184,7 +190,7 @@ const retryDelivery = (reference: string): void =>
         deliveries.retries.store({
             worksheet: props.worksheet.reference,
             attempt: reference,
-        }),
+        }).url,
         { preserveScroll: true },
     );
 const sendApproval = (): void => {
