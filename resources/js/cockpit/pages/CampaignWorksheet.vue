@@ -137,18 +137,18 @@ const fulfillmentReadinessDescription = (): string => {
     const count = plannedCount();
 
     if (count === 0 && issuedCount() > 0) {
-        return `All ${issuedCount()} ${issuedCount() === 1 ? 'beneficiary Pay Code has' : 'beneficiary Pay Codes have'} been issued. Export the list when you are ready to distribute it.`;
+        return `All ${issuedCount()} ${issuedCount() === 1 ? 'Pay Code is' : 'Pay Codes are'} ready to distribute.`;
     }
 
     if (count === 0) {
-        return 'The authorized worksheet is preparing its beneficiary issuance plan. No Pay Codes, delivery, or bank transfers have started.';
+        return 'Preparing the approved recipient list.';
     }
 
     return (
         count +
         ' ' +
-        (count === 1 ? 'beneficiary is' : 'beneficiaries are') +
-        ' ready for explicit issuance. No Pay Codes, delivery, or bank transfers have started.'
+        (count === 1 ? 'recipient is' : 'recipients are') +
+        ' ready for Pay Code issuance.'
     );
 };
 const add = (): void =>
@@ -495,17 +495,17 @@ const sendApproval = (): void => {
                         <p
                             class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                         >
-                            Beneficiary Fulfillment
+                            Issuance
                         </p>
                         <h2
                             class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50"
                         >
                             {{
                                 plannedCount() > 0
-                                    ? 'Beneficiaries Ready To Issue'
+                                    ? 'Recipients Ready'
                                     : issuedCount() > 0
                                       ? 'Pay Codes Issued'
-                                      : 'Beneficiary Fulfillment Is Being Prepared'
+                                      : 'Preparing Pay Codes'
                             }}
                         </h2>
                         <p
@@ -544,15 +544,15 @@ const sendApproval = (): void => {
                         <p
                             class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                         >
-                            NetBank Fulfillment
+                            Bank Transfers
                         </p>
                         <h2
                             class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50"
                         >
                             {{
                                 props.direct_bank_transfer_enabled
-                                    ? 'Dispatch Next 100 Transfers'
-                                    : 'Direct Bank Transfer Is Not Enabled'
+                                    ? 'Transfers Ready'
+                                    : 'Bank Transfers Unavailable'
                             }}
                         </h2>
                         <p
@@ -560,8 +560,8 @@ const sendApproval = (): void => {
                         >
                             {{
                                 props.direct_bank_transfer_enabled
-                                    ? 'Checking never re-dispatches a transfer.'
-                                    : 'This authorized worksheet remains intact. Enable the explicit NetBank runtime gate before any provider transfer controls are available.'
+                                    ? 'Send or check the next authorized transfer batch.'
+                                    : 'This batch remains authorized. Transfers can begin when NetBank is enabled.'
                             }}
                         </p>
                     </div>
@@ -668,18 +668,18 @@ const sendApproval = (): void => {
                         <p
                             class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                         >
-                            Delivery
+                            Distribution
                         </p>
                         <h2
                             class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50"
                         >
-                            Choose How To Distribute
+                            Send Pay Codes
                         </h2>
                         <p
                             class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                         >
-                            Issuance never sends messages. Each action below is
-                            explicit and recorded.
+                            Download the list or send through an enabled
+                            channel.
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
@@ -728,7 +728,7 @@ const sendApproval = (): void => {
                     v-if="props.delivery.attempts.length === 0"
                     class="px-4 py-5 text-sm text-slate-500 dark:text-slate-400"
                 >
-                    No delivery attempts yet.
+                    Nothing sent yet.
                 </div>
                 <div
                     v-else
@@ -782,7 +782,7 @@ const sendApproval = (): void => {
                 <p
                     class="text-[0.65rem] font-semibold tracking-[0.18em] text-amber-800 uppercase dark:text-amber-200"
                 >
-                    Officer Authorization
+                    Approval
                 </p>
                 <div
                     class="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -791,7 +791,7 @@ const sendApproval = (): void => {
                         <h2
                             class="font-semibold text-slate-950 dark:text-slate-50"
                         >
-                            Approval Pay Code Ready
+                            Officer Approval Required
                         </h2>
                         <p
                             class="mt-1 text-sm text-slate-600 dark:text-slate-300"
@@ -799,8 +799,8 @@ const sendApproval = (): void => {
                             <span class="font-semibold">{{
                                 props.authorization.approval_pay_code
                             }}</span>
-                            authorizes this frozen beneficiary list. The officer
-                            must sign in and review it.
+                            · {{ props.worksheet.rows.length }} recipients. The
+                            officer must sign in to approve this batch.
                         </p>
                     </div>
                     <Link
@@ -917,12 +917,12 @@ const sendApproval = (): void => {
                         <p
                             class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                         >
-                            Beneficiary Outcomes
+                            Results
                         </p>
                         <h2
                             class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50"
                         >
-                            First 100 Results
+                            Recipient Results
                         </h2>
                     </div>
                     <a

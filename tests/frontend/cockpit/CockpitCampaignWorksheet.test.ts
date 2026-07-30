@@ -493,21 +493,19 @@ describe('Cockpit campaign worksheets', () => {
         ).toBeLessThan(page.indexOf('<CockpitCampaignImportWorkspace'));
         expect(page).toContain('v-if="isDraft()"');
         expect(page).toContain('Pay Codes Issued');
-        expect(page).toContain('Direct Bank Transfer Is Not Enabled');
+        expect(page).toContain('Bank Transfers Unavailable');
         expect(page).toContain('props.direct_bank_transfer_enabled');
-        expect(page).toContain('Beneficiaries Ready To Issue');
-        expect(page).toContain(
-            'No Pay Codes, delivery, or bank transfers have started.',
-        );
+        expect(page).toContain('Recipients Ready');
+        expect(page).toContain('ready for Pay Code issuance.');
         expect(page).toContain('v-if="plannedCount() > 0"');
         expect(page).toContain('data-testid="campaign-delivery-controls"');
-        expect(page).toContain('Issuance never sends messages.');
+        expect(page).toContain('Download the list or send through an enabled');
         expect(page).toContain('Download CSV');
         expect(page).toContain('SMS Disabled');
         expect(page).toContain('Email Disabled');
         expect(page).toContain('data-testid="campaign-approval-delivery"');
         expect(page).toContain('Send To Officer');
-        expect(page).toContain('must sign in and review it.');
+        expect(page).toContain('must sign in to approve this batch.');
     });
 
     it('keeps imported beneficiaries staged behind explicit review controls', () => {
