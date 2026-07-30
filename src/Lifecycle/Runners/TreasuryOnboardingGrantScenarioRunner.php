@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Lifecycle\Runners;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
@@ -100,7 +101,7 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
                         'netbank-primary',
                     ),
                     idempotencyReference: $runReference,
-                    expiresAt: now()->addSeconds((int) data_get(
+                    expiresAt: Carbon::now()->addSeconds((int) data_get(
                         $context->scenario,
                         'ttl_seconds',
                         604_800,
