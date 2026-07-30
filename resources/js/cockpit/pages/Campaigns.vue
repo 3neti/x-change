@@ -76,7 +76,7 @@ function submitIntakeFile(file: File): void {
     }
 
     intakeForm.file = file;
-    intakeForm.post(storeIntake(), {
+    intakeForm.post(storeIntake().url, {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => intakeForm.reset('file'),
@@ -205,7 +205,7 @@ onMounted(() => window.addEventListener('paste', pasteIntakeFromPage));
 onBeforeUnmount(() => window.removeEventListener('paste', pasteIntakeFromPage));
 
 function createWorksheet(): void {
-    form.post(store(), {
+    form.post(store().url, {
         preserveScroll: true,
         onSuccess: () => form.reset('name'),
     });
@@ -235,7 +235,7 @@ function createApprovalPayCode(worksheet: CampaignWorksheet): void {
     }
 
     authorizingWorksheet.value = worksheet.reference;
-    authorizationForm.post(authorizations.store(worksheet.reference), {
+    authorizationForm.post(authorizations.store(worksheet.reference).url, {
         preserveScroll: true,
         onFinish: () => {
             authorizingWorksheet.value = null;
@@ -258,7 +258,7 @@ function peso(minor: number): string {
 
 function activityLabel(): string {
     if (props.worksheets.length === 0) {
-        return 'No worksheets';
+        return 'No batches';
     }
 
     const authorized = props.worksheets.filter(
@@ -272,6 +272,36 @@ function activityLabel(): string {
     }
 
     return 'Draft only';
+}
+
+function statusClasses(status: string): string {
+    if (status === 'authorized' || status === 'completed') {
+        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300';
+    }
+
+    if (status === 'awaiting_officer') {
+        return 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300';
+    }
+
+    return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300';
+}
+
+function batchActionLabel(worksheet: CampaignWorksheet): string {
+    if (worksheet.status === 'draft') {
+        return worksheet.beneficiary_count > 0
+            ? 'Request Approval'
+            : 'Continue';
+    }
+
+    if (worksheet.status === 'awaiting_officer') {
+        return 'View Approval';
+    }
+
+    if (worksheet.status === 'authorized') {
+        return 'Open Batch';
+    }
+
+    return 'View Results';
 }
 
 function dateTime(value: string | null): string {
@@ -373,12 +403,12 @@ function dateTime(value: string | null): string {
                             <p
                                 class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                             >
-                                Your Worksheets
+                                Your Batches
                             </p>
                             <h2
                                 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Campaign Activity
+                                Payment Batches
                             </h2>
                         </div>
                         <span
@@ -398,13 +428,12 @@ function dateTime(value: string | null): string {
                         <p
                             class="mt-3 font-semibold text-slate-950 dark:text-slate-50"
                         >
-                            No campaign worksheets yet
+                            No payment batches yet
                         </p>
                         <p
                             class="mt-1 max-w-sm text-sm leading-5 text-slate-500 dark:text-slate-400"
                         >
-                            Create one to assemble beneficiaries before any
-                            authorization or financial action.
+                            Add a recipient list or start with an empty batch.
                         </p>
                     </div>
 
@@ -415,7 +444,8 @@ function dateTime(value: string | null): string {
                         <article
                             v-for="worksheet in props.worksheets"
                             :key="worksheet.reference"
-                            class="@container grid gap-3 px-4 py-3"
+                            class="@container grid gap-3 px-4 py-3 @3xl:grid-cols-[minmax(0,1fr)_auto] @3xl:items-center"
+                            :title="worksheet.reference"
                         >
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
@@ -429,29 +459,29 @@ function dateTime(value: string | null): string {
                                         >{{ display(worksheet.profile) }}</span
                                     >
                                     <span
-                                        class="rounded-full bg-amber-50 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                                        :class="statusClasses(worksheet.status)"
+                                        class="rounded-full px-2 py-0.5 text-[0.65rem] font-semibold"
                                         >{{ display(worksheet.status) }}</span
                                     >
                                 </div>
                                 <p
                                     class="mt-1 text-xs text-slate-500 dark:text-slate-400"
                                 >
-                                    {{ worksheet.reference }} ·
                                     {{ display(worksheet.fulfillment_mode) }} ·
                                     updated {{ dateTime(worksheet.updated_at) }}
                                 </p>
                             </div>
                             <div
-                                class="flex flex-col gap-3 @xl:flex-row @xl:items-center @xl:justify-between"
+                                class="flex flex-col gap-3 @xl:flex-row @xl:items-center @xl:justify-end"
                             >
                                 <dl
-                                    class="grid w-full grid-cols-2 gap-x-4 text-left text-xs @xl:w-auto @xl:min-w-44 @xl:text-right"
+                                    class="grid w-full grid-cols-2 gap-x-5 text-left text-xs @xl:w-auto @xl:min-w-44 @xl:text-right"
                                 >
                                     <div>
                                         <dt
                                             class="text-slate-500 dark:text-slate-400"
                                         >
-                                            Beneficiaries
+                                            Recipients
                                         </dt>
                                         <dd
                                             class="font-semibold text-slate-950 dark:text-slate-50"
@@ -463,7 +493,7 @@ function dateTime(value: string | null): string {
                                         <dt
                                             class="text-slate-500 dark:text-slate-400"
                                         >
-                                            Principal
+                                            Total
                                         </dt>
                                         <dd
                                             class="font-semibold text-slate-950 dark:text-slate-50"
@@ -475,21 +505,17 @@ function dateTime(value: string | null): string {
                                     </div>
                                 </dl>
                                 <div
-                                    v-if="worksheet.status === 'draft'"
                                     class="flex w-full items-center gap-2 @xl:w-auto"
                                 >
                                     <button
+                                        v-if="
+                                            worksheet.status === 'draft' &&
+                                            worksheet.beneficiary_count > 0
+                                        "
                                         type="button"
                                         :data-testid="`campaign-activity-create-approval-${worksheet.reference}`"
-                                        :disabled="
-                                            worksheet.beneficiary_count === 0 ||
-                                            authorizationForm.processing
-                                        "
-                                        :title="
-                                            worksheet.beneficiary_count === 0
-                                                ? 'Add at least one beneficiary first.'
-                                                : 'Freeze this worksheet and create its officer Approval Pay Code.'
-                                        "
+                                        :disabled="authorizationForm.processing"
+                                        title="Lock this recipient list and prepare its officer Approval Pay Code."
                                         class="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 @xl:flex-none dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
                                         @click="
                                             createApprovalPayCode(worksheet)
@@ -503,10 +529,18 @@ function dateTime(value: string | null): string {
                                             authorizingWorksheet ===
                                             worksheet.reference
                                                 ? 'Creating…'
-                                                : 'Create Approval Pay Code'
+                                                : batchActionLabel(worksheet)
                                         }}
                                     </button>
+                                    <a
+                                        v-else
+                                        :href="show(worksheet.reference).url"
+                                        class="inline-flex min-w-0 flex-1 items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 @xl:flex-none dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                    >
+                                        {{ batchActionLabel(worksheet) }}
+                                    </a>
                                     <button
+                                        v-if="worksheet.status === 'draft'"
                                         type="button"
                                         :aria-label="`Delete draft ${worksheet.name}`"
                                         :disabled="deleteForm.processing"

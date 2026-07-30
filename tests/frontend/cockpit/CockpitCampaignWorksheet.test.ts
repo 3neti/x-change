@@ -39,6 +39,8 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('₱0.00');
         expect(wrapper.text()).toContain('Draft only');
         expect(wrapper.text()).not.toContain('Maria Santos');
+        expect(wrapper.text()).toContain('Payment Batches');
+        expect(wrapper.text()).toContain('Continue');
         expect(wrapper.text()).toContain('Import Beneficiary List');
         expect(wrapper.text()).toContain('Drop A File Or Paste Rows');
         expect(wrapper.text()).toContain('Choose CSV Or Excel');
@@ -49,15 +51,15 @@ describe('Cockpit campaign worksheets', () => {
         ).toBe('group');
         expect(
             wrapper
-                .get(
+                .find(
                     `[data-testid="campaign-activity-create-approval-${worksheet.reference}"]`,
                 )
-                .attributes('disabled'),
-        ).toBeDefined();
+                .exists(),
+        ).toBe(false);
         expect(wrapper.text()).toContain('Start Blank');
     });
 
-    it('creates an Approval Pay Code from Campaign Activity through the existing authorization route', async () => {
+    it('requests approval from Payment Batches through the existing authorization route', async () => {
         const readyWorksheet = {
             ...worksheet,
             beneficiary_count: 2,
@@ -83,13 +85,13 @@ describe('Cockpit campaign worksheets', () => {
         );
 
         expect(action.attributes('disabled')).toBeUndefined();
+        expect(action.text()).toContain('Request Approval');
         await action.trigger('click');
 
         expect(post).toHaveBeenCalledOnce();
-        expect(post.mock.calls[0][0]).toMatchObject({
-            method: 'post',
-            url: `/x/cockpit/campaigns/${worksheet.reference}/authorizations`,
-        });
+        expect(post.mock.calls[0][0]).toBe(
+            `/x/cockpit/campaigns/${worksheet.reference}/authorizations`,
+        );
     });
 
     it('gives beneficiary imports a drag target and rejects unsupported files locally', async () => {
