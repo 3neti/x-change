@@ -41,6 +41,7 @@ class DoctorXChangeCommand extends Command
                 $this->check('users.mobile_verified_at column', $this->hasColumn('users', 'mobile_verified_at'), 'users.mobile_verified_at exists'),
                 $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
                 $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
+                $this->productionApplicationSecurityCheck(),
                 $this->productionOnboardingOtpCheck(),
                 $this->queueRuntimeCheck(),
                 $this->schedulerLockCacheCheck(),
@@ -199,6 +200,44 @@ class DoctorXChangeCommand extends Command
                 'otp_required' => $required,
                 'driver' => $driver,
                 'local_code_visible' => $showsLocalCode,
+            ],
+        );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function productionApplicationSecurityCheck(): array
+    {
+        $environment = (string) config('app.env');
+        $production = $environment === 'production';
+        $debug = (bool) config('app.debug');
+        $hasStableKey = is_string(config('app.key'))
+            && trim((string) config('app.key')) !== '';
+        $url = (string) config('app.url');
+        $usesHttps = str_starts_with($url, 'https://');
+        $secureCookies = (bool) config('session.secure');
+        $ready = ! $production || (
+            ! $debug
+            && $hasStableKey
+            && $usesHttps
+            && $secureCookies
+        );
+
+        return $this->check(
+            'production application security',
+            $ready,
+            $ready
+                ? ($production
+                    ? 'production debug, key, HTTPS, and cookie controls are ready'
+                    : "production-only application security gate is not required in [{$environment}]")
+                : 'production requires debug off, a stable key, HTTPS, and secure cookies',
+            [
+                'environment' => $environment,
+                'debug' => $debug,
+                'app_key_configured' => $hasStableKey,
+                'https' => $usesHttps,
+                'secure_cookies' => $secureCookies,
             ],
         );
     }

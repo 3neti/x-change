@@ -245,8 +245,10 @@ Every item is required before inviting real alpha users.
 
 ### P0 — Security and operational safety
 
-- [ ] Set `APP_ENV=production`, `APP_DEBUG=false`, and a stable `APP_KEY`.
-- [ ] Use HTTPS and secure cookies.
+- [ ] Set `APP_ENV=production`, `APP_DEBUG=false`, and a stable `APP_KEY`
+      (strict readiness enforcement implemented; deployment evidence pending).
+- [ ] Use HTTPS and secure cookies (strict readiness enforcement implemented;
+      deployment evidence pending).
 - [ ] Configure trusted hosts/proxies and webhook IP/signature policy.
 - [ ] Keep secrets only in the cloud secret store.
 - [ ] Define maker/checker identities independently of ordinary Account users.

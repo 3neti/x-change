@@ -130,6 +130,43 @@ it('accepts a configured production onboarding OTP driver', function () {
         ->and($check['meta']['local_code_visible'])->toBeFalse();
 });
 
+it('rejects unsafe application settings in production', function () {
+    config()->set('app.env', 'production');
+    config()->set('app.debug', true);
+    config()->set('app.key', null);
+    config()->set('app.url', 'http://example.test');
+    config()->set('session.secure', false);
+
+    Artisan::call('x-change:doctor', ['--json' => true]);
+
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'production application security');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['meta'])->toMatchArray([
+            'environment' => 'production',
+            'debug' => true,
+            'app_key_configured' => false,
+            'https' => false,
+            'secure_cookies' => false,
+        ]);
+});
+
+it('accepts hardened application settings in production', function () {
+    config()->set('app.env', 'production');
+    config()->set('app.debug', false);
+    config()->set('app.key', 'base64:stable-production-key');
+    config()->set('app.url', 'https://x-change.example');
+    config()->set('session.secure', true);
+
+    Artisan::call('x-change:doctor', ['--json' => true]);
+
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'production application security');
+
+    expect($check['passed'])->toBeTrue();
+});
+
 it('reports the cockpit operator activity runtime profile as an explicit doctor check', function () {
     $exitCode = Artisan::call('x-change:doctor', [
         '--operator-activity-runtime' => true,
