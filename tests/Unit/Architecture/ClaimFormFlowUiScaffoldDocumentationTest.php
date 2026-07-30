@@ -19,6 +19,8 @@ it('documents the public claim form-flow ui scaffold without cockpit scope', fun
         ->toContain('no-money claim walkthrough passed with `submitted_claim=false`')
         ->and($profile)
         ->toContain('x-change.claim.experience_ui')
+        ->toContain('XCHANGE_CLAIM_UI_DENSITY')
+        ->toContain('ui_layout')
         ->toContain('Do not put Cockpit-specific copy')
         ->toContain('Do not use this profile to decide claim execution')
         ->and($batch)

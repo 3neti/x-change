@@ -1857,6 +1857,41 @@ return [
         ],
         'submission_lock_seconds' => 30,
         'submission_lock_wait_seconds' => 3,
+        'experience_ui' => [
+            'variant' => env(
+                'XCHANGE_CLAIM_UI_VARIANT',
+                env('FORM_FLOW_UI_VARIANT', 'default'),
+            ),
+            'show_progress' => (bool) env('XCHANGE_CLAIM_UI_SHOW_PROGRESS', true),
+            'support_label' => env('XCHANGE_CLAIM_UI_SUPPORT_LABEL'),
+            'layout' => [
+                'density' => env('XCHANGE_CLAIM_UI_DENSITY', 'compact'),
+                'capture_surface' => env('XCHANGE_CLAIM_UI_CAPTURE_SURFACE', 'edge_to_edge'),
+                'minimize_scroll' => (bool) env('XCHANGE_CLAIM_UI_MINIMIZE_SCROLL', true),
+            ],
+            'copy' => [
+                'entry_title' => env('XCHANGE_CLAIM_UI_ENTRY_TITLE', 'Claim Pay Code'),
+                'wallet_title' => env('XCHANGE_CLAIM_UI_WALLET_TITLE', 'Where should we send the money?'),
+                'confirmation_title' => env('XCHANGE_CLAIM_UI_CONFIRMATION_TITLE', 'Review your claim'),
+                'success_title' => env('XCHANGE_CLAIM_UI_SUCCESS_TITLE', 'Claim completed'),
+                'approval_waiting_title' => env('XCHANGE_CLAIM_UI_APPROVAL_WAITING_TITLE', 'Awaiting payout approval'),
+                'issuer_otp_title' => env('XCHANGE_CLAIM_UI_ISSUER_OTP_TITLE', 'Approve payout OTP'),
+            ],
+            'permissions' => [
+                'location' => [
+                    'why' => env('XCHANGE_CLAIM_UI_LOCATION_WHY', 'This Pay Code requires location evidence.'),
+                ],
+                'camera' => [
+                    'why' => env('XCHANGE_CLAIM_UI_CAMERA_WHY', 'This Pay Code requires selfie evidence.'),
+                ],
+                'signature' => [
+                    'why' => env('XCHANGE_CLAIM_UI_SIGNATURE_WHY', 'This Pay Code requires signed confirmation.'),
+                ],
+                'kyc' => [
+                    'why' => env('XCHANGE_CLAIM_UI_KYC_WHY', 'This Pay Code requires identity verification.'),
+                ],
+            ],
+        ],
         'share' => [
             'public_image_middleware' => [
                 'throttle:60,1',

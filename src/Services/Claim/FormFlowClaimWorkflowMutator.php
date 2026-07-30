@@ -34,16 +34,7 @@ final class FormFlowClaimWorkflowMutator
         $payload['title'] = $workflow->title;
         $payload['description'] = $workflow->description;
         $payload['metadata'] = array_replace_recursive((array) ($payload['metadata'] ?? []), [
-            'claim_workflow' => [
-                'key' => $workflow->key,
-                'requires_mobile' => $workflow->requires_mobile,
-                'requires_destination' => $workflow->requires_destination,
-                'requires_amount' => $workflow->requires_amount,
-                'requires_authenticated_officer' => $workflow->requires_authenticated_officer,
-                'confirmation_label' => $workflow->confirmation_label,
-                'skip_form_flow_splash' => $workflow->skip_form_flow_splash,
-                'review' => $workflow->review,
-            ],
+            'claim_workflow' => $this->workflowPayload($workflow),
         ]);
 
         $payload['steps'] = array_map(
@@ -69,6 +60,12 @@ final class FormFlowClaimWorkflowMutator
 
         $step['config']['title'] = $workflow->title;
         $step['config']['description'] = $workflow->description;
+        $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
+        $step['config']['ui_variant'] = config(
+            'x-change.claim.experience_ui.variant',
+            config('form-flow.ui.variant', 'default'),
+        );
+        $step['config']['ui_layout'] = config('x-change.claim.experience_ui.layout', []);
         $step['config']['auto_sync'] = ['enabled' => false];
         $step['config']['fields'] = array_values(array_map(
             fn (array $field): array => $this->applyToField($field, $workflow, $authenticatedMobile),
@@ -114,5 +111,24 @@ final class FormFlowClaimWorkflowMutator
         }
 
         return $field;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function workflowPayload(ClaimWorkflowDescriptorData $workflow): array
+    {
+        return [
+            'key' => $workflow->key,
+            'title' => $workflow->title,
+            'description' => $workflow->description,
+            'requires_mobile' => $workflow->requires_mobile,
+            'requires_destination' => $workflow->requires_destination,
+            'requires_amount' => $workflow->requires_amount,
+            'requires_authenticated_officer' => $workflow->requires_authenticated_officer,
+            'confirmation_label' => $workflow->confirmation_label,
+            'skip_form_flow_splash' => $workflow->skip_form_flow_splash,
+            'review' => $workflow->review,
+        ];
     }
 }

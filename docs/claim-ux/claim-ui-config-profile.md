@@ -21,6 +21,11 @@ variant selection, and permission explanations.
         ),
         'show_progress' => (bool) env('XCHANGE_CLAIM_UI_SHOW_PROGRESS', true),
         'support_label' => env('XCHANGE_CLAIM_UI_SUPPORT_LABEL'),
+        'layout' => [
+            'density' => env('XCHANGE_CLAIM_UI_DENSITY', 'compact'),
+            'capture_surface' => env('XCHANGE_CLAIM_UI_CAPTURE_SURFACE', 'edge_to_edge'),
+            'minimize_scroll' => (bool) env('XCHANGE_CLAIM_UI_MINIMIZE_SCROLL', true),
+        ],
         'copy' => [
             'entry_title' => 'Claim Pay Code',
             'wallet_title' => 'Where should we send the money?',
@@ -43,6 +48,9 @@ variant selection, and permission explanations.
 
 ```env
 XCHANGE_CLAIM_UI_VARIANT=default
+XCHANGE_CLAIM_UI_DENSITY=compact
+XCHANGE_CLAIM_UI_CAPTURE_SURFACE=edge_to_edge
+XCHANGE_CLAIM_UI_MINIMIZE_SCROLL=true
 XCHANGE_CLAIM_UI_SHOW_PROGRESS=true
 XCHANGE_CLAIM_UI_SUPPORT_LABEL=
 
@@ -69,6 +77,18 @@ changing the workflow.
 `immersive` is for claim steps where the input surface should dominate the
 viewport, such as signature, selfie, and location.
 
+## Layout Semantics
+
+`density=compact` is the QA default for keeping payout fields and handler
+screens closer to a one-page mobile review.
+
+`capture_surface=edge_to_edge` tells form-flow drivers to prefer wider
+signature, camera, selfie, and location surfaces.
+
+`minimize_scroll=true` expresses the public claim QA goal that first-time
+redeemers should not need unnecessary vertical travel to understand or submit a
+claim.
+
 ## Current Wiring
 
 `FormFlowClaimWorkflowMutator` forwards the configured variant to the
@@ -76,6 +96,12 @@ x-change-owned wallet/form step as:
 
 ```php
 $step['config']['ui_variant']
+```
+
+It also forwards layout guidance as:
+
+```php
+$step['config']['ui_layout']
 ```
 
 The handler packages also accept `ui_variant`, but broader driver-wide adoption

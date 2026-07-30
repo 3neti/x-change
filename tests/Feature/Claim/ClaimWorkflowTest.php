@@ -85,6 +85,7 @@ it('removes destination collection from a campaign officer authorization workflo
     );
 
     $walletStep = $instructions->toArray()['steps'][0]['config'];
+    $claimWorkflow = $instructions->toArray()['metadata']['claim_workflow'];
     $fieldNames = array_column($walletStep['fields'], 'name');
 
     expect($workflow->key)->toBe('campaign.officer-authorization.v1')
@@ -93,8 +94,14 @@ it('removes destination collection from a campaign officer authorization workflo
         ->and($workflow->requires_authenticated_officer)->toBeTrue()
         ->and($workflow->skip_form_flow_splash)->toBeTrue()
         ->and($walletStep['title'])->toBe('Campaign Officer Authorization')
-        ->and($instructions->toArray()['metadata']['claim_workflow']['confirmation_label'])->toBe('Authorize Campaign')
-        ->and($instructions->toArray()['metadata']['claim_workflow']['skip_form_flow_splash'])->toBeTrue()
+        ->and($walletStep['claim_workflow']['key'])->toBe('campaign.officer-authorization.v1')
+        ->and($walletStep['claim_workflow']['title'])->toBe('Campaign Officer Authorization')
+        ->and($walletStep['claim_workflow']['description'])->toBe('Review the frozen worksheet for 2 beneficiaries totaling 125.00 PHP. No payout will be sent by this approval.')
+        ->and($walletStep['claim_workflow']['confirmation_label'])->toBe('Authorize Campaign')
+        ->and($claimWorkflow['title'])->toBe('Campaign Officer Authorization')
+        ->and($claimWorkflow['description'])->toBe('Review the frozen worksheet for 2 beneficiaries totaling 125.00 PHP. No payout will be sent by this approval.')
+        ->and($claimWorkflow['confirmation_label'])->toBe('Authorize Campaign')
+        ->and($claimWorkflow['skip_form_flow_splash'])->toBeTrue()
         ->and($walletStep['auto_sync']['enabled'])->toBeFalse()
         ->and($fieldNames)->toBe(['mobile'])
         ->and($walletStep['fields'][0]['default'])->toBe('09173011987')
@@ -102,6 +109,8 @@ it('removes destination collection from a campaign officer authorization workflo
 });
 
 it('keeps destination collection for an ordinary disbursement workflow', function () {
+    config()->set('x-change.claim.experience_ui.variant', 'immersive');
+
     $voucher = Mockery::mock(Voucher::class);
     $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn(['instructions' => []]);
 
@@ -126,9 +135,16 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         $workflow,
     );
 
-    $fieldNames = array_column($instructions->toArray()['steps'][0]['config']['fields'], 'name');
+    $walletStep = $instructions->toArray()['steps'][0]['config'];
+    $fieldNames = array_column($walletStep['fields'], 'name');
 
     expect($workflow->key)->toBe('disbursement.v1')
         ->and($workflow->requires_destination)->toBeTrue()
+        ->and($walletStep['claim_workflow']['key'])->toBe('disbursement.v1')
+        ->and($walletStep['claim_workflow']['confirmation_label'])->toBe('Confirm Redemption')
+        ->and($walletStep['ui_variant'])->toBe('immersive')
+        ->and($walletStep['ui_layout']['density'])->toBe('compact')
+        ->and($walletStep['ui_layout']['capture_surface'])->toBe('edge_to_edge')
+        ->and($walletStep['ui_layout']['minimize_scroll'])->toBeTrue()
         ->and($fieldNames)->toBe(['amount', 'settlement_rail', 'mobile', 'bank_code', 'account_number']);
 });
