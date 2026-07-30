@@ -12,6 +12,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Models\MobileVerificationChallenge;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
 
 final class MobileVerificationPageController extends Controller
 {
@@ -49,6 +50,7 @@ final class MobileVerificationPageController extends Controller
             ],
             'local_code' => $this->localCode(),
             'status' => $request->session()->get('status'),
+            'auth_intent' => app(CampaignOfficerAuthorizationLoginIntent::class)->current($request),
         ]);
     }
 

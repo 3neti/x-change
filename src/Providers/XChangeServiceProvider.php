@@ -343,6 +343,7 @@ use LBHurtado\XChange\Services\VoucherPaymentQrRendererFactory;
 use LBHurtado\XChange\Services\WithdrawalLifecycleService;
 use LBHurtado\XChange\Services\WithdrawalPipeline;
 use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
+use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
@@ -1595,6 +1596,7 @@ class XChangeServiceProvider extends ServiceProvider
                 'canResetPassword' => false,
                 'canRegister' => Features::enabled(Features::registration()),
                 'status' => $request->session()->get('status'),
+                'auth_intent' => app(CampaignOfficerAuthorizationLoginIntent::class)->current($request),
             ]));
 
             Fortify::registerView(fn () => Inertia::render('auth/Register'));

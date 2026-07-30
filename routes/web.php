@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\Web\BalancePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimAuthorizationRequiredController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimCompleteController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimExperienceController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimPageController;
@@ -345,6 +346,9 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(func
     Route::get('claim/{code}', ClaimPageController::class)
         ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.show');
+    Route::get('claim/{code}/authorization-required', ClaimAuthorizationRequiredController::class)
+        ->middleware((array) config('x-change.claim.public_read_middleware', []))
+        ->name('x-change.claim.authorization-required');
     Route::get('claim/{code}/experience', ClaimExperienceController::class)
         ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.experience');

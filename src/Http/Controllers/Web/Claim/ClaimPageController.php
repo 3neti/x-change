@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
@@ -11,19 +13,24 @@ use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Actions\Claim\ValidateCompiledClaimVoucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
+use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
+use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
 
 class ClaimPageController extends Controller
 {
     public function __invoke(
+        Request $request,
         string $code,
         ValidateCompiledClaimVoucher $validator,
         VoucherFlowCapabilityResolverContract $capabilities,
+        ClaimWorkflowResolverContract $workflows,
+        CampaignOfficerAuthorizationLoginIntent $loginIntent,
         ClaimShareMetadataResolverContract $shareMetadata,
         ClaimShareCardUrlResolverContract $shareCardUrls,
         ClaimEntryResponseFactory $responses,
-    ): Response {
+    ): Response|RedirectResponse {
         $code = strtoupper(trim($code));
         $voucher = Voucher::query()->where('code', $code)->first();
 
@@ -39,6 +46,25 @@ class ClaimPageController extends Controller
                 message: 'This Pay Code accepts payment and cannot be claimed.',
                 code: $code,
             );
+        }
+
+        $workflow = $workflows->resolve($voucher);
+
+        if ($workflow->requires_authenticated_officer && $request->user() === null) {
+            $loginIntent->remember($request, $code, $workflow);
+
+            return redirect()->route('x-change.claim.authorization-required', ['code' => $code]);
+        }
+
+        if ($workflow->requires_authenticated_officer) {
+            $authenticatedMobile = $request->user()?->getAttribute('mobile');
+
+            if (! is_string($authenticatedMobile) || trim($authenticatedMobile) === '') {
+                return $responses->error(
+                    message: 'Your authenticated officer profile needs a verified mobile number before it can authorize a campaign.',
+                    code: $code,
+                );
+            }
         }
 
         $message = $validator->handle($voucher);

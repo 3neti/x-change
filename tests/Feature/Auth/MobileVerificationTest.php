@@ -9,6 +9,7 @@ use LBHurtado\XChange\Actions\Auth\StartMobileVerification;
 use LBHurtado\XChange\Actions\Auth\VerifyMobileVerification;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\MobileVerificationChallenge;
+use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('creates a mobile-first user as unverified', function () {
@@ -98,6 +99,33 @@ it('renders the mobile verification page without exposing the full mobile', func
         ->assertJsonPath('props.verified', false)
         ->assertJsonPath('props.local_code', '000000')
         ->assertJsonMissing(['639173011987']);
+});
+
+it('passes campaign authorization login intent to the mobile verification page', function () {
+    $user = actingAsTestUser();
+    $user->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => null,
+    ])->save();
+
+    $intent = [
+        'type' => 'campaign_authorization',
+        'code' => 'AUTH1',
+        'workflow_key' => 'campaign.officer-authorization.v1',
+        'title' => 'Officer authorization required',
+        'description' => 'Sign in with the campaign officer account authorized to approve this worksheet.',
+        'intended_url' => route('x-change.claim.show', ['code' => 'AUTH1']),
+        'handoff_url' => route('x-change.claim.authorization-required', ['code' => 'AUTH1']),
+        'created_at' => now()->toIso8601String(),
+    ];
+
+    $this->withSession([CampaignOfficerAuthorizationLoginIntent::SessionKey => $intent])
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.onboarding.mobile-verification.show'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/onboarding/MobileVerification')
+        ->assertJsonPath('props.auth_intent.type', 'campaign_authorization')
+        ->assertJsonPath('props.auth_intent.code', 'AUTH1');
 });
 
 it('blocks QR Ph simulation before mobile verification and creates no Funding Intent', function () {

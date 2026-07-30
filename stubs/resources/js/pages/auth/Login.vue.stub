@@ -21,6 +21,13 @@ defineProps<{
     status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
+    auth_intent?: {
+        type: 'campaign_authorization';
+        code: string;
+        title: string;
+        description: string;
+        intended_url: string;
+    } | null;
 }>();
 </script>
 
@@ -32,6 +39,19 @@ defineProps<{
         class="mb-4 text-center text-sm font-medium text-green-600"
     >
         {{ status }}
+    </div>
+
+    <div
+        v-if="auth_intent?.type === 'campaign_authorization'"
+        class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+        data-testid="login-auth-intent"
+    >
+        <p class="font-semibold">Officer authorization required</p>
+        <p>
+            Sign in to approve campaign Pay Code
+            <span class="font-mono font-semibold">{{ auth_intent.code }}</span
+            >.
+        </p>
     </div>
 
     <Form

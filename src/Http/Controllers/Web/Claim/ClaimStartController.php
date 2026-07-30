@@ -24,6 +24,7 @@ use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
+use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
@@ -40,6 +41,7 @@ class ClaimStartController extends Controller
         protected VoucherFlowCapabilityResolverContract $capabilities,
         protected ClaimWorkflowResolverContract $claimWorkflows,
         protected FormFlowClaimWorkflowMutator $formFlowWorkflows,
+        protected CampaignOfficerAuthorizationLoginIntent $campaignAuthorizationLoginIntent,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -155,9 +157,9 @@ class ClaimStartController extends Controller
             $officer = $request->user();
 
             if ($officer === null) {
-                $request->session()->put('url.intended', route('x-change.claim.show', ['code' => $code]));
+                $this->campaignAuthorizationLoginIntent->remember($request, $code, $workflow);
 
-                return redirect()->route('login');
+                return redirect()->route('x-change.claim.authorization-required', ['code' => $code]);
             }
 
             $authenticatedMobile = $officer->getAttribute('mobile');

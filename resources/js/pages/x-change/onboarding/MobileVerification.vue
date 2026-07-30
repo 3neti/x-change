@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import {
     challenge,
     verify,
@@ -11,18 +12,55 @@ type Challenge = {
     attempts: number;
 };
 
-defineProps<{
+type AuthIntent = {
+    type: 'campaign_authorization';
+    code: string;
+    title: string;
+    description: string;
+    intended_url: string;
+};
+
+const props = defineProps<{
     mobile: string;
     verified: boolean;
     challenge?: Challenge | null;
     local_code?: string | null;
     status?: string | null;
+    auth_intent?: AuthIntent | null;
 }>();
 
 const challengeForm = useForm({});
 const verifyForm = useForm({
     code: '',
 });
+
+const isCampaignAuthorization = computed(
+    () => props.auth_intent?.type === 'campaign_authorization',
+);
+
+const eyebrow = computed(() =>
+    isCampaignAuthorization.value
+        ? 'Officer authorization'
+        : 'Secure onboarding',
+);
+
+const title = computed(() =>
+    isCampaignAuthorization.value
+        ? 'Verify your officer mobile'
+        : 'Verify your mobile',
+);
+
+const description = computed(() =>
+    isCampaignAuthorization.value
+        ? 'Campaign authorization requires a verified officer mobile before the worksheet can be approved.'
+        : 'Protected actions such as campaign authorization and account funding need a mobile number verified here first.',
+);
+
+const verifiedDescription = computed(() =>
+    isCampaignAuthorization.value
+        ? 'Your mobile is verified. Return to the approval Pay Code to continue campaign authorization.'
+        : 'Your mobile is verified and can now be used for protected x-change actions such as campaign authorization and funding readiness checks.',
+);
 
 function requestCode(): void {
     challengeForm.post(challenge(), {
@@ -51,12 +89,11 @@ function submitCode(): void {
                 <p
                     class="text-xs font-semibold tracking-[0.18em] text-sky-300 uppercase"
                 >
-                    Secure onboarding
+                    {{ eyebrow }}
                 </p>
-                <h1 class="mt-2 text-2xl font-semibold">Verify your mobile</h1>
+                <h1 class="mt-2 text-2xl font-semibold">{{ title }}</h1>
                 <p class="mt-2 text-sm leading-6 text-slate-300">
-                    QR Ph funding can resolve an Account only from a mobile
-                    number that was verified here first.
+                    {{ description }}
                 </p>
             </header>
 
@@ -159,14 +196,13 @@ function submitCode(): void {
                     v-else
                     class="text-sm leading-6 text-emerald-700 dark:text-emerald-300"
                 >
-                    Your mobile is verified and can now resolve your Account
-                    during provider-confirmed QR Ph funding.
+                    {{ verifiedDescription }}
                 </p>
 
                 <p class="text-xs leading-5 text-slate-500">
-                    A webhook never creates a user and never verifies a mobile.
-                    Unknown payer mobiles stop before Funding Intent creation or
-                    Account credit.
+                    Verification proves mobile ownership. It does not send
+                    campaign messages, create funding intents, call providers,
+                    or credit an account by itself.
                 </p>
             </div>
         </section>
