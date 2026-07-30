@@ -34,7 +34,12 @@ class InstallXChangeCommand extends Command
         {--no-treasury : Explicitly defer Treasury preflight, provisioning, and reconciliation}
         {--treasury-opening-policy= : unattributed, system-capital, or configured}
         {--capitalization-authorization-reference= : Stable deployment or control authorization reference}
-        {--confirm-system-ownership : Confirm that opening provider funds belong to the system principal}';
+        {--confirm-system-ownership : Confirm that opening provider funds belong to the system principal}
+        {--provision-system-principal : Create or adopt the configured non-interactive system principal}
+        {--system-principal-name= : Display name for a newly created system principal}
+        {--system-principal-email= : Email; must match XCHANGE_SYSTEM_USER_ID}
+        {--system-principal-authorization-reference= : Stable deployment or control authorization}
+        {--confirm-system-principal : Confirm this Account is the system principal}';
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
 
@@ -144,6 +149,47 @@ class InstallXChangeCommand extends Command
         ) {
             $this->components->error(
                 'Treasury opening capitalization options cannot be combined with [--no-treasury].',
+            );
+
+            return self::FAILURE;
+        }
+
+        if (
+            ! (bool) $this->option('provision-system-principal')
+            && (
+                $this->option('system-principal-name') !== null
+                || $this->option('system-principal-email') !== null
+                || $this->option('system-principal-authorization-reference') !== null
+                || (bool) $this->option('confirm-system-principal')
+            )
+        ) {
+            $this->components->error(
+                'System-principal options require [--provision-system-principal].',
+            );
+
+            return self::FAILURE;
+        }
+
+        if (
+            (bool) $this->option('provision-system-principal')
+            && ! (bool) $this->option('confirm-system-principal')
+        ) {
+            $this->components->error(
+                'System-principal provisioning requires [--confirm-system-principal].',
+            );
+
+            return self::FAILURE;
+        }
+
+        if (
+            (bool) $this->option('provision-system-principal')
+            && trim((string) $this->option(
+                'system-principal-authorization-reference',
+            )) === ''
+        ) {
+            $this->components->error(
+                'System-principal provisioning requires '
+                .'[--system-principal-authorization-reference].',
             );
 
             return self::FAILURE;
@@ -487,6 +533,27 @@ class InstallXChangeCommand extends Command
                 $this->components->error(
                     'Bootstrap seeder created or conflicted with Treasury topology. '
                     .'Fresh installation requires Treasury to begin uninitialized.',
+                );
+
+                return self::FAILURE;
+            }
+        }
+
+        if ((bool) $this->option('provision-system-principal')) {
+            $exitCode = $this->call('x-change:system-principal:provision', [
+                '--name' => $this->option('system-principal-name'),
+                '--email' => $this->option('system-principal-email'),
+                '--authorization-reference' => (string) $this->option(
+                    'system-principal-authorization-reference',
+                ),
+                '--commit' => true,
+                '--confirm-system-principal' => true,
+                '--no-interaction' => true,
+            ]);
+
+            if ($exitCode !== self::SUCCESS) {
+                $this->components->error(
+                    'System-principal provisioning failed; X-Change installation is incomplete.',
                 );
 
                 return self::FAILURE;

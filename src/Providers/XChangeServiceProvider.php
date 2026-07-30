@@ -82,6 +82,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\CapitalizeTreasuryOpeningBalance
 use LBHurtado\XChange\Console\Commands\Treasury\CorrectLegacyPayCodeFeePostingCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\MigrateLegacyAccountBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\ProvisionSystemPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ReconcileOpeningTreasuryBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\RedactTreasurySensitiveMetadataCommand;
@@ -1088,6 +1089,7 @@ class XChangeServiceProvider extends ServiceProvider
                 MigrateLegacyAccountBalanceCommand::class,
                 PreflightTreasuryCommand::class,
                 RedactTreasurySensitiveMetadataCommand::class,
+                ProvisionSystemPrincipalCommand::class,
                 ProvisionTreasuryCommand::class,
                 ReconcileOpeningTreasuryBalanceCommand::class,
                 RepairMissingDisbursementPostingsCommand::class,

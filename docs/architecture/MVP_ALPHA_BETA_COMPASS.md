@@ -43,9 +43,25 @@ Treasury provisioning. It is resolved through the wallet package's federated
 system-user resolver using the configured x-change candidate. The resolver does
 not create the user.
 
-Therefore, a fresh production deployment currently needs a separate,
-controlled system-principal creation step before Treasury provisioning. This
-gap blocks unattended fresh-cloud installation.
+Fresh production deployment now has a guarded package-owned bootstrap:
+
+```bash
+php artisan x-change:system-principal:provision \
+    --authorization-reference=deployment:<stable-reference> \
+    --commit \
+    --confirm-system-principal \
+    --no-interaction
+```
+
+The command previews by default, requires the configured stable email
+identifier, generates no usable credential, opens the System Account exactly
+once, rejects ambiguous identities, and refuses a different authorization
+reference on retry. `x-change:install` can invoke the same operation before
+Treasury provisioning with `--provision-system-principal`.
+
+The system principal deliberately has no interactive mobile identity. It is a
+Treasury principal, not an operator login; maker/checker work belongs to named
+human officers.
 
 ### Local and testing
 
@@ -143,9 +159,12 @@ Every item is required before inviting real alpha users.
 
 ### P0 — Deployment and system principal
 
-- [ ] Add a guarded production system-principal bootstrap command or seeder.
-- [ ] Require a stable identifier, mobile, email, and explicit confirmation.
-- [ ] Make retries idempotent and fail if multiple candidates resolve.
+- [x] Add a guarded production system-principal bootstrap command or seeder.
+- [x] Require a stable configured email identifier, deployment authorization,
+      and explicit ownership confirmation.
+- [x] Keep the system principal non-interactive rather than assigning it a
+      recoverable mobile login.
+- [x] Make retries idempotent and fail if multiple candidates resolve.
 - [ ] Establish the supported fresh-cloud command order.
 - [ ] Prove install from an empty production-like database.
 - [ ] Prove a second install changes neither balances nor Treasury topology.
