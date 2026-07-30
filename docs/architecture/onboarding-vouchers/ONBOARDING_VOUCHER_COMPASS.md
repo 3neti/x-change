@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Lifecycle Treasury Isolation Correction
-Status: Slices 0–9 complete
+Current slice: Truthful Lifecycle Ledger and Browser Payee Acceptance
+Status: Slices 0–15 complete
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -41,6 +41,12 @@ Last updated: 2026-07-30
 | 7 | Template and Campaign Propagation | Completed |
 | 8 | Lifecycle and Browser Acceptance | Completed |
 | 9 | Lifecycle Treasury Isolation Correction | Completed |
+| 10 | Execution-Aware Payout Isolation | Completed |
+| 11 | System Account Lifecycle Issuance | Completed |
+| 12 | Neutral Lifecycle Rider | Completed |
+| 13 | Neutral Public Claim Preview | Completed |
+| 14 | Unified Rider Fallback Policy | Completed |
+| 15 | Truthful Ledger and Browser Payee Acceptance | Completed |
 
 ## Settled Decisions
 
@@ -129,6 +135,32 @@ assets. It does not own onboarding business logic.
    handoff point.
 
 ## Slice Log
+
+### 2026-07-30 — Slice 15 completed
+
+- Raised the onboarding characterization principal from ₱1.00 to ₱50.00.
+- Added explicit `--claim-mobile`, `--claim-name`, and `--claim-email`
+  lifecycle overrides so operators no longer need temporary environment
+  variables to identify the claimant.
+- The version 2 report now distinguishes the actual instruction debit from
+  the estimated principal-plus-instructions commitment. It no longer presents
+  a cached wallet snapshot as an actual principal debit.
+- The report exposes recipient Client Funds and Pay Code Reserve positions,
+  provider payout, principal disposition, and the remaining product decision.
+- Lifecycle claims no longer fabricate OTP verification evidence when the
+  persisted onboarding policy disables OTP.
+- In-app browser acceptance completed `TEST-VTPE`, issued by system Account
+  user `#1`, for claimant Mobile ending `0722`:
+  - the clean onboarding claim collected Mobile, Full Name, and Email;
+  - the execution driver created user `#29`, a platform Account, and zeroed
+    Client Funds and Pay Code Reserve positions;
+  - claimant handoff authenticated the new Account into Cockpit;
+  - no provider reconciliation or external payout was created;
+  - local OTP was disabled, so `mobile_verified_at` correctly remained null.
+- The ₱50 principal remains a characterization liability under the isolated
+  lifecycle boundary. A live-money onboarding scenario must reserve real
+  Treasury Client Funds and use the explicit live-provider confirmation gate;
+  increasing the denomination alone must never bypass that boundary.
 
 ### 2026-07-30 — Slice 14 completed
 

@@ -68,6 +68,7 @@ final class LifecycleScenarioEngine
             (array) config('x-change.lifecycle.defaults', []),
             $scenario,
         );
+        $scenario = $this->applyClaimantOverrides($scenario, $options);
 
         try {
             $resolvedProvider = $this->resolveProvider($options, $scenario, $output);
@@ -315,6 +316,29 @@ final class LifecycleScenarioEngine
     private function requiresLiveProvider(array $scenario): bool
     {
         return (bool) data_get($scenario, 'execution_runtime.live_provider', false);
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @return array<string, mixed>
+     */
+    private function applyClaimantOverrides(
+        array $scenario,
+        LifecycleScenarioRunOptions $options,
+    ): array {
+        if ($options->claimMobile !== null) {
+            data_set($scenario, 'mobile', $options->claimMobile);
+        }
+
+        if ($options->claimName !== null) {
+            data_set($scenario, 'onboarding.name', $options->claimName);
+        }
+
+        if ($options->claimEmail !== null) {
+            data_set($scenario, 'onboarding.email', $options->claimEmail);
+        }
+
+        return $scenario;
     }
 
     /**

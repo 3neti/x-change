@@ -474,7 +474,7 @@ return [
                 'issuer_role' => 'system',
                 'funding_boundary' => 'isolated_compatibility_wallet',
             ],
-            'amount' => 1,
+            'amount' => 50,
             'currency' => 'PHP',
             'mobile' => env('XCHANGE_LIFECYCLE_ONBOARDING_VOUCHER_MOBILE', '09179990001'),
             'onboarding' => [

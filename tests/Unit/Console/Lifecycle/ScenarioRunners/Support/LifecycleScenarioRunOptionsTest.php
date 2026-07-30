@@ -9,6 +9,9 @@ it('builds lifecycle scenario run options from console options', function () {
         'issuer' => '1',
         'wallet' => '2',
         'amount' => '100',
+        'claim-mobile' => '09175180722',
+        'claim-name' => 'Lifecycle Recipient',
+        'claim-email' => 'lifecycle-recipient@example.test',
         'timeout' => '180',
         'poll' => '10',
         'max-polls' => '18',
@@ -22,6 +25,9 @@ it('builds lifecycle scenario run options from console options', function () {
     expect($options->issuer)->toBe('1')
         ->and($options->wallet)->toBe('2')
         ->and($options->amount)->toBe(100.0)
+        ->and($options->claimMobile)->toBe('09175180722')
+        ->and($options->claimName)->toBe('Lifecycle Recipient')
+        ->and($options->claimEmail)->toBe('lifecycle-recipient@example.test')
         ->and($options->timeout)->toBe(180)
         ->and($options->poll)->toBe(10)
         ->and($options->maxPolls)->toBe(18)

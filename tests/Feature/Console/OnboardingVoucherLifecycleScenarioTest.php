@@ -78,13 +78,31 @@ it('issues and claims an onboarding Voucher through the explicit execution workf
         ->and($payload['success'])->toBeTrue()
         ->and(data_get($payload, 'issuer.role'))->toBe('system')
         ->and(data_get($payload, 'issuer.funding_boundary'))->toBe('isolated_compatibility_wallet')
-        ->and(data_get($payload, 'issuance_ledger.principal_minor'))->toBe(100)
+        ->and(data_get($payload, 'issuance_ledger.pay_code_principal_minor'))->toBe(5_000)
         ->and(data_get($payload, 'issuance_ledger.instruction_cost_minor'))->toBeGreaterThan(0)
+        ->and(data_get($payload, 'issuance_ledger.instruction_debit_minor'))
+        ->toBe(data_get($payload, 'issuance_ledger.instruction_cost_minor'))
+        ->and(data_get($payload, 'issuance_ledger.estimated_total_commitment_minor'))
+        ->toBe(
+            data_get($payload, 'issuance_ledger.pay_code_principal_minor')
+            + data_get($payload, 'issuance_ledger.instruction_cost_minor'),
+        )
+        ->and(data_get($payload, 'issuance_ledger.principal_treatment_at_issuance'))
+        ->toBe('voucher_liability_only')
         ->and(data_get($payload, 'voucher.onboarding'))->toBeTrue()
         ->and(data_get($payload, 'voucher.execution_driver'))->toBe('onboarding_account_provisioning')
         ->and(data_get($payload, 'voucher.claimed'))->toBeTrue()
         ->and(data_get($payload, 'recipient_account.mobile_verified'))->toBeTrue()
         ->and(data_get($payload, 'recipient_account.platform_account_ready'))->toBeTrue()
+        ->and(data_get($payload, 'recipient_account.treasury_positions_ready'))->toBeTrue()
+        ->and(data_get($payload, 'recipient_account.client_funds_minor'))->toBe(0)
+        ->and(data_get($payload, 'recipient_account.pay_code_reserve_minor'))->toBe(0)
+        ->and(data_get($payload, 'economic_outcome.provider_payout_minor'))->toBe(0)
+        ->and(data_get($payload, 'economic_outcome.recipient_client_funds_credit_minor'))->toBe(0)
+        ->and(data_get($payload, 'economic_outcome.principal_disposition'))
+        ->toBe('redeemed_without_provider_payout_or_account_credit')
+        ->and(data_get($payload, 'economic_outcome.requires_product_decision'))->toBeTrue()
+        ->and(data_get($payload, 'controls.mobile_verification_required'))->toBeTrue()
         ->and(data_get($payload, 'controls.provider_calls'))->toBeFalse()
         ->and(data_get($payload, 'controls.provider_attempt_count'))->toBe(0)
         ->and(data_get($payload, 'controls.external_payout_suppressed'))->toBeTrue()
@@ -110,4 +128,61 @@ it('issues and claims an onboarding Voucher through the explicit execution workf
         ->and(json_encode(
             $voucher->redeemers()->latest('id')->first()?->metadata,
         ))->not->toContain('otp_code');
+});
+
+it('does not fabricate OTP verification evidence when the onboarding policy disables OTP', function (): void {
+    config()->set('x-change.onboarding.voucher.require_otp', false);
+
+    $output = new BufferedOutput;
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'onboarding_voucher',
+        '--json' => true,
+    ], $output);
+    $rendered = $output->fetch();
+    $payload = json_decode($rendered, true);
+
+    expect($exitCode)->toBe(0, $rendered)
+        ->and(data_get($payload, 'controls.mobile_verification_required'))->toBeFalse()
+        ->and(data_get($payload, 'recipient_account.mobile_verified'))->toBeFalse()
+        ->and(data_get($payload, 'controls.raw_otp_persisted'))->toBeFalse();
+
+    $voucher = Voucher::query()
+        ->where('code', data_get($payload, 'voucher.code'))
+        ->sole();
+    $inputs = (array) data_get(
+        $voucher->redeemers()->latest('id')->first()?->metadata,
+        'redemption.inputs',
+        [],
+    );
+
+    expect($inputs)->not->toHaveKeys([
+        'verified_at',
+        'otp',
+        'otp_verified',
+        'otp_verification',
+    ]);
+});
+
+it('accepts explicit claimant identity overrides without changing the system issuer', function (): void {
+    config()->set('x-change.onboarding.voucher.require_otp', false);
+
+    $output = new BufferedOutput;
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'onboarding_voucher',
+        '--claim-mobile' => '09175180722',
+        '--claim-name' => 'Lifecycle Payee',
+        '--claim-email' => 'lifecycle-payee-09175180722@example.test',
+        '--json' => true,
+    ], $output);
+    $rendered = $output->fetch();
+    $payload = json_decode($rendered, true);
+
+    expect($exitCode)->toBe(0, $rendered)
+        ->and(data_get($payload, 'issuer.role'))->toBe('system')
+        ->and(data_get($payload, 'recipient_account.mobile'))->toEndWith('0722')
+        ->and(User::query()
+            ->whereIn('mobile', ['09175180722', '639175180722'])
+            ->where('name', 'Lifecycle Payee')
+            ->where('email', 'lifecycle-payee-09175180722@example.test')
+            ->count())->toBe(1);
 });

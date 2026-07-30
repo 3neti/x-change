@@ -21,6 +21,9 @@ class RunLifecycleScenarioCommand extends Command
         {--issuer= : Issuer user id}
         {--wallet= : Wallet owner/user id}
         {--amount= : Override scenario amount}
+        {--claim-mobile= : Override the claimant Mobile for this run}
+        {--claim-name= : Override the claimant full name for onboarding scenarios}
+        {--claim-email= : Override the claimant email for onboarding scenarios}
         {--prepare : Run xchange:lifecycle:prepare first}
         {--fresh : Prepare with migrate:fresh and lifecycle seeders}
         {--no-claim : Generate but do not claim}

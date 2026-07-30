@@ -6,6 +6,10 @@ namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
@@ -17,6 +21,8 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
 {
     public function __construct(
         private LifecycleClaimSubmitter $claimSubmitter,
+        private TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private TreasuryPositionReadModelContract $positions,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -40,6 +46,15 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
             'onboarding.name',
             'Onboarding Voucher Recipient',
         ));
+        $mobileVerificationRequired = (bool) data_get(
+            $context->voucher->metadata,
+            'instructions.execution.metadata.onboarding.mobile_verification_required',
+            true,
+        );
+        $accountBeforeClaim = $this->accountFor($context, $mobile);
+        $positionsBeforeClaim = $accountBeforeClaim instanceof Model
+            ? $this->recipientPositions($accountBeforeClaim)
+            : $this->emptyRecipientPositions();
 
         try {
             $result = $this->claimSubmitter->submit(
@@ -53,15 +68,7 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
                         'name' => $name,
                         'email' => $email,
                         'mobile' => $mobile,
-                        'verified_at' => now()->toIso8601String(),
-                        'otp' => [
-                            'verified_at' => now()->toIso8601String(),
-                        ],
-                        'otp_verified' => true,
-                        'otp_verification' => [
-                            'verified_at' => now()->toIso8601String(),
-                        ],
-                    ],
+                    ] + $this->verificationEvidence($mobileVerificationRequired),
                 ],
             );
         } catch (Throwable $exception) {
@@ -98,6 +105,19 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
         );
         $providerCallsSuppressed = $executionPolicy === OnboardingVoucherInstructionPolicy::PostRedemptionMode
             && $providerAttempts === 0;
+        $principalMinor = (int) round(
+            ((float) ($context->generated?->amount ?? 0)) * 100
+        );
+        $instructionDebitMinor = abs((int) ($context->generated?->debit->amount ?? 0));
+        $estimatedTotalCommitmentMinor = (int) round(
+            ((float) ($context->generated?->cost->account_debit ?? 0)) * 100
+        );
+        $recipientPositions = $this->recipientPositions($account);
+        $clientFundsCreditMinor = $recipientPositions['client_funds_minor']
+            - $positionsBeforeClaim['client_funds_minor'];
+        $principalDisposition = $principalMinor === 0
+            ? 'not_applicable'
+            : 'redeemed_without_provider_payout_or_account_credit';
 
         return new ScenarioRunResult(
             exitCode: $providerCallsSuppressed
@@ -124,24 +144,14 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
                 ],
                 'issuance_ledger' => [
                     'currency' => $context->generated?->currency,
-                    'principal_minor' => (int) round(
-                        ((float) ($context->generated?->amount ?? 0)) * 100
-                    ),
+                    'pay_code_principal_minor' => $principalMinor,
                     'instruction_cost_minor' => (int) round(
                         ((float) ($context->generated?->cost->total ?? 0)) * 100
                     ),
-                    'account_debit_minor' => (int) round(
-                        ((float) ($context->generated?->cost->account_debit ?? 0)) * 100
-                    ),
+                    'instruction_debit_minor' => $instructionDebitMinor,
+                    'estimated_total_commitment_minor' => $estimatedTotalCommitmentMinor,
+                    'principal_treatment_at_issuance' => 'voucher_liability_only',
                     'charges' => $context->generated?->cost->charges ?? [],
-                    'wallet_before' => data_get(
-                        $context->generated?->wallet,
-                        'balance_before',
-                    ),
-                    'wallet_after' => data_get(
-                        $context->generated?->wallet,
-                        'balance_after',
-                    ),
                 ],
                 'voucher' => [
                     'code' => $context->voucher->getAttribute('code'),
@@ -158,8 +168,19 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
                     'mobile_verified' => $account->getAttribute('mobile_verified_at') !== null,
                     'platform_account_ready' => method_exists($account, 'wallet')
                         && $account->wallet()->where('slug', 'platform')->exists(),
+                    'treasury_positions_ready' => $recipientPositions['count'] > 0,
+                    'client_funds_minor' => $recipientPositions['client_funds_minor'],
+                    'pay_code_reserve_minor' => $recipientPositions['pay_code_reserve_minor'],
+                ],
+                'economic_outcome' => [
+                    'provider_payout_minor' => 0,
+                    'recipient_client_funds_credit_minor' => $clientFundsCreditMinor,
+                    'principal_disposition' => $principalDisposition,
+                    'requires_product_decision' => $principalDisposition
+                        === 'redeemed_without_provider_payout_or_account_credit',
                 ],
                 'controls' => [
+                    'mobile_verification_required' => $mobileVerificationRequired,
                     'provider_calls' => $providerAttempts > 0,
                     'provider_attempt_count' => $providerAttempts,
                     'external_payout_suppressed' => $providerCallsSuppressed,
@@ -210,6 +231,81 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
     private function maskedMobile(string $mobile): string
     {
         return str_repeat('*', max(0, mb_strlen($mobile) - 4)).mb_substr($mobile, -4);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function verificationEvidence(bool $required): array
+    {
+        if (! $required) {
+            return [];
+        }
+
+        $verifiedAt = now()->toIso8601String();
+
+        return [
+            'verified_at' => $verifiedAt,
+            'otp' => [
+                'verified_at' => $verifiedAt,
+            ],
+            'otp_verified' => true,
+            'otp_verification' => [
+                'verified_at' => $verifiedAt,
+            ],
+        ];
+    }
+
+    /**
+     * @return array{count:int,client_funds_minor:int,pay_code_reserve_minor:int}
+     */
+    private function recipientPositions(Model $account): array
+    {
+        $positions = array_values(array_filter(
+            $this->positions->forPrincipal(
+                $this->principalReferences->resolve($account),
+            ),
+            static fn (TreasuryPositionData $position): bool => $position->status === 'active',
+        ));
+
+        return [
+            'count' => count($positions),
+            'client_funds_minor' => $this->sumPurpose(
+                $positions,
+                TreasuryPositionPurpose::ClientFunds,
+            ),
+            'pay_code_reserve_minor' => $this->sumPurpose(
+                $positions,
+                TreasuryPositionPurpose::PayCodeReserve,
+            ),
+        ];
+    }
+
+    /**
+     * @return array{count:int,client_funds_minor:int,pay_code_reserve_minor:int}
+     */
+    private function emptyRecipientPositions(): array
+    {
+        return [
+            'count' => 0,
+            'client_funds_minor' => 0,
+            'pay_code_reserve_minor' => 0,
+        ];
+    }
+
+    /**
+     * @param  list<TreasuryPositionData>  $positions
+     */
+    private function sumPurpose(
+        array $positions,
+        TreasuryPositionPurpose $purpose,
+    ): int {
+        return array_sum(array_map(
+            static fn (TreasuryPositionData $position): int => $position->purpose === $purpose
+                ? $position->balanceMinor
+                : 0,
+            $positions,
+        ));
     }
 
     private function rawOtpPersisted(Model $voucher): bool
