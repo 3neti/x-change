@@ -90,12 +90,6 @@ function peso(minor: number): string {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(minor / 100);
 }
 
-function rowLabel(row: IntakeRow): string {
-    const beneficiary = row.normalized?.beneficiary ?? {};
-
-    return beneficiary.name || beneficiary.mobile || beneficiary.email || `Source row ${row.source_row}`;
-}
-
 function selectedRowLabel(): string {
     const count = conversionForm.included_source_rows.length;
 
@@ -186,31 +180,32 @@ function selectedRowLabel(): string {
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <div>
                             <h3 class="font-semibold text-slate-950 dark:text-slate-50">Beneficiary Preview</h3>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Choose the valid rows to add. Invalid rows are never silently included.</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Choose valid rows to add. Scroll sideways to inspect every imported column.</p>
                         </div>
                         <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800">{{ conversionForm.included_source_rows.length }} selected</span>
                     </div>
-                    <div class="max-h-[32rem] overflow-auto rounded-xl border border-slate-200 dark:border-slate-700">
-                        <table class="w-full min-w-[34rem] text-left text-sm">
+                    <div class="max-h-[32rem] overflow-auto rounded-xl border border-slate-200 dark:border-slate-700" data-testid="campaign-intake-source-table">
+                        <table class="min-w-max text-left text-sm">
                             <thead class="sticky top-0 bg-slate-50 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400">
                                 <tr>
-                                    <th class="w-12 px-3 py-2">Add</th>
-                                    <th class="px-3 py-2">Recipient</th>
-                                    <th class="px-3 py-2 text-right">Amount</th>
-                                    <th class="px-3 py-2">Check</th>
+                                    <th class="sticky left-0 z-10 w-12 bg-slate-50 px-3 py-2 dark:bg-slate-950">Add</th>
+                                    <th class="min-w-20 px-3 py-2">Row</th>
+                                    <th v-for="header in intake.source_headers" :key="header" class="min-w-36 max-w-64 px-3 py-2">{{ header }}</th>
+                                    <th class="min-w-44 px-3 py-2">Check</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
                                 <tr v-for="row in intake.rows" :key="row.source_row">
-                                    <td class="px-3 py-2">
+                                    <td class="sticky left-0 z-10 bg-white px-3 py-2 dark:bg-slate-900">
                                         <input v-if="row.status === 'valid'" v-model="conversionForm.included_source_rows" type="checkbox" :value="row.source_row" class="size-4 rounded" />
                                         <AlertTriangle v-else class="size-4 text-amber-500" aria-label="Invalid row" />
                                     </td>
-                                    <td class="px-3 py-2">
-                                        <p class="font-medium text-slate-950 dark:text-slate-50">{{ rowLabel(row) }}</p>
-                                        <p class="text-xs text-slate-500">Row {{ row.source_row }}</p>
+                                    <td class="px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400">{{ row.source_row }}</td>
+                                    <td v-for="header in intake.source_headers" :key="`${row.source_row}-${header}`" class="min-w-36 max-w-64 px-3 py-2">
+                                        <span class="block truncate text-slate-800 dark:text-slate-100" :title="row.source[header] || 'Blank'">
+                                            {{ row.source[header] || '—' }}
+                                        </span>
                                     </td>
-                                    <td class="px-3 py-2 text-right font-medium">{{ row.normalized ? peso(row.normalized.amount_minor) : '—' }}</td>
                                     <td class="max-w-64 px-3 py-2">
                                         <span v-if="row.status === 'valid'" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"><Check class="size-3.5" /> Ready</span>
                                         <span v-else class="text-xs leading-4 text-amber-700 dark:text-amber-300">{{ row.errors.join(' ') }}</span>

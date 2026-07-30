@@ -45,10 +45,15 @@ describe('Cockpit campaign worksheets', () => {
                     reference: '01KYINTAKE',
                     source_name: 'july-payroll.csv',
                     source_format: 'csv',
-                    source_headers: ['name', 'mobile', 'amount'],
+                    source_headers: ['name', 'bank', 'account number', 'amount'],
                     source_sheet: null,
                     row_count: 2,
-                    mapping: { name: 'name', mobile: 'mobile', amount: 'amount' },
+                    mapping: {
+                        name: 'name',
+                        institution: 'bank',
+                        bank_account: 'account number',
+                        amount: 'amount',
+                    },
                     suggestion: {
                         name: 'July Payroll',
                         profile: 'payroll',
@@ -65,7 +70,12 @@ describe('Cockpit campaign worksheets', () => {
                         {
                             source_row: 2,
                             status: 'valid',
-                            source: { name: 'Maria', mobile: '09173011987', amount: '100.00' },
+                            source: {
+                                name: 'Maria',
+                                bank: 'GCash',
+                                'account number': '09173011987',
+                                amount: '100.00',
+                            },
                             normalized: {
                                 beneficiary: { name: 'Maria', mobile: '09173011987' },
                                 amount_minor: 10_000,
@@ -75,7 +85,12 @@ describe('Cockpit campaign worksheets', () => {
                         {
                             source_row: 3,
                             status: 'invalid',
-                            source: { name: 'Missing', mobile: '', amount: '50.00' },
+                            source: {
+                                name: 'Missing',
+                                bank: 'NetBank',
+                                'account number': '',
+                                amount: '50.00',
+                            },
                             normalized: null,
                             errors: ['A mobile number or email address is required.'],
                         },
@@ -88,7 +103,12 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('Review Before Adding');
         expect(wrapper.text()).toContain('How Recipients Receive Funds');
         expect(wrapper.text()).toContain('Create Campaign With 1 Row');
-        expect(wrapper.text()).toContain('Invalid rows are never silently included.');
+        expect(wrapper.text()).toContain('Scroll sideways to inspect every imported column.');
+        expect(wrapper.text()).toContain('bank');
+        expect(wrapper.text()).toContain('account number');
+        expect(wrapper.text()).toContain('GCash');
+        expect(wrapper.text()).toContain('09173011987');
+        expect(wrapper.find('[data-testid="campaign-intake-source-table"]').classes()).toContain('overflow-auto');
     });
 
     it('labels authorized activity accurately instead of calling it draft only', () => {
