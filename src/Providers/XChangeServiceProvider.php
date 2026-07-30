@@ -30,6 +30,7 @@ use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
+use LBHurtado\Onboarding\Contracts\ContactUserProvisionerContract;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
@@ -290,6 +291,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultCockpitActivityHando
 use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
+use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
@@ -306,6 +308,8 @@ use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
+use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
+use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Payment\AccountFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderWalletCollectionPosting;
@@ -1002,6 +1006,17 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app
             ->make(ExecutionDriverRegistry::class)
             ->register('x_change_live_cash', XChangeLiveCashExecutionDriver::class);
+        $this->app
+            ->make(ExecutionDriverRegistry::class)
+            ->register(
+                OnboardingVoucherInstructionPolicy::ExecutionDriver,
+                OnboardingAccountProvisioningExecutionDriver::class,
+            );
+
+        $this->app->singleton(
+            ContactUserProvisionerContract::class,
+            XChangeContactUserProvisioner::class,
+        );
 
         $this->app->bind(
             SettlementReadinessGateContract::class,

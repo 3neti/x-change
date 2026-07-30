@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Slice 5 — Account-Provisioning Execution Driver
-Status: Slice 4 complete; Slice 5 in progress
+Current slice: Slice 6 — Issuance Dependency UX
+Status: Slice 5 complete; Slice 6 in progress
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -36,8 +36,8 @@ Last updated: 2026-07-30
 | 2 | Commercial Catalog and Instruction Product | Completed |
 | 3 | Explicit Claim Workflow Descriptor | Completed |
 | 4 | Generic Claim Authentication Handoff | Completed |
-| 5 | Account-Provisioning Execution Driver | In progress |
-| 6 | Issuance Dependency UX | Pending |
+| 5 | Account-Provisioning Execution Driver | Completed |
+| 6 | Issuance Dependency UX | In progress |
 | 7 | Template and Campaign Propagation | Pending |
 | 8 | Lifecycle and Browser Acceptance | Pending |
 
@@ -204,3 +204,26 @@ assets. It does not own onboarding business logic.
   - package claim/authentication: 16 tests and 75 assertions;
   - root claim workflow regression: 6 tests and 48 assertions;
   - claim authentication frontend: 4 tests.
+
+### 2026-07-30 — Slice 5 completed
+
+- Registered `onboarding_account_provisioning` with the shared Voucher
+  `ExecutionDriverRegistry`.
+- Implemented the existing `3neti/onboarding`
+  `ContactUserProvisionerContract` in x-change, keeping host User and Treasury
+  knowledge outside the onboarding package.
+- Account resolution is idempotent by normalized verified Mobile and rejects
+  Email or Mobile ownership conflicts.
+- New claimants receive one authenticatable User, an idempotent platform
+  Account, and the configured Treasury Account positions.
+- Account provisioning and Voucher redemption now share one database
+  transaction. A failed redemption rolls back newly created Account state and
+  does not consume the Voucher.
+- Required OTP workflows fail before mutation without trusted verification
+  evidence; locally disabled OTP workflows follow their persisted policy.
+- Raw OTP and PIN material is stripped before Voucher redemption and is absent
+  from execution results.
+- Successful browser claims schedule claimant authentication after commit,
+  regenerate the session identifier, and remove stale auth intent state.
+- Focused execution and provisioning verification passes: 8 tests and
+  39 assertions.
