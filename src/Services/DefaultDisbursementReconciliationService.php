@@ -55,11 +55,13 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
             $errorMessage = 'Provider returned an untrusted failed status with incomplete metadata.';
         }
 
-        // Clear stale review flags once the provider later returns a trusted success.
-        if ($resolvedStatus === 'succeeded') {
+        // Clear stale review flags once the provider later returns trusted final evidence.
+        if ($resolvedStatus === 'succeeded' || ($resolvedStatus === 'failed' && $trustsFailure)) {
             $needsReview = false;
             $reviewReason = null;
-            $errorMessage = null;
+            $errorMessage = $resolvedStatus === 'failed'
+                ? $this->extractFailureMessage($metadata)
+                : null;
         }
 
         $updates = [
@@ -138,5 +140,29 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
             || $hasStatusDetails
             || ($hasDestinationBank && $hasDestinationAccount)
             || $hasRail;
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    protected function extractFailureMessage(array $metadata): ?string
+    {
+        foreach (['rejection_reason', 'failure_reason', 'message', 'error'] as $key) {
+            $message = data_get($metadata, $key);
+
+            if (is_string($message) && trim($message) !== '') {
+                return trim($message);
+            }
+        }
+
+        foreach (array_reverse((array) data_get($metadata, 'status_details', [])) as $detail) {
+            $message = is_array($detail) ? ($detail['message'] ?? null) : null;
+
+            if (is_string($message) && trim($message) !== '') {
+                return trim($message);
+            }
+        }
+
+        return null;
     }
 }

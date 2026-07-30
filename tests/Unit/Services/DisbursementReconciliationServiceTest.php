@@ -79,3 +79,78 @@ it('reconciles a pending record to succeeded', function () {
 
     Event::assertDispatched(DisbursementConfirmed::class);
 });
+
+it('reconciles a trusted provider failure without leaving stale review flags', function () {
+    Event::fake();
+
+    $record = DisbursementReconciliation::query()->create([
+        'voucher_id' => 11,
+        'voucher_code' => 'TEST-FAIL',
+        'claim_type' => 'withdraw',
+        'provider' => 'netbank',
+        'provider_reference' => 'TEST-FAIL-09173011987',
+        'provider_transaction_id' => '407906626',
+        'transaction_uuid' => null,
+        'status' => 'pending',
+        'internal_status' => 'recorded',
+        'amount' => 2.00,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '******1987',
+        'settlement_rail' => 'INSTAPAY',
+        'attempt_count' => 1,
+        'needs_review' => true,
+        'review_reason' => 'Low-confidence failed status from provider',
+        'error_message' => 'Provider returned an untrusted failed status with incomplete metadata.',
+        'raw_request' => null,
+        'raw_response' => null,
+        'meta' => null,
+    ]);
+
+    $metadata = [
+        'transaction_id' => '407906626',
+        'operation_id' => '407906626',
+        'status' => 'Rejected',
+        'settlement_rail' => 'INSTAPAY',
+        'rejection_reason' => 'AC06 (Blocked account)',
+        'status_details' => [
+            ['status' => 'Pending', 'updated' => '2026-07-30T03:19:02Z'],
+            ['status' => 'Rejected', 'message' => 'AC06 (Blocked account)', 'updated' => '2026-07-30T03:19:03Z'],
+        ],
+    ];
+
+    $fetcher = Mockery::mock(DisbursementStatusFetcherContract::class);
+    $fetcher->shouldReceive('fetch')
+        ->once()
+        ->andReturn([
+            'status' => 'failed',
+            'metadata' => $metadata,
+        ]);
+
+    $resolver = Mockery::mock(DisbursementStatusResolverContract::class);
+    $resolver->shouldReceive('resolveFromFetchedStatus')
+        ->once()
+        ->with('failed', $metadata)
+        ->andReturn('failed');
+
+    $store = Mockery::mock(DisbursementReconciliationStoreContract::class);
+
+    $service = new DefaultDisbursementReconciliationService($store, $fetcher, $resolver);
+
+    $result = $service->reconcile($record);
+
+    expect($result['resolved_status'])->toBe('failed')
+        ->and($result['needs_review'])->toBeFalse()
+        ->and($result['trusted_failure'])->toBeTrue();
+
+    $record->refresh();
+
+    expect($record->status)->toBe('failed')
+        ->and($record->needs_review)->toBeFalse()
+        ->and($record->review_reason)->toBeNull()
+        ->and($record->error_message)->toBe('AC06 (Blocked account)')
+        ->and($record->raw_response)->toBe($metadata)
+        ->and($record->next_retry_at)->toBeNull();
+
+    Event::assertNotDispatched(DisbursementConfirmed::class);
+});

@@ -95,11 +95,13 @@ class CheckDisbursementStatusCommand extends Command
                 'currency' => data_get($metadata, 'amount.cur'),
                 'value' => data_get($metadata, 'amount.num'),
             ],
+            'rejection_reason' => data_get($metadata, 'rejection_reason'),
             'status_details' => $this->normalizeStatusDetails(
                 data_get($metadata, 'status_details', [])
             ),
             'raw' => $metadata,
         ];
+        $payload['operator_guidance'] = $this->operatorGuidance($payload);
 
         $this->renderPayload($payload, 'Disbursement status checked successfully.');
 
@@ -134,6 +136,7 @@ class CheckDisbursementStatusCommand extends Command
 
                 return [
                     'status' => $item['status'] ?? null,
+                    'message' => $item['message'] ?? null,
                     'updated' => $item['updated'] ?? null,
                 ];
             },
@@ -154,5 +157,56 @@ class CheckDisbursementStatusCommand extends Command
         }
 
         return str_repeat('*', $length - 4).substr($accountNumber, -4);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{severity: string, action: string, message: string}
+     */
+    protected function operatorGuidance(array $payload): array
+    {
+        if ($payload['resolved_status'] === 'succeeded') {
+            return [
+                'severity' => 'info',
+                'action' => 'no_action',
+                'message' => 'Provider status indicates the payout is complete.',
+            ];
+        }
+
+        if ($payload['resolved_status'] === 'failed') {
+            return [
+                'severity' => 'failed',
+                'action' => 'review_rejection_before_reissue',
+                'message' => $this->failureGuidanceMessage($payload),
+            ];
+        }
+
+        if ($payload['needs_review'] === true) {
+            return [
+                'severity' => 'needs_review',
+                'action' => 'verify_provider_dashboard',
+                'message' => 'Provider status is incomplete. Verify the provider dashboard before retrying, compensating, or telling the redeemer the payout failed.',
+            ];
+        }
+
+        return [
+            'severity' => 'pending',
+            'action' => 'wait_and_poll',
+            'message' => 'Provider status is not final yet. Continue polling before taking recovery action.',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function failureGuidanceMessage(array $payload): string
+    {
+        $reason = $payload['rejection_reason'] ?: $payload['error_message'];
+
+        if (is_string($reason) && trim($reason) !== '') {
+            return 'Provider rejected the payout: '.trim($reason).'. Confirm the destination details before issuing a replacement Pay Code.';
+        }
+
+        return 'Provider rejected the payout. Confirm the destination details before issuing a replacement Pay Code.';
     }
 }
