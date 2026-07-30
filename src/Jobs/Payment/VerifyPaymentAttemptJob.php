@@ -12,9 +12,11 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
+use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use Throwable;
 
 class VerifyPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
 {
@@ -73,5 +75,17 @@ class VerifyPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
         }
 
         $verify->handle($attempt, $this->trigger);
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        app(RecordExternalJobFailure::class)->handle(
+            jobType: class_basename(self::class),
+            subjectType: 'payment_attempt',
+            subjectId: $this->paymentAttemptId,
+            failure: $exception,
+            providerCode: $this->providerCode,
+            trigger: $this->trigger->value,
+        );
     }
 }

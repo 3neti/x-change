@@ -14,10 +14,12 @@ use LBHurtado\EmiCore\Models\WebhookReceipt;
 use LBHurtado\XChange\Actions\Funding\FinalizeFundingSuspenseMonitoring;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
+use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use Throwable;
 
 class VerifyFundingWebhookReceiptJob implements ShouldQueue
 {
@@ -79,5 +81,16 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
             )->afterCommit());
 
         $finalizeMonitoring->handle($receipt->getKey());
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        app(RecordExternalJobFailure::class)->handle(
+            jobType: class_basename(self::class),
+            subjectType: 'webhook_receipt',
+            subjectId: $this->webhookReceiptId,
+            failure: $exception,
+            trigger: 'webhook',
+        );
     }
 }

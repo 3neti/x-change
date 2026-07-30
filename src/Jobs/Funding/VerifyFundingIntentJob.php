@@ -14,10 +14,12 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
+use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Models\FundingIntent;
+use Throwable;
 
 class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
 {
@@ -88,5 +90,17 @@ class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
         if ($intent->status === FundingIntentStatus::Verified) {
             $settle->handle($intent);
         }
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        app(RecordExternalJobFailure::class)->handle(
+            jobType: class_basename(self::class),
+            subjectType: 'funding_intent',
+            subjectId: $this->fundingIntentId,
+            failure: $exception,
+            providerCode: $this->providerCode,
+            trigger: $this->trigger->value,
+        );
     }
 }

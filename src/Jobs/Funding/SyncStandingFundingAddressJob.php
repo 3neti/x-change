@@ -13,8 +13,10 @@ use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
+use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use Throwable;
 
 final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
 {
@@ -78,5 +80,17 @@ final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
         }
 
         $sync->handle($address, $this->trigger, $this->webhookReceiptId);
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        app(RecordExternalJobFailure::class)->handle(
+            jobType: class_basename(self::class),
+            subjectType: 'standing_funding_address',
+            subjectId: $this->standingFundingAddressId,
+            failure: $exception,
+            providerCode: $this->providerCode,
+            trigger: $this->trigger,
+        );
     }
 }
