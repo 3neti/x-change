@@ -40,6 +40,8 @@ it('documents the public claim form-flow ui scaffold without cockpit scope', fun
         ->toContain('--qa-acceptance')
         ->toContain('claim-ux-acceptance-report.md')
         ->toContain('Visual Polish Priorities')
+        ->toContain('Reviewer Notes By Status')
+        ->toContain('direct HTML/PDF storyboard links')
         ->toContain('Review checklist')
         ->toContain('Reviewer status')
         ->toContain('default` points to the HTML index')

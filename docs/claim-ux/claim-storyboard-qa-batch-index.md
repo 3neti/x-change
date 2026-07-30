@@ -209,6 +209,10 @@ The acceptance report includes a Visual Polish Priorities section:
   dense mobile screens, handler capture surfaces, rider handoff, and success
   redirect copy.
 
+The report also includes a scenario table with direct HTML/PDF storyboard links
+and a Reviewer Notes By Status section so blockers and polish notes can be read
+without opening the worksheet.
+
 Use individual scenario commands when iterating on a single lane.
 
 Use real lifecycle/provider commands only when the goal is provider regression,

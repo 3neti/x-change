@@ -1293,15 +1293,67 @@ final class ClaimWalkthroughCommand extends Command
             '',
             '## Scenario Results',
             '',
+            '| Priority | Scenario | Status | HTML | PDF | Notes |',
+            '| --- | --- | --- | --- | --- | --- |',
         ];
 
         foreach ((array) data_get($review, 'entries', []) as $entry) {
-            $lines[] = '- `'.data_get($entry, 'scenario').'` - '.data_get($entry, 'review.status', 'unreviewed');
+            $lines[] = sprintf(
+                '| %s | `%s` | %s | [HTML](%s) | [PDF](%s) | %s |',
+                $this->qaAcceptanceTableCell(data_get($entry, 'priority')),
+                $this->qaAcceptanceTableCell(data_get($entry, 'scenario')),
+                $this->qaAcceptanceTableCell(data_get($entry, 'review.status', 'unreviewed')),
+                $this->qaAcceptanceTableCell(data_get($entry, 'storyboard_html')),
+                $this->qaAcceptanceTableCell(data_get($entry, 'storyboard_pdf')),
+                $this->qaAcceptanceTableCell(data_get($entry, 'review.notes')),
+            );
         }
 
-        $lines[] = '';
+        $lines = [
+            ...$lines,
+            '',
+            '## Reviewer Notes By Status',
+            '',
+            ...$this->qaAcceptanceReviewerNoteLines($review),
+            '',
+        ];
 
         return implode(PHP_EOL, $lines);
+    }
+
+    private function qaAcceptanceTableCell(mixed $value): string
+    {
+        return str_replace('|', '\\|', $this->qaBatchMarkdownText($value));
+    }
+
+    /**
+     * @param  array<string, mixed>  $review
+     * @return list<string>
+     */
+    private function qaAcceptanceReviewerNoteLines(array $review): array
+    {
+        $entries = collect((array) data_get($review, 'entries', []));
+        $lines = [];
+
+        foreach (['blocker', 'needs_fix', 'unreviewed', 'pass'] as $status) {
+            $matching = $entries->filter(fn (array $entry): bool => data_get($entry, 'review.status') === $status);
+
+            if ($matching->isEmpty()) {
+                continue;
+            }
+
+            $lines[] = '### '.str_replace('_', ' ', ucfirst($status));
+            $lines[] = '';
+
+            foreach ($matching as $entry) {
+                $notes = trim((string) data_get($entry, 'review.notes'));
+                $lines[] = '- `'.data_get($entry, 'scenario').'`: '.($notes !== '' ? $notes : 'No notes recorded.');
+            }
+
+            $lines[] = '';
+        }
+
+        return $lines !== [] ? $lines : ['- No reviewer notes were recorded.'];
     }
 
     /**

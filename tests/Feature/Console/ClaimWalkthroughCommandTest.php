@@ -196,7 +196,9 @@ it('summarizes qa review worksheets and writes an acceptance report', function (
         ->and($acceptance['report_markdown'])->toBeFile()
         ->and(file_get_contents($acceptance['report_markdown']))->toContain('# Claim UX Acceptance Report')
         ->and(file_get_contents($acceptance['report_markdown']))->toContain('P1: Polish needs_fix lanes')
-        ->and(file_get_contents($acceptance['report_markdown']))->toContain('P2: Complete human review');
+        ->and(file_get_contents($acceptance['report_markdown']))->toContain('P2: Complete human review')
+        ->and(file_get_contents($acceptance['report_markdown']))->toContain('| Priority | Scenario | Status | HTML | PDF | Notes |')
+        ->and(file_get_contents($acceptance['report_markdown']))->toContain('## Reviewer Notes By Status');
 });
 
 it('diffs two qa batch manifests by scenario artifact fingerprint and storyboard paths', function (): void {
