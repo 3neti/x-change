@@ -18,6 +18,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignApprovalDeliveryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferDispatchController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferReconciliationController;
@@ -125,6 +126,10 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/{worksheet}/authorizations', [CockpitCampaignWorksheetAuthorizationController::class, 'store'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.campaigns.authorizations.store');
+        Route::post('campaigns/{worksheet}/authorizations/{authorization}/deliveries/{channel}', [CockpitCampaignApprovalDeliveryController::class, 'store'])
+            ->whereIn('channel', ['sms', 'email'])
+            ->middleware('throttle:3,1')
+            ->name('x-change.cockpit.campaigns.authorizations.deliveries.store');
         Route::post('campaigns/{worksheet}/fulfillments/pay-codes', [CockpitCampaignWorksheetFulfillmentController::class, 'store'])
             ->middleware('throttle:3,1')
             ->name('x-change.cockpit.campaigns.fulfillments.pay-codes.store');

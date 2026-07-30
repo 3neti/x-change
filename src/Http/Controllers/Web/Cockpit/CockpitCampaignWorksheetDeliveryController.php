@@ -40,10 +40,9 @@ class CockpitCampaignWorksheetDeliveryController extends Controller
 
         return to_route('x-change.cockpit.campaigns.show', $worksheet)
             ->with('campaign_notice', sprintf(
-                '%s delivery: %d sent, %d failed, %d blocked, %d already attempted.',
+                '%s delivery: %d queued, %d blocked, %d already attempted.',
                 strtoupper($channel),
-                $result['sent'],
-                $result['failed'],
+                $result['queued'],
                 $result['blocked'],
                 $result['skipped'],
             ));

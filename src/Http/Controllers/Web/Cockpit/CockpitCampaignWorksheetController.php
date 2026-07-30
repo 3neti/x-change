@@ -284,13 +284,16 @@ class CockpitCampaignWorksheetController extends Controller
             ->map(function (CampaignDeliveryAttempt $attempt): array {
                 $lastEvent = $attempt->events->last();
                 $beneficiary = (array) ($attempt->fulfillment?->row?->beneficiary_ciphertext ?? []);
+                $metadata = (array) $attempt->metadata;
+                $purpose = (string) ($metadata['purpose'] ?? ($attempt->channel === 'export' ? 'beneficiary_export' : 'beneficiary_delivery'));
 
                 return [
                     'reference' => (string) $attempt->reference,
                     'channel' => (string) $attempt->channel,
                     'attempt_number' => (int) $attempt->attempt_number,
                     'retry_of_reference' => $attempt->retry_of_reference,
-                    'beneficiary' => (string) ($beneficiary['name'] ?? 'Batch export'),
+                    'purpose' => $purpose,
+                    'beneficiary' => (string) ($beneficiary['name'] ?? ($purpose === 'officer_authorization' ? 'Approval officer' : 'Batch export')),
                     'pay_code' => $attempt->fulfillment?->pay_code,
                     'status' => (string) ($lastEvent?->event_type ?? 'requested'),
                     'safe_error_code' => $lastEvent?->safe_error_code,

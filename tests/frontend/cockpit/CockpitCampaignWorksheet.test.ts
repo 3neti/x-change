@@ -76,5 +76,8 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('Download CSV');
         expect(page).toContain('SMS Disabled');
         expect(page).toContain('Email Disabled');
+        expect(page).toContain('data-testid="campaign-approval-delivery"');
+        expect(page).toContain('Send To Officer');
+        expect(page).toContain('The officer must sign in and review it.');
     });
 });

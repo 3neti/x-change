@@ -2,16 +2,42 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
+use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
+use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
+use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+
+it('keeps campaign messaging behind the encrypted x-change feedback queue boundary', function () {
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+
+    $job = new DispatchCampaignFeedbackJob(123, 'recipient@example.test');
+    $campaignSources = implode('', [
+        file_get_contents(__DIR__.'/../../../src/Actions/Campaigns/DispatchCampaignFeedback.php'),
+        file_get_contents(__DIR__.'/../../../src/Actions/Campaigns/DispatchCampaignPayCodeDeliveries.php'),
+        file_get_contents(__DIR__.'/../../../src/Actions/Campaigns/SendCampaignApprovalPayCode.php'),
+    ]);
+
+    expect($job)->toBeInstanceOf(ShouldQueue::class)
+        ->and($job)->toBeInstanceOf(ShouldBeEncrypted::class)
+        ->and($job->queue)->toBe('x-change-feedback')
+        ->and($campaignSources)->not->toContain('Mail::')
+        ->and($campaignSources)->not->toContain('EngageSpark')
+        ->and($campaignSources)->not->toContain('FeedbackDeliveryAttemptRuntimeContract');
+});
 
 it('shows only the authenticated owner campaign worksheet summaries', function () {
     $owner = actingAsTestUser();
@@ -279,9 +305,11 @@ it('records an explicit export as an immutable append-only delivery attempt', fu
         ->toThrow(LogicException::class, 'Campaign delivery attempt events are append-only.');
 });
 
-it('sends campaign email only through an enabled explicit action and records blocked routes', function () {
+it('queues campaign email on x-change-feedback and records blocked routes', function () {
     Mail::fake();
+    Queue::fake([DispatchCampaignFeedbackJob::class]);
     config()->set('x-change.campaigns.delivery.email.enabled', true);
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
     $owner = actingAsTestUser();
     $officer = actingAsTestUser();
     $officer->forceFill(['mobile' => '09173011987'])->save();
@@ -320,9 +348,15 @@ it('sends campaign email only through an enabled explicit action and records blo
         'channel' => 'email',
     ]))
         ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
-        ->assertSessionHas('campaign_notice', 'EMAIL delivery: 1 sent, 0 failed, 1 blocked, 0 already attempted.');
+        ->assertSessionHas('campaign_notice', 'EMAIL delivery: 1 queued, 1 blocked, 0 already attempted.');
 
-    Mail::assertSent(FeedbackEmailMessage::class, 1);
+    Mail::assertNothingSent();
+    Queue::assertPushedOn(
+        'x-change-feedback',
+        DispatchCampaignFeedbackJob::class,
+        fn (DispatchCampaignFeedbackJob $job): bool => $job->queue === 'x-change-feedback'
+            && $job->recipient === 'maria@example.test',
+    );
 
     expect(CampaignDeliveryAttempt::query()->where('channel', 'email')->count())->toBe(2)
         ->and(CampaignDeliveryAttempt::query()
@@ -332,13 +366,32 @@ it('sends campaign email only through an enabled explicit action and records blo
             ->sort()
             ->values()
             ->all())
-        ->toBe(['blocked', 'completed']);
+        ->toBe(['blocked', 'queued']);
+
+    $queuedJob = null;
+    Queue::assertPushed(
+        DispatchCampaignFeedbackJob::class,
+        function (DispatchCampaignFeedbackJob $job) use (&$queuedJob): bool {
+            $queuedJob = $job;
+
+            return $job->recipient === 'maria@example.test';
+        },
+    );
+    expect($queuedJob)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
+    $queuedJob->handle(app(DispatchCampaignFeedback::class));
+
+    Mail::assertSent(FeedbackEmailMessage::class, 1);
+    expect(ExecutionJournalEntry::query()
+        ->where('correlation_id', $authorization->reference)
+        ->orderBy('id')
+        ->pluck('event_type')
+        ->all())->toBe(['feedback.created', 'feedback.sent']);
 
     $this->post(route('x-change.cockpit.campaigns.deliveries.store', [
         'worksheet' => $worksheet->reference,
         'channel' => 'email',
     ]))
-        ->assertSessionHas('campaign_notice', 'EMAIL delivery: 0 sent, 0 failed, 0 blocked, 2 already attempted.');
+        ->assertSessionHas('campaign_notice', 'EMAIL delivery: 0 queued, 0 blocked, 2 already attempted.');
 
     Mail::assertSent(FeedbackEmailMessage::class, 1);
     expect(CampaignDeliveryAttempt::query()->where('channel', 'email')->count())->toBe(2);
@@ -381,4 +434,202 @@ it('rejects campaign messaging while its explicit runtime gate is disabled', fun
     ]))->assertForbidden();
 
     expect(CampaignDeliveryAttempt::query()->count())->toBe(0);
+});
+
+it('queues an awaiting officer approval Pay Code through x-change feedback without approving the worksheet', function () {
+    Mail::fake();
+    Queue::fake([DispatchCampaignFeedbackJob::class]);
+    config()->set('x-change.campaigns.delivery.email.enabled', true);
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-approval-email-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Approval Email Payroll',
+        fulfillmentMode: 'pay_code_distribution',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09178889999'], 12_500)],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+    $requestToken = (string) Str::uuid();
+
+    Mail::assertNothingSent();
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(0);
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'authorization' => $authorization->reference,
+        'channel' => 'email',
+    ]), [
+        'recipient' => 'officer@example.test',
+        'request_token' => $requestToken,
+    ])
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', 'Approval Pay Code queued for EMAIL delivery.');
+
+    Mail::assertNothingSent();
+    Queue::assertPushedOn(
+        'x-change-feedback',
+        DispatchCampaignFeedbackJob::class,
+        fn (DispatchCampaignFeedbackJob $job): bool => $job->queue === 'x-change-feedback'
+            && $job->recipient === 'officer@example.test',
+    );
+
+    $attempt = CampaignDeliveryAttempt::query()->with('events')->sole();
+
+    expect($attempt->campaign_worksheet_fulfillment_id)->toBeNull()
+        ->and($attempt->channel)->toBe('email')
+        ->and($attempt->recipient_route_hash)->toBe(hash('sha256', 'officer@example.test'))
+        ->and($attempt->metadata)->toMatchArray([
+            'purpose' => 'officer_authorization',
+            'pay_code' => $authorization->approval_pay_code,
+        ])
+        ->and($attempt->events->pluck('event_type')->all())->toBe(['requested', 'queued'])
+        ->and($authorization->fresh()->status)->toBe('awaiting_officer')
+        ->and($authorization->fulfillments()->count())->toBe(0);
+
+    $queuedJob = null;
+    Queue::assertPushed(
+        DispatchCampaignFeedbackJob::class,
+        function (DispatchCampaignFeedbackJob $job) use (&$queuedJob): bool {
+            $queuedJob = $job;
+
+            return true;
+        },
+    );
+    expect($queuedJob)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
+    $queuedJob->handle(app(DispatchCampaignFeedback::class));
+
+    Mail::assertSent(FeedbackEmailMessage::class, function (FeedbackEmailMessage $message) use ($authorization): bool {
+        return $message->hasTo('officer@example.test')
+            && str_contains($message->intent->message->body, (string) $authorization->approval_pay_code);
+    });
+    expect($attempt->fresh()->events->pluck('event_type')->all())
+        ->toBe(['requested', 'queued', 'completed'])
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', $authorization->reference)
+            ->orderBy('id')
+            ->pluck('event_type')
+            ->all())
+        ->toBe(['feedback.created', 'feedback.sent']);
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'authorization' => $authorization->reference,
+        'channel' => 'email',
+    ]), [
+        'recipient' => 'officer@example.test',
+        'request_token' => $requestToken,
+    ])->assertSessionHas('campaign_notice', 'This approval delivery request was already processed.');
+
+    Mail::assertSent(FeedbackEmailMessage::class, 1);
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(1);
+});
+
+it('preserves the feedback created and queued journal lifecycle for campaign sms', function () {
+    Queue::fake([
+        DispatchCampaignFeedbackJob::class,
+        DeliverQueuedFeedbackSmsJob::class,
+    ]);
+    config()->set('x-change.campaigns.delivery.sms.enabled', true);
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-approval-sms-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'assistance',
+        name: 'Approval SMS Assistance',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09178889999'], 5_000)],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'authorization' => $authorization->reference,
+        'channel' => 'sms',
+    ]), [
+        'recipient' => '09173011987',
+        'request_token' => (string) Str::uuid(),
+    ])->assertSessionHas('campaign_notice', 'Approval Pay Code queued for SMS delivery.');
+
+    $campaignJob = null;
+    Queue::assertPushedOn(
+        'x-change-feedback',
+        DispatchCampaignFeedbackJob::class,
+        function (DispatchCampaignFeedbackJob $job) use (&$campaignJob): bool {
+            $campaignJob = $job;
+
+            return $job->recipient === '09173011987';
+        },
+    );
+    Queue::assertNotPushed(DeliverQueuedFeedbackSmsJob::class);
+
+    expect($campaignJob)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
+    $campaignJob->handle(app(DispatchCampaignFeedback::class));
+
+    Queue::assertPushedOn(
+        'x-change-feedback',
+        DeliverQueuedFeedbackSmsJob::class,
+        fn (DeliverQueuedFeedbackSmsJob $job): bool => $job->queue === 'x-change-feedback',
+    );
+
+    $attempt = CampaignDeliveryAttempt::query()->with('events')->sole();
+
+    expect($attempt->events->pluck('event_type')->all())
+        ->toBe(['requested', 'queued', 'provider_queued'])
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', $authorization->reference)
+            ->orderBy('id')
+            ->pluck('event_type')
+            ->all())
+        ->toBe(['feedback.created', 'feedback.queued'])
+        ->and($authorization->fresh()->status)->toBe('awaiting_officer');
+});
+
+it('validates and gates officer approval delivery independently from authorization', function () {
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-approval-gated-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'assistance',
+        name: 'Gated Approval',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09178889999'], 1_000)],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'authorization' => $authorization->reference,
+        'channel' => 'email',
+    ]), [
+        'recipient' => 'officer@example.test',
+        'request_token' => (string) Str::uuid(),
+    ])->assertForbidden();
+
+    config()->set('x-change.campaigns.delivery.email.enabled', true);
+
+    $this->from(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->post(route('x-change.cockpit.campaigns.authorizations.deliveries.store', [
+            'worksheet' => $worksheet->reference,
+            'authorization' => $authorization->reference,
+            'channel' => 'email',
+        ]), [
+            'recipient' => 'not-an-email',
+            'request_token' => (string) Str::uuid(),
+        ])
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHasErrors('recipient');
+
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(0)
+        ->and($authorization->fresh()->status)->toBe('awaiting_officer');
 });

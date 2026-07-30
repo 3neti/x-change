@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import { ArrowLeft, Check, Download, FileSpreadsheet, LockKeyhole, Mail, MessageSquare, Plus, RotateCcw, Send, Upload, Users, XCircle } from 'lucide-vue-next';
 import { index } from '@/routes/x-change/cockpit/campaigns';
 import rows from '@/routes/x-change/cockpit/campaigns/rows';
@@ -17,7 +18,7 @@ type Worksheet = { reference: string; profile: string; name: string; status: str
 type Import = { reference: string; status: string; source_format: string; row_count: number; valid_count: number; validation_errors: { row: number; messages: string[] }[]; mapping: Record<string, string> };
 type Authorization = { reference?: string; status?: string; approval_pay_code?: string | null; beneficiary_count?: number; principal_minor?: number };
 type Fulfillment = { reference: string; ordinal: number; beneficiary: string; amount_minor: number; mode: string; status: string; provider_transfer_reference: string | null; pay_code: string | null };
-type DeliveryAttempt = { reference: string; channel: string; attempt_number: number; retry_of_reference: string | null; beneficiary: string; pay_code: string | null; status: string; safe_error_code: string | null; requested_at: string | null; can_retry: boolean };
+type DeliveryAttempt = { reference: string; channel: string; attempt_number: number; retry_of_reference: string | null; purpose: string; beneficiary: string; pay_code: string | null; status: string; safe_error_code: string | null; requested_at: string | null; can_retry: boolean };
 type Delivery = { channels: { sms: boolean; email: boolean }; attempts: DeliveryAttempt[] };
 type Props = CockpitHeaderPageProps & { worksheet: Worksheet; imports: Import[]; fulfillment_summary: Record<string, number>; authorization: Authorization; fulfillments: Fulfillment[]; direct_bank_transfer_enabled: boolean; delivery: Delivery };
 const props = defineProps<Props>();
@@ -29,6 +30,9 @@ const transferForm = useForm({});
 const reconciliationForm = useForm({});
 const fallbackForm = useForm({});
 const deliveryForm = useForm({});
+const approvalDeliveryForm = useForm({ recipient: '', request_token: crypto.randomUUID() });
+const approvalDeliveryChannel = ref<'sms' | 'email'>(props.delivery.channels.sms ? 'sms' : 'email');
+const approvalDeliveryAttempts = computed(() => props.delivery.attempts.filter((attempt) => attempt.purpose === 'officer_authorization').slice(0, 3));
 const peso = (minor: number) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(minor / 100);
 const plannedCount = (): number => props.fulfillment_summary.planned_count ?? 0;
 const issuedCount = (): number => props.fulfillment_summary.issued_count ?? 0;
@@ -56,6 +60,20 @@ const reconcileTransfers = (): void => reconciliationForm.post(fulfillments.bank
 const planFallbacks = (): void => fallbackForm.post(fulfillments.fallbacks.store(props.worksheet.reference), { preserveScroll: true });
 const deliver = (channel: 'sms' | 'email'): void => deliveryForm.post(deliveries.store({ worksheet: props.worksheet.reference, channel }), { preserveScroll: true });
 const retryDelivery = (reference: string): void => deliveryForm.post(deliveries.retries.store({ worksheet: props.worksheet.reference, attempt: reference }), { preserveScroll: true });
+const sendApproval = (): void => {
+    if (!props.authorization.reference) return;
+    approvalDeliveryForm.post(authorizations.deliveries.store({
+        worksheet: props.worksheet.reference,
+        authorization: props.authorization.reference,
+        channel: approvalDeliveryChannel.value,
+    }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            approvalDeliveryForm.reset('recipient');
+            approvalDeliveryForm.request_token = crypto.randomUUID();
+        },
+    });
+};
 </script>
 
 <template>
@@ -110,7 +128,26 @@ const retryDelivery = (reference: string): void => deliveryForm.post(deliveries.
                     </article>
                 </div>
             </section>
-            <section v-if="props.authorization.status === 'awaiting_officer' && props.authorization.approval_pay_code" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/30"><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:text-amber-200">Officer Authorization</p><div class="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="font-semibold text-slate-950 dark:text-slate-50">Approval Pay Code Ready</h2><p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ props.authorization.approval_pay_code }} authorizes this frozen beneficiary list. It does not issue, deliver, or transfer beneficiary funds.</p></div><Link :href="claimShow(props.authorization.approval_pay_code)" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-950">Open Approval Pay Code</Link></div></section>
+            <section v-if="props.authorization.status === 'awaiting_officer' && props.authorization.approval_pay_code" data-testid="campaign-approval-delivery" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/30">
+                <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:text-amber-200">Officer Authorization</p>
+                <div class="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div><h2 class="font-semibold text-slate-950 dark:text-slate-50">Approval Pay Code Ready</h2><p class="mt-1 text-sm text-slate-600 dark:text-slate-300"><span class="font-semibold">{{ props.authorization.approval_pay_code }}</span> authorizes this frozen beneficiary list. The officer must sign in and review it.</p></div>
+                    <Link :href="claimShow(props.authorization.approval_pay_code)" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-950">Open Approval Pay Code</Link>
+                </div>
+                <form class="mt-4 grid gap-2 border-t border-amber-200 pt-4 sm:grid-cols-[auto_minmax(12rem,1fr)_auto] dark:border-amber-900/70" @submit.prevent="sendApproval">
+                    <div class="inline-flex rounded-xl border border-amber-300 bg-white p-1 dark:border-amber-800 dark:bg-slate-950">
+                        <button type="button" :disabled="!props.delivery.channels.sms" :class="approvalDeliveryChannel === 'sms' ? 'bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40" @click="approvalDeliveryChannel = 'sms'"><MessageSquare class="size-3.5" /> SMS</button>
+                        <button type="button" :disabled="!props.delivery.channels.email" :class="approvalDeliveryChannel === 'email' ? 'bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40" @click="approvalDeliveryChannel = 'email'"><Mail class="size-3.5" /> Email</button>
+                    </div>
+                    <input v-model="approvalDeliveryForm.recipient" :type="approvalDeliveryChannel === 'email' ? 'email' : 'tel'" :placeholder="approvalDeliveryChannel === 'email' ? 'Officer email' : 'Officer mobile'" :disabled="!props.delivery.channels[approvalDeliveryChannel]" class="min-w-0 rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm text-slate-950 placeholder:text-slate-400 disabled:opacity-50 dark:border-amber-800 dark:bg-slate-950 dark:text-white" />
+                    <button type="submit" :disabled="approvalDeliveryForm.processing || !approvalDeliveryForm.recipient || !props.delivery.channels[approvalDeliveryChannel]" class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-100 dark:text-slate-950"><Send class="size-4" /> {{ approvalDeliveryForm.processing ? 'Sending…' : 'Send To Officer' }}</button>
+                    <p v-if="approvalDeliveryForm.errors.recipient" class="text-xs text-rose-700 sm:col-start-2 dark:text-rose-300">{{ approvalDeliveryForm.errors.recipient }}</p>
+                </form>
+                <div v-if="approvalDeliveryAttempts.length" class="mt-3 flex flex-wrap gap-2">
+                    <span v-for="attempt in approvalDeliveryAttempts" :key="attempt.reference" class="rounded-full border border-amber-300 bg-white/80 px-2.5 py-1 text-xs font-semibold capitalize text-slate-600 dark:border-amber-800 dark:bg-slate-950/70 dark:text-slate-300">{{ attempt.channel }} · {{ attempt.status }}</span>
+                </div>
+                <p v-if="!props.delivery.channels.sms && !props.delivery.channels.email" class="mt-2 text-xs text-amber-800 dark:text-amber-200">SMS and email delivery are disabled by runtime configuration. You can still share the code or link manually.</p>
+            </section>
             <section v-if="props.fulfillments.length > 0" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"><div class="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Beneficiary Outcomes</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">First 100 Results</h2></div><a :href="exports.results(props.worksheet.reference).url" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"><Download class="size-4" /> Export All Results</a></div><div class="divide-y divide-slate-200 dark:divide-slate-800"><article v-for="item in props.fulfillments" :key="item.reference" class="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"><div><p class="font-semibold text-slate-950 dark:text-slate-50">{{ item.ordinal }} · {{ item.beneficiary }}</p><p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ item.mode }} · {{ item.status }}<template v-if="item.provider_transfer_reference"> · {{ item.provider_transfer_reference }}</template><template v-else-if="item.pay_code"> · {{ item.pay_code }}</template></p></div><p class="text-sm font-semibold text-slate-950 dark:text-slate-50">{{ peso(item.amount_minor) }}</p><span class="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ item.status }}</span></article></div></section>
 
             <section v-if="isDraft()" class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
