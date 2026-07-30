@@ -34,8 +34,33 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('Draft only');
         expect(wrapper.text()).not.toContain('Maria Santos');
         expect(wrapper.text()).toContain('Import Beneficiary List');
+        expect(wrapper.text()).toContain('Drop CSV Or Excel Here');
         expect(wrapper.text()).toContain('Choose CSV Or Excel');
+        expect(wrapper.find('[data-testid="campaign-import-drop-zone"]').attributes('role')).toBe('button');
         expect(wrapper.text()).toContain('Start Blank');
+    });
+
+    it('gives beneficiary imports a drag target and rejects unsupported files locally', async () => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+            },
+        });
+        const dropZone = wrapper.get('[data-testid="campaign-import-drop-zone"]');
+
+        await dropZone.trigger('dragenter');
+        expect(dropZone.classes()).toContain('border-sky-500');
+
+        await dropZone.trigger('dragleave');
+        expect(dropZone.classes()).not.toContain('border-sky-500');
+
+        await dropZone.trigger('drop', {
+            dataTransfer: {
+                files: [new File(['not a worksheet'], 'beneficiaries.pdf', { type: 'application/pdf' })],
+            },
+        });
+
+        expect(wrapper.text()).toContain('Choose a CSV or XLSX file.');
     });
 
     it('opens an explicit intake review with suggested choices and row controls', () => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { ClipboardList, FileSpreadsheet, Plus, Send, Trash2, Upload, Users } from 'lucide-vue-next';
+import { ref } from 'vue';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
 import CockpitCampaignIntakeDialog from '../components/CockpitCampaignIntakeDialog.vue';
@@ -35,18 +36,83 @@ const form = useForm({
 });
 const deleteForm = useForm({});
 const intakeForm = useForm<{ file: File | null }>({ file: null });
+const intakeFileInput = ref<HTMLInputElement | null>(null);
+const intakeDragDepth = ref(0);
+const isDraggingIntake = ref(false);
+const intakeFileError = ref<string | null>(null);
 
 function uploadIntake(event: Event): void {
     const input = event.target as HTMLInputElement;
-    intakeForm.file = input.files?.[0] ?? null;
-    if (!intakeForm.file) {
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+
+    if (!file) {
         return;
     }
 
+    submitIntakeFile(file);
+}
+
+function submitIntakeFile(file: File): void {
+    intakeFileError.value = null;
+    intakeForm.clearErrors('file');
+
+    if (!/\.(csv|xlsx)$/i.test(file.name)) {
+        intakeFileError.value = 'Choose a CSV or XLSX file.';
+
+        return;
+    }
+
+    intakeForm.file = file;
     intakeForm.post(storeIntake(), {
         forceFormData: true,
         preserveScroll: true,
+        onSuccess: () => intakeForm.reset('file'),
     });
+}
+
+function openIntakeFilePicker(): void {
+    if (!intakeForm.processing) {
+        intakeFileInput.value?.click();
+    }
+}
+
+function beginIntakeDrag(): void {
+    if (intakeForm.processing) {
+        return;
+    }
+
+    intakeDragDepth.value += 1;
+    isDraggingIntake.value = true;
+}
+
+function endIntakeDrag(): void {
+    intakeDragDepth.value = Math.max(0, intakeDragDepth.value - 1);
+
+    if (intakeDragDepth.value === 0) {
+        isDraggingIntake.value = false;
+    }
+}
+
+function dropIntake(event: DragEvent): void {
+    intakeDragDepth.value = 0;
+    isDraggingIntake.value = false;
+
+    if (intakeForm.processing) {
+        return;
+    }
+
+    const files = Array.from(event.dataTransfer?.files ?? []);
+
+    if (files.length !== 1) {
+        intakeFileError.value = files.length > 1
+            ? 'Choose one beneficiary file at a time.'
+            : 'Choose a CSV or XLSX file.';
+
+        return;
+    }
+
+    submitIntakeFile(files[0]);
 }
 
 function createWorksheet(): void {
@@ -206,12 +272,52 @@ function dateTime(value: string | null): string {
                             </div>
                         </div>
                         <p class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300">Upload CSV or Excel. We’ll suggest the purpose and recipient method before creating anything.</p>
-                        <label class="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950">
-                            <Upload class="size-4" aria-hidden="true" />
-                            {{ intakeForm.processing ? 'Inspecting…' : 'Choose CSV Or Excel' }}
-                            <input type="file" accept=".csv,.txt,.xlsx" class="sr-only" :disabled="intakeForm.processing" @change="uploadIntake" />
-                        </label>
-                        <p v-if="intakeForm.errors.file" class="mt-2 text-xs text-rose-600 dark:text-rose-300">{{ intakeForm.errors.file }}</p>
+                        <div
+                            data-testid="campaign-import-drop-zone"
+                            role="button"
+                            :tabindex="intakeForm.processing ? -1 : 0"
+                            :aria-disabled="intakeForm.processing"
+                            aria-label="Import beneficiary list from CSV or Excel"
+                            class="mt-4 flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-6 text-center transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+                            :class="
+                                isDraggingIntake
+                                    ? 'border-sky-500 bg-sky-50 ring-4 ring-sky-100 dark:border-sky-400 dark:bg-sky-950/40 dark:ring-sky-950'
+                                    : 'border-slate-300 bg-slate-50/70 hover:border-sky-400 hover:bg-sky-50/60 dark:border-slate-700 dark:bg-slate-950/60 dark:hover:border-sky-500 dark:hover:bg-sky-950/30'
+                            "
+                            @click="openIntakeFilePicker"
+                            @keydown.enter.prevent="openIntakeFilePicker"
+                            @keydown.space.prevent="openIntakeFilePicker"
+                            @dragenter.prevent="beginIntakeDrag"
+                            @dragover.prevent
+                            @dragleave.prevent="endIntakeDrag"
+                            @drop.prevent="dropIntake"
+                        >
+                            <span class="inline-flex size-10 items-center justify-center rounded-full bg-white text-sky-600 shadow-sm dark:bg-slate-900 dark:text-sky-300">
+                                <Upload class="size-5" aria-hidden="true" />
+                            </span>
+                            <p class="mt-3 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                                {{ intakeForm.processing ? 'Inspecting Beneficiaries…' : isDraggingIntake ? 'Drop To Inspect' : 'Drop CSV Or Excel Here' }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                {{ intakeForm.processing ? 'Preparing a private review. Nothing is added yet.' : 'or Choose CSV Or Excel' }}
+                            </p>
+                            <p class="mt-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                                CSV · XLSX · One File At A Time
+                            </p>
+                        </div>
+                        <input
+                            ref="intakeFileInput"
+                            type="file"
+                            accept=".csv,.xlsx"
+                            class="sr-only"
+                            :disabled="intakeForm.processing"
+                            tabindex="-1"
+                            aria-hidden="true"
+                            @change="uploadIntake"
+                        />
+                        <p v-if="intakeFileError || intakeForm.errors.file" class="mt-2 text-xs text-rose-600 dark:text-rose-300">
+                            {{ intakeFileError || intakeForm.errors.file }}
+                        </p>
                     </section>
 
                     <details class="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
