@@ -1151,6 +1151,9 @@ function stringValue(value: unknown): string | null {
                     :onboarding-otp-required="
                         props.onboarding_policy?.otp_required ?? true
                     "
+                    :onboarding-preset="
+                        props.invitation_preset?.enabled ?? false
+                    "
                     :last-instructions="props.last_instructions"
                     :saved-templates="props.saved_templates ?? []"
                     :templates="templates"

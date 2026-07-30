@@ -79,12 +79,14 @@ const props = withDefaults(
         campaignContext?: CockpitQuickGenerateCampaignContext;
         feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
         onboardingOtpRequired?: boolean;
+        onboardingPreset?: boolean;
         lastInstructions?: CockpitQuickGenerateLastInstructions | null;
         savedTemplates?: CockpitSavedPayCodeTemplate[];
         templates: CockpitQuickGenerateTemplate[];
     }>(),
     {
         onboardingOtpRequired: true,
+        onboardingPreset: false,
     },
 );
 
@@ -548,7 +550,7 @@ const purpose = ref(
 const riderMessageFormat = ref<RiderContentFormat>('plain');
 const count = ref('1');
 const selectedInputFieldValues = ref<string[]>(['mobile']);
-const onboardingEnabled = ref(false);
+const onboardingEnabled = ref(props.onboardingPreset);
 const validationSecret = ref('');
 const requireMobileValidation = ref(true);
 const requirePayableValidation = ref(false);
@@ -2195,7 +2197,7 @@ watch(
     (): void => {
         applyOnboardingDependencies();
     },
-    { flush: 'sync' },
+    { flush: 'sync', immediate: true },
 );
 
 const payeeHelpText = computed<string>(() => {

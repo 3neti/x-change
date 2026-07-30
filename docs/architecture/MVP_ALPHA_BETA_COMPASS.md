@@ -105,8 +105,10 @@ onboarding to campaign beneficiaries. The onboarding execution driver:
 - schedules authenticated claimant handoff.
 
 This is the correct architectural invitation primitive. MVP still needs an
-obvious **Invite someone** entry point and delivery/status language around that
-primitive.
+obvious delivery/status language around that primitive. The Cockpit now exposes
+**Invite Someone**, which opens Quick Generate with onboarding identity
+requirements already enabled; it does not introduce a second invitation route
+or execution path.
 
 ## Navigation Baseline
 
@@ -188,7 +190,7 @@ Every item is required before inviting real alpha users.
 - [x] Provision the local Account and Treasury positions exactly once.
 - [ ] Require production OTP delivery and verification.
 - [ ] Preserve first-PIN setup for invitation-created Accounts.
-- [ ] Add a clear **Invite someone** action backed by an onboarding Pay Code.
+- [x] Add a clear **Invite someone** action backed by an onboarding Pay Code.
 - [ ] Allow invitation delivery by canonical claim URL through the existing
       x-change feedback workflow.
 - [ ] Show invitation status without exposing identity or provider payloads.

@@ -40,6 +40,10 @@ class CockpitQuickGeneratePageController extends Controller
             'onboarding_policy' => [
                 'otp_required' => (bool) config('x-change.onboarding.voucher.require_otp', true),
             ],
+            'invitation_preset' => [
+                'enabled' => $request->query('intent') === 'invite',
+                'source' => 'cockpit',
+            ],
             'last_instructions' => $this->lastInstructions->for($request->user()),
             'saved_templates' => $this->templates->for($request->user()),
         ]);

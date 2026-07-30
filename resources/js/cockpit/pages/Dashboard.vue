@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { quickGenerate } from '@/routes/x-change/cockpit';
 import {
     Activity,
     AlertTriangle,
@@ -12,6 +13,7 @@ import {
     Megaphone,
     Radio,
     ShieldCheck,
+    UserPlus,
 } from 'lucide-vue-next';
 import type { Component } from 'vue';
 import { computed, ref } from 'vue';
@@ -147,8 +149,15 @@ const controls: CockpitControl[] = [
         key: 'create',
         label: 'Create',
         description: 'Design and issue a Pay Code',
-        href: '/x/cockpit/quick-generate',
+        href: quickGenerate().url,
         icon: BadgePlus,
+    },
+    {
+        key: 'invite',
+        label: 'Invite Someone',
+        description: 'Issue an Account invitation',
+        href: quickGenerate({ query: { intent: 'invite' } }).url,
+        icon: UserPlus,
     },
     {
         key: 'funding',

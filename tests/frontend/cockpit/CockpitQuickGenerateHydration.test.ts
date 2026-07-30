@@ -51,6 +51,40 @@ const quickGenerateReadModel = {
 };
 
 describe('Cockpit Quick Generate hydration', () => {
+    it('opens an Account invitation with onboarding requirements already enabled', () => {
+        const wrapper = mount(QuickGenerate, {
+            props: {
+                quick_generate_read_model: quickGenerateReadModel,
+                invitation_preset: {
+                    enabled: true,
+                    source: 'cockpit',
+                },
+                onboarding_policy: {
+                    otp_required: true,
+                },
+            },
+        });
+
+        const preview = JSON.parse(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-engineering-preview-json"]',
+                )
+                .text(),
+        );
+
+        expect(
+            (
+                wrapper.get('[data-testid="cockpit-quick-generate-onboarding"]')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
+        expect(preview.onboarding).toBe(true);
+        expect(preview.inputs.fields).toEqual(
+            expect.arrayContaining(['mobile', 'email', 'name', 'otp']),
+        );
+    });
+
     it('locks onboarding identity requirements into the canonical instruction payload', async () => {
         const wrapper = mount(QuickGenerate, {
             props: {

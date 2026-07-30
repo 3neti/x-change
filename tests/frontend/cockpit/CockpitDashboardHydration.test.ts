@@ -513,6 +513,7 @@ describe('Cockpit dashboard read model hydration', () => {
         ).toContain('Cockpit');
         expect(panel.text()).toContain('Choose a workspace');
         expect(panel.text()).toContain('Create');
+        expect(panel.text()).toContain('Invite Someone');
         expect(panel.text()).toContain('Funding');
         expect(panel.text()).toContain('Pay Codes');
         expect(panel.text()).toContain('Campaigns');
@@ -520,11 +521,14 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(horizon.text()).toContain('4');
         expect(horizon.text()).toContain('Needs Attention');
         expect(horizon.text()).toContain('1 sanitized summaries');
-        expect(links).toHaveLength(4);
+        expect(links).toHaveLength(5);
         expect(links[0].attributes('href')).toBe('/x/cockpit/quick-generate');
-        expect(links[1].attributes('href')).toBe('/x/cockpit/funding');
-        expect(links[2].attributes('href')).toBe('/x/cockpit/pay-codes');
-        expect(links[3].attributes('href')).toBe('/x/cockpit/campaigns');
+        expect(links[1].attributes('href')).toBe(
+            '/x/cockpit/quick-generate?intent=invite',
+        );
+        expect(links[2].attributes('href')).toBe('/x/cockpit/funding');
+        expect(links[3].attributes('href')).toBe('/x/cockpit/pay-codes');
+        expect(links[4].attributes('href')).toBe('/x/cockpit/campaigns');
         links.forEach((link) => {
             expect(link.classes()).toContain('min-h-20');
         });
