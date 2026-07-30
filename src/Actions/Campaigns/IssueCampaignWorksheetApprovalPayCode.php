@@ -27,17 +27,26 @@ final class IssueCampaignWorksheetApprovalPayCode
                 ->lockForUpdate()
                 ->first();
 
-            if (! $worksheet instanceof CampaignWorksheet || $worksheet->status !== 'awaiting_authorization' || $worksheet->rows_hash === null) {
+            if (
+                ! $worksheet instanceof CampaignWorksheet
+                || $worksheet->status !== 'awaiting_authorization'
+                || $worksheet->rows_hash === null
+                || $worksheet->manifest_hash === null
+            ) {
                 throw new RuntimeException('The campaign worksheet must be frozen before an approval Pay Code can be issued.');
             }
 
-            $authorization = $worksheet->authorizations()->where('manifest_hash', $worksheet->rows_hash)->lockForUpdate()->first();
+            $authorization = $worksheet->authorizations()->where('manifest_hash', $worksheet->manifest_hash)->lockForUpdate()->first();
             if ($authorization instanceof CampaignWorksheetAuthorization && $authorization->approval_pay_code !== null) {
                 return $authorization;
             }
 
             $authorization ??= $worksheet->authorizations()->create([
-                'manifest_hash' => $worksheet->rows_hash,
+                'manifest_hash' => $worksheet->manifest_hash,
+                'rows_hash' => $worksheet->rows_hash,
+                'instruction_blueprint_ciphertext' => $worksheet->instruction_blueprint_ciphertext ?? [],
+                'instruction_blueprint_hash' => $worksheet->instruction_blueprint_hash,
+                'instruction_blueprint_schema' => $worksheet->instruction_blueprint_schema,
                 'beneficiary_count' => $worksheet->rows->count(),
                 'principal_minor' => $worksheet->rows->sum('amount_minor'),
                 'currency' => $worksheet->currency,
@@ -53,7 +62,7 @@ final class IssueCampaignWorksheetApprovalPayCode
                 'count' => 1, 'prefix' => 'APPR', 'mask' => '****', 'voucher_type' => VoucherType::SETTLEMENT->value, 'target_amount' => 0,
                 'validation' => $requiresOtp ? ['otp' => ['required' => true, 'on_failure' => 'block']] : null,
                 'rules' => ['min_payment' => 0, 'max_payment' => 0, 'allow_overpayment' => false, 'auto_close_on_full_payment' => false],
-                'execution' => ['driver' => 'campaign_worksheet_authorization', 'mode' => 'officer_approval', 'metadata' => ['authorization_reference' => $authorization->reference, 'worksheet_reference' => $worksheet->reference, 'manifest_hash' => $worksheet->rows_hash, 'beneficiary_count' => $authorization->beneficiary_count, 'principal_minor' => $authorization->principal_minor, 'currency' => $worksheet->currency]],
+                'execution' => ['driver' => 'campaign_worksheet_authorization', 'mode' => 'officer_approval', 'metadata' => ['authorization_reference' => $authorization->reference, 'worksheet_reference' => $worksheet->reference, 'manifest_hash' => $worksheet->manifest_hash, 'rows_hash' => $worksheet->rows_hash, 'instruction_blueprint_hash' => $worksheet->instruction_blueprint_hash, 'beneficiary_count' => $authorization->beneficiary_count, 'principal_minor' => $authorization->principal_minor, 'currency' => $worksheet->currency]],
                 'claim' => ['outcomes' => [['key' => 'authorize_campaign']], 'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'authorize_campaign', 'onboarding' => ['mode' => 'never'], 'claimant' => ['mode' => 'unbound'], 'profile' => 'voucher.claim.v1'],
                 'metadata' => [
                     'flow_type' => 'settlement',

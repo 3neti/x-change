@@ -44,7 +44,12 @@ final class ApproveCampaignWorksheetAuthorization
             if (
                 $authorization->status !== 'awaiting_officer'
                 || $authorization->worksheet->status !== 'awaiting_authorization'
-                || ! hash_equals((string) $authorization->manifest_hash, (string) $authorization->worksheet->rows_hash)
+                || ! hash_equals((string) $authorization->manifest_hash, (string) $authorization->worksheet->manifest_hash)
+                || ! hash_equals((string) $authorization->rows_hash, (string) $authorization->worksheet->rows_hash)
+                || ! hash_equals(
+                    (string) $authorization->instruction_blueprint_hash,
+                    (string) $authorization->worksheet->instruction_blueprint_hash,
+                )
             ) {
                 throw new RuntimeException('Campaign approval is no longer valid for this worksheet manifest.');
             }

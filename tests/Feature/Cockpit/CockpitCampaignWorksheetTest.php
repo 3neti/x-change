@@ -675,6 +675,27 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
             new CampaignWorksheetRowData(null, 2, ['mobile' => '09179998888'], 7_500),
         ],
     ));
+    $repository->updateInstructionBlueprint(
+        (string) $worksheet->reference,
+        $owner->getMorphClass(),
+        (string) $owner->getKey(),
+        [
+            'rider' => [
+                'message' => 'July salary',
+                'url' => 'https://example.test/payroll',
+                'stamp' => [
+                    'source' => 'message',
+                    'show_logo' => true,
+                ],
+            ],
+            'inputs' => ['fields' => ['name']],
+            'feedback' => ['channels' => ['mobile']],
+            'claim' => ['onboarding' => ['mode' => 'if_required']],
+            'expiry_days' => 14,
+        ],
+        'x-change.campaign-voucher-blueprint.v1',
+        0,
+    );
     $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
 
     $this->actingAs($owner);
@@ -698,6 +719,21 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
         ->and((int) $owner->wallet()->where('slug', 'platform')->sole()->balance)->toBe(0)
         ->and(Wallet::query()->findOrFail($clientFunds->internal_ledger_id)->getBalanceIntAttribute())->toBe(0)
         ->and(Wallet::query()->findOrFail($payCodeReserve->internal_ledger_id)->getBalanceIntAttribute())->toBe(20_000);
+
+    $issuedVouchers = Voucher::query()
+        ->whereIn('code', $authorization->fulfillments()->pluck('pay_code'))
+        ->orderBy('code')
+        ->get();
+
+    expect($authorization->manifest_hash)->not->toBe($authorization->rows_hash)
+        ->and($authorization->instruction_blueprint_hash)->toHaveLength(64)
+        ->and($issuedVouchers)->toHaveCount(2)
+        ->and(data_get($issuedVouchers[0]->instructions, 'rider.message'))->toBe('July salary')
+        ->and(data_get($issuedVouchers[0]->instructions, 'rider.url'))->toBe('https://example.test/payroll')
+        ->and(data_get($issuedVouchers[0]->instructions, 'inputs.fields.0')->value)->toBe('name')
+        ->and(data_get($issuedVouchers[0]->instructions, 'feedback.mobile'))->not->toBeNull()
+        ->and($authorization->fulfillments->first()->metadata['instruction_blueprint_hash'])
+        ->toBe($authorization->instruction_blueprint_hash);
 
     $this->post(route('x-change.cockpit.campaigns.fulfillments.pay-codes.store', $worksheet->reference))
         ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
