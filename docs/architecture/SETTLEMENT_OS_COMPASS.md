@@ -1,5 +1,8 @@
 # Settlement Operating System Compass
 
+MVP deployment and release readiness is governed by
+[`MVP_ALPHA_BETA_COMPASS.md`](MVP_ALPHA_BETA_COMPASS.md).
+
 ## Mission
 
 Operationalize x-change as a Settlement Operating System for Pay Codes / Portable Settlement Contracts.
