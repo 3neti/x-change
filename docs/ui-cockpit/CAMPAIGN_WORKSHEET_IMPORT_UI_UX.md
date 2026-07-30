@@ -9,16 +9,40 @@ provider, or move money.
 
 ## User workflow
 
-1. Open a draft Campaign worksheet.
-2. Choose a CSV or XLSX file.
-3. Review the detected column mapping and row-level validation.
-4. Correct the mapping or delivery default when necessary.
-5. Add the valid rows to the draft explicitly.
-6. Correct or discard the remaining invalid rows.
-7. Freeze the complete worksheet and create its officer-authorization Pay Code.
+The default path begins on `/x/cockpit/campaigns`:
+
+1. Choose a CSV or XLSX beneficiary list.
+2. Review the suggested Campaign name, purpose, and recipient method.
+3. Inspect the ready rows and row-level validation errors.
+4. Correct the mapping or recipient method, then recheck the rows when needed.
+5. Select the valid rows to include and explicitly confirm whether invalid rows
+   should stay out.
+6. Create one draft Campaign containing only the selected valid rows.
+7. Complete, freeze, and authorize the worksheet through the normal Campaign
+   lifecycle.
+
+No Campaign exists before step 6. Starting an empty Campaign remains available
+as a secondary path for manual entry.
 
 Only one unresolved import preview is shown at a time. The worksheet cannot be
 frozen while valid staged rows remain unapplied.
+
+The existing worksheet-level importer remains available for an owner who
+deliberately needs to add another beneficiary file to an existing draft.
+
+## Deterministic suggestions
+
+Suggestions are explainable defaults, never authorization:
+
+- payroll, salary, and employee file/header language suggests Payroll;
+- ayuda, aid, assistance, relief, or benefit language suggests Assistance;
+- bank or account columns suggest direct bank transfer;
+- mobile or email columns suggest Pay Code distribution;
+- when both destination families exist, the user must confirm the recipient
+  method.
+
+The classifier does not infer purpose from names, mobile numbers, account
+numbers, remarks, or other beneficiary PII.
 
 ## Flexible file contract
 
@@ -49,24 +73,31 @@ For direct-bank worksheets:
 
 - Original files are not retained.
 - Source and normalized rows are encrypted individually in staging storage.
+- The uploaded filename and source manifest are encrypted.
+- A content hash detects an owner replaying the same file; a replay resolves to
+  the existing review or Campaign instead of creating a duplicate.
 - Formulas are rejected; import never evaluates spreadsheet content.
 - Files are bounded by size, row count, column count, and cell length.
 - Blank files, duplicate headers, duplicate mappings, and overlapping active
   previews are rejected.
-- Valid rows may be applied independently; invalid rows are never silently
-  skipped or coerced.
+- Valid rows are included only when selected. Invalid rows are never silently
+  skipped, coerced, or included; exclusion requires explicit confirmation.
 - Reapplying an already applied row is idempotent.
+- Intake conversion creates the Campaign, import history, and beneficiary rows
+  in one database transaction.
 
 ## Visual contract
 
-The import workspace is the first control on a draft worksheet. It uses the
-same compact Cockpit card language as Funding and Pay Codes:
+Import Beneficiary List is the primary Campaign-index action. Start Blank is a
+secondary disclosure. The review opens as a focused responsive workspace using
+the same compact Cockpit card language as Funding and Pay Codes:
 
-- upload and preview are primary;
+- suggestions and beneficiary preview are primary;
 - mapping is compact and secondary;
-- Ready, Needs Attention, and Ready Value are visible at a glance;
+- Ready, Errors, and Value are visible at a glance;
 - the preview table remains horizontally scrollable on narrow screens;
-- manual Add Beneficiary remains available below for exceptions.
+- row inclusion is reversible until Campaign creation;
+- manual Add Beneficiary remains available inside a draft for exceptions.
 
 The status language describes draft preparation only. It must never imply that
 beneficiaries have been paid or that a provider has accepted instructions.
