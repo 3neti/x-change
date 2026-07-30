@@ -29,6 +29,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetExpor
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFallbackController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFulfillmentController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetImportController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetIntakeController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetResultsExportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
@@ -118,6 +119,18 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])
             ->middleware('throttle:20,1')
             ->name('x-change.cockpit.campaigns.store');
+        Route::post('campaigns/intakes', [CockpitCampaignWorksheetIntakeController::class, 'store'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.intakes.store');
+        Route::patch('campaigns/intakes/{intake}', [CockpitCampaignWorksheetIntakeController::class, 'update'])
+            ->middleware('throttle:20,1')
+            ->name('x-change.cockpit.campaigns.intakes.update');
+        Route::post('campaigns/intakes/{intake}/conversion', [CockpitCampaignWorksheetIntakeController::class, 'convert'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.intakes.convert');
+        Route::delete('campaigns/intakes/{intake}', [CockpitCampaignWorksheetIntakeController::class, 'destroy'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.intakes.destroy');
         Route::get('campaigns/{worksheet}', [CockpitCampaignWorksheetController::class, 'show'])
             ->name('x-change.cockpit.campaigns.show');
         Route::delete('campaigns/{worksheet}', [CockpitCampaignWorksheetController::class, 'destroy'])

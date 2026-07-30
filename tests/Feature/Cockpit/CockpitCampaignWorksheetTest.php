@@ -13,6 +13,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
+use LBHurtado\XCampaign\Contracts\CampaignWorksheetIntakeRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
@@ -102,6 +103,92 @@ it('shows only the authenticated owner campaign worksheet summaries', function (
         ->assertJsonPath('props.worksheets.0.name', 'July Payroll')
         ->assertJsonPath('props.worksheets.0.beneficiary_count', 0)
         ->assertJsonMissingPath('props.worksheets.0.beneficiary');
+});
+
+it('scrutinizes a worksheet before creating a campaign and converts selected valid rows', function () {
+    $owner = actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.campaigns.intakes.store'), [
+        'file' => UploadedFile::fake()->createWithContent(
+            'july-payroll.csv',
+            "name,mobile,amount\nMaria,09173011987,100.00\nMissing,,50.00\n",
+        ),
+    ])->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice');
+
+    expect(app(CampaignWorksheetRepository::class)
+        ->summariesForOwner($owner->getMorphClass(), (string) $owner->getKey()))
+        ->toBe([]);
+
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.index'))
+        ->assertOk()
+        ->assertJsonPath('props.active_intake.suggestion.profile', 'payroll')
+        ->assertJsonPath('props.active_intake.suggestion.fulfillment_mode', 'pay_code_distribution')
+        ->assertJsonPath('props.active_intake.valid_count', 1)
+        ->assertJsonPath('props.active_intake.invalid_count', 1)
+        ->assertJsonPath('props.active_intake.valid_principal_minor', 10_000);
+
+    $intake = $response->json('props.active_intake.reference');
+    $this->post(route('x-change.cockpit.campaigns.intakes.convert', $intake), [
+        'name' => 'July Payroll',
+        'profile' => 'payroll',
+        'fulfillment_mode' => 'pay_code_distribution',
+        'included_source_rows' => [2],
+        'exclude_invalid_rows' => true,
+    ])->assertRedirect();
+
+    $worksheet = app(CampaignWorksheetRepository::class)
+        ->summariesForOwner($owner->getMorphClass(), (string) $owner->getKey())[0];
+
+    expect($worksheet->name)->toBe('July Payroll')
+        ->and($worksheet->beneficiaryCount)->toBe(1)
+        ->and($worksheet->principalMinor)->toBe(10_000);
+});
+
+it('suggests direct bank transfer when bank destination columns are present', function () {
+    actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.campaigns.intakes.store'), [
+        'file' => UploadedFile::fake()->createWithContent(
+            'assistance-bank-list.csv',
+            "name,bank,account number,amount\nMaria,GCash,09173011987,500.00\n",
+        ),
+    ])->assertRedirect();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.index'))
+        ->assertOk()
+        ->assertJsonPath('props.active_intake.suggestion.profile', 'assistance')
+        ->assertJsonPath('props.active_intake.suggestion.fulfillment_mode', 'direct_bank_transfer')
+        ->assertJsonPath('props.active_intake.valid_count', 1);
+});
+
+it('does not create duplicate campaigns when the same intake conversion is replayed', function () {
+    $owner = actingAsTestUser();
+    $file = UploadedFile::fake()->createWithContent(
+        'beneficiaries.csv',
+        "mobile,amount\n09173011987,100.00\n",
+    );
+    $this->post(route('x-change.cockpit.campaigns.intakes.store'), ['file' => $file]);
+    $intake = app(CampaignWorksheetIntakeRepository::class)
+        ->activeForOwner($owner->getMorphClass(), (string) $owner->getKey());
+
+    $payload = [
+        'name' => 'Replay Safe Campaign',
+        'profile' => 'payroll',
+        'fulfillment_mode' => 'pay_code_distribution',
+        'included_source_rows' => [2],
+        'exclude_invalid_rows' => false,
+    ];
+    $this->post(route('x-change.cockpit.campaigns.intakes.convert', $intake?->reference), $payload)
+        ->assertRedirect();
+    $this->post(route('x-change.cockpit.campaigns.intakes.convert', $intake?->reference), $payload)
+        ->assertNotFound();
+
+    expect(app(CampaignWorksheetRepository::class)
+        ->summariesForOwner($owner->getMorphClass(), (string) $owner->getKey()))
+        ->toHaveCount(1);
 });
 
 it('lets the owner delete a draft campaign and its working data', function () {

@@ -12,9 +12,11 @@ use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
+use LBHurtado\XCampaign\Contracts\CampaignWorksheetIntakeRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetImportData;
+use LBHurtado\XCampaign\Data\CampaignWorksheetIntakeData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetSummaryData;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
@@ -29,6 +31,7 @@ class CockpitCampaignWorksheetController extends Controller
     public function __construct(
         private readonly CampaignWorksheetRepository $worksheets,
         private readonly CampaignWorksheetImportRepository $imports,
+        private readonly CampaignWorksheetIntakeRepository $intakes,
     ) {}
 
     public function index(Request $request): Response
@@ -37,6 +40,7 @@ class CockpitCampaignWorksheetController extends Controller
 
         return Inertia::render('x-change/cockpit/Campaigns', [
             'worksheets' => $this->summariesFor($owner),
+            'active_intake' => $this->activeIntakeFor($owner),
         ]);
     }
 
@@ -159,6 +163,38 @@ class CockpitCampaignWorksheetController extends Controller
     private function ownerType(mixed $owner): string
     {
         return $owner instanceof Model ? $owner->getMorphClass() : $owner::class;
+    }
+
+    /** @return array<string, mixed> */
+    private function activeIntakeFor(mixed $owner): array
+    {
+        $intake = $this->intakes->activeForOwner(
+            $this->ownerType($owner),
+            (string) $owner->getAuthIdentifier(),
+        );
+        if (! $intake instanceof CampaignWorksheetIntakeData) {
+            return [];
+        }
+
+        $validRows = collect($intake->rows)->where('status', 'valid');
+        $invalidRows = collect($intake->rows)->where('status', 'invalid');
+
+        return [
+            'reference' => $intake->reference,
+            'source_name' => $intake->sourceName,
+            'source_format' => $intake->sourceFormat,
+            'source_headers' => $intake->sourceHeaders,
+            'source_sheet' => $intake->sourceSheet,
+            'row_count' => $intake->rowCount,
+            'mapping' => $intake->mapping,
+            'suggestion' => $intake->suggestion,
+            'valid_count' => $validRows->count(),
+            'invalid_count' => $invalidRows->count(),
+            'valid_principal_minor' => $validRows->sum(
+                fn (array $row): int => (int) data_get($row, 'normalized.amount_minor', 0),
+            ),
+            'rows' => collect($intake->rows)->take(100)->values()->all(),
+        ];
     }
 
     /**
