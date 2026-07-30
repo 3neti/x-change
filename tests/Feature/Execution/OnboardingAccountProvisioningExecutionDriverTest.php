@@ -62,6 +62,24 @@ it('registers the onboarding account provisioning execution driver', function ()
         ->toBeInstanceOf(OnboardingAccountProvisioningExecutionDriver::class);
 });
 
+it('persists an execution-only post-redemption policy for onboarding Vouchers', function (): void {
+    $normalized = app(OnboardingVoucherInstructionPolicy::class)->normalize([
+        'onboarding' => true,
+        'cash' => [
+            'amount' => 1,
+            'currency' => 'PHP',
+        ],
+        'inputs' => [
+            'fields' => [],
+        ],
+    ]);
+
+    expect(data_get(
+        $normalized,
+        'execution.metadata.post_redemption.mode',
+    ))->toBe(OnboardingVoucherInstructionPolicy::PostRedemptionMode);
+});
+
 it('fails before account mutation when required mobile verification evidence is absent', function () {
     $provisioner = Mockery::mock(ContactUserProvisionerContract::class);
     $provisioner->shouldNotReceive('provision');

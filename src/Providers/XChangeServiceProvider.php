@@ -284,6 +284,7 @@ use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\DefaultXChangeOnboardingGateway;
 use LBHurtado\XChange\Services\EventLifecycleService;
+use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffPipeline;
 use LBHurtado\XChange\Services\Execution\LifecycleExecutionCashDisbursementPoller;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultActionHandoff;
@@ -367,7 +368,6 @@ class XChangeServiceProvider extends ServiceProvider
         $this->alignVoucherDefaults();
         $this->alignAccountSystemUser();
         $this->alignSettlementEnvelopeDefaults();
-
         $this->app->singleton(QrPhSimulatorFundingProviderAdapter::class);
         $this->app->tag(
             QrPhSimulatorFundingProviderAdapter::class,
@@ -1036,6 +1036,7 @@ class XChangeServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->decorateOnboardingCompletionHook();
+        $this->prependExecutionAwarePostRedemptionGate();
         $this->bootConfig();
         $this->loadViewsFrom($this->packagePath('resources/views'), 'x-change');
         $this->bootFundingVerificationRateLimiter();
@@ -1108,6 +1109,19 @@ class XChangeServiceProvider extends ServiceProvider
             DisbursementConfirmed::class,
             HandleConfirmedDisbursement::class
         );
+    }
+
+    protected function prependExecutionAwarePostRedemptionGate(): void
+    {
+        $pipeline = (array) config('voucher-pipeline.post-redemption', []);
+
+        if (in_array(ExecutionAwarePostRedemptionGate::class, $pipeline, true)) {
+            return;
+        }
+
+        array_unshift($pipeline, ExecutionAwarePostRedemptionGate::class);
+
+        config()->set('voucher-pipeline.post-redemption', $pipeline);
     }
 
     protected function bootFundingVerificationRateLimiter(): void

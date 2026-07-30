@@ -14,6 +14,8 @@ final class OnboardingVoucherInstructionPolicy
 
     public const string WorkflowKey = 'onboarding.account-provisioning.v1';
 
+    public const string PostRedemptionMode = 'execution_only';
+
     /**
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
@@ -58,6 +60,11 @@ final class OnboardingVoucherInstructionPolicy
             'mobile_verification_required' => $requiresOtp,
             'authentication_mode' => 'claimant_handoff',
         ]);
+        Arr::set(
+            $input,
+            'execution.metadata.post_redemption.mode',
+            self::PostRedemptionMode,
+        );
 
         return $input;
     }
