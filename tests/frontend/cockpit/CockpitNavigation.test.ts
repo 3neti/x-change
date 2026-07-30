@@ -8,10 +8,11 @@ import {
 describe('Cockpit navigation baseline', () => {
     it('defines the primary and secondary Cockpit navigation model', () => {
         expect(cockpitPrimaryNavigation.map((item) => item.label)).toEqual([
-            'Dashboard',
+            'Cockpit',
             'Create',
             'Funding',
             'Pay Codes',
+            'Campaigns',
             'Templates',
             'Contacts',
             'Operations',
@@ -25,7 +26,7 @@ describe('Cockpit navigation baseline', () => {
             'Administration',
         ]);
 
-        expect(cockpitNavigationItems).toHaveLength(12);
+        expect(cockpitNavigationItems).toHaveLength(13);
     });
 
     it('marks only implemented Cockpit routes as enabled navigation links', () => {
@@ -41,6 +42,7 @@ describe('Cockpit navigation baseline', () => {
             'quick-generate',
             'funding',
             'pay-codes',
+            'campaigns',
             'accounts',
             'runtime-profile',
         ]);

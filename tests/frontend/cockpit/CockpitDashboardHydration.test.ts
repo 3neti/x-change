@@ -269,7 +269,8 @@ const operatorIssuanceActivityReadModel = {
                         classification: 'recorded',
                         tone: 'success',
                         label: 'Journal recorded',
-                        description: 'The durable activity was handed to the journal and a journal entry identifier is available for read-only inspection.',
+                        description:
+                            'The durable activity was handed to the journal and a journal entry identifier is available for read-only inspection.',
                         operator_action: 'none',
                         read_only: true,
                         retry_enabled: false,
@@ -278,7 +279,8 @@ const operatorIssuanceActivityReadModel = {
                     },
                     metadata: {
                         reference_number: 'XJ-1',
-                        event_type: 'cockpit.operator_issuance_activity.recorded',
+                        event_type:
+                            'cockpit.operator_issuance_activity.recorded',
                         provider_payload: 'must-not-render',
                         token: 'must-not-render',
                     },
@@ -292,7 +294,8 @@ const operatorIssuanceActivityReadModel = {
                     source: 'test-action-handoff',
                     reason: 'x-action composed presentation-only operator action hints for this Cockpit activity.',
                     metadata: {
-                        event_or_state: 'cockpit.operator_issuance_activity.recorded',
+                        event_or_state:
+                            'cockpit.operator_issuance_activity.recorded',
                         actions: [
                             {
                                 key: 'cockpit.pay-code.open',
@@ -314,7 +317,8 @@ const operatorIssuanceActivityReadModel = {
                 },
                 feedback_handoff: {
                     status: 'planned',
-                    feedback_intent_id: 'cockpit.operator_issuance_activity.recorded',
+                    feedback_intent_id:
+                        'cockpit.operator_issuance_activity.recorded',
                     delivery_plan_id: 'plan-feedback-1',
                     delivery_receipt_id: null,
                     feedback_required: false,
@@ -322,14 +326,17 @@ const operatorIssuanceActivityReadModel = {
                     source: 'test-feedback-handoff',
                     reason: 'x-feedback prepared an operator activity delivery plan without dispatching provider delivery.',
                     metadata: {
-                        intent_key: 'cockpit.operator_issuance_activity.recorded',
-                        event_type: 'cockpit.operator_issuance_activity.recorded',
+                        intent_key:
+                            'cockpit.operator_issuance_activity.recorded',
+                        event_type:
+                            'cockpit.operator_issuance_activity.recorded',
                         delivery_boundary: 'prepare_only',
                         planned_deliveries: 1,
                         channels: ['in_app'],
                         plan_items: [
                             {
-                                intent_key: 'cockpit.operator_issuance_activity.recorded',
+                                intent_key:
+                                    'cockpit.operator_issuance_activity.recorded',
                                 recipient_type: 'operator',
                                 recipient_id: 'operator-1',
                                 channel: 'in_app',
@@ -415,16 +422,26 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Pay Codes Visible');
-        expect(wrapper.text()).toContain('Sanitized voucher lifecycle list rows');
+        expect(wrapper.text()).toContain(
+            'Sanitized voucher lifecycle list rows',
+        );
         expect(wrapper.text()).toContain('Issued');
         expect(wrapper.text()).toContain('Awaiting Approval');
         expect(wrapper.text()).toContain('PC-AWAITING-001');
         expect(wrapper.text()).toContain('Status: awaiting_approval');
         expect(wrapper.text()).toContain('2026-07-03T13:00:00+08:00');
-        expect(wrapper.findAll('[data-testid="cockpit-dashboard-metric-card"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-pipeline-stage"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-risk-signal"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-activity-item"]')).toHaveLength(1);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-dashboard-metric-card"]'),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pipeline-stage"]'),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-risk-signal"]'),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-activity-item"]'),
+        ).toHaveLength(1);
     });
 
     it('hydrates the global header from cockpit header balance read model props', () => {
@@ -435,17 +452,26 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Client Funds');
-        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('₱9,876.50');
-        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Not available');
-        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).not.toContain('Client Funds not connected');
+        expect(
+            wrapper.find('[data-testid="cockpit-global-header"]').text(),
+        ).toContain('Client Funds');
+        expect(
+            wrapper.find('[data-testid="cockpit-global-header"]').text(),
+        ).toContain('₱9,876.50');
+        expect(
+            wrapper.find('[data-testid="cockpit-global-header"]').text(),
+        ).toContain('Not available');
+        expect(
+            wrapper.find('[data-testid="cockpit-global-header"]').text(),
+        ).not.toContain('Client Funds not connected');
     });
 
-    it('renders a primary operating summary with safe dashboard navigation', () => {
+    it('renders the primary controls and operational horizon', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
-                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                operator_issuance_activity_read_model:
+                    operatorIssuanceActivityReadModel,
                 read_model: {
                     journal: {
                         status: 'available',
@@ -475,93 +501,84 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        const panel = wrapper.find('[data-testid="cockpit-operating-summary-panel"]');
-        const links = wrapper.findAll('[data-testid="cockpit-operating-summary-link"]');
+        const panel = wrapper.find('[data-testid="cockpit-controls-panel"]');
+        const links = wrapper.findAll('[data-testid="cockpit-control-link"]');
+        const horizon = wrapper.find(
+            '[data-testid="cockpit-operational-horizon"]',
+        );
 
         expect(panel.exists()).toBe(true);
-        expect(wrapper.text()).toContain('Settlement OS Operating Overview');
-        expect(panel.text()).toContain('Start here for generation, inspection, and attention queues');
-        expect(panel.text()).toContain('1/6 services connected');
-        expect(panel.text()).not.toContain('integration read-models not wired');
+        expect(
+            wrapper.find('[data-testid="cockpit-page-heading"]').text(),
+        ).toContain('Cockpit');
+        expect(panel.text()).toContain('Choose a workspace');
+        expect(panel.text()).toContain('Create');
+        expect(panel.text()).toContain('Funding');
         expect(panel.text()).toContain('Pay Codes');
-        expect(panel.text()).toContain('4');
-        expect(panel.text()).toContain('Quick Generate');
-        expect(panel.text()).toContain('issued');
-        expect(panel.text()).toContain('Needs Attention');
-        expect(panel.text()).toContain('1 sanitized summaries');
-        expect(links).toHaveLength(3);
-        expect(links[0].attributes('href')).toBe('/x/cockpit/pay-codes');
-        expect(links[1].attributes('href')).toBe('/x/cockpit/quick-generate');
-        expect(links[2].attributes('href')).toBe('/x/cockpit/pay-codes?status=expired');
+        expect(panel.text()).toContain('Campaigns');
+        expect(horizon.text()).toContain('Pay Codes');
+        expect(horizon.text()).toContain('4');
+        expect(horizon.text()).toContain('Needs Attention');
+        expect(horizon.text()).toContain('1 sanitized summaries');
+        expect(links).toHaveLength(4);
+        expect(links[0].attributes('href')).toBe('/x/cockpit/quick-generate');
+        expect(links[1].attributes('href')).toBe('/x/cockpit/funding');
+        expect(links[2].attributes('href')).toBe('/x/cockpit/pay-codes');
+        expect(links[3].attributes('href')).toBe('/x/cockpit/campaigns');
         links.forEach((link) => {
-            expect(link.classes()).toContain('min-h-7');
-            expect(link.classes()).toContain('whitespace-nowrap');
+            expect(link.classes()).toContain('min-h-20');
         });
         expect(panel.text()).not.toContain('must-not-render');
         expect(panel.text()).not.toContain('provider_payload');
         expect(panel.text()).not.toContain('raw_payload');
     });
 
-    it('renders operator focus guidance as links only', () => {
+    it('renders attention signals as inspection links only', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
             },
         });
 
-        const panel = wrapper.find('[data-testid="cockpit-operator-focus-panel"]');
-        const links = wrapper.findAll('[data-testid="cockpit-operator-focus-link"]');
+        const panel = wrapper.find('[data-testid="cockpit-attention-panel"]');
+        const links = wrapper.findAll('[data-testid="cockpit-attention-item"]');
 
         expect(panel.exists()).toBe(true);
-        expect(panel.text()).toContain('Operator Focus');
-        expect(panel.text()).toContain('Next safe actions');
-        expect(panel.text()).toContain('Generate a Pay Code');
-        expect(panel.text()).toContain('Inspect Pay Codes');
-        expect(panel.text()).toContain('Review attention queue');
-        expect(panel.text()).toContain('Links only');
-        expect(panel.text()).not.toContain('safe navigation');
-        expect(panel.text()).toContain('They do not execute money movement');
-        expect(panel.text()).toContain('4 visible');
+        expect(panel.text()).toContain('Attention');
+        expect(panel.text()).toContain('Items that may need review');
+        expect(panel.text()).toContain('Awaiting Approval');
         expect(panel.text()).toContain('1 sanitized summaries');
-        expect(links).toHaveLength(3);
-        expect(links[0].attributes('href')).toBe('/x/cockpit/quick-generate');
-        expect(links[1].attributes('href')).toBe('/x/cockpit/pay-codes');
-        expect(links[2].attributes('href')).toBe('/x/cockpit/pay-codes?status=expired');
-        links.forEach((link) => {
-            expect(link.classes()).toContain('min-h-7');
-            expect(link.classes()).toContain('whitespace-nowrap');
-        });
-        expect(wrapper.findAll('[data-testid="cockpit-operator-focus-item"]')).toHaveLength(3);
+        expect(links).toHaveLength(1);
+        expect(links[0].attributes('href')).toBe('/x/cockpit/pay-codes');
+        expect(
+            wrapper.find('[data-testid="cockpit-dashboard-mutation"]').exists(),
+        ).toBe(false);
     });
 
-    it('orders dashboard sections around operator generation and execution evidence first', () => {
+    it('orders the Cockpit around controls, horizon, attention, activity, then system status', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
-                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                operator_issuance_activity_read_model:
+                    operatorIssuanceActivityReadModel,
             },
         });
 
         const text = wrapper.text();
-        const connectedServicesIndex = text.indexOf('Connected Services');
-        const operatorFocusIndex = text.indexOf('Operator Focus');
-        const issuanceIndex = text.indexOf('Issuance Activity');
-        const executionIndex = text.indexOf('System Activity');
-        const integrationIndex = text.indexOf('Service Connection Details');
-        const liquidityIndex = text.indexOf('Funding Status');
-        const campaignIndex = text.lastIndexOf('Campaign summary');
+        const controlsIndex = text.indexOf('Controls');
+        const horizonIndex = text.indexOf('Operational Horizon');
+        const attentionIndex = text.indexOf('Attention');
+        const activityIndex = text.indexOf('Recent Activity');
+        const statusIndex = text.indexOf('System Status');
 
-        expect(connectedServicesIndex).toBeGreaterThan(-1);
-        expect(operatorFocusIndex).toBeGreaterThan(-1);
-        expect(operatorFocusIndex).toBeGreaterThan(connectedServicesIndex);
-        expect(issuanceIndex).toBeGreaterThan(operatorFocusIndex);
-        expect(executionIndex).toBeGreaterThan(issuanceIndex);
-        expect(integrationIndex).toBeGreaterThan(executionIndex);
-        expect(liquidityIndex).toBeGreaterThan(integrationIndex);
-        expect(campaignIndex).toBeGreaterThan(liquidityIndex);
+        expect(controlsIndex).toBeGreaterThan(-1);
+        expect(horizonIndex).toBeGreaterThan(controlsIndex);
+        expect(attentionIndex).toBeGreaterThan(horizonIndex);
+        expect(activityIndex).toBeGreaterThan(attentionIndex);
+        expect(statusIndex).toBeGreaterThan(activityIndex);
     });
 
-    it('groups lower system posture panels behind an optional disclosure', () => {
+    it('groups technical posture panels behind the System Status disclosure', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
@@ -572,16 +589,22 @@ describe('Cockpit dashboard read model hydration', () => {
             '[data-testid="cockpit-diagnostics-disclosure"]',
         );
         const postureDisclosure = disclosures.find((disclosure) =>
-            disclosure.text().includes('System posture'),
+            disclosure.text().includes('System Status'),
         );
 
         expect(postureDisclosure?.exists()).toBe(true);
-        expect(postureDisclosure?.text()).toContain('Optional system status');
-        expect(postureDisclosure?.text()).toContain('Show system posture');
-        expect(postureDisclosure?.text()).toContain('Service Connection Details');
+        expect(postureDisclosure?.text()).toContain(
+            'Accounts, services, and diagnostics',
+        );
+        expect(postureDisclosure?.text()).toContain('Show system status');
+        expect(postureDisclosure?.text()).toContain(
+            'Service Connection Details',
+        );
         expect(postureDisclosure?.text()).toContain('Funding readiness');
         expect(postureDisclosure?.text()).toContain('Claim lifecycle summary');
-        expect(postureDisclosure?.text()).toContain('Items that may need attention');
+        expect(postureDisclosure?.text()).toContain(
+            'Items that may need attention',
+        );
         expect(postureDisclosure?.text()).toContain('Campaign summary');
     });
 
@@ -594,7 +617,8 @@ describe('Cockpit dashboard read model hydration', () => {
                         {
                             id: 'execution-result-1',
                             label: 'Execution recorded for PC-EXEC-001',
-                            description: 'settlement_envelope succeeded · exec-001',
+                            description:
+                                'settlement_envelope succeeded · exec-001',
                             timestamp: '2026-07-16T08:00:00+08:00',
                             source: 'execution',
                             projection_badge: 'Journal evidence',
@@ -602,36 +626,51 @@ describe('Cockpit dashboard read model hydration', () => {
                         },
                     ],
                 },
-                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                operator_issuance_activity_read_model:
+                    operatorIssuanceActivityReadModel,
             },
         });
 
-        const issuancePanel = wrapper.find('[data-testid="cockpit-operator-issuance-activity-panel"]');
-        const executionPanel = wrapper.find('[data-testid="cockpit-recent-activity-panel"]');
+        const issuancePanel = wrapper.find(
+            '[data-testid="cockpit-operator-issuance-activity-panel"]',
+        );
+        const executionPanel = wrapper.find(
+            '[data-testid="cockpit-recent-activity-panel"]',
+        );
 
         expect(issuancePanel.exists()).toBe(true);
         expect(executionPanel.exists()).toBe(true);
         expect(issuancePanel.text()).toContain('Issuance Activity');
         expect(issuancePanel.text()).toContain('Generated Pay Codes');
         expect(issuancePanel.text()).toContain('Pay Code PC-1234 issued');
-        expect(issuancePanel.text()).not.toContain('Execution recorded for PC-EXEC-001');
+        expect(issuancePanel.text()).not.toContain(
+            'Execution recorded for PC-EXEC-001',
+        );
         expect(executionPanel.text()).toContain('System Activity');
         expect(executionPanel.text()).toContain('Recent operating evidence');
-        expect(executionPanel.text()).toContain('does not execute follow-up work');
-        expect(executionPanel.text()).toContain('Execution recorded for PC-EXEC-001');
+        expect(executionPanel.text()).toContain(
+            'does not execute follow-up work',
+        );
+        expect(executionPanel.text()).toContain(
+            'Execution recorded for PC-EXEC-001',
+        );
         expect(executionPanel.text()).not.toContain('Pay Code PC-1234 issued');
     });
 
-    it('uses operator-friendly copy for disconnected integration summaries', () => {
+    it('uses concise copy for disconnected system status', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
             },
         });
 
-        const panel = wrapper.find('[data-testid="cockpit-operating-summary-panel"]');
+        const panel = wrapper.find(
+            '[data-testid="cockpit-connected-services-overview"]',
+        );
 
-        expect(panel.text()).toContain('Service summaries not connected yet');
+        expect(panel.text()).toContain(
+            'Supporting service summaries are not connected',
+        );
         expect(panel.text()).not.toContain('integration read-models not wired');
     });
 
@@ -666,7 +705,9 @@ describe('Cockpit dashboard read model hydration', () => {
 
         expect(wrapper.text()).toContain('Summary not connected');
         expect(wrapper.text()).toContain('no provider call from dashboard');
-        expect(wrapper.text()).toContain('Audit facts require authorization and redaction before display.');
+        expect(wrapper.text()).toContain(
+            'Audit facts require authorization and redaction before display.',
+        );
     });
 
     it('forwards route adapter props into the cockpit dashboard page', () => {
@@ -700,26 +741,56 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('09173011987');
         expect(wrapper.text()).toContain('Campaign payout');
         expect(wrapper.text()).toContain('Campaign details');
-        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Surfaces');
-        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Panels');
-        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Actions');
-        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Selected');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-density-summary"]')
+                .text(),
+        ).toContain('Surfaces');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-density-summary"]')
+                .text(),
+        ).toContain('Panels');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-density-summary"]')
+                .text(),
+        ).toContain('Actions');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-density-summary"]')
+                .text(),
+        ).toContain('Selected');
         expect(wrapper.text()).not.toContain('Campaign Dashboard');
         expect(wrapper.text()).not.toContain('Attachment Operator Workspace');
-        expect(wrapper.text()).not.toContain('Audience Import Workspace: Ready');
+        expect(wrapper.text()).not.toContain(
+            'Audience Import Workspace: Ready',
+        );
         expect(wrapper.text()).not.toContain('Review Campaign: Available');
         expect(wrapper.text()).not.toContain('Generate Pay Codes: Blocked');
-        await wrapper.find('[data-testid="cockpit-campaign-details-toggle"]').trigger('click');
+        await wrapper
+            .find('[data-testid="cockpit-campaign-details-toggle"]')
+            .trigger('click');
         expect(wrapper.text()).toContain('Campaign Dashboard');
         expect(wrapper.text()).toContain('Attachment Operator Workspace');
         expect(wrapper.text()).toContain('Audience Import Workspace: Ready');
         expect(wrapper.text()).toContain('Review Campaign: Available');
         expect(wrapper.text()).toContain('Generate Pay Codes: Blocked');
         expect(wrapper.text()).toContain('Campaign changes disabled');
-        expect(wrapper.text()).not.toContain('campaign-mutations-not-authorized');
-        expect(wrapper.find('[data-testid="cockpit-campaign-adoption-panel"]').exists()).toBe(true);
-        expect(wrapper.findAll('[data-testid="cockpit-campaign-surface"]')).toHaveLength(2);
-        expect(wrapper.find('[data-testid="cockpit-campaign-details"]').exists()).toBe(true);
+        expect(wrapper.text()).not.toContain(
+            'campaign-mutations-not-authorized',
+        );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-adoption-panel"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-campaign-surface"]'),
+        ).toHaveLength(2);
+        expect(
+            wrapper.find('[data-testid="cockpit-campaign-details"]').exists(),
+        ).toBe(true);
     });
 
     it('does not render unsafe campaign cockpit payload values or mutation affordances', () => {
@@ -734,7 +805,11 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
         expect(wrapper.text()).not.toContain('/must-not-render');
-        expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-mutation-button"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('renders unavailable campaign cockpit presentation as read-only disabled state', () => {
@@ -753,7 +828,7 @@ describe('Cockpit dashboard read model hydration', () => {
                     },
                     redactions: {
                         payloads: 'not-loaded',
-                            reason: 'missing-campaign-context',
+                        reason: 'missing-campaign-context',
                     },
                 },
             },
@@ -762,13 +837,27 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Campaigns');
         expect(wrapper.text()).toContain('Campaign summary not connected');
         expect(wrapper.text()).toContain('No campaign selected');
-        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Selected');
-        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('No');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-density-summary"]')
+                .text(),
+        ).toContain('Selected');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-density-summary"]')
+                .text(),
+        ).toContain('No');
         expect(wrapper.text()).not.toContain('missing-campaign-context');
-        expect(wrapper.text()).not.toContain('No campaign panels authorized for display.');
-        expect(wrapper.text()).not.toContain('No campaign actions authorized for display.');
+        expect(wrapper.text()).not.toContain(
+            'No campaign panels authorized for display.',
+        );
+        expect(wrapper.text()).not.toContain(
+            'No campaign actions authorized for display.',
+        );
         expect(wrapper.text()).not.toContain('Campaign changes disabled');
-        expect(wrapper.find('[data-testid="cockpit-campaign-details"]').exists()).toBe(false);
+        expect(
+            wrapper.find('[data-testid="cockpit-campaign-details"]').exists(),
+        ).toBe(false);
     });
 
     it('renders installed x-campaign package presence without implying a selected campaign', async () => {
@@ -821,21 +910,47 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('No campaign selected');
         expect(wrapper.text()).toContain('Read-only campaign summaries');
         expect(wrapper.text()).toContain('Ready when a campaign is selected');
-        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Surfaces');
-        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Selected');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-density-summary"]')
+                .text(),
+        ).toContain('Surfaces');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-density-summary"]')
+                .text(),
+        ).toContain('Selected');
         expect(wrapper.text()).not.toContain('Campaign summary not connected');
 
-        await wrapper.find('[data-testid="cockpit-campaign-details-toggle"]').trigger('click');
+        await wrapper
+            .find('[data-testid="cockpit-campaign-details-toggle"]')
+            .trigger('click');
 
         expect(wrapper.text()).toContain('Campaign Dashboard');
         expect(wrapper.text()).toContain('Available');
-        expect(wrapper.text()).toContain('Select a campaign to see workspace panels.');
-        expect(wrapper.text()).toContain('Select a campaign to see available campaign actions.');
-        expect(wrapper.text()).toContain('A dedicated campaign workspace is not enabled yet.');
-        expect(wrapper.find('[data-testid="cockpit-campaign-quick-generate-link"]').exists()).toBe(false);
-        expect(wrapper.text()).not.toContain('No campaign panels authorized for display.');
-        expect(wrapper.text()).not.toContain('No campaign actions authorized for display.');
-        expect(wrapper.text()).not.toContain('Deferred until an explicit read-only workspace route is authorized.');
+        expect(wrapper.text()).toContain(
+            'Select a campaign to see workspace panels.',
+        );
+        expect(wrapper.text()).toContain(
+            'Select a campaign to see available campaign actions.',
+        );
+        expect(wrapper.text()).toContain(
+            'A dedicated campaign workspace is not enabled yet.',
+        );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-quick-generate-link"]')
+                .exists(),
+        ).toBe(false);
+        expect(wrapper.text()).not.toContain(
+            'No campaign panels authorized for display.',
+        );
+        expect(wrapper.text()).not.toContain(
+            'No campaign actions authorized for display.',
+        );
+        expect(wrapper.text()).not.toContain(
+            'Deferred until an explicit read-only workspace route is authorized.',
+        );
         expect(wrapper.text()).not.toContain('No planning key');
         expect(wrapper.text()).not.toContain('No execution id');
     });
@@ -861,15 +976,31 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        const explorerLink = wrapper.find('[data-testid="cockpit-campaign-explorer-link"]');
+        const explorerLink = wrapper.find(
+            '[data-testid="cockpit-campaign-explorer-link"]',
+        );
 
         expect(explorerLink.exists()).toBe(true);
-        expect(explorerLink.attributes('href')).toBe('/x/cockpit/pay-codes?campaign_planning_key=campaign-plan-1&campaign_execution_id=execution-1&campaign_source=campaign_cockpit');
+        expect(explorerLink.attributes('href')).toBe(
+            '/x/cockpit/pay-codes?campaign_planning_key=campaign-plan-1&campaign_execution_id=execution-1&campaign_source=campaign_cockpit',
+        );
         expect(explorerLink.text()).toContain('Open Pay Code Explorer');
         expect(wrapper.text()).toContain('Existing read-only Cockpit route');
-        expect(wrapper.find('[data-testid="cockpit-campaign-workspace-link"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="cockpit-campaign-workspace-link"]').attributes('aria-disabled')).toBe('true');
-        expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-workspace-link"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-workspace-link"]')
+                .attributes('aria-disabled'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-mutation-button"]')
+                .exists(),
+        ).toBe(false);
         expect(wrapper.text()).not.toContain('/campaigns/');
         expect(wrapper.text()).not.toContain('/must-not-render');
     });
@@ -882,28 +1013,54 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        const quickGenerateLink = wrapper.find('[data-testid="cockpit-campaign-quick-generate-link"]');
-        const selectedContext = wrapper.find('[data-testid="cockpit-campaign-selected-context"]');
-        const prefillSummary = wrapper.find('[data-testid="cockpit-campaign-prefill-summary"]');
+        const quickGenerateLink = wrapper.find(
+            '[data-testid="cockpit-campaign-quick-generate-link"]',
+        );
+        const selectedContext = wrapper.find(
+            '[data-testid="cockpit-campaign-selected-context"]',
+        );
+        const prefillSummary = wrapper.find(
+            '[data-testid="cockpit-campaign-prefill-summary"]',
+        );
 
         expect(selectedContext.exists()).toBe(true);
-        expect(selectedContext.text()).toContain('This campaign can prefill Quick Generate');
+        expect(selectedContext.text()).toContain(
+            'This campaign can prefill Quick Generate',
+        );
         expect(prefillSummary.exists()).toBe(true);
         expect(prefillSummary.text()).toContain('Recipient');
         expect(prefillSummary.text()).toContain('09173011987');
         expect(prefillSummary.text()).toContain('Purpose');
         expect(prefillSummary.text()).toContain('Campaign payout');
         expect(quickGenerateLink.exists()).toBe(true);
-        expect(quickGenerateLink.attributes('href')).toContain('/x/cockpit/quick-generate');
-        expect(quickGenerateLink.attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
-        expect(quickGenerateLink.attributes('href')).toContain('campaign_template_key=ofw-remittance');
-        expect(quickGenerateLink.attributes('href')).toContain('campaign_recipient_reference=09173011987');
-        expect(quickGenerateLink.text()).toContain('Generate from this campaign');
-        expect(quickGenerateLink.text()).toContain('Prefills the existing Quick Generate handoff');
-        expect(quickGenerateLink.text()).toContain('read-only campaign context');
+        expect(quickGenerateLink.attributes('href')).toContain(
+            '/x/cockpit/quick-generate',
+        );
+        expect(quickGenerateLink.attributes('href')).toContain(
+            'campaign_planning_key=campaign-plan-1',
+        );
+        expect(quickGenerateLink.attributes('href')).toContain(
+            'campaign_template_key=ofw-remittance',
+        );
+        expect(quickGenerateLink.attributes('href')).toContain(
+            'campaign_recipient_reference=09173011987',
+        );
+        expect(quickGenerateLink.text()).toContain(
+            'Generate from this campaign',
+        );
+        expect(quickGenerateLink.text()).toContain(
+            'Prefills the existing Quick Generate handoff',
+        );
+        expect(quickGenerateLink.text()).toContain(
+            'read-only campaign context',
+        );
         expect(wrapper.text()).not.toContain('raw_payload');
         expect(wrapper.text()).not.toContain('must-not-render');
-        expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-mutation-button"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('renders read-only campaign recipient quick generate source links from the campaign read model', () => {
@@ -914,25 +1071,47 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        const recipientLinks = wrapper.find('[data-testid="cockpit-campaign-recipient-source-links"]');
-        const firstRecipientLink = wrapper.find('[data-testid="cockpit-campaign-recipient-source-link-0"]');
-        const secondRecipientLink = wrapper.find('[data-testid="cockpit-campaign-recipient-source-link-1"]');
+        const recipientLinks = wrapper.find(
+            '[data-testid="cockpit-campaign-recipient-source-links"]',
+        );
+        const firstRecipientLink = wrapper.find(
+            '[data-testid="cockpit-campaign-recipient-source-link-0"]',
+        );
+        const secondRecipientLink = wrapper.find(
+            '[data-testid="cockpit-campaign-recipient-source-link-1"]',
+        );
 
         expect(recipientLinks.exists()).toBe(true);
-        expect(recipientLinks.text()).toContain('Recipient Quick Generate entry points');
-        expect(recipientLinks.text()).toContain('Campaign state is not mutated');
+        expect(recipientLinks.text()).toContain(
+            'Recipient Quick Generate entry points',
+        );
+        expect(recipientLinks.text()).toContain(
+            'Campaign state is not mutated',
+        );
         expect(firstRecipientLink.exists()).toBe(true);
-        expect(firstRecipientLink.attributes('href')).toContain('/x/cockpit/quick-generate');
-        expect(firstRecipientLink.attributes('href')).toContain('campaign_recipient_id=recipient-a');
+        expect(firstRecipientLink.attributes('href')).toContain(
+            '/x/cockpit/quick-generate',
+        );
+        expect(firstRecipientLink.attributes('href')).toContain(
+            'campaign_recipient_id=recipient-a',
+        );
         expect(firstRecipientLink.text()).toContain('Generate for Ana');
         expect(firstRecipientLink.text()).toContain('BEN-A');
         expect(secondRecipientLink.exists()).toBe(true);
-        expect(secondRecipientLink.attributes('href')).toContain('campaign_template_key=money-changer');
-        expect(secondRecipientLink.attributes('href')).toContain('campaign_recipient_reference=BEN-B');
+        expect(secondRecipientLink.attributes('href')).toContain(
+            'campaign_template_key=money-changer',
+        );
+        expect(secondRecipientLink.attributes('href')).toContain(
+            'campaign_recipient_reference=BEN-B',
+        );
         expect(secondRecipientLink.text()).toContain('Generate for Ben');
         expect(secondRecipientLink.text()).toContain('BEN-B');
         expect(wrapper.text()).not.toContain('must-not-render');
-        expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-campaign-mutation-button"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('renders journal action and feedback integration summary cards from the read model bundle', async () => {
@@ -944,7 +1123,8 @@ describe('Cockpit dashboard read model hydration', () => {
                         {
                             id: 'execution-1',
                             label: 'Execution recorded for PC-1234',
-                            description: 'settlement_envelope succeeded · exec-1234',
+                            description:
+                                'settlement_envelope succeeded · exec-1234',
                             timestamp: '2026-07-10T10:00:00+08:00',
                             source: 'execution',
                         },
@@ -952,7 +1132,8 @@ describe('Cockpit dashboard read model hydration', () => {
                 },
                 cockpit_header_read_model: cockpitHeaderReadModel,
                 campaign_read_model: campaignReadModel,
-                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                operator_issuance_activity_read_model:
+                    operatorIssuanceActivityReadModel,
                 read_model: {
                     journal: {
                         status: 'available',
@@ -988,29 +1169,36 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Connected Services');
-        expect(wrapper.text()).toContain('Audit, follow-up, notification, campaign, funding-position, and execution readiness');
-        expect(wrapper.text()).toContain('Core summaries connected');
-        expect(wrapper.text()).toContain('This overview shows which surrounding packages are available for read-only inspection.');
-        expect(wrapper.find('[data-testid="cockpit-connected-services-overview"]').exists()).toBe(true);
-        expect(wrapper.findAll('[data-testid="cockpit-connected-service-card"]')).toHaveLength(6);
+        expect(wrapper.text()).toContain(
+            'Audit, follow-up, and notification summaries are available.',
+        );
+        expect(wrapper.text()).toContain('All systems ready');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-connected-services-overview"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-connected-service-card"]'),
+        ).toHaveLength(6);
         expect(wrapper.text()).toContain('Service Connection Details');
-        expect(wrapper.text()).toContain('Audit, follow-up, and notification payload boundaries');
-        expect(wrapper.text()).toContain('Audit, follow-up, and notification summaries are available for read-only display.');
-        expect(wrapper.text()).toContain('Durable activity read model available');
-        expect(wrapper.text()).toContain('Quick Generate activity can be inspected as an operator-safe summary.');
+        expect(wrapper.text()).toContain('Activity available');
+        expect(wrapper.text()).toContain(
+            'Recent Pay Code issuance can be inspected.',
+        );
         expect(wrapper.text()).toContain('Audit Trail');
-        expect(wrapper.text()).toContain('x-journal audit source');
+        expect(wrapper.text()).toContain('x-journal');
         expect(wrapper.text()).toContain('1 entries');
         expect(wrapper.text()).toContain('Follow-Up Actions');
-        expect(wrapper.text()).toContain('x-action follow-up source');
+        expect(wrapper.text()).toContain('x-action');
         expect(wrapper.text()).toContain('1 actions');
         expect(wrapper.text()).toContain('Notifications');
-        expect(wrapper.text()).toContain('x-feedback notification source');
+        expect(wrapper.text()).toContain('x-feedback');
         expect(wrapper.text()).toContain('1 deliveries');
         expect(wrapper.text()).toContain('Campaigns');
         expect(wrapper.text()).toContain('Campaign package');
-        expect(wrapper.text()).toContain('2 surfaces');
-        expect(wrapper.text()).toContain('Funding position');
+        expect(wrapper.text()).toContain('2 ready');
+        expect(wrapper.text()).toContain('Funding Position');
         expect(wrapper.text()).toContain('Treasury posture');
         expect(wrapper.text()).toContain('2 positions');
         expect(wrapper.text()).toContain('Execution Evidence');
@@ -1018,23 +1206,49 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('1 records');
         expect(wrapper.text()).not.toContain('journal-evidence-summary-only');
         expect(wrapper.text()).not.toContain('safe-action-host-summary-only');
-        expect(wrapper.text()).not.toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).not.toContain(
+            'communication-delivery-summary-only',
+        );
         expect(wrapper.text()).not.toContain('Payload policy');
         expect(wrapper.text()).not.toContain('Display readiness');
         expect(wrapper.text()).not.toContain('Journal Evidence Summary Only');
         expect(wrapper.text()).not.toContain('Safe Action Host Summary Only');
-        expect(wrapper.text()).not.toContain('Communication Delivery Summary Only');
+        expect(wrapper.text()).not.toContain(
+            'Communication Delivery Summary Only',
+        );
         expect(wrapper.text()).not.toContain('must-not-render');
-        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-card"]')).toHaveLength(3);
-        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')).toHaveLength(3);
-        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-details"]')).toHaveLength(0);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-integration-summary-card"]'),
+        ).toHaveLength(3);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-integration-summary-details-toggle"]',
+            ),
+        ).toHaveLength(3);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-integration-summary-details"]',
+            ),
+        ).toHaveLength(0);
         expect(wrapper.text()).toContain('Connection details');
-        await wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')[0].trigger('click');
-        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-details"]')).toHaveLength(1);
+        await wrapper
+            .findAll(
+                '[data-testid="cockpit-integration-summary-details-toggle"]',
+            )[0]
+            .trigger('click');
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-integration-summary-details"]',
+            ),
+        ).toHaveLength(1);
         expect(wrapper.text()).toContain('Payload policy');
         expect(wrapper.text()).toContain('Display readiness');
         expect(wrapper.text()).toContain('Journal Evidence Summary Only');
-        expect(wrapper.find('[data-testid="cockpit-activity-readiness-summary"]').exists()).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-activity-readiness-summary"]')
+                .exists(),
+        ).toBe(true);
     });
 
     it('renders integration unavailable reasons without exception messages', async () => {
@@ -1061,7 +1275,11 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Audit Trail');
         expect(wrapper.text()).toContain('Unavailable');
         expect(wrapper.text()).not.toContain('Read Model Unavailable');
-        await wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')[0].trigger('click');
+        await wrapper
+            .findAll(
+                '[data-testid="cockpit-integration-summary-details-toggle"]',
+            )[0]
+            .trigger('click');
         expect(wrapper.text()).toContain('Read Model Unavailable');
         expect(wrapper.text()).not.toContain('RuntimeException');
         expect(wrapper.text()).not.toContain('must-not-render');
@@ -1080,7 +1298,8 @@ describe('Cockpit dashboard read model hydration', () => {
                                 id: 'journal-1',
                                 event_type: 'voucher.redeemed',
                                 raw_payload: 'SECRET-DO-NOT-RENDER',
-                                exception_message: 'Stack trace must stay hidden',
+                                exception_message:
+                                    'Stack trace must stay hidden',
                             },
                         ],
                         redactions: {
@@ -1131,8 +1350,12 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Connected Services');
         expect(wrapper.text()).not.toContain('Journal Evidence Summary Only');
         expect(wrapper.text()).not.toContain('Safe Action Host Summary Only');
-        expect(wrapper.text()).not.toContain('Communication Delivery Summary Only');
-        for (const toggle of wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')) {
+        expect(wrapper.text()).not.toContain(
+            'Communication Delivery Summary Only',
+        );
+        for (const toggle of wrapper.findAll(
+            '[data-testid="cockpit-integration-summary-details-toggle"]',
+        )) {
             await toggle.trigger('click');
         }
         expect(wrapper.text()).toContain('Journal Evidence Summary Only');
@@ -1151,13 +1374,16 @@ describe('Cockpit dashboard read model hydration', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
-                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                operator_issuance_activity_read_model:
+                    operatorIssuanceActivityReadModel,
             },
         });
 
         expect(wrapper.text()).toContain('Issuance Activity');
         expect(wrapper.text()).toContain('Pay Code PC-1234 issued');
-        expect(wrapper.text()).toContain('PHP 100.00 issued through Quick Generate');
+        expect(wrapper.text()).toContain(
+            'PHP 100.00 issued through Quick Generate',
+        );
         expect(wrapper.text()).toContain('corr-1');
         expect(wrapper.text()).toContain('Journal: Recorded');
         expect(wrapper.text()).toContain('Action: Prepared');
@@ -1171,9 +1397,13 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Journal entry: journal-entry-1');
         expect(wrapper.text()).toContain('Writes journal: yes');
         expect(wrapper.text()).toContain('Source: test-journal-handoff');
-        expect(wrapper.text()).toContain('Reason: Journal handoff was recorded.');
+        expect(wrapper.text()).toContain(
+            'Reason: Journal handoff was recorded.',
+        );
         expect(wrapper.text()).toContain('Reference: XJ-1');
-        expect(wrapper.text()).toContain('Event: cockpit.operator_issuance_activity.recorded');
+        expect(wrapper.text()).toContain(
+            'Event: cockpit.operator_issuance_activity.recorded',
+        );
         expect(wrapper.text()).toContain('Diagnostic: Journal recorded');
         expect(wrapper.text()).toContain('Action: none');
         expect(wrapper.text()).toContain('Read-only: yes');
@@ -1181,7 +1411,9 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Action run: action-run-1');
         expect(wrapper.text()).toContain('Executes action: no');
         expect(wrapper.text()).toContain('Suggested action: Open Pay Code');
-        expect(wrapper.text()).toContain('Feedback intent: cockpit.operator_issuance_activity.recorded');
+        expect(wrapper.text()).toContain(
+            'Feedback intent: cockpit.operator_issuance_activity.recorded',
+        );
         expect(wrapper.text()).toContain('Delivery plan: plan-feedback-1');
         expect(wrapper.text()).toContain('Sends feedback: no');
         expect(wrapper.text()).toContain('Channel: in_app');
@@ -1189,7 +1421,9 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Source: test-feedback-handoff');
         expect(wrapper.text()).toContain('Campaign attribution: available');
         expect(wrapper.text()).toContain('Campaign context');
-        expect(wrapper.text()).toContain('This Pay Code keeps read-only campaign attribution');
+        expect(wrapper.text()).toContain(
+            'This Pay Code keeps read-only campaign attribution',
+        );
         expect(wrapper.text()).toContain('Campaign: campaign-wave-43c');
         expect(wrapper.text()).toContain('Audience: audience-wave-43c');
         expect(wrapper.text()).toContain('Recipient: recipient-wave-43c');
@@ -1204,34 +1438,172 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Campaign mutation: no');
         expect(wrapper.text()).toContain('Read-only: yes');
         expect(wrapper.text()).toContain('Read-only');
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-campaign-return-panel"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-campaign-attribution"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-summary"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-diagnostic"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-action-summary"]')).toHaveLength(1);
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-feedback-summary"]')).toHaveLength(1);
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').text()).toContain('campaign context');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').text()).toContain('read-only');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234/distribution?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).toContain('Open Distribution workspace');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).toContain('campaign context');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).toContain('read-only');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity&campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).toContain('Open in Explorer');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).toContain('campaign context');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').attributes('href')).toBe('/x/cockpit?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').text()).toContain('Return to Campaign Dashboard');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').text()).toContain('read-only');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-return-dashboard-link"]').attributes('href')).toBe('/x/cockpit?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-return-dashboard-link"]').text()).toContain('Return to Campaign Dashboard');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-return-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity&campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-return-explorer-link"]').text()).toContain('Open campaign-filtered Explorer');
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-card"]',
+            ),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-campaign-return-panel"]',
+            ),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-campaign-attribution"]',
+            ),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-journal-summary"]',
+            ),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-journal-diagnostic"]',
+            ),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-action-summary"]',
+            ),
+        ).toHaveLength(1);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-feedback-summary"]',
+            ),
+        ).toHaveLength(1);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-operator-issuance-activity-link"]')
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit/pay-codes/PC-1234?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter',
+        );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-operator-issuance-activity-link"]')
+                .text(),
+        ).toContain('campaign context');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-operator-issuance-activity-link"]')
+                .text(),
+        ).toContain('read-only');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-distribution-link"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit/pay-codes/PC-1234/distribution?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-distribution-link"]',
+                )
+                .text(),
+        ).toContain('Open Distribution workspace');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-distribution-link"]',
+                )
+                .text(),
+        ).toContain('campaign context');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-distribution-link"]',
+                )
+                .text(),
+        ).toContain('read-only');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-explorer-link"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity&campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-explorer-link"]',
+                )
+                .text(),
+        ).toContain('Open in Explorer');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-explorer-link"]',
+                )
+                .text(),
+        ).toContain('campaign context');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]',
+                )
+                .text(),
+        ).toContain('Return to Campaign Dashboard');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]',
+                )
+                .text(),
+        ).toContain('read-only');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-campaign-return-dashboard-link"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-campaign-return-dashboard-link"]',
+                )
+                .text(),
+        ).toContain('Return to Campaign Dashboard');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-campaign-return-explorer-link"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity&campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-campaign-return-explorer-link"]',
+                )
+                .text(),
+        ).toContain('Open campaign-filtered Explorer');
     });
 
     it('hides empty disconnected activity handoff details while preserving status badges', () => {
-        const disconnectedReadModel = structuredClone(operatorIssuanceActivityReadModel);
+        const disconnectedReadModel = structuredClone(
+            operatorIssuanceActivityReadModel,
+        );
         disconnectedReadModel.presentations[0].handoffs = {
             journal: 'not_wired',
             action: 'not_wired',
@@ -1269,13 +1641,33 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('Journal status details');
         expect(wrapper.text()).not.toContain('Action status details');
         expect(wrapper.text()).not.toContain('Feedback status details');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-journal-summary"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-action-summary"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-feedback-summary"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-journal-summary"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-action-summary"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-feedback-summary"]',
+                )
+                .exists(),
+        ).toBe(false);
     });
 
     it('does not propagate mutating campaign activity attribution into campaign navigation links', () => {
-        const unsafeActivityReadModel = structuredClone(operatorIssuanceActivityReadModel);
+        const unsafeActivityReadModel = structuredClone(
+            operatorIssuanceActivityReadModel,
+        );
         unsafeActivityReadModel.presentations[0].metadata.campaign_attribution.mutates_campaign = true;
         unsafeActivityReadModel.presentations[0].metadata.campaign_attribution.read_only = false;
 
@@ -1286,15 +1678,65 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).not.toContain('campaign context');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').text()).not.toContain('campaign context');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').text()).not.toContain('read-only');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234/distribution');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).not.toContain('campaign context');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).not.toContain('read-only');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-explorer-link"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-explorer-link"]',
+                )
+                .text(),
+        ).not.toContain('campaign context');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-operator-issuance-activity-link"]')
+                .attributes('href'),
+        ).toBe('/x/cockpit/pay-codes/PC-1234');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-operator-issuance-activity-link"]')
+                .text(),
+        ).not.toContain('campaign context');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-operator-issuance-activity-link"]')
+                .text(),
+        ).not.toContain('read-only');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-distribution-link"]',
+                )
+                .attributes('href'),
+        ).toBe('/x/cockpit/pay-codes/PC-1234/distribution');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-distribution-link"]',
+                )
+                .text(),
+        ).not.toContain('campaign context');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-distribution-link"]',
+                )
+                .text(),
+        ).not.toContain('read-only');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]',
+                )
+                .exists(),
+        ).toBe(false);
         expect(wrapper.text()).toContain('Campaign mutation: yes');
         expect(wrapper.text()).toContain('Read-only: no');
         expect(wrapper.text()).not.toContain('must-not-render');
@@ -1304,19 +1746,30 @@ describe('Cockpit dashboard read model hydration', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
-                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                operator_issuance_activity_read_model:
+                    operatorIssuanceActivityReadModel,
             },
         });
 
-        const form = wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-form"]');
-        const search = wrapper.find('[data-testid="cockpit-operator-issuance-activity-search-input"]');
-        const status = wrapper.find('[data-testid="cockpit-operator-issuance-activity-status-filter"]');
-        const handoff = wrapper.find('[data-testid="cockpit-operator-issuance-activity-handoff-filter"]');
+        const form = wrapper.find(
+            '[data-testid="cockpit-operator-issuance-activity-filter-form"]',
+        );
+        const search = wrapper.find(
+            '[data-testid="cockpit-operator-issuance-activity-search-input"]',
+        );
+        const status = wrapper.find(
+            '[data-testid="cockpit-operator-issuance-activity-status-filter"]',
+        );
+        const handoff = wrapper.find(
+            '[data-testid="cockpit-operator-issuance-activity-handoff-filter"]',
+        );
 
         expect(form.attributes('method')).toBe('get');
         expect(form.attributes('action')).toBe('/x/cockpit');
         expect(search.attributes('name')).toBe('activity_search');
-        expect((search.element as HTMLInputElement).value).toBe('money changer');
+        expect((search.element as HTMLInputElement).value).toBe(
+            'money changer',
+        );
         expect(search.attributes('disabled')).toBeUndefined();
         expect(status.attributes('name')).toBe('activity_status');
         expect((status.element as HTMLSelectElement).value).toBe('issued');
@@ -1324,29 +1777,102 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(handoff.attributes('name')).toBe('activity_handoff_status');
         expect((handoff.element as HTMLSelectElement).value).toBe('recorded');
         expect(handoff.text()).toContain('Planned');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-active-filters"]').text()).toContain('3 active filters');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-active-filters"]').text()).toContain('Read-only filter query; no activity mutation is executed.');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Showing 1 matching activity for the current read-only filters.');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-summary"]').text()).toContain('Filters: search “money changer” · status Issued · follow-up Recorded');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-clear"]').attributes('href')).toBe('/x/cockpit');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-clear-search"]').attributes('href')).toBe('/x/cockpit?activity_status=issued&activity_handoff_status=recorded');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-clear-status"]').attributes('href')).toBe('/x/cockpit?activity_search=money+changer&activity_handoff_status=recorded');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-clear-handoff"]').attributes('href')).toBe('/x/cockpit?activity_search=money+changer&activity_status=issued');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-active-filters"]',
+                )
+                .text(),
+        ).toContain('3 active filters');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-active-filters"]',
+                )
+                .text(),
+        ).toContain(
+            'Read-only filter query; no activity mutation is executed.',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-result-summary"]',
+                )
+                .text(),
+        ).toContain(
+            'Showing 1 matching activity for the current read-only filters.',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-filter-summary"]',
+                )
+                .text(),
+        ).toContain(
+            'Filters: search “money changer” · status Issued · follow-up Recorded',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-filter-clear"]',
+                )
+                .attributes('href'),
+        ).toBe('/x/cockpit');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-clear-search"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit?activity_status=issued&activity_handoff_status=recorded',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-clear-status"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit?activity_search=money+changer&activity_handoff_status=recorded',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-clear-handoff"]',
+                )
+                .attributes('href'),
+        ).toBe(
+            '/x/cockpit?activity_search=money+changer&activity_status=issued',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-mutation"]',
+                )
+                .exists(),
+        ).toBe(false);
     });
 
     it('limits dashboard activity density while preserving read-only overflow guidance', () => {
-        const denseReadModel = structuredClone(operatorIssuanceActivityReadModel);
+        const denseReadModel = structuredClone(
+            operatorIssuanceActivityReadModel,
+        );
         denseReadModel.search_filters.search = undefined;
         denseReadModel.search_filters.statuses = [];
         denseReadModel.search_filters.handoff_statuses = [];
-        denseReadModel.presentations = Array.from({ length: 7 }, (_, index) => ({
-            ...structuredClone(operatorIssuanceActivityReadModel.presentations[0]),
-            id: `activity-${index + 1}`,
-            code: `PC-DENSE-${index + 1}`,
-            title: `Pay Code PC-DENSE-${index + 1} issued`,
-            detail_href: `/x/cockpit/pay-codes/PC-DENSE-${index + 1}`,
-        }));
+        denseReadModel.presentations = Array.from(
+            { length: 7 },
+            (_, index) => ({
+                ...structuredClone(
+                    operatorIssuanceActivityReadModel.presentations[0],
+                ),
+                id: `activity-${index + 1}`,
+                code: `PC-DENSE-${index + 1}`,
+                title: `Pay Code PC-DENSE-${index + 1} issued`,
+                detail_href: `/x/cockpit/pay-codes/PC-DENSE-${index + 1}`,
+            }),
+        );
 
         const wrapper = mount(CockpitDashboard, {
             props: {
@@ -1355,21 +1881,46 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Showing 7 recent activities.');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-density-summary"]').text()).toContain('Displaying the latest 5 of 7 activities.');
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(5);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-result-summary"]',
+                )
+                .text(),
+        ).toContain('Showing 7 recent activities.');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-density-summary"]',
+                )
+                .text(),
+        ).toContain('Displaying the latest 5 of 7 activities.');
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-card"]',
+            ),
+        ).toHaveLength(5);
         expect(wrapper.text()).toContain('Pay Code PC-DENSE-1 issued');
         expect(wrapper.text()).toContain('Pay Code PC-DENSE-5 issued');
         expect(wrapper.text()).not.toContain('Pay Code PC-DENSE-6 issued');
-        expect(wrapper.text()).toContain('2 additional activities are available through filters or Pay Code Explorer links.');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-density-overflow"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain(
+            '2 additional activities are available through filters or Pay Code Explorer links.',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-density-overflow"]',
+                )
+                .exists(),
+        ).toBe(true);
     });
 
     it('does not render unsafe operator issuance activity payloads or side-effect affordances', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
-                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                operator_issuance_activity_read_model:
+                    operatorIssuanceActivityReadModel,
             },
         });
 
@@ -1378,8 +1929,20 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('raw_payload');
         expect(wrapper.text()).not.toContain('recipient_secret');
         expect(wrapper.text()).not.toContain('token');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-journal-retry"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-mutation"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-journal-retry"]',
+                )
+                .exists(),
+        ).toBe(false);
     });
 
     it('renders unavailable operator issuance activity as a read-only empty state', () => {
@@ -1405,13 +1968,49 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Issuance Activity');
-        expect(wrapper.text()).toContain('No operator issuance activity available');
-        expect(wrapper.text()).toContain('Activity recording is not wired yet.');
-        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(0);
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-search-input"]').attributes('disabled')).toBeDefined();
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-submit"]').attributes('disabled')).toBeDefined();
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Activity filters become available when durable activity storage is wired.');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-summary"]').text()).toContain('Filter summary unavailable until durable activity storage is wired.');
+        expect(wrapper.text()).toContain(
+            'No operator issuance activity available',
+        );
+        expect(wrapper.text()).toContain(
+            'Activity recording is not wired yet.',
+        );
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-operator-issuance-activity-card"]',
+            ),
+        ).toHaveLength(0);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-search-input"]',
+                )
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-filter-submit"]',
+                )
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-result-summary"]',
+                )
+                .text(),
+        ).toContain(
+            'Activity filters become available when durable activity storage is wired.',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-filter-summary"]',
+                )
+                .text(),
+        ).toContain(
+            'Filter summary unavailable until durable activity storage is wired.',
+        );
     });
 
     it('renders a filtered no-match empty state without implying missing runtime wiring', () => {
@@ -1433,22 +2032,43 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('No activity matches current filters');
-        expect(wrapper.text()).toContain('Clear filters or adjust the search/status criteria to inspect durable operator issuance activity.');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Showing 0 matching activities for the current read-only filters.');
-        expect(wrapper.text()).not.toContain('Activity recording is not wired yet.');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain(
+            'Clear filters or adjust the search/status criteria to inspect durable operator issuance activity.',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-result-summary"]',
+                )
+                .text(),
+        ).toContain(
+            'Showing 0 matching activities for the current read-only filters.',
+        );
+        expect(wrapper.text()).not.toContain(
+            'Activity recording is not wired yet.',
+        );
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-operator-issuance-activity-mutation"]',
+                )
+                .exists(),
+        ).toBe(false);
     });
 
     it('forwards operator issuance activity props through the dashboard route adapter', () => {
         const wrapper = mount(DashboardRouteAdapter, {
             props: {
                 dashboard_read_model: dashboardReadModel,
-                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                operator_issuance_activity_read_model:
+                    operatorIssuanceActivityReadModel,
             },
         });
 
         expect(wrapper.text()).toContain('Pay Code PC-1234 issued');
-        expect(wrapper.text()).toContain('PHP 100.00 issued through Quick Generate');
+        expect(wrapper.text()).toContain(
+            'PHP 100.00 issued through Quick Generate',
+        );
         expect(wrapper.text()).not.toContain('must-not-render');
     });
 });

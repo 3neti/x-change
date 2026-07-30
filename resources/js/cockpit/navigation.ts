@@ -3,7 +3,7 @@ import type { CockpitNavigationItem } from './types';
 export const cockpitNavigationItems: CockpitNavigationItem[] = [
     {
         key: 'dashboard',
-        label: 'Dashboard',
+        label: 'Cockpit',
         href: '/x/cockpit',
         group: 'primary',
         description: 'Operational awareness',

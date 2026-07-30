@@ -1,4 +1,19 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
+import {
+    Activity,
+    AlertTriangle,
+    ArrowRight,
+    BadgePlus,
+    BanknoteArrowUp,
+    Check,
+    CircleGauge,
+    FileStack,
+    Megaphone,
+    Radio,
+    ShieldCheck,
+} from 'lucide-vue-next';
+import type { Component } from 'vue';
 import { computed, ref } from 'vue';
 import CockpitCampaignAdoptionPanel from '../components/CockpitCampaignAdoptionPanel.vue';
 import CockpitDiagnosticsDisclosure from '../components/CockpitDiagnosticsDisclosure.vue';
@@ -26,6 +41,30 @@ import type {
 
 const props = defineProps<CockpitDashboardPageProps>();
 
+type CockpitControl = {
+    key: string;
+    label: string;
+    description: string;
+    href: string;
+    icon: Component;
+};
+
+type CockpitHorizonItem = {
+    key: string;
+    label: string;
+    value: string;
+    detail: string;
+    tone: 'neutral' | 'healthy' | 'warning';
+};
+
+type CockpitLogItem = {
+    key: string;
+    label: string;
+    detail: string;
+    meta: string;
+    href?: string;
+};
+
 type CockpitConnectedServiceCard = {
     key: string;
     label: string;
@@ -38,6 +77,7 @@ type CockpitConnectedServiceCard = {
 
 const readModel = computed(() => props.dashboard_read_model);
 const expandedIntegrationDetails = ref<Record<string, boolean>>({});
+
 const headerBalances = computed(() => {
     const balances = props.cockpit_header_read_model?.balances;
 
@@ -45,8 +85,13 @@ const headerBalances = computed(() => {
         ? balances
         : undefined;
 });
+
 const metrics = computed<CockpitDashboardMetric[]>(() => {
-    if (!readModel.value?.authorized || !Array.isArray(readModel.value.metrics) || readModel.value.metrics.length === 0) {
+    if (
+        !readModel.value?.authorized ||
+        !Array.isArray(readModel.value.metrics) ||
+        readModel.value.metrics.length === 0
+    ) {
         return cockpitDashboardMetrics;
     }
 
@@ -56,7 +101,11 @@ const metrics = computed<CockpitDashboardMetric[]>(() => {
 });
 
 const pipeline = computed<CockpitPipelineStage[]>(() => {
-    if (!readModel.value?.authorized || !Array.isArray(readModel.value.pipeline) || readModel.value.pipeline.length === 0) {
+    if (
+        !readModel.value?.authorized ||
+        !Array.isArray(readModel.value.pipeline) ||
+        readModel.value.pipeline.length === 0
+    ) {
         return cockpitRedemptionPipelineStages;
     }
 
@@ -66,7 +115,11 @@ const pipeline = computed<CockpitPipelineStage[]>(() => {
 });
 
 const riskSignals = computed<CockpitRiskSignal[]>(() => {
-    if (!readModel.value?.authorized || !Array.isArray(readModel.value.risk_signals) || readModel.value.risk_signals.length === 0) {
+    if (
+        !readModel.value?.authorized ||
+        !Array.isArray(readModel.value.risk_signals) ||
+        readModel.value.risk_signals.length === 0
+    ) {
         return cockpitRiskSignals;
     }
 
@@ -76,7 +129,11 @@ const riskSignals = computed<CockpitRiskSignal[]>(() => {
 });
 
 const activity = computed<CockpitActivityItem[]>(() => {
-    if (!readModel.value?.authorized || !Array.isArray(readModel.value.activity) || readModel.value.activity.length === 0) {
+    if (
+        !readModel.value?.authorized ||
+        !Array.isArray(readModel.value.activity) ||
+        readModel.value.activity.length === 0
+    ) {
         return cockpitRecentActivityItems;
     }
 
@@ -84,6 +141,37 @@ const activity = computed<CockpitActivityItem[]>(() => {
         .map((item) => sanitizeActivityItem(item))
         .filter((item): item is CockpitActivityItem => item !== null);
 });
+
+const controls: CockpitControl[] = [
+    {
+        key: 'create',
+        label: 'Create',
+        description: 'Design and issue a Pay Code',
+        href: '/x/cockpit/quick-generate',
+        icon: BadgePlus,
+    },
+    {
+        key: 'funding',
+        label: 'Funding',
+        description: 'Add and confirm Account funds',
+        href: '/x/cockpit/funding',
+        icon: BanknoteArrowUp,
+    },
+    {
+        key: 'pay-codes',
+        label: 'Pay Codes',
+        description: 'Find and inspect issued Pay Codes',
+        href: '/x/cockpit/pay-codes',
+        icon: FileStack,
+    },
+    {
+        key: 'campaigns',
+        label: 'Campaigns',
+        description: 'Prepare payments to many recipients',
+        href: '/x/cockpit/campaigns',
+        icon: Megaphone,
+    },
+];
 
 const integrationSummaries = computed(() => [
     integrationSummary(
@@ -112,6 +200,27 @@ const integrationSummaries = computed(() => [
     ),
 ]);
 
+const campaignSurfaceSummary = computed(() => {
+    const surfaces = Array.isArray(props.campaign_read_model?.surfaces)
+        ? props.campaign_read_model.surfaces
+        : [];
+    const availableSurfaces = surfaces.filter((surface) => {
+        const status = typeof surface.status === 'string' ? surface.status : '';
+
+        return surface.enabled === true || isStatusAvailable(status);
+    });
+
+    if (availableSurfaces.length > 0) {
+        return `${availableSurfaces.length} ready`;
+    }
+
+    return 'None active';
+});
+
+const executionEvidenceCount = computed(
+    () => activity.value.filter((item) => item.source === 'execution').length,
+);
+
 const connectedServiceCards = computed<CockpitConnectedServiceCard[]>(() => [
     ...integrationSummaries.value.map((summary) => ({
         key: summary.key,
@@ -126,17 +235,25 @@ const connectedServiceCards = computed<CockpitConnectedServiceCard[]>(() => [
         key: 'campaigns',
         label: 'Campaigns',
         source: 'Campaign package',
-        status: displayStatus(stringValue(props.campaign_read_model?.status) ?? 'not_wired'),
+        status: displayStatus(
+            stringValue(props.campaign_read_model?.status) ?? 'not_wired',
+        ),
         count: campaignSurfaceSummary.value,
         boundary: 'Read-only campaign context',
-        available: props.campaign_read_model?.authorized === true && isStatusAvailable(stringValue(props.campaign_read_model.status) ?? ''),
+        available:
+            props.campaign_read_model?.authorized === true &&
+            isStatusAvailable(
+                stringValue(props.campaign_read_model.status) ?? '',
+            ),
     },
     {
         key: 'balances',
-        label: 'Funding position',
+        label: 'Funding Position',
         source: 'Treasury posture',
         status: headerBalances.value ? 'Available' : 'Not connected',
-        count: headerBalances.value ? `${headerBalances.value.length} positions` : '0 positions',
+        count: headerBalances.value
+            ? `${headerBalances.value.length} positions`
+            : '0 positions',
         boundary: 'Read-only Treasury posture',
         available: headerBalances.value !== undefined,
     },
@@ -144,42 +261,34 @@ const connectedServiceCards = computed<CockpitConnectedServiceCard[]>(() => [
         key: 'execution',
         label: 'Execution Evidence',
         source: 'Execution read model',
-        status: executionEvidenceCount.value > 0 ? 'Available' : 'Not connected',
+        status:
+            executionEvidenceCount.value > 0 ? 'Available' : 'Not connected',
         count: `${executionEvidenceCount.value} records`,
         boundary: 'Read-only execution summaries',
         available: executionEvidenceCount.value > 0,
     },
 ]);
 
-const operatingSummaryCards = computed(() => [
-    {
-        key: 'pay-codes',
-        label: 'Pay Codes',
-        value: metricValue('pay-codes-visible') ?? '0',
-        description: 'Sanitized Pay Code rows available for operator inspection.',
-        href: '/x/cockpit/pay-codes',
-        action: 'Open Pay Code Explorer',
-    },
-    {
-        key: 'quick-generate',
-        label: 'Quick Generate',
-        value: latestIssuanceStatus.value,
-        description: 'Template-first issuance handoff through existing x-change generation.',
-        href: '/x/cockpit/quick-generate',
-        action: 'Generate Pay Code',
-    },
-    {
-        key: 'attention',
-        label: 'Needs Attention',
-        value: metricValue('needs-attention') ?? riskSignals.value[0]?.value ?? '0',
-        description: 'Expired, awaiting approval, or review-oriented summaries only.',
-        href: '/x/cockpit/pay-codes?status=expired',
-        action: 'Review attention queue',
-    },
-]);
+const operatingIntegrationStatus = computed(() => {
+    const availableCount = connectedServiceCards.value.filter(
+        (summary) => summary.available,
+    ).length;
+
+    if (availableCount === connectedServiceCards.value.length) {
+        return 'All systems ready';
+    }
+
+    if (availableCount > 0) {
+        return `${availableCount}/${connectedServiceCards.value.length} systems ready`;
+    }
+
+    return 'System details unavailable';
+});
 
 const latestIssuanceStatus = computed(() => {
-    const presentations = Array.isArray(props.operator_issuance_activity_read_model?.presentations)
+    const presentations = Array.isArray(
+        props.operator_issuance_activity_read_model?.presentations,
+    )
         ? props.operator_issuance_activity_read_model.presentations
         : [];
 
@@ -187,45 +296,273 @@ const latestIssuanceStatus = computed(() => {
         .map((presentation) => stringValue(presentation.status))
         .find((status): status is string => status !== undefined);
 
-    return firstStatus ?? 'ready';
+    return firstStatus ? displayStatus(firstStatus) : 'No recent issuance';
 });
 
-const operatingIntegrationStatus = computed(() => {
-    const availableCount = connectedServiceCards.value.filter((summary) => summary.available).length;
+const actionableSignals = computed(() =>
+    riskSignals.value.filter((signal) => isActionableSignal(signal.value)),
+);
 
-    if (availableCount === connectedServiceCards.value.length) {
-        return 'Core summaries connected';
+const attentionValue = computed(() => {
+    if (actionableSignals.value.length === 0) {
+        return 'Clear';
+    }
+
+    return (
+        metricValue('needs-attention') ??
+        actionableSignals.value[0]?.value ??
+        `${actionableSignals.value.length}`
+    );
+});
+
+const horizonItems = computed<CockpitHorizonItem[]>(() => [
+    {
+        key: 'pay-codes',
+        label: 'Pay Codes',
+        value: metricValue('pay-codes-visible') ?? '0',
+        detail: 'Visible to this Account',
+        tone: 'neutral',
+    },
+    {
+        key: 'claims',
+        label: 'Claim Progress',
+        value: pipelineValue('redeemed') ?? pipelineValue('issued') ?? '—',
+        detail: pipelineValue('redeemed')
+            ? 'Redeemed'
+            : 'Latest lifecycle count',
+        tone: 'healthy',
+    },
+    {
+        key: 'campaigns',
+        label: 'Campaigns',
+        value: campaignSurfaceSummary.value,
+        detail:
+            props.campaign_read_model?.authorized === true
+                ? 'Campaign context available'
+                : 'No selected campaign',
+        tone: 'neutral',
+    },
+    {
+        key: 'attention',
+        label: 'Needs Attention',
+        value: attentionValue.value,
+        detail:
+            actionableSignals.value.length > 0
+                ? `${actionableSignals.value.length} signal${actionableSignals.value.length === 1 ? '' : 's'}`
+                : 'No current signals',
+        tone: actionableSignals.value.length > 0 ? 'warning' : 'healthy',
+    },
+]);
+
+const logItems = computed<CockpitLogItem[]>(() => {
+    const issuance = (
+        Array.isArray(
+            props.operator_issuance_activity_read_model?.presentations,
+        )
+            ? props.operator_issuance_activity_read_model.presentations
+            : []
+    ).map((presentation, index) => ({
+        key:
+            stringValue(presentation.id) ??
+            stringValue(presentation.code) ??
+            `issuance-${index}`,
+        label: stringValue(presentation.title) ?? 'Pay Code issued',
+        detail:
+            stringValue(presentation.subtitle) ??
+            'Issuance activity is available.',
+        meta: displayStatus(stringValue(presentation.status) ?? 'available'),
+        href: stringValue(presentation.detail_href),
+    }));
+
+    const system = activity.value.map((item) => ({
+        key: `activity-${item.id}`,
+        label: item.label,
+        detail: item.description,
+        meta: displayStatus(item.source),
+    }));
+
+    return [...issuance, ...system].slice(0, 5);
+});
+
+const hasOperationalHistory = computed(() => {
+    if (readModel.value?.authorized !== true) {
+        return false;
+    }
+
+    return (
+        numericValue(metricValue('pay-codes-visible')) > 0 ||
+        (props.operator_issuance_activity_read_model?.authorized === true &&
+            Array.isArray(
+                props.operator_issuance_activity_read_model.presentations,
+            ) &&
+            props.operator_issuance_activity_read_model.presentations.length >
+                0)
+    );
+});
+
+const gettingStartedSteps = computed(() => [
+    {
+        key: 'fund',
+        label: 'Establish funds',
+        href: '/x/cockpit/funding',
+        complete: hasClientFunds(),
+    },
+    {
+        key: 'create',
+        label: 'Create a Pay Code',
+        href: '/x/cockpit/quick-generate',
+        complete: numericValue(metricValue('pay-codes-visible')) > 0,
+    },
+    {
+        key: 'deliver',
+        label: 'Share or deliver',
+        href: '/x/cockpit/pay-codes',
+        complete:
+            numericValue(pipelineValue('shared')) > 0 ||
+            numericValue(pipelineValue('redeemed')) > 0,
+    },
+    {
+        key: 'monitor',
+        label: 'Monitor results',
+        href: '/x/cockpit/pay-codes',
+        complete:
+            readModel.value?.authorized === true && activity.value.length > 0,
+    },
+]);
+
+const pinnedCampaign = computed(() => {
+    if (props.campaign_read_model?.authorized !== true) {
+        return null;
+    }
+
+    const facts = props.campaign_read_model.facts;
+    const cards =
+        facts && typeof facts === 'object' && !Array.isArray(facts)
+            ? facts.cards
+            : undefined;
+    const campaign =
+        cards && typeof cards === 'object' && !Array.isArray(cards)
+            ? cards.campaign
+            : undefined;
+    const name =
+        campaign && typeof campaign === 'object' && !Array.isArray(campaign)
+            ? stringValue(campaign.name)
+            : undefined;
+    const count =
+        campaign && typeof campaign === 'object' && !Array.isArray(campaign)
+            ? numericValue(campaign.recipient_count)
+            : 0;
+
+    return {
+        name: name ?? 'Selected campaign',
+        detail:
+            count > 0
+                ? `${count.toLocaleString()} beneficiaries`
+                : 'Campaign context available',
+        href: '/x/cockpit/campaigns',
+    };
+});
+
+const integrationReadinessNote = computed(() => {
+    const availableCount = integrationSummaries.value.filter(
+        (summary) => summary.status === 'available',
+    ).length;
+
+    if (availableCount === integrationSummaries.value.length) {
+        return 'Audit, follow-up, and notification summaries are available.';
     }
 
     if (availableCount > 0) {
-        return `${availableCount}/${connectedServiceCards.value.length} services connected`;
+        return 'Some supporting service summaries are available.';
     }
 
-    return 'Service summaries not connected yet';
+    return 'Supporting service summaries are not connected.';
 });
 
-const campaignSurfaceSummary = computed(() => {
-    const surfaces = Array.isArray(props.campaign_read_model?.surfaces) ? props.campaign_read_model.surfaces : [];
-    const availableSurfaces = surfaces.filter((surface) => {
-        const status = typeof surface.status === 'string' ? surface.status : '';
-
-        return surface.enabled === true || isStatusAvailable(status);
-    });
-
-    if (availableSurfaces.length > 0) {
-        return `${availableSurfaces.length} surfaces`;
+const activityReadiness = computed(() => {
+    if (props.operator_issuance_activity_read_model?.authorized === true) {
+        return {
+            status:
+                stringValue(
+                    props.operator_issuance_activity_read_model.status,
+                ) ?? 'available',
+            label: 'Activity available',
+            description: 'Recent Pay Code issuance can be inspected.',
+        };
     }
 
-    return 'No campaign selected';
+    return {
+        status:
+            stringValue(props.operator_issuance_activity_read_model?.status) ??
+            'not_wired',
+        label: 'Activity unavailable',
+        description: 'Activity appears after durable storage is enabled.',
+    };
 });
-
-const executionEvidenceCount = computed(() => activity.value.filter((item) => item.source === 'execution').length);
 
 function metricValue(key: string): string | undefined {
     return metrics.value.find((metric) => metric.key === key)?.value;
 }
 
-function sanitizeMetric(metric: CockpitDashboardMetric): CockpitDashboardMetric | null {
+function pipelineValue(key: string): string | undefined {
+    return pipeline.value.find((stage) => stage.key === key)?.value;
+}
+
+function hasClientFunds(): boolean {
+    const clientFunds = headerBalances.value?.find(
+        (balance) =>
+            balance.key === 'internal' ||
+            balance.label.toLowerCase() === 'client funds',
+    );
+
+    if (!clientFunds) {
+        return false;
+    }
+
+    if (
+        typeof clientFunds.amount_minor === 'number' &&
+        clientFunds.amount_minor > 0
+    ) {
+        return true;
+    }
+
+    return numericValue(clientFunds.value) > 0;
+}
+
+function numericValue(value: unknown): number {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value !== 'string') {
+        return 0;
+    }
+
+    const normalized = value.replace(/[^\d.-]/g, '');
+    const parsed = Number.parseFloat(normalized);
+
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isActionableSignal(value: string): boolean {
+    const normalized = value.trim().toLowerCase();
+
+    if (
+        normalized === '' ||
+        normalized === '—' ||
+        normalized.includes('not connected') ||
+        normalized.includes('not available') ||
+        normalized.includes('deferred')
+    ) {
+        return false;
+    }
+
+    return numericValue(normalized) > 0;
+}
+
+function sanitizeMetric(
+    metric: CockpitDashboardMetric,
+): CockpitDashboardMetric | null {
     const key = stringValue(metric.key);
     const label = stringValue(metric.label);
     const value = stringValue(metric.value);
@@ -243,7 +580,9 @@ function sanitizeMetric(metric: CockpitDashboardMetric): CockpitDashboardMetric 
     };
 }
 
-function sanitizePipelineStage(stage: CockpitPipelineStage): CockpitPipelineStage | null {
+function sanitizePipelineStage(
+    stage: CockpitPipelineStage,
+): CockpitPipelineStage | null {
     const key = stringValue(stage.key);
     const label = stringValue(stage.label);
     const value = stringValue(stage.value);
@@ -260,7 +599,9 @@ function sanitizePipelineStage(stage: CockpitPipelineStage): CockpitPipelineStag
     };
 }
 
-function sanitizeRiskSignal(signal: CockpitRiskSignal): CockpitRiskSignal | null {
+function sanitizeRiskSignal(
+    signal: CockpitRiskSignal,
+): CockpitRiskSignal | null {
     const key = stringValue(signal.key);
     const label = stringValue(signal.label);
     const value = stringValue(signal.value);
@@ -278,7 +619,9 @@ function sanitizeRiskSignal(signal: CockpitRiskSignal): CockpitRiskSignal | null
     };
 }
 
-function sanitizeActivityItem(item: CockpitActivityItem): CockpitActivityItem | null {
+function sanitizeActivityItem(
+    item: CockpitActivityItem,
+): CockpitActivityItem | null {
     const id = stringValue(item.id);
     const label = stringValue(item.label);
     const description = stringValue(item.description);
@@ -303,7 +646,10 @@ function sanitizeActivityItem(item: CockpitActivityItem): CockpitActivityItem | 
                   .map((target) => stringValue(target))
                   .filter((target): target is string => target !== undefined)
             : undefined,
-        metadata: typeof item.metadata === 'object' && item.metadata !== null ? item.metadata : undefined,
+        metadata:
+            typeof item.metadata === 'object' && item.metadata !== null
+                ? item.metadata
+                : undefined,
     };
 }
 
@@ -320,15 +666,27 @@ function stringValue(value: unknown): string | undefined {
 }
 
 function toneValue(value: unknown): CockpitDashboardMetric['tone'] {
-    return value === 'healthy' || value === 'warning' || value === 'critical' ? value : 'neutral';
+    return value === 'healthy' || value === 'warning' || value === 'critical'
+        ? value
+        : 'neutral';
 }
 
-function severityValue(value: unknown): CockpitRiskSignal['severity'] | undefined {
-    return value === 'watch' || value === 'warning' || value === 'critical' ? value : undefined;
+function severityValue(
+    value: unknown,
+): CockpitRiskSignal['severity'] | undefined {
+    return value === 'watch' || value === 'warning' || value === 'critical'
+        ? value
+        : undefined;
 }
 
-function sourceValue(value: unknown): CockpitActivityItem['source'] | undefined {
-    return value === 'execution' || value === 'journal' || value === 'action' || value === 'feedback' || value === 'system'
+function sourceValue(
+    value: unknown,
+): CockpitActivityItem['source'] | undefined {
+    return value === 'execution' ||
+        value === 'journal' ||
+        value === 'action' ||
+        value === 'feedback' ||
+        value === 'system'
         ? value
         : undefined;
 }
@@ -348,15 +706,25 @@ function integrationSummary(
     policy: string;
     reason: string;
 } {
-    const collection = Array.isArray(model?.[collectionKey]) ? model[collectionKey] : [];
+    const collection = Array.isArray(model?.[collectionKey])
+        ? model[collectionKey]
+        : [];
 
     return {
         key,
         label,
         status: stringValue(model?.status) ?? 'not_wired',
         count: `${collection.length} ${noun}`,
-        policy: stringValue((model?.redactions as CockpitReadModelRedactions | undefined)?.payloads) ?? fallbackPolicy,
-        reason: stringValue((model?.redactions as CockpitReadModelRedactions | undefined)?.reason) ?? 'read-model-ready',
+        policy:
+            stringValue(
+                (model?.redactions as CockpitReadModelRedactions | undefined)
+                    ?.payloads,
+            ) ?? fallbackPolicy,
+        reason:
+            stringValue(
+                (model?.redactions as CockpitReadModelRedactions | undefined)
+                    ?.reason,
+            ) ?? 'read-model-ready',
     };
 }
 
@@ -372,15 +740,11 @@ function displayStatus(value: string): string {
     }
 
     if (normalized === 'read-model-ready') {
-        return 'Ready for display';
+        return 'Ready';
     }
 
     if (normalized === 'presentation_only') {
         return 'Read-only';
-    }
-
-    if (normalized === 'available') {
-        return 'Available';
     }
 
     return normalized
@@ -393,85 +757,28 @@ function isStatusAvailable(value: string): boolean {
     return value.trim() === 'available';
 }
 
-const integrationReadinessNote = computed(() => {
-    const availableCount = integrationSummaries.value.filter((summary) => summary.status === 'available').length;
-
-    if (availableCount === integrationSummaries.value.length) {
-        return 'Audit, follow-up, and notification summaries are available for read-only display.';
-    }
-
-    if (availableCount > 0) {
-        return 'Some service summaries are connected; unavailable services stay visibly marked as not connected.';
-    }
-
-    return 'Service cards stay as placeholders until audit, follow-up, and notification summaries are connected.';
-});
-
-const activityReadiness = computed(() => {
-    if (props.operator_issuance_activity_read_model?.authorized === true) {
-        return {
-            status: stringValue(props.operator_issuance_activity_read_model.status) ?? 'available',
-            label: 'Durable activity read model available',
-            description: 'Quick Generate activity can be inspected as an operator-safe summary.',
-        };
-    }
-
-    return {
-        status: stringValue(props.operator_issuance_activity_read_model?.status) ?? 'not_wired',
-        label: 'Activity recording not connected',
-        description: 'Quick Generate can still issue Pay Codes; activity summaries appear after durable activity storage is enabled.',
-    };
-});
-
-const operatorFocusItems = computed(() => [
-    {
-        key: 'generate',
-        label: 'Generate a Pay Code',
-        status: 'available',
-        description: 'Use Quick Generate when you need a new template-first Pay Code.',
-        href: '/x/cockpit/quick-generate',
-        action: 'Open Quick Generate',
-    },
-    {
-        key: 'inspect',
-        label: 'Inspect Pay Codes',
-        status: `${metricValue('pay-codes-visible') ?? '0'} visible`,
-        description: 'Review sanitized lifecycle state, claim URL readiness, and distribution guidance.',
-        href: '/x/cockpit/pay-codes',
-        action: 'Open Explorer',
-    },
-    {
-        key: 'attention',
-        label: 'Review attention queue',
-        status: metricValue('needs-attention') ?? riskSignals.value[0]?.value ?? 'pending',
-        description: 'Start with expired or awaiting-approval summaries. This guidance does not mutate lifecycle truth.',
-        href: '/x/cockpit/pay-codes?status=expired',
-        action: 'Review now',
-    },
-]);
-
 function integrationSourceLabel(key: string): string {
     if (key === 'journal') {
-        return 'x-journal audit source';
+        return 'x-journal';
     }
 
     if (key === 'actions') {
-        return 'x-action follow-up source';
+        return 'x-action';
     }
 
-    return 'x-feedback notification source';
+    return 'x-feedback';
 }
 
 function serviceBoundary(key: string): string {
     if (key === 'journal') {
-        return 'Read-only audit summaries';
+        return 'Audit summaries';
     }
 
     if (key === 'actions') {
-        return 'Read-only follow-up summaries';
+        return 'Follow-up summaries';
     }
 
-    return 'Read-only notification summaries';
+    return 'Delivery summaries';
 }
 
 function toggleIntegrationDetails(key: string): void {
@@ -491,282 +798,614 @@ function areIntegrationDetailsExpanded(key: string): boolean {
         active-navigation="dashboard"
         :cockpit-header-read-model="props.cockpit_header_read_model"
     >
-        <section class="space-y-6" data-testid="cockpit-dashboard-shell">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Operator Dashboard
-                </p>
-                <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Settlement OS Operating Overview
-                </h2>
-                <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This dashboard now prioritizes operator navigation and read-only system posture. It does not
-                    execute vouchers, write journal entries, resolve workflow authority, send feedback, call providers,
-                    dispatch campaigns, or move money.
-                </p>
+        <section class="space-y-4" data-testid="cockpit-dashboard-shell">
+            <header
+                class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-page-heading"
+            >
+                <div>
+                    <p
+                        class="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400"
+                    >
+                        Settlement Operations
+                    </p>
+                    <h1
+                        class="mt-1 text-2xl font-semibold text-slate-950 dark:text-white"
+                    >
+                        Cockpit
+                    </h1>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <Link
+                        v-if="actionableSignals.length > 0"
+                        href="/x/cockpit/pay-codes?status=expired"
+                        prefetch
+                        class="inline-flex h-9 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                        data-testid="cockpit-attention-summary-link"
+                    >
+                        <AlertTriangle class="size-4" aria-hidden="true" />
+                        {{ attentionValue }} need review
+                    </Link>
+                    <span
+                        v-else
+                        class="inline-flex h-9 items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+                        data-testid="cockpit-attention-clear"
+                    >
+                        <Check class="size-4" aria-hidden="true" />
+                        No current alerts
+                    </span>
+                    <span
+                        class="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 px-3 text-sm font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                    >
+                        <Radio class="size-4" aria-hidden="true" />
+                        {{ operatingIntegrationStatus }}
+                    </span>
+                </div>
+            </header>
+
+            <section
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-controls-panel"
+            >
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2
+                            class="text-base font-semibold text-slate-950 dark:text-white"
+                        >
+                            Controls
+                        </h2>
+                        <p
+                            class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                        >
+                            Choose a workspace.
+                        </p>
+                    </div>
+                    <CircleGauge
+                        class="size-5 text-slate-400"
+                        aria-hidden="true"
+                    />
+                </div>
+
+                <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    <Link
+                        v-for="control in controls"
+                        :key="control.key"
+                        :href="control.href"
+                        prefetch
+                        class="group flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800/70 dark:focus-visible:outline-white"
+                        data-testid="cockpit-control-link"
+                    >
+                        <span
+                            class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 transition group-hover:bg-slate-900 group-hover:text-white dark:bg-slate-800 dark:text-slate-200 dark:group-hover:bg-white dark:group-hover:text-slate-950"
+                        >
+                            <component
+                                :is="control.icon"
+                                class="size-5"
+                                aria-hidden="true"
+                            />
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span
+                                class="block font-semibold text-slate-950 dark:text-white"
+                            >
+                                {{ control.label }}
+                            </span>
+                            <span
+                                class="mt-0.5 block text-xs leading-5 text-slate-500 dark:text-slate-400"
+                            >
+                                {{ control.description }}
+                            </span>
+                        </span>
+                        <ArrowRight
+                            class="size-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-slate-700 dark:group-hover:text-slate-200"
+                            aria-hidden="true"
+                        />
+                    </Link>
+                </div>
+            </section>
+
+            <section
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-operational-horizon"
+            >
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2
+                            class="text-base font-semibold text-slate-950 dark:text-white"
+                        >
+                            Operational Horizon
+                        </h2>
+                        <p
+                            class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                        >
+                            Current work at a glance.
+                        </p>
+                    </div>
+                    <Activity
+                        class="size-5 text-slate-400"
+                        aria-hidden="true"
+                    />
+                </div>
+
+                <div
+                    class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 lg:grid-cols-4 dark:border-slate-700 dark:bg-slate-700"
+                >
+                    <article
+                        v-for="item in horizonItems"
+                        :key="item.key"
+                        class="bg-white px-4 py-3 dark:bg-slate-900"
+                        data-testid="cockpit-horizon-item"
+                    >
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="size-2 rounded-full"
+                                :class="{
+                                    'bg-slate-400': item.tone === 'neutral',
+                                    'bg-emerald-500': item.tone === 'healthy',
+                                    'bg-amber-500': item.tone === 'warning',
+                                }"
+                            />
+                            <p
+                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                            >
+                                {{ item.label }}
+                            </p>
+                        </div>
+                        <p
+                            class="mt-2 truncate text-xl font-semibold text-slate-950 tabular-nums dark:text-white"
+                        >
+                            {{ item.value }}
+                        </p>
+                        <p
+                            class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400"
+                        >
+                            {{ item.detail }}
+                        </p>
+                    </article>
+                </div>
+            </section>
+
+            <div class="grid gap-4 xl:grid-cols-5">
+                <section
+                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-2 dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-attention-panel"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2
+                                class="text-base font-semibold text-slate-950 dark:text-white"
+                            >
+                                Attention
+                            </h2>
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                Items that may need review.
+                            </p>
+                        </div>
+                        <AlertTriangle
+                            class="size-5"
+                            :class="
+                                actionableSignals.length > 0
+                                    ? 'text-amber-500'
+                                    : 'text-emerald-500'
+                            "
+                            aria-hidden="true"
+                        />
+                    </div>
+
+                    <div
+                        v-if="actionableSignals.length > 0"
+                        class="mt-4 divide-y divide-slate-100 dark:divide-slate-800"
+                    >
+                        <Link
+                            v-for="signal in actionableSignals"
+                            :key="signal.key"
+                            href="/x/cockpit/pay-codes"
+                            prefetch
+                            class="group flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                            data-testid="cockpit-attention-item"
+                        >
+                            <span class="min-w-0">
+                                <span
+                                    class="block truncate text-sm font-semibold text-slate-900 dark:text-white"
+                                >
+                                    {{ signal.label }}
+                                </span>
+                                <span
+                                    class="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ signal.value }}
+                                </span>
+                            </span>
+                            <ArrowRight
+                                class="size-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5"
+                                aria-hidden="true"
+                            />
+                        </Link>
+                    </div>
+
+                    <div
+                        v-else
+                        class="mt-4 flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 px-4 text-center dark:border-slate-700"
+                        data-testid="cockpit-attention-empty"
+                    >
+                        <ShieldCheck
+                            class="size-7 text-emerald-500"
+                            aria-hidden="true"
+                        />
+                        <p
+                            class="mt-2 text-sm font-semibold text-slate-900 dark:text-white"
+                        >
+                            Nothing needs review
+                        </p>
+                        <p
+                            class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                        >
+                            New exceptions will appear here.
+                        </p>
+                    </div>
+                </section>
+
+                <section
+                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-3 dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-recent-log"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2
+                                class="text-base font-semibold text-slate-950 dark:text-white"
+                            >
+                                Recent Activity
+                            </h2>
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                Issuance and settlement signals.
+                            </p>
+                        </div>
+                        <Radio
+                            class="size-5 text-slate-400"
+                            aria-hidden="true"
+                        />
+                    </div>
+
+                    <div
+                        class="mt-4 divide-y divide-slate-100 dark:divide-slate-800"
+                    >
+                        <template v-for="item in logItems" :key="item.key">
+                            <Link
+                                v-if="item.href"
+                                :href="item.href"
+                                prefetch
+                                class="group flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                                data-testid="cockpit-log-item"
+                            >
+                                <span
+                                    class="size-2 shrink-0 rounded-full bg-slate-400"
+                                />
+                                <span class="min-w-0 flex-1">
+                                    <span
+                                        class="block truncate text-sm font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{ item.label }}
+                                    </span>
+                                    <span
+                                        class="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{ item.detail }}
+                                    </span>
+                                </span>
+                                <span
+                                    class="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ item.meta }}
+                                </span>
+                            </Link>
+                            <div
+                                v-else
+                                class="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                                data-testid="cockpit-log-item"
+                            >
+                                <span
+                                    class="size-2 shrink-0 rounded-full bg-slate-400"
+                                />
+                                <span class="min-w-0 flex-1">
+                                    <span
+                                        class="block truncate text-sm font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{ item.label }}
+                                    </span>
+                                    <span
+                                        class="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{ item.detail }}
+                                    </span>
+                                </span>
+                                <span
+                                    class="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ item.meta }}
+                                </span>
+                            </div>
+                        </template>
+                    </div>
+                </section>
             </div>
 
             <section
-                class="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-6 shadow-sm dark:border-indigo-900/70 dark:bg-indigo-950/30"
-                data-testid="cockpit-operating-summary-panel"
+                v-if="!hasOperationalHistory"
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-getting-started"
             >
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div
+                    class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+                >
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-700 dark:text-indigo-300">
-                            Operator Console
-                        </p>
-                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
-                            Start here for generation, inspection, and attention queues
-                        </h3>
-                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-700 dark:text-slate-300">
-                            The dashboard aggregates existing Cockpit read models into safe links. Journal,
-                            action, feedback, provider, campaign, voucher, and wallet mutations remain outside this
-                            page.
+                        <h2
+                            class="text-base font-semibold text-slate-950 dark:text-white"
+                        >
+                            Getting Started
+                        </h2>
+                        <p
+                            class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                        >
+                            Establish funds, issue, deliver, then monitor.
                         </p>
                     </div>
-
-                    <span class="inline-flex min-h-7 shrink-0 items-center justify-center rounded-full border border-indigo-200 bg-white px-3 py-1 text-center text-xs font-semibold leading-none text-indigo-700 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300">
-                        {{ operatingIntegrationStatus }}
-                    </span>
-                </div>
-
-                <div class="mt-6 grid gap-3 lg:grid-cols-3">
-                    <article
-                        v-for="card in operatingSummaryCards"
-                        :key="card.key"
-                        class="rounded-xl border border-white/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                        data-testid="cockpit-operating-summary-card"
+                    <ol
+                        class="grid flex-1 gap-2 sm:grid-cols-2 lg:max-w-3xl lg:grid-cols-4"
                     >
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                                    {{ card.label }}
-                                </p>
-                                <p class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                                    {{ card.value }}
-                                </p>
-                            </div>
-                            <a
-                                :href="card.href"
-                                class="inline-flex min-h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-indigo-600 px-3 py-1.5 text-center text-xs font-semibold leading-none text-white shadow-sm hover:bg-indigo-500"
-                                data-testid="cockpit-operating-summary-link"
+                        <li
+                            v-for="(step, index) in gettingStartedSteps"
+                            :key="step.key"
+                        >
+                            <Link
+                                :href="step.href"
+                                prefetch
+                                class="flex min-h-14 items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:border-slate-700 dark:hover:bg-slate-800 dark:focus-visible:outline-white"
+                                data-testid="cockpit-getting-started-step"
                             >
-                                {{ card.action }}
-                            </a>
-                        </div>
-                        <p class="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-400">
-                            {{ card.description }}
-                        </p>
-                    </article>
+                                <span
+                                    class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                                    :class="
+                                        step.complete
+                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                                    "
+                                >
+                                    <Check
+                                        v-if="step.complete"
+                                        class="size-4"
+                                        aria-hidden="true"
+                                    />
+                                    <span v-else>{{ index + 1 }}</span>
+                                </span>
+                                <span
+                                    class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                                >
+                                    {{ step.label }}
+                                </span>
+                            </Link>
+                        </li>
+                    </ol>
                 </div>
             </section>
 
             <section
-                class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/20"
-                data-testid="cockpit-connected-services-overview"
+                v-if="pinnedCampaign"
+                class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-pinned-work"
             >
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <span
+                        class="flex size-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    >
+                        <Megaphone class="size-5" aria-hidden="true" />
+                    </span>
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
-                            Connected Services
+                        <p
+                            class="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
+                            Pinned Campaign
                         </p>
-                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
-                            Audit, follow-up, notification, campaign, funding-position, and execution readiness
-                        </h3>
-                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-700 dark:text-slate-300">
-                            This overview shows which surrounding packages are available for read-only inspection.
-                            It does not write audit entries, run follow-up actions, send notifications, mutate
-                            campaigns, query providers, or move money.
+                        <p
+                            class="mt-0.5 font-semibold text-slate-950 dark:text-white"
+                        >
+                            {{ pinnedCampaign.name }}
+                        </p>
+                        <p
+                            class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+                        >
+                            {{ pinnedCampaign.detail }}
                         </p>
                     </div>
-                    <span class="inline-flex min-h-7 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white px-3 py-1 text-center text-xs font-semibold leading-none text-emerald-700 dark:border-emerald-800 dark:bg-slate-950 dark:text-emerald-300">
-                        {{ operatingIntegrationStatus }}
-                    </span>
                 </div>
-
-                <div class="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <article
-                        v-for="service in connectedServiceCards"
-                        :key="service.key"
-                        class="flex min-h-36 flex-col justify-between rounded-xl border border-white/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                        data-testid="cockpit-connected-service-card"
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="font-semibold text-slate-950 dark:text-slate-50">
-                                    {{ service.label }}
-                                </p>
-                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                    {{ service.source }}
-                                </p>
-                            </div>
-                            <span class="inline-flex min-h-6 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                {{ service.status }}
-                            </span>
-                        </div>
-
-                        <div class="mt-4">
-                            <p class="text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                                {{ service.count }}
-                            </p>
-                            <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                {{ service.boundary }}
-                            </p>
-                        </div>
-                    </article>
-                </div>
+                <Link
+                    :href="pinnedCampaign.href"
+                    prefetch
+                    class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:outline-white"
+                >
+                    Open Campaigns
+                    <ArrowRight class="size-4" aria-hidden="true" />
+                </Link>
             </section>
-
-            <section
-                class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-operator-focus-panel"
-            >
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                            Operator Focus
-                        </p>
-                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
-                            Next safe actions
-                        </h3>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            These are navigation and inspection actions only. They do not execute money movement,
-                            dispatch feedback, write journal entries, run action continuations, or mutate campaign state.
-                        </p>
-                    </div>
-                    <span class="inline-flex min-h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-slate-200 px-3 py-1 text-center text-xs font-semibold leading-none text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                        Links only
-                    </span>
-                </div>
-
-                <div class="mt-5 grid gap-3 lg:grid-cols-3">
-                    <article
-                        v-for="item in operatorFocusItems"
-                        :key="item.key"
-                        class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
-                        data-testid="cockpit-operator-focus-item"
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="font-semibold text-slate-950 dark:text-slate-50">
-                                    {{ item.label }}
-                                </p>
-                                <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                    {{ item.status }}
-                                </p>
-                            </div>
-                            <a
-                                :href="item.href"
-                                class="inline-flex min-h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-slate-200 px-3 py-1.5 text-center text-xs font-semibold leading-none text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                                data-testid="cockpit-operator-focus-link"
-                            >
-                                {{ item.action }}
-                            </a>
-                        </div>
-                        <p class="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {{ item.description }}
-                        </p>
-                    </article>
-                </div>
-            </section>
-
-            <CockpitOperatorIssuanceActivityPanel :read-model="props.operator_issuance_activity_read_model" />
-
-            <CockpitRecentActivityPanel :items="activity" />
 
             <CockpitDiagnosticsDisclosure
-                title="System posture"
-                summary="Funding, service connections, campaign context, and lifecycle posture remain available here without dominating the operator dashboard."
-                eyebrow="Optional system status"
-                action-label="Show system posture"
+                title="System Status"
+                :summary="operatingIntegrationStatus"
+                eyebrow="Accounts, services, and diagnostics"
+                action-label="Show system status"
             >
                 <section
-                    class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-integration-summary-panel"
+                    class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-connected-services-overview"
                 >
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                                Service Connection Details
-                            </p>
-                            <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                                Audit, follow-up, and notification payload boundaries
+                            <h3
+                                class="text-base font-semibold text-slate-950 dark:text-white"
+                            >
+                                Connected Services
                             </h3>
-                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
                                 {{ integrationReadinessNote }}
                             </p>
                         </div>
+                        <span
+                            class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                        >
+                            {{ operatingIntegrationStatus }}
+                        </span>
+                    </div>
 
+                    <div class="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        <article
+                            v-for="service in connectedServiceCards"
+                            :key="service.key"
+                            class="rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+                            data-testid="cockpit-connected-service-card"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{ service.label }}
+                                    </p>
+                                    <p
+                                        class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{ service.source }}
+                                    </p>
+                                </div>
+                                <span
+                                    class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                >
+                                    {{ service.status }}
+                                </span>
+                            </div>
+                            <p
+                                class="mt-3 text-lg font-semibold text-slate-950 dark:text-white"
+                            >
+                                {{ service.count }}
+                            </p>
+                            <p
+                                class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                            >
+                                {{ service.boundary }}
+                            </p>
+                        </article>
+                    </div>
+                </section>
+
+                <section
+                    class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-integration-summary-panel"
+                >
+                    <div
+                        class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"
+                    >
+                        <div>
+                            <h3
+                                class="text-base font-semibold text-slate-950 dark:text-white"
+                            >
+                                Service Connection Details
+                            </h3>
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                {{ integrationReadinessNote }}
+                            </p>
+                        </div>
                         <div
-                            class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                            class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
                             data-testid="cockpit-activity-readiness-summary"
                         >
-                            <p class="font-semibold uppercase tracking-wide">
-                                {{ displayStatus(activityReadiness.status) }}
-                            </p>
-                            <p class="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            <p
+                                class="font-semibold text-slate-900 dark:text-slate-100"
+                            >
                                 {{ activityReadiness.label }}
                             </p>
-                            <p class="mt-1 max-w-xs leading-5">
+                            <p class="mt-1">
                                 {{ activityReadiness.description }}
                             </p>
                         </div>
                     </div>
-                    <div class="mt-5 grid gap-3 md:grid-cols-3">
+
+                    <div class="mt-4 grid gap-2 md:grid-cols-3">
                         <article
                             v-for="summary in integrationSummaries"
                             :key="summary.key"
-                            class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                            class="rounded-lg border border-slate-200 p-3 dark:border-slate-700"
                             data-testid="cockpit-integration-summary-card"
                         >
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="font-semibold text-slate-950 dark:text-slate-50">
-                                        {{ summary.label }}
-                                    </p>
-                                    <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                        {{ integrationSourceLabel(summary.key) }}
-                                    </p>
-                                </div>
-                                <span class="inline-flex min-h-6 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <div
+                                class="flex items-center justify-between gap-2"
+                            >
+                                <p
+                                    class="text-sm font-semibold text-slate-900 dark:text-white"
+                                >
+                                    {{ summary.label }}
+                                </p>
+                                <span
+                                    class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                                >
                                     {{ displayStatus(summary.status) }}
                                 </span>
                             </div>
-                            <p class="mt-4 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                            <p
+                                class="mt-2 text-lg font-semibold text-slate-950 dark:text-white"
+                            >
                                 {{ summary.count }}
                             </p>
                             <button
                                 type="button"
-                                class="mt-3 inline-flex min-h-7 items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold leading-none text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                class="mt-2 text-xs font-semibold text-slate-600 underline-offset-4 hover:underline dark:text-slate-300"
                                 data-testid="cockpit-integration-summary-details-toggle"
-                                :aria-expanded="areIntegrationDetailsExpanded(summary.key)"
+                                :aria-expanded="
+                                    areIntegrationDetailsExpanded(summary.key)
+                                "
                                 @click="toggleIntegrationDetails(summary.key)"
                             >
-                                {{ areIntegrationDetailsExpanded(summary.key) ? 'Hide connection details' : 'Connection details' }}
+                                {{
+                                    areIntegrationDetailsExpanded(summary.key)
+                                        ? 'Hide details'
+                                        : 'Connection details'
+                                }}
                             </button>
-                            <div
-                                v-if="areIntegrationDetailsExpanded(summary.key)"
-                                class="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
+                            <dl
+                                v-if="
+                                    areIntegrationDetailsExpanded(summary.key)
+                                "
+                                class="mt-2 space-y-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
                                 data-testid="cockpit-integration-summary-details"
                             >
-                                <dl class="mt-3 space-y-2">
-                                    <div>
-                                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
-                                            Payload policy
-                                        </dt>
-                                        <dd>{{ displayStatus(summary.policy) }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
-                                            Display readiness
-                                        </dt>
-                                        <dd>{{ displayStatus(summary.reason) }}</dd>
-                                    </div>
-                                </dl>
-                            </div>
+                                <div>
+                                    <dt class="font-semibold">
+                                        Payload policy
+                                    </dt>
+                                    <dd>{{ displayStatus(summary.policy) }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold">
+                                        Display readiness
+                                    </dt>
+                                    <dd>{{ displayStatus(summary.reason) }}</dd>
+                                </div>
+                            </dl>
                         </article>
                     </div>
                 </section>
+
+                <CockpitOperatorIssuanceActivityPanel
+                    :read-model="props.operator_issuance_activity_read_model"
+                />
+
+                <CockpitRecentActivityPanel :items="activity" />
 
                 <CockpitLiquidityHero
                     :metrics="metrics"
@@ -781,7 +1420,9 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                     <CockpitRiskExpiryPanel :signals="riskSignals" />
                 </div>
 
-                <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
+                <CockpitCampaignAdoptionPanel
+                    :read-model="props.campaign_read_model"
+                />
             </CockpitDiagnosticsDisclosure>
         </section>
     </CockpitLayout>
