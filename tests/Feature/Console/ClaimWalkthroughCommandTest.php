@@ -235,6 +235,9 @@ it('diffs two qa batch manifests by scenario artifact fingerprint and storyboard
     expect($diff['schema'])->toBe('x-change.claim-walkthrough.qa-diff.v1')
         ->and($diff['counts']['changed'])->toBe(1)
         ->and($diff['counts']['unchanged'])->toBe(9)
+        ->and($diff['artifacts']['diff_markdown'])->toBeFile()
+        ->and(file_get_contents($diff['artifacts']['diff_markdown']))->toContain('# Claim UX QA Diff Report')
+        ->and(file_get_contents($diff['artifacts']['diff_markdown']))->toContain('artifact_fingerprint_changed')
         ->and($changed['reasons'])->toContain('artifact_fingerprint_changed')
         ->and($changed['reasons'])->toContain('storyboard_html_changed');
 });

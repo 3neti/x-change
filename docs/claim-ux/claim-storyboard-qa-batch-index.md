@@ -172,6 +172,15 @@ The diff highlights added, removed, changed, and unchanged scenarios. A changed
 scenario reports whether the artifact fingerprint, storyboard HTML path, or
 storyboard PDF path changed.
 
+It also writes a Markdown report beside the current batch manifest:
+
+```text
+claim-ux-qa-diff-report.md
+```
+
+Use `--qa-diff-output=/absolute/path.md` when a specific diff report path is
+needed.
+
 ## Acceptance Report
 
 Generate a final Markdown acceptance report with:

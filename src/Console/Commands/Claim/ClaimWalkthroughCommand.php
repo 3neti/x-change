@@ -27,6 +27,7 @@ final class ClaimWalkthroughCommand extends Command
         {--qa-review= : Read a QA batch JSON manifest or Markdown worksheet and summarize review statuses}
         {--qa-diff-from= : Previous QA batch JSON manifest or batch folder for storyboard diffing}
         {--qa-diff-to= : Current QA batch JSON manifest or batch folder for storyboard diffing}
+        {--qa-diff-output= : Override the QA diff Markdown output path}
         {--qa-acceptance= : Read a QA batch JSON manifest or Markdown worksheet and generate an acceptance report}
         {--qa-acceptance-output= : Override the acceptance report Markdown output path}
         {--qa-review-output= : Override the review summary JSON output path}
@@ -91,6 +92,9 @@ final class ClaimWalkthroughCommand extends Command
                 $artifacts,
                 trim((string) $this->option('qa-diff-from')),
                 trim((string) $this->option('qa-diff-to')),
+                is_string($this->option('qa-diff-output')) && trim((string) $this->option('qa-diff-output')) !== ''
+                    ? trim((string) $this->option('qa-diff-output'))
+                    : null,
             );
         }
 
@@ -558,8 +562,12 @@ final class ClaimWalkthroughCommand extends Command
         return self::SUCCESS;
     }
 
-    private function renderQaDiff(ClaimWalkthroughArtifactStore $artifacts, string $from, string $to): int
-    {
+    private function renderQaDiff(
+        ClaimWalkthroughArtifactStore $artifacts,
+        string $from,
+        string $to,
+        ?string $outputPath,
+    ): int {
         $fromPath = $this->resolveQaBatchManifestPath($from);
         $toPath = $this->resolveQaBatchManifestPath($to);
 
@@ -581,6 +589,12 @@ final class ClaimWalkthroughCommand extends Command
             $fromPath,
             $toPath,
         );
+        $diffPath = $outputPath ?: $this->defaultQaDiffReportPath($toPath);
+        $payload['artifacts'] = [
+            'diff_markdown' => $diffPath,
+        ];
+
+        $artifacts->writeText($diffPath, $this->renderQaDiffMarkdown($payload));
 
         if ($this->option('json')) {
             $this->line(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -595,6 +609,7 @@ final class ClaimWalkthroughCommand extends Command
         $this->line('Removed: '.data_get($payload, 'counts.removed', 0));
         $this->line('Changed: '.data_get($payload, 'counts.changed', 0));
         $this->line('Unchanged: '.data_get($payload, 'counts.unchanged', 0));
+        $this->line('Diff report: '.$diffPath);
 
         foreach ((array) data_get($payload, 'entries', []) as $entry) {
             if (data_get($entry, 'status') !== 'unchanged') {
@@ -1203,6 +1218,52 @@ final class ClaimWalkthroughCommand extends Command
         $directory = is_dir($source) ? $source : dirname($source);
 
         return rtrim($directory, '/').'/claim-walkthrough-qa-review-summary.json';
+    }
+
+    private function defaultQaDiffReportPath(string $source): string
+    {
+        $directory = is_dir($source) ? $source : dirname($source);
+
+        return rtrim($directory, '/').'/claim-ux-qa-diff-report.md';
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function renderQaDiffMarkdown(array $payload): string
+    {
+        $lines = [
+            '# Claim UX QA Diff Report',
+            '',
+            'Generated at: '.$this->qaBatchMarkdownText(data_get($payload, 'generated_at')),
+            'From: '.$this->qaBatchMarkdownText(data_get($payload, 'from.run_id')).' (`'.$this->qaBatchMarkdownText(data_get($payload, 'from.source')).'`)',
+            'To: '.$this->qaBatchMarkdownText(data_get($payload, 'to.run_id')).' (`'.$this->qaBatchMarkdownText(data_get($payload, 'to.source')).'`)',
+            '',
+            '## Summary',
+            '',
+            '- Added: '.data_get($payload, 'counts.added', 0),
+            '- Removed: '.data_get($payload, 'counts.removed', 0),
+            '- Changed: '.data_get($payload, 'counts.changed', 0),
+            '- Unchanged: '.data_get($payload, 'counts.unchanged', 0),
+            '',
+            '## Changed Lanes',
+            '',
+        ];
+
+        $changed = collect((array) data_get($payload, 'entries', []))
+            ->filter(fn (array $entry): bool => data_get($entry, 'status') !== 'unchanged');
+
+        if ($changed->isEmpty()) {
+            $lines[] = '- No storyboard lane changed.';
+        } else {
+            foreach ($changed as $entry) {
+                $lines[] = '- `'.data_get($entry, 'scenario').'` - '.data_get($entry, 'status').' ('.implode(', ', (array) data_get($entry, 'reasons', [])).')';
+            }
+        }
+
+        $lines[] = '';
+
+        return implode(PHP_EOL, $lines);
     }
 
     /**
