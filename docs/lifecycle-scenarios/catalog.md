@@ -99,6 +99,7 @@ Every lifecycle scenario may define the following metadata:
 | settlement_three_party_flow | Multi-party settlement orchestration |
 | treasury_basic_cash | Rollback-only Treasury funding and Pay Code issuance accounting |
 | treasury_live_basic_cash | Replay-safe provider balance synchronization, ₱150 open-slice issuance, three live claims, and per-slice Treasury accounting |
+| treasury_onboarding_grant | Persistent system-sponsored onboarding grant from Account Funding Reserve, with optional browser claim handoff |
 
 ---
 

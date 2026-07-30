@@ -194,6 +194,7 @@ final class LifecycleScenarioEngine
             'qrph_unknown_mobile_onboarding',
             'treasury_basic_cash',
             'treasury_live_basic_cash',
+            'treasury_onboarding_grant',
         ], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,
@@ -381,6 +382,8 @@ final class LifecycleScenarioEngine
             'approval_pipeline' => $options->approvalPipeline,
             'confirm_live_transfer' => $options->confirmLiveTransfer,
             'run_reference' => $options->runReference,
+            'amount' => $options->amount,
+            'no_claim' => $options->noClaim,
         ];
 
         $result = $runner->run(

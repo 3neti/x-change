@@ -512,6 +512,26 @@ return [
             ],
         ],
 
+        'treasury_onboarding_grant' => [
+            'label' => 'Treasury Onboarding Grant',
+            'description' => 'Reserves a system-sponsored Account Funding Pay Code, provisions the claimant Account through the execution engine, and transfers the grant into Client Funds without a provider payout.',
+            'category' => 'treasury',
+            'tags' => ['treasury', 'onboarding', 'account-funding', 'no-provider-call'],
+            'mode' => 'treasury_onboarding_grant',
+            'amount' => 15,
+            'currency' => 'PHP',
+            'mobile' => '09399236237',
+            'ttl_seconds' => 604800,
+            'onboarding' => [
+                'name' => 'Sofia Hurtado',
+                'email' => 'sofia@hurtado.ph',
+            ],
+            'treasury' => [
+                'connection' => 'netbank-primary',
+                'authorization_reference' => 'system-policy:onboarding-grant-v1',
+            ],
+        ],
+
         'treasury_live_basic_cash' => [
             'label' => 'Treasury Live Basic Cash',
             'description' => 'Synchronizes authoritative provider liquidity, exposes system and Account positions, issues one open-slice Pay Code, and claims it in three live provider transfers under a replay-safe run reference.',
@@ -1930,5 +1950,6 @@ return [
                 'tariffs' => ['cash'],
             ],
         ],
+
     ],
 ];

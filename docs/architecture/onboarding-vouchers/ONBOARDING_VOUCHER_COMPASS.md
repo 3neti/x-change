@@ -26,7 +26,7 @@ Authenticated claimant handoff to Cockpit
 
 Current wave: Onboarding Voucher Revised Claim Architecture
 Current slice: Treasury-Backed Onboarding Grant
-Status: Slice 16 core accounting complete; lifecycle/browser acceptance pending
+Status: Slice 16 lifecycle complete; browser acceptance pending
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -157,6 +157,15 @@ assets. It does not own onboarding business logic.
 - The earlier claimant identity remains untouched for audit continuity. The
   browser acceptance identity for this slice is Sofia Hurtado, Mobile ending
   `6237`, with a ₱15.00 grant.
+- Added the persistent `treasury_onboarding_grant` lifecycle mode. It requires
+  a stable run reference, defaults to Sofia and ₱15.00, and supports
+  `--no-claim` so the canonical browser claim can be accepted separately.
+- Its report exposes the exact system Account Funding Reserve, Pay Code
+  Reserve, recipient Client Funds, provider Inventory, provider-attempt count,
+  claim count, and append-only journal event sequence.
+- Focused lifecycle verification proves issue replay, full claim, missing
+  run-reference rejection, one claim row, unchanged Inventory, and zero
+  provider attempts.
 
 ### 2026-07-30 — Slice 15 completed
 
