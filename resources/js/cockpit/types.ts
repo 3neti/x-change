@@ -1468,8 +1468,13 @@ export type CockpitQuickGenerateReadModel = {
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     quick_generate_read_model?: CockpitQuickGenerateReadModel;
     feedback_defaults?: CockpitQuickGenerateFeedbackDefaults;
+    onboarding_policy?: CockpitQuickGenerateOnboardingPolicy;
     last_instructions?: CockpitQuickGenerateLastInstructions | null;
     saved_templates?: CockpitSavedPayCodeTemplate[];
+};
+
+export type CockpitQuickGenerateOnboardingPolicy = {
+    otp_required: boolean;
 };
 
 export type CockpitSavedPayCodeTemplate = {

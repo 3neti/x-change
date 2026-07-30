@@ -51,6 +51,96 @@ const quickGenerateReadModel = {
 };
 
 describe('Cockpit Quick Generate hydration', () => {
+    it('locks onboarding identity requirements into the canonical instruction payload', async () => {
+        const wrapper = mount(QuickGenerate, {
+            props: {
+                quick_generate_read_model: quickGenerateReadModel,
+                onboarding_policy: {
+                    otp_required: true,
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-onboarding"]')
+            .setValue(true);
+
+        const preview = JSON.parse(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-engineering-preview-json"]',
+                )
+                .text(),
+        );
+
+        expect(preview.onboarding).toBe(true);
+        expect(preview.inputs.fields).toEqual(
+            expect.arrayContaining(['mobile', 'email', 'name', 'otp']),
+        );
+        expect(preview.inputs.requirements).toContain('otp');
+        expect(wrapper.findAll('[data-onboarding-locked="true"]')).toHaveLength(
+            4,
+        );
+    });
+
+    it('allows local onboarding without OTP but keeps mobile-specific onboarding verified', async () => {
+        const wrapper = mount(QuickGenerate, {
+            props: {
+                quick_generate_read_model: quickGenerateReadModel,
+                onboarding_policy: {
+                    otp_required: false,
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-onboarding"]')
+            .setValue(true);
+
+        let preview = JSON.parse(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-engineering-preview-json"]',
+                )
+                .text(),
+        );
+
+        expect(preview.inputs.fields).toEqual(
+            expect.arrayContaining(['mobile', 'email', 'name']),
+        );
+        expect(preview.inputs.fields).not.toContain('otp');
+        expect(preview.inputs.requirements).not.toContain('otp');
+
+        const restrictedWrapper = mount(QuickGenerate, {
+            props: {
+                quick_generate_read_model: {
+                    ...quickGenerateReadModel,
+                    draft_contract: {
+                        recipient_reference: '09173011987',
+                    },
+                },
+                onboarding_policy: {
+                    otp_required: false,
+                },
+            },
+        });
+
+        await restrictedWrapper
+            .get('[data-testid="cockpit-quick-generate-onboarding"]')
+            .setValue(true);
+
+        preview = JSON.parse(
+            restrictedWrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-engineering-preview-json"]',
+                )
+                .text(),
+        );
+
+        expect(preview.inputs.fields).toContain('otp');
+        expect(preview.inputs.requirements).toContain('otp');
+    });
+
     it('hydrates sanitized template choices without restoring retired reference panels', () => {
         const wrapper = mount(QuickGenerate, {
             props: {

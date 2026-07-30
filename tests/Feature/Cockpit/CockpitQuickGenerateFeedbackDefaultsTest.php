@@ -27,3 +27,17 @@ it('hydrates quick generate with operator-safe feedback defaults', function (): 
     expect($response->json('props.feedback_defaults.webhook'))
         ->toStartWith(url('/x/webhooks/operator/'));
 });
+
+it('hydrates the effective onboarding OTP policy without exposing configuration details', function (): void {
+    config()->set('x-change.onboarding.voucher.require_otp', false);
+
+    actingAsTestUser();
+
+    $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('props.onboarding_policy.otp_required', false)
+        ->assertJsonMissingPath('props.onboarding_policy.otp_secret')
+        ->assertJsonMissingPath('props.onboarding_policy.provider');
+});

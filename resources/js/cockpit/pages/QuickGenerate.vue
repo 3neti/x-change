@@ -505,9 +505,10 @@ const mutationContract = computed<CockpitQuickGenerateMutationContract>(() => {
     };
 });
 
-const claimPreviewContract =
-    computed<CockpitQuickGenerateClaimPreviewContract>(() => {
-        const contract = props.quick_generate_read_model?.claim_preview_contract;
+const claimPreviewContract = computed<CockpitQuickGenerateClaimPreviewContract>(
+    () => {
+        const contract =
+            props.quick_generate_read_model?.claim_preview_contract;
 
         if (
             !readModelAvailable.value ||
@@ -524,7 +525,8 @@ const claimPreviewContract =
         }
 
         return contract;
-    });
+    },
+);
 
 function defaultDraftContract(): CockpitQuickGenerateDraftContract {
     return {
@@ -1146,6 +1148,9 @@ function stringValue(value: unknown): string | null {
                     :draft-contract="draftContract"
                     :campaign-context="campaignContext"
                     :feedback-defaults="props.feedback_defaults"
+                    :onboarding-otp-required="
+                        props.onboarding_policy?.otp_required ?? true
+                    "
                     :last-instructions="props.last_instructions"
                     :saved-templates="props.saved_templates ?? []"
                     :templates="templates"

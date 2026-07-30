@@ -37,6 +37,9 @@ class CockpitQuickGeneratePageController extends Controller
                 campaignPurpose: $this->optionalString($request->query('campaign_purpose')),
             ),
             'feedback_defaults' => $this->feedbackDefaults($request),
+            'onboarding_policy' => [
+                'otp_required' => (bool) config('x-change.onboarding.voucher.require_otp', true),
+            ],
             'last_instructions' => $this->lastInstructions->for($request->user()),
             'saved_templates' => $this->templates->for($request->user()),
         ]);

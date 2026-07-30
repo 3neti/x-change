@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Slice 6 — Issuance Dependency UX
-Status: Slice 5 complete; Slice 6 in progress
+Current slice: Slice 7 — Template and Campaign Propagation
+Status: Slice 6 complete; Slice 7 in progress
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -37,8 +37,8 @@ Last updated: 2026-07-30
 | 3 | Explicit Claim Workflow Descriptor | Completed |
 | 4 | Generic Claim Authentication Handoff | Completed |
 | 5 | Account-Provisioning Execution Driver | Completed |
-| 6 | Issuance Dependency UX | In progress |
-| 7 | Template and Campaign Propagation | Pending |
+| 6 | Issuance Dependency UX | Completed |
+| 7 | Template and Campaign Propagation | In progress |
 | 8 | Lifecycle and Browser Acceptance | Pending |
 
 ## Settled Decisions
@@ -227,3 +227,19 @@ assets. It does not own onboarding business logic.
   regenerate the session identifier, and remove stale auth intent state.
 - Focused execution and provisioning verification passes: 8 tests and
   39 assertions.
+
+### 2026-07-30 — Slice 6 completed
+
+- Added one explicit **Set Up Recipient Account** choice to the existing
+  Quick Generate instruction builder.
+- Enabling it emits only the canonical `onboarding: true` authoring flag.
+- Full Name, Email, and Mobile become selected and locked dependencies.
+- OTP is selected and locked when the effective onboarding policy requires it.
+- A specific Mobile recipient continues to force OTP when the local sandbox
+  override is disabled.
+- The same payload feeds the live commercial estimate, claim preview,
+  reusable template blueprint, and issuance request.
+- The Cockpit page exposes only the effective OTP boolean; provider details,
+  secrets, and authentication internals remain server-side.
+- Focused page and frontend verification passes: 8 tests and 16 backend
+  assertions.

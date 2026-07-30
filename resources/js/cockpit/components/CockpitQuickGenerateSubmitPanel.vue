@@ -70,17 +70,23 @@ import CockpitRiderEditorDisclosure from './CockpitRiderEditorDisclosure.vue';
 import CockpitRiderMessageEditor from './CockpitRiderMessageEditor.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
 
-const props = defineProps<{
-    clientFundsMinor?: number | null;
-    mutationContract?: CockpitQuickGenerateMutationContract;
-    claimPreviewContract?: CockpitQuickGenerateClaimPreviewContract;
-    draftContract?: CockpitQuickGenerateDraftContract;
-    campaignContext?: CockpitQuickGenerateCampaignContext;
-    feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
-    lastInstructions?: CockpitQuickGenerateLastInstructions | null;
-    savedTemplates?: CockpitSavedPayCodeTemplate[];
-    templates: CockpitQuickGenerateTemplate[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        clientFundsMinor?: number | null;
+        mutationContract?: CockpitQuickGenerateMutationContract;
+        claimPreviewContract?: CockpitQuickGenerateClaimPreviewContract;
+        draftContract?: CockpitQuickGenerateDraftContract;
+        campaignContext?: CockpitQuickGenerateCampaignContext;
+        feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
+        onboardingOtpRequired?: boolean;
+        lastInstructions?: CockpitQuickGenerateLastInstructions | null;
+        savedTemplates?: CockpitSavedPayCodeTemplate[];
+        templates: CockpitQuickGenerateTemplate[];
+    }>(),
+    {
+        onboardingOtpRequired: true,
+    },
+);
 
 const emit = defineEmits<{
     submitStart: [payload: Record<string, unknown>];
@@ -542,6 +548,7 @@ const purpose = ref(
 const riderMessageFormat = ref<RiderContentFormat>('plain');
 const count = ref('1');
 const selectedInputFieldValues = ref<string[]>(['mobile']);
+const onboardingEnabled = ref(false);
 const validationSecret = ref('');
 const requireMobileValidation = ref(true);
 const requirePayableValidation = ref(false);
@@ -791,6 +798,7 @@ function applyTemplateDefaults(templateKey: string): void {
     purpose.value = defaults.purpose;
     riderMessageFormat.value = 'plain';
     selectedInputFieldValues.value = [...defaults.inputFields];
+    onboardingEnabled.value = false;
     expiryPreset.value = defaults.expiryPreset;
     expiryCustomDays.value = '';
     ttl.value = '';
@@ -1159,6 +1167,10 @@ function applyInstructionBlueprint(
         'inputs',
         'fields',
     ]);
+    onboardingEnabled.value =
+        dataGet(instructions, ['onboarding']) === true ||
+        instructionString(instructions, ['claim', 'onboarding', 'mode']) ===
+            'required';
 
     validationSecret.value = '';
     requireMobileValidation.value =
@@ -2143,6 +2155,49 @@ const payeeType = computed<'anyone' | 'mobile' | 'vendor'>(() => {
     return 'vendor';
 });
 
+const onboardingOtpEnforced = computed<boolean>(() => {
+    return (
+        onboardingEnabled.value &&
+        (props.onboardingOtpRequired !== false || payeeType.value === 'mobile')
+    );
+});
+
+function applyOnboardingDependencies(): void {
+    if (!onboardingEnabled.value) {
+        return;
+    }
+
+    const fields = new Set(selectedInputFieldValues.value);
+    fields.add('name');
+    fields.add('email');
+    fields.add('mobile');
+
+    if (onboardingOtpEnforced.value) {
+        fields.add('otp');
+        verificationOtp.value = true;
+    }
+
+    selectedInputFieldValues.value = voucherInputFieldPayloadOrder.filter(
+        (field) => fields.has(field),
+    );
+}
+
+function isOnboardingFieldLocked(field: string): boolean {
+    return (
+        onboardingEnabled.value &&
+        (['name', 'email', 'mobile'].includes(field) ||
+            (field === 'otp' && onboardingOtpEnforced.value))
+    );
+}
+
+watch(
+    [onboardingEnabled, onboardingOtpEnforced],
+    (): void => {
+        applyOnboardingDependencies();
+    },
+    { flush: 'sync' },
+);
+
 const payeeHelpText = computed<string>(() => {
     if (isAccountFundingClaim.value && payeeType.value === 'mobile') {
         return `Restricted to the verified Account for ${normalizedPayee.value}.`;
@@ -2335,6 +2390,16 @@ const effectiveMandatesDisplay = computed<string>(() => {
 const selectedInputFields = computed<string[]>(() => {
     const fields = new Set(selectedInputFieldValues.value);
 
+    if (onboardingEnabled.value) {
+        fields.add('name');
+        fields.add('email');
+        fields.add('mobile');
+    }
+
+    if (onboardingOtpEnforced.value) {
+        fields.add('otp');
+    }
+
     if (payeeType.value === 'mobile') {
         fields.add('mobile');
     }
@@ -2483,7 +2548,7 @@ const structuredValidationPreviewDisplay = computed<string>(() => {
 const verificationSummary = computed<string[]>(() => {
     return [
         verificationKyc.value ? 'kyc' : null,
-        verificationOtp.value ? 'otp' : null,
+        verificationOtp.value || onboardingOtpEnforced.value ? 'otp' : null,
         verificationSelfie.value ? 'selfie' : null,
     ].filter((item): item is string => item !== null);
 });
@@ -3592,6 +3657,7 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
 
     const payload: Record<string, unknown> = {
         cash,
+        ...(onboardingEnabled.value ? { onboarding: true } : {}),
         ...(provider.value.trim() === ''
             ? {}
             : { provider: provider.value.trim() }),
@@ -5817,6 +5883,29 @@ function instructionRecord(
                         </div>
                     </summary>
                     <div class="mt-4 grid gap-3">
+                        <label
+                            class="flex items-start justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100"
+                            data-testid="cockpit-quick-generate-onboarding-toggle"
+                        >
+                            <span class="grid gap-0.5">
+                                <span class="font-semibold">
+                                    Set Up Recipient Account
+                                </span>
+                                <span
+                                    class="text-xs text-emerald-700 dark:text-emerald-300"
+                                >
+                                    Collect the identity details needed to open
+                                    or link the recipient’s Account.
+                                </span>
+                            </span>
+                            <input
+                                v-model="onboardingEnabled"
+                                type="checkbox"
+                                class="mt-0.5 rounded border-emerald-300"
+                                :disabled="processing"
+                                data-testid="cockpit-quick-generate-onboarding"
+                            />
+                        </label>
                         <div
                             class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
                             data-testid="cockpit-quick-generate-input-fields"
@@ -5831,7 +5920,15 @@ function instructionRecord(
                                     type="checkbox"
                                     :value="field.value"
                                     class="rounded border-slate-300"
-                                    :disabled="processing"
+                                    :disabled="
+                                        processing ||
+                                        isOnboardingFieldLocked(field.value)
+                                    "
+                                    :data-onboarding-locked="
+                                        isOnboardingFieldLocked(field.value)
+                                            ? 'true'
+                                            : undefined
+                                    "
                                 />
                                 <span>
                                     <span class="block">{{ field.label }}</span>
@@ -6043,7 +6140,9 @@ function instructionRecord(
                                         v-model="verificationOtp"
                                         type="checkbox"
                                         class="mt-0.5 rounded border-sky-300"
-                                        :disabled="processing"
+                                        :disabled="
+                                            processing || onboardingOtpEnforced
+                                        "
                                     />
                                     <span class="grid gap-0.5">
                                         <span>OTP</span>
