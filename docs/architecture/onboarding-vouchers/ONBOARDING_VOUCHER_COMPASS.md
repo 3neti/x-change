@@ -25,16 +25,16 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Slice 2 — Commercial Catalog and Instruction Product
-Status: Slice 1 complete; Slice 2 in progress
+Current slice: Slice 3 — Explicit Claim Workflow Descriptor
+Status: Slice 2 complete; Slice 3 in progress
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
 |---|---|---|
 | 0 | Compass and Boundary Lock | Completed |
 | 1 | Minimal Voucher Instruction Contract | Completed |
-| 2 | Commercial Catalog and Instruction Product | In progress |
-| 3 | Explicit Claim Workflow Descriptor | Pending |
+| 2 | Commercial Catalog and Instruction Product | Completed |
+| 3 | Explicit Claim Workflow Descriptor | In progress |
 | 4 | Generic Claim Authentication Handoff | Pending |
 | 5 | Account-Provisioning Execution Driver | Pending |
 | 6 | Issuance Dependency UX | Pending |
@@ -149,3 +149,19 @@ assets. It does not own onboarding business logic.
   metadata.
 - Focused Voucher DTO, claim instruction, and instruction-domain tests pass:
   21 tests and 69 assertions.
+
+### 2026-07-30 — Slice 2 completed
+
+- Published Pay Code commercial catalog version 3 with the explicit
+  `onboarding.enabled` item.
+- Set the initial Account Onboarding tariff to ₱10.00; future price changes
+  require another catalog version and do not rewrite accepted quotes.
+- Added the matching `3neti/instruction` product projection with catalog
+  reference and version metadata.
+- Added onboarding selection to the x-change deterministic commercial quote.
+- Missing onboarding catalog support now fails closed instead of silently
+  producing a free instruction.
+- Focused verification passes:
+  - x-commerce: 6 tests and 25 assertions;
+  - instruction product projection: 2 tests and 6 assertions;
+  - x-change pricing: 8 tests and 33 assertions.

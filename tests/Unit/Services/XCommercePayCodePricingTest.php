@@ -53,10 +53,54 @@ it('uses the immutable x-commerce catalog for Pay Code pricing and projections',
             'rider.message',
         ])
         ->and($first['catalog_reference'])->toBe('pay-code')
-        ->and($first['catalog_version'])->toBe(2)
+        ->and($first['catalog_version'])->toBe(3)
         ->and($first['waterfall_policy_reference'])->toBe('pay-code-commercial-waterfall')
         ->and($first['waterfall_policy_version'])->toBe(1)
         ->and($first['commercial_quote_reference'])->toStartWith('commercial-quote:');
+});
+
+it('prices onboarding as an explicit versioned commercial instruction', function () {
+    $instructions = validVoucherInstructions(100, 'INSTAPAY', [
+        'onboarding' => true,
+        'inputs' => ['fields' => []],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]);
+
+    $estimate = app(PricingServiceContract::class)->estimate($instructions);
+
+    $charges = collect($estimate['charges'])->keyBy('catalog_item_reference');
+
+    expect($estimate['catalog_version'])->toBe(3)
+        ->and($estimate['total_minor'])->toBe(2_500)
+        ->and($estimate['charges'])->toHaveCount(2)
+        ->and($charges->get('onboarding.enabled')['label'])->toBe('Account Onboarding')
+        ->and($charges->get('onboarding.enabled')['price_minor'])->toBe(1_000);
+});
+
+it('fails closed when an onboarding instruction is missing from the active catalog', function () {
+    $catalog = config('x-commerce.catalogs.pay_code');
+    unset($catalog['items']['onboarding.enabled']);
+    config()->set('x-commerce.catalogs.pay_code', $catalog);
+
+    $instructions = validVoucherInstructions(100, 'INSTAPAY', [
+        'onboarding' => true,
+        'inputs' => ['fields' => []],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]);
+
+    expect(fn () => app(PricingServiceContract::class)->estimate($instructions))
+        ->toThrow(
+            PayCodeIssuanceFailed::class,
+            'The active commercial catalog does not price Account Onboarding.',
+        );
 });
 
 it('prices a collectible instruction without treating its target as outbound cash', function () {

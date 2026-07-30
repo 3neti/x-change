@@ -187,6 +187,10 @@ final class PayCodeCommercialQuoteService
             $selected[] = 'voucher_type.'.$voucherType;
         }
 
+        if ($instructions->onboarding) {
+            $selected[] = 'onboarding.enabled';
+        }
+
         $fields = $this->fieldNames($instructions);
 
         foreach ($fields as $field) {
@@ -238,6 +242,12 @@ final class PayCodeCommercialQuoteService
             ->reject(static fn ($item): bool => $item->deprecated)
             ->pluck('reference')
             ->all();
+
+        if ($instructions->onboarding && ! in_array('onboarding.enabled', $available, true)) {
+            throw new PayCodeIssuanceFailed(
+                'The active commercial catalog does not price Account Onboarding.',
+            );
+        }
 
         return collect($selected)
             ->unique()
