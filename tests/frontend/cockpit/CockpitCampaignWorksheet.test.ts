@@ -37,7 +37,37 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('Drop A File Or Paste Rows');
         expect(wrapper.text()).toContain('Choose CSV Or Excel');
         expect(wrapper.find('[data-testid="campaign-import-drop-zone"]').attributes('role')).toBe('group');
+        expect(wrapper.get(`[data-testid="campaign-activity-create-approval-${worksheet.reference}"]`).attributes('disabled')).toBeDefined();
         expect(wrapper.text()).toContain('Start Blank');
+    });
+
+    it('creates an Approval Pay Code from Campaign Activity through the existing authorization route', async () => {
+        const readyWorksheet = {
+            ...worksheet,
+            beneficiary_count: 2,
+            principal_minor: 150000,
+        };
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [readyWorksheet],
+            },
+        });
+        const authorizationForm = (wrapper.vm as unknown as {
+            authorizationForm: {
+                post: (...args: unknown[]) => void;
+            };
+        }).authorizationForm;
+        const post = vi.spyOn(authorizationForm, 'post').mockImplementation(() => undefined);
+        const action = wrapper.get(`[data-testid="campaign-activity-create-approval-${worksheet.reference}"]`);
+
+        expect(action.attributes('disabled')).toBeUndefined();
+        await action.trigger('click');
+
+        expect(post).toHaveBeenCalledOnce();
+        expect(post.mock.calls[0][0]).toMatchObject({
+            method: 'post',
+            url: `/x/cockpit/campaigns/${worksheet.reference}/authorizations`,
+        });
     });
 
     it('gives beneficiary imports a drag target and rejects unsupported files locally', async () => {

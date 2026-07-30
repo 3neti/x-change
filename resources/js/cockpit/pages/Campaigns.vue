@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { ClipboardList, FileSpreadsheet, Plus, Send, Trash2, Upload, Users } from 'lucide-vue-next';
+import { ClipboardList, FileSpreadsheet, LockKeyhole, Plus, Send, Trash2, Upload, Users } from 'lucide-vue-next';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
+import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
 import CockpitCampaignIntakeDialog from '../components/CockpitCampaignIntakeDialog.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
@@ -35,6 +36,8 @@ const form = useForm({
     delivery_plan: ['csv'],
 });
 const deleteForm = useForm({});
+const authorizationForm = useForm({});
+const authorizingWorksheet = ref<string | null>(null);
 const intakeForm = useForm<{ file: File | null }>({ file: null });
 const intakeFileInput = ref<HTMLInputElement | null>(null);
 const intakeDragDepth = ref(0);
@@ -198,6 +201,20 @@ function deleteWorksheet(worksheet: CampaignWorksheet): void {
     });
 }
 
+function createApprovalPayCode(worksheet: CampaignWorksheet): void {
+    if (worksheet.status !== 'draft' || worksheet.beneficiary_count === 0 || authorizationForm.processing) {
+        return;
+    }
+
+    authorizingWorksheet.value = worksheet.reference;
+    authorizationForm.post(authorizations.store(worksheet.reference), {
+        preserveScroll: true,
+        onFinish: () => {
+            authorizingWorksheet.value = null;
+        },
+    });
+}
+
 function display(value: string): string {
     return value
         .replaceAll('_', ' ')
@@ -293,7 +310,7 @@ function dateTime(value: string | null): string {
                     </div>
 
                     <div v-else class="divide-y divide-slate-200 dark:divide-slate-800">
-                        <article v-for="worksheet in props.worksheets" :key="worksheet.reference" class="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                        <article v-for="worksheet in props.worksheets" :key="worksheet.reference" class="@container grid gap-3 px-4 py-3">
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <a :href="show(worksheet.reference).url" class="truncate font-semibold text-slate-950 hover:underline dark:text-slate-50">{{ worksheet.name }}</a>
@@ -302,8 +319,8 @@ function dateTime(value: string | null): string {
                                 </div>
                                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ worksheet.reference }} · {{ display(worksheet.fulfillment_mode) }} · updated {{ dateTime(worksheet.updated_at) }}</p>
                             </div>
-                            <div class="flex items-center justify-between gap-3 sm:justify-end">
-                                <dl class="grid min-w-44 grid-cols-2 gap-x-4 text-right text-xs">
+                            <div class="flex flex-col gap-3 @xl:flex-row @xl:items-center @xl:justify-between">
+                                <dl class="grid w-full grid-cols-2 gap-x-4 text-left text-xs @xl:w-auto @xl:min-w-44 @xl:text-right">
                                     <div>
                                         <dt class="text-slate-500 dark:text-slate-400">Beneficiaries</dt>
                                         <dd class="font-semibold text-slate-950 dark:text-slate-50">{{ worksheet.beneficiary_count }}</dd>
@@ -313,16 +330,28 @@ function dateTime(value: string | null): string {
                                         <dd class="font-semibold text-slate-950 dark:text-slate-50">{{ peso(worksheet.principal_minor) }}</dd>
                                     </div>
                                 </dl>
-                                <button
-                                    v-if="worksheet.status === 'draft'"
-                                    type="button"
-                                    :aria-label="`Delete draft ${worksheet.name}`"
-                                    :disabled="deleteForm.processing"
-                                    class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-rose-200 text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
-                                    @click="deleteWorksheet(worksheet)"
-                                >
-                                    <Trash2 class="size-4" aria-hidden="true" />
-                                </button>
+                                <div v-if="worksheet.status === 'draft'" class="flex w-full items-center gap-2 @xl:w-auto">
+                                    <button
+                                        type="button"
+                                        :data-testid="`campaign-activity-create-approval-${worksheet.reference}`"
+                                        :disabled="worksheet.beneficiary_count === 0 || authorizationForm.processing"
+                                        :title="worksheet.beneficiary_count === 0 ? 'Add at least one beneficiary first.' : 'Freeze this worksheet and create its officer Approval Pay Code.'"
+                                        class="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 @xl:flex-none dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+                                        @click="createApprovalPayCode(worksheet)"
+                                    >
+                                        <LockKeyhole class="size-3.5 shrink-0" aria-hidden="true" />
+                                        {{ authorizingWorksheet === worksheet.reference ? 'Creating…' : 'Create Approval Pay Code' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        :aria-label="`Delete draft ${worksheet.name}`"
+                                        :disabled="deleteForm.processing"
+                                        class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-rose-200 text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                                        @click="deleteWorksheet(worksheet)"
+                                    >
+                                        <Trash2 class="size-4" aria-hidden="true" />
+                                    </button>
+                                </div>
                             </div>
                         </article>
                     </div>
