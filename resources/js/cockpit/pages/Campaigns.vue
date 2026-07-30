@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { ClipboardList, Plus, Send, Users } from 'lucide-vue-next';
-import { show, store } from '@/routes/x-change/cockpit/campaigns';
+import { ClipboardList, Plus, Send, Trash2, Users } from 'lucide-vue-next';
+import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type { CockpitHeaderPageProps } from '../types';
 
@@ -30,11 +30,22 @@ const form = useForm({
     fulfillment_mode: 'pay_code_distribution',
     delivery_plan: ['csv'],
 });
+const deleteForm = useForm({});
 
 function createWorksheet(): void {
     form.post(store(), {
         preserveScroll: true,
         onSuccess: () => form.reset('name'),
+    });
+}
+
+function deleteWorksheet(worksheet: CampaignWorksheet): void {
+    if (!window.confirm(`Delete “${worksheet.name}”? Its draft beneficiaries and staged imports will be permanently removed.`)) {
+        return;
+    }
+
+    deleteForm.delete(destroy(worksheet.reference).url, {
+        preserveScroll: true,
     });
 }
 
@@ -142,16 +153,28 @@ function dateTime(value: string | null): string {
                                 </div>
                                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ worksheet.reference }} · {{ display(worksheet.fulfillment_mode) }} · updated {{ dateTime(worksheet.updated_at) }}</p>
                             </div>
-                            <dl class="grid grid-cols-2 gap-x-4 text-right text-xs sm:min-w-44">
-                                <div>
-                                    <dt class="text-slate-500 dark:text-slate-400">Beneficiaries</dt>
-                                    <dd class="font-semibold text-slate-950 dark:text-slate-50">{{ worksheet.beneficiary_count }}</dd>
-                                </div>
-                                <div>
-                                    <dt class="text-slate-500 dark:text-slate-400">Principal</dt>
-                                    <dd class="font-semibold text-slate-950 dark:text-slate-50">{{ peso(worksheet.principal_minor) }}</dd>
-                                </div>
-                            </dl>
+                            <div class="flex items-center justify-between gap-3 sm:justify-end">
+                                <dl class="grid min-w-44 grid-cols-2 gap-x-4 text-right text-xs">
+                                    <div>
+                                        <dt class="text-slate-500 dark:text-slate-400">Beneficiaries</dt>
+                                        <dd class="font-semibold text-slate-950 dark:text-slate-50">{{ worksheet.beneficiary_count }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="text-slate-500 dark:text-slate-400">Principal</dt>
+                                        <dd class="font-semibold text-slate-950 dark:text-slate-50">{{ peso(worksheet.principal_minor) }}</dd>
+                                    </div>
+                                </dl>
+                                <button
+                                    v-if="worksheet.status === 'draft'"
+                                    type="button"
+                                    :aria-label="`Delete draft ${worksheet.name}`"
+                                    :disabled="deleteForm.processing"
+                                    class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-rose-200 text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                                    @click="deleteWorksheet(worksheet)"
+                                >
+                                    <Trash2 class="size-4" aria-hidden="true" />
+                                </button>
+                            </div>
                         </article>
                     </div>
                 </div>

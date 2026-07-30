@@ -7,3 +7,8 @@ export const show = (worksheet: string) => ({
     url: `/x/cockpit/campaigns/${worksheet}`,
     method: 'get' as const,
 });
+
+export const destroy = (worksheet: string) => ({
+    url: `/x/cockpit/campaigns/${worksheet}`,
+    method: 'delete' as const,
+});

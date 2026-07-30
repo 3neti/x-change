@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import Campaigns from '../../../resources/js/cockpit/pages/Campaigns.vue';
 import CampaignsRouteAdapter from '../../../resources/js/pages/x-change/cockpit/Campaigns.vue';
 
@@ -43,6 +43,24 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(wrapper.text()).toContain('Authorized');
         expect(wrapper.text()).not.toContain('Draft only');
+    });
+
+    it('offers destructive deletion only for drafts and requires confirmation', async () => {
+        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [worksheet, { ...worksheet, reference: 'authorized', status: 'authorized' }],
+            },
+        });
+
+        const deleteButtons = wrapper.findAll('button[aria-label^="Delete draft"]');
+        expect(deleteButtons).toHaveLength(1);
+        await deleteButtons[0].trigger('click');
+        expect(confirm).toHaveBeenCalledWith(
+            'Delete “July Payroll”? Its draft beneficiaries and staged imports will be permanently removed.',
+        );
+
+        confirm.mockRestore();
     });
 
     it('keeps the host Inertia adapter aligned with the package page', () => {

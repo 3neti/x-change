@@ -104,6 +104,57 @@ it('shows only the authenticated owner campaign worksheet summaries', function (
         ->assertJsonMissingPath('props.worksheets.0.beneficiary');
 });
 
+it('lets the owner delete a draft campaign and its working data', function () {
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-delete-draft',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Mistaken Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09173011987'], 10_000)],
+    ));
+
+    $this->delete(route('x-change.cockpit.campaigns.destroy', $worksheet->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice', 'Mistaken Payroll was deleted.');
+
+    expect($repository->findForOwner(
+        (string) $worksheet->reference,
+        $owner->getMorphClass(),
+        (string) $owner->getKey(),
+    ))->toBeNull();
+});
+
+it('hides another owner campaign and protects every non-draft campaign from deletion', function () {
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-delete-protected',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Protected Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09173011987'], 10_000)],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+
+    $this->delete(route('x-change.cockpit.campaigns.destroy', $worksheet->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHasErrors(['campaign' => 'Only a draft Campaign may be deleted.']);
+
+    actingAsTestUser();
+    $this->delete(route('x-change.cockpit.campaigns.destroy', $worksheet->reference))
+        ->assertNotFound();
+
+    expect($repository->findForOwner(
+        (string) $worksheet->reference,
+        $owner->getMorphClass(),
+        (string) $owner->getKey(),
+    ))->not->toBeNull();
+});
+
 it('does not let a worksheet creator supply beneficiary or approval facts', function () {
     actingAsTestUser();
 

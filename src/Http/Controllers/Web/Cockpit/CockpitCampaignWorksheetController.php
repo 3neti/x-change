@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use InvalidArgumentException;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
@@ -68,6 +69,35 @@ class CockpitCampaignWorksheetController extends Controller
             'direct_bank_transfer_enabled' => (bool) config('x-change.campaigns.netbank_dispatch.enabled', false),
             'delivery' => $this->deliveryFor($worksheet, $request->user()),
         ]);
+    }
+
+    public function destroy(Request $request, string $worksheet): RedirectResponse
+    {
+        $owner = $request->user();
+        $campaign = $this->worksheets->findForOwner(
+            $worksheet,
+            $this->ownerType($owner),
+            (string) $owner->getAuthIdentifier(),
+        );
+        abort_unless($campaign instanceof CampaignWorksheetData, 404);
+        if ($campaign->status !== 'draft') {
+            return to_route('x-change.cockpit.campaigns.index')
+                ->withErrors(['campaign' => 'Only a draft Campaign may be deleted.']);
+        }
+
+        try {
+            $this->worksheets->deleteDraft(
+                $worksheet,
+                $this->ownerType($owner),
+                (string) $owner->getAuthIdentifier(),
+            );
+        } catch (InvalidArgumentException $exception) {
+            return to_route('x-change.cockpit.campaigns.index')
+                ->withErrors(['campaign' => $exception->getMessage()]);
+        }
+
+        return to_route('x-change.cockpit.campaigns.index')
+            ->with('campaign_notice', sprintf('%s was deleted.', $campaign->name));
     }
 
     public function addRow(

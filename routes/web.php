@@ -120,6 +120,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             ->name('x-change.cockpit.campaigns.store');
         Route::get('campaigns/{worksheet}', [CockpitCampaignWorksheetController::class, 'show'])
             ->name('x-change.cockpit.campaigns.show');
+        Route::delete('campaigns/{worksheet}', [CockpitCampaignWorksheetController::class, 'destroy'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.destroy');
         Route::post('campaigns/{worksheet}/rows', [CockpitCampaignWorksheetController::class, 'addRow'])
             ->middleware('throttle:60,1')
             ->name('x-change.cockpit.campaigns.rows.store');
