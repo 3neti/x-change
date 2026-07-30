@@ -25,15 +25,15 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Slice 0 — Compass and Boundary Lock
-Status: In progress
+Current slice: Slice 2 — Commercial Catalog and Instruction Product
+Status: Slice 1 complete; Slice 2 in progress
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
 |---|---|---|
-| 0 | Compass and Boundary Lock | In progress |
-| 1 | Minimal Voucher Instruction Contract | Pending |
-| 2 | Commercial Catalog and Instruction Product | Pending |
+| 0 | Compass and Boundary Lock | Completed |
+| 1 | Minimal Voucher Instruction Contract | Completed |
+| 2 | Commercial Catalog and Instruction Product | In progress |
 | 3 | Explicit Claim Workflow Descriptor | Pending |
 | 4 | Generic Claim Authentication Handoff | Pending |
 | 5 | Account-Provisioning Execution Driver | Pending |
@@ -137,3 +137,15 @@ assets. It does not own onboarding business logic.
 - Confirmed the implementation will extend the campaign claim-workflow seam
   instead of creating route-name or Vue field-guessing special cases.
 
+### 2026-07-30 — Slice 1 completed
+
+- Added `VoucherInstructionsData::$onboarding` with a safe default of `false`.
+- Preserved the legacy clean wire shape by omitting the canonical field when
+  it is false.
+- Serialized explicit onboarding intent when true.
+- Mapped only legacy `claim.onboarding.mode=required` to the canonical flag.
+- Kept legacy `if_required` outside the new onboarding classification.
+- Allowed an explicit canonical false value to override legacy compatibility
+  metadata.
+- Focused Voucher DTO, claim instruction, and instruction-domain tests pass:
+  21 tests and 69 assertions.
