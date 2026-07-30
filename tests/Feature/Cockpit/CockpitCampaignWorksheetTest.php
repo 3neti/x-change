@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
@@ -30,6 +31,8 @@ use LBHurtado\XFeedback\Drivers\SmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 function fundCampaignOwnerClientFunds(
     mixed $owner,
@@ -199,7 +202,7 @@ it('rejects ambiguous and over-precise beneficiary amounts', function (string $a
     ])->assertSessionHasErrors('amount');
 })->with(['1.234', '1,2', '0']);
 
-it('stages a campaign import for review and applies only a fully valid staged import once', function () {
+it('stages a campaign import for review and applies valid rows once', function () {
     $owner = actingAsTestUser();
     app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
         reference: 'campaign-import-01', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Import Payroll',
@@ -213,6 +216,8 @@ it('stages a campaign import for review and applies only a fully valid staged im
     $response->assertOk()
         ->assertJsonPath('props.imports.0.status', 'staged')
         ->assertJsonPath('props.imports.0.valid_count', 1)
+        ->assertJsonPath('props.imports.0.unapplied_valid_count', 1)
+        ->assertJsonPath('props.imports.0.valid_principal_minor', 125_000)
         ->assertJsonPath('props.imports.0.mapping.amount', 'amount');
 
     $reference = $response->json('props.imports.0.reference');
@@ -226,20 +231,227 @@ it('stages a campaign import for review and applies only a fully valid staged im
         ->assertSessionHas('campaign_notice', 'Campaign worksheet import has already been applied or is unavailable.');
 });
 
-it('stages import errors without adding any beneficiary', function () {
+it('preserves quoted CSV line breaks while staging rows', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-multiline', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Import Multiline',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-multiline'), [
+        'file' => UploadedFile::fake()->createWithContent(
+            'beneficiaries.csv',
+            "mobile,amount,remarks\n09173011987,100.00,\"First line\nSecond line\"\n",
+        ),
+    ])->assertRedirect();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.show', 'campaign-import-multiline'))
+        ->assertJsonPath('props.imports.0.unapplied_valid_count', 1)
+        ->assertJsonPath('props.imports.0.preview.0.normalized.beneficiary.remarks', "First line\nSecond line");
+});
+
+it('requires the current import preview to be resolved before staging another file', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-single-preview', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Single Preview',
+    ));
+
+    $route = route('x-change.cockpit.campaigns.imports.store', 'campaign-import-single-preview');
+    $this->post($route, [
+        'file' => UploadedFile::fake()->createWithContent('first.csv', "mobile,amount\n09173011987,100.00\n"),
+    ])->assertRedirect();
+
+    $this->post($route, [
+        'file' => UploadedFile::fake()->createWithContent('second.csv', "mobile,amount\n09170000001,200.00\n"),
+    ])->assertSessionHasErrors([
+        'file' => 'Add or discard the current preview before uploading another file.',
+    ]);
+
+    expect(app(CampaignWorksheetImportRepository::class)
+        ->forOwner('campaign-import-single-preview', $owner->getMorphClass(), (string) $owner->getKey()))
+        ->toHaveCount(1);
+});
+
+it('rejects empty import files and duplicate source mappings', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-guards', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Import Guards',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-guards'), [
+        'file' => UploadedFile::fake()->createWithContent('empty.csv', "mobile,amount\n"),
+    ])->assertSessionHasErrors(['file' => 'The file contains no beneficiary rows.']);
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-guards'), [
+        'file' => UploadedFile::fake()->createWithContent('beneficiaries.csv', "contact,amount\n09173011987,100.00\n"),
+    ])->assertRedirect();
+
+    $staged = app(CampaignWorksheetImportRepository::class)
+        ->forOwner('campaign-import-guards', $owner->getMorphClass(), (string) $owner->getKey())[0];
+
+    $this->patch(route('x-change.cockpit.campaigns.imports.mapping.update', [
+        'worksheet' => 'campaign-import-guards',
+        'import' => $staged->reference,
+    ]), [
+        'mapping' => ['mobile' => 'contact', 'name' => 'contact', 'amount' => 'amount'],
+        'default_wallet' => 'GCash',
+        'default_delivery_preference' => 'manual',
+    ])->assertSessionHasErrors([
+        'mapping' => 'Each source column may be mapped to only one beneficiary field.',
+    ]);
+});
+
+it('stages valid and invalid rows independently and applies only valid rows', function () {
     $owner = actingAsTestUser();
     app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
         reference: 'campaign-import-errors', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'assistance', name: 'Import Errors',
     ));
 
     $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-errors'), [
-        'file' => UploadedFile::fake()->createWithContent('beneficiaries.csv', "name,amount\nMaria,1250.00\n"),
+        'file' => UploadedFile::fake()->createWithContent(
+            'beneficiaries.csv',
+            "name,mobile,amount\nMaria,09173011987,1250.00\nJose,,250.00\n",
+        ),
     ])->assertRedirect();
 
-    $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.campaigns.show', 'campaign-import-errors'))
-        ->assertJsonPath('props.imports.0.valid_count', 0)
-        ->assertJsonPath('props.imports.0.validation_errors.0.row', 2)
+    $response = $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.campaigns.show', 'campaign-import-errors'));
+    $response->assertJsonPath('props.imports.0.unapplied_valid_count', 1)
+        ->assertJsonPath('props.imports.0.invalid_count', 1)
+        ->assertJsonPath('props.imports.0.validation_errors.0.row', 3)
         ->assertJsonPath('props.worksheet.rows', []);
+
+    $this->post(route('x-change.cockpit.campaigns.imports.apply', [
+        'worksheet' => 'campaign-import-errors',
+        'import' => $response->json('props.imports.0.reference'),
+    ]))->assertRedirect();
+
+    expect(app(CampaignWorksheetRepository::class)
+        ->findForOwner('campaign-import-errors', $owner->getMorphClass(), (string) $owner->getKey())
+        ?->rows)->toHaveCount(1);
+});
+
+it('maps mobile and peso amount files to GCash direct transfer destinations by default', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-wallet',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Wallet Payroll',
+        fulfillmentMode: 'direct_bank_transfer',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-wallet'), [
+        'file' => UploadedFile::fake()->createWithContent(
+            'wallets.csv',
+            "mobile number,amount\n09173011987,500.00\n",
+        ),
+    ])->assertRedirect();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.show', 'campaign-import-wallet'))
+        ->assertJsonPath('props.imports.0.unapplied_valid_count', 1)
+        ->assertJsonPath('props.imports.0.preview.0.normalized.amount_minor', 50_000)
+        ->assertJsonPath('props.imports.0.preview.0.normalized.beneficiary.institution', 'GCash')
+        ->assertJsonPath('props.imports.0.preview.0.normalized.beneficiary.bank_code', 'GXCHPHM2XXX')
+        ->assertJsonPath('props.imports.0.preview.0.normalized.beneficiary.bank_account', '09173011987');
+});
+
+it('allows source columns to be remapped and revalidates unapplied rows', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-remap', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Remap Payroll',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-remap'), [
+        'file' => UploadedFile::fake()->createWithContent('custom.csv', "contact,pay\n09173011987,125.50\n"),
+    ])->assertRedirect();
+
+    $staged = app(CampaignWorksheetImportRepository::class)
+        ->forOwner('campaign-import-remap', $owner->getMorphClass(), (string) $owner->getKey())[0];
+    expect($staged->validationErrors)->not->toBeEmpty();
+
+    $this->patch(route('x-change.cockpit.campaigns.imports.mapping.update', [
+        'worksheet' => 'campaign-import-remap',
+        'import' => $staged->reference,
+    ]), [
+        'mapping' => ['mobile' => 'contact', 'amount' => 'pay'],
+        'default_wallet' => 'GCash',
+        'default_delivery_preference' => 'sms',
+    ])->assertRedirect();
+
+    $remapped = app(CampaignWorksheetImportRepository::class)
+        ->findForOwner('campaign-import-remap', (string) $staged->reference, $owner->getMorphClass(), (string) $owner->getKey());
+    expect($remapped?->validationErrors)->toBe([])
+        ->and(data_get($remapped?->stagedRows, '0.normalized.amount_minor'))->toBe(12_550)
+        ->and(data_get($remapped?->stagedRows, '0.normalized.delivery_preference'))->toBe('sms');
+});
+
+it('rejects ambiguous institution names and unsupported wallet rails', function (string $amount) {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-ambiguous-'.$amount,
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Ambiguous Institution',
+        fulfillmentMode: 'direct_bank_transfer',
+    ));
+
+    $reference = 'campaign-import-ambiguous-'.$amount;
+    $this->post(route('x-change.cockpit.campaigns.imports.store', $reference), [
+        'file' => UploadedFile::fake()->createWithContent(
+            'banks.csv',
+            "bank,account number,amount\nMaya,09173011987,{$amount}\n",
+        ),
+    ])->assertRedirect();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.show', $reference))
+        ->assertJsonPath('props.imports.0.invalid_count', 1)
+        ->assertJsonPath('props.imports.0.unapplied_valid_count', 0);
+})->with(['500.00', '50000.00']);
+
+it('rejects formula cells in xlsx imports', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-formula', ownerType: $owner->getMorphClass(), ownerId: (string) $owner->getKey(), profile: 'payroll', name: 'Formula Payroll',
+    ));
+
+    $spreadsheet = new Spreadsheet;
+    $spreadsheet->getActiveSheet()->fromArray([
+        ['mobile', 'amount'],
+        ['09173011987', '=100+25'],
+    ]);
+    $path = tempnam(sys_get_temp_dir(), 'campaign-xlsx-');
+    (new Xlsx($spreadsheet))->save($path);
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-formula'), [
+        'file' => new UploadedFile($path, 'formula.xlsx', null, null, true),
+    ])->assertSessionHasErrors('file');
+});
+
+it('blocks worksheet freezing while valid imported rows remain unapplied', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-import-freeze',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Freeze Guard Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09170000001'], 10_000)],
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.imports.store', 'campaign-import-freeze'), [
+        'file' => UploadedFile::fake()->createWithContent('pending.csv', "mobile,amount\n09173011987,125.00\n"),
+    ])->assertRedirect();
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.store', 'campaign-import-freeze'))
+        ->assertSessionHas('campaign_notice', 'Add or discard every valid staged import before freezing the worksheet.');
+
+    expect(app(CampaignWorksheetRepository::class)
+        ->findForOwner('campaign-import-freeze', $owner->getMorphClass(), (string) $owner->getKey())
+        ?->status)->toBe('draft');
 });
 
 it('issues one zero-value settlement approval Pay Code for a frozen worksheet', function () {

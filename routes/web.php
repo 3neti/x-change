@@ -161,6 +161,12 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/{worksheet}/imports/{import}/apply', [CockpitCampaignWorksheetImportController::class, 'apply'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.imports.apply');
+        Route::patch('campaigns/{worksheet}/imports/{import}/mapping', [CockpitCampaignWorksheetImportController::class, 'updateMapping'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.imports.mapping.update');
+        Route::delete('campaigns/{worksheet}/imports/{import}', [CockpitCampaignWorksheetImportController::class, 'discard'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.imports.destroy');
         Route::get('accounts', CockpitAccountPageController::class)
             ->middleware('verified')
             ->name('x-change.cockpit.accounts.index');

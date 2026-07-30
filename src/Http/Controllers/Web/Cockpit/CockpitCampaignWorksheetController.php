@@ -166,15 +166,43 @@ class CockpitCampaignWorksheetController extends Controller
     /** @return array<int, array<string, mixed>> */
     private function importsFor(string $reference, mixed $owner): array
     {
-        return array_map(fn (CampaignWorksheetImportData $import): array => [
-            'reference' => $import->reference,
-            'status' => $import->status,
-            'source_format' => $import->sourceFormat,
-            'row_count' => $import->rowCount,
-            'valid_count' => count($import->validRows),
-            'validation_errors' => $import->validationErrors,
-            'mapping' => $import->mapping,
-        ], $this->imports->forOwner($reference, $this->ownerType($owner), (string) $owner->getAuthIdentifier()));
+        return array_values(array_filter(array_map(function (CampaignWorksheetImportData $import): ?array {
+            if ($import->status === 'discarded') {
+                return null;
+            }
+
+            $unapplied = collect($import->stagedRows)->whereNull('applied_at');
+            $valid = $unapplied->where('status', 'valid');
+            $mapping = array_filter(
+                $import->mapping,
+                fn (string $key): bool => ! str_starts_with($key, '__'),
+                ARRAY_FILTER_USE_KEY,
+            );
+
+            return [
+                'reference' => $import->reference,
+                'status' => $import->status,
+                'source_format' => $import->sourceFormat,
+                'source_sheet' => $import->sourceSheet,
+                'source_headers' => $import->sourceHeaders,
+                'row_count' => $import->rowCount,
+                'valid_count' => count($import->validRows),
+                'unapplied_valid_count' => $valid->count(),
+                'invalid_count' => $unapplied->where('status', 'invalid')->count(),
+                'valid_principal_minor' => $valid->sum(
+                    fn (array $row): int => (int) data_get($row, 'normalized.amount_minor', 0),
+                ),
+                'validation_errors' => $import->validationErrors,
+                'mapping' => $mapping,
+                'default_wallet' => $import->mapping['__default_wallet'] ?? 'GCash',
+                'default_delivery_preference' => $import->mapping['__default_delivery_preference'] ?? 'manual',
+                'preview' => $unapplied->take(50)->values()->all(),
+            ];
+        }, $this->imports->forOwner(
+            $reference,
+            $this->ownerType($owner),
+            (string) $owner->getAuthIdentifier(),
+        ))));
     }
 
     /** @return array<string, int> */

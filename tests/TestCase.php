@@ -82,6 +82,7 @@ abstract class TestCase extends Orchestra
             InstructionServiceProvider::class,
             EmiCoreServiceProvider::class,
             MerchantServiceProvider::class,
+            $this->optionalProvider('LBHurtado\\MoneyIssuer\\MoneyIssuerServiceProvider'),
             $this->optionalProvider('LBHurtado\\XJournal\\XJournalServiceProvider'),
             $this->optionalProvider('LBHurtado\\XAction\\XActionServiceProvider'),
             $this->optionalProvider('LBHurtado\\XFeedback\\XFeedbackServiceProvider'),
