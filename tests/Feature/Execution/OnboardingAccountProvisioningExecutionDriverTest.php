@@ -113,7 +113,10 @@ it('provisions the account and strips raw OTP evidence before Voucher redemption
             $inputs = (array) data_get($context->meta, 'inputs', []);
 
             return ! array_key_exists('otp_code', $inputs)
-                && ! array_key_exists('otp', $inputs)
+                && data_get($inputs, 'otp.verified_at') === '2026-07-30T12:00:00+08:00'
+                && data_get($inputs, 'otp.otp_code') === null
+                && data_get($inputs, 'otp.value') === 'verified'
+                && data_get($inputs, 'otp.verified') === true
                 && data_get($inputs, 'verified_at') === '2026-07-30T12:00:00+08:00';
         }))
         ->andReturn(ExecutionResultData::succeeded('default'));
@@ -129,7 +132,10 @@ it('provisions the account and strips raw OTP evidence before Voucher redemption
         'full_name' => 'Maria Santos',
         'email' => 'maria@example.test',
         'otp_code' => '123456',
-        'otp' => '123456',
+        'otp' => [
+            'otp_code' => '123456',
+            'verified_at' => '2026-07-30T12:00:00+08:00',
+        ],
         'verified_at' => '2026-07-30T12:00:00+08:00',
     ]));
 

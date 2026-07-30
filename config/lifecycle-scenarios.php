@@ -464,6 +464,30 @@ return [
             ],
         ],
 
+        'onboarding_voucher' => [
+            'label' => 'Onboarding Voucher',
+            'description' => 'Issues and claims one onboarding Pay Code through the explicit workflow descriptor and account-provisioning execution driver.',
+            'category' => 'onboarding',
+            'tags' => ['onboarding', 'voucher', 'claim-workflow', 'execution-engine'],
+            'mode' => 'onboarding_voucher',
+            'amount' => 1,
+            'currency' => 'PHP',
+            'mobile' => env('XCHANGE_LIFECYCLE_ONBOARDING_VOUCHER_MOBILE', '09179990001'),
+            'onboarding' => [
+                'enabled' => true,
+                'name' => env('XCHANGE_LIFECYCLE_ONBOARDING_VOUCHER_NAME', 'Onboarding Voucher Recipient'),
+                'email' => env('XCHANGE_LIFECYCLE_ONBOARDING_VOUCHER_EMAIL', 'onboarding-voucher-09179990001@example.test'),
+            ],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'claim' => [],
+            'expect' => [
+                'tariffs' => ['cash', 'onboarding.enabled'],
+            ],
+        ],
+
         'treasury_basic_cash' => [
             'label' => 'Treasury Basic Cash',
             'description' => 'Funds an Account from verified provider evidence, issues the canonical basic_cash Pay Code, and demonstrates the resulting liability and issuance capacity under one rollback boundary.',

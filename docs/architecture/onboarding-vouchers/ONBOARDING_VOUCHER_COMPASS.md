@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Slice 8 — Lifecycle and Browser Acceptance
-Status: Slice 7 complete; Slice 8 in progress
+Current slice: Wave closed
+Status: Slices 0–8 complete
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -39,7 +39,7 @@ Last updated: 2026-07-30
 | 5 | Account-Provisioning Execution Driver | Completed |
 | 6 | Issuance Dependency UX | Completed |
 | 7 | Template and Campaign Propagation | Completed |
-| 8 | Lifecycle and Browser Acceptance | In progress |
+| 8 | Lifecycle and Browser Acceptance | Completed |
 
 ## Settled Decisions
 
@@ -258,3 +258,31 @@ assets. It does not own onboarding business logic.
   issuance normalizer before Voucher creation, producing the same execution
   driver and claim dependencies as single issuance.
 - Focused Campaign persistence, compilation, and frontend verification passes.
+
+### 2026-07-30 — Slice 8 completed
+
+- Added the deterministic `onboarding_voucher` lifecycle scenario.
+- The scenario issues and claims a canonical onboarding Pay Code, provisions
+  or reuses the recipient User and Account positions, and reports the
+  canonical `/x/claim/{code}` link without calling a payout provider.
+- Lifecycle preparation now synchronizes the active immutable x-commerce
+  catalog into wallet-backed instruction products after any configured legacy
+  seeder. This keeps `onboarding.enabled` priced and allocatable even while an
+  installed instruction-package release is being upgraded.
+- Corrected authentication-evidence redaction at the execution boundary:
+  raw OTP codes are removed, while the non-secret `verified` marker and
+  verification timestamp survive for Voucher contract validation.
+- The lifecycle proves the Voucher is consumed once, the recipient Mobile is
+  verified, the platform Account exists, Treasury positions are provisioned,
+  no provider call occurs, and no raw OTP is persisted.
+- Browser acceptance on the rebuilt production bundle confirms:
+  - **Set Up Recipient Account** is visible in Claim Requirements;
+  - Full Name, Mobile, and Email are selected and locked;
+  - sandbox OTP may remain optional for an unrestricted recipient;
+  - entering a specific Mobile immediately selects and locks OTP;
+  - the commercial estimate updates from ₱40.50 to ₱51.30 for local
+    onboarding, then to ₱55.00 when the Mobile-specific OTP safeguard applies.
+- Focused lifecycle, execution, normalization, pricing, workflow, and
+  authentication verification passes: 32 tests and 166 assertions.
+- Production asset build and Cockpit asset diagnostics pass. The known
+  third-party Rolldown pure-annotation warnings remain non-blocking.

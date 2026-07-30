@@ -287,11 +287,11 @@ class PrepareLifecycleEnvironmentCommand extends Command
             ]);
 
             $this->line(Artisan::output());
-
-            return;
+        } else {
+            $this->seedInstructionItemsFromPricingConfig();
         }
 
-        $this->seedInstructionItemsFromPricingConfig();
+        $this->seedInstructionItemsFromCommercialCatalog();
     }
 
     protected function seedInstructionItemsFromPricingConfig(): void
@@ -337,6 +337,38 @@ class PrepareLifecycleEnvironmentCommand extends Command
         }
 
         $this->info('Instruction items seeded from x-change.pricelist config.');
+    }
+
+    protected function seedInstructionItemsFromCommercialCatalog(): void
+    {
+        $catalog = (array) config('x-commerce.catalogs.pay_code.items', []);
+
+        foreach ($catalog as $index => $data) {
+            if (! is_string($index) || $index === '' || ! is_array($data)) {
+                continue;
+            }
+
+            DB::table('instruction_items')->updateOrInsert(
+                ['index' => $index],
+                [
+                    'name' => $this->inferInstructionItemName($index, $data),
+                    'type' => $this->inferInstructionItemType($index, $data),
+                    'price' => (int) ($data['unit_price_minor'] ?? 0),
+                    'currency' => (string) config('x-commerce.catalogs.pay_code.currency', 'PHP'),
+                    'meta' => json_encode([
+                        'label' => $data['label'] ?? null,
+                        'description' => $data['description'] ?? null,
+                        'category' => $data['category'] ?? 'other',
+                        'catalog_reference' => config('x-commerce.catalogs.pay_code.reference'),
+                        'catalog_version' => config('x-commerce.catalogs.pay_code.version'),
+                    ], JSON_UNESCAPED_SLASHES),
+                    'revenue_destination_type' => null,
+                    'revenue_destination_id' => null,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
     }
 
     /**

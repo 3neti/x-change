@@ -166,11 +166,19 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
         $inputs = (array) data_get($meta, 'inputs', []);
 
         Arr::forget($inputs, [
-            'otp',
             'otp_code',
+            'otp.code',
+            'otp.otp',
+            'otp.otp_code',
             'otp_verification.otp',
             'otp_verification.otp_code',
         ]);
+
+        if ($this->verifiedAt($inputs) !== null) {
+            data_set($inputs, 'otp.value', 'verified');
+            data_set($inputs, 'otp.verified', true);
+        }
+
         data_set($meta, 'inputs', $inputs);
 
         return new ExecutionContextData(

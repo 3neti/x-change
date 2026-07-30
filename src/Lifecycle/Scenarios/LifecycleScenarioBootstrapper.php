@@ -190,6 +190,7 @@ final class LifecycleScenarioBootstrapper
             'issuer_id' => $issuerId,
             'wallet_id' => $walletId,
             'provider' => data_get($scenario, 'provider'),
+            'onboarding' => data_get($scenario, 'onboarding.enabled', false),
 
             'cash' => [
                 'amount' => $amount,
