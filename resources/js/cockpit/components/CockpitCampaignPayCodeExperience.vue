@@ -10,11 +10,12 @@ import {
     ShieldCheck,
     Sparkles,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import voucherBlueprint from '@/routes/x-change/cockpit/campaigns/voucher-blueprint';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 
 type Blueprint = {
+    onboarding?: boolean;
     inputs?: { fields?: string[] };
     feedback?: { channels?: string[] };
     rider?: {
@@ -32,19 +33,25 @@ type Blueprint = {
     expiry_days?: number;
 };
 
-const props = defineProps<{
-    worksheetReference: string;
-    worksheetName: string;
-    fulfillmentMode: string;
-    status: string;
-    currency: string;
-    beneficiaryCount: number;
-    representativeAmountMinor?: number;
-    representativeRecipient?: string;
-    blueprint: Blueprint;
-    revision: number;
-    blueprintHash?: string | null;
-}>();
+const props = withDefaults(
+    defineProps<{
+        worksheetReference: string;
+        worksheetName: string;
+        fulfillmentMode: string;
+        status: string;
+        currency: string;
+        beneficiaryCount: number;
+        representativeAmountMinor?: number;
+        representativeRecipient?: string;
+        blueprint: Blueprint;
+        revision: number;
+        blueprintHash?: string | null;
+        onboardingOtpRequired?: boolean;
+    }>(),
+    {
+        onboardingOtpRequired: true,
+    },
+);
 
 type EditorKey = 'instructions' | 'stamp' | 'claim';
 const activeEditor = ref<EditorKey>('instructions');
@@ -54,8 +61,10 @@ const editorTabs = [
     ['claim', 'Claim', ShieldCheck],
 ] as const;
 const inputOptions = [
+    ['mobile', 'Mobile'],
     ['name', 'Name'],
     ['email', 'Email'],
+    ['otp', 'OTP'],
     ['reference_code', 'Reference'],
     ['kyc', 'Identity'],
     ['selfie', 'Selfie'],
@@ -79,6 +88,9 @@ const initialValidation = (key: string) => ({
 const form = useForm({
     expected_revision: props.revision,
     blueprint: {
+        onboarding:
+            props.blueprint.onboarding === true ||
+            props.blueprint.claim?.onboarding?.mode === 'required',
         inputs: { fields: [...(props.blueprint.inputs?.fields ?? [])] },
         feedback: {
             channels: [...(props.blueprint.feedback?.channels ?? [])],
@@ -124,11 +136,6 @@ const form = useForm({
             selfie: initialValidation('selfie'),
             signature: initialValidation('signature'),
         },
-        claim: {
-            onboarding: {
-                mode: props.blueprint.claim?.onboarding?.mode ?? 'if_required',
-            },
-        },
         expiry_days: props.blueprint.expiry_days ?? 7,
     },
 });
@@ -148,6 +155,55 @@ const requiredValidationLabels = computed(() =>
                 ].required,
         )
         .map(([, label]) => label),
+);
+const onboardingOtpEnforced = computed(
+    () =>
+        form.blueprint.onboarding &&
+        (props.onboardingOtpRequired !== false ||
+            /^(\+|09|639|63)/.test(props.representativeRecipient ?? '')),
+);
+
+function applyOnboardingDependencies(): void {
+    if (!form.blueprint.onboarding) {
+        return;
+    }
+
+    const enforceOtp =
+        props.onboardingOtpRequired !== false ||
+        /^(\+|09|639|63)/.test(props.representativeRecipient ?? '');
+    const fields = new Set(form.blueprint.inputs.fields);
+    fields.add('name');
+    fields.add('email');
+    fields.add('mobile');
+
+    if (enforceOtp) {
+        fields.add('otp');
+        form.blueprint.validation.otp.required = true;
+        form.blueprint.validation.otp.on_failure = 'block';
+    }
+
+    form.blueprint.inputs.fields = inputOptions
+        .map(([value]) => value)
+        .filter((field) => fields.has(field));
+}
+
+const onboardingLockedFields = computed<string[]>(() => {
+    if (!form.blueprint.onboarding) {
+        return [];
+    }
+
+    return [
+        'mobile',
+        'name',
+        'email',
+        ...(onboardingOtpEnforced.value ? ['otp'] : []),
+    ];
+});
+
+watch(
+    [() => form.blueprint.onboarding, onboardingOtpEnforced],
+    applyOnboardingDependencies,
+    { immediate: true, flush: 'sync' },
 );
 const instructionKeys = computed(() => [
     ...form.blueprint.inputs.fields,
@@ -433,6 +489,18 @@ function selectEditor(key: EditorKey): void {
                                         type="checkbox"
                                         :value="value"
                                         class="rounded border-slate-300 text-orange-600"
+                                        :disabled="
+                                            onboardingLockedFields.includes(
+                                                value,
+                                            )
+                                        "
+                                        :data-onboarding-locked="
+                                            onboardingLockedFields.includes(
+                                                value,
+                                            )
+                                                ? 'true'
+                                                : undefined
+                                        "
                                     />
                                     {{ label }}
                                 </label>
@@ -457,6 +525,10 @@ function selectEditor(key: EditorKey): void {
                                         "
                                         type="checkbox"
                                         class="rounded border-slate-300 text-orange-600"
+                                        :disabled="
+                                            value === 'otp' &&
+                                            onboardingOtpEnforced
+                                        "
                                     />
                                     {{ label }}
                                 </label>
@@ -464,21 +536,26 @@ function selectEditor(key: EditorKey): void {
                         </div>
                         <div class="grid gap-3 sm:grid-cols-2">
                             <label
-                                class="grid gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                                class="flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100"
+                                data-testid="campaign-onboarding-toggle"
                             >
-                                Onboarding
-                                <select
-                                    v-model="
-                                        form.blueprint.claim.onboarding.mode
-                                    "
-                                    class="rounded-xl border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                >
-                                    <option value="never">Never</option>
-                                    <option value="if_required">
-                                        When Required
-                                    </option>
-                                    <option value="required">Always</option>
-                                </select>
+                                <span class="grid gap-0.5">
+                                    <span class="font-semibold">
+                                        Set Up Recipient Accounts
+                                    </span>
+                                    <span
+                                        class="font-normal text-emerald-700 dark:text-emerald-300"
+                                    >
+                                        Apply onboarding to every beneficiary
+                                        Pay Code.
+                                    </span>
+                                </span>
+                                <input
+                                    v-model="form.blueprint.onboarding"
+                                    type="checkbox"
+                                    class="mt-0.5 rounded border-emerald-300 text-emerald-600"
+                                    @change="applyOnboardingDependencies"
+                                />
                             </label>
                             <label
                                 class="grid gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300"

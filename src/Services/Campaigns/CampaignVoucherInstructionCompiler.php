@@ -9,12 +9,14 @@ use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
+use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 use RuntimeException;
 
 final readonly class CampaignVoucherInstructionCompiler
 {
     public function __construct(
         private CampaignVoucherInstructionBlueprintSanitizer $sanitizer,
+        private VoucherIssuancePayloadNormalizer $normalizer,
     ) {}
 
     /**
@@ -42,7 +44,12 @@ final readonly class CampaignVoucherInstructionCompiler
             : [];
         $feedbackChannels = data_get($blueprint, 'feedback.channels', []);
 
+        $onboarding = array_key_exists('onboarding', $blueprint)
+            ? $blueprint['onboarding'] === true
+            : data_get($blueprint, 'claim.onboarding.mode') === 'required';
+
         $instructions = [
+            'onboarding' => $onboarding,
             'cash' => [
                 'amount' => $row->amount_minor / 100,
                 'currency' => $row->currency,
@@ -103,6 +110,7 @@ final readonly class CampaignVoucherInstructionCompiler
             ],
         ];
 
+        $instructions = $this->normalizer->normalize($instructions);
         VoucherInstructionsData::createFromAttribs($instructions);
 
         return $instructions;

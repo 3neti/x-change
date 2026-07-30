@@ -443,6 +443,66 @@ describe('Cockpit campaign worksheets', () => {
         );
     });
 
+    it('propagates account onboarding as a locked campaign-wide instruction', async () => {
+        const wrapper = mount(CockpitCampaignPayCodeExperience, {
+            props: {
+                worksheetReference: worksheet.reference,
+                worksheetName: worksheet.name,
+                fulfillmentMode: worksheet.fulfillment_mode,
+                status: 'draft',
+                currency: 'PHP',
+                beneficiaryCount: 2,
+                representativeAmountMinor: 12_500,
+                representativeRecipient: '',
+                blueprint: {},
+                revision: 0,
+                onboardingOtpRequired: true,
+            },
+        });
+
+        const claimTab = wrapper
+            .findAll('button')
+            .find((button) => button.text().trim() === 'Claim');
+
+        expect(claimTab).toBeDefined();
+        await claimTab?.trigger('click');
+        await wrapper
+            .get('[data-testid="campaign-onboarding-toggle"] input')
+            .setValue(true);
+        await wrapper.vm.$nextTick();
+
+        const form = (
+            wrapper.vm as unknown as {
+                form: {
+                    blueprint: {
+                        onboarding: boolean;
+                        inputs: { fields: string[] };
+                        validation: {
+                            otp: {
+                                required: boolean;
+                                on_failure: string;
+                            };
+                        };
+                    };
+                };
+            }
+        ).form;
+
+        expect(form.blueprint.onboarding).toBe(true);
+        expect(form.blueprint.inputs.fields).toEqual([
+            'mobile',
+            'name',
+            'email',
+            'otp',
+        ]);
+        expect(form.blueprint.validation.otp).toEqual({
+            required: true,
+            on_failure: 'block',
+        });
+
+        expect(form.blueprint).not.toHaveProperty('claim');
+    });
+
     it('offers destructive deletion only for drafts and requires confirmation', async () => {
         const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
         const wrapper = mount(Campaigns, {

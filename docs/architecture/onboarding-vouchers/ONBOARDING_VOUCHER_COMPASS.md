@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Slice 7 — Template and Campaign Propagation
-Status: Slice 6 complete; Slice 7 in progress
+Current slice: Slice 8 — Lifecycle and Browser Acceptance
+Status: Slice 7 complete; Slice 8 in progress
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -38,8 +38,8 @@ Last updated: 2026-07-30
 | 4 | Generic Claim Authentication Handoff | Completed |
 | 5 | Account-Provisioning Execution Driver | Completed |
 | 6 | Issuance Dependency UX | Completed |
-| 7 | Template and Campaign Propagation | In progress |
-| 8 | Lifecycle and Browser Acceptance | Pending |
+| 7 | Template and Campaign Propagation | Completed |
+| 8 | Lifecycle and Browser Acceptance | In progress |
 
 ## Settled Decisions
 
@@ -243,3 +243,18 @@ assets. It does not own onboarding business logic.
   secrets, and authentication internals remain server-side.
 - Focused page and frontend verification passes: 8 tests and 16 backend
   assertions.
+
+### 2026-07-30 — Slice 7 completed
+
+- Saved personal templates and Last Pay Code reuse retain the canonical
+  `onboarding` flag because they consume the same Quick Generate payload.
+- Campaign worksheets now author the same boolean instead of encoding new
+  behavior through `claim.onboarding.mode`.
+- Campaign onboarding locks Full Name, Email, Mobile, and the effective OTP
+  safeguard for every beneficiary Pay Code.
+- Frozen legacy Campaign blueprints retain their historical shape and remain
+  readable; only legacy `required` maps to canonical onboarding.
+- Beneficiary issuance now passes the frozen blueprint through the shared
+  issuance normalizer before Voucher creation, producing the same execution
+  driver and claim dependencies as single issuance.
+- Focused Campaign persistence, compilation, and frontend verification passes.

@@ -43,6 +43,7 @@ class UpdateCampaignVoucherBlueprintRequest extends FormRequest
         return [
             'expected_revision' => ['required', 'integer', 'min:0'],
             'blueprint' => ['required', 'array'],
+            'blueprint.onboarding' => ['nullable', 'boolean'],
             'blueprint.expiry_days' => ['required', 'integer', 'between:1,365'],
             'blueprint.inputs' => ['required', 'array'],
             'blueprint.inputs.fields' => ['present', 'array', 'max:12'],
@@ -89,9 +90,9 @@ class UpdateCampaignVoucherBlueprintRequest extends FormRequest
             'blueprint.validation.signature' => ['nullable', 'array'],
             'blueprint.validation.signature.required' => ['required_with:blueprint.validation.signature', 'boolean'],
             'blueprint.validation.signature.on_failure' => ['required_with:blueprint.validation.signature', Rule::in(['block', 'warn'])],
-            'blueprint.claim' => ['required', 'array'],
-            'blueprint.claim.onboarding' => ['required', 'array'],
-            'blueprint.claim.onboarding.mode' => ['required', Rule::in(['never', 'if_required', 'required'])],
+            'blueprint.claim' => ['nullable', 'array'],
+            'blueprint.claim.onboarding' => ['nullable', 'array'],
+            'blueprint.claim.onboarding.mode' => ['nullable', Rule::in(['never', 'if_required', 'required'])],
         ];
     }
 }

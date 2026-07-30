@@ -71,6 +71,7 @@ class CockpitCampaignWorksheetController extends Controller
             'authorization' => $this->authorizationFor($worksheet, $request->user()),
             'fulfillments' => $this->fulfillmentsFor($worksheet, $request->user()),
             'direct_bank_transfer_enabled' => (bool) config('x-change.campaigns.netbank_dispatch.enabled', false),
+            'onboarding_otp_required' => (bool) config('x-change.onboarding.voucher.require_otp', true),
             'delivery' => $this->deliveryFor($worksheet, $request->user()),
         ]);
     }

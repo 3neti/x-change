@@ -82,6 +82,7 @@ type Props = CockpitHeaderPageProps & {
     authorization: Authorization;
     fulfillments: Fulfillment[];
     direct_bank_transfer_enabled: boolean;
+    onboarding_otp_required?: boolean;
     delivery: Delivery;
 };
 const props = defineProps<Props>();
@@ -325,6 +326,7 @@ const sendApproval = (): void => {
                 :blueprint="props.worksheet.instruction_blueprint"
                 :revision="props.worksheet.instruction_blueprint_revision"
                 :blueprint-hash="props.worksheet.instruction_blueprint_hash"
+                :onboarding-otp-required="props.onboarding_otp_required ?? true"
             />
 
             <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">

@@ -98,13 +98,20 @@ final class CampaignVoucherInstructionBlueprintSanitizer
             ['onboarding'],
         );
 
-        return [
+        $blueprint = [
             'inputs' => ['fields' => $fields],
             'feedback' => ['channels' => $channels],
             'rider' => $rider,
             'validation' => $validation,
-            'claim' => $claim,
             'expiry_days' => max(1, min(365, (int) ($input['expiry_days'] ?? 7))),
         ];
+
+        if (array_key_exists('onboarding', $input)) {
+            $blueprint['onboarding'] = $input['onboarding'] === true;
+        } else {
+            $blueprint['claim'] = $claim;
+        }
+
+        return $blueprint;
     }
 }

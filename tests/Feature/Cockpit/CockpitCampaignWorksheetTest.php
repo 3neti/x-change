@@ -153,7 +153,7 @@ it('lets only the draft owner save one encrypted Pay Code experience for every b
                 'selfie' => ['required' => false, 'on_failure' => 'block'],
                 'signature' => ['required' => false, 'on_failure' => 'block'],
             ],
-            'claim' => ['onboarding' => ['mode' => 'if_required']],
+            'onboarding' => true,
             'expiry_days' => 14,
         ],
     ])->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
@@ -169,6 +169,7 @@ it('lets only the draft owner save one encrypted Pay Code experience for every b
         ->value('instruction_blueprint_ciphertext');
 
     expect($stored?->instructionBlueprintRevision)->toBe(1)
+        ->and($stored?->instructionBlueprint['onboarding'])->toBeTrue()
         ->and($stored?->instructionBlueprint['rider']['message'])->toBe('July salary')
         ->and($stored?->instructionBlueprint)->not->toHaveKeys(['cash', 'execution'])
         ->and($stored?->instructionBlueprint['rider']['splash'])->not->toContain('<script')
@@ -796,7 +797,7 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
             ],
             'inputs' => ['fields' => ['name']],
             'feedback' => ['channels' => ['mobile']],
-            'claim' => ['onboarding' => ['mode' => 'if_required']],
+            'onboarding' => true,
             'expiry_days' => 14,
         ],
         'x-change.campaign-voucher-blueprint.v1',
@@ -836,6 +837,9 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
         ->and($issuedVouchers)->toHaveCount(2)
         ->and(data_get($issuedVouchers[0]->instructions, 'rider.message'))->toBe('July salary')
         ->and(data_get($issuedVouchers[0]->instructions, 'rider.url'))->toBe('https://example.test/payroll')
+        ->and(data_get($issuedVouchers[0]->instructions, 'onboarding'))->toBeTrue()
+        ->and(data_get($issuedVouchers[0]->instructions, 'execution.driver'))->toBe('onboarding_account_provisioning')
+        ->and(data_get($issuedVouchers[1]->instructions, 'onboarding'))->toBeTrue()
         ->and(data_get($issuedVouchers[0]->instructions, 'inputs.fields.0')->value)->toBe('name')
         ->and(data_get($issuedVouchers[0]->instructions, 'feedback.mobile'))->not->toBeNull()
         ->and($authorization->fulfillments->first()->metadata['instruction_blueprint_hash'])
