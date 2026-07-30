@@ -208,6 +208,11 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('data-testid="campaign-fulfillment-readiness"');
         expect(page).toContain('Authorized Beneficiaries');
         expect(page).toContain('<CockpitCampaignWorksheetBeneficiaries');
+        expect(page).toContain("isDraft() ? 'Worksheet' : 'Authorized Worksheet'");
+        expect(page).not.toContain('Private Worksheet');
+        expect(page.indexOf('<CockpitCampaignWorksheetBeneficiaries')).toBeLessThan(
+            page.indexOf('<CockpitCampaignImportWorkspace'),
+        );
         expect(page).toContain("v-if=\"isDraft()\"");
         expect(page).toContain('Pay Codes Issued');
         expect(page).toContain('Direct Bank Transfer Is Not Enabled');
