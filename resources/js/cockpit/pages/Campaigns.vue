@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { ClipboardList, FileSpreadsheet, Plus, Send, Trash2, Upload, Users } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
 import CockpitCampaignIntakeDialog from '../components/CockpitCampaignIntakeDialog.vue';
@@ -124,6 +124,35 @@ function pasteIntake(event: ClipboardEvent): void {
     submitPastedIntake(event.clipboardData?.getData('text/plain') ?? '');
 }
 
+function isEditablePasteTarget(target: EventTarget | null): boolean {
+    return target instanceof Element
+        && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]') !== null;
+}
+
+function looksLikeBeneficiaryRows(text: string): boolean {
+    const header = text.trim().split(/\r?\n/, 1)[0]?.toLowerCase() ?? '';
+
+    return /[,;\t]/.test(header)
+        && /\b(amount|value)\b/.test(header)
+        && /\b(name|mobile|phone|bank|account|email)\b/.test(header)
+        && text.trim().includes('\n');
+}
+
+function pasteIntakeFromPage(event: ClipboardEvent): void {
+    if (intakeForm.processing || event.defaultPrevented || isEditablePasteTarget(event.target)) {
+        return;
+    }
+
+    const text = event.clipboardData?.getData('text/plain') ?? '';
+
+    if (!looksLikeBeneficiaryRows(text)) {
+        return;
+    }
+
+    event.preventDefault();
+    submitPastedIntake(text);
+}
+
 function dropIntake(event: DragEvent): void {
     intakeDragDepth.value = 0;
     isDraggingIntake.value = false;
@@ -148,6 +177,9 @@ function dropIntake(event: DragEvent): void {
 
     submitPastedIntake(event.dataTransfer?.getData('text/plain') ?? '');
 }
+
+onMounted(() => window.addEventListener('paste', pasteIntakeFromPage));
+onBeforeUnmount(() => window.removeEventListener('paste', pasteIntakeFromPage));
 
 function createWorksheet(): void {
     form.post(store(), {
@@ -325,7 +357,7 @@ function dateTime(value: string | null): string {
                             @dragover.prevent
                             @dragleave.prevent="endIntakeDrag"
                             @drop.prevent="dropIntake"
-                            @paste.prevent="pasteIntake"
+                            @paste.stop.prevent="pasteIntake"
                         >
                             <span class="inline-flex size-10 items-center justify-center rounded-full bg-white text-sky-600 shadow-sm dark:bg-slate-900 dark:text-sky-300">
                                 <Upload class="size-5" aria-hidden="true" />
@@ -334,7 +366,7 @@ function dateTime(value: string | null): string {
                                 {{ intakeForm.processing ? 'Inspecting Beneficiaries…' : isDraggingIntake ? 'Drop To Inspect' : 'Drop A File Or Paste Rows' }}
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {{ intakeForm.processing ? 'Preparing a private review. Nothing is added yet.' : 'Click here and press Ctrl/⌘ + V' }}
+                                {{ intakeForm.processing ? 'Preparing a private review. Nothing is added yet.' : 'Press Ctrl/⌘ + V anywhere on this page' }}
                             </p>
                             <button
                                 v-if="!intakeForm.processing"

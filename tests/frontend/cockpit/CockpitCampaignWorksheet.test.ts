@@ -104,6 +104,52 @@ describe('Cockpit campaign worksheets', () => {
         expect(intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
     });
 
+    it('accepts beneficiary CSV pasted anywhere except editable controls', () => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+            },
+        });
+        const component = wrapper.vm as unknown as {
+            intakeForm: {
+                file: File | null;
+                post: (...args: unknown[]) => void;
+            };
+            pasteIntakeFromPage: (event: ClipboardEvent) => void;
+        };
+        const post = vi.spyOn(component.intakeForm, 'post').mockImplementation(() => undefined);
+        const csv = [
+            'name,bank,account number,amount',
+            'Maria Santos,BDO,001234567890,1000.00',
+        ].join('\n');
+        const preventDefault = vi.fn();
+
+        component.pasteIntakeFromPage({
+            target: document.body,
+            defaultPrevented: false,
+            clipboardData: {
+                getData: vi.fn().mockReturnValue(csv),
+            },
+            preventDefault,
+        } as unknown as ClipboardEvent);
+
+        expect(preventDefault).toHaveBeenCalledOnce();
+        expect(post).toHaveBeenCalledOnce();
+        expect(component.intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
+
+        component.pasteIntakeFromPage({
+            target: document.createElement('input'),
+            defaultPrevented: false,
+            clipboardData: {
+                getData: vi.fn().mockReturnValue(csv),
+            },
+            preventDefault,
+        } as unknown as ClipboardEvent);
+
+        expect(post).toHaveBeenCalledOnce();
+        wrapper.unmount();
+    });
+
     it('opens an explicit intake review with suggested choices and row controls', () => {
         const wrapper = mount(Campaigns, {
             props: {
