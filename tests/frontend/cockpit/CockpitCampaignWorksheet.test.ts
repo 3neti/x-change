@@ -41,9 +41,9 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).not.toContain('Maria Santos');
         expect(wrapper.text()).toContain('Payment Batches');
         expect(wrapper.text()).toContain('Continue');
-        expect(wrapper.text()).toContain('Import Beneficiary List');
+        expect(wrapper.text()).toContain('Add Recipient List');
         expect(wrapper.text()).toContain('Drop A File Or Paste Rows');
-        expect(wrapper.text()).toContain('Choose CSV Or Excel');
+        expect(wrapper.text()).toContain('Choose File');
         expect(
             wrapper
                 .find('[data-testid="campaign-import-drop-zone"]')
@@ -56,7 +56,7 @@ describe('Cockpit campaign worksheets', () => {
                 )
                 .exists(),
         ).toBe(false);
-        expect(wrapper.text()).toContain('Start Blank');
+        expect(wrapper.text()).toContain('Start Empty');
     });
 
     it('requests approval from Payment Batches through the existing authorization route', async () => {
@@ -156,7 +156,7 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(post).toHaveBeenCalledOnce();
         expect(intakeForm.file).toBeInstanceOf(File);
-        expect(intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
+        expect(intakeForm.file?.name).toBe('pasted-recipients.csv');
         expect(intakeForm.file?.type).toBe('text/csv');
 
         await wrapper
@@ -169,7 +169,7 @@ describe('Cockpit campaign worksheets', () => {
             });
 
         expect(post).toHaveBeenCalledTimes(2);
-        expect(intakeForm.file?.name).toBe('pasted-beneficiaries.csv');
+        expect(intakeForm.file?.name).toBe('pasted-recipients.csv');
     });
 
     it('accepts beneficiary CSV pasted anywhere except editable controls', () => {
@@ -205,9 +205,7 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(preventDefault).toHaveBeenCalledOnce();
         expect(post).toHaveBeenCalledOnce();
-        expect(component.intakeForm.file?.name).toBe(
-            'pasted-beneficiaries.csv',
-        );
+        expect(component.intakeForm.file?.name).toBe('pasted-recipients.csv');
 
         component.pasteIntakeFromPage({
             target: document.createElement('input'),
@@ -464,7 +462,7 @@ describe('Cockpit campaign worksheets', () => {
         expect(
             wrapper.find('[data-testid="cockpit-campaigns-page"]').exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Import Beneficiary List');
+        expect(wrapper.text()).toContain('Add Recipient List');
     });
 
     it('makes the planned post-approval state explicit before beneficiary issuance', () => {

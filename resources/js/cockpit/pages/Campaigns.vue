@@ -117,13 +117,13 @@ function submitPastedIntake(text: string): void {
 
     if (csv === '' || !csv.includes('\n')) {
         intakeFileError.value =
-            'Paste CSV rows with a header and at least one beneficiary.';
+            'Paste rows with a header and at least one recipient.';
 
         return;
     }
 
     submitIntakeFile(
-        new File([`${csv}\n`], 'pasted-beneficiaries.csv', {
+        new File([`${csv}\n`], 'pasted-recipients.csv', {
             type: 'text/csv',
         }),
     );
@@ -187,7 +187,7 @@ function dropIntake(event: DragEvent): void {
     const files = Array.from(event.dataTransfer?.files ?? []);
 
     if (files.length > 1) {
-        intakeFileError.value = 'Choose one beneficiary file at a time.';
+        intakeFileError.value = 'Choose one recipient file at a time.';
 
         return;
     }
@@ -571,29 +571,28 @@ function dateTime(value: string | null): string {
                                 <p
                                     class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                                 >
-                                    New Campaign
+                                    New Batch
                                 </p>
                                 <h2
                                     class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
                                 >
-                                    Import Beneficiary List
+                                    Add Recipient List
                                 </h2>
                             </div>
                         </div>
                         <p
                             class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300"
                         >
-                            Upload a file or paste copied CSV rows. We’ll
-                            suggest the purpose and recipient method before
-                            creating anything.
+                            Drop a file or paste copied rows. Review everything
+                            before creating the batch.
                         </p>
                         <div
                             data-testid="campaign-import-drop-zone"
                             role="group"
                             :tabindex="intakeForm.processing ? -1 : 0"
                             :aria-disabled="intakeForm.processing"
-                            aria-label="Import beneficiary list from CSV, Excel, or pasted rows"
-                            class="mt-4 flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-6 text-center transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+                            aria-label="Add a recipient list from CSV, Excel, or pasted rows"
+                            class="mt-3 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-5 text-center transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
                             :class="
                                 isDraggingIntake
                                     ? 'border-sky-500 bg-sky-50 ring-4 ring-sky-100 dark:border-sky-400 dark:bg-sky-950/40 dark:ring-sky-950'
@@ -618,7 +617,7 @@ function dateTime(value: string | null): string {
                             >
                                 {{
                                     intakeForm.processing
-                                        ? 'Inspecting Beneficiaries…'
+                                        ? 'Reading Recipients…'
                                         : isDraggingIntake
                                           ? 'Drop To Inspect'
                                           : 'Drop A File Or Paste Rows'
@@ -629,7 +628,7 @@ function dateTime(value: string | null): string {
                             >
                                 {{
                                     intakeForm.processing
-                                        ? 'Preparing a private review. Nothing is added yet.'
+                                        ? 'Preparing your review.'
                                         : 'Press Ctrl/⌘ + V anywhere on this page'
                                 }}
                             </p>
@@ -640,7 +639,7 @@ function dateTime(value: string | null): string {
                                 @click.stop="openIntakeFilePicker"
                             >
                                 <Upload class="size-3.5" aria-hidden="true" />
-                                Choose CSV Or Excel
+                                Choose File
                             </button>
                             <p
                                 class="mt-3 text-[0.65rem] font-semibold tracking-[0.14em] text-slate-400 uppercase dark:text-slate-500"
@@ -679,12 +678,12 @@ function dateTime(value: string | null): string {
                                     <p
                                         class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                                     >
-                                        Start Blank
+                                        Start Empty
                                     </p>
                                     <h2
                                         class="mt-0.5 text-sm font-semibold text-slate-950 dark:text-slate-50"
                                     >
-                                        Create An Empty Campaign
+                                        Start Empty Batch
                                     </h2>
                                 </div>
                             </div>
@@ -702,12 +701,12 @@ function dateTime(value: string | null): string {
                                     <p
                                         class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
                                     >
-                                        New Campaign
+                                        New Batch
                                     </p>
                                     <h2
                                         class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
                                     >
-                                        Create A Worksheet
+                                        Batch Details
                                     </h2>
                                 </div>
                             </div>
@@ -716,7 +715,7 @@ function dateTime(value: string | null): string {
                                 <label
                                     class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
                                 >
-                                    Campaign name
+                                    Batch Name
                                     <input
                                         v-model="form.name"
                                         type="text"
@@ -734,7 +733,7 @@ function dateTime(value: string | null): string {
                                 <label
                                     class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
                                 >
-                                    Profile
+                                    Type
                                     <select
                                         v-model="form.profile"
                                         class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm transition outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
@@ -749,7 +748,7 @@ function dateTime(value: string | null): string {
                                 <label
                                     class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
                                 >
-                                    Intended fulfillment
+                                    Payment Method
                                     <select
                                         v-model="form.fulfillment_mode"
                                         class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm transition outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
@@ -773,13 +772,13 @@ function dateTime(value: string | null): string {
                                 {{
                                     form.processing
                                         ? 'Creating…'
-                                        : 'Create Worksheet'
+                                        : 'Create Batch'
                                 }}
                             </button>
                             <p
                                 class="mt-2 text-center text-xs leading-4 text-slate-500 dark:text-slate-400"
                             >
-                                No beneficiaries or funds are added yet.
+                                Begins as a draft.
                             </p>
                         </form>
                     </details>
