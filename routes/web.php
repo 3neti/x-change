@@ -68,6 +68,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitStandingFundingReceipt
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
+use LBHurtado\XChange\Http\Controllers\Web\Onboarding\InitialPinSetupController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationChallengeController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationSubmissionController;
@@ -102,6 +103,11 @@ Route::get('x/claim/{code}/share-card.png', ClaimShareCardController::class)
 
 // Authenticated operator routes
 Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
+    Route::get('onboarding/pin', [InitialPinSetupController::class, 'show'])
+        ->name('x-change.onboarding.pin.show');
+    Route::put('onboarding/pin', [InitialPinSetupController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('x-change.onboarding.pin.store');
     Route::get('onboarding/mobile/verify', MobileVerificationPageController::class)
         ->name('x-change.onboarding.mobile-verification.show');
     Route::post('onboarding/mobile/challenge', MobileVerificationChallengeController::class)

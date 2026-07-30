@@ -17,7 +17,7 @@ use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\ModelChannel\Traits\HasChannels;
 use LBHurtado\Wallet\Traits\HasPlatformWallets;
 
-#[Fillable(['name', 'mobile', 'mobile_verified_at', 'email', 'password'])]
+#[Fillable(['name', 'mobile', 'mobile_verified_at', 'email', 'password', 'onboarding_meta'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements Customer, HasMobileChannel
 {
@@ -40,6 +40,7 @@ class User extends Authenticatable implements Customer, HasMobileChannel
         return [
             'email_verified_at' => 'datetime',
             'mobile_verified_at' => 'datetime',
+            'onboarding_meta' => 'array',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];

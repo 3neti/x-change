@@ -26,6 +26,10 @@ return new class extends Migration
             if (! Schema::hasColumn('users', 'mobile_verified_at')) {
                 $table->timestamp('mobile_verified_at')->nullable();
             }
+
+            if (! Schema::hasColumn('users', 'onboarding_meta')) {
+                $table->json('onboarding_meta')->nullable();
+            }
         });
     }
 
@@ -42,7 +46,7 @@ return new class extends Migration
                 $table->dropColumn('country');
             }
 
-            foreach (['mobile_verified_at', 'mobile', 'metadata'] as $column) {
+            foreach (['onboarding_meta', 'mobile_verified_at', 'mobile', 'metadata'] as $column) {
                 if (Schema::hasColumn('users', $column)) {
                     $table->dropColumn($column);
                 }

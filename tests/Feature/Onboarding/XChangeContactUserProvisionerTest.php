@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
+use LBHurtado\XChange\Services\Onboarding\AccountPinSetupState;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -23,7 +24,8 @@ it('creates one Account and reuses it on an idempotent onboarding retry', functi
             skippedConnections: [],
         ));
 
-    $service = new XChangeContactUserProvisioner($wallets, $portfolios);
+    $pinSetup = app(AccountPinSetupState::class);
+    $service = new XChangeContactUserProvisioner($wallets, $portfolios, $pinSetup);
     $contact = (object) ['mobile' => '09173011987'];
     $attributes = [
         'name' => 'Maria Santos',
@@ -40,7 +42,8 @@ it('creates one Account and reuses it on an idempotent onboarding retry', functi
         ->and($replayed->meta['reused'])->toBeTrue()
         ->and($created->user->is($replayed->user))->toBeTrue()
         ->and(User::query()->where('mobile', '639173011987')->count())->toBe(1)
-        ->and($created->user->getAttribute('mobile_verified_at'))->not->toBeNull();
+        ->and($created->user->getAttribute('mobile_verified_at'))->not->toBeNull()
+        ->and($pinSetup->isRequired($created->user->fresh()))->toBeTrue();
 });
 
 it('fails closed when an Email belongs to another Account', function () {
@@ -56,7 +59,11 @@ it('fails closed when an Email belongs to another Account', function () {
     $portfolios = Mockery::mock(TreasuryAccountPortfolioProvisioningContract::class);
     $portfolios->shouldNotReceive('provision');
 
-    $service = new XChangeContactUserProvisioner($wallets, $portfolios);
+    $service = new XChangeContactUserProvisioner(
+        $wallets,
+        $portfolios,
+        app(AccountPinSetupState::class),
+    );
 
     expect(fn () => $service->provision(
         (object) ['mobile' => '09173011987'],

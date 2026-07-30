@@ -21,6 +21,7 @@ final readonly class XChangeContactUserProvisioner implements ContactUserProvisi
     public function __construct(
         private WalletProvisioningContract $wallets,
         private TreasuryAccountPortfolioProvisioningContract $accountPortfolios,
+        private AccountPinSetupState $pinSetup,
     ) {}
 
     /**
@@ -87,6 +88,10 @@ final readonly class XChangeContactUserProvisioner implements ContactUserProvisi
             }
 
             $user->save();
+
+            if (! $reused) {
+                $this->pinSetup->markRequired($user);
+            }
 
             $this->wallets->open($user, [
                 'wallet' => [

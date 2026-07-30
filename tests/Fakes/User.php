@@ -37,12 +37,14 @@ class User extends Authenticatable implements Confirmable, Customer, HasLifecycl
         'password',
         'country',
         'metadata',
+        'onboarding_meta',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'metadata' => 'array',
+        'onboarding_meta' => 'array',
     ];
 
     /**

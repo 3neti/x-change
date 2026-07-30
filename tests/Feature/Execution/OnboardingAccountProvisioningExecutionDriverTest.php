@@ -18,6 +18,7 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
 use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
+use LBHurtado\XChange\Services\Onboarding\AccountPinSetupState;
 use LBHurtado\XChange\Services\Onboarding\OnboardingVoucherClaimantAuthenticator;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
@@ -218,7 +219,11 @@ it('rolls back a newly provisioned Account when Voucher redemption fails', funct
         ->andReturn(ExecutionResultData::failed('default', 'compatibility_redemption_rejected'));
 
     $driver = new OnboardingAccountProvisioningExecutionDriver(
-        new PromoteContactToUser(new XChangeContactUserProvisioner($wallets, $portfolios)),
+        new PromoteContactToUser(new XChangeContactUserProvisioner(
+            $wallets,
+            $portfolios,
+            app(AccountPinSetupState::class),
+        )),
         $defaultDriver,
         app(DispatchVoucherClaimOutcome::class),
         app(OnboardingVoucherClaimantAuthenticator::class),

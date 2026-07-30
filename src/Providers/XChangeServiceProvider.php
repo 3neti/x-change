@@ -208,6 +208,7 @@ use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Exceptions\VoucherFlowCapabilityException;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Http\Middleware\RequireInitialPinSetup;
 use LBHurtado\XChange\Http\Responses\MobileFirstRegisterResponse;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
@@ -1035,6 +1036,7 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->bootInitialPinSetupGuard();
         $this->decorateOnboardingCompletionHook();
         $this->prependExecutionAwarePostRedemptionGate();
         $this->bootConfig();
@@ -1108,6 +1110,18 @@ class XChangeServiceProvider extends ServiceProvider
         Event::listen(
             DisbursementConfirmed::class,
             HandleConfirmedDisbursement::class
+        );
+    }
+
+    protected function bootInitialPinSetupGuard(): void
+    {
+        if (! $this->mobileFirstAuthEnabled()) {
+            return;
+        }
+
+        $this->app['router']->pushMiddlewareToGroup(
+            'web',
+            RequireInitialPinSetup::class,
         );
     }
 
