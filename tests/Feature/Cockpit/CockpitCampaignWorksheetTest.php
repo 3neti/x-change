@@ -191,6 +191,37 @@ it('does not create duplicate campaigns when the same intake conversion is repla
         ->toHaveCount(1);
 });
 
+it('restages an uploaded file when its previously converted draft was deleted', function () {
+    $owner = actingAsTestUser();
+    $contents = "mobile,amount\n09173011987,100.00\n";
+    $upload = fn (): UploadedFile => UploadedFile::fake()->createWithContent('beneficiaries.csv', $contents);
+
+    $this->post(route('x-change.cockpit.campaigns.intakes.store'), ['file' => $upload()]);
+    $intake = app(CampaignWorksheetIntakeRepository::class)
+        ->activeForOwner($owner->getMorphClass(), (string) $owner->getKey());
+    $this->post(route('x-change.cockpit.campaigns.intakes.convert', $intake?->reference), [
+        'name' => 'Deleted Import Campaign',
+        'profile' => 'payroll',
+        'fulfillment_mode' => 'pay_code_distribution',
+        'included_source_rows' => [2],
+        'exclude_invalid_rows' => false,
+    ])->assertRedirect();
+    $worksheet = app(CampaignWorksheetRepository::class)
+        ->summariesForOwner($owner->getMorphClass(), (string) $owner->getKey())[0];
+    $this->delete(route('x-change.cockpit.campaigns.destroy', $worksheet->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.index'));
+
+    $this->post(route('x-change.cockpit.campaigns.intakes.store'), ['file' => $upload()])
+        ->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice', 'Review the suggested Campaign and beneficiary rows before adding them.');
+
+    $restaged = app(CampaignWorksheetIntakeRepository::class)
+        ->activeForOwner($owner->getMorphClass(), (string) $owner->getKey());
+
+    expect($restaged?->status)->toBe('staged')
+        ->and($restaged?->reference)->not->toBe($intake?->reference);
+});
+
 it('lets the owner delete a draft campaign and its working data', function () {
     $owner = actingAsTestUser();
     $repository = app(CampaignWorksheetRepository::class);
