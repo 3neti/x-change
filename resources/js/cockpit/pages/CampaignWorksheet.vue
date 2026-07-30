@@ -335,34 +335,28 @@ const sendApproval = (): void => {
                         class="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
                     >
                         <div>
-                            <p
-                                class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
-                            >
-                                {{
-                                    isDraft()
-                                        ? 'Draft Beneficiaries'
-                                        : 'Authorized Beneficiaries'
-                                }}
-                            </p>
-                            <h2
-                                class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50"
-                            >
-                                {{
-                                    isDraft()
-                                        ? 'Worksheet'
-                                        : 'Authorized Worksheet'
-                                }}
-                            </h2>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h2
+                                    class="font-semibold text-slate-950 dark:text-slate-50"
+                                >
+                                    Recipients
+                                </h2>
+                                <span
+                                    class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                >
+                                    {{ isDraft() ? 'Draft' : 'Authorized' }}
+                                </span>
+                            </div>
                             <p
                                 v-if="isDraft()"
                                 class="mt-1 text-xs text-slate-500 dark:text-slate-400"
                             >
                                 {{
                                     props.worksheet.rows.length === 0
-                                        ? 'Add at least one beneficiary before approval.'
+                                        ? 'Add at least one recipient.'
                                         : hasPendingImportRows
-                                          ? 'Review or discard the pending beneficiary import first.'
-                                          : 'Ready to lock for officer authorization.'
+                                          ? 'Finish or discard the pending import.'
+                                          : `${props.worksheet.rows.length} ${props.worksheet.rows.length === 1 ? 'recipient' : 'recipients'} ready for approval.`
                                 }}
                             </p>
                         </div>
@@ -381,8 +375,8 @@ const sendApproval = (): void => {
                             <LockKeyhole class="size-4" />
                             {{
                                 authorizationForm.processing
-                                    ? 'Creating…'
-                                    : 'Create Approval Pay Code'
+                                    ? 'Preparing…'
+                                    : 'Request Approval'
                             }}
                         </button>
                     </div>
@@ -400,15 +394,10 @@ const sendApproval = (): void => {
                     <div class="flex items-center gap-2">
                         <Plus class="size-4 text-slate-500" />
                         <div>
-                            <p
-                                class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
-                            >
-                                Add Beneficiary
-                            </p>
                             <h2
-                                class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50"
+                                class="font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Recipient Details
+                                Add Recipient
                             </h2>
                         </div>
                     </div>
@@ -434,16 +423,16 @@ const sendApproval = (): void => {
                                 class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label
                         ><label
                             class="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
-                            >Mobile Or Bank Destination
+                            >Destination
                             <input
                                 v-model="form.mobile"
-                                placeholder="Mobile"
+                                placeholder="Mobile number"
                                 class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /><input
                                 v-model="form.bank_account"
                                 placeholder="Bank account"
                                 class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /><input
                                 v-model="form.bank_code"
-                                placeholder="Bank code (for NetBank transfer)"
+                                placeholder="Bank name or code"
                                 class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label
                         ><label
                             class="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
@@ -474,13 +463,12 @@ const sendApproval = (): void => {
                         :disabled="form.processing"
                         class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950"
                     >
-                        {{ form.processing ? 'Adding…' : 'Add Beneficiary' }}
+                        {{ form.processing ? 'Adding…' : 'Add Recipient' }}
                     </button>
                     <p
                         class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400"
                     >
-                        Draft only. This does not authorize, issue, deliver, or
-                        transfer funds.
+                        Added to this draft only.
                     </p>
                 </form>
             </section>

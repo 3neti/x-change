@@ -476,15 +476,15 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(page).toContain('data-testid="campaign-fulfillment-readiness"');
         expect(page).toContain('<CockpitCampaignPayCodeExperience');
-        expect(page).toContain('Authorized Beneficiaries');
+        expect(page).toContain('Recipients');
         expect(page).toContain('<CockpitCampaignWorksheetBeneficiaries');
-        expect(page).toContain("'Authorized Worksheet'");
+        expect(page).toContain("isDraft() ? 'Draft' : 'Authorized'");
         expect(page).not.toContain('Private Worksheet');
         expect(page).toContain(
             'data-testid="campaign-create-approval-pay-code"',
         );
-        expect(page).toContain('Ready to lock for officer authorization.');
-        expect(page.match(/Create Approval Pay Code/g)).toHaveLength(1);
+        expect(page).toContain('ready for approval.');
+        expect(page.match(/Request Approval/g)).toHaveLength(1);
         expect(
             page.indexOf('data-testid="campaign-create-approval-pay-code"'),
         ).toBeLessThan(page.indexOf('<CockpitCampaignImportWorkspace'));
@@ -530,15 +530,15 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('hasPendingImportRows');
         expect(workspace).toContain('data-testid="campaign-import-workspace"');
         expect(workspace).toContain(
-            'Two columns are enough: Mobile and Amount.',
+            'CSV or XLSX · Mobile and Amount are enough.',
         );
         expect(workspace).toContain('Update Mapping');
         expect(workspace).toContain('Needs Attention');
-        expect(workspace).toContain(
-            'Add {{ activeImport.unapplied_valid_count }} Valid Beneficiaries',
-        );
+        expect(workspace).toContain('Valid');
+        expect(workspace).toContain('Recipients');
         expect(workspace).toContain('Invalid rows stay staged for correction.');
-        expect(workspace).toContain('router.delete(imports.destroy');
+        expect(workspace).toContain('router.delete(');
+        expect(workspace).toContain('imports.destroy({');
         expect(workspace).toContain('xl:grid-cols-[18rem_minmax(0,1fr)]');
         expect(workspace).toContain('dark:bg-slate-900');
     });

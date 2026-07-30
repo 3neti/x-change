@@ -29,13 +29,13 @@ const peso = (minor: number): string =>
     >
         <Users class="size-8 text-slate-300 dark:text-slate-700" />
         <p class="mt-3 font-semibold text-slate-950 dark:text-slate-50">
-            No beneficiaries yet
+            No recipients yet
         </p>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {{
                 draft
-                    ? 'Add the first recipient from the form.'
-                    : 'This authorized worksheet has no beneficiaries.'
+                    ? 'Add a recipient or import an existing list.'
+                    : 'This authorized batch has no recipients.'
             }}
         </p>
     </div>
@@ -48,12 +48,14 @@ const peso = (minor: number): string =>
             class="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
         >
             <div class="min-w-0">
-                <p class="truncate font-semibold text-slate-950 dark:text-slate-50">
+                <p
+                    class="truncate font-semibold text-slate-950 dark:text-slate-50"
+                >
                     {{
                         row.beneficiary.name ||
                         row.beneficiary.mobile ||
                         row.beneficiary.bank_account ||
-                        'Beneficiary'
+                        'Recipient'
                     }}
                 </p>
                 <div
@@ -83,7 +85,9 @@ const peso = (minor: number): string =>
                             {{ row.beneficiary.bank_account }}
                         </span>
                     </span>
-                    <span class="capitalize">{{ row.delivery_preference }}</span>
+                    <span class="capitalize">{{
+                        row.delivery_preference
+                    }}</span>
                 </div>
             </div>
             <p class="font-semibold text-slate-950 dark:text-slate-50">
