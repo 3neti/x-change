@@ -16,6 +16,7 @@ class DoctorXChangeCommand extends Command
 {
     protected $signature = 'x-change:doctor
         {--json : Output JSON}
+        {--strict : Return a non-zero exit status when any check fails}
         {--assets : Inspect published x-change frontend asset drift only}
         {--operator-activity-runtime : Inspect Cockpit operator activity runtime configuration only}';
 
@@ -44,13 +45,27 @@ class DoctorXChangeCommand extends Command
                 $this->providerRuntimeSettingsCheck($settings),
             ]);
 
+        $passed = collect($checks)->every(
+            static fn (array $check): bool => $check['passed'] === true,
+        );
+        $strict = (bool) $this->option('strict');
+        $exitCode = $strict && ! $passed
+            ? self::FAILURE
+            : self::SUCCESS;
+
         if ($this->option('json')) {
             $this->line(json_encode([
-                'success' => true,
+                'schema' => 'x-change.readiness-report.v1',
+                'success' => $passed,
+                'strict' => $strict,
+                'summary' => [
+                    'passed' => collect($checks)->where('passed', true)->count(),
+                    'failed' => collect($checks)->where('passed', false)->count(),
+                ],
                 'checks' => $checks,
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
-            return self::SUCCESS;
+            return $exitCode;
         }
 
         $this->info('X-Change doctor');
@@ -67,7 +82,13 @@ class DoctorXChangeCommand extends Command
             $this->components->warn($message);
         }
 
-        return self::SUCCESS;
+        if ($strict && ! $passed) {
+            $this->components->error(
+                'Strict readiness failed. Deployment must not continue.',
+            );
+        }
+
+        return $exitCode;
     }
 
     /**

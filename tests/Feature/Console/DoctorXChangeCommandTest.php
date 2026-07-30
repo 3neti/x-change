@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
+use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 
 it('reports x-change doctor checks as json', function () {
     $this->artisan('x-change:doctor --json')
@@ -21,6 +22,47 @@ it('reports published cockpit asset drift as json', function () {
     expect($exitCode)->toBe(0)
         ->and($payload['checks'][0]['name'])->toBe('published cockpit assets')
         ->and($payload['checks'][0]['meta'])->toHaveKeys(['summary', 'files']);
+});
+
+it('keeps ordinary diagnostics non-blocking while reporting failed readiness', function () {
+    app()->instance(
+        PublishedAssetDriftDetector::class,
+        failingPublishedAssetDriftDetector(),
+    );
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--assets' => true,
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true);
+
+    expect($exitCode)->toBe(0)
+        ->and($payload['schema'])->toBe('x-change.readiness-report.v1')
+        ->and($payload['success'])->toBeFalse()
+        ->and($payload['strict'])->toBeFalse()
+        ->and($payload['summary'])->toBe([
+            'passed' => 0,
+            'failed' => 1,
+        ]);
+});
+
+it('blocks deployment in strict mode when any readiness check fails', function () {
+    app()->instance(
+        PublishedAssetDriftDetector::class,
+        failingPublishedAssetDriftDetector(),
+    );
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--assets' => true,
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true);
+
+    expect($exitCode)->toBe(1)
+        ->and($payload['success'])->toBeFalse()
+        ->and($payload['strict'])->toBeTrue()
+        ->and($payload['checks'][0]['passed'])->toBeFalse();
 });
 
 it('reports the cockpit operator activity runtime profile as an explicit doctor check', function () {
@@ -57,3 +99,26 @@ it('reports explicitly enabled cockpit operator activity runtime components thro
         ->and($payload['checks'][0]['meta']['repository_enabled'])->toBeTrue()
         ->and($repository['resolved_class'])->toBe(DatabaseCockpitOperatorIssuanceActivityRepository::class);
 });
+
+function failingPublishedAssetDriftDetector(): PublishedAssetDriftDetector
+{
+    return new class extends PublishedAssetDriftDetector
+    {
+        public function inspect(?array $mappings = null): array
+        {
+            return [
+                'name' => 'published cockpit assets',
+                'passed' => false,
+                'message' => 'published Cockpit assets have drift from package source',
+                'summary' => [
+                    'checked' => 1,
+                    'ok' => 0,
+                    'stale' => 1,
+                    'missing' => 0,
+                    'extra' => 0,
+                ],
+                'files' => [],
+            ];
+        }
+    };
+}

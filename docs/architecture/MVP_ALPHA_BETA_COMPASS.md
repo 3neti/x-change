@@ -169,7 +169,7 @@ Every item is required before inviting real alpha users.
 - [ ] Establish the supported fresh-cloud command order.
 - [ ] Prove install from an empty production-like database.
 - [ ] Prove a second install changes neither balances nor Treasury topology.
-- [ ] Add a strict readiness command whose non-zero exit status blocks deploy.
+- [x] Add a strict readiness command whose non-zero exit status blocks deploy.
 - [ ] Keep `--no-treasury` an explicit deferred mode, never an automatic
       provider-failure fallback.
 
@@ -353,3 +353,22 @@ Use these labels consistently:
   operational sign-off has been completed.
 
 The current state is: **controlled-alpha candidate; Alpha Gate incomplete**.
+
+## Deployment Readiness Gate
+
+Human diagnostics remain non-blocking:
+
+```bash
+php artisan x-change:doctor --json --no-interaction
+```
+
+Deployment automation must use strict mode:
+
+```bash
+php artisan x-change:doctor --strict --json --no-interaction
+```
+
+The strict command returns a non-zero status when any reported check fails. Its
+versioned JSON report includes the overall result, strict-mode state, pass/fail
+counts, and the individual checks. A deploy must stop on that non-zero status;
+it must not retry with `--no-treasury` or silently disable a provider.

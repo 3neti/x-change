@@ -487,6 +487,15 @@ Run it after installing or republishing scaffolds:
 php artisan x-change:doctor --json
 ```
 
+For release automation, use strict mode so a failed check stops the deploy:
+
+```bash
+php artisan x-change:doctor --strict --json --no-interaction
+```
+
+The ordinary command remains a non-blocking diagnostic. `--strict` returns a
+non-zero exit status when any check fails.
+
 ## Turnkey Lifecycle Verification
 
 The installer should leave the host in a state where onboarding readiness can be checked through the lifecycle runtime, not only through static config inspection.
