@@ -23,5 +23,6 @@ final class IssueSystemAccountFundingPayCodeData extends Data
         public readonly ?string $authorizationReference = null,
         public readonly string $source = 'system_utility',
         public readonly array $metadata = [],
+        public readonly bool $onboarding = false,
     ) {}
 }

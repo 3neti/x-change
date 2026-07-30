@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 
+use Bavix\Wallet\Exceptions\InsufficientFunds;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('issues and replays one recipient-bound Account Funding Pay Code from the system Account Funding Reserve', function (): void {
@@ -174,6 +178,137 @@ it('rejects direct issuance without evidence and authorization references', func
 
     expect(SystemAccountFundingPayCodeIssuance::query()->count())
         ->toBe(0);
+});
+
+it('atomically provisions a new Account and funds it from the system Account Funding Reserve', function (): void {
+    config()->set('x-change.onboarding.voucher.require_otp', false);
+
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        1_802,
+        'onboarding-grant-sofia',
+    );
+    $inventoryBefore = TreasuryInventory::query()
+        ->sum('balance_minor');
+
+    $request = new IssueSystemAccountFundingPayCodeData(
+        amountMinor: 1_500,
+        connectionReference: 'netbank-primary',
+        idempotencyReference: 'onboarding-grant-sofia-20260730-001',
+        expiresAt: now()->addDay(),
+        evidenceReference: 'system-reserve:onboarding-grant-sofia',
+        authorizationReference: 'system-policy:onboarding-grant-v1',
+        source: 'treasury_onboarding_grant',
+        onboarding: true,
+    );
+    $issuance = app(IssueSystemAccountFundingPayCode::class)->handle($request);
+    $replay = app(IssueSystemAccountFundingPayCode::class)->handle($request);
+    $voucher = $issuance->voucher;
+
+    expect($voucher)->not->toBeNull()
+        ->and($replay->is($issuance))->toBeTrue()
+        ->and(data_get($voucher?->metadata, 'instructions.onboarding'))->toBeTrue()
+        ->and(data_get($voucher?->metadata, 'instructions.execution.driver'))
+        ->toBe('onboarding_account_provisioning')
+        ->and(data_get($voucher?->metadata, 'instructions.claim.default_outcome'))
+        ->toBe('account_funding')
+        ->and(systemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ))->toBe(302)
+        ->and(systemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(1_500);
+
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '639399236237',
+        'recipient_country' => 'PH',
+        'inputs' => [
+            'full_name' => 'Sofia Hurtado',
+            'name' => 'Sofia Hurtado',
+            'email' => 'sofia@hurtado.ph',
+            'mobile' => '639399236237',
+        ],
+    ]);
+    $sofia = User::query()
+        ->where('mobile', '639399236237')
+        ->sole();
+    $claim = $voucher->claims()->sole();
+    $claimReplay = app(DispatchVoucherClaimOutcome::class)->handle(
+        voucher: $voucher,
+        requestedOutcome: 'account_funding',
+        payload: [],
+        claimant: $sofia,
+    );
+
+    expect($result->claimed)->toBeTrue()
+        ->and($sofia->name)->toBe('Sofia Hurtado')
+        ->and($sofia->email)->toBe('sofia@hurtado.ph')
+        ->and($claimReplay->is($claim))->toBeTrue()
+        ->and(systemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ))->toBe(302)
+        ->and(systemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(0)
+        ->and(systemFundingPositionBalance(
+            $sofia,
+            TreasuryPositionPurpose::ClientFunds,
+        ))->toBe(1_500)
+        ->and(TreasuryInventory::query()
+            ->sum('balance_minor'))->toBe($inventoryBefore)
+        ->and($voucher->claims()->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()
+            ->orderBy('id')
+            ->pluck('event_type')
+            ->all())->toBe([
+                'account_funding.pay_code.issued',
+                'account_funding.pay_code.outcome_selected',
+                'account_funding.pay_code.applied',
+            ]);
+
+    fakePayoutProvider()->assertNoDisbursementAttempted();
+});
+
+it('rolls back onboarding grant issuance when the system reserve is insufficient', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        1_499,
+        'onboarding-grant-insufficient',
+    );
+
+    expect(fn () => app(IssueSystemAccountFundingPayCode::class)->handle(
+        new IssueSystemAccountFundingPayCodeData(
+            amountMinor: 1_500,
+            connectionReference: 'netbank-primary',
+            idempotencyReference: 'onboarding-grant-insufficient',
+            expiresAt: now()->addDay(),
+            evidenceReference: 'system-reserve:onboarding-grant-insufficient',
+            authorizationReference: 'system-policy:onboarding-grant-v1',
+            source: 'treasury_onboarding_grant',
+            onboarding: true,
+        ),
+    ))->toThrow(InsufficientFunds::class);
+
+    expect(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(0)
+        ->and(systemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ))->toBe(1_499)
+        ->and(systemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(0)
+        ->and(ExecutionJournalEntry::query()->count())->toBe(0);
+
+    fakePayoutProvider()->assertNoDisbursementAttempted();
 });
 
 function systemFundingPositionBalance(

@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Truthful Lifecycle Ledger and Browser Payee Acceptance
-Status: Slices 0–15 complete
+Current slice: Treasury-Backed Onboarding Grant
+Status: Slice 16 core accounting complete; lifecycle/browser acceptance pending
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -47,6 +47,7 @@ Last updated: 2026-07-30
 | 13 | Neutral Public Claim Preview | Completed |
 | 14 | Unified Rider Fallback Policy | Completed |
 | 15 | Truthful Ledger and Browser Payee Acceptance | Completed |
+| 16 | Treasury-Backed Onboarding Grant | In progress |
 
 ## Settled Decisions
 
@@ -135,6 +136,27 @@ assets. It does not own onboarding business logic.
    handoff point.
 
 ## Slice Log
+
+### 2026-07-30 — Slice 16 core accounting completed
+
+- Extended the guarded system Account Funding Pay Code issuer with an explicit
+  onboarding intent; the normalizer still owns compilation into the
+  `onboarding_account_provisioning` execution driver.
+- Composed Account provisioning and the existing `account_funding` claim
+  outcome inside the execution engine rather than adding an onboarding-only
+  transfer path.
+- Issuance moves exactly the grant principal from the system Account Funding
+  Reserve to Pay Code Reserve. Successful claim moves that same principal to
+  the newly provisioned Account's Client Funds.
+- Provider Inventory is unchanged and no bank or EMI payout is attempted.
+- Replays reuse the same issuance, claim, and Treasury operation. The generic
+  claim recorder reuses the already-settled Account Funding claim instead of
+  creating a duplicate claim row.
+- Insufficient system reserve rolls back the issuance record, Voucher,
+  reserve movement, and journal lifecycle.
+- The earlier claimant identity remains untouched for audit continuity. The
+  browser acceptance identity for this slice is Sofia Hurtado, Mobile ending
+  `6237`, with a ₱15.00 grant.
 
 ### 2026-07-30 — Slice 15 completed
 

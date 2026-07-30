@@ -13,7 +13,9 @@ use LBHurtado\Voucher\Contracts\ExecutionDriverContract;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
+use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Exceptions\OnboardingVoucherExecutionFailed;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Onboarding\OnboardingVoucherClaimantAuthenticator;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use Throwable;
@@ -23,6 +25,7 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
     public function __construct(
         private PromoteContactToUser $promoteContact,
         private DefaultExecutionDriver $defaultDriver,
+        private DispatchVoucherClaimOutcome $claimOutcomes,
         private OnboardingVoucherClaimantAuthenticator $authenticator,
         private Request $request,
     ) {}
@@ -98,15 +101,7 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             throw new OnboardingVoucherExecutionFailed('account_provisioning_rejected');
         }
 
-        $redemption = $this->defaultDriver->execute(
-            $this->withoutSensitiveAuthenticationEvidence($context),
-        );
-
-        if (! $redemption->successful) {
-            throw new OnboardingVoucherExecutionFailed(
-                $redemption->failure ?? 'voucher_redemption_rejected',
-            );
-        }
+        $settlement = $this->settle($context, $promotion->user);
 
         $handoffScheduled = $this->request->hasSession();
 
@@ -125,7 +120,7 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             events: [
                 'onboarding.account_resolved',
                 'onboarding.account_positions_provisioned',
-                'onboarding.voucher_redeemed',
+                $settlement['event'],
                 $handoffScheduled
                     ? 'onboarding.claimant_authentication_scheduled'
                     : 'onboarding.claimant_handoff_deferred',
@@ -138,8 +133,60 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
                 'principal_reference' => data_get($promotion->meta, 'principal_reference'),
                 'position_count' => (int) data_get($promotion->meta, 'position_count', 0),
                 'claimant_authentication_scheduled' => $handoffScheduled,
+                'settlement_mode' => $settlement['mode'],
+                'treasury_operation_reference' => $settlement['treasury_operation_reference'],
             ],
         );
+    }
+
+    /**
+     * @return array{event:string,mode:string,treasury_operation_reference:?string}
+     */
+    private function settle(
+        ExecutionContextData $context,
+        Authenticatable $claimant,
+    ): array {
+        $defaultOutcome = data_get(
+            $context->voucher?->metadata,
+            'instructions.claim.default_outcome',
+        );
+
+        if ($defaultOutcome === 'account_funding') {
+            $claim = $this->claimOutcomes->handle(
+                voucher: $context->voucher,
+                requestedOutcome: 'account_funding',
+                payload: [],
+                claimant: $claimant,
+            );
+
+            if (! $claim instanceof VoucherClaim || $claim->status !== 'succeeded') {
+                throw new OnboardingVoucherExecutionFailed(
+                    'account_funding_rejected',
+                );
+            }
+
+            return [
+                'event' => 'onboarding.account_funded',
+                'mode' => 'account_funding',
+                'treasury_operation_reference' => $claim->treasury_operation_reference,
+            ];
+        }
+
+        $redemption = $this->defaultDriver->execute(
+            $this->withoutSensitiveAuthenticationEvidence($context),
+        );
+
+        if (! $redemption->successful) {
+            throw new OnboardingVoucherExecutionFailed(
+                $redemption->failure ?? 'voucher_redemption_rejected',
+            );
+        }
+
+        return [
+            'event' => 'onboarding.voucher_redeemed',
+            'mode' => 'voucher_redemption',
+            'treasury_operation_reference' => null,
+        ];
     }
 
     /**

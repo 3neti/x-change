@@ -16,6 +16,7 @@ use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
 use LBHurtado\XChange\Services\Funding\AccountFundingPayCodeJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 use RuntimeException;
 
 final readonly class IssueSystemAccountFundingPayCode
@@ -28,6 +29,7 @@ final readonly class IssueSystemAccountFundingPayCode
         private TreasuryPayCodeAccountingService $accounting,
         private VoucherClaimantReference $claimantReferences,
         private AccountFundingPayCodeJournal $journal,
+        private VoucherIssuancePayloadNormalizer $instructions,
     ) {}
 
     public function handle(
@@ -166,7 +168,7 @@ final readonly class IssueSystemAccountFundingPayCode
                 );
             }
 
-            $voucher = $this->payCodes->handle($system, [
+            $voucherInstructions = [
                 'cash' => [
                     'amount' => $data->amountMinor / (10 ** $connection->decimalPlaces),
                     'currency' => $connection->currency,
@@ -188,7 +190,9 @@ final readonly class IssueSystemAccountFundingPayCode
                     'selection' => 'server',
                     'consumption' => 'one_of',
                     'default_outcome' => 'account_funding',
-                    'onboarding' => ['mode' => 'if_required'],
+                    'onboarding' => [
+                        'mode' => $data->onboarding ? 'required' : 'if_required',
+                    ],
                     'claimant' => $recipient === null
                         ? ['mode' => 'unbound']
                         : [
@@ -210,9 +214,19 @@ final readonly class IssueSystemAccountFundingPayCode
                             'issuance_reference' => $issuance->reference,
                             'source' => $source,
                         ],
+                        'onboarding_grant' => [
+                            'enabled' => $data->onboarding,
+                            'provider_calls' => false,
+                        ],
                     ],
                 ], $data->metadata),
-            ], $data->expiresAt);
+                'onboarding' => $data->onboarding,
+            ];
+            $voucher = $this->payCodes->handle(
+                $system,
+                $this->instructions->normalize($voucherInstructions),
+                $data->expiresAt,
+            );
             $reservation = $this->accounting->reserveAccountFunding(
                 systemOwner: $system,
                 voucher: $voucher,
@@ -290,6 +304,7 @@ final readonly class IssueSystemAccountFundingPayCode
             'source' => trim($data->source),
             'expires_at' => $data->expiresAt->toIso8601String(),
             'metadata' => $data->metadata,
+            'onboarding' => $data->onboarding,
         ], JSON_THROW_ON_ERROR));
     }
 }

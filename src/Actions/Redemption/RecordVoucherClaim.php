@@ -21,6 +21,17 @@ class RecordVoucherClaim
         SubmitPayCodeClaimResultData $result,
         array $payload = [],
     ): VoucherClaim {
+        $settledAccountFundingClaim = $this->settledAccountFundingClaim(
+            $voucher,
+            $result,
+        );
+
+        if ($settledAccountFundingClaim instanceof VoucherClaim) {
+            $settledAccountFundingClaim->setRelation('voucher', $voucher);
+
+            return $settledAccountFundingClaim;
+        }
+
         $nextClaimNumber = (int) $voucher->claims()->count() + 1;
 
         $requestedAmount = $result->requested_amount;
@@ -62,6 +73,27 @@ class RecordVoucherClaim
         $this->markVoucherRedeemedWhenFullyClaimed($voucher, $result);
 
         return $claim;
+    }
+
+    protected function settledAccountFundingClaim(
+        Voucher $voucher,
+        SubmitPayCodeClaimResultData $result,
+    ): ?VoucherClaim {
+        if (
+            ! $result->claimed
+            || data_get(
+                $voucher->metadata,
+                'instructions.claim.default_outcome',
+            ) !== 'account_funding'
+        ) {
+            return null;
+        }
+
+        return VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->where('settlement_mode', 'account_funding')
+            ->where('status', 'succeeded')
+            ->first();
     }
 
     protected function toMinorUnits(?float $amount): ?int

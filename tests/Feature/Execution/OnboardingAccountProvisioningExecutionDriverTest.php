@@ -13,6 +13,7 @@ use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
+use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
@@ -90,6 +91,7 @@ it('fails before account mutation when required mobile verification evidence is 
     $driver = new OnboardingAccountProvisioningExecutionDriver(
         new PromoteContactToUser($provisioner),
         $defaultDriver,
+        app(DispatchVoucherClaimOutcome::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
         Request::create('/x/claim/ONBD-1234'),
     );
@@ -142,6 +144,7 @@ it('provisions the account and strips raw OTP evidence before Voucher redemption
     $driver = new OnboardingAccountProvisioningExecutionDriver(
         new PromoteContactToUser($provisioner),
         $defaultDriver,
+        app(DispatchVoucherClaimOutcome::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
         Request::create('/x/claim/ONBD-1234'),
     );
@@ -185,6 +188,7 @@ it('does not require OTP evidence when the persisted onboarding policy disabled 
     $driver = new OnboardingAccountProvisioningExecutionDriver(
         new PromoteContactToUser($provisioner),
         $defaultDriver,
+        app(DispatchVoucherClaimOutcome::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
         Request::create('/x/claim/ONBD-1234'),
     );
@@ -216,6 +220,7 @@ it('rolls back a newly provisioned Account when Voucher redemption fails', funct
     $driver = new OnboardingAccountProvisioningExecutionDriver(
         new PromoteContactToUser(new XChangeContactUserProvisioner($wallets, $portfolios)),
         $defaultDriver,
+        app(DispatchVoucherClaimOutcome::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
         Request::create('/x/claim/ONBD-1234'),
     );
