@@ -210,6 +210,12 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('<CockpitCampaignWorksheetBeneficiaries');
         expect(page).toContain("isDraft() ? 'Worksheet' : 'Authorized Worksheet'");
         expect(page).not.toContain('Private Worksheet');
+        expect(page).toContain('data-testid="campaign-create-approval-pay-code"');
+        expect(page).toContain('Ready to lock for officer authorization.');
+        expect(page.match(/Create Approval Pay Code/g)).toHaveLength(1);
+        expect(page.indexOf('data-testid="campaign-create-approval-pay-code"')).toBeLessThan(
+            page.indexOf('<CockpitCampaignImportWorkspace'),
+        );
         expect(page.indexOf('<CockpitCampaignWorksheetBeneficiaries')).toBeLessThan(
             page.indexOf('<CockpitCampaignImportWorkspace'),
         );
