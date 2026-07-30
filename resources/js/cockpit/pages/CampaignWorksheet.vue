@@ -66,7 +66,7 @@ const sendApproval = (): void => {
         worksheet: props.worksheet.reference,
         authorization: props.authorization.reference,
         channel: approvalDeliveryChannel.value,
-    }), {
+    }).url, {
         preserveScroll: true,
         onSuccess: () => {
             approvalDeliveryForm.reset('recipient');
@@ -140,7 +140,7 @@ const sendApproval = (): void => {
                         <button type="button" :disabled="!props.delivery.channels.email" :class="approvalDeliveryChannel === 'email' ? 'bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40" @click="approvalDeliveryChannel = 'email'"><Mail class="size-3.5" /> Email</button>
                     </div>
                     <input v-model="approvalDeliveryForm.recipient" :type="approvalDeliveryChannel === 'email' ? 'email' : 'tel'" :placeholder="approvalDeliveryChannel === 'email' ? 'Officer email' : 'Officer mobile'" :disabled="!props.delivery.channels[approvalDeliveryChannel]" class="min-w-0 rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm text-slate-950 placeholder:text-slate-400 disabled:opacity-50 dark:border-amber-800 dark:bg-slate-950 dark:text-white" />
-                    <button type="submit" :disabled="approvalDeliveryForm.processing || !approvalDeliveryForm.recipient || !props.delivery.channels[approvalDeliveryChannel]" class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-100 dark:text-slate-950"><Send class="size-4" /> {{ approvalDeliveryForm.processing ? 'Sending…' : 'Send To Officer' }}</button>
+                    <button type="submit" :disabled="approvalDeliveryForm.processing || !approvalDeliveryForm.recipient || !props.delivery.channels[approvalDeliveryChannel]" class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-100 dark:text-slate-950"><Send class="size-4" /> {{ approvalDeliveryForm.processing ? 'Queueing…' : 'Send To Officer' }}</button>
                     <p v-if="approvalDeliveryForm.errors.recipient" class="text-xs text-rose-700 sm:col-start-2 dark:text-rose-300">{{ approvalDeliveryForm.errors.recipient }}</p>
                 </form>
                 <div v-if="approvalDeliveryAttempts.length" class="mt-3 flex flex-wrap gap-2">
