@@ -1,29 +1,27 @@
 <script setup lang="ts">
 import { Link, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { ArrowLeft, Check, Download, FileSpreadsheet, LockKeyhole, Mail, MessageSquare, Plus, RotateCcw, Send, Upload, Users, XCircle } from 'lucide-vue-next';
+import { ArrowLeft, Download, LockKeyhole, Mail, MessageSquare, Plus, RotateCcw, Send, Users } from 'lucide-vue-next';
 import { index } from '@/routes/x-change/cockpit/campaigns';
 import rows from '@/routes/x-change/cockpit/campaigns/rows';
-import imports from '@/routes/x-change/cockpit/campaigns/imports';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import fulfillments from '@/routes/x-change/cockpit/campaigns/fulfillments';
 import exports from '@/routes/x-change/cockpit/campaigns/exports';
 import deliveries from '@/routes/x-change/cockpit/campaigns/deliveries';
 import { show as claimShow } from '@/routes/x-change/claim';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
+import CockpitCampaignImportWorkspace, { type CampaignImport } from '../components/CockpitCampaignImportWorkspace.vue';
 import type { CockpitHeaderPageProps } from '../types';
 
 type Row = { reference: string; ordinal: number; beneficiary: Record<string, string>; amount_minor: number; delivery_preference: string; status: string };
 type Worksheet = { reference: string; profile: string; name: string; status: string; fulfillment_mode: string; rows: Row[] };
-type Import = { reference: string; status: string; source_format: string; row_count: number; valid_count: number; validation_errors: { row: number; messages: string[] }[]; mapping: Record<string, string> };
 type Authorization = { reference?: string; status?: string; approval_pay_code?: string | null; beneficiary_count?: number; principal_minor?: number };
 type Fulfillment = { reference: string; ordinal: number; beneficiary: string; amount_minor: number; mode: string; status: string; provider_transfer_reference: string | null; pay_code: string | null };
 type DeliveryAttempt = { reference: string; channel: string; attempt_number: number; retry_of_reference: string | null; purpose: string; beneficiary: string; pay_code: string | null; status: string; safe_error_code: string | null; requested_at: string | null; can_retry: boolean };
 type Delivery = { channels: { sms: boolean; email: boolean }; attempts: DeliveryAttempt[] };
-type Props = CockpitHeaderPageProps & { worksheet: Worksheet; imports: Import[]; fulfillment_summary: Record<string, number>; authorization: Authorization; fulfillments: Fulfillment[]; direct_bank_transfer_enabled: boolean; delivery: Delivery };
+type Props = CockpitHeaderPageProps & { worksheet: Worksheet; imports: CampaignImport[]; fulfillment_summary: Record<string, number>; authorization: Authorization; fulfillments: Fulfillment[]; direct_bank_transfer_enabled: boolean; delivery: Delivery };
 const props = defineProps<Props>();
 const form = useForm({ amount: '', name: '', mobile: '', bank_account: '', bank_code: '', email: '', remarks: '', external_reference: '', delivery_preference: 'manual' });
-const importForm = useForm({ file: null as File | null });
 const authorizationForm = useForm({});
 const fulfillmentForm = useForm({});
 const transferForm = useForm({});
@@ -37,6 +35,7 @@ const peso = (minor: number) => new Intl.NumberFormat('en-PH', { style: 'currenc
 const plannedCount = (): number => props.fulfillment_summary.planned_count ?? 0;
 const issuedCount = (): number => props.fulfillment_summary.issued_count ?? 0;
 const isDraft = (): boolean => props.worksheet.status === 'draft';
+const hasPendingImportRows = computed(() => props.imports.some((item) => item.unapplied_valid_count > 0));
 const fulfillmentReadinessDescription = (): string => {
     const count = plannedCount();
 
@@ -51,8 +50,6 @@ const fulfillmentReadinessDescription = (): string => {
     return count + ' ' + (count === 1 ? 'beneficiary is' : 'beneficiaries are') + ' ready for explicit issuance. No Pay Codes, delivery, or bank transfers have started.';
 };
 const add = (): void => form.post(rows.store(props.worksheet.reference), { preserveScroll: true, onSuccess: () => form.reset() });
-const stage = (): void => importForm.post(imports.store(props.worksheet.reference), { preserveScroll: true, onSuccess: () => importForm.reset() });
-const apply = (reference: string): void => importForm.post(imports.apply({ worksheet: props.worksheet.reference, import: reference }), { preserveScroll: true });
 const authorize = (): void => authorizationForm.post(authorizations.store(props.worksheet.reference), { preserveScroll: true });
 const issue = (): void => fulfillmentForm.post(fulfillments.payCodes.store(props.worksheet.reference), { preserveScroll: true });
 const dispatchTransfers = (): void => transferForm.post(fulfillments.bankTransfers.store(props.worksheet.reference), { preserveScroll: true });
@@ -88,6 +85,13 @@ const sendApproval = (): void => {
                 <div class="rounded-xl bg-slate-50 px-4 py-2 text-right dark:bg-slate-950"><p class="text-xs text-slate-500 dark:text-slate-400">Beneficiaries</p><p class="text-lg font-semibold text-slate-950 dark:text-slate-50">{{ props.worksheet.rows.length }}</p></div>
             </section>
 
+            <CockpitCampaignImportWorkspace
+                v-if="isDraft()"
+                :worksheet-reference="props.worksheet.reference"
+                :fulfillment-mode="props.worksheet.fulfillment_mode"
+                :imports="props.imports"
+            />
+
             <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                 <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800"><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{{ isDraft() ? 'Draft Beneficiaries' : 'Authorized Beneficiaries' }}</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ isDraft() ? 'Private Worksheet' : 'Authorized Worksheet' }}</h2></div>
@@ -105,7 +109,7 @@ const sendApproval = (): void => {
             </section>
 
             <section v-if="props.worksheet.status === 'draft'" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div class="flex items-center gap-2"><LockKeyhole class="size-4 text-slate-500" /><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Officer Authorization</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">Freeze And Create Approval Pay Code</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Locks this worksheet and creates one zero-value Settlement Pay Code. It does not issue, deliver, or transfer beneficiary funds.</p></div></div><button type="button" :disabled="props.worksheet.rows.length === 0 || authorizationForm.processing" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950" @click="authorize"><LockKeyhole class="size-4" /> {{ authorizationForm.processing ? 'Creating…' : 'Create Approval Pay Code' }}</button></div>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div class="flex items-center gap-2"><LockKeyhole class="size-4 text-slate-500" /><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Officer Authorization</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">Freeze And Create Approval Pay Code</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ hasPendingImportRows ? 'Add or discard the ready imported rows first.' : 'Locks this worksheet and creates one zero-value Settlement Pay Code. It does not issue, deliver, or transfer beneficiary funds.' }}</p></div></div><button type="button" :disabled="props.worksheet.rows.length === 0 || hasPendingImportRows || authorizationForm.processing" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950" @click="authorize"><LockKeyhole class="size-4" /> {{ authorizationForm.processing ? 'Creating…' : 'Create Approval Pay Code' }}</button></div>
             </section>
             <section v-if="props.worksheet.status === 'authorized' && props.worksheet.fulfillment_mode === 'pay_code_distribution'" data-testid="campaign-fulfillment-readiness" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Beneficiary Fulfillment</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ plannedCount() > 0 ? 'Beneficiaries Ready To Issue' : issuedCount() > 0 ? 'Pay Codes Issued' : 'Beneficiary Fulfillment Is Being Prepared' }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ fulfillmentReadinessDescription() }}</p></div><button v-if="plannedCount() > 0" type="button" :disabled="fulfillmentForm.processing" class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950" @click="issue"><Send class="size-4" /> {{ fulfillmentForm.processing ? 'Issuing…' : 'Issue Next 100' }}</button></div></section>
             <section v-if="props.worksheet.status === 'authorized' && props.worksheet.fulfillment_mode === 'direct_bank_transfer'" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">NetBank Fulfillment</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ props.direct_bank_transfer_enabled ? 'Dispatch Next 100 Transfers' : 'Direct Bank Transfer Is Not Enabled' }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ props.direct_bank_transfer_enabled ? 'Checking never re-dispatches a transfer.' : 'This authorized worksheet remains intact. Enable the explicit NetBank runtime gate before any provider transfer controls are available.' }}</p></div><div class="flex flex-wrap gap-2"><button v-if="(props.fulfillment_summary.fallback_count ?? 0) > 0" type="button" :disabled="fulfillmentForm.processing" class="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold dark:border-slate-700" @click="issue">{{ fulfillmentForm.processing ? 'Issuing…' : 'Issue Planned Fallbacks' }}</button><button type="button" :disabled="fallbackForm.processing" class="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold dark:border-slate-700" @click="planFallbacks">{{ fallbackForm.processing ? 'Planning…' : 'Plan Pay Code Fallbacks' }}</button><template v-if="props.direct_bank_transfer_enabled"><button type="button" :disabled="reconciliationForm.processing" class="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold dark:border-slate-700" @click="reconcileTransfers">{{ reconciliationForm.processing ? 'Checking…' : 'Check NetBank' }}</button><button type="button" :disabled="transferForm.processing" class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950" @click="dispatchTransfers"><Send class="size-4" /> {{ transferForm.processing ? 'Dispatching…' : 'Dispatch Next 100' }}</button></template></div></div></section>
@@ -150,14 +154,6 @@ const sendApproval = (): void => {
             </section>
             <section v-if="props.fulfillments.length > 0" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"><div class="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Beneficiary Outcomes</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">First 100 Results</h2></div><a :href="exports.results(props.worksheet.reference).url" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"><Download class="size-4" /> Export All Results</a></div><div class="divide-y divide-slate-200 dark:divide-slate-800"><article v-for="item in props.fulfillments" :key="item.reference" class="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"><div><p class="font-semibold text-slate-950 dark:text-slate-50">{{ item.ordinal }} · {{ item.beneficiary }}</p><p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ item.mode }} · {{ item.status }}<template v-if="item.provider_transfer_reference"> · {{ item.provider_transfer_reference }}</template><template v-else-if="item.pay_code"> · {{ item.pay_code }}</template></p></div><p class="text-sm font-semibold text-slate-950 dark:text-slate-50">{{ peso(item.amount_minor) }}</p><span class="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ item.status }}</span></article></div></section>
 
-            <section v-if="isDraft()" class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div class="flex items-center gap-2"><FileSpreadsheet class="size-4 text-slate-500" /><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Import Review</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">Staged Beneficiaries</h2></div></div>
-                    <p v-if="props.imports.length === 0" class="mt-4 text-sm text-slate-500 dark:text-slate-400">Upload a CSV or XLSX file to preview its detected fields and validation results.</p>
-                    <div v-else class="mt-4 space-y-3"><article v-for="item in props.imports" :key="item.reference" class="rounded-xl border border-slate-200 p-3 dark:border-slate-800"><div class="flex items-start justify-between gap-3"><div><p class="font-semibold text-slate-950 dark:text-slate-50">{{ item.source_format.toUpperCase() }} import</p><p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ item.valid_count }} valid of {{ item.row_count }} rows · {{ item.status }}</p></div><button v-if="item.status === 'staged' && item.validation_errors.length === 0" type="button" class="inline-flex items-center gap-1 rounded-lg bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-950" @click="apply(item.reference)"><Check class="size-3.5" /> Apply Valid Rows</button></div><p v-if="item.validation_errors.length" class="mt-2 flex items-center gap-1 text-xs text-rose-600 dark:text-rose-300"><XCircle class="size-3.5" /> Row {{ item.validation_errors[0].row }}: {{ item.validation_errors[0].messages.join(' ') }}</p><p v-else class="mt-2 text-xs text-emerald-700 dark:text-emerald-300">Detected: {{ Object.entries(item.mapping).map(([field, header]) => `${header} → ${field}`).join(' · ') }}</p></article></div>
-                </div>
-                <form class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900" @submit.prevent="stage"><div class="flex items-center gap-2"><Upload class="size-4 text-slate-500" /><div><p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Import File</p><h2 class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">CSV Or XLSX</h2></div></div><input accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" type="file" class="mt-4 block w-full text-sm text-slate-600 dark:text-slate-300" @input="importForm.file = ($event.target as HTMLInputElement).files?.[0] ?? null" /><p v-if="importForm.errors.file" class="mt-2 text-xs text-rose-600">{{ importForm.errors.file }}</p><button type="submit" :disabled="!importForm.file || importForm.processing" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950">{{ importForm.processing ? 'Staging…' : 'Preview Import' }}</button><p class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">Nothing joins the draft until Apply Valid Rows is selected.</p></form>
-            </section>
         </main>
     </CockpitLayout>
 </template>

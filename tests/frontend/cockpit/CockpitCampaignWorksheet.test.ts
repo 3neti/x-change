@@ -80,4 +80,27 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('Send To Officer');
         expect(page).toContain('The officer must sign in and review it.');
     });
+
+    it('keeps imported beneficiaries staged behind explicit review controls', () => {
+        const page = readFileSync(
+            resolve(import.meta.dirname, '../../../resources/js/cockpit/pages/CampaignWorksheet.vue'),
+            'utf8',
+        );
+        const workspace = readFileSync(
+            resolve(import.meta.dirname, '../../../resources/js/cockpit/components/CockpitCampaignImportWorkspace.vue'),
+            'utf8',
+        );
+
+        expect(page).toContain('<CockpitCampaignImportWorkspace');
+        expect(page).toContain('hasPendingImportRows');
+        expect(workspace).toContain('data-testid="campaign-import-workspace"');
+        expect(workspace).toContain('Two columns are enough: Mobile and Amount.');
+        expect(workspace).toContain('Update Mapping');
+        expect(workspace).toContain('Needs Attention');
+        expect(workspace).toContain('Add {{ activeImport.unapplied_valid_count }} Valid Beneficiaries');
+        expect(workspace).toContain('Invalid rows stay staged for correction.');
+        expect(workspace).toContain("router.delete(imports.destroy");
+        expect(workspace).toContain('xl:grid-cols-[18rem_minmax(0,1fr)]');
+        expect(workspace).toContain('dark:bg-slate-900');
+    });
 });
