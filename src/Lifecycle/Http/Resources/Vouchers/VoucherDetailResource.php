@@ -67,8 +67,17 @@ class VoucherDetailResource extends JsonResource
     {
         try {
             $code = data_get($this->resource, 'code');
+            $instructions = (array) data_get($this->resource, 'instructions', []);
+            $rider = (array) data_get($instructions, 'rider', []);
 
             if (! filled($code)) {
+                return null;
+            }
+
+            if (
+                data_get($instructions, 'execution.driver') === 'onboarding_account_provisioning'
+                && ! $this->hasAuthoredRider($rider)
+            ) {
                 return null;
             }
 
@@ -87,7 +96,7 @@ class VoucherDetailResource extends JsonResource
 
             $experience = app(RiderExperienceResolverContract::class)->resolve($subject, [
                 'state' => RiderOutcomeState::AcceptedSuccess->value,
-                'rider' => data_get($this->resource, 'instructions.rider', []),
+                'rider' => $rider,
                 'meta' => [
                     'source' => 'x-change',
                     'route' => 'voucher.preview',
@@ -103,5 +112,16 @@ class VoucherDetailResource extends JsonResource
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $rider
+     */
+    protected function hasAuthoredRider(array $rider): bool
+    {
+        return filled(data_get($rider, 'message'))
+            || filled(data_get($rider, 'url'))
+            || filled(data_get($rider, 'splash'))
+            || (array) data_get($rider, 'stages', []) !== [];
     }
 }

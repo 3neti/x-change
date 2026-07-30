@@ -130,6 +130,18 @@ assets. It does not own onboarding business logic.
 
 ## Slice Log
 
+### 2026-07-30 — Slice 13 completed
+
+- Browser forensics confirmed the Voucher persisted a neutral Rider, while
+  the public preview API still resolved the host's demonstration Rider as a
+  fallback.
+- Onboarding previews now suppress that fallback only when the execution
+  driver is `onboarding_account_provisioning` and no Rider content was
+  authored.
+- An onboarding Voucher with an intentional message, URL, Splash, or stage
+  collection still receives the normal x-rider experience.
+- Ordinary Voucher previews and authored Rider behavior remain unchanged.
+
 ### 2026-07-30 — Slice 12 completed
 
 - In-app browser inspection found that the onboarding lifecycle inherited

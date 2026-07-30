@@ -53,6 +53,43 @@ it('shows a voucher by code through the lifecycle route surface', function () {
         ->assertJsonPath('data.voucher.approval.required', true);
 });
 
+it('does not apply a default Rider to an onboarding voucher without authored Rider content', function (): void {
+    $resolver = Mockery::mock(RiderExperienceResolverContract::class);
+    $resolver->shouldNotReceive('resolve');
+    $this->app->instance(RiderExperienceResolverContract::class, $resolver);
+
+    $service = Mockery::mock(VoucherLifecycleServiceContract::class);
+    $service->shouldReceive('showByCode')
+        ->once()
+        ->with('TEST-ONBOARD')
+        ->andReturn((object) [
+            'id' => 1,
+            'voucher_id' => 99,
+            'code' => 'TEST-ONBOARD',
+            'amount' => 1.00,
+            'currency' => 'PHP',
+            'status' => 'issued',
+            'issuer_id' => 1,
+            'claimed' => false,
+            'fully_claimed' => false,
+            'instructions' => [
+                'execution' => [
+                    'driver' => 'onboarding_account_provisioning',
+                ],
+                'rider' => [
+                    'message' => null,
+                    'url' => null,
+                    'splash' => null,
+                ],
+            ],
+        ]);
+    $this->app->instance(VoucherLifecycleServiceContract::class, $service);
+
+    $this->getJson(xchangeApi('vouchers/code/TEST-ONBOARD'))
+        ->assertOk()
+        ->assertJsonPath('data.voucher.rider', null);
+});
+
 it('exposes resolved rider pre claim content in voucher preview', function (): void {
     $resolver = Mockery::mock(RiderExperienceResolverContract::class);
 
