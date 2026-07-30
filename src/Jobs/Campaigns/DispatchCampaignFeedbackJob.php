@@ -19,6 +19,8 @@ use Throwable;
 
 final class DispatchCampaignFeedbackJob implements ShouldBeEncrypted, ShouldBeUnique, ShouldQueue
 {
+    public const Queue = 'x-change-feedback';
+
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
@@ -37,10 +39,7 @@ final class DispatchCampaignFeedbackJob implements ShouldBeEncrypted, ShouldBeUn
         public readonly int $attemptId,
         public readonly string $recipient,
     ) {
-        $this->onQueue((string) config(
-            'x-change.redemption.feedback.queue',
-            'x-change-feedback',
-        ));
+        $this->onQueue(self::Queue);
     }
 
     public function uniqueId(): string

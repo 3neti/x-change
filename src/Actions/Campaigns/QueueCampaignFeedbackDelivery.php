@@ -42,10 +42,7 @@ final readonly class QueueCampaignFeedbackDelivery
             ],
         );
 
-        $queue = (string) config(
-            'x-change.redemption.feedback.queue',
-            'x-change-feedback',
-        );
+        $queue = DispatchCampaignFeedbackJob::Queue;
 
         $this->deliveryAttempts->append(
             $attempt,

@@ -7,19 +7,24 @@ namespace LBHurtado\XChange\Actions\Campaigns;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
+use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
+use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Data\FeedbackChannelData;
 use LBHurtado\XFeedback\Data\FeedbackDeliveryData;
 use LBHurtado\XFeedback\Data\FeedbackIntentData;
 use LBHurtado\XFeedback\Data\FeedbackMessageData;
 use LBHurtado\XFeedback\Data\FeedbackRecipientData;
 use RuntimeException;
+use Throwable;
 
 final readonly class DispatchCampaignFeedback
 {
     public function __construct(
         private DeliverAndJournalFeedback $feedback,
         private RecordCampaignDeliveryAttempt $deliveryAttempts,
+        private FeedbackChannelRegistryContract $feedbackChannels,
     ) {}
 
     public function handle(int $attemptId, string $recipient): void
@@ -31,6 +36,17 @@ final readonly class DispatchCampaignFeedback
         if ($attempt->events->contains(
             fn ($event): bool => in_array($event->event_type, ['completed', 'failed'], true),
         )) {
+            return;
+        }
+
+        if ($attempt->channel === 'sms' && ! $this->smsQueueBoundaryIsReady()) {
+            $this->deliveryAttempts->append(
+                $attempt,
+                'failed',
+                safeErrorCode: 'campaign_sms_queue_boundary_unavailable',
+                metadata: ['expected_queue' => DispatchCampaignFeedbackJob::Queue],
+            );
+
             return;
         }
 
@@ -73,6 +89,20 @@ final readonly class DispatchCampaignFeedback
             safeErrorCode: 'feedback_delivery_not_accepted',
             metadata: ['feedback_delivery_id' => $result->deliveryId],
         );
+    }
+
+    private function smsQueueBoundaryIsReady(): bool
+    {
+        if (config('x-change.redemption.feedback.queue') !== DispatchCampaignFeedbackJob::Queue) {
+            return false;
+        }
+
+        try {
+            return $this->feedbackChannels->driver('sms')
+                instanceof QueuedEngageSparkSmsFeedbackChannelDriver;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function intent(CampaignDeliveryAttempt $attempt, string $recipient): FeedbackIntentData

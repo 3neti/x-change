@@ -18,11 +18,14 @@ use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
+use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
+use LBHurtado\XFeedback\Drivers\SmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
+use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('keeps campaign messaging behind the encrypted x-change feedback queue boundary', function () {
-    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    config()->set('x-change.redemption.feedback.queue', 'default');
 
     $job = new DispatchCampaignFeedbackJob(123, 'recipient@example.test');
     $campaignSources = implode('', [
@@ -35,7 +38,7 @@ it('keeps campaign messaging behind the encrypted x-change feedback queue bounda
         ->and($job)->toBeInstanceOf(ShouldBeEncrypted::class)
         ->and($job->queue)->toBe('x-change-feedback')
         ->and($campaignSources)->not->toContain('Mail::')
-        ->and($campaignSources)->not->toContain('EngageSpark')
+        ->and($campaignSources)->not->toContain('LBHurtado\\SMS')
         ->and($campaignSources)->not->toContain('FeedbackDeliveryAttemptRuntimeContract');
 });
 
@@ -590,6 +593,68 @@ it('preserves the feedback created and queued journal lifecycle for campaign sms
             ->pluck('event_type')
             ->all())
         ->toBe(['feedback.created', 'feedback.queued'])
+        ->and($authorization->fresh()->status)->toBe('awaiting_officer');
+});
+
+it('fails closed before feedback when the campaign sms adapter can send directly', function () {
+    Queue::fake([
+        DispatchCampaignFeedbackJob::class,
+        DeliverQueuedFeedbackSmsJob::class,
+    ]);
+    config()->set('x-change.campaigns.delivery.sms.enabled', true);
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-approval-sms-direct-driver-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'assistance',
+        name: 'Direct Driver Must Fail Closed',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09178889999'], 5_000)],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'authorization' => $authorization->reference,
+        'channel' => 'sms',
+    ]), [
+        'recipient' => '09173011987',
+        'request_token' => (string) Str::uuid(),
+    ])->assertSessionHas('campaign_notice', 'Approval Pay Code queued for SMS delivery.');
+
+    $campaignJob = null;
+    Queue::assertPushed(
+        DispatchCampaignFeedbackJob::class,
+        function (DispatchCampaignFeedbackJob $job) use (&$campaignJob): bool {
+            $campaignJob = $job;
+
+            return true;
+        },
+    );
+
+    app(FeedbackChannelRegistryContract::class)->register(
+        'sms',
+        SmsFeedbackChannelDriver::class,
+    );
+
+    expect($campaignJob)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
+    $campaignJob->handle(app(DispatchCampaignFeedback::class));
+
+    Queue::assertNotPushed(DeliverQueuedFeedbackSmsJob::class);
+
+    $attempt = CampaignDeliveryAttempt::query()->with('events')->sole();
+
+    expect($attempt->events->pluck('event_type')->all())
+        ->toBe(['requested', 'queued', 'failed'])
+        ->and($attempt->events->last()?->safe_error_code)
+        ->toBe('campaign_sms_queue_boundary_unavailable')
+        ->and(FeedbackDeliveryRecord::query()->count())->toBe(0)
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', $authorization->reference)
+            ->count())->toBe(0)
         ->and($authorization->fresh()->status)->toBe('awaiting_officer');
 });
 
