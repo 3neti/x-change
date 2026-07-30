@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
+import { request as requestPin } from '@/routes/password';
 
 defineOptions({
     layout: {
@@ -76,7 +77,17 @@ defineProps<{
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">PIN</Label>
+                <div class="flex items-center justify-between gap-3">
+                    <Label for="password">PIN</Label>
+                    <TextLink
+                        v-if="canResetPassword"
+                        :href="requestPin()"
+                        :tabindex="5"
+                        class="text-xs"
+                    >
+                        Forgot PIN?
+                    </TextLink>
+                </div>
                 <Input
                     id="password"
                     type="password"
@@ -114,7 +125,7 @@ defineProps<{
             v-if="canRegister"
         >
             New to X-Change?
-            <TextLink :href="register()" :tabindex="5">Create account</TextLink>
+            <TextLink :href="register()" :tabindex="6">Create account</TextLink>
         </div>
     </Form>
 </template>

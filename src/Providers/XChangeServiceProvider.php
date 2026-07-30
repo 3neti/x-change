@@ -24,6 +24,7 @@ use Inertia\Inertia;
 use InvalidArgumentException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 use Laravel\Fortify\Contracts\RegisterResponse;
+use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
@@ -46,6 +47,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
+use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
@@ -1627,8 +1629,10 @@ class XChangeServiceProvider extends ServiceProvider
 
             Fortify::authenticateUsing($this->app->make(AuthenticateMobileFirstUser::class));
             Fortify::createUsersUsing(CreateNewMobileFirstUser::class);
+            Fortify::resetUserPasswordsUsing(ResetMobileFirstPin::class);
 
             $this->app->singleton(CreatesNewUsers::class, CreateNewMobileFirstUser::class);
+            $this->app->singleton(ResetsUserPasswords::class, ResetMobileFirstPin::class);
             $this->app->singleton(RegisterResponse::class, MobileFirstRegisterResponse::class);
 
             Fortify::confirmPasswordsUsing(function ($user, string $password): bool {
