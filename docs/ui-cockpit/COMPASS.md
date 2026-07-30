@@ -4852,3 +4852,21 @@ Current boundary:
 - The finalized issue dialog and crawler share-card endpoint continue to serve
   the exact stored Stamp PNG. No claim authorization, provider settlement,
   Treasury posting, or money movement changed.
+
+# 2026-07-30 — Flexible Campaign Worksheet Import
+
+- Made beneficiary import the primary preparation control on draft Campaign
+  worksheets while retaining manual row entry for exceptions.
+- Added CSV and XLSX staging with encrypted source and normalized rows,
+  formula rejection, bounded parsing, deterministic column detection, editable
+  mappings, row-level validation, partial valid-row application, and discard.
+- Standardized all imported and manually entered amounts on pesos; centavos
+  remain an internal accounting representation.
+- Added common-name institution resolution through `3neti/money-issuer`.
+  Mobile-only direct-transfer lists default to GCash, while ambiguous or
+  unsupported institution/rail combinations fail closed.
+- Protected worksheet authorization from unapplied valid staged rows and
+  limited each draft to one unresolved preview.
+- Focused Campaign coverage passed with 31 backend tests / 241 assertions and
+  5 frontend tests. Production build and published-asset diagnostics passed.
+- Full contract: `CAMPAIGN_WORKSHEET_IMPORT_UI_UX.md`.
