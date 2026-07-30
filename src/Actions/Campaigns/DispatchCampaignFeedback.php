@@ -27,7 +27,7 @@ final readonly class DispatchCampaignFeedback
         private FeedbackChannelRegistryContract $feedbackChannels,
     ) {}
 
-    public function handle(int $attemptId, string $recipient): void
+    public function handle(int $attemptId, string $recipient): ?string
     {
         $attempt = CampaignDeliveryAttempt::query()
             ->with(['authorization.worksheet', 'fulfillment.row', 'events'])
@@ -36,7 +36,7 @@ final readonly class DispatchCampaignFeedback
         if ($attempt->events->contains(
             fn ($event): bool => in_array($event->event_type, ['completed', 'failed'], true),
         )) {
-            return;
+            return null;
         }
 
         if ($attempt->channel === 'sms' && ! $this->smsQueueBoundaryIsReady()) {
@@ -47,7 +47,7 @@ final readonly class DispatchCampaignFeedback
                 metadata: ['expected_queue' => DispatchCampaignFeedbackJob::Queue],
             );
 
-            return;
+            return null;
         }
 
         $result = $this->feedback->handle(
@@ -66,7 +66,7 @@ final readonly class DispatchCampaignFeedback
                 metadata: ['feedback_delivery_id' => $result->deliveryId],
             );
 
-            return;
+            return null;
         }
 
         if ($result->status === FeedbackDeliveryData::StatusQueued) {
@@ -78,7 +78,7 @@ final readonly class DispatchCampaignFeedback
                 metadata: ['feedback_delivery_id' => $result->deliveryId],
             );
 
-            return;
+            return $result->deliveryId;
         }
 
         $this->deliveryAttempts->append(
@@ -89,6 +89,8 @@ final readonly class DispatchCampaignFeedback
             safeErrorCode: 'feedback_delivery_not_accepted',
             metadata: ['feedback_delivery_id' => $result->deliveryId],
         );
+
+        return null;
     }
 
     private function smsQueueBoundaryIsReady(): bool

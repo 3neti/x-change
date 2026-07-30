@@ -59,7 +59,16 @@ final class DispatchCampaignFeedbackJob implements ShouldBeEncrypted, ShouldBeUn
 
     public function handle(DispatchCampaignFeedback $delivery): void
     {
-        $delivery->handle($this->attemptId, $this->recipient);
+        $deliveryId = $delivery->handle($this->attemptId, $this->recipient);
+
+        if (! is_string($deliveryId) || trim($deliveryId) === '') {
+            return;
+        }
+
+        ConvergeCampaignFeedbackDeliveryJob::dispatch(
+            attemptId: $this->attemptId,
+            deliveryId: $deliveryId,
+        )->afterCommit();
     }
 
     public function failed(Throwable $exception): void

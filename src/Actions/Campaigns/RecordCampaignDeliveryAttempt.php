@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\Campaigns;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
@@ -86,6 +87,61 @@ final class RecordCampaignDeliveryAttempt
         });
 
         if ($eventType !== 'requested') {
+            $this->audit->log('campaign.delivery.'.$eventType, [
+                ...$this->auditPayload($attempt),
+                'delivery_event_reference' => (string) $event->reference,
+                'safe_error_code' => $safeErrorCode,
+            ]);
+        }
+
+        return $event;
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    public function appendTerminalIfOpen(
+        CampaignDeliveryAttempt $attempt,
+        string $eventType,
+        ?string $providerStatus = null,
+        ?string $providerDeliveryReference = null,
+        ?string $safeErrorCode = null,
+        array $metadata = [],
+    ): CampaignDeliveryAttemptEvent {
+        if (! in_array($eventType, ['completed', 'failed'], true)) {
+            throw new InvalidArgumentException('A terminal campaign delivery event must be completed or failed.');
+        }
+
+        [$event, $created] = DB::transaction(function () use ($attempt, $eventType, $providerStatus, $providerDeliveryReference, $safeErrorCode, $metadata): array {
+            $lockedAttempt = CampaignDeliveryAttempt::query()
+                ->lockForUpdate()
+                ->findOrFail($attempt->getKey());
+            $existing = $lockedAttempt->events()
+                ->whereIn('event_type', ['completed', 'failed'])
+                ->orderBy('sequence')
+                ->first();
+
+            if ($existing instanceof CampaignDeliveryAttemptEvent) {
+                return [$existing, false];
+            }
+
+            $sequence = (int) $lockedAttempt->events()
+                ->lockForUpdate()
+                ->max('sequence') + 1;
+            $event = $lockedAttempt->events()->create([
+                'sequence' => $sequence,
+                'event_type' => $eventType,
+                'provider_status' => $providerStatus,
+                'provider_delivery_reference' => $providerDeliveryReference,
+                'safe_error_code' => $safeErrorCode,
+                'metadata' => $metadata,
+                'occurred_at' => now(),
+            ]);
+
+            return [$event, true];
+        });
+
+        if ($created) {
             $this->audit->log('campaign.delivery.'.$eventType, [
                 ...$this->auditPayload($attempt),
                 'delivery_event_reference' => (string) $event->reference,

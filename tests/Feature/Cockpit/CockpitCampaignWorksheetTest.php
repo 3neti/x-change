@@ -12,8 +12,10 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
+use LBHurtado\XChange\Actions\Campaigns\ConvergeCampaignFeedbackDelivery;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
+use LBHurtado\XChange\Jobs\Campaigns\ConvergeCampaignFeedbackDeliveryJob;
 use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
@@ -534,6 +536,7 @@ it('queues an awaiting officer approval Pay Code through x-change feedback witho
 
 it('preserves the feedback created and queued journal lifecycle for campaign sms', function () {
     Queue::fake([
+        ConvergeCampaignFeedbackDeliveryJob::class,
         DispatchCampaignFeedbackJob::class,
         DeliverQueuedFeedbackSmsJob::class,
     ]);
@@ -582,8 +585,19 @@ it('preserves the feedback created and queued journal lifecycle for campaign sms
         DeliverQueuedFeedbackSmsJob::class,
         fn (DeliverQueuedFeedbackSmsJob $job): bool => $job->queue === 'x-change-feedback',
     );
+    $convergenceJob = null;
+    Queue::assertPushedOn(
+        'x-change-feedback',
+        ConvergeCampaignFeedbackDeliveryJob::class,
+        function (ConvergeCampaignFeedbackDeliveryJob $job) use (&$convergenceJob): bool {
+            $convergenceJob = $job;
+
+            return $job->queue === 'x-change-feedback';
+        },
+    );
 
     $attempt = CampaignDeliveryAttempt::query()->with('events')->sole();
+    $feedbackRecord = FeedbackDeliveryRecord::query()->sole();
 
     expect($attempt->events->pluck('event_type')->all())
         ->toBe(['requested', 'queued', 'provider_queued'])
@@ -593,6 +607,94 @@ it('preserves the feedback created and queued journal lifecycle for campaign sms
             ->pluck('event_type')
             ->all())
         ->toBe(['feedback.created', 'feedback.queued'])
+        ->and($authorization->fresh()->status)->toBe('awaiting_officer');
+
+    $feedbackRecord->forceFill([
+        'status' => 'sent',
+        'provider_status' => 'ACCEPTED',
+        'provider_message_id' => 'sms-provider-message-1',
+    ])->save();
+
+    expect($convergenceJob)->toBeInstanceOf(ConvergeCampaignFeedbackDeliveryJob::class);
+    $convergenceJob->handle(app(ConvergeCampaignFeedbackDelivery::class));
+    $convergenceJob->handle(app(ConvergeCampaignFeedbackDelivery::class));
+
+    expect($attempt->fresh()->events->pluck('event_type')->all())
+        ->toBe(['requested', 'queued', 'provider_queued', 'completed'])
+        ->and($attempt->fresh()->events->last()?->provider_status)->toBe('ACCEPTED')
+        ->and($attempt->fresh()->events->last()?->provider_delivery_reference)
+        ->toBe('sms-provider-message-1');
+});
+
+it('converges a final x-feedback sms failure once', function () {
+    Queue::fake([
+        ConvergeCampaignFeedbackDeliveryJob::class,
+        DispatchCampaignFeedbackJob::class,
+        DeliverQueuedFeedbackSmsJob::class,
+    ]);
+    config()->set('x-change.campaigns.delivery.sms.enabled', true);
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-approval-sms-failure-convergence-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'assistance',
+        name: 'SMS Failure Convergence',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09178889999'], 5_000)],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'authorization' => $authorization->reference,
+        'channel' => 'sms',
+    ]), [
+        'recipient' => '09173011987',
+        'request_token' => (string) Str::uuid(),
+    ])->assertSessionHas('campaign_notice', 'Approval Pay Code queued for SMS delivery.');
+
+    $campaignJob = null;
+    Queue::assertPushed(
+        DispatchCampaignFeedbackJob::class,
+        function (DispatchCampaignFeedbackJob $job) use (&$campaignJob): bool {
+            $campaignJob = $job;
+
+            return true;
+        },
+    );
+
+    expect($campaignJob)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
+    $campaignJob->handle(app(DispatchCampaignFeedback::class));
+
+    $convergenceJob = null;
+    Queue::assertPushed(
+        ConvergeCampaignFeedbackDeliveryJob::class,
+        function (ConvergeCampaignFeedbackDeliveryJob $job) use (&$convergenceJob): bool {
+            $convergenceJob = $job;
+
+            return true;
+        },
+    );
+
+    FeedbackDeliveryRecord::query()->sole()->forceFill([
+        'status' => 'failed_final',
+        'provider_status' => 'FAILED',
+    ])->save();
+
+    expect($convergenceJob)->toBeInstanceOf(ConvergeCampaignFeedbackDeliveryJob::class);
+    $convergenceJob->handle(app(ConvergeCampaignFeedbackDelivery::class));
+    $convergenceJob->handle(app(ConvergeCampaignFeedbackDelivery::class));
+
+    $attempt = CampaignDeliveryAttempt::query()->with('events')->sole();
+
+    expect($attempt->events->pluck('event_type')->all())
+        ->toBe(['requested', 'queued', 'provider_queued', 'failed'])
+        ->and($attempt->events->last()?->provider_status)->toBe('FAILED')
+        ->and($attempt->events->last()?->safe_error_code)
+        ->toBe('feedback_delivery_failed_final')
         ->and($authorization->fresh()->status)->toBe('awaiting_officer');
 });
 
