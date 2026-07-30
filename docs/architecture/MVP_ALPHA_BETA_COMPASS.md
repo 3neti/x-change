@@ -110,18 +110,17 @@ primitive.
 
 ## Navigation Baseline
 
-The accepted authenticated home is `/x/cockpit`.
+The accepted authenticated home is `/x/cockpit`. `/x/dashboard` is now a
+compatibility redirect, Fortify uses the Cockpit as its successful-login home,
+and the mobile-first auth publish set includes the x-change landing page.
 
-The host still contains legacy navigation:
+The host may still contain legacy links while migrating:
 
-- Fortify redirects successful login to `/x/dashboard`;
-- `/dashboard` redirects to `/x/dashboard`;
-- the public landing page links authenticated users to `/x/dashboard`;
-- the public landing page is still the Laravel starter page; and
-- host header components still link to `/x/dashboard`.
+- `/dashboard` may redirect through `/x/dashboard`; and
+- older host header components may still link to `/x/dashboard`.
 
-Alpha must make `/x/cockpit` canonical and redirect the legacy dashboard routes
-to it. Users must not encounter two competing operating homes.
+Both paths finish in the Cockpit; the legacy x-change Dashboard component is no
+longer rendered.
 
 ## Fresh-Cloud Target Sequence
 
@@ -174,10 +173,11 @@ Every item is required before inviting real alpha users.
 
 ### P0 — Canonical product entry
 
-- [ ] Replace the Laravel starter landing page with an x-change landing page.
-- [ ] Send authenticated visitors to `/x/cockpit`.
-- [ ] Change Fortify's successful-login home to `/x/cockpit`.
-- [ ] Redirect `/dashboard` and `/x/dashboard` to `/x/cockpit`.
+- [x] Replace the Laravel starter landing page with an x-change landing page.
+- [x] Send authenticated visitors to `/x/cockpit`.
+- [x] Change Fortify's successful-login home to `/x/cockpit`.
+- [x] Redirect `/dashboard` and `/x/dashboard` to `/x/cockpit`, allowing the
+      host compatibility route to pass through `/x/dashboard`.
 - [ ] Remove legacy Dashboard links from host navigation.
 - [ ] Browser-test guest, newly registered, invited, and returning-user entry.
 

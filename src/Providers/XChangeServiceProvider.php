@@ -1591,6 +1591,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('stubs/database/factories/UserFactory.php.stub') => database_path('factories/UserFactory.php'),
             $this->packagePath('stubs/resources/js/pages/auth/Login.vue.stub') => resource_path('js/pages/auth/Login.vue'),
             $this->packagePath('stubs/resources/js/pages/auth/Register.vue.stub') => resource_path('js/pages/auth/Register.vue'),
+            $this->packagePath('stubs/resources/js/pages/Welcome.vue.stub') => resource_path('js/pages/Welcome.vue'),
         ], 'x-change-auth');
 
         $this->publishes([
@@ -1628,6 +1629,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->booted(function (): void {
             $this->app['config']->set('fortify.username', 'mobile');
             $this->app['config']->set('fortify.lowercase_usernames', false);
+            $this->app['config']->set('fortify.home', '/x/cockpit');
 
             Fortify::authenticateUsing($this->app->make(AuthenticateMobileFirstUser::class));
             Fortify::createUsersUsing(CreateNewMobileFirstUser::class);

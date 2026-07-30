@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
-use Inertia\Inertia;
-use Inertia\Response;
 
-class DashboardPageController extends Controller
+final class DashboardPageController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(): RedirectResponse
     {
-        return Inertia::render('x-change/Dashboard');
+        return redirect()->route('x-change.cockpit.dashboard');
     }
 }
