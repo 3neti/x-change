@@ -443,3 +443,38 @@ assets. It does not own onboarding business logic.
   authentication verification passes: 32 tests and 166 assertions.
 - Production asset build and Cockpit asset diagnostics pass. The known
   third-party Rolldown pure-annotation warnings remain non-blocking.
+
+### 2026-07-31 — Slice 9 completed
+
+- Newly provisioned onboarding claimants are now marked as requiring an
+  initial PIN instead of being given a PIN they do not know.
+- Authenticated claim completion hands the claimant to a dedicated
+  **Create Your PIN** screen before any Cockpit or settings page is available.
+- Initial setup asks only for the new PIN and confirmation. It deliberately
+  does not ask for a current PIN.
+- The requirement is persisted in Account onboarding metadata and cleared
+  only after the new PIN is hashed and stored successfully.
+- Existing settings security confirmation remains unchanged for later PIN
+  changes by established users.
+- Focused onboarding provisioning, execution, and PIN setup verification
+  passes: 15 tests and 60 assertions.
+- Commit: `f2f22dcc` (`feat: require onboarding claimants to create pin`).
+
+### 2026-07-31 — Slice 10 completed
+
+- Enabled Fortify's standard password-reset broker as the recovery authority,
+  presented to mobile-first users as **Forgot PIN**.
+- Login now links to the email-based recovery request when reset-password
+  support is enabled.
+- The emailed reset token opens a dedicated **Reset PIN** form that accepts a
+  numeric PIN and confirmation.
+- The reset action uses Laravel's broker token, hashes the new PIN, and also
+  clears a pending first-time PIN requirement when recovery is used.
+- Recovery does not disclose whether an email address belongs to an Account;
+  Fortify retains its standard throttling, token expiry, and single-use reset
+  semantics.
+- Focused authentication and onboarding regression verification passes:
+  20 tests and 69 assertions.
+- Production asset compilation passes; known third-party Rolldown
+  pure-annotation warnings remain non-blocking.
+- Commit: `6b93082a` (`feat: add mobile-first pin recovery`).
