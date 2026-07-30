@@ -52,12 +52,17 @@ class PrepareLifecycleEnvironmentCommand extends Command
 
         $systemUser = $this->ensureSystemUser();
         $testUser = $this->ensureTestUser();
+        $scenarioIssuers = $this->ensureScenarioIssuers();
 
         $systemFloat = (float) ($this->option('system-float') ?: config('x-change.lifecycle.defaults.system_float', 1_000_000));
         $userFloat = (float) ($this->option('user-float') ?: config('x-change.lifecycle.defaults.user_float', 10_000));
 
         $this->fundSystemWallet($systemUser, $systemFloat);
         $this->fundTestUser($systemUser, $testUser, $userFloat);
+
+        foreach ($scenarioIssuers as $scenarioIssuer) {
+            $this->fundTestUser($systemUser, $scenarioIssuer, $userFloat);
+        }
 
         $this->seedInstructionItems();
 
@@ -78,6 +83,17 @@ class PrepareLifecycleEnvironmentCommand extends Command
                     ? $testUser->getMobileChannel()
                     : null,
             ],
+            'scenario_issuers' => array_map(
+                static fn (Model $issuer): array => [
+                    'id' => $issuer->getKey(),
+                    'email' => $issuer->getAttribute('email'),
+                    'mobile' => $issuer instanceof HasMobileChannel
+                        ? $issuer->getMobileChannel()
+                        : null,
+                    'wallet_balance' => $issuer->wallet?->balanceFloat,
+                ],
+                $scenarioIssuers,
+            ),
             'balances' => [
                 'system_wallet' => $systemUser->wallet?->balanceFloat ?? null,
                 'test_wallet' => $testUser->wallet?->balanceFloat ?? null,
@@ -116,6 +132,19 @@ class PrepareLifecycleEnvironmentCommand extends Command
                 ? Number::currency((float) $testUser->wallet->balanceFloat, in: 'PHP')
                 : 'n/a'
         ));
+
+        foreach ($scenarioIssuers as $scenarioIssuer) {
+            $this->line(sprintf(
+                'Scenario Issuer: %s / %s / %s',
+                $scenarioIssuer->getAttribute('email') ?: '#'.$scenarioIssuer->getKey(),
+                $scenarioIssuer instanceof HasMobileChannel
+                    ? ($scenarioIssuer->getMobileChannel() ?: 'n/a')
+                    : 'n/a',
+                $scenarioIssuer->wallet?->balanceFloat !== null
+                    ? Number::currency((float) $scenarioIssuer->wallet->balanceFloat, in: 'PHP')
+                    : 'n/a',
+            ));
+        }
 
         $this->line('Instruction Items: '.count($priceList));
         $this->newLine();
@@ -245,13 +274,75 @@ class PrepareLifecycleEnvironmentCommand extends Command
         return $user;
     }
 
+    /**
+     * @return list<Model>
+     */
+    protected function ensureScenarioIssuers(): array
+    {
+        $issuers = [];
+
+        foreach ((array) config('x-change.lifecycle.scenarios', []) as $scenario) {
+            if (! is_array($scenario)) {
+                continue;
+            }
+
+            $email = trim((string) data_get($scenario, 'lifecycle.issuer_email'));
+
+            if ($email === '' || isset($issuers[$email])) {
+                continue;
+            }
+
+            $issuers[$email] = $this->ensureScenarioIssuer(
+                email: $email,
+                mobile: trim((string) data_get($scenario, 'lifecycle.issuer_mobile')),
+            );
+        }
+
+        return array_values($issuers);
+    }
+
+    protected function ensureScenarioIssuer(string $email, string $mobile): Model
+    {
+        $class = $this->userModelClass();
+
+        /** @var Model $user */
+        $user = $class::firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'Lifecycle Scenario Issuer',
+                'password' => bcrypt('password'),
+            ],
+        );
+
+        if ($mobile !== '') {
+            if (! $user instanceof HasMobileChannel) {
+                throw new RuntimeException(sprintf(
+                    'Lifecycle user model [%s] must implement [%s] to support mobile channels.',
+                    $class,
+                    HasMobileChannel::class,
+                ));
+            }
+
+            if ($user->getMobileChannel() !== $mobile) {
+                $user->setMobileChannel($mobile);
+                $user->refresh();
+            }
+        }
+
+        return $user;
+    }
+
     protected function fundSystemWallet(Model $systemUser, float $amount): void
     {
         if ($amount <= 0 || ! method_exists($systemUser, 'depositFloat')) {
             return;
         }
 
-        $systemUser->depositFloat($amount);
+        $difference = $amount - (float) ($systemUser->wallet?->balanceFloat ?? 0);
+
+        if ($difference > 0) {
+            $systemUser->depositFloat($difference);
+        }
     }
 
     protected function fundTestUser(Model $systemUser, Model $testUser, float $amount): void
@@ -260,8 +351,10 @@ class PrepareLifecycleEnvironmentCommand extends Command
             return;
         }
 
-        if (method_exists($systemUser, 'transferFloat')) {
-            $systemUser->transferFloat($testUser, $amount);
+        $difference = $amount - (float) ($testUser->wallet?->balanceFloat ?? 0);
+
+        if ($difference > 0 && method_exists($systemUser, 'transferFloat')) {
+            $systemUser->transferFloat($testUser, $difference);
         }
     }
 

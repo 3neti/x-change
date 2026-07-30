@@ -71,6 +71,26 @@ it('resolves max polls from timeout and poll when explicit option is missing', f
         ->and($bootstrapper->resolveMaxPolls(181, 10))->toBe(19);
 });
 
+it('resolves an explicitly prepared scenario issuer by email', function () {
+    config()->set('x-change.lifecycle.defaults.user_model', FakeLifecycleUser::class);
+
+    $issuer = FakeLifecycleUser::query()->create([
+        'name' => 'Isolated Scenario Issuer',
+        'email' => 'isolated-scenario@example.test',
+        'password' => bcrypt('password'),
+    ]);
+    $issuer->setMobileChannel('09179990000');
+
+    $resolved = app(LifecycleScenarioBootstrapper::class)->resolveScenarioIssuer([
+        'issuer_id' => 999,
+        'lifecycle' => [
+            'issuer_email' => 'isolated-scenario@example.test',
+        ],
+    ]);
+
+    expect($resolved->is($issuer))->toBeTrue();
+});
+
 it('bootstraps a lifecycle scenario end to end', function () {
     config()->set('x-change.lifecycle.defaults.user_model', FakeLifecycleUser::class);
 

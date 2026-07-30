@@ -470,6 +470,17 @@ return [
             'category' => 'onboarding',
             'tags' => ['onboarding', 'voucher', 'claim-workflow', 'execution-engine'],
             'mode' => 'onboarding_voucher',
+            'lifecycle' => [
+                'issuer_email' => env(
+                    'XCHANGE_LIFECYCLE_ONBOARDING_VOUCHER_ISSUER_EMAIL',
+                    'onboarding-voucher-issuer@example.test',
+                ),
+                'issuer_mobile' => env(
+                    'XCHANGE_LIFECYCLE_ONBOARDING_VOUCHER_ISSUER_MOBILE',
+                    '09179990000',
+                ),
+                'funding_boundary' => 'isolated_compatibility_wallet',
+            ],
             'amount' => 1,
             'currency' => 'PHP',
             'mobile' => env('XCHANGE_LIFECYCLE_ONBOARDING_VOUCHER_MOBILE', '09179990001'),

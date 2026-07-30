@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Tests\Fakes\User;
 use Symfony\Component\Console\Output\BufferedOutput;
 
@@ -20,9 +21,29 @@ beforeEach(function (): void {
     ]);
 
     enableNetbankTreasuryForTests();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        User::query()->where('email', 'system@example.test')->sole(),
+        ['netbank-primary'],
+    );
+});
+
+it('prepares the isolated scenario issuer to a minimum without inflating it on repeat', function (): void {
+    $issuer = User::query()
+        ->where('email', 'onboarding-voucher-issuer@example.test')
+        ->sole();
+    $balanceBefore = (float) $issuer->wallet->balanceFloat;
+
+    Artisan::call('xchange:lifecycle:prepare', [
+        '--seed' => true,
+    ]);
+
+    expect($balanceBefore)->toBe(10_000.0)
+        ->and((float) $issuer->fresh()->wallet->balanceFloat)->toBe($balanceBefore);
 });
 
 it('issues and claims an onboarding Voucher through the explicit execution workflow', function (): void {
+    config()->set('x-change.commercial.enabled', true);
+
     $output = new BufferedOutput;
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'onboarding_voucher',
@@ -42,13 +63,15 @@ it('issues and claims an onboarding Voucher through the explicit execution workf
         ->and(data_get($payload, 'recipient_account.platform_account_ready'))->toBeTrue()
         ->and(data_get($payload, 'controls.provider_calls'))->toBeFalse()
         ->and(data_get($payload, 'controls.raw_otp_persisted'))->toBeFalse()
-        ->and(data_get($payload, 'controls.canonical_claim_link'))->toStartWith('/x/claim/');
+        ->and(data_get($payload, 'controls.canonical_claim_link'))->toStartWith('/x/claim/')
+        ->and(config('x-change.commercial.enabled'))->toBeTrue();
 
     $voucher = Voucher::query()
         ->where('code', data_get($payload, 'voucher.code'))
         ->sole();
 
     expect($voucher->redeemed_at)->not->toBeNull()
+        ->and($voucher->owner?->getAttribute('email'))->toBe('onboarding-voucher-issuer@example.test')
         ->and(User::query()->whereIn('mobile', ['09179990001', '639179990001'])->count())
         ->toBe(1)
         ->and(data_get(

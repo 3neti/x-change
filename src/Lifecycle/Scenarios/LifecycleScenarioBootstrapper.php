@@ -14,6 +14,7 @@ use LBHurtado\XChange\Contracts\MoneyMovementLifecycleTriggerMatrixContract;
 use LBHurtado\XChange\Contracts\MoneyMovementTargetModelContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
+use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use RuntimeException;
 
 final class LifecycleScenarioBootstrapper
@@ -42,14 +43,19 @@ final class LifecycleScenarioBootstrapper
     ): LifecycleScenarioBootstrapResult {
         $this->assertLifecycleUserModelSupportsMobile();
 
-        $issuerId = (int) ($issuerOption ?: $scenario['issuer_id'] ?? 1);
-        $walletId = (int) ($walletOption ?: $scenario['wallet_id'] ?? 1);
+        $issuer = $this->resolveScenarioIssuer($scenario, $issuerOption);
+        $issuerId = (int) $issuer->getKey();
+        $walletId = (int) (
+            $walletOption
+                ?: (data_get($scenario, 'lifecycle.issuer_email')
+                    ? $issuerId
+                    : ($scenario['wallet_id'] ?? $issuerId))
+        );
         $amount = (float) ($amountOption ?: $scenario['amount'] ?? 25);
         $timeout = (int) ($timeoutOption ?: $scenario['timeout'] ?? 180);
         $poll = max(1, (int) ($pollOption ?: $scenario['poll'] ?? 10));
         $maxPolls = $this->resolveMaxPolls($timeout, $poll, $maxPollsOption);
 
-        $issuer = $this->resolveIssuerModel($issuerId);
         $baseClaimMobile = $this->resolveScenarioMobile($scenario, $issuer);
         $idempotencyKey = 'lifecycle-'.(string) str()->uuid();
         $beforeIssuance = $this->liabilities->forIssuer($issuer)->toArray();
@@ -66,7 +72,7 @@ final class LifecycleScenarioBootstrapper
             ->handle($lifecycleInput)
             ->toArray();
 
-        $generated = $this->generatePayCode->handle($lifecycleInput);
+        $generated = $this->generateScenarioPayCode($scenario, $lifecycleInput);
         $voucher = $this->vouchers->findByCodeOrFail($generated->code);
         $afterIssuance = $this->liabilities->forIssuer($issuer)->toArray();
 
@@ -153,6 +159,66 @@ final class LifecycleScenarioBootstrapper
         }
 
         return $issuer;
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     */
+    public function resolveScenarioIssuer(array $scenario, ?string $issuerOption = null): Model
+    {
+        if ($issuerOption !== null && trim($issuerOption) !== '') {
+            return $this->resolveIssuerModel((int) $issuerOption);
+        }
+
+        $email = trim((string) data_get($scenario, 'lifecycle.issuer_email'));
+
+        if ($email === '') {
+            return $this->resolveIssuerModel((int) ($scenario['issuer_id'] ?? 1));
+        }
+
+        $class = $this->userModelClass();
+
+        /** @var Model|null $issuer */
+        $issuer = $class::query()->where('email', $email)->first();
+
+        if (! $issuer) {
+            throw new RuntimeException(sprintf(
+                'Lifecycle scenario issuer [%s] is not prepared. Run the scenario with --prepare.',
+                $email,
+            ));
+        }
+
+        if (! $issuer instanceof HasMobileChannel) {
+            throw new RuntimeException(sprintf(
+                'Lifecycle issuer model [%s] must implement [%s].',
+                $class,
+                HasMobileChannel::class,
+            ));
+        }
+
+        return $issuer;
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $lifecycleInput
+     */
+    private function generateScenarioPayCode(
+        array $scenario,
+        array $lifecycleInput,
+    ): GeneratePayCodeResultData {
+        if (data_get($scenario, 'lifecycle.funding_boundary') !== 'isolated_compatibility_wallet') {
+            return $this->generatePayCode->handle($lifecycleInput);
+        }
+
+        $commercialEnabled = config('x-change.commercial.enabled');
+        config()->set('x-change.commercial.enabled', false);
+
+        try {
+            return $this->generatePayCode->handle($lifecycleInput);
+        } finally {
+            config()->set('x-change.commercial.enabled', $commercialEnabled);
+        }
     }
 
     /**

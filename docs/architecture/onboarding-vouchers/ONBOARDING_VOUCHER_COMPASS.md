@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Wave closed
-Status: Slices 0–8 complete
+Current slice: Lifecycle Treasury Isolation Correction
+Status: Slices 0–9 complete
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -40,6 +40,7 @@ Last updated: 2026-07-30
 | 6 | Issuance Dependency UX | Completed |
 | 7 | Template and Campaign Propagation | Completed |
 | 8 | Lifecycle and Browser Acceptance | Completed |
+| 9 | Lifecycle Treasury Isolation Correction | Completed |
 
 ## Settled Decisions
 
@@ -128,6 +129,23 @@ assets. It does not own onboarding business logic.
    handoff point.
 
 ## Slice Log
+
+### 2026-07-30 — Slice 9 completed
+
+- Reproduced the host-only failure where lifecycle preparation funded the
+  compatibility wallet but a pre-existing zero Treasury Client Funds position
+  correctly blocked issuance.
+- Added a dedicated, prepared onboarding-scenario issuer so claim-architecture
+  acceptance never borrows the system user or a real operator Account.
+- Kept the scenario on an explicit isolated compatibility-ledger boundary.
+  It still estimates and charges the onboarding tariff, but it cannot create
+  synthetic NetBank Inventory or Treasury Positions.
+- Preserved normal Cockpit and Treasury funding safeguards without a bypass.
+- Made lifecycle preparation top up synthetic wallets to a configured minimum
+  instead of adding the full amount again on every run.
+- Added regression coverage for a host with a zero system Treasury position,
+  explicit scenario-issuer resolution, and restoration of the commercial
+  runtime setting after issuance.
 
 ### 2026-07-30 — Slice 0 opened
 
