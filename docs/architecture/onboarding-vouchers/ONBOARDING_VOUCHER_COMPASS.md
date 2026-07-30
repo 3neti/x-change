@@ -130,6 +130,35 @@ assets. It does not own onboarding business logic.
 
 ## Slice Log
 
+### 2026-07-30 — Slice 11 completed
+
+- Recast the lifecycle as a system-issued onboarding invitation while keeping
+  its test money isolated from Treasury and provider Inventory.
+- Added a dedicated `lifecycle` compatibility wallet for the system Account;
+  lifecycle preparation tops it up to a configured minimum without touching
+  NetBank Inventory or Account Treasury Positions.
+- The isolated boundary is accepted only in configured synthetic
+  environments and fails closed elsewhere.
+- The version 2 report now exposes the system issuer, compatibility boundary,
+  principal, instruction cost, Account debit, price components, recipient
+  Account readiness, persisted execution policy, and observed provider
+  attempt count.
+- Scenario success now requires the provider-attempt count to remain zero;
+  `provider_calls: false` is derived from persisted evidence instead of being
+  a hard-coded assertion.
+
+### 2026-07-30 — Slice 10 completed
+
+- Persisted the generic `execution_only` post-redemption mode on onboarding
+  Voucher instructions.
+- Prepended an execution-aware gate to the shared post-redemption pipeline.
+  It suppresses external payout only when that persisted mode is present;
+  ordinary disbursement and Campaign authorization behavior are unchanged.
+- This corrects the earlier lifecycle false positive in which Account
+  provisioning succeeded but the legacy redeemed observer still attempted a
+  NetBank transfer.
+- Focused policy, driver, pipeline, and serialization verification passes.
+
 ### 2026-07-30 — Slice 9 completed
 
 - Reproduced the host-only failure where lifecycle preparation funded the

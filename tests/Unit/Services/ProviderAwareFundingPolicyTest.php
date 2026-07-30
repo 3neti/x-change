@@ -20,6 +20,54 @@ use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\SyncPaynamicsWalletBalance;
 use LBHurtado\XChange\Tests\Fakes\User;
 
+it('uses an isolated compatibility wallet without provider calls for local lifecycle scenarios', function () {
+    config()->set('x-change.lifecycle.synthetic_funding_environments', ['testing']);
+
+    $owner = new stdClass;
+    $wallet = (object) ['balance' => 5000];
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $links = Mockery::mock(ProviderAccountLinkRepositoryContract::class);
+    $provisioning = Mockery::mock(ProviderProvisioningGatewayContract::class);
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('getBalance')->once()->with($wallet)->andReturn(5000);
+
+    $decision = (new ProviderAwareFundingPolicy($settings, $links, $provisioning, $wallets))
+        ->assertCanIssue($owner, $wallet, 27.30, [
+            'currency' => 'PHP',
+            'lifecycle_funding_boundary' => 'isolated_compatibility_wallet',
+        ]);
+
+    expect($decision->allowed)->toBeTrue()
+        ->and($decision->authority)->toBe('local_ledger')
+        ->and($decision->available_minor)->toBe(5000)
+        ->and($decision->required_minor)->toBe(2730)
+        ->and($decision->meta)->toMatchArray([
+            'provider' => 'lifecycle',
+            'topology' => 'isolated_compatibility_wallet',
+            'provider_calls' => false,
+        ]);
+});
+
+it('rejects an isolated lifecycle funding boundary outside approved environments', function () {
+    config()->set('x-change.lifecycle.synthetic_funding_environments', ['local']);
+
+    $owner = new stdClass;
+    $wallet = (object) ['balance' => 5000];
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $links = Mockery::mock(ProviderAccountLinkRepositoryContract::class);
+    $provisioning = Mockery::mock(ProviderProvisioningGatewayContract::class);
+    $wallets = Mockery::mock(WalletAccessContract::class);
+
+    expect(fn () => (new ProviderAwareFundingPolicy($settings, $links, $provisioning, $wallets))
+        ->assertCanIssue($owner, $wallet, 27.30, [
+            'lifecycle_funding_boundary' => 'isolated_compatibility_wallet',
+        ]))
+        ->toThrow(
+            InsufficientWalletBalance::class,
+            'The isolated lifecycle funding boundary is unavailable in this environment.',
+        );
+});
+
 it('uses the local ledger balance for ledger pooled providers', function () {
     $owner = new stdClass;
     $wallet = (object) ['balance' => 5000];

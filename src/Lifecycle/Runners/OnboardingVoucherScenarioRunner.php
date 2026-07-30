@@ -8,6 +8,8 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Throwable;
 
@@ -67,6 +69,7 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
                 $context,
                 'The onboarding Voucher claim failed safely.',
                 $exception::class,
+                $exception->getMessage(),
             );
         }
 
@@ -86,22 +89,67 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
             );
         }
 
+        $providerAttempts = DisbursementReconciliation::query()
+            ->where('voucher_code', $context->voucher->getAttribute('code'))
+            ->count();
+        $executionPolicy = data_get(
+            $context->voucher->metadata,
+            'instructions.execution.metadata.post_redemption.mode',
+        );
+        $providerCallsSuppressed = $executionPolicy === OnboardingVoucherInstructionPolicy::PostRedemptionMode
+            && $providerAttempts === 0;
+
         return new ScenarioRunResult(
-            exitCode: Command::SUCCESS,
+            exitCode: $providerCallsSuppressed
+                ? Command::SUCCESS
+                : Command::FAILURE,
             payload: [
-                'schema' => 'x-change.lifecycle.onboarding-voucher.v1',
+                'schema' => 'x-change.lifecycle.onboarding-voucher.v2',
                 'scenario' => $context->scenarioKey,
                 'label' => $context->label(),
                 'mode' => $context->mode(),
-                'success' => true,
-                'message' => 'The onboarding Voucher provisioned or reused the recipient Account and completed through the execution engine.',
+                'success' => $providerCallsSuppressed,
+                'message' => $providerCallsSuppressed
+                    ? 'The system Account issued the onboarding Pay Code; the execution engine provisioned the recipient Account without a provider payout.'
+                    : 'The onboarding account was provisioned, but the no-provider-call invariant failed.',
                 'generated' => $context->generated?->toArray(),
+                'issuer' => [
+                    'role' => 'system',
+                    'model' => $context->issuer::class,
+                    'key' => (string) $context->issuer->getKey(),
+                    'funding_boundary' => data_get(
+                        $context->scenario,
+                        'lifecycle.funding_boundary',
+                    ),
+                ],
+                'issuance_ledger' => [
+                    'currency' => $context->generated?->currency,
+                    'principal_minor' => (int) round(
+                        ((float) ($context->generated?->amount ?? 0)) * 100
+                    ),
+                    'instruction_cost_minor' => (int) round(
+                        ((float) ($context->generated?->cost->total ?? 0)) * 100
+                    ),
+                    'account_debit_minor' => (int) round(
+                        ((float) ($context->generated?->cost->account_debit ?? 0)) * 100
+                    ),
+                    'charges' => $context->generated?->cost->charges ?? [],
+                    'wallet_before' => data_get(
+                        $context->generated?->wallet,
+                        'balance_before',
+                    ),
+                    'wallet_after' => data_get(
+                        $context->generated?->wallet,
+                        'balance_after',
+                    ),
+                ],
                 'voucher' => [
                     'code' => $context->voucher->getAttribute('code'),
                     'onboarding' => data_get($context->voucher, 'instructions.onboarding') === true,
                     'execution_driver' => data_get($context->voucher, 'instructions.execution.driver'),
                     'claimed' => $result->claimed,
                     'status' => $result->status,
+                    'post_redemption_mode' => $executionPolicy,
                 ],
                 'recipient_account' => [
                     'model' => $account::class,
@@ -112,7 +160,9 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
                         && $account->wallet()->where('slug', 'platform')->exists(),
                 ],
                 'controls' => [
-                    'provider_calls' => false,
+                    'provider_calls' => $providerAttempts > 0,
+                    'provider_attempt_count' => $providerAttempts,
+                    'external_payout_suppressed' => $providerCallsSuppressed,
                     'raw_otp_persisted' => $this->rawOtpPersisted($context->voucher),
                     'canonical_claim_link' => route(
                         'x-change.claim.show',
@@ -137,17 +187,21 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
         ScenarioRunContext $context,
         string $message,
         ?string $exception = null,
+        ?string $exceptionMessage = null,
     ): ScenarioRunResult {
         return new ScenarioRunResult(
             exitCode: Command::FAILURE,
             payload: [
-                'schema' => 'x-change.lifecycle.onboarding-voucher.v1',
+                'schema' => 'x-change.lifecycle.onboarding-voucher.v2',
                 'scenario' => $context->scenarioKey,
                 'label' => $context->label(),
                 'mode' => $context->mode(),
                 'success' => false,
                 'message' => $message,
                 'exception' => $exception,
+                'exception_message' => app()->environment(['local', 'testing'])
+                    ? $exceptionMessage
+                    : null,
                 'provider_calls' => false,
             ],
         );

@@ -36,6 +36,10 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
     {
         $this->assertAccountIsNotOnFundingHold($localWallet);
 
+        if (data_get($context, 'lifecycle_funding_boundary') === 'isolated_compatibility_wallet') {
+            return $this->isolatedLifecycleDecision($localWallet, $amount, $context);
+        }
+
         $provider = $this->effectiveProviderForOwner($owner, data_get($context, 'provider'));
         $topology = $this->settings->topology($provider);
         $requiredMinor = $this->normalizeAmountForWallet($amount);
@@ -90,6 +94,54 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
                 'source_account' => $provider === 'netbank'
                     ? ($sourceAccount ?? null)
                     : null,
+            ],
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    protected function isolatedLifecycleDecision(
+        mixed $localWallet,
+        float|int|string $amount,
+        array $context,
+    ): FundingDecisionData {
+        if (! app()->environment(
+            (array) config('x-change.lifecycle.synthetic_funding_environments', ['local', 'testing'])
+        )) {
+            throw new InsufficientWalletBalance(
+                'The isolated lifecycle funding boundary is unavailable in this environment.'
+            );
+        }
+
+        $requiredMinor = $this->normalizeAmountForWallet($amount);
+        $availableMinor = $this->normalizeBalanceForComparison(
+            $this->wallets->getBalance($localWallet)
+        );
+        $currency = (string) data_get(
+            $context,
+            'currency',
+            config('x-change.pricing.currency', 'PHP'),
+        );
+
+        if ($availableMinor < $requiredMinor) {
+            throw new InsufficientWalletBalance(sprintf(
+                'Lifecycle issuer wallet cannot afford the requested amount. Balance: %s, Required: %s',
+                $availableMinor,
+                $requiredMinor,
+            ));
+        }
+
+        return FundingDecisionData::allowed(
+            authority: 'local_ledger',
+            availableMinor: $availableMinor,
+            requiredMinor: $requiredMinor,
+            currency: $currency,
+            freshAsOf: now()->toIso8601String(),
+            meta: [
+                'provider' => 'lifecycle',
+                'topology' => 'isolated_compatibility_wallet',
+                'provider_calls' => false,
             ],
         );
     }

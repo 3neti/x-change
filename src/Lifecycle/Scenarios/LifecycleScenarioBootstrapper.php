@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Lifecycle\Scenarios;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
+use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
@@ -27,6 +28,7 @@ final class LifecycleScenarioBootstrapper
         private readonly MoneyMovementAccountingDecisionContract $moneyMovementDecision,
         private readonly MoneyMovementTargetModelContract $moneyMovementTarget,
         private readonly MoneyMovementLifecycleTriggerMatrixContract $moneyMovementTriggers,
+        private readonly SystemUserResolverContract $systemUsers,
     ) {}
 
     /**
@@ -48,6 +50,7 @@ final class LifecycleScenarioBootstrapper
         $walletId = (int) (
             $walletOption
                 ?: (data_get($scenario, 'lifecycle.issuer_email')
+                    || data_get($scenario, 'lifecycle.issuer_role') === 'system'
                     ? $issuerId
                     : ($scenario['wallet_id'] ?? $issuerId))
         );
@@ -168,6 +171,19 @@ final class LifecycleScenarioBootstrapper
     {
         if ($issuerOption !== null && trim($issuerOption) !== '') {
             return $this->resolveIssuerModel((int) $issuerOption);
+        }
+
+        if (data_get($scenario, 'lifecycle.issuer_role') === 'system') {
+            $issuer = $this->systemUsers->resolve();
+
+            if (! $issuer instanceof Model || ! $issuer instanceof HasMobileChannel) {
+                throw new RuntimeException(sprintf(
+                    'The configured system user must be an Eloquent model implementing [%s].',
+                    HasMobileChannel::class,
+                ));
+            }
+
+            return $issuer;
         }
 
         $email = trim((string) data_get($scenario, 'lifecycle.issuer_email'));
@@ -314,6 +330,10 @@ final class LifecycleScenarioBootstrapper
 
             '_meta' => [
                 'idempotency_key' => $idempotencyKey,
+                'lifecycle_funding_boundary' => data_get(
+                    $scenario,
+                    'lifecycle.funding_boundary',
+                ),
             ],
         ];
     }

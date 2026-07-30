@@ -91,6 +91,20 @@ it('resolves an explicitly prepared scenario issuer by email', function () {
     expect($resolved->is($issuer))->toBeTrue();
 });
 
+it('resolves the system account as a scenario issuer', function () {
+    config()->set('x-change.lifecycle.defaults.user_model', FakeLifecycleUser::class);
+
+    $system = enableNetbankTreasuryForTests();
+
+    $resolved = app(LifecycleScenarioBootstrapper::class)->resolveScenarioIssuer([
+        'lifecycle' => [
+            'issuer_role' => 'system',
+        ],
+    ]);
+
+    expect($resolved->is($system))->toBeTrue();
+});
+
 it('bootstraps a lifecycle scenario end to end', function () {
     config()->set('x-change.lifecycle.defaults.user_model', FakeLifecycleUser::class);
 

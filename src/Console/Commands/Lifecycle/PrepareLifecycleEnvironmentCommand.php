@@ -64,6 +64,8 @@ class PrepareLifecycleEnvironmentCommand extends Command
             $this->fundTestUser($systemUser, $scenarioIssuer, $userFloat);
         }
 
+        $this->fundSystemWallet($systemUser, $systemFloat);
+        $this->fundIsolatedLifecycleWallet($systemUser, $systemFloat);
         $this->seedInstructionItems();
 
         $priceList = $this->lifecyclePriceList();
@@ -334,13 +336,19 @@ class PrepareLifecycleEnvironmentCommand extends Command
 
     protected function fundSystemWallet(Model $systemUser, float $amount): void
     {
-        if ($amount <= 0 || ! method_exists($systemUser, 'depositFloat')) {
+        if ($amount <= 0) {
             return;
         }
 
-        $difference = $amount - (float) ($systemUser->wallet?->balanceFloat ?? 0);
+        $systemUser->unsetRelation('wallet');
+        $wallet = method_exists($systemUser, 'getWallet')
+            ? $systemUser->getWallet('platform')
+            : $systemUser->wallet;
+        $difference = $amount - (float) ($wallet?->balanceFloat ?? 0);
 
-        if ($difference > 0) {
+        if ($difference > 0 && method_exists($wallet, 'depositFloat')) {
+            $wallet->depositFloat($difference);
+        } elseif ($difference > 0 && method_exists($systemUser, 'depositFloat')) {
             $systemUser->depositFloat($difference);
         }
     }
@@ -355,6 +363,38 @@ class PrepareLifecycleEnvironmentCommand extends Command
 
         if ($difference > 0 && method_exists($systemUser, 'transferFloat')) {
             $systemUser->transferFloat($testUser, $difference);
+        }
+    }
+
+    protected function fundIsolatedLifecycleWallet(Model $systemUser, float $amount): void
+    {
+        if (
+            $amount <= 0
+            || ! method_exists($systemUser, 'getWallet')
+            || ! method_exists($systemUser, 'createWallet')
+        ) {
+            return;
+        }
+
+        $usesSystemLifecycleIssuer = collect(
+            (array) config('x-change.lifecycle.scenarios', [])
+        )->contains(static fn (mixed $scenario): bool => is_array($scenario)
+            && data_get($scenario, 'lifecycle.issuer_role') === 'system'
+            && data_get($scenario, 'lifecycle.funding_boundary') === 'isolated_compatibility_wallet');
+
+        if (! $usesSystemLifecycleIssuer) {
+            return;
+        }
+
+        $wallet = $systemUser->getWallet('lifecycle')
+            ?? $systemUser->createWallet([
+                'name' => 'Lifecycle Scenario Funds',
+                'slug' => 'lifecycle',
+            ]);
+        $difference = $amount - (float) $wallet->balanceFloat;
+
+        if ($difference > 0 && method_exists($wallet, 'depositFloat')) {
+            $wallet->depositFloat($difference);
         }
     }
 

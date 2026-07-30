@@ -103,7 +103,7 @@ class GeneratePayCode
         }
 
         $input = $this->splashArtwork()->prepare($input);
-        $wallet = $this->wallets->resolveForUser($issuer);
+        $wallet = $this->resolveIssuanceWallet($issuer, $input);
         $estimate = $this->estimatePayCodeCost->handle($input);
         $balanceBefore = $this->wallets->getBalance($wallet);
         $funding = $this->fundingPolicy()->assertCanIssue(
@@ -114,6 +114,10 @@ class GeneratePayCode
                 'provider' => data_get($input, 'provider'),
                 'currency' => $estimate->currency,
                 'cash_amount' => data_get($input, 'cash.amount'),
+                'lifecycle_funding_boundary' => data_get(
+                    $input,
+                    '_meta.lifecycle_funding_boundary',
+                ),
             ],
         );
 
@@ -153,6 +157,32 @@ class GeneratePayCode
                 allocations: $allocation['allocations'] ?? [],
             );
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function resolveIssuanceWallet(Model $issuer, array $input): mixed
+    {
+        if (data_get($input, '_meta.lifecycle_funding_boundary') !== 'isolated_compatibility_wallet') {
+            return $this->wallets->resolveForUser($issuer);
+        }
+
+        if (! app()->environment(
+            (array) config('x-change.lifecycle.synthetic_funding_environments', ['local', 'testing'])
+        )) {
+            return $this->wallets->resolveForUser($issuer);
+        }
+
+        if (! method_exists($issuer, 'getWallet') || ! method_exists($issuer, 'createWallet')) {
+            return $this->wallets->resolveForUser($issuer);
+        }
+
+        return $issuer->getWallet('lifecycle')
+            ?? $issuer->createWallet([
+                'name' => 'Lifecycle Scenario Funds',
+                'slug' => 'lifecycle',
+            ]);
     }
 
     protected function splashArtwork(): RiderSplashArtworkSnapshotterContract
