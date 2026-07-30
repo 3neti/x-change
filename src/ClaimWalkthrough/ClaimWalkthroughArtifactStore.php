@@ -51,6 +51,16 @@ final class ClaimWalkthroughArtifactStore
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function readJson(string $path): array
+    {
+        $payload = json_decode($this->readText($path), true);
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
      * @param  array<int, array<string, mixed>>  $events
      */
     public function writeJsonLines(string $path, array $events): void
@@ -66,6 +76,21 @@ final class ClaimWalkthroughArtifactStore
     public function writeHtml(string $path, string $html): void
     {
         $this->files->put($path, $html);
+    }
+
+    public function writeText(string $path, string $text): void
+    {
+        $this->files->put($path, $text);
+    }
+
+    public function readText(string $path): string
+    {
+        return $this->files->get($path);
+    }
+
+    public function exists(string $path): bool
+    {
+        return $this->files->exists($path);
     }
 
     public function writePdf(string $path, string $pdf): void

@@ -192,6 +192,7 @@ final class ClaimWalkthroughScenarioRepository
                     ],
                 ],
             ],
+            ...(new ClaimHandlerPreviewScenarioFactory)->all(),
             'claim_named_three_slices_preview' => [
                 'key' => 'claim_named_three_slices_preview',
                 'label' => 'Three named slices claim preview',
