@@ -26,7 +26,7 @@ Authenticated claimant handoff to Cockpit
 
 Current wave: Onboarding Voucher Revised Claim Architecture
 Current slice: Treasury-Backed Onboarding Grant
-Status: Slice 16 lifecycle complete; browser acceptance pending
+Status: Slices 0–16 complete
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -47,7 +47,7 @@ Last updated: 2026-07-30
 | 13 | Neutral Public Claim Preview | Completed |
 | 14 | Unified Rider Fallback Policy | Completed |
 | 15 | Truthful Ledger and Browser Payee Acceptance | Completed |
-| 16 | Treasury-Backed Onboarding Grant | In progress |
+| 16 | Treasury-Backed Onboarding Grant | Completed |
 
 ## Settled Decisions
 
@@ -166,6 +166,23 @@ assets. It does not own onboarding business logic.
 - Focused lifecycle verification proves issue replay, full claim, missing
   run-reference rejection, one claim row, unchanged Inventory, and zero
   provider attempts.
+- In-app browser acceptance completed `FUND-A4HU` for Sofia Hurtado, Mobile
+  ending `6237`:
+  - the system Account Funding Reserve moved from ₱18.02 to ₱3.02 at issuance;
+  - Pay Code Reserve moved from ₱0.00 to ₱15.00, then returned to ₱0.00;
+  - Sofia's new Account received exactly ₱15.00 Client Funds;
+  - provider Inventory remained ₱1,956.32;
+  - one Account Funding claim and the exact
+    `issued → outcome_selected → applied` journal sequence were persisted;
+  - no provider reconciliation or external payout was created;
+  - claimant handoff authenticated Sofia into Cockpit, where the global header
+    displayed Client Funds of ₱15.00.
+- Local OTP was disabled for this acceptance run, so Sofia's
+  `mobile_verified_at` correctly remains null. Production retains the
+  fail-closed OTP default.
+- Durable lifecycle replay now reuses the original expiry timestamp and
+  reports an already-claimed Pay Code with the existing recipient Account and
+  positions instead of trying to issue or settle it again.
 
 ### 2026-07-30 — Slice 15 completed
 

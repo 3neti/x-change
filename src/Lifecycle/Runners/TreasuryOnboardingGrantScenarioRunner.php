@@ -19,6 +19,7 @@ use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use Throwable;
@@ -90,6 +91,19 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
         $inventoryBefore = (int) TreasuryInventory::query()
             ->sum('balance_minor');
         $systemBefore = $this->positionBalances($system);
+        $existingIssuance = SystemAccountFundingPayCodeIssuance::query()
+            ->where(
+                'idempotency_reference_hash',
+                hash('sha256', $runReference),
+            )
+            ->first();
+        $expiresAt = $existingIssuance?->expires_at !== null
+            ? Carbon::parse($existingIssuance->expires_at)
+            : Carbon::now()->addSeconds((int) data_get(
+                $context->scenario,
+                'ttl_seconds',
+                604_800,
+            ));
 
         try {
             $issuance = $this->issuePayCode->handle(
@@ -101,11 +115,7 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
                         'netbank-primary',
                     ),
                     idempotencyReference: $runReference,
-                    expiresAt: Carbon::now()->addSeconds((int) data_get(
-                        $context->scenario,
-                        'ttl_seconds',
-                        604_800,
-                    )),
+                    expiresAt: $expiresAt,
                     evidenceReference: 'system-reserve:'.$runReference,
                     authorizationReference: (string) data_get(
                         $context->scenario,
@@ -145,6 +155,12 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
         }
 
         if ((bool) data_get($context->scenario, '_runtime.no_claim', false)) {
+            $recipient = $voucher->redeemed_at !== null
+                ? $context->issuer::query()
+                    ->whereIn('mobile', MobileNumber::candidates($mobile))
+                    ->first()
+                : null;
+
             return new ScenarioRunResult(
                 exitCode: Command::SUCCESS,
                 payload: $this->payload(
@@ -157,8 +173,8 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
                     email: $email,
                     systemBefore: $systemBefore,
                     inventoryBefore: $inventoryBefore,
-                    claimed: false,
-                    recipient: null,
+                    claimed: $voucher->redeemed_at !== null,
+                    recipient: $recipient,
                 ),
             );
         }

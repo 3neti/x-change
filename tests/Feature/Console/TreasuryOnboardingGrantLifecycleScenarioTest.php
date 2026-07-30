@@ -31,6 +31,7 @@ it('issues one replay-safe browser grant from the system Account Funding Reserve
         '--run-reference' => 'treasury-onboarding-grant-sofia-20260730-001',
         '--json' => true,
     ]);
+    $this->travel(2)->minutes();
     $replay = runTreasuryOnboardingGrant([
         '--no-claim' => true,
         '--run-reference' => 'treasury-onboarding-grant-sofia-20260730-001',
@@ -79,6 +80,11 @@ it('claims the grant into the newly provisioned Sofia Account without changing I
         '--run-reference' => 'treasury-onboarding-grant-sofia-claim-20260730-001',
         '--json' => true,
     ]);
+    $replay = runTreasuryOnboardingGrant([
+        '--no-claim' => true,
+        '--run-reference' => 'treasury-onboarding-grant-sofia-claim-20260730-001',
+        '--json' => true,
+    ]);
     $sofia = User::query()
         ->where('mobile', '639399236237')
         ->sole();
@@ -103,6 +109,11 @@ it('claims the grant into the newly provisioned Sofia Account without changing I
         ->and(data_get($run, 'payload.controls.provider_calls'))->toBeFalse()
         ->and(data_get($run, 'payload.controls.provider_attempt_count'))->toBe(0)
         ->and(data_get($run, 'payload.controls.claim_count'))->toBe(1)
+        ->and(data_get($replay, 'payload.pay_code.claimed'))->toBeTrue()
+        ->and(data_get($replay, 'payload.recipient.account_id'))->toBe($sofia->getKey())
+        ->and(data_get($replay, 'payload.recipient.positions.client_funds_minor'))
+        ->toBe(1_500)
+        ->and(data_get($replay, 'payload.controls.claim_count'))->toBe(1)
         ->and(data_get($run, 'payload.controls.journal_events'))->toBe([
             'account_funding.pay_code.issued',
             'account_funding.pay_code.outcome_selected',
