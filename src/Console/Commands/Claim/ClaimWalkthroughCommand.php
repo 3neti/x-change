@@ -29,6 +29,7 @@ final class ClaimWalkthroughCommand extends Command
         {--qa-diff-to= : Current QA batch JSON manifest or batch folder for storyboard diffing}
         {--qa-acceptance= : Read a QA batch JSON manifest or Markdown worksheet and generate an acceptance report}
         {--qa-acceptance-output= : Override the acceptance report Markdown output path}
+        {--qa-review-output= : Override the review summary JSON output path}
         {--dry-run : Create storyboard artifacts without launching a browser}
         {--code= : Use an existing Pay Code for browser capture}
         {--create-fixture : Generate a disposable walkthrough Pay Code before browser capture}
@@ -71,7 +72,13 @@ final class ClaimWalkthroughCommand extends Command
         }
 
         if (is_string($this->option('qa-review')) && trim((string) $this->option('qa-review')) !== '') {
-            return $this->renderQaReviewSummary($artifacts, trim((string) $this->option('qa-review')));
+            return $this->renderQaReviewSummary(
+                $artifacts,
+                trim((string) $this->option('qa-review')),
+                is_string($this->option('qa-review-output')) && trim((string) $this->option('qa-review-output')) !== ''
+                    ? trim((string) $this->option('qa-review-output'))
+                    : null,
+            );
         }
 
         if (
@@ -512,8 +519,11 @@ final class ClaimWalkthroughCommand extends Command
         return self::SUCCESS;
     }
 
-    private function renderQaReviewSummary(ClaimWalkthroughArtifactStore $artifacts, string $source): int
-    {
+    private function renderQaReviewSummary(
+        ClaimWalkthroughArtifactStore $artifacts,
+        string $source,
+        ?string $outputPath,
+    ): int {
         $path = $this->resolveQaReviewSourcePath($source);
 
         if (! $artifacts->exists($path)) {
@@ -523,6 +533,12 @@ final class ClaimWalkthroughCommand extends Command
         }
 
         $payload = $this->qaReviewSummaryPayload($artifacts, $path);
+        $summaryPath = $outputPath ?: $this->defaultQaReviewSummaryPath($path);
+        $payload['artifacts'] = [
+            'review_summary_json' => $summaryPath,
+        ];
+
+        $artifacts->writeJson($summaryPath, $payload);
 
         if ($this->option('json')) {
             $this->line(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -532,6 +548,7 @@ final class ClaimWalkthroughCommand extends Command
 
         $this->info('Claim storyboard QA review summary');
         $this->line('Source: '.$payload['source']);
+        $this->line('Summary JSON: '.$summaryPath);
         $this->line('Entries: '.$payload['entry_count']);
         $this->line('Pass: '.data_get($payload, 'counts.pass', 0));
         $this->line('Needs fix: '.data_get($payload, 'counts.needs_fix', 0));
@@ -1179,6 +1196,13 @@ final class ClaimWalkthroughCommand extends Command
         $directory = is_dir($source) ? $source : dirname($source);
 
         return rtrim($directory, '/').'/claim-ux-acceptance-report.md';
+    }
+
+    private function defaultQaReviewSummaryPath(string $source): string
+    {
+        $directory = is_dir($source) ? $source : dirname($source);
+
+        return rtrim($directory, '/').'/claim-walkthrough-qa-review-summary.json';
     }
 
     /**

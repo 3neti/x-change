@@ -179,7 +179,9 @@ it('summarizes qa review worksheets and writes an acceptance report', function (
         ->and($summary['counts']['needs_fix'])->toBe(1)
         ->and($summary['counts']['blocker'])->toBe(0)
         ->and($summary['counts']['unreviewed'])->toBe(8)
-        ->and($summary['accepted'])->toBeFalse();
+        ->and($summary['accepted'])->toBeFalse()
+        ->and($summary['artifacts']['review_summary_json'])->toBeFile()
+        ->and(file_get_contents($summary['artifacts']['review_summary_json']))->toContain('x-change.claim-walkthrough.qa-review-summary.v1');
 
     $exitCode = Artisan::call('xchange:claim-walkthrough', [
         '--qa-acceptance' => $worksheet,

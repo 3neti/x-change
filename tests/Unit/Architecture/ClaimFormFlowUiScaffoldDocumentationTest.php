@@ -32,6 +32,8 @@ it('documents the public claim form-flow ui scaffold without cockpit scope', fun
         ->toContain('allowed_statuses')
         ->toContain('needs_fix')
         ->toContain('--qa-review')
+        ->toContain('--qa-review-output')
+        ->toContain('claim-walkthrough-qa-review-summary.json')
         ->toContain('--qa-diff-from')
         ->toContain('--qa-acceptance')
         ->toContain('claim-ux-acceptance-report.md')

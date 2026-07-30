@@ -147,6 +147,16 @@ php artisan xchange:claim-walkthrough \
 The command accepts either the Markdown worksheet, the JSON manifest, or the
 batch folder. It returns `pass`, `needs_fix`, `blocker`, and `unreviewed` counts.
 
+It also writes a structured review summary JSON artifact beside the worksheet:
+
+```text
+claim-walkthrough-qa-review-summary.json
+```
+
+Use `--qa-review-output=/absolute/path.json` when a specific summary path is
+needed. This keeps reviewer outcomes artifact-first and machine-readable without
+requiring database persistence.
+
 ## QA Diff
 
 Compare two batch manifests or batch folders with:
