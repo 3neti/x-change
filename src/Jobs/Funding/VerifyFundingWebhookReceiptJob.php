@@ -28,6 +28,10 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
 
     public int $tries = 5;
 
+    public int $timeout = 60;
+
+    public bool $failOnTimeout = true;
+
     /** @var list<int> */
     public array $backoff = [30, 120, 300, 900];
 

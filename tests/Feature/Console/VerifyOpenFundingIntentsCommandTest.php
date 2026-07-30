@@ -128,6 +128,7 @@ it('registers the package-owned non-overlapping minute schedule', function () {
     expect($event)->not->toBeNull()
         ->and($event->expression)->toBe('* * * * *')
         ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->onOneServer)->toBeTrue()
         ->and($event->expiresAt)->toBe(5)
         ->and($event->command)->toContain(
             'xchange:funding:verify-open --provider=netbank --limit=100',

@@ -224,10 +224,10 @@ Every item is required before inviting real alpha users.
 
 - [ ] Use a durable production queue and shared cache.
 - [ ] Run workers for `default`, `x-change-feedback`, and `x-change-funding`.
-- [ ] Give provider-facing jobs explicit timeouts shorter than `retry_after`.
+- [x] Give provider-facing jobs explicit timeouts shorter than `retry_after`.
 - [ ] Record terminal failure evidence for every externally dependent job.
 - [ ] Run the Laravel scheduler continuously.
-- [ ] Use `onOneServer()` or an equivalent shared lock for multi-node schedules.
+- [x] Use `onOneServer()` or an equivalent shared lock for multi-node schedules.
 - [ ] Configure Resend and prove email delivery.
 - [ ] Configure EngageSpark or the approved SMS transport and prove SMS
       delivery.

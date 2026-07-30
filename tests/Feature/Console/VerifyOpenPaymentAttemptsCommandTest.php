@@ -55,6 +55,7 @@ it('registers the package-owned non-overlapping payment verification schedule', 
     expect($event)->not->toBeNull()
         ->and($event->expression)->toBe('* * * * *')
         ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->onOneServer)->toBeTrue()
         ->and($event->expiresAt)->toBe(5)
         ->and($event->command)->toContain(
             'xchange:payments:verify-open --provider=netbank --limit=100',

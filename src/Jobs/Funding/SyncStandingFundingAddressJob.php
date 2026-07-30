@@ -25,6 +25,10 @@ final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 5;
 
+    public int $timeout = 60;
+
+    public bool $failOnTimeout = true;
+
     public int $uniqueFor;
 
     /** @var list<int> */

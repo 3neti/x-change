@@ -57,6 +57,7 @@ it('registers the package-owned standing address schedule', function () {
     expect($event)->not->toBeNull()
         ->and($event->expression)->toBe('* * * * *')
         ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->onOneServer)->toBeTrue()
         ->and($event->expiresAt)->toBe(5)
         ->and($event->command)->toContain(
             'xchange:funding:sync-standing --provider=netbank --limit=100',

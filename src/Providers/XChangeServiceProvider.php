@@ -1191,6 +1191,7 @@ class XChangeServiceProvider extends ServiceProvider
                     ->command("xchange:payments:verify-open --provider=netbank --limit={$batchSize}")
                     ->name('xchange:payments:verify-open:netbank')
                     ->everyMinute()
+                    ->onOneServer()
                     ->withoutOverlapping(5);
             });
         }
@@ -1206,6 +1207,7 @@ class XChangeServiceProvider extends ServiceProvider
                     ->command("xchange:funding:verify-open --provider=netbank --limit={$batchSize}")
                     ->name('xchange:funding:verify-open:netbank')
                     ->everyMinute()
+                    ->onOneServer()
                     ->withoutOverlapping(5);
             });
         }
@@ -1222,6 +1224,7 @@ class XChangeServiceProvider extends ServiceProvider
                     ->command("xchange:funding:sync-standing --provider=netbank --limit={$batchSize}")
                     ->name('xchange:funding:sync-standing:netbank')
                     ->everyMinute()
+                    ->onOneServer()
                     ->withoutOverlapping(5);
             });
         }
