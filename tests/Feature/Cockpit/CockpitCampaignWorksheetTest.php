@@ -160,6 +160,45 @@ it('lets only the worksheet owner add a draft beneficiary with a mobile or bank 
         ->assertNotFound();
 });
 
+it('accepts beneficiary amounts in major peso units and stores exact minor units', function () {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-major-amount',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Major Amount Payroll',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.rows.store', 'campaign-major-amount'), [
+        'amount' => '₱1,250.50',
+        'name' => 'Maria Santos',
+        'mobile' => '09173011987',
+        'delivery_preference' => 'sms',
+    ])->assertRedirect(route('x-change.cockpit.campaigns.show', 'campaign-major-amount'));
+
+    expect(app(CampaignWorksheetRepository::class)
+        ->findForOwner('campaign-major-amount', $owner->getMorphClass(), (string) $owner->getKey())
+        ?->rows[0]->amountMinor)->toBe(125_050);
+});
+
+it('rejects ambiguous and over-precise beneficiary amounts', function (string $amount) {
+    $owner = actingAsTestUser();
+    app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-invalid-major-amount',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Invalid Major Amount Payroll',
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.rows.store', 'campaign-invalid-major-amount'), [
+        'amount' => $amount,
+        'mobile' => '09173011987',
+        'delivery_preference' => 'sms',
+    ])->assertSessionHasErrors('amount');
+})->with(['1.234', '1,2', '0']);
+
 it('stages a campaign import for review and applies only a fully valid staged import once', function () {
     $owner = actingAsTestUser();
     app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
