@@ -25,6 +25,8 @@ final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 5;
 
+    public const string Queue = 'x-change-funding';
+
     public int $timeout = 60;
 
     public bool $failOnTimeout = true;
@@ -44,6 +46,7 @@ final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
             1,
             (int) config('x-change.funding.standing_addresses.lock_seconds', 120),
         );
+        $this->onQueue(self::Queue);
     }
 
     /**

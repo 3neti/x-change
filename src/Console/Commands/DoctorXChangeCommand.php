@@ -41,6 +41,8 @@ class DoctorXChangeCommand extends Command
                 $this->check('users.mobile_verified_at column', $this->hasColumn('users', 'mobile_verified_at'), 'users.mobile_verified_at exists'),
                 $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
                 $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
+                $this->queueRuntimeCheck(),
+                $this->schedulerLockCacheCheck(),
                 $this->providerTopologyCheck($topologies),
                 $this->providerRuntimeSettingsCheck($settings),
             ]);
@@ -133,6 +135,49 @@ class DoctorXChangeCommand extends Command
         } catch (Throwable $e) {
             return $this->check('provider topology', false, $e->getMessage());
         }
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function queueRuntimeCheck(): array
+    {
+        $connection = (string) config('queue.default');
+        $durable = ! in_array($connection, ['', 'sync', 'null'], true);
+
+        return $this->check(
+            'durable queue runtime',
+            $durable,
+            $durable
+                ? "queue connection [{$connection}] can run asynchronously"
+                : "queue connection [{$connection}] cannot provide durable asynchronous processing",
+            [
+                'connection' => $connection,
+                'required_queues' => [
+                    'default',
+                    'x-change-feedback',
+                    'x-change-funding',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function schedulerLockCacheCheck(): array
+    {
+        $store = (string) config('cache.default');
+        $shared = in_array($store, ['database', 'dynamodb', 'memcached', 'redis'], true);
+
+        return $this->check(
+            'shared scheduler lock cache',
+            $shared,
+            $shared
+                ? "cache store [{$store}] supports shared scheduler locks"
+                : "cache store [{$store}] is not approved for multi-node scheduler locks",
+            ['store' => $store],
+        );
     }
 
     /**

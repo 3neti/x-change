@@ -28,6 +28,8 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
 
     public int $tries = 5;
 
+    public const string Queue = 'x-change-funding';
+
     public int $timeout = 60;
 
     public bool $failOnTimeout = true;
@@ -37,7 +39,9 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
 
     public function __construct(
         public readonly int $webhookReceiptId,
-    ) {}
+    ) {
+        $this->onQueue(self::Queue);
+    }
 
     public function handle(
         VerifyFundingWebhookReceipt $verify,

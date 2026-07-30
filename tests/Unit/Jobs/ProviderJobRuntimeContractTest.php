@@ -37,6 +37,7 @@ it('bounds provider-facing jobs below the queue retry window', function (): void
             ->toBe(60)
             ->toBeLessThan((int) config('queue.connections.database.retry_after'))
             ->and($job->failOnTimeout)->toBeTrue()
-            ->and($job->tries)->toBe(5);
+            ->and($job->tries)->toBe(5)
+            ->and($job->queue)->toBe('x-change-funding');
     }
 });

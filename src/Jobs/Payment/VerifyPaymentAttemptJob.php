@@ -25,6 +25,8 @@ class VerifyPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 5;
 
+    public const string Queue = 'x-change-funding';
+
     public int $timeout = 60;
 
     public bool $failOnTimeout = true;
@@ -40,6 +42,7 @@ class VerifyPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
         public readonly PaymentVerificationTrigger $trigger,
     ) {
         $this->uniqueFor = (int) config('x-change.payment.attempts.verification_lock_seconds', 120);
+        $this->onQueue(self::Queue);
     }
 
     /**

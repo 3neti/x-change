@@ -28,6 +28,8 @@ class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 5;
 
+    public const string Queue = 'x-change-funding';
+
     public int $timeout = 60;
 
     public bool $failOnTimeout = true;
@@ -45,6 +47,7 @@ class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
         public readonly ?int $webhookReceiptId = null,
     ) {
         $this->uniqueFor = (int) config('x-change.funding.verification_lock_seconds', 120);
+        $this->onQueue(self::Queue);
     }
 
     /**

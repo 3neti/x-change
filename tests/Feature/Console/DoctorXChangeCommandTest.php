@@ -65,6 +65,37 @@ it('blocks deployment in strict mode when any readiness check fails', function (
         ->and($payload['checks'][0]['passed'])->toBeFalse();
 });
 
+it('reports unsafe synchronous queues and local scheduler locks', function () {
+    config()->set('queue.default', 'sync');
+    config()->set('cache.default', 'array');
+
+    Artisan::call('x-change:doctor', ['--json' => true]);
+
+    $checks = collect(json_decode(Artisan::output(), true)['checks']);
+    $queue = $checks->firstWhere('name', 'durable queue runtime');
+    $cache = $checks->firstWhere('name', 'shared scheduler lock cache');
+
+    expect($queue['passed'])->toBeFalse()
+        ->and($queue['meta']['required_queues'])->toBe([
+            'default',
+            'x-change-feedback',
+            'x-change-funding',
+        ])
+        ->and($cache['passed'])->toBeFalse();
+});
+
+it('accepts durable queues and a shared scheduler lock cache', function () {
+    config()->set('queue.default', 'database');
+    config()->set('cache.default', 'database');
+
+    Artisan::call('x-change:doctor', ['--json' => true]);
+
+    $checks = collect(json_decode(Artisan::output(), true)['checks']);
+
+    expect($checks->firstWhere('name', 'durable queue runtime')['passed'])->toBeTrue()
+        ->and($checks->firstWhere('name', 'shared scheduler lock cache')['passed'])->toBeTrue();
+});
+
 it('reports the cockpit operator activity runtime profile as an explicit doctor check', function () {
     $exitCode = Artisan::call('x-change:doctor', [
         '--operator-activity-runtime' => true,
