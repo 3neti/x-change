@@ -58,6 +58,12 @@ it('reuses the system issuer balance without inflating it on repeat', function (
 it('issues and claims an onboarding Voucher through the explicit execution workflow', function (): void {
     config()->set('x-change.commercial.enabled', true);
 
+    expect(config('x-change.lifecycle.scenarios.onboarding_voucher.rider'))->toBe([
+        'message' => null,
+        'url' => null,
+        'splash' => null,
+    ]);
+
     $output = new BufferedOutput;
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'onboarding_voucher',
@@ -92,6 +98,9 @@ it('issues and claims an onboarding Voucher through the explicit execution workf
 
     expect($voucher->redeemed_at)->not->toBeNull()
         ->and($voucher->owner?->getAttribute('email'))->toBe('system@example.test')
+        ->and(data_get($voucher->metadata, 'instructions.rider.message'))->toBeNull()
+        ->and(data_get($voucher->metadata, 'instructions.rider.url'))->toBeNull()
+        ->and(data_get($voucher->metadata, 'instructions.rider.splash'))->toBeNull()
         ->and(User::query()->whereIn('mobile', ['09179990001', '639179990001'])->count())
         ->toBe(1)
         ->and(data_get(

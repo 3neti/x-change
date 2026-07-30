@@ -130,6 +130,15 @@ assets. It does not own onboarding business logic.
 
 ## Slice Log
 
+### 2026-07-30 — Slice 12 completed
+
+- In-app browser inspection found that the onboarding lifecycle inherited
+  generic demonstration Rider content from the lifecycle defaults.
+- The scenario now declares a neutral Rider explicitly, so the canonical
+  onboarding walkthrough cannot display demo copy, artwork, or outbound links.
+- Regression coverage verifies the persisted onboarding Voucher contains no
+  Rider message, URL, or Splash.
+
 ### 2026-07-30 — Slice 11 completed
 
 - Recast the lifecycle as a system-issued onboarding invitation while keeping

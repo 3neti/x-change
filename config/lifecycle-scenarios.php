@@ -486,6 +486,11 @@ return [
                 'fields' => [],
             ],
             'feedback' => [],
+            'rider' => [
+                'message' => null,
+                'url' => null,
+                'splash' => null,
+            ],
             'claim' => [],
             'expect' => [
                 'tariffs' => ['cash', 'onboarding.enabled'],
