@@ -19,6 +19,7 @@ use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
 use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
 use LBHurtado\XChange\Services\Onboarding\AccountPinSetupState;
+use LBHurtado\XChange\Services\Onboarding\DefaultAccountProvisioningService;
 use LBHurtado\XChange\Services\Onboarding\OnboardingVoucherClaimantAuthenticator;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
@@ -220,8 +221,7 @@ it('rolls back a newly provisioned Account when Voucher redemption fails', funct
 
     $driver = new OnboardingAccountProvisioningExecutionDriver(
         new PromoteContactToUser(new XChangeContactUserProvisioner(
-            $wallets,
-            $portfolios,
+            new DefaultAccountProvisioningService($wallets, $portfolios),
             app(AccountPinSetupState::class),
         )),
         $defaultDriver,

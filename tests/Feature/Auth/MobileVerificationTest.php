@@ -7,6 +7,8 @@ use Laravel\Fortify\Contracts\CreatesNewUsers;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\StartMobileVerification;
 use LBHurtado\XChange\Actions\Auth\VerifyMobileVerification;
+use LBHurtado\XChange\Contracts\AccountProvisioningContract;
+use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\MobileVerificationChallenge;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
@@ -25,7 +27,7 @@ it('creates a mobile-first user as unverified', function () {
     $user = app(CreateNewMobileFirstUser::class)->create([
         'name' => 'New Mobile User',
         'mobile' => '0917 301 1987',
-        'email' => null,
+        'email' => 'new-mobile-user@example.test',
         'password' => '1234',
         'password_confirmation' => '1234',
     ]);
@@ -57,6 +59,16 @@ it('verifies the mobile only after the OTP provider confirms the code', function
         'mobile_verified_at' => null,
     ])->save();
     $challenge = app(StartMobileVerification::class)->handle($user);
+    $accounts = Mockery::mock(AccountProvisioningContract::class);
+    $accounts->shouldReceive('provision')
+        ->once()
+        ->with(Mockery::on(fn ($owner): bool => $owner->is($user)))
+        ->andReturn(new TreasuryAccountPortfolioData(
+            principalReference: 'principal:account:mobile-verification',
+            positions: [],
+            skippedConnections: [],
+        ));
+    app()->instance(AccountProvisioningContract::class, $accounts);
 
     expect(fn () => app(VerifyMobileVerification::class)->handle($user, '123456'))
         ->toThrow(ValidationException::class, 'verification code is invalid');

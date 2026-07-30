@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Contracts\WithdrawalOtpApprovalServiceContract;
 use LBHurtado\XChange\Models\MobileVerificationChallenge;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
@@ -17,6 +18,7 @@ final class VerifyMobileVerification
 {
     public function __construct(
         private readonly WithdrawalOtpApprovalServiceContract $otp,
+        private readonly AccountProvisioningContract $accounts,
     ) {}
 
     public function handle(Model $user, string $code): MobileVerificationChallenge
@@ -117,6 +119,7 @@ final class VerifyMobileVerification
             $lockedUser->forceFill([
                 'mobile_verified_at' => $verifiedAt,
             ])->save();
+            $this->accounts->provision($lockedUser);
 
             return $lockedChallenge->refresh();
         }, attempts: 3);

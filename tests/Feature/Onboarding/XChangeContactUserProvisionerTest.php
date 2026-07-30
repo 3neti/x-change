@@ -2,21 +2,15 @@
 
 declare(strict_types=1);
 
-use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
-use LBHurtado\XChange\Contracts\WalletProvisioningContract;
+use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
 use LBHurtado\XChange\Services\Onboarding\AccountPinSetupState;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('creates one Account and reuses it on an idempotent onboarding retry', function () {
-    $wallets = Mockery::mock(WalletProvisioningContract::class);
-    $wallets->shouldReceive('open')
-        ->twice()
-        ->andReturn((object) ['id' => 1, 'slug' => 'platform']);
-
-    $portfolios = Mockery::mock(TreasuryAccountPortfolioProvisioningContract::class);
-    $portfolios->shouldReceive('provision')
+    $accounts = Mockery::mock(AccountProvisioningContract::class);
+    $accounts->shouldReceive('provision')
         ->twice()
         ->andReturn(new TreasuryAccountPortfolioData(
             principalReference: 'principal:account:onboarding',
@@ -25,7 +19,7 @@ it('creates one Account and reuses it on an idempotent onboarding retry', functi
         ));
 
     $pinSetup = app(AccountPinSetupState::class);
-    $service = new XChangeContactUserProvisioner($wallets, $portfolios, $pinSetup);
+    $service = new XChangeContactUserProvisioner($accounts, $pinSetup);
     $contact = (object) ['mobile' => '09173011987'];
     $attributes = [
         'name' => 'Maria Santos',
@@ -54,14 +48,11 @@ it('fails closed when an Email belongs to another Account', function () {
         'password' => bcrypt('password'),
     ]);
 
-    $wallets = Mockery::mock(WalletProvisioningContract::class);
-    $wallets->shouldNotReceive('open');
-    $portfolios = Mockery::mock(TreasuryAccountPortfolioProvisioningContract::class);
-    $portfolios->shouldNotReceive('provision');
+    $accounts = Mockery::mock(AccountProvisioningContract::class);
+    $accounts->shouldNotReceive('provision');
 
     $service = new XChangeContactUserProvisioner(
-        $wallets,
-        $portfolios,
+        $accounts,
         app(AccountPinSetupState::class),
     );
 

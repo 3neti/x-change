@@ -90,6 +90,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\RepairMissingDisbursementPosting
 use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
+use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferDispatcherContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferStatusCheckerContract;
@@ -313,6 +314,7 @@ use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
+use LBHurtado\XChange\Services\Onboarding\DefaultAccountProvisioningService;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Payment\AccountFundingCollectionPosting;
@@ -1017,6 +1019,10 @@ class XChangeServiceProvider extends ServiceProvider
                 OnboardingAccountProvisioningExecutionDriver::class,
             );
 
+        $this->app->singleton(
+            AccountProvisioningContract::class,
+            DefaultAccountProvisioningService::class,
+        );
         $this->app->singleton(
             ContactUserProvisionerContract::class,
             XChangeContactUserProvisioner::class,

@@ -86,10 +86,10 @@ Fortify registration is enabled. A visitor can create an Account using:
 The new user is authenticated and sent to mobile verification. Production
 mobile verification fails closed if a real OTP driver is not configured.
 
-After verification, the current flow sends the user to Funding. However,
-self-registration does not currently provision the same provider-positioned
-Treasury Account portfolio created by the onboarding-voucher execution path.
-This must be unified before self-service alpha.
+After verification, the current flow sends the user to Funding.
+Self-registration and onboarding-voucher execution now converge on the same
+idempotent Account provisioner. Mobile verification is committed only if the
+local Account and its provider-positioned Treasury portfolio are ready.
 
 ### Invitation
 
@@ -183,9 +183,9 @@ Every item is required before inviting real alpha users.
 
 ### P0 — Account onboarding
 
-- [ ] Make self-registration and onboarding-voucher execution converge on one
+- [x] Make self-registration and onboarding-voucher execution converge on one
       Account provisioning service.
-- [ ] Provision the local Account and Treasury positions exactly once.
+- [x] Provision the local Account and Treasury positions exactly once.
 - [ ] Require production OTP delivery and verification.
 - [ ] Preserve first-PIN setup for invitation-created Accounts.
 - [ ] Add a clear **Invite someone** action backed by an onboarding Pay Code.

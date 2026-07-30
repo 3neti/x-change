@@ -11,16 +11,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use LBHurtado\Onboarding\Contracts\ContactUserProvisionerContract;
 use LBHurtado\Onboarding\Data\ContactPromotionResultData;
-use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
-use LBHurtado\XChange\Contracts\WalletProvisioningContract;
+use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
 
 final readonly class XChangeContactUserProvisioner implements ContactUserProvisionerContract
 {
     public function __construct(
-        private WalletProvisioningContract $wallets,
-        private TreasuryAccountPortfolioProvisioningContract $accountPortfolios,
+        private AccountProvisioningContract $accounts,
         private AccountPinSetupState $pinSetup,
     ) {}
 
@@ -93,13 +91,7 @@ final readonly class XChangeContactUserProvisioner implements ContactUserProvisi
                 $this->pinSetup->markRequired($user);
             }
 
-            $this->wallets->open($user, [
-                'wallet' => [
-                    'slug' => 'platform',
-                    'name' => 'Platform Account',
-                ],
-            ]);
-            $portfolio = $this->accountPortfolios->provision($user);
+            $portfolio = $this->accounts->provision($user);
 
             return new ContactPromotionResultData(
                 promoted: true,
