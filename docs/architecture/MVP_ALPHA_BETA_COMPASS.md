@@ -188,7 +188,7 @@ Every item is required before inviting real alpha users.
 - [x] Make self-registration and onboarding-voucher execution converge on one
       Account provisioning service.
 - [x] Provision the local Account and Treasury positions exactly once.
-- [ ] Require production OTP delivery and verification.
+- [x] Require production OTP delivery and verification.
 - [ ] Preserve first-PIN setup for invitation-created Accounts.
 - [x] Add a clear **Invite someone** action backed by an onboarding Pay Code.
 - [ ] Allow invitation delivery by canonical claim URL through the existing

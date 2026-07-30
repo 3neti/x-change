@@ -41,6 +41,7 @@ class DoctorXChangeCommand extends Command
                 $this->check('users.mobile_verified_at column', $this->hasColumn('users', 'mobile_verified_at'), 'users.mobile_verified_at exists'),
                 $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
                 $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
+                $this->productionOnboardingOtpCheck(),
                 $this->queueRuntimeCheck(),
                 $this->schedulerLockCacheCheck(),
                 $this->providerTopologyCheck($topologies),
@@ -158,6 +159,46 @@ class DoctorXChangeCommand extends Command
                     'x-change-feedback',
                     'x-change-funding',
                 ],
+            ],
+        );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function productionOnboardingOtpCheck(): array
+    {
+        $environment = (string) config('app.env');
+        $production = $environment === 'production';
+        $enabled = (bool) config('x-change.onboarding.mobile_verification.enabled', true);
+        $required = (bool) config('x-change.onboarding.voucher.require_otp', true);
+        $driver = (string) config('x-change.withdrawal.otp.driver', 'null');
+        $showsLocalCode = (bool) config(
+            'x-change.onboarding.mobile_verification.show_local_code',
+            false,
+        );
+        $ready = ! $production || (
+            $enabled
+            && $required
+            && $driver !== ''
+            && $driver !== 'null'
+            && ! $showsLocalCode
+        );
+
+        return $this->check(
+            'production onboarding OTP',
+            $ready,
+            $ready
+                ? ($production
+                    ? "onboarding OTP uses the configured [{$driver}] delivery driver"
+                    : "production-only OTP gate is not required in [{$environment}]")
+                : 'production onboarding requires a non-null OTP driver with local code display disabled',
+            [
+                'environment' => $environment,
+                'mobile_verification_enabled' => $enabled,
+                'otp_required' => $required,
+                'driver' => $driver,
+                'local_code_visible' => $showsLocalCode,
             ],
         );
     }

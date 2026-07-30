@@ -96,6 +96,40 @@ it('accepts durable queues and a shared scheduler lock cache', function () {
         ->and($checks->firstWhere('name', 'shared scheduler lock cache')['passed'])->toBeTrue();
 });
 
+it('rejects a null or locally visible onboarding OTP driver in production', function () {
+    config()->set('app.env', 'production');
+    config()->set('x-change.onboarding.mobile_verification.enabled', true);
+    config()->set('x-change.onboarding.voucher.require_otp', true);
+    config()->set('x-change.withdrawal.otp.driver', 'null');
+    config()->set('x-change.onboarding.mobile_verification.show_local_code', true);
+
+    Artisan::call('x-change:doctor', ['--json' => true]);
+
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'production onboarding OTP');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['meta']['driver'])->toBe('null')
+        ->and($check['meta']['local_code_visible'])->toBeTrue();
+});
+
+it('accepts a configured production onboarding OTP driver', function () {
+    config()->set('app.env', 'production');
+    config()->set('x-change.onboarding.mobile_verification.enabled', true);
+    config()->set('x-change.onboarding.voucher.require_otp', true);
+    config()->set('x-change.withdrawal.otp.driver', 'engagespark');
+    config()->set('x-change.onboarding.mobile_verification.show_local_code', false);
+
+    Artisan::call('x-change:doctor', ['--json' => true]);
+
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'production onboarding OTP');
+
+    expect($check['passed'])->toBeTrue()
+        ->and($check['meta']['driver'])->toBe('engagespark')
+        ->and($check['meta']['local_code_visible'])->toBeFalse();
+});
+
 it('reports the cockpit operator activity runtime profile as an explicit doctor check', function () {
     $exitCode = Artisan::call('x-change:doctor', [
         '--operator-activity-runtime' => true,
