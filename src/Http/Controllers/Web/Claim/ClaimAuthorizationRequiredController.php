@@ -12,8 +12,9 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
+use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
-use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
+use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 
 final class ClaimAuthorizationRequiredController extends Controller
 {
@@ -22,7 +23,7 @@ final class ClaimAuthorizationRequiredController extends Controller
         string $code,
         ClaimWorkflowResolverContract $workflows,
         ClaimEntryResponseFactory $responses,
-        CampaignOfficerAuthorizationLoginIntent $loginIntent,
+        ClaimAuthenticationIntent $loginIntent,
     ): Response|RedirectResponse {
         $code = strtoupper(trim($code));
         $voucher = Voucher::query()->where('code', $code)->first();
@@ -36,7 +37,7 @@ final class ClaimAuthorizationRequiredController extends Controller
 
         $workflow = $workflows->resolve($voucher);
 
-        if (! $workflow->requires_authenticated_officer) {
+        if ($workflow->authentication_mode !== ClaimAuthenticationMode::AuthenticatedOfficer) {
             return redirect()->route('x-change.claim.show', ['code' => $code]);
         }
 

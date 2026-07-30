@@ -15,8 +15,9 @@ use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
-use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
+use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 
 class ClaimPageController extends Controller
 {
@@ -26,7 +27,7 @@ class ClaimPageController extends Controller
         ValidateCompiledClaimVoucher $validator,
         VoucherFlowCapabilityResolverContract $capabilities,
         ClaimWorkflowResolverContract $workflows,
-        CampaignOfficerAuthorizationLoginIntent $loginIntent,
+        ClaimAuthenticationIntent $loginIntent,
         ClaimShareMetadataResolverContract $shareMetadata,
         ClaimShareCardUrlResolverContract $shareCardUrls,
         ClaimEntryResponseFactory $responses,
@@ -50,13 +51,16 @@ class ClaimPageController extends Controller
 
         $workflow = $workflows->resolve($voucher);
 
-        if ($workflow->requires_authenticated_officer && $request->user() === null) {
+        if (
+            $workflow->authentication_mode === ClaimAuthenticationMode::AuthenticatedOfficer
+            && $request->user() === null
+        ) {
             $loginIntent->remember($request, $code, $workflow);
 
             return redirect()->route('x-change.claim.authorization-required', ['code' => $code]);
         }
 
-        if ($workflow->requires_authenticated_officer) {
+        if ($workflow->authentication_mode === ClaimAuthenticationMode::AuthenticatedOfficer) {
             $authenticatedMobile = $request->user()?->getAttribute('mobile');
 
             if (! is_string($authenticatedMobile) || trim($authenticatedMobile) === '') {

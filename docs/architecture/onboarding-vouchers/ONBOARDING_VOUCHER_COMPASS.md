@@ -25,8 +25,8 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Slice 4 — Generic Claim Authentication Handoff
-Status: Slice 3 complete; Slice 4 in progress
+Current slice: Slice 5 — Account-Provisioning Execution Driver
+Status: Slice 4 complete; Slice 5 in progress
 Last updated: 2026-07-30
 
 | Slice | Name | Status |
@@ -35,8 +35,8 @@ Last updated: 2026-07-30
 | 1 | Minimal Voucher Instruction Contract | Completed |
 | 2 | Commercial Catalog and Instruction Product | Completed |
 | 3 | Explicit Claim Workflow Descriptor | Completed |
-| 4 | Generic Claim Authentication Handoff | In progress |
-| 5 | Account-Provisioning Execution Driver | Pending |
+| 4 | Generic Claim Authentication Handoff | Completed |
+| 5 | Account-Provisioning Execution Driver | In progress |
 | 6 | Issuance Dependency UX | Pending |
 | 7 | Template and Campaign Propagation | Pending |
 | 8 | Lifecycle and Browser Acceptance | Pending |
@@ -184,3 +184,23 @@ assets. It does not own onboarding business logic.
 - Focused verification passes:
   - normalization and commercial regression: 16 tests and 58 assertions;
   - claim workflow regression: 6 tests and 48 assertions.
+
+### 2026-07-30 — Slice 4 completed
+
+- Replaced the campaign-only session assumption with the generic
+  `ClaimAuthenticationIntent` contract.
+- Preserved `campaign_authorization` as the authenticated-officer intent and
+  added the distinct `onboarding_claimant_handoff` intent.
+- Both intents retain the canonical `/x/claim/{code}` intended URL.
+- Claim controllers now enforce pre-claim login from the descriptor's
+  `authenticated_officer` mode; `claimant_handoff` intentionally remains
+  pre-auth until the execution driver provisions and authenticates the
+  verified recipient.
+- Login, mobile verification, and the protected-claim page consume generic
+  intent title and description data instead of inferring behavior from route
+  names.
+- The former campaign-specific helper remains as a compatibility adapter.
+- Focused verification passes:
+  - package claim/authentication: 16 tests and 75 assertions;
+  - root claim workflow regression: 6 tests and 48 assertions;
+  - claim authentication frontend: 4 tests.

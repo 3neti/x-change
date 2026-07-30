@@ -32,6 +32,7 @@ describe('claim authorization required page', () => {
                 claim_url: '/x/claim/AUTH1',
                 intent: {
                     type: 'campaign_authorization',
+                    authentication_mode: 'authenticated_officer',
                     code: 'AUTH1',
                     title: 'Officer authorization required',
                     description:
@@ -55,7 +56,7 @@ describe('claim authorization required page', () => {
         expect(wrapper.get('[data-testid="claim-auth-required-page"]').text()).toContain(
             'Officer authorization required',
         );
-        expect(wrapper.text()).toContain('frozen campaign worksheet');
+        expect(wrapper.text()).toContain('campaign officer account');
         expect(wrapper.text()).toContain('AUTH1');
         expect(wrapper.text()).toContain('does not issue Pay Codes');
         expect(wrapper.get('[data-testid="claim-auth-login"] a').attributes('href')).toBe(

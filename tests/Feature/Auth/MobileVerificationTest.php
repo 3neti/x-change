@@ -9,7 +9,7 @@ use LBHurtado\XChange\Actions\Auth\StartMobileVerification;
 use LBHurtado\XChange\Actions\Auth\VerifyMobileVerification;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\MobileVerificationChallenge;
-use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
+use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('creates a mobile-first user as unverified', function () {
@@ -119,7 +119,7 @@ it('passes campaign authorization login intent to the mobile verification page',
         'created_at' => now()->toIso8601String(),
     ];
 
-    $this->withSession([CampaignOfficerAuthorizationLoginIntent::SessionKey => $intent])
+    $this->withSession([ClaimAuthenticationIntent::SessionKey => $intent])
         ->withHeader('X-Inertia', 'true')
         ->get(route('x-change.onboarding.mobile-verification.show'))
         ->assertOk()

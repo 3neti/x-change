@@ -20,11 +20,12 @@ use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
+use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
-use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
+use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
@@ -41,7 +42,7 @@ class ClaimStartController extends Controller
         protected VoucherFlowCapabilityResolverContract $capabilities,
         protected ClaimWorkflowResolverContract $claimWorkflows,
         protected FormFlowClaimWorkflowMutator $formFlowWorkflows,
-        protected CampaignOfficerAuthorizationLoginIntent $campaignAuthorizationLoginIntent,
+        protected ClaimAuthenticationIntent $claimAuthenticationIntent,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -153,11 +154,11 @@ class ClaimStartController extends Controller
         $workflow = $this->claimWorkflows->resolve($voucher);
         $authenticatedMobile = null;
 
-        if ($workflow->requires_authenticated_officer) {
+        if ($workflow->authentication_mode === ClaimAuthenticationMode::AuthenticatedOfficer) {
             $officer = $request->user();
 
             if ($officer === null) {
-                $this->campaignAuthorizationLoginIntent->remember($request, $code, $workflow);
+                $this->claimAuthenticationIntent->remember($request, $code, $workflow);
 
                 return redirect()->route('x-change.claim.authorization-required', ['code' => $code]);
             }

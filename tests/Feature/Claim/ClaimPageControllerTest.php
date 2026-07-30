@@ -9,7 +9,7 @@ use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
-use LBHurtado\XChange\Support\Claim\CampaignOfficerAuthorizationLoginIntent;
+use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('renders the canonical human claim page without exposing the experience JSON', function () {
@@ -74,8 +74,9 @@ it('routes unauthenticated campaign officer authorization to an explicit login h
     $this->get(route('x-change.claim.show', ['code' => $voucher->code]))
         ->assertRedirect(route('x-change.claim.authorization-required', ['code' => $voucher->code]))
         ->assertSessionHas('url.intended', route('x-change.claim.show', ['code' => $voucher->code]))
-        ->assertSessionHas(CampaignOfficerAuthorizationLoginIntent::SessionKey, function (array $payload) use ($voucher): bool {
+        ->assertSessionHas(ClaimAuthenticationIntent::SessionKey, function (array $payload) use ($voucher): bool {
             return $payload['type'] === 'campaign_authorization'
+                && $payload['authentication_mode'] === 'authenticated_officer'
                 && $payload['code'] === $voucher->code
                 && $payload['workflow_key'] === 'campaign.officer-authorization.v1';
         });

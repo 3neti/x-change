@@ -7,9 +7,16 @@ namespace LBHurtado\XChange\Support\Claim;
 use Illuminate\Http\Request;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
 
+/**
+ * @deprecated Use ClaimAuthenticationIntent.
+ */
 final class CampaignOfficerAuthorizationLoginIntent
 {
-    public const string SessionKey = 'x-change.auth.intent';
+    public const string SessionKey = ClaimAuthenticationIntent::SessionKey;
+
+    public function __construct(
+        private readonly ClaimAuthenticationIntent $intents,
+    ) {}
 
     /**
      * @return array{
@@ -25,24 +32,7 @@ final class CampaignOfficerAuthorizationLoginIntent
      */
     public function remember(Request $request, string $code, ClaimWorkflowDescriptorData $workflow): array
     {
-        $code = strtoupper(trim($code));
-        $intendedUrl = route('x-change.claim.show', ['code' => $code]);
-
-        $payload = [
-            'type' => 'campaign_authorization',
-            'code' => $code,
-            'workflow_key' => $workflow->key,
-            'title' => 'Officer authorization required',
-            'description' => 'Sign in with the campaign officer account authorized to approve this worksheet.',
-            'intended_url' => $intendedUrl,
-            'handoff_url' => route('x-change.claim.authorization-required', ['code' => $code]),
-            'created_at' => now()->toIso8601String(),
-        ];
-
-        $request->session()->put('url.intended', $intendedUrl);
-        $request->session()->put(self::SessionKey, $payload);
-
-        return $payload;
+        return $this->intents->remember($request, $code, $workflow);
     }
 
     /**
@@ -50,7 +40,7 @@ final class CampaignOfficerAuthorizationLoginIntent
      */
     public function current(Request $request): ?array
     {
-        $payload = $request->session()->get(self::SessionKey);
+        $payload = $this->intents->current($request);
 
         if (! is_array($payload) || ($payload['type'] ?? null) !== 'campaign_authorization') {
             return null;

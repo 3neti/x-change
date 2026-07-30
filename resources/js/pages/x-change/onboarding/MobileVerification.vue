@@ -13,7 +13,8 @@ type Challenge = {
 };
 
 type AuthIntent = {
-    type: 'campaign_authorization';
+    type: 'campaign_authorization' | 'onboarding_claimant_handoff';
+    authentication_mode?: 'authenticated_officer' | 'claimant_handoff';
     code: string;
     title: string;
     description: string;
@@ -37,28 +38,39 @@ const verifyForm = useForm({
 const isCampaignAuthorization = computed(
     () => props.auth_intent?.type === 'campaign_authorization',
 );
+const isOnboardingClaimantHandoff = computed(
+    () => props.auth_intent?.type === 'onboarding_claimant_handoff',
+);
 
 const eyebrow = computed(() =>
     isCampaignAuthorization.value
         ? 'Officer authorization'
+        : isOnboardingClaimantHandoff.value
+          ? 'Pay Code onboarding'
         : 'Secure onboarding',
 );
 
 const title = computed(() =>
     isCampaignAuthorization.value
         ? 'Verify your officer mobile'
+        : isOnboardingClaimantHandoff.value
+          ? 'Verify your recipient mobile'
         : 'Verify your mobile',
 );
 
 const description = computed(() =>
     isCampaignAuthorization.value
         ? 'Campaign authorization requires a verified officer mobile before the worksheet can be approved.'
+        : isOnboardingClaimantHandoff.value
+          ? 'Verify the mobile collected by this Pay Code before Account setup is completed.'
         : 'Protected actions such as campaign authorization and account funding need a mobile number verified here first.',
 );
 
 const verifiedDescription = computed(() =>
     isCampaignAuthorization.value
         ? 'Your mobile is verified. Return to the approval Pay Code to continue campaign authorization.'
+        : isOnboardingClaimantHandoff.value
+          ? 'Your mobile is verified. Continue the Pay Code claim to finish Account setup.'
         : 'Your mobile is verified and can now be used for protected x-change actions such as campaign authorization and funding readiness checks.',
 );
 

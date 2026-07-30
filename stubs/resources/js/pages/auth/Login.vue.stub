@@ -22,7 +22,8 @@ defineProps<{
     canResetPassword: boolean;
     canRegister: boolean;
     auth_intent?: {
-        type: 'campaign_authorization';
+        type: 'campaign_authorization' | 'onboarding_claimant_handoff';
+        authentication_mode: 'authenticated_officer' | 'claimant_handoff';
         code: string;
         title: string;
         description: string;
@@ -42,16 +43,13 @@ defineProps<{
     </div>
 
     <div
-        v-if="auth_intent?.type === 'campaign_authorization'"
+        v-if="auth_intent"
         class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
         data-testid="login-auth-intent"
     >
-        <p class="font-semibold">Officer authorization required</p>
-        <p>
-            Sign in to approve campaign Pay Code
-            <span class="font-mono font-semibold">{{ auth_intent.code }}</span
-            >.
-        </p>
+        <p class="font-semibold">{{ auth_intent.title }}</p>
+        <p>{{ auth_intent.description }}</p>
+        <p class="mt-1 font-mono font-semibold">{{ auth_intent.code }}</p>
     </div>
 
     <Form

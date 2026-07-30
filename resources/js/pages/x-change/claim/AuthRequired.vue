@@ -7,7 +7,8 @@ import { ShieldCheck } from 'lucide-vue-next';
 defineOptions({ layout: null });
 
 type AuthIntent = {
-    type: 'campaign_authorization';
+    type: 'campaign_authorization' | 'onboarding_claimant_handoff';
+    authentication_mode: 'authenticated_officer' | 'claimant_handoff';
     code: string;
     title: string;
     description: string;
@@ -31,7 +32,7 @@ defineProps<{
 </script>
 
 <template>
-    <Head title="Officer authorization required" />
+    <Head :title="intent.title" />
 
     <ClaimStepShell tone="warning" width="lg">
         <div class="space-y-5" data-testid="claim-auth-required-page">
@@ -42,13 +43,13 @@ defineProps<{
                     <p
                         class="text-xs font-semibold tracking-[0.18em] text-amber-700 uppercase"
                     >
-                        Campaign approval
+                        Protected claim
                     </p>
                     <h1
                         class="text-2xl font-semibold tracking-tight"
                         data-testid="claim-auth-required-title"
                     >
-                        Officer authorization required
+                        {{ intent.title }}
                     </h1>
                 </div>
 
@@ -56,9 +57,7 @@ defineProps<{
                     class="mx-auto max-w-md text-sm leading-6 text-muted-foreground"
                     data-testid="claim-auth-required-description"
                 >
-                    This Pay Code approves a frozen campaign worksheet. Sign in
-                    with the officer account authorized to review and approve
-                    it.
+                    {{ intent.description }}
                 </p>
             </div>
 
@@ -66,7 +65,7 @@ defineProps<{
                 class="rounded-lg border border-border/70 bg-background/70 px-4 py-3"
                 data-testid="claim-auth-required-code"
             >
-                <p class="text-xs text-muted-foreground">Approval Pay Code</p>
+                <p class="text-xs text-muted-foreground">Pay Code</p>
                 <p class="mt-1 font-mono text-lg font-semibold">{{ code }}</p>
             </div>
 
@@ -75,8 +74,8 @@ defineProps<{
                     {{ workflow.description }}
                 </p>
                 <p>
-                    Signing in here does not issue Pay Codes, deliver messages,
-                    transfer funds, or redeem a beneficiary payout by itself.
+                    Authentication does not issue Pay Codes, deliver messages,
+                    transfer funds, or complete this claim by itself.
                 </p>
             </div>
 
