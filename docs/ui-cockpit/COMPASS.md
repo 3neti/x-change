@@ -4,12 +4,25 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Create Pay Code semantic icon language
+Current slice: Cockpit home operating overview
 Status: Implemented / accepted
-Last updated: 2026-07-28
+Last updated: 2026-07-31
 
 ## Completed
 
+- Rebuilt `/x/cockpit` as a restrained operating overview:
+  - put Create, Funding, Pay Codes, and Campaigns first as working controls;
+  - added a compact operational horizon for Pay Codes, claims, campaigns, and
+    items needing attention;
+  - separated actionable attention from routine integration placeholders;
+  - combined issuance and operational facts into one Recent Activity stream;
+  - made first-use guidance and pinned campaign context conditional;
+  - kept Account money facts in the shared global header instead of repeating
+    them in the page;
+  - moved connected-service, integration, liquidity, pipeline, risk, and
+    technical detail under one System Status disclosure; and
+  - preserved the read-only route, sanitized read models, and package boundary.
+- Canonical UI/UX contract: `COCKPIT_HOME_UI_UX.md`.
 - Reframed `/x/cockpit/quick-generate` as **Create Pay Code**:
   - established `Create → Design → Review → Issue` as the user journey;
   - replaced the technical page header with plain-language product copy;
