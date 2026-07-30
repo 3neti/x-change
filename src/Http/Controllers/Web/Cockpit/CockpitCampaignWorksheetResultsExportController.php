@@ -44,7 +44,7 @@ class CockpitCampaignWorksheetResultsExportController extends Controller
                             $fulfillment->status,
                             $fulfillment->provider_transfer_reference,
                             $fulfillment->pay_code,
-                            $fulfillment->pay_code === null ? '' : route('x-change.claim.start', $fulfillment->pay_code),
+                            $fulfillment->pay_code === null ? '' : route('x-change.claim.show', ['code' => $fulfillment->pay_code]),
                         ]);
                     }
                 });

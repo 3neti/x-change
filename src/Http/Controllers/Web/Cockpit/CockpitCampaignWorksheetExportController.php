@@ -54,7 +54,7 @@ class CockpitCampaignWorksheetExportController extends Controller
                     ->with('row')->where('status', 'issued')->orderBy('id')->chunkById(250, function ($fulfillments) use ($handle): void {
                         foreach ($fulfillments as $fulfillment) {
                             $beneficiary = $fulfillment->row?->beneficiary_ciphertext ?? [];
-                            fputcsv($handle, [$beneficiary['name'] ?? '', $beneficiary['mobile'] ?? '', $beneficiary['email'] ?? '', $beneficiary['external_reference'] ?? '', number_format(($fulfillment->row?->amount_minor ?? 0) / 100, 2, '.', ''), $fulfillment->pay_code, route('x-change.claim.start', $fulfillment->pay_code)]);
+                            fputcsv($handle, [$beneficiary['name'] ?? '', $beneficiary['mobile'] ?? '', $beneficiary['email'] ?? '', $beneficiary['external_reference'] ?? '', number_format(($fulfillment->row?->amount_minor ?? 0) / 100, 2, '.', ''), $fulfillment->pay_code, route('x-change.claim.show', ['code' => $fulfillment->pay_code])]);
                         }
                     });
                 fclose($handle);

@@ -287,9 +287,13 @@ it('records an explicit export as an immutable append-only delivery attempt', fu
         ->assertOk()
         ->assertHeader('cache-control', 'no-store, private');
 
+    $issuedPayCode = (string) $authorization->fulfillments()->value('pay_code');
+
     expect($response->streamedContent())
         ->toContain('Maria Santos')
-        ->toContain('maria@example.test');
+        ->toContain('maria@example.test')
+        ->toContain(route('x-change.claim.show', ['code' => $issuedPayCode]))
+        ->not->toContain('/x/claim?'.$issuedPayCode);
 
     $attempt = CampaignDeliveryAttempt::query()->with('events')->sole();
 
@@ -312,7 +316,9 @@ it('records an explicit export as an immutable append-only delivery attempt', fu
 
 it('queues campaign email on x-change-feedback and records blocked routes', function () {
     Mail::fake();
-    Queue::fake([DispatchCampaignFeedbackJob::class]);
+    Queue::fake([
+        DispatchCampaignFeedbackJob::class,
+    ]);
     config()->set('x-change.campaigns.delivery.email.enabled', true);
     config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
     $owner = actingAsTestUser();
@@ -385,7 +391,20 @@ it('queues campaign email on x-change-feedback and records blocked routes', func
     expect($queuedJob)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
     $queuedJob->handle(app(DispatchCampaignFeedback::class));
 
-    Mail::assertSent(FeedbackEmailMessage::class, 1);
+    $emailFulfillment = $authorization->fulfillments()
+        ->with('row')
+        ->get()
+        ->first(fn ($fulfillment): bool => $fulfillment->row?->ordinal === 1);
+    $emailClaimUrl = route('x-change.claim.show', [
+        'code' => $emailFulfillment?->pay_code,
+    ]);
+
+    Mail::assertSent(
+        FeedbackEmailMessage::class,
+        fn (FeedbackEmailMessage $message): bool => str_contains($message->intent->message->body, $emailClaimUrl)
+            && data_get($message->intent->message->actions, '0.href') === $emailClaimUrl
+            && ! str_contains($message->intent->message->body, '/x/claim?APPR-'),
+    );
     expect(ExecutionJournalEntry::query()
         ->where('correlation_id', $authorization->reference)
         ->orderBy('id')
@@ -420,6 +439,81 @@ it('queues campaign email on x-change-feedback and records blocked routes', func
     expect($retry->attempt_number)->toBe(3)
         ->and($retry->events->pluck('event_type')->all())->toBe(['requested', 'blocked'])
         ->and(CampaignDeliveryAttempt::query()->where('channel', 'email')->count())->toBe(3);
+});
+
+it('uses the canonical claim path in beneficiary Pay Code sms', function () {
+    Queue::fake([
+        ConvergeCampaignFeedbackDeliveryJob::class,
+        DispatchCampaignFeedbackJob::class,
+        DeliverQueuedFeedbackSmsJob::class,
+    ]);
+    config()->set('x-change.campaigns.delivery.sms.enabled', true);
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    $owner = actingAsTestUser();
+    $officer = actingAsTestUser();
+    $officer->forceFill(['mobile' => '09173011987'])->save();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-beneficiary-sms-claim-url-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'assistance',
+        name: 'Beneficiary SMS Claim URL',
+        fulfillmentMode: 'pay_code_distribution',
+        rows: [
+            new CampaignWorksheetRowData(
+                null,
+                1,
+                ['name' => 'Maria Santos', 'mobile' => '09179998888'],
+                1_000,
+            ),
+        ],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+
+    $this->actingAs($owner);
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+    $this->actingAs($officer);
+    app(CampaignWorksheetAuthorizationExecutionService::class)->execute(
+        Voucher::query()->where('code', $authorization->approval_pay_code)->sole(),
+        ['mobile' => '09173011987'],
+    );
+    $this->actingAs($owner)
+        ->post(route('x-change.cockpit.campaigns.fulfillments.pay-codes.store', $worksheet->reference))
+        ->assertRedirect();
+    $this->post(route('x-change.cockpit.campaigns.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'channel' => 'sms',
+    ]))->assertSessionHas('campaign_notice', 'SMS delivery: 1 queued, 0 blocked, 0 already attempted.');
+
+    $beneficiaryCampaignJob = null;
+    Queue::assertPushed(
+        DispatchCampaignFeedbackJob::class,
+        function (DispatchCampaignFeedbackJob $job) use (&$beneficiaryCampaignJob): bool {
+            if ($job->recipient !== '09179998888') {
+                return false;
+            }
+
+            $beneficiaryCampaignJob = $job;
+
+            return true;
+        },
+    );
+
+    expect($beneficiaryCampaignJob)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
+    $beneficiaryCampaignJob->handle(app(DispatchCampaignFeedback::class));
+
+    $smsFulfillment = $authorization->fulfillments()->sole();
+    $smsClaimUrl = route('x-change.claim.show', [
+        'code' => $smsFulfillment->pay_code,
+    ]);
+
+    Queue::assertPushed(
+        DeliverQueuedFeedbackSmsJob::class,
+        fn (DeliverQueuedFeedbackSmsJob $job): bool => str_contains($job->message, $smsClaimUrl)
+            && str_contains($job->message, '/x/claim/'.$smsFulfillment->pay_code)
+            && ! str_contains($job->message, '/x/claim?APPR-'),
+    );
 });
 
 it('rejects campaign messaging while its explicit runtime gate is disabled', function () {
@@ -509,8 +603,15 @@ it('queues an awaiting officer approval Pay Code through x-change feedback witho
     $queuedJob->handle(app(DispatchCampaignFeedback::class));
 
     Mail::assertSent(FeedbackEmailMessage::class, function (FeedbackEmailMessage $message) use ($authorization): bool {
+        $claimUrl = route('x-change.claim.show', [
+            'code' => $authorization->approval_pay_code,
+        ]);
+
         return $message->hasTo('officer@example.test')
-            && str_contains($message->intent->message->body, (string) $authorization->approval_pay_code);
+            && str_contains($message->intent->message->body, $claimUrl)
+            && data_get($message->intent->message->actions, '0.href') === $claimUrl
+            && ! str_contains($message->intent->message->body, '/x/claim?APPR-')
+            && ! str_contains((string) data_get($message->intent->message->actions, '0.href'), '/x/claim?APPR-');
     });
     expect($attempt->fresh()->events->pluck('event_type')->all())
         ->toBe(['requested', 'queued', 'completed'])
@@ -580,10 +681,20 @@ it('preserves the feedback created and queued journal lifecycle for campaign sms
     expect($campaignJob)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
     $campaignJob->handle(app(DispatchCampaignFeedback::class));
 
+    $providerJob = null;
     Queue::assertPushedOn(
         'x-change-feedback',
         DeliverQueuedFeedbackSmsJob::class,
-        fn (DeliverQueuedFeedbackSmsJob $job): bool => $job->queue === 'x-change-feedback',
+        function (DeliverQueuedFeedbackSmsJob $job) use (&$providerJob, $authorization): bool {
+            $providerJob = $job;
+            $claimUrl = route('x-change.claim.show', [
+                'code' => $authorization->approval_pay_code,
+            ]);
+
+            return $job->queue === 'x-change-feedback'
+                && str_contains($job->message, $claimUrl)
+                && ! str_contains($job->message, '/x/claim?APPR-');
+        },
     );
     $convergenceJob = null;
     Queue::assertPushedOn(
@@ -601,6 +712,7 @@ it('preserves the feedback created and queued journal lifecycle for campaign sms
 
     expect($attempt->events->pluck('event_type')->all())
         ->toBe(['requested', 'queued', 'provider_queued'])
+        ->and($providerJob)->toBeInstanceOf(DeliverQueuedFeedbackSmsJob::class)
         ->and(ExecutionJournalEntry::query()
             ->where('correlation_id', $authorization->reference)
             ->orderBy('id')

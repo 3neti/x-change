@@ -135,7 +135,9 @@ final readonly class DispatchCampaignFeedback
         CampaignDeliveryAttempt $attempt,
         string $recipient,
     ): FeedbackIntentData {
-        $claimUrl = route('x-change.claim.start', $authorization->approval_pay_code);
+        $claimUrl = route('x-change.claim.show', [
+            'code' => $authorization->approval_pay_code,
+        ]);
         $worksheetName = (string) ($authorization->worksheet?->name ?? 'Campaign worksheet');
 
         return FeedbackIntentData::forEvent(
@@ -176,7 +178,9 @@ final readonly class DispatchCampaignFeedback
         }
 
         $beneficiary = (array) ($fulfillment->row?->beneficiary_ciphertext ?? []);
-        $claimUrl = route('x-change.claim.start', $fulfillment->pay_code);
+        $claimUrl = route('x-change.claim.show', [
+            'code' => $fulfillment->pay_code,
+        ]);
 
         return FeedbackIntentData::forEvent(
             key: 'campaign.pay_code.delivery',
