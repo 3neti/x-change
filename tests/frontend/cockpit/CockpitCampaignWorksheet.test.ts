@@ -399,10 +399,10 @@ describe('Cockpit campaign worksheets', () => {
         ).form;
         const put = vi.spyOn(form, 'put').mockImplementation(() => undefined);
 
-        expect(wrapper.text()).toContain('Pay Code Experience');
-        expect(wrapper.text()).toContain('Applies To All 2');
+        expect(wrapper.text()).toContain('Recipient Experience');
+        expect(wrapper.text()).toContain('All 2 Recipients');
         expect(wrapper.text()).toContain(
-            'Amount and recipient come from each worksheet row.',
+            'Each recipient receives this experience with their own details.',
         );
         expect(wrapper.text()).toContain('₱125.00');
         expect(
@@ -414,7 +414,7 @@ describe('Cockpit campaign worksheets', () => {
         await wrapper.get('input[maxlength="5000"]').setValue('July salary');
         const save = wrapper
             .findAll('button')
-            .find((button) => button.text().includes('Save Experience'));
+            .find((button) => button.text().includes('Save Changes'));
         expect(save).toBeDefined();
         await save?.trigger('click');
 

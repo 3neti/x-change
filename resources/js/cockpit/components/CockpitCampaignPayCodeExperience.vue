@@ -175,8 +175,8 @@ const previewDocument = computed(() =>
 );
 const scopeLabel = computed(() =>
     props.fulfillmentMode === 'direct_bank_transfer'
-        ? 'Fallback Pay Code Experience'
-        : 'Pay Code Experience',
+        ? 'Fallback Pay Code'
+        : 'Pay Code',
 );
 const shortHash = computed(() =>
     props.blueprintHash ? props.blueprintHash.slice(0, 10) : 'Legacy Snapshot',
@@ -211,13 +211,13 @@ function selectEditor(key: EditorKey): void {
                     <span
                         class="rounded-full bg-orange-50 px-2 py-0.5 text-[0.65rem] font-semibold text-orange-700 dark:bg-orange-950/50 dark:text-orange-200"
                     >
-                        Applies To All {{ beneficiaryCount }}
+                        All {{ beneficiaryCount }} Recipients
                     </span>
                 </div>
                 <h2
                     class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50"
                 >
-                    One Design, Bound To Every Beneficiary
+                    Recipient Experience
                 </h2>
             </div>
             <div class="flex items-center gap-2">
@@ -234,7 +234,7 @@ function selectEditor(key: EditorKey): void {
                     @click="save"
                 >
                     <Save class="size-4" />
-                    {{ form.processing ? 'Saving…' : 'Save Experience' }}
+                    {{ form.processing ? 'Saving…' : 'Save Changes' }}
                 </button>
             </div>
         </header>
@@ -542,13 +542,13 @@ function selectEditor(key: EditorKey): void {
                             <p
                                 class="text-xs font-semibold text-slate-700 dark:text-slate-200"
                             >
-                                Representative Preview
+                                Preview
                             </p>
                             <p
                                 class="text-[0.7rem] text-slate-500 dark:text-slate-400"
                             >
-                                Amount and recipient come from each worksheet
-                                row.
+                                Each recipient receives this experience with
+                                their own details.
                             </p>
                         </div>
                     </div>
