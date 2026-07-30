@@ -134,6 +134,11 @@ class CockpitCampaignWorksheetIntakeController extends Controller
         $owner = $request->user();
         $staged = $this->owned($intake, $owner);
         $validated = $request->validated();
+        if ($validated['profile'] !== data_get($staged->suggestion, 'profile')
+            || $validated['fulfillment_mode'] !== data_get($staged->suggestion, 'fulfillment_mode')) {
+            return to_route('x-change.cockpit.campaigns.index')
+                ->withErrors(['intake' => 'Recheck the rows after changing the purpose or recipient method.']);
+        }
         $hasInvalidRows = collect($staged->rows)->contains('status', 'invalid');
         if ($hasInvalidRows && ! $validated['exclude_invalid_rows']) {
             return to_route('x-change.cockpit.campaigns.index')

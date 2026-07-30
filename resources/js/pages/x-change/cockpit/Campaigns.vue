@@ -17,6 +17,7 @@ type CampaignWorksheet = {
 
 type CampaignsPageProps = CockpitHeaderPageProps & {
     worksheets: CampaignWorksheet[];
+    active_intake?: Record<string, unknown>;
 };
 
 const props = defineProps<CampaignsPageProps>();

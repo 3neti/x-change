@@ -193,6 +193,7 @@ class CockpitCampaignWorksheetController extends Controller
             'valid_principal_minor' => $validRows->sum(
                 fn (array $row): int => (int) data_get($row, 'normalized.amount_minor', 0),
             ),
+            'valid_source_rows' => $validRows->pluck('source_row')->map(fn (mixed $row): int => (int) $row)->values()->all(),
             'rows' => collect($intake->rows)->take(100)->values()->all(),
         ];
     }

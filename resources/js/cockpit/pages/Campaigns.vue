@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { ClipboardList, Plus, Send, Trash2, Users } from 'lucide-vue-next';
+import { ClipboardList, FileSpreadsheet, Plus, Send, Trash2, Upload, Users } from 'lucide-vue-next';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
+import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
+import CockpitCampaignIntakeDialog from '../components/CockpitCampaignIntakeDialog.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type { CockpitHeaderPageProps } from '../types';
 
@@ -20,6 +22,7 @@ type CampaignWorksheet = {
 
 type CampaignsPageProps = CockpitHeaderPageProps & {
     worksheets: CampaignWorksheet[];
+    active_intake?: Record<string, unknown>;
 };
 
 const props = defineProps<CampaignsPageProps>();
@@ -31,6 +34,20 @@ const form = useForm({
     delivery_plan: ['csv'],
 });
 const deleteForm = useForm({});
+const intakeForm = useForm<{ file: File | null }>({ file: null });
+
+function uploadIntake(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    intakeForm.file = input.files?.[0] ?? null;
+    if (!intakeForm.file) {
+        return;
+    }
+
+    intakeForm.post(storeIntake(), {
+        forceFormData: true,
+        preserveScroll: true,
+    });
+}
 
 function createWorksheet(): void {
     form.post(store(), {
@@ -179,7 +196,35 @@ function dateTime(value: string | null): string {
                     </div>
                 </div>
 
-                <form class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900" @submit.prevent="createWorksheet">
+                <div class="space-y-3">
+                    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div class="flex items-center gap-2">
+                            <FileSpreadsheet class="size-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
+                            <div>
+                                <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">New Campaign</p>
+                                <h2 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">Import Beneficiary List</h2>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300">Upload CSV or Excel. We’ll suggest the purpose and recipient method before creating anything.</p>
+                        <label class="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950">
+                            <Upload class="size-4" aria-hidden="true" />
+                            {{ intakeForm.processing ? 'Inspecting…' : 'Choose CSV Or Excel' }}
+                            <input type="file" accept=".csv,.txt,.xlsx" class="sr-only" :disabled="intakeForm.processing" @change="uploadIntake" />
+                        </label>
+                        <p v-if="intakeForm.errors.file" class="mt-2 text-xs text-rose-600 dark:text-rose-300">{{ intakeForm.errors.file }}</p>
+                    </section>
+
+                    <details class="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <summary class="cursor-pointer list-none p-4">
+                            <div class="flex items-center gap-2">
+                                <Plus class="size-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
+                                <div>
+                                    <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Start Blank</p>
+                                    <h2 class="mt-0.5 text-sm font-semibold text-slate-950 dark:text-slate-50">Create An Empty Campaign</h2>
+                                </div>
+                            </div>
+                        </summary>
+                <form class="border-t border-slate-200 p-4 dark:border-slate-800" @submit.prevent="createWorksheet">
                     <div class="flex items-center gap-2">
                         <Plus class="size-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
                         <div>
@@ -216,9 +261,12 @@ function dateTime(value: string | null): string {
                         <Send class="size-4" aria-hidden="true" />
                         {{ form.processing ? 'Creating…' : 'Create Worksheet' }}
                     </button>
-                    <p class="mt-2 text-center text-xs leading-4 text-slate-500 dark:text-slate-400">A worksheet cannot move money. Add beneficiaries and request authorization in the next steps.</p>
+                    <p class="mt-2 text-center text-xs leading-4 text-slate-500 dark:text-slate-400">No beneficiaries or funds are added yet.</p>
                 </form>
+                    </details>
+                </div>
             </section>
         </main>
+        <CockpitCampaignIntakeDialog v-if="Object.keys(props.active_intake ?? {}).length > 0" :intake="props.active_intake as never" />
     </CockpitLayout>
 </template>

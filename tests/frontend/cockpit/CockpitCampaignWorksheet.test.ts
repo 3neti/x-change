@@ -32,6 +32,63 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('₱0.00');
         expect(wrapper.text()).toContain('Draft only');
         expect(wrapper.text()).not.toContain('Maria Santos');
+        expect(wrapper.text()).toContain('Import Beneficiary List');
+        expect(wrapper.text()).toContain('Choose CSV Or Excel');
+        expect(wrapper.text()).toContain('Start Blank');
+    });
+
+    it('opens an explicit intake review with suggested choices and row controls', () => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+                active_intake: {
+                    reference: '01KYINTAKE',
+                    source_name: 'july-payroll.csv',
+                    source_format: 'csv',
+                    source_headers: ['name', 'mobile', 'amount'],
+                    source_sheet: null,
+                    row_count: 2,
+                    mapping: { name: 'name', mobile: 'mobile', amount: 'amount' },
+                    suggestion: {
+                        name: 'July Payroll',
+                        profile: 'payroll',
+                        profile_reason: 'The file name looks like payroll.',
+                        fulfillment_mode: 'pay_code_distribution',
+                        fulfillment_reason: 'Mobile columns were found.',
+                        needs_fulfillment_choice: false,
+                    },
+                    valid_count: 1,
+                    invalid_count: 1,
+                    valid_principal_minor: 10_000,
+                    valid_source_rows: [2],
+                    rows: [
+                        {
+                            source_row: 2,
+                            status: 'valid',
+                            source: { name: 'Maria', mobile: '09173011987', amount: '100.00' },
+                            normalized: {
+                                beneficiary: { name: 'Maria', mobile: '09173011987' },
+                                amount_minor: 10_000,
+                            },
+                            errors: [],
+                        },
+                        {
+                            source_row: 3,
+                            status: 'invalid',
+                            source: { name: 'Missing', mobile: '', amount: '50.00' },
+                            normalized: null,
+                            errors: ['A mobile number or email address is required.'],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="campaign-intake-dialog"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Review Before Adding');
+        expect(wrapper.text()).toContain('How Recipients Receive Funds');
+        expect(wrapper.text()).toContain('Create Campaign With 1 Row');
+        expect(wrapper.text()).toContain('Invalid rows are never silently included.');
     });
 
     it('labels authorized activity accurately instead of calling it draft only', () => {
@@ -71,7 +128,7 @@ describe('Cockpit campaign worksheets', () => {
         });
 
         expect(wrapper.find('[data-testid="cockpit-campaigns-page"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Create A Worksheet');
+        expect(wrapper.text()).toContain('Import Beneficiary List');
     });
 
     it('makes the planned post-approval state explicit before beneficiary issuance', () => {
