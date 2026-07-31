@@ -2,21 +2,23 @@
 
 ## Status
 
-Read-only audit performed on 2026-07-31.
+Audit performed on 2026-07-31 and advanced through the approved release
+preparation gate.
 
 ```text
 package:        3neti/wallet
 repository:       git@github.com:3neti/wallet.git
 branch:           main
-runtime head:     3469f5f4938ace13ea1573bf7c2d01962bfb3444
+runtime head:     05a141b
 cleanup commit:   b9a1706
-remote state:     local main is one cleanup commit ahead of origin/main
+remote state:     local main equals origin/main
 latest tag:       v1.1.0
 classification:   release-after-fix
 ```
 
-No wallet source, configuration, manifest, lock file, repository, remote, or
-tag was changed during this audit.
+The runtime Treasury implementation remained frozen. Approved changes were
+limited to Finder cleanup, release documentation, Composer compatibility
+metadata, CI, and package tests. No release tag was created.
 
 ## Audit result
 
@@ -48,14 +50,13 @@ docs/architecture/treasury/.DS_Store
 They are untracked Finder metadata. No wallet source or tracked file was dirty.
 They did not represent uncommitted Treasury work.
 
-The cleanup was completed in wallet commit `b9a1706`:
+The cleanup was completed and pushed in wallet commit `b9a1706`:
 
 - both Finder files were removed;
 - `.DS_Store` is ignored at every repository depth; and
 - no runtime or Composer file changed.
 
-The wallet worktree is clean after that commit. The cleanup commit has not been
-pushed by this documentation slice.
+The wallet worktree is clean and matches `origin/main`.
 
 ## Verification evidence
 
@@ -79,51 +80,66 @@ Additional checks:
 The ignored local lock is development residue, not a release artifact. It must
 not be used as evidence for a clean consumer.
 
-## Release blockers
+## Release-preparation evidence
 
-### 1. The README describes the pre-Treasury package
+The approved `v2.0.0-beta.1` preparation lane produced these pushed commits:
 
-The README currently says:
+| Commit | Slice |
+| --- | --- |
+| `7251c23` | Rewrite the package contract and document the 2.x beta boundary. |
+| `86318b6` | Declare PHP/Laravel support and add compatibility tests and CI. |
+| `4ef85ff` | Make the CI database extensions explicit. |
+| `4d83759` | Remove a redundant clean-runner Pest flag. |
+| `05a141b` | Commit a stable PHPUnit configuration for clean Pest runners. |
 
-- the package does not own or ship migrations;
-- the package is stateless;
-- multi-account and audit behavior are future extensions; and
-- the package is only integration glue over Bavix.
-
-Current `main` loads six package-owned Treasury migrations and owns Inventory,
-Position, operation, read-model, and reconciliation primitives. The README must
-be rewritten before release.
-
-### 2. Runtime framework dependencies are implicit
-
-The runtime source imports Laravel configuration, database, broadcasting,
-events, queue, and support contracts, but the manifest declares only:
-
-- `spatie/laravel-data`;
-- `lorisleiva/laravel-actions`;
-- `brick/money`; and
-- `bavix/laravel-wallet`.
-
-The package currently relies on transitive Illuminate dependencies. Release
-preparation must declare the framework components it directly consumes and
-state supported PHP and Laravel versions.
-
-### 3. Laravel 13 is not tested by the package manifest
-
-The development manifest uses:
+The package manifest now declares:
 
 ```json
 {
-    "orchestra/testbench": "^10.3",
-    "pestphp/pest": "^3.8"
+    "php": "^8.3",
+    "laravel/framework": "^12.0 || ^13.0"
 }
 ```
 
-That is the Laravel 12 test generation. The x-change host currently exercises
-wallet on Laravel 13, but the wallet repository needs its own supported-version
-matrix. Its test dependencies and CI must prove every advertised version.
+The package suite now contains 94 tests and 1,733 assertions. It passed locally
+on Laravel 12 / Pest 3 and Laravel 13 / Pest 4.
 
-### 4. Public construction changed after v1.1.0
+GitHub Actions run `30595844287` passed all four advertised lanes:
+
+- PHP 8.3 / Laravel 12;
+- PHP 8.4 / Laravel 12;
+- PHP 8.3 / Laravel 13; and
+- PHP 8.4 / Laravel 13.
+
+Composer security audit reported no known advisories for the resolved Laravel
+13 lane.
+
+## Downstream candidate evidence
+
+The exact untagged wallet candidate commit `05a141b` was exercised without
+changing downstream runtime source:
+
+| Consumer | Evidence |
+| --- | --- |
+| `3neti/cash` | Clean VCS install of `05a141b`; 95 tests and 194 assertions passed. |
+| `3neti/emi-netbank` | Current source suite: 154 passed, 28 skipped, 542 assertions. |
+| `3neti/voucher` | Current source suite: 420 passed, 28 skipped, 1,287 assertions. |
+| `3neti/x-change` | Focused Treasury/wallet integration: 24 tests and 177 assertions passed on Laravel 13. |
+
+The isolated NetBank consumer resolved and installed wallet `05a141b`
+successfully. Its clean test run then exposed a separate dependency-release
+blocker: current NetBank test code uses
+`ProviderLivePreflightFailureCode::DnsResolutionFailed`, but the latest
+immutable `3neti/emi-core` release does not contain that enum. The local
+NetBank suite passes because it consumes the current emi-core workspace.
+
+This is not a wallet compatibility failure. It proves that the immutable
+emi-core release must be advanced before NetBank can satisfy its own clean
+consumer gate.
+
+## Release blockers
+
+### 1. Public construction changed after v1.1.0
 
 `SystemUserResolverService` changed from an implicitly no-argument service to a
 constructor requiring the Laravel configuration repository.
@@ -135,12 +151,7 @@ Container resolution remains supported and the package tests pass, but direct
 construction by a consumer can break. This is the primary semantic-versioning
 question.
 
-### 5. No package CI was observed
-
-The wallet repository has no observed `.github/workflows` release validation.
-A release must not depend on tests run only from this workstation.
-
-### 6. Downstream constraints currently accept only 1.x
+### 2. Downstream constraints currently accept only 1.x
 
 Observed consumers:
 
@@ -152,9 +163,16 @@ Observed consumers:
 | `3neti/x-change` | `^1.1` |
 | host application | `^1.1` |
 
-A `2.x` wallet release requires a coordinated downstream release wave. A
-compatible `1.2.x` release requires explicit backward-compatibility work and
-tests first.
+A `2.x` wallet release requires a coordinated downstream release wave. The
+runtime compatibility evidence passes, but immutable constraints have not yet
+been advanced.
+
+### 3. NetBank's clean consumer requires a newer emi-core release
+
+The exact wallet candidate resolves from GitHub in a clean NetBank consumer.
+The consumer cannot finish its suite using the latest immutable emi-core
+release because current NetBank tests reference a newer provider preflight enum.
+Release emi-core before treating the NetBank clean-consumer gate as complete.
 
 ## Version decision
 
@@ -164,9 +182,10 @@ Two valid paths exist:
 
 ### Preferred if direct construction is intentionally unsupported
 
-Cut `v2.0.0-beta.1` after the manifest, README, CI, and clean-consumer gates
-pass. This is the safest semantic statement because the package’s documented
-scope and public construction behavior changed materially.
+Cut `v2.0.0-beta.1` after the remaining immutable clean-consumer gate passes.
+The manifest, README, package CI, and source-compatibility gates now pass. This
+remains the safest semantic statement because the package’s documented scope
+and public construction behavior changed materially.
 
 Consequences:
 
@@ -187,19 +206,18 @@ deployment convenience.
 
 ## Required release-preparation slice
 
-Code remains frozen. When package release changes are explicitly authorized,
-the wallet slice should contain only:
+The approved release-preparation slice is complete through source-consumer
+validation:
 
-1. remove and ignore Finder metadata;
-2. rewrite README installation, migration, Treasury, and upgrade guidance;
-3. declare PHP and direct Illuminate runtime constraints;
-4. add a Laravel 12/13 package CI matrix;
-5. add backward-compatibility tests or approve the `2.x` boundary;
-6. run strict Composer validation without local path repositories;
-7. run the full wallet suite;
-8. install the proposed wallet release in clean consumers for `cash`,
-   `emi-netbank`, `voucher`, and `x-change`; and
-9. create a tag only after those consumers pass.
+1. Finder metadata is removed and ignored.
+2. README and upgrade guidance describe the Treasury package accurately.
+3. PHP and Laravel runtime constraints are explicit.
+4. Laravel 12/13 CI passes.
+5. The `2.x` boundary is approved and tested.
+6. Strict Composer validation passes.
+7. The full wallet suite passes.
+8. Source consumers pass; cash also passes a clean exact-commit install.
+9. NetBank's immutable emi-core dependency remains the no-tag blocker.
 
 Each behavior-changing compatibility fix must be a separate tested commit.
 Documentation, manifest/CI, and release tagging must remain separate commits or
@@ -208,17 +226,19 @@ external actions.
 ## Gate decision
 
 ```text
-source integrity:       pass
-worktree cleanliness:   pass
-remote parity:          pending cleanup push
-package tests:          pass
-manifest structure:     pass
-release documentation:  fail
-direct dependency list: fail
-Laravel version matrix: fail
-semantic version:       decision required
-clean consumer:         not run
-tag authorization:      blocked
+source integrity:        pass
+worktree cleanliness:    pass
+remote parity:           pass
+package tests:           pass
+manifest structure:      pass
+release documentation:   pass
+direct dependency list:  pass
+Laravel version matrix:  pass
+semantic version:        v2.0.0-beta.1 approved
+source consumers:        pass
+cash clean consumer:     pass
+NetBank clean consumer:  blocked by immutable emi-core
+tag authorization:       blocked
 ```
 
 The next dependency must not be released around wallet. Wallet is the first
