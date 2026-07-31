@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-use Tests\TestCase;
-
-uses(TestCase::class);
-
 it('defines the public claim experience ui profile without cockpit coupling', function () {
     $profile = config('x-change.claim.experience_ui');
 

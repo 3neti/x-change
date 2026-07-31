@@ -10,9 +10,6 @@ use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecution
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
-use Tests\TestCase;
-
-uses(TestCase::class);
 
 it('binds the shared claim workflow resolver', function () {
     expect(app(ClaimWorkflowResolverContract::class))->toBeInstanceOf(DefaultClaimWorkflowResolver::class);
@@ -64,6 +61,7 @@ it('removes destination collection from a campaign officer authorization workflo
     $instructions = (new FormFlowClaimWorkflowMutator)->apply(
         FormFlowInstructionsData::from([
             'reference_id' => 'claim-workflow-01',
+            'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-01'],
             'steps' => [[
                 'handler' => 'form',
                 'config' => [
@@ -131,6 +129,7 @@ it('compiles onboarding account provisioning without payout fields or route gues
     $instructions = (new FormFlowClaimWorkflowMutator)->apply(
         FormFlowInstructionsData::from([
             'reference_id' => 'claim-workflow-onboarding-01',
+            'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-onboarding-01'],
             'steps' => [
                 [
                     'handler' => 'form',
@@ -192,6 +191,7 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
     $instructions = (new FormFlowClaimWorkflowMutator)->apply(
         FormFlowInstructionsData::from([
             'reference_id' => 'claim-workflow-02',
+            'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-02'],
             'steps' => [[
                 'handler' => 'form',
                 'config' => [
