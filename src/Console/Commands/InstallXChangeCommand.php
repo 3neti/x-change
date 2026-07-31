@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
+use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
@@ -55,6 +56,7 @@ class InstallXChangeCommand extends Command
         TreasuryProviderConnectionCatalog $treasuryConnections,
         PreInstallReadinessInspector $preInstallReadiness,
         SystemPrincipalProvisioningService $systemPrincipalProvisioning,
+        CommissioningManifestRecorder $commissioningManifests,
     ): int {
         $this->components->info('Installing X-Change...');
 
@@ -679,6 +681,14 @@ class InstallXChangeCommand extends Command
         }
 
         $publishResources();
+
+        if (! $this->option('no-treasury')) {
+            $commissioningManifests->record();
+        } else {
+            $this->components->warn(
+                'Commissioning remains incomplete because Treasury was explicitly deferred.',
+            );
+        }
 
         $this->newLine();
         $this->components->info('X-Change installed successfully.');

@@ -17,4 +17,11 @@ dl div { padding: 1rem; border-radius: 1rem; background: #111827; }
 dt { color: #94a3b8; font-size: .75rem; text-transform: uppercase; }
 dd { margin: .35rem 0 0; font-weight: 700; text-transform: capitalize; }
 .operator { margin-bottom: 0; font-size: .875rem; }
+form { display: grid; gap: .65rem; margin-top: 1.5rem; }
+label { color: #94a3b8; font-size: .8rem; font-weight: 700; }
+input, button { min-height: 2.75rem; border: 1px solid #475569; border-radius: .75rem; padding: .65rem .85rem; font: inherit; }
+input { background: #0f172a; color: #f8fafc; }
+button { border-color: #f97316; background: #f97316; color: #111827; font-weight: 800; cursor: pointer; }
+li { margin: .65rem 0; color: #cbd5e1; line-height: 1.45; }
+code { color: #fdba74; overflow-wrap: anywhere; }
 @media (max-width: 34rem) { dl { grid-template-columns: 1fr; } }

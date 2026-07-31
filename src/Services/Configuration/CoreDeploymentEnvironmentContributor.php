@@ -21,6 +21,13 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 required: true,
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_COMMISSIONING_ACCESS_TOKEN',
+                description: 'Secret used to unlock the server commissioning checklist.',
+                category: 'X-Change',
+                configPath: 'x-change.commissioning.access_token',
+                secret: true,
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_SYSTEM_USER_ID',
                 description: 'Stable email of the non-interactive system principal.',
                 category: 'Identity',

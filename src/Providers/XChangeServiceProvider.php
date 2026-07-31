@@ -50,6 +50,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
+use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
@@ -57,6 +58,7 @@ use LBHurtado\XChange\Console\Commands\Claim\SnapshotRiderSplashArtworkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
+use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
@@ -1181,6 +1183,8 @@ class XChangeServiceProvider extends ServiceProvider
                 ConfigureXChangeCommand::class,
                 InspectXChangeConfigurationCommand::class,
                 DoctorXChangeCommand::class,
+                CommissioningStatusCommand::class,
+                AdoptCommissioningManifestCommand::class,
                 SeedCockpitDiagnosticActivityCommand::class,
                 ShowCockpitOperatorActivityRuntimeProfileCommand::class,
             ]);

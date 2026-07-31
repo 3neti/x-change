@@ -18,6 +18,12 @@
             <div><dt>Safety</dt><dd>Financial operations locked</dd></div>
         </dl>
         <p class="operator">Deployment operators can complete the protected server checklist.</p>
+        <form method="post" action="{{ route('x-change.commissioning.checklist.unlock') }}">
+            @csrf
+            <label for="access_token">Operator access token</label>
+            <input id="access_token" name="access_token" type="password" autocomplete="off" required>
+            <button type="submit">Open checklist</button>
+        </form>
     </section>
 </main>
 </body>
