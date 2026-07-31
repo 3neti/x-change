@@ -9,6 +9,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -221,6 +222,7 @@ use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Exceptions\VoucherFlowCapabilityException;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
 use LBHurtado\XChange\Http\Middleware\RequireInitialPinSetup;
 use LBHurtado\XChange\Http\Responses\MobileFirstRegisterResponse;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
@@ -1113,6 +1115,9 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->app->make(HttpKernel::class)->prependMiddleware(
+            EnsureXChangeIsCommissioned::class,
+        );
         $this->bootInitialPinSetupGuard();
         $this->decorateOnboardingCompletionHook();
         $this->prependExecutionAwarePostRedemptionGate();
@@ -1763,6 +1768,8 @@ class XChangeServiceProvider extends ServiceProvider
         }
 
         $config = $this->app['config'];
+
+        $this->loadRoutesFrom($this->packagePath('routes/commissioning.php'));
 
         if ((bool) $config->get('x-change.routes.web', true)) {
             $this->loadRoutesFrom($this->packagePath('routes/web.php'));

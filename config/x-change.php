@@ -176,6 +176,12 @@ return [
         ))),
     ],
 
+    'commissioning' => [
+        'enabled' => (bool) env('XCHANGE_COMMISSIONING_ENABLED', true),
+        'access_token' => env('XCHANGE_COMMISSIONING_ACCESS_TOKEN'),
+        'retry_after_seconds' => (int) env('XCHANGE_COMMISSIONING_RETRY_AFTER', 300),
+    ],
+
     'product' => [
         'name' => env('XCHANGE_PRODUCT_NAME', 'X-Change'),
         'code' => env('XCHANGE_PRODUCT_CODE', 'x-change'),
