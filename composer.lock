@@ -127,16 +127,16 @@
         },
         {
             "name": "3neti/emi-core",
-            "version": "v2.0.0-beta.1",
+            "version": "v2.0.0-beta.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-core.git",
-                "reference": "30fe88c8ee72d2dcab58fb0a7418f298103684b7"
+                "reference": "e4ec8236451e8137c07dff1dcc2e41218ed75d1a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-core/zipball/30fe88c8ee72d2dcab58fb0a7418f298103684b7",
-                "reference": "30fe88c8ee72d2dcab58fb0a7418f298103684b7",
+                "url": "https://api.github.com/repos/3neti/emi-core/zipball/e4ec8236451e8137c07dff1dcc2e41218ed75d1a",
+                "reference": "e4ec8236451e8137c07dff1dcc2e41218ed75d1a",
                 "shasum": ""
             },
             "require": {
@@ -176,9 +176,9 @@
             "description": "Provider-agnostic EMI domain: contracts, enums, models, DTOs, events",
             "support": {
                 "issues": "https://github.com/3neti/emi-core/issues",
-                "source": "https://github.com/3neti/emi-core/tree/v2.0.0-beta.1"
+                "source": "https://github.com/3neti/emi-core/tree/v2.0.0-beta.3"
             },
-            "time": "2026-07-31T01:59:24+00:00"
+            "time": "2026-07-31T13:55:30+00:00"
         },
         {
             "name": "3neti/emi-netbank",

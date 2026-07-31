@@ -167,6 +167,10 @@ HTML;
 
 return [
 
+    'deployment' => [
+        'profile' => env('XCHANGE_DEPLOYMENT_PROFILE', 'development'),
+    ],
+
     'product' => [
         'name' => env('XCHANGE_PRODUCT_NAME', 'X-Change'),
         'code' => env('XCHANGE_PRODUCT_CODE', 'x-change'),

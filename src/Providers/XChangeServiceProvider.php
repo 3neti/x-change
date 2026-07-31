@@ -27,6 +27,7 @@ use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
+use LBHurtado\EmiCore\Contracts\DeploymentEnvironmentContributor;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
@@ -262,6 +263,8 @@ use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
+use LBHurtado\XChange\Services\Configuration\CoreDeploymentEnvironmentContributor;
+use LBHurtado\XChange\Services\Configuration\DeploymentEnvironmentCatalog;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
 use LBHurtado\XChange\Services\DefaultClaimApprovalExecutionService;
@@ -376,6 +379,18 @@ class XChangeServiceProvider extends ServiceProvider
             'x-change'
         );
         $this->mergeLifecycleScenarioDefaults();
+
+        $this->app->singleton(CoreDeploymentEnvironmentContributor::class);
+        $this->app->tag(
+            CoreDeploymentEnvironmentContributor::class,
+            DeploymentEnvironmentContributor::class,
+        );
+        $this->app->singleton(
+            DeploymentEnvironmentCatalog::class,
+            fn ($app): DeploymentEnvironmentCatalog => new DeploymentEnvironmentCatalog(
+                $app->tagged(DeploymentEnvironmentContributor::class),
+            ),
+        );
 
         if ($this->mobileFirstAuthEnabled()) {
             $this->app['config']->set('fortify.username', 'mobile');
