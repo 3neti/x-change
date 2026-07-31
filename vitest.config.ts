@@ -180,10 +180,6 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/funding-index-route.ts',
             ),
-            '@/routes/x-change/cockpit': path.resolve(
-                __dirname,
-                'tests/frontend/stubs/cockpit-route.ts',
-            ),
             '@/routes/x-change/cockpit/campaigns/intakes': path.resolve(
                 __dirname,
                 'tests/frontend/stubs/campaign-intake-route.ts',
@@ -231,6 +227,10 @@ export default defineConfig({
             '@/routes/x-change/cockpit/accounts': path.resolve(
                 __dirname,
                 'tests/frontend/stubs/accounts-route.ts',
+            ),
+            '@/routes/x-change/cockpit': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/cockpit-route.ts',
             ),
             '@/routes/x-change/onboarding/mobile-verification': path.resolve(
                 __dirname,

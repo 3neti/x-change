@@ -10,190 +10,66 @@
     ],
     "repositories": [
         {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/x-commerce",
-            "options": {
-                "symlink": true
-            }
+            "type": "git",
+            "url": "https://github.com/3neti/onboarding.git"
         },
         {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/emi-core",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "3neti/emi-core": "1.0.5"
-                }
-            }
+            "type": "git",
+            "url": "https://github.com/3neti/x-action.git"
         },
         {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/merchant",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "3neti/merchant": "1.1.1"
-                }
-            }
+            "type": "git",
+            "url": "https://github.com/3neti/x-campaign.git"
         },
         {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/wallet",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "3neti/wallet": "1.1.1"
-                }
-            }
+            "type": "git",
+            "url": "https://github.com/3neti/x-commerce.git"
         },
         {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/voucher",
-            "options": {
-                "symlink": true
-            }
+            "type": "git",
+            "url": "https://github.com/3neti/x-feedback.git"
         },
         {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/cash",
-            "options": {
-                "symlink": true
-            }
+            "type": "git",
+            "url": "https://github.com/3neti/x-journal.git"
         },
         {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/onboarding",
-            "options": {
-                "symlink": true
-            }
+            "type": "git",
+            "url": "https://github.com/3neti/x-ray.git"
         },
         {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/form-flow-manager",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/form-handler-kyc",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/form-handler-location",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/form-handler-otp",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/form-handler-selfie",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/form-handler-signature",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/x-rider",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/x-ray",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/x-journal",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/x-action",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/x-feedback",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/x-campaign",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/emi-paynamics",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "url": "/Users/rli/PhpstormProjects/packages/emi-netbank",
-            "options": {
-                "symlink": true
-            }
+            "type": "git",
+            "url": "https://github.com/3neti/x-rider.git"
         }
     ],
     "require": {
-        "php": "^8.2",
-        "3neti/cash": "dev-main",
+        "php": "^8.3",
+        "3neti/cash": "^1.3",
         "3neti/contact": "^1.1",
-        "3neti/emi-core": "^1.0",
-        "3neti/emi-netbank": "dev-main",
-        "3neti/emi-paynamics": "dev-main",
-        "3neti/onboarding": "dev-main",
-        "3neti/form-flow": "dev-main",
-        "3neti/form-handler-kyc": "dev-main",
-        "3neti/form-handler-location": "dev-main",
-        "3neti/form-handler-otp": "dev-main",
-        "3neti/form-handler-selfie": "dev-main",
-        "3neti/form-handler-signature": "dev-main",
+        "3neti/emi-core": "^2.0@beta",
+        "3neti/emi-netbank": "^2.1",
+        "3neti/emi-paynamics": "^2.0@beta",
+        "3neti/onboarding": "^1.0",
+        "3neti/form-flow": "^1.8",
+        "3neti/form-handler-kyc": "^1.1",
+        "3neti/form-handler-location": "^1.2",
+        "3neti/form-handler-otp": "^1.1",
+        "3neti/form-handler-selfie": "^1.1",
+        "3neti/form-handler-signature": "^1.2",
         "3neti/instruction": "^0.2",
         "3neti/laravel-model-channel": "^1.1",
-        "3neti/merchant": "^1.1",
-        "3neti/money-issuer": "^1.0.3",
+        "3neti/merchant": "^1.2",
+        "3neti/money-issuer": "^1.1",
         "3neti/report-registry": "^1.1",
-        "3neti/voucher": "dev-main",
-        "3neti/wallet": "^1.1",
-        "3neti/x-commerce": "dev-main",
-        "3neti/x-action": "dev-main",
-        "3neti/x-campaign": "dev-main",
-        "3neti/x-feedback": "dev-main",
-        "3neti/x-journal": "dev-main",
-        "3neti/x-ray": "dev-main",
-        "3neti/x-rider": "dev-main",
+        "3neti/voucher": "^1.0@beta",
+        "3neti/wallet": "^2.0@beta",
+        "3neti/x-commerce": "^1.0",
+        "3neti/x-action": "^1.0",
+        "3neti/x-campaign": "^1.0",
+        "3neti/x-feedback": "^1.0",
+        "3neti/x-journal": "^1.0",
+        "3neti/x-ray": "^1.0",
+        "3neti/x-rider": "^1.0",
         "brick/money": "^0.10.3",
         "endroid/qr-code": "^6.1",
         "illuminate/contracts": "^13.0",
@@ -232,7 +108,7 @@
             ]
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "config": {
         "sort-packages": true,
@@ -241,8 +117,8 @@
         }
     },
     "scripts": {
-        "test": "php -d memory_limit=1G vendor/bin/pest",
-        "test:unit": "php -d memory_limit=1G vendor/bin/pest",
-        "test:coverage": "php -d memory_limit=1G vendor/bin/pest --coverage"
+        "test": "php -d memory_limit=2G vendor/bin/pest",
+        "test:unit": "php -d memory_limit=2G vendor/bin/pest",
+        "test:coverage": "php -d memory_limit=2G vendor/bin/pest --coverage"
     }
 }

@@ -25,8 +25,8 @@ it('documents quick generate productization slice one', function (): void {
         ->toContain('Generated through the existing x-change issuance')
         ->toContain('handoff. Cockpit presents the result')
         ->toContain('copy the beneficiary URL')
-        ->toContain('approved external distribution')
-        ->toContain('workflow.');
+        ->toContain('approved external')
+        ->toContain('distribution workflow.');
 
     expect($cockpitCompass)
         ->toContain('Quick Generate Productization Slice 1');

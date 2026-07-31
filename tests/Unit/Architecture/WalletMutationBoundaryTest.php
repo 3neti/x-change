@@ -9,6 +9,7 @@ it('keeps direct Bavix wallet deposits out of x-change production code', functio
     $allowed = [
         'src/Actions/Payment/CollectVoucherFunds.php',
         'src/Services/Funding/BavixFundingAccountCredit.php',
+        'src/Services/Payment/ProviderWalletCollectionPosting.php',
     ];
 
     $violations = collect(File::allFiles($packageRoot.'/src'))

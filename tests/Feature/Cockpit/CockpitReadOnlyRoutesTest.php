@@ -285,7 +285,8 @@ it('passes optional campaign navigation context to the pay code explorer without
     $campaignRoutes = collect(Route::getRoutes())
         ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.campaign'));
 
-    expect($campaignRoutes)->toHaveCount(0);
+    expect($campaignRoutes)->not->toBeEmpty()
+        ->and(Route::getRoutes()->getByName('x-change.cockpit.campaigns.index'))->not->toBeNull();
 });
 
 it('passes optional campaign recipient navigation context to voucher detail and distribution destinations', function (string $route, string $destination) {
@@ -1224,14 +1225,37 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         );
 
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
+        'x-change.cockpit.campaigns.store',
+        'x-change.cockpit.campaigns.intakes.store',
+        'x-change.cockpit.campaigns.intakes.update',
+        'x-change.cockpit.campaigns.intakes.convert',
+        'x-change.cockpit.campaigns.intakes.destroy',
+        'x-change.cockpit.campaigns.destroy',
+        'x-change.cockpit.campaigns.rows.store',
+        'x-change.cockpit.campaigns.voucher-blueprint.update',
+        'x-change.cockpit.campaigns.authorizations.store',
+        'x-change.cockpit.campaigns.authorizations.deliveries.store',
+        'x-change.cockpit.campaigns.fulfillments.pay-codes.store',
+        'x-change.cockpit.campaigns.deliveries.store',
+        'x-change.cockpit.campaigns.deliveries.retries.store',
+        'x-change.cockpit.campaigns.fulfillments.bank-transfers.store',
+        'x-change.cockpit.campaigns.fulfillments.bank-transfers.reconciliations.store',
+        'x-change.cockpit.campaigns.fulfillments.fallbacks.store',
+        'x-change.cockpit.campaigns.imports.store',
+        'x-change.cockpit.campaigns.imports.apply',
+        'x-change.cockpit.campaigns.imports.mapping.update',
+        'x-change.cockpit.campaigns.imports.destroy',
         'x-change.cockpit.accounts.scenarios.funding-destinations.store',
         'x-change.cockpit.accounts.providers.funding-destination.update',
         'x-change.cockpit.accounts.funding-qr-merchant-profile.update',
         'x-change.cockpit.funding.liquidity-refreshes.store',
         'x-change.cockpit.funding.requests.store',
+        'x-change.cockpit.funding.requests.transfer-checks.store',
         'x-change.cockpit.funding.requests.reviews.store',
         'x-change.cockpit.funding.requests.approvals.store',
-        'x-change.cockpit.funding.codes.claims.store',
+        'x-change.cockpit.funding.requests.pay-code-claims.store',
+        'x-change.cockpit.funding.pay-code-inspections.store',
+        'x-change.cockpit.funding.pay-code-claims.store',
         'x-change.cockpit.funding.intents.store',
         'x-change.cockpit.funding.intents.verification-checks.store',
         'x-change.cockpit.funding.standing-addresses.netbank.store',
@@ -1241,6 +1265,10 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         'x-change.cockpit.funding.suspense.reconciliation-requests.store',
         'x-change.cockpit.funding.reconciliations.approve',
         'x-change.cockpit.quick-generate.store',
+        'x-change.cockpit.quick-generate.claim-previews.store',
+        'x-change.cockpit.quick-generate.artwork-previews.store',
+        'x-change.cockpit.pay-code-templates.store',
+        'x-change.cockpit.pay-code-templates.update',
     ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())
         ->toBe(CockpitFundingIntentController::class)
         ->and(Route::getRoutes()->getByName('x-change.cockpit.funding.scenarios.qrph.store')?->getActionName())

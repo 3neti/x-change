@@ -77,7 +77,7 @@ function cockpitWave10ActivityBalanceFake(): BuildBalanceOverview
     {
         public function __construct() {}
 
-        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
+        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true, bool $forceSync = false): array
         {
             return [
                 'provider' => 'netbank',

@@ -672,6 +672,7 @@ const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
 const riderDesignTeleportReady = ref(false);
+const riderDesignTeleportActive = ref(false);
 const startingPoint = ref<'blank' | 'last' | 'template'>(
     props.lastInstructions ? 'last' : 'template',
 );
@@ -691,7 +692,8 @@ const submissionErrorHeading = ref('Fix these fields before issuing');
 
 hydrateLastInstructions();
 
-onMounted((): void => {
+onMounted(async (): Promise<void> => {
+    await nextTick();
     riderDesignTeleportReady.value = true;
 });
 
@@ -3252,7 +3254,17 @@ const previewStale = computed<boolean>(() => {
     );
 });
 
-watch(canvasView, (view): void => {
+watch(canvasView, async (view): Promise<void> => {
+    riderDesignTeleportActive.value = false;
+
+    if (view === 'design') {
+        await nextTick();
+        riderDesignTeleportActive.value =
+            typeof document !== 'undefined' &&
+            document.querySelector('#quick-generate-rider-design-editor') !==
+                null;
+    }
+
     if (
         view === 'claim' &&
         previewStatus.value === 'idle' &&
@@ -6488,6 +6500,7 @@ function instructionRecord(
                     <Teleport
                         v-if="riderDesignTeleportReady"
                         to="#quick-generate-rider-design-editor"
+                        :disabled="!riderDesignTeleportActive"
                         defer
                     >
                         <div class="grid gap-3">

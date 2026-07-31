@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use LBHurtado\XChange\Actions\Auth\StartMobileVerification;
 use LBHurtado\XChange\Actions\Auth\VerifyMobileVerification;
+use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
@@ -22,6 +23,7 @@ final class QrPhUnknownMobileOnboardingScenarioRunner implements ScenarioRunnerC
         private readonly DatabaseManager $databases,
         private readonly WalletAccessContract $wallets,
         private readonly NullWithdrawalOtpApprovalService $simulatedOtp,
+        private readonly AccountProvisioningContract $accounts,
         private readonly QrPhFundingSimulationScenarioRunner $funding,
     ) {}
 
@@ -57,7 +59,9 @@ final class QrPhUnknownMobileOnboardingScenarioRunner implements ScenarioRunnerC
 
         try {
             $result = $this->execute($context, $mobile);
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            report($exception);
+
             $exitCode = Command::FAILURE;
             $result = [
                 'success' => false,
@@ -146,7 +150,8 @@ final class QrPhUnknownMobileOnboardingScenarioRunner implements ScenarioRunnerC
             ],
         );
         $challenge = (new StartMobileVerification($this->simulatedOtp))->handle($newUser);
-        (new VerifyMobileVerification($this->simulatedOtp))->handle($newUser, '000000');
+        (new VerifyMobileVerification($this->simulatedOtp, $this->accounts))
+            ->handle($newUser, '000000');
         $challenge->refresh();
         $newUser->refresh();
 

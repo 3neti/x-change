@@ -1166,7 +1166,7 @@ describe('Cockpit Quick Generate foundation', () => {
             .setValue('A distinct beneficiary splash');
 
         await wrapper
-            .find('[data-testid="cockpit-quick-generate-submit-purpose"]')
+            .find('[data-testid="cockpit-quick-generate-primary-purpose"]')
             .setValue('A purpose-led Rider Stamp');
 
         expect(
@@ -1815,7 +1815,7 @@ describe('Cockpit Quick Generate foundation', () => {
             .find('[data-testid="cockpit-quick-generate-submit-recipient"]')
             .setValue('09173011987');
         await wrapper
-            .find('[data-testid="cockpit-quick-generate-submit-purpose"]')
+            .find('[data-testid="cockpit-quick-generate-primary-purpose"]')
             .setValue('Operator test issuance');
         await wrapper
             .find('[data-testid="cockpit-quick-generate-submit-panel"]')
@@ -2912,8 +2912,8 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             (
                 wrapper.find(
-                    '[data-testid="cockpit-quick-generate-submit-purpose"]',
-                ).element as HTMLTextAreaElement
+                    '[data-testid="cockpit-quick-generate-primary-purpose"]',
+                ).element as HTMLInputElement
             ).value,
         ).toBe('Campaign payout');
 

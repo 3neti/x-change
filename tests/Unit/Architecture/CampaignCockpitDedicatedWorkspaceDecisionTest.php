@@ -34,17 +34,19 @@ it('updates the cockpit compass for host integration slice 1G', function () {
         ->and($compass)->toContain('Campaign mutation route scaffolding remains unauthorized');
 });
 
-it('does not register dedicated campaign cockpit routes at the decision point', function () {
+it('preserves the historical decision report while registering the subsequently authorized campaign workspace', function () {
     $campaignCockpitRoutes = collect(Route::getRoutes())
         ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.campaign'));
 
-    expect($campaignCockpitRoutes)->toHaveCount(0);
+    expect($campaignCockpitRoutes)->not->toBeEmpty()
+        ->and(Route::has('x-change.cockpit.campaigns.index'))->toBeTrue()
+        ->and(Route::has('x-change.cockpit.campaigns.show'))->toBeTrue();
 });
 
-it('does not scaffold dedicated campaign workspace controllers or pages', function () {
+it('ships the authorized campaign workspace controllers and pages', function () {
     $root = dirname(__DIR__, 3);
 
-    expect(file_exists($root.'/src/Http/Controllers/Web/Cockpit/CockpitCampaignWorkspacePageController.php'))->toBeFalse()
-        ->and(file_exists($root.'/resources/js/cockpit/pages/CampaignWorkspace.vue'))->toBeFalse()
-        ->and(file_exists($root.'/resources/js/pages/x-change/cockpit/CampaignWorkspace.vue'))->toBeFalse();
+    expect(file_exists($root.'/src/Http/Controllers/Web/Cockpit/CockpitCampaignWorksheetController.php'))->toBeTrue()
+        ->and(file_exists($root.'/resources/js/cockpit/pages/Campaigns.vue'))->toBeTrue()
+        ->and(file_exists($root.'/resources/js/cockpit/pages/CampaignWorksheet.vue'))->toBeTrue();
 });

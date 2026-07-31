@@ -12,6 +12,7 @@ use LBHurtado\XChange\Models\VoucherClaimOutcomeSelection;
 use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
 use LBHurtado\XChange\Services\Claim\VoucherClaimOutcomeRegistry;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
+use LBHurtado\XChange\Services\Funding\AccountFundingPayCodeJournal;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('persists one atomic outcome selection and permits an idempotent replay', function () {
@@ -136,6 +137,7 @@ function outcomeDispatcher(): DispatchVoucherClaimOutcome
         app(VoucherClaimPolicyResolver::class),
         $registry,
         app(VoucherClaimantReference::class),
+        app(AccountFundingPayCodeJournal::class),
     );
 }
 

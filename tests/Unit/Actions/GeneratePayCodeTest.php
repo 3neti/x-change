@@ -282,7 +282,8 @@ it('stops before estimating, funding, or issuing when selected Stamp artwork is 
 });
 
 it('stops before issuance when wallet cannot afford the estimated cost', function () {
-    $issuer = (object) ['id' => 1];
+    $issuer = new User;
+    $issuer->id = 1;
     $wallet = (object) ['id' => 10];
 
     $input = [

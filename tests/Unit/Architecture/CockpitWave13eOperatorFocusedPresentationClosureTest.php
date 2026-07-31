@@ -16,10 +16,10 @@ it('documents cockpit wave 13e operator focused presentation closure', function 
         ->and($report)->toContain('Wave 13D')
         ->and($report)->toContain('php artisan x-change:install --force')
         ->and($report)->toContain('npm run dev')
-        ->and($quickGenerate)->toContain('CockpitDiagnosticsDisclosure')
-        ->and($quickGenerate)->toContain('Quick Generate')
-        ->and($quickGenerate)->toContain('Engineering diagnostics')
-        ->and($quickGenerate)->toContain('Full architecture history')
+        ->and($quickGenerate)->toContain('Pay Code Issuance')
+        ->and($quickGenerate)->toContain('Create a Pay Code for someone to claim.')
+        ->and($quickGenerate)->not->toContain('Engineering diagnostics')
+        ->and($quickGenerate)->not->toContain('Full architecture history')
         ->and($callout)->toContain('Cockpit bridge')
         ->and($diagnostics)->toContain('Show diagnostic history');
 });

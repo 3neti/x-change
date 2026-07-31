@@ -16,7 +16,7 @@ it('adds operator safe funding preflight metadata before quick generate issuance
     {
         public function __construct() {}
 
-        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
+        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true, bool $forceSync = false): array
         {
             return [
                 'provider' => 'netbank',
@@ -62,7 +62,7 @@ it('keeps quick generate issuance non blocking when funding preflight is unavail
     {
         public function __construct() {}
 
-        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
+        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true, bool $forceSync = false): array
         {
             throw new RuntimeException('funding unavailable');
         }

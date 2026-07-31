@@ -27,7 +27,7 @@ it('documents the historical wallet treasury consumer boundary and current runti
         ->and($settlementCompass)->toContain('../ui-cockpit/reports/455-treasury-consumer-review-wallet-phase-0-5.md')
         ->and($settlementCompass)->toContain('x-change bridge values remain authoritative for Cockpit display until wallet Treasury reports real persisted facts')
         ->and($settlementCompass)->toContain('x-change must not treat `NullTreasuryPlanningRuntime` output as an executed allocation')
-        ->and($composer['require']['3neti/wallet'] ?? null)->toBe('^1.1');
+        ->and($composer['require']['3neti/wallet'] ?? null)->toBe('^2.0@beta');
 });
 
 it('keeps wallet treasury implementation classes out of x-change production code for the consumer review slice', function () {

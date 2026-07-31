@@ -167,15 +167,24 @@ describe('Quick Generate last instructions', () => {
                 version: 2,
             },
         });
+        await wrapper
+            .get('[data-testid="cockpit-pay-code-canvas-design-button"]')
+            .trigger('click');
+        await wrapper.vm.$nextTick();
+
         expect(
-            wrapper.get<HTMLSelectElement>(
-                '[data-testid="cockpit-quick-generate-rider-stamp-source"]',
-            ).element.value,
+            (
+                wrapper.get(
+                    '[data-testid="cockpit-quick-generate-rider-stamp-source"] input:checked',
+                ).element as HTMLInputElement
+            ).value,
         ).toBe('splash');
         expect(
-            wrapper.get<HTMLSelectElement>(
-                '[data-testid="cockpit-quick-generate-rider-stamp-fit"]',
-            ).element.value,
+            (
+                wrapper.get(
+                    '[data-testid="cockpit-quick-generate-rider-stamp-fit"] input:checked',
+                ).element as HTMLInputElement
+            ).value,
         ).toBe('contain');
 
         await wrapper

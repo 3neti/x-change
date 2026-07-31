@@ -16,11 +16,10 @@ it('documents quick generate primary workflow compression slice 1', function ():
         ->toContain('slim operational header')
         ->toContain('Presentation-only shell compression')
         ->and($page)->toContain('data-testid="cockpit-quick-generate-header"')
-        ->and($page)->toContain('data-testid="cockpit-quick-generate-header-progress"')
-        ->and($page)->toContain('Create a Pay Code')
+        ->and($page)->toContain('data-testid="cockpit-quick-generate-funding-link"')
+        ->and($page)->toContain('Pay Code Issuance')
         ->and($page)->not->toContain('data-testid="cockpit-quick-generate-header-facts"')
-        ->and($frontendTest)->toContain("expect(header.classes()).toContain('py-3')")
-        ->and($frontendTest)->toContain("expect(headerProgress.text()).toContain('Review')")
+        ->and($frontendTest)->toContain('data-testid="cockpit-pay-code-canvas-header"')
         ->and($compass)->toContain('Quick Generate Primary Workflow Compression — Slice 1')
         ->and($settlementCompass)->toContain('Quick Generate Primary Workflow Compression — Slice 1');
 });
@@ -40,12 +39,11 @@ it('documents quick generate primary workflow compression slice 2', function ():
         ->toContain('Quick Generate Primary Workflow Compression — Slice 2')
         ->toContain('closed handoff-status disclosure')
         ->toContain('Presentation-only secondary-control compression')
-        ->and($page)->toContain('data-testid="cockpit-quick-generate-reference-guide"')
-        ->and($page)->toContain('compact')
+        ->and($page)->toContain('data-testid="cockpit-quick-generate-primary-workflow-stack"')
+        ->and($page)->not->toContain('data-testid="cockpit-quick-generate-reference-guide"')
         ->and($disclosure)->toContain('compact?: boolean')
         ->and($handoff)->toContain('4 safeguards')
-        ->and($frontendTest)->toContain("expect(panel.attributes('open')).toBeUndefined()")
-        ->and($frontendTest)->toContain("expect(disclosure.classes()).toContain('py-3')")
+        ->and($frontendTest)->toContain('data-testid="cockpit-voucher-instruction-builder"')
         ->and($compass)->toContain('Quick Generate Primary Workflow Compression — Slice 2')
         ->and($settlementCompass)->toContain('Quick Generate Primary Workflow Compression — Slice 2');
 });
@@ -83,11 +81,10 @@ it('keeps quick generate instruction copy task oriented', function (): void {
     $panel = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue');
 
     expect($panel)
-        ->toContain('Instructions And Safeguards')
+        ->toContain('Claim Experience')
         ->toContain('Issuance Details')
         ->toContain('Claim Requirements')
         ->toContain('Validation And Verification')
-        ->toContain('Claim Experience')
         ->toContain('Status Updates')
         ->toContain('Claim Schedule And Availability')
         ->toContain('Advanced Settlement Settings')

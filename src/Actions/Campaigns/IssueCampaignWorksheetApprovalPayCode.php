@@ -6,7 +6,7 @@ namespace LBHurtado\XChange\Actions\Campaigns;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use LBHurtado\Voucher\Actions\GenerateVouchers;
+use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
@@ -16,6 +16,10 @@ use RuntimeException;
 
 final class IssueCampaignWorksheetApprovalPayCode
 {
+    public function __construct(
+        private readonly GeneratesVouchers $vouchers,
+    ) {}
+
     public function handle(string $worksheetReference, Model $owner): CampaignWorksheetAuthorization
     {
         return DB::transaction(function () use ($worksheetReference, $owner): CampaignWorksheetAuthorization {
@@ -54,7 +58,7 @@ final class IssueCampaignWorksheetApprovalPayCode
 
             $requiresOtp = (bool) data_get($worksheet->metadata, 'officer_authorization.require_otp', false);
 
-            $voucher = GenerateVouchers::run(VoucherInstructionsData::from([
+            $voucher = $this->vouchers->handle(VoucherInstructionsData::from([
                 'cash' => ['amount' => 0, 'currency' => $worksheet->currency, 'validation' => ['country' => 'PH']],
                 'inputs' => ['fields' => $requiresOtp ? ['otp'] : []],
                 'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],

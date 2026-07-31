@@ -3,7 +3,6 @@ import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
 import { Link } from '@inertiajs/vue3';
 import { Landmark } from 'lucide-vue-next';
 import { computed } from 'vue';
-import CockpitDiagnosticsDisclosure from '../components/CockpitDiagnosticsDisclosure.vue';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';

@@ -29,7 +29,7 @@ describe('Cockpit dashboard shell baseline', () => {
         ).toBe(true);
         expect(
             wrapper.findAll('[data-testid="cockpit-control-link"]'),
-        ).toHaveLength(4);
+        ).toHaveLength(5);
         expect(
             wrapper.findAll('[data-testid="cockpit-horizon-item"]'),
         ).toHaveLength(4);

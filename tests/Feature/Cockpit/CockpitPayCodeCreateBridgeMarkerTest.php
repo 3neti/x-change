@@ -9,7 +9,7 @@ it('exposes a cockpit bridge marker on the legacy pay code create page without r
     {
         public function __construct() {}
 
-        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
+        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true, bool $forceSync = false): array
         {
             return [
                 'provider' => 'netbank',

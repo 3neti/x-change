@@ -19,7 +19,7 @@ it('documents Voucher claim outcomes and reviewed funding boundaries', function 
         ->toContain('system Treasury pays the exact target once')
         ->toContain('`CompleteVoucherCollection`')
         ->toContain('php artisan x-change:funding:issue-pay-code FUND-XXXX')
-        ->toContain('Account owner is not offered a claim action')
+        ->toContain('Cockpit exposes Pay Code vocabulary without an owner claim action')
         ->toContain('XCHANGE_FUNDING_REQUEST_EVIDENCE_DISK')
         ->toContain('`pay_code_issued`')
         ->toContain('maximum execution cost across all offered outcomes')

@@ -37,9 +37,11 @@ it('updates the cockpit compass for host integration slice 1H closure', function
         ->and($compass)->toContain('Campaign mutation route scaffolding remains unauthorized');
 });
 
-it('keeps campaign cockpit closure free of new campaign routes', function () {
+it('preserves the historical read-only closure while exposing the subsequently authorized campaign routes', function () {
     $campaignCockpitRoutes = collect(Route::getRoutes())
         ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.campaign'));
 
-    expect($campaignCockpitRoutes)->toHaveCount(0);
+    expect($campaignCockpitRoutes)->not->toBeEmpty()
+        ->and(Route::has('x-change.cockpit.campaigns.index'))->toBeTrue()
+        ->and(Route::has('x-change.cockpit.campaigns.show'))->toBeTrue();
 });

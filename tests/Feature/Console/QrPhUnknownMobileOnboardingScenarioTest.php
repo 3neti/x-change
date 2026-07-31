@@ -37,6 +37,7 @@ it('stops an unknown mobile, onboards it explicitly, funds once, and rolls every
     Http::preventStrayRequests();
     config()->set('x-change.lifecycle.defaults.user_model', FakeLifecycleUser::class);
     config()->set('x-change.lifecycle.qrph_funding_simulation.enabled', true);
+    enableNetbankTreasuryForTests();
     $issuer = actingAsTestUser();
     $balanceBefore = (int) $issuer->wallet->balance;
     $countsBefore = [

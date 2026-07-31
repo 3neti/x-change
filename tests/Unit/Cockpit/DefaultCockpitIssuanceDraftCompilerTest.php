@@ -43,9 +43,6 @@ it('compiles a cockpit issuance draft into a GeneratePayCodeRequest compatible p
         ],
         'rider' => [
             'message' => 'Counter cash-out',
-            'url' => null,
-            'splash' => null,
-            'splash_timeout' => null,
         ],
         '_meta' => [
             'idempotency_key' => 'idem-compiler',
