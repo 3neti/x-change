@@ -22,15 +22,35 @@ final class ManagedEnvironmentExampleRenderer
         string $profile,
         array $providerCodes,
     ): string {
-        $managed = $this->managedBlock($variables, $profile, $providerCodes);
         $pattern = '/'.preg_quote(self::BeginMarker, '/').'.*?'
             .preg_quote(self::EndMarker, '/').'/s';
+        $hostOwned = preg_replace($pattern, '', $existing) ?? $existing;
+        $hostKeys = $this->environmentKeys($hostOwned);
+        $managedVariables = array_values(array_filter(
+            $variables,
+            static fn (EnvironmentVariableData $variable): bool => ! isset($hostKeys[$variable->key]),
+        ));
+        $managed = $this->managedBlock($managedVariables, $profile, $providerCodes);
 
         if (preg_match($pattern, $existing) === 1) {
             return rtrim((string) preg_replace($pattern, $managed, $existing)).PHP_EOL;
         }
 
         return rtrim($existing).PHP_EOL.PHP_EOL.$managed.PHP_EOL;
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    private function environmentKeys(string $contents): array
+    {
+        preg_match_all(
+            '/^(?:export\s+)?([A-Z][A-Z0-9_]*)\s*=/m',
+            $contents,
+            $matches,
+        );
+
+        return array_fill_keys($matches[1] ?? [], true);
     }
 
     /**
