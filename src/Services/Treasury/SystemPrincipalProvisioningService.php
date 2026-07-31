@@ -50,56 +50,26 @@ final readonly class SystemPrincipalProvisioningService
         );
     }
 
+    public function assertConfiguration(
+        ?string $name = null,
+        ?string $email = null,
+    ): void {
+        $this->configuration($name, $email);
+    }
+
     private function resolve(
         ?string $name,
         ?string $email,
         string $authorizationReference,
         bool $commit,
     ): SystemPrincipalProvisioningData {
-        $modelClass = $this->modelClass();
-        $identifierColumn = trim((string) config(
-            'x-change.payout.system_user_column',
-            'id',
-        ));
-        $configuredIdentifier = trim((string) config(
-            'x-change.payout.system_user_id',
-        ));
-
-        if ($configuredIdentifier === '') {
-            throw new TreasuryConfigurationException(
-                'Treasury system principal [XCHANGE_SYSTEM_USER_ID] is required.',
-            );
-        }
-
-        if ($identifierColumn !== 'email') {
-            throw new TreasuryConfigurationException(
-                'Automatic system-principal creation requires '
-                .'[XCHANGE_SYSTEM_USER_COLUMN=email]. Existing principals may '
-                .'continue using another stable identifier.',
-            );
-        }
-
-        $email = mb_strtolower(trim($email ?? $configuredIdentifier));
-
-        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-            throw new TreasuryConfigurationException(
-                'The configured system-principal email is invalid.',
-            );
-        }
-
-        if (! hash_equals(mb_strtolower($configuredIdentifier), $email)) {
-            throw new TreasuryConfigurationException(
-                'The system-principal email must match [XCHANGE_SYSTEM_USER_ID].',
-            );
-        }
-
-        $name = trim($name ?? 'x-change System Principal');
-
-        if ($name === '') {
-            throw new TreasuryConfigurationException(
-                'The system-principal name is required.',
-            );
-        }
+        [
+            $modelClass,
+            $identifierColumn,
+            $configuredIdentifier,
+            $email,
+            $name,
+        ] = $this->configuration($name, $email);
 
         if (! $commit) {
             $existing = $modelClass::query()
@@ -206,6 +176,65 @@ final readonly class SystemPrincipalProvisioningService
                 authorizationReference: $authorizationReference,
             );
         }, attempts: 3);
+    }
+
+    /**
+     * @return array{class-string<Model>, string, string, string, string}
+     */
+    private function configuration(?string $name, ?string $email): array
+    {
+        $modelClass = $this->modelClass();
+        $identifierColumn = trim((string) config(
+            'x-change.payout.system_user_column',
+            'id',
+        ));
+        $configuredIdentifier = trim((string) config(
+            'x-change.payout.system_user_id',
+        ));
+
+        if ($configuredIdentifier === '') {
+            throw new TreasuryConfigurationException(
+                'Treasury system principal [XCHANGE_SYSTEM_USER_ID] is required.',
+            );
+        }
+
+        if ($identifierColumn !== 'email') {
+            throw new TreasuryConfigurationException(
+                'Automatic system-principal creation requires '
+                .'[XCHANGE_SYSTEM_USER_COLUMN=email]. Existing principals may '
+                .'continue using another stable identifier.',
+            );
+        }
+
+        $email = mb_strtolower(trim($email ?? $configuredIdentifier));
+
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            throw new TreasuryConfigurationException(
+                'The configured system-principal email is invalid.',
+            );
+        }
+
+        if (! hash_equals(mb_strtolower($configuredIdentifier), $email)) {
+            throw new TreasuryConfigurationException(
+                'The system-principal email must match [XCHANGE_SYSTEM_USER_ID].',
+            );
+        }
+
+        $name = trim($name ?? 'x-change System Principal');
+
+        if ($name === '') {
+            throw new TreasuryConfigurationException(
+                'The system-principal name is required.',
+            );
+        }
+
+        return [
+            $modelClass,
+            $identifierColumn,
+            $configuredIdentifier,
+            $email,
+            $name,
+        ];
     }
 
     /**

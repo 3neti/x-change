@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Command;
+use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -120,4 +122,68 @@ it('requires installer system-principal controls to travel together', function (
             'System-principal options require [--provision-system-principal].',
         )
         ->assertFailed();
+});
+
+it('allows the installer to provision the sole fresh-database Account without a seeder', function () {
+    config()->set('x-change.deployment.profile', 'development');
+    config()->set('x-change.treasury.connections', []);
+    config()->set('x-change.treasury.legal_entity_reference', 'legal-entity:test');
+    config()->set('x-change.treasury.legal_profile', 'treasury-settlement-ph-v1');
+    config()->set('x-change.treasury.legal_profile_version', '2026-07-24.1');
+    app('migrator')->path(Orchestra\Testbench\default_migration_path());
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--confirm-database-reset' => true,
+        '--provision-system-principal' => true,
+        '--system-principal-name' => 'Alpha System Principal',
+        '--system-principal-email' => 'system-alpha@example.test',
+        '--system-principal-authorization-reference' => 'deployment:alpha-001',
+        '--confirm-system-principal' => true,
+        '--no-auth' => true,
+        '--no-auth-tests' => true,
+        '--no-settings' => true,
+        '--no-settings-tests' => true,
+        '--no-assets' => true,
+        '--no-handlers' => true,
+        '--no-rider' => true,
+        '--no-x-ray' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('X-Change installed successfully.')
+        ->assertSuccessful();
+
+    $principal = User::query()->sole();
+
+    expect($principal->email)->toBe('system-alpha@example.test')
+        ->and($principal->wallet()->where('slug', 'platform')->count())->toBe(1)
+        ->and(data_get(
+            $principal->onboarding_meta,
+            'system_principal.interactive_login',
+        ))->toBeFalse();
+});
+
+it('rejects an unstable system-principal identifier before a fresh database reset', function () {
+    config()->set('x-change.payout.system_user_column', 'id');
+    config()->set('x-change.payout.system_user_id', '1');
+    $commands = [];
+    Event::listen(
+        CommandStarting::class,
+        function (CommandStarting $event) use (&$commands): void {
+            $commands[] = $event->command;
+        },
+    );
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--confirm-database-reset' => true,
+        '--provision-system-principal' => true,
+        '--system-principal-authorization-reference' => 'deployment:alpha-001',
+        '--confirm-system-principal' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('XCHANGE_SYSTEM_USER_COLUMN=email')
+        ->assertFailed();
+
+    expect($commands)->not->toContain('migrate:fresh');
 });

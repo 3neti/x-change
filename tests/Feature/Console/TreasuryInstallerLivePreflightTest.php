@@ -61,7 +61,7 @@ it('stops a forced non-interactive install before every side effect when require
         ->not->toContain('x-change:treasury:reconcile-opening');
 });
 
-it('requires explicit destructive consent and a bootstrap seeder before a fresh database install', function () {
+it('requires explicit destructive consent and a bootstrap source before a fresh database install', function () {
     enableNetbankTreasuryForTests();
     $liveProbeCalls = 0;
     bindInstallerLiveProbe(
@@ -96,7 +96,8 @@ it('requires explicit destructive consent and a bootstrap seeder before a fresh 
         '--no-interaction' => true,
     ])
         ->expectsOutputToContain(
-            'Fresh database installation requires an explicit [--seeder] class.',
+            'Fresh database installation requires either an explicit '
+            .'[--seeder] class or [--provision-system-principal].',
         )
         ->assertFailed();
 

@@ -22,9 +22,17 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
             ),
             new EnvironmentVariableData(
                 key: 'XCHANGE_SYSTEM_USER_ID',
-                description: 'Stable identifier of the non-interactive system principal.',
+                description: 'Stable email of the non-interactive system principal.',
                 category: 'Identity',
-                configPath: 'x-change.system_user_id',
+                configPath: 'x-change.payout.system_user_id',
+                requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_SYSTEM_USER_COLUMN',
+                description: 'Stable lookup column used for the system principal.',
+                category: 'Identity',
+                configPath: 'x-change.payout.system_user_column',
+                safeExample: 'email',
                 requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
             ),
             new EnvironmentVariableData(

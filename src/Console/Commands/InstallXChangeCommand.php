@@ -9,6 +9,7 @@ use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
+use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningCapitalizationPolicyResolver;
@@ -53,6 +54,7 @@ class InstallXChangeCommand extends Command
         TreasuryPreflightService $treasuryPreflight,
         TreasuryProviderConnectionCatalog $treasuryConnections,
         DeploymentConfigurationInspector $deploymentConfiguration,
+        SystemPrincipalProvisioningService $systemPrincipalProvisioning,
     ): int {
         $this->components->info('Installing X-Change...');
 
@@ -105,9 +107,14 @@ class InstallXChangeCommand extends Command
             return self::FAILURE;
         }
 
-        if ($freshDatabase && $seeder === '') {
+        if (
+            $freshDatabase
+            && $seeder === ''
+            && ! (bool) $this->option('provision-system-principal')
+        ) {
             $this->components->error(
-                'Fresh database installation requires an explicit [--seeder] class.',
+                'Fresh database installation requires either an explicit '
+                .'[--seeder] class or [--provision-system-principal].',
             );
 
             return self::FAILURE;
@@ -115,6 +122,7 @@ class InstallXChangeCommand extends Command
 
         if (
             $freshDatabase
+            && $seeder !== ''
             && (
                 ! class_exists($seeder)
                 || ! is_subclass_of($seeder, Seeder::class)
@@ -182,6 +190,19 @@ class InstallXChangeCommand extends Command
             );
 
             return self::FAILURE;
+        }
+
+        if ((bool) $this->option('provision-system-principal')) {
+            try {
+                $systemPrincipalProvisioning->assertConfiguration(
+                    name: $this->option('system-principal-name'),
+                    email: $this->option('system-principal-email'),
+                );
+            } catch (TreasuryConfigurationException $exception) {
+                $this->components->error($exception->getMessage());
+
+                return self::FAILURE;
+            }
         }
 
         if (
@@ -526,7 +547,7 @@ class InstallXChangeCommand extends Command
             }
         }
 
-        if ($freshDatabase) {
+        if ($freshDatabase && $seeder !== '') {
             $seedExitCode = self::FAILURE;
             $this->components->task(
                 "Running bootstrap seeder [{$seeder}]",
@@ -546,6 +567,9 @@ class InstallXChangeCommand extends Command
                 return self::FAILURE;
             }
 
+        }
+
+        if ($freshDatabase) {
             $initialization = $treasuryInitialization->inspect();
 
             if (

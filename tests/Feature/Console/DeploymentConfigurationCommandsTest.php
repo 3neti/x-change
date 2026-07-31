@@ -73,6 +73,7 @@ it('updates only the managed environment example section', function (): void {
             ->and($second)->toBe($first)
             ->and($second)->toContain('HOST_SETTING=preserved')
             ->toContain('XCHANGE_DEPLOYMENT_PROFILE=netbank')
+            ->toContain('XCHANGE_SYSTEM_USER_COLUMN=email')
             ->toContain('NETBANK_FUNDING_CLIENT_SECRET=')
             ->and(substr_count($second, ManagedEnvironmentExampleRenderer::BeginMarker))->toBe(1);
     } finally {
