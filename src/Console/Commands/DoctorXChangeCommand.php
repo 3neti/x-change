@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
+use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use Throwable;
 
@@ -27,6 +28,7 @@ class DoctorXChangeCommand extends Command
         ProviderRuntimeSettingsResolverContract $settings,
         PublishedAssetDriftDetector $publishedAssets,
         CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
+        DeploymentConfigurationInspector $deploymentConfiguration,
     ): int {
         $checks = $this->option('operator-activity-runtime')
             ? [$this->operatorActivityRuntimeProfileCheck($operatorActivityRuntimeProfile)]
@@ -34,6 +36,7 @@ class DoctorXChangeCommand extends Command
             ? [$this->publishedAssetCheck($publishedAssets)]
             : [
                 $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
+                $this->deploymentConfigurationCheck($deploymentConfiguration),
                 $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
                 $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
                 $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
@@ -93,6 +96,37 @@ class DoctorXChangeCommand extends Command
         }
 
         return $exitCode;
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function deploymentConfigurationCheck(
+        DeploymentConfigurationInspector $inspector,
+    ): array {
+        try {
+            $result = $inspector->inspect();
+            $message = $result['ready']
+                ? "deployment profile [{$result['profile']}] is configured"
+                : 'deployment configuration is incomplete';
+
+            if ($result['legacy_published_config']) {
+                $message .= '; a published x-change config overrides package defaults';
+            }
+
+            return $this->check(
+                'deployment configuration',
+                $result['ready'],
+                $message,
+                $result,
+            );
+        } catch (Throwable $exception) {
+            return $this->check(
+                'deployment configuration',
+                false,
+                $exception->getMessage(),
+            );
+        }
     }
 
     /**

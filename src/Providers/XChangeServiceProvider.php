@@ -56,6 +56,7 @@ use LBHurtado\XChange\Console\Commands\Claim\SnapshotRiderSplashArtworkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
+use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Feedback\ShowFeedbackHistoryCommand;
@@ -68,6 +69,7 @@ use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeC
 use LBHurtado\XChange\Console\Commands\Funding\SyncStandingFundingAddressesCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyFundingRequestBackingCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
+use LBHurtado\XChange\Console\Commands\InspectXChangeConfigurationCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
@@ -265,6 +267,7 @@ use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\Configuration\CoreDeploymentEnvironmentContributor;
+use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
 use LBHurtado\XChange\Services\Configuration\DeploymentConnectionCatalog;
 use LBHurtado\XChange\Services\Configuration\DeploymentEnvironmentCatalog;
 use LBHurtado\XChange\Services\Configuration\DeploymentProfileCatalog;
@@ -403,6 +406,7 @@ class XChangeServiceProvider extends ServiceProvider
         );
         $this->app->singleton(DeploymentProfileCatalog::class);
         $this->app->singleton(DeploymentTreasuryConnectionConfiguration::class);
+        $this->app->singleton(DeploymentConfigurationInspector::class);
 
         if ($this->mobileFirstAuthEnabled()) {
             $this->app['config']->set('fortify.username', 'mobile');
@@ -1159,6 +1163,8 @@ class XChangeServiceProvider extends ServiceProvider
                 RepairMissingDisbursementPostingsCommand::class,
                 SimulateTreasuryProviderDepositCommand::class,
                 InstallXChangeCommand::class,
+                ConfigureXChangeCommand::class,
+                InspectXChangeConfigurationCommand::class,
                 DoctorXChangeCommand::class,
                 SeedCockpitDiagnosticActivityCommand::class,
                 ShowCockpitOperatorActivityRuntimeProfileCommand::class,

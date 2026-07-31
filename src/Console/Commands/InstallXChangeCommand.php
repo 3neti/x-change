@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
+use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
@@ -19,6 +20,7 @@ class InstallXChangeCommand extends Command
 {
     protected $signature = 'x-change:install
         {--force : Overwrite existing published files}
+        {--profile= : Explicit deployment profile for this installation}
         {--no-auth : Skip mobile-first auth scaffold publishing}
         {--no-auth-tests : Skip mobile-first auth test scaffold publishing}
         {--no-settings : Skip mobile-first settings scaffold publishing}
@@ -50,8 +52,34 @@ class InstallXChangeCommand extends Command
         TreasuryOpeningCapitalizationPolicyResolver $capitalizationPolicies,
         TreasuryPreflightService $treasuryPreflight,
         TreasuryProviderConnectionCatalog $treasuryConnections,
+        DeploymentConfigurationInspector $deploymentConfiguration,
     ): int {
         $this->components->info('Installing X-Change...');
+
+        if ($this->option('profile') !== null) {
+            config()->set('x-change.deployment.profile', $this->option('profile'));
+        }
+
+        try {
+            $deployment = $deploymentConfiguration->inspect();
+        } catch (Throwable $exception) {
+            $this->components->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if (! $deployment['ready']) {
+            $this->components->error(
+                'Deployment configuration is incomplete: '
+                .implode(', ', $deployment['missing_variables']).'.',
+            );
+            $this->components->warn(
+                'Run [php artisan x-change:configure --profile='
+                .$deployment['profile'].'] to refresh the sanitized environment checklist.',
+            );
+
+            return self::FAILURE;
+        }
 
         $capitalizationConnections = [];
         $freshDatabase = (bool) $this->option('fresh-database');
