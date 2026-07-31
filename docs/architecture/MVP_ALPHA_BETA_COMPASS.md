@@ -356,6 +356,36 @@ Use these labels consistently:
 
 The current state is: **controlled-alpha candidate; Alpha Gate incomplete**.
 
+## Commissioning Mode
+
+A fresh host is intentionally unavailable for financial use until the package
+records a successful installation manifest. Commissioning is package-owned and
+does not use Laravel maintenance mode.
+
+| State | Meaning | Public behavior |
+| --- | --- | --- |
+| `configuration_required` | Required deployment settings are absent or invalid | Neutral `503`; no setting names or credentials |
+| `ready_to_install` | Static configuration passes but package migrations have not established the manifest boundary | Neutral `503` |
+| `installation_incomplete` | Installation began, was interrupted, or its sanitized configuration fingerprint changed | Neutral `503` |
+| `operational` | Manifest, profile, active connections, and current fingerprint agree | Normal application traffic |
+
+The gate covers host web routes, authentication, Cockpit, claims, payments,
+package APIs, lifecycle APIs, and provider webhooks. Static files are served by
+the web server. `/up` remains a process liveness signal and `/x/ready` is the
+financial application readiness signal.
+
+The public commissioning screen is asset-independent and identifies no
+provider, account, secret, or missing variable. A protected read-only checklist
+uses `XCHANGE_COMMISSIONING_ACCESS_TOKEN`; it reports sanitized checks and
+server commands but cannot edit `.env` or submit credentials. All commissioning
+responses use `no-store`, `noindex`, and `Retry-After` headers.
+
+Installation writes the manifest only after migrations, system-principal and
+Treasury work, opening reconciliation/capitalization, and required publication
+finish successfully. `--no-treasury` deliberately leaves commissioning
+incomplete. Provider downtime after a valid manifest is operational degradation
+and does not return the deployment to Commissioning Mode.
+
 ## Deployment Readiness Gate
 
 Human diagnostics remain non-blocking:

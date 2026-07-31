@@ -209,6 +209,40 @@ x-change is designed for:
 
 No central x-change server is required.
 
+### Commissioning a fresh deployment
+
+X-Change starts fail-closed. Until installation finishes, ordinary web, API,
+claim, payment, authentication, and webhook traffic receives a neutral `503`
+response. Laravel's `/up` endpoint remains available for liveness, while
+`/x/ready` reports whether X-Change is operational.
+
+The package does not accept credentials through the browser and never writes
+the host `.env`. Configure the deployment from the server:
+
+```bash
+php artisan x-change:configure --profile=netbank
+php artisan optimize:clear
+php artisan x-change:doctor --pre-install --strict
+php artisan x-change:install --force --no-interaction
+php artisan x-change:doctor --strict
+```
+
+Set `XCHANGE_COMMISSIONING_ACCESS_TOKEN` to expose the detailed, read-only
+operator checklist at `/x/commissioning/checklist`. The token is submitted by
+POST, never placed in a URL, and rotating it invalidates existing checklist
+sessions. Existing deployments may create their first manifest only through:
+
+```bash
+php artisan x-change:commissioning:adopt \
+  --confirm-existing-installation \
+  --no-interaction
+```
+
+The adoption command refuses incomplete identity or Treasury topology. The
+installation manifest contains only the profile, connection references,
+package/manifest versions, completion time, and an HMAC fingerprint. It stores
+no credential or provider response.
+
 ---
 
 ## 🔐 License

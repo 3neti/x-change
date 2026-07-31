@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
+use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use Throwable;
@@ -30,6 +31,7 @@ class DoctorXChangeCommand extends Command
         PublishedAssetDriftDetector $publishedAssets,
         CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
         PreInstallReadinessInspector $preInstallReadiness,
+        CommissioningStateResolver $commissioning,
     ): int {
         $checks = $this->option('pre-install')
             ? $preInstallReadiness->inspect()['checks']
@@ -40,6 +42,7 @@ class DoctorXChangeCommand extends Command
             : [
                 $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
                 ...$preInstallReadiness->inspect()['checks'],
+                $this->commissioningCheck($commissioning),
                 $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
                 $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
                 $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
@@ -139,6 +142,31 @@ class DoctorXChangeCommand extends Command
         } catch (Throwable $e) {
             return $this->check('provider topology', false, $e->getMessage());
         }
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function commissioningCheck(CommissioningStateResolver $commissioning): array
+    {
+        if (! (bool) config('x-change.commissioning.enabled', true)) {
+            return $this->check(
+                'commissioning manifest',
+                true,
+                'commissioning gate is explicitly disabled',
+            );
+        }
+
+        $state = $commissioning->resolve();
+
+        return $this->check(
+            'commissioning manifest',
+            $state->isOperational(),
+            $state->isOperational()
+                ? 'installation manifest matches the active deployment configuration'
+                : 'installation is not commissioned ['.$state->state->value.']',
+            ['state' => $state->state->value, 'reason' => $state->reason],
+        );
     }
 
     /**
