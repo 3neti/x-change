@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
-use App\Models\InstructionItem;
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use LBHurtado\Instruction\Models\InstructionItem;
 use LBHurtado\XChange\Models\RevenueCollection;
 use RuntimeException;
 use Throwable;

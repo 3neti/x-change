@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Lifecycle\Scenarios;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
@@ -129,7 +128,10 @@ final class LifecycleScenarioBootstrapper
 
     public function userModelClass(): string
     {
-        $class = (string) config('x-change.lifecycle.defaults.user_model', User::class);
+        $class = (string) config(
+            'x-change.lifecycle.defaults.user_model',
+            config('auth.providers.users.model', 'App\\Models\\User'),
+        );
 
         if ($class === '' || ! class_exists($class)) {
             throw new RuntimeException('Configured lifecycle user model is invalid.');

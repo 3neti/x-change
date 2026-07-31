@@ -1,11 +1,26 @@
 {
+  "name": "@3neti/x-change",
+  "private": true,
+  "type": "module",
   "scripts": {
     "test:frontend": "vitest run"
   },
   "devDependencies": {
+    "@inertiajs/core": "^3.6.1",
+    "@inertiajs/vue3": "^3.6.1",
+    "@laravel/echo-vue": "^2.4.0",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/test-utils": "^2.4.10",
+    "@vueuse/core": "^12.8.2",
     "jsdom": "^29.1.1",
-    "vitest": "^4.1.7"
+    "lucide-vue-next": "^0.468.0",
+    "marked": "^18.0.7",
+    "reka-ui": "^2.10.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.7",
+    "vue": "^3.5.40"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }

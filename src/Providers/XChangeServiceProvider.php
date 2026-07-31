@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Providers;
 
-use App\Models\User;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -2088,7 +2087,10 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function alignAccountSystemUser(): void
     {
-        $model = config('x-change.onboarding.issuer_model', User::class);
+        $model = config(
+            'x-change.onboarding.issuer_model',
+            config('auth.providers.users.model', 'App\\Models\\User'),
+        );
         $identifier = config('x-change.payout.system_user_id');
         $column = config('x-change.payout.system_user_column', 'id');
 

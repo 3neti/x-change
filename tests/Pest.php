@@ -41,6 +41,21 @@ use Propaganistas\LaravelPhone\PhoneNumber;
 
 uses(TestCase::class)->in('Unit', 'Feature');
 
+$embeddedHostArchitectureTests = array_values(array_filter(
+    glob(__DIR__.'/Unit/Architecture/*.php') ?: [],
+    static function (string $path): bool {
+        $source = file_get_contents($path);
+
+        return is_string($source)
+            && (str_contains($source, 'dirname($packageRoot, 2)')
+                || str_contains($source, "\$packageRoot.'/../../"));
+    },
+));
+
+uses()
+    ->group('embedded-host-layout')
+    ->in(...$embeddedHostArchitectureTests);
+
 afterEach(function () {
     Mockery::close();
 });

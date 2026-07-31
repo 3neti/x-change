@@ -43,7 +43,10 @@ class RevenueCollection extends Model
     public function collectedBy(): BelongsTo
     {
         return $this->belongsTo(
-            config('x-change.lifecycle.defaults.user_model', \App\Models\User::class),
+            config(
+                'x-change.lifecycle.defaults.user_model',
+                config('auth.providers.users.model', 'App\\Models\\User'),
+            ),
             'collected_by_user_id'
         );
     }

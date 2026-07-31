@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Models\User;
 use LBHurtado\Instruction\Models\InstructionItem;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
@@ -1161,7 +1160,7 @@ return [
 
     'onboarding' => [
         //        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', \LBHurtado\XChange\Tests\Fakes\User::class),
-        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', User::class),
+        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', 'App\\Models\\User'),
         'default_wallet_slug' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_SLUG', 'platform'),
         'default_wallet_name' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_NAME', 'Platform Wallet'),
         'driver' => env('XCHANGE_ONBOARDING_DRIVER', 'legacy'),
@@ -1706,13 +1705,12 @@ return [
         'instruction_item_model' => env(
             'XCHANGE_REVENUE_INSTRUCTION_ITEM_MODEL',
             InstructionItem::class,
-            //            \App\Models\InstructionItem::class
         ),
 
         'destination' => [
             'model' => env(
                 'XCHANGE_REVENUE_DESTINATION_MODEL',
-                User::class
+                'App\\Models\\User'
             ),
             'identifier' => env('XCHANGE_REVENUE_DESTINATION_IDENTIFIER'),
             'identifier_column' => env('XCHANGE_REVENUE_DESTINATION_IDENTIFIER_COLUMN', 'email'),

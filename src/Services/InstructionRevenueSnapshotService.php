@@ -8,6 +8,7 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Brick\Money\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use LBHurtado\Instruction\Models\InstructionItem;
 use RuntimeException;
 
 class InstructionRevenueSnapshotService
@@ -28,7 +29,7 @@ class InstructionRevenueSnapshotService
     {
         $modelClass = $this->instructionItemModelClass();
 
-        /** @var \Illuminate\Support\Collection<int, Model> $items */
+        /** @var Collection<int, Model> $items */
         $items = $modelClass::query()->get();
 
         $rows = $items
@@ -82,7 +83,7 @@ class InstructionRevenueSnapshotService
 
     protected function instructionItemModelClass(): string
     {
-        $class = (string) config('x-change.revenue.instruction_item_model', \App\Models\InstructionItem::class);
+        $class = (string) config('x-change.revenue.instruction_item_model', InstructionItem::class);
 
         if ($class === '' || ! class_exists($class)) {
             throw new RuntimeException('Configured revenue instruction item model is invalid.');

@@ -18,6 +18,7 @@ use LBHurtado\Instruction\Database\Seeders\InstructionItemSeeder;
 use LBHurtado\Instruction\InstructionServiceProvider;
 use LBHurtado\Merchant\MerchantServiceProvider;
 use LBHurtado\ModelChannel\ModelChannelServiceProvider;
+use LBHurtado\ModelInput\ModelInputServiceProvider;
 use LBHurtado\Onboarding\OnboardingServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\VoucherServiceProvider;
@@ -76,6 +77,7 @@ abstract class TestCase extends Orchestra
             CashServiceProvider::class,
             LBHurtadoWalletServiceProvider::class,
             ModelChannelServiceProvider::class,
+            ModelInputServiceProvider::class,
             VouchersServiceProvider::class,
             ContactServiceProvider::class,
             VoucherServiceProvider::class,
@@ -534,11 +536,8 @@ abstract class TestCase extends Orchestra
 
     protected function loadModelInputPackageMigrations(): void
     {
-        $candidatePaths = [
-            base_path('vendor/3neti/laravel-model-input/database/migrations'),
-            dirname(__DIR__, 4).'/vendor/3neti/laravel-model-input/database/migrations',
-        ];
-
-        $this->runMigrationFilesFromCandidates($candidatePaths);
+        $this->runMigrationFilesFromCandidates([
+            $this->packageRoot(ModelInputServiceProvider::class).'/database/migrations',
+        ]);
     }
 }
