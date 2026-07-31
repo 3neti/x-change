@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
-use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
+use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use Throwable;
 
@@ -19,6 +19,7 @@ class DoctorXChangeCommand extends Command
         {--json : Output JSON}
         {--strict : Return a non-zero exit status when any check fails}
         {--assets : Inspect published x-change frontend asset drift only}
+        {--pre-install : Inspect only checks that are safe before migrations and publishing}
         {--operator-activity-runtime : Inspect Cockpit operator activity runtime configuration only}';
 
     protected $description = 'Inspect X-Change turnkey installation readiness.';
@@ -28,15 +29,17 @@ class DoctorXChangeCommand extends Command
         ProviderRuntimeSettingsResolverContract $settings,
         PublishedAssetDriftDetector $publishedAssets,
         CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
-        DeploymentConfigurationInspector $deploymentConfiguration,
+        PreInstallReadinessInspector $preInstallReadiness,
     ): int {
-        $checks = $this->option('operator-activity-runtime')
+        $checks = $this->option('pre-install')
+            ? $preInstallReadiness->inspect()['checks']
+            : ($this->option('operator-activity-runtime')
             ? [$this->operatorActivityRuntimeProfileCheck($operatorActivityRuntimeProfile)]
             : ($this->option('assets')
             ? [$this->publishedAssetCheck($publishedAssets)]
             : [
                 $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
-                $this->deploymentConfigurationCheck($deploymentConfiguration),
+                ...$preInstallReadiness->inspect()['checks'],
                 $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
                 $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
                 $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
@@ -44,13 +47,9 @@ class DoctorXChangeCommand extends Command
                 $this->check('users.mobile_verified_at column', $this->hasColumn('users', 'mobile_verified_at'), 'users.mobile_verified_at exists'),
                 $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
                 $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
-                $this->productionApplicationSecurityCheck(),
-                $this->productionOnboardingOtpCheck(),
-                $this->queueRuntimeCheck(),
-                $this->schedulerLockCacheCheck(),
                 $this->providerTopologyCheck($topologies),
                 $this->providerRuntimeSettingsCheck($settings),
-            ]);
+            ]));
 
         $passed = collect($checks)->every(
             static fn (array $check): bool => $check['passed'] === true,
@@ -101,37 +100,6 @@ class DoctorXChangeCommand extends Command
     /**
      * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
      */
-    protected function deploymentConfigurationCheck(
-        DeploymentConfigurationInspector $inspector,
-    ): array {
-        try {
-            $result = $inspector->inspect();
-            $message = $result['ready']
-                ? "deployment profile [{$result['profile']}] is configured"
-                : 'deployment configuration is incomplete';
-
-            if ($result['legacy_published_config']) {
-                $message .= '; a published x-change config overrides package defaults';
-            }
-
-            return $this->check(
-                'deployment configuration',
-                $result['ready'],
-                $message,
-                $result,
-            );
-        } catch (Throwable $exception) {
-            return $this->check(
-                'deployment configuration',
-                false,
-                $exception->getMessage(),
-            );
-        }
-    }
-
-    /**
-     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
-     */
     protected function publishedAssetCheck(PublishedAssetDriftDetector $publishedAssets): array
     {
         $result = $publishedAssets->inspect();
@@ -171,127 +139,6 @@ class DoctorXChangeCommand extends Command
         } catch (Throwable $e) {
             return $this->check('provider topology', false, $e->getMessage());
         }
-    }
-
-    /**
-     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
-     */
-    protected function queueRuntimeCheck(): array
-    {
-        $connection = (string) config('queue.default');
-        $durable = ! in_array($connection, ['', 'sync', 'null'], true);
-
-        return $this->check(
-            'durable queue runtime',
-            $durable,
-            $durable
-                ? "queue connection [{$connection}] can run asynchronously"
-                : "queue connection [{$connection}] cannot provide durable asynchronous processing",
-            [
-                'connection' => $connection,
-                'required_queues' => [
-                    'default',
-                    'x-change-feedback',
-                    'x-change-funding',
-                ],
-            ],
-        );
-    }
-
-    /**
-     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
-     */
-    protected function productionOnboardingOtpCheck(): array
-    {
-        $environment = (string) config('app.env');
-        $production = $environment === 'production';
-        $enabled = (bool) config('x-change.onboarding.mobile_verification.enabled', true);
-        $required = (bool) config('x-change.onboarding.voucher.require_otp', true);
-        $driver = (string) config('x-change.withdrawal.otp.driver', 'null');
-        $showsLocalCode = (bool) config(
-            'x-change.onboarding.mobile_verification.show_local_code',
-            false,
-        );
-        $ready = ! $production || (
-            $enabled
-            && $required
-            && $driver !== ''
-            && $driver !== 'null'
-            && ! $showsLocalCode
-        );
-
-        return $this->check(
-            'production onboarding OTP',
-            $ready,
-            $ready
-                ? ($production
-                    ? "onboarding OTP uses the configured [{$driver}] delivery driver"
-                    : "production-only OTP gate is not required in [{$environment}]")
-                : 'production onboarding requires a non-null OTP driver with local code display disabled',
-            [
-                'environment' => $environment,
-                'mobile_verification_enabled' => $enabled,
-                'otp_required' => $required,
-                'driver' => $driver,
-                'local_code_visible' => $showsLocalCode,
-            ],
-        );
-    }
-
-    /**
-     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
-     */
-    protected function productionApplicationSecurityCheck(): array
-    {
-        $environment = (string) config('app.env');
-        $production = $environment === 'production';
-        $debug = (bool) config('app.debug');
-        $hasStableKey = is_string(config('app.key'))
-            && trim((string) config('app.key')) !== '';
-        $url = (string) config('app.url');
-        $usesHttps = str_starts_with($url, 'https://');
-        $secureCookies = (bool) config('session.secure');
-        $ready = ! $production || (
-            ! $debug
-            && $hasStableKey
-            && $usesHttps
-            && $secureCookies
-        );
-
-        return $this->check(
-            'production application security',
-            $ready,
-            $ready
-                ? ($production
-                    ? 'production debug, key, HTTPS, and cookie controls are ready'
-                    : "production-only application security gate is not required in [{$environment}]")
-                : 'production requires debug off, a stable key, HTTPS, and secure cookies',
-            [
-                'environment' => $environment,
-                'debug' => $debug,
-                'app_key_configured' => $hasStableKey,
-                'https' => $usesHttps,
-                'secure_cookies' => $secureCookies,
-            ],
-        );
-    }
-
-    /**
-     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
-     */
-    protected function schedulerLockCacheCheck(): array
-    {
-        $store = (string) config('cache.default');
-        $shared = in_array($store, ['database', 'dynamodb', 'memcached', 'redis'], true);
-
-        return $this->check(
-            'shared scheduler lock cache',
-            $shared,
-            $shared
-                ? "cache store [{$store}] supports shared scheduler locks"
-                : "cache store [{$store}] is not approved for multi-node scheduler locks",
-            ['store' => $store],
-        );
     }
 
     /**

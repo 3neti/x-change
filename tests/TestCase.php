@@ -124,6 +124,7 @@ abstract class TestCase extends Orchestra
 
         $app['config']->set('x-change.routes.web', true);
         $app['config']->set('x-change.routes.api', true);
+        $app['config']->set('x-change.deployment.profile_explicitly_configured', true);
 
         $app['config']->set('x-change.product.name', 'X-Change');
         $app['config']->set('x-change.product.code', 'x-change');

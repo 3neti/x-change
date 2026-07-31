@@ -7,7 +7,7 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
-use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
+use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
@@ -53,7 +53,7 @@ class InstallXChangeCommand extends Command
         TreasuryOpeningCapitalizationPolicyResolver $capitalizationPolicies,
         TreasuryPreflightService $treasuryPreflight,
         TreasuryProviderConnectionCatalog $treasuryConnections,
-        DeploymentConfigurationInspector $deploymentConfiguration,
+        PreInstallReadinessInspector $preInstallReadiness,
         SystemPrincipalProvisioningService $systemPrincipalProvisioning,
     ): int {
         $this->components->info('Installing X-Change...');
@@ -224,21 +224,31 @@ class InstallXChangeCommand extends Command
         }
 
         try {
-            $deployment = $deploymentConfiguration->inspect();
+            $readiness = $preInstallReadiness->inspect();
         } catch (Throwable $exception) {
             $this->components->error($exception->getMessage());
 
             return self::FAILURE;
         }
 
-        if (! $deployment['ready']) {
+        if (! $readiness['ready']) {
+            $failedChecks = collect($readiness['checks'])
+                ->where('passed', false)
+                ->pluck('name')
+                ->implode(', ');
             $this->components->error(
-                'Deployment configuration is incomplete: '
-                .implode(', ', $deployment['missing_variables']).'.',
+                'Pre-install doctor failed: '.$failedChecks.'.',
             );
+            if ($readiness['missing_variables'] !== []) {
+                $this->components->error(
+                    'Missing or invalid environment configuration: '
+                    .implode(', ', $readiness['missing_variables']).'.',
+                );
+            }
             $this->components->warn(
                 'Run [php artisan x-change:configure --profile='
-                .$deployment['profile'].'] to refresh the sanitized environment checklist.',
+                .$readiness['profile'].'] to refresh the sanitized environment checklist, '
+                .'then [php artisan x-change:doctor --pre-install --strict].',
             );
 
             return self::FAILURE;

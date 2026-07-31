@@ -11,6 +11,100 @@ it('reports x-change doctor checks as json', function () {
         ->assertExitCode(0);
 });
 
+it('runs a strict pre-install doctor without requiring post-install tables', function () {
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--pre-install' => true,
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true);
+
+    expect($exitCode)->toBe(0)
+        ->and($payload['success'])->toBeTrue()
+        ->and(collect($payload['checks'])->pluck('name'))
+        ->not->toContain('onboarding sessions table');
+});
+
+it('requires an explicitly configured deployment profile', function () {
+    config()->set('x-change.deployment.profile_explicitly_configured', false);
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--pre-install' => true,
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'deployment configuration');
+
+    expect($exitCode)->toBe(1)
+        ->and($check['passed'])->toBeFalse()
+        ->and($check['meta']['missing_variables'])
+        ->toContain('XCHANGE_DEPLOYMENT_PROFILE');
+});
+
+it('reports invalid live system principal identity variables', function () {
+    config()->set('x-change.deployment.profile', 'netbank');
+    config()->set('x-change.payout.system_user_column', 'id');
+    config()->set('x-change.payout.system_user_id', '1');
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'system principal identity');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['meta']['missing_variables'])->toBe([
+            'XCHANGE_SYSTEM_USER_COLUMN',
+            'XCHANGE_SYSTEM_USER_ID',
+        ]);
+});
+
+it('fails closed when enabled campaign email delivery is incomplete', function () {
+    config()->set('x-change.campaigns.delivery.email.enabled', true);
+    config()->set('mail.default', 'log');
+    config()->set('mail.from.address', 'hello@example.com');
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'campaign email delivery');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['meta']['missing_variables'])->toBe([
+            'MAIL_MAILER',
+            'MAIL_FROM_ADDRESS',
+        ]);
+});
+
+it('fails closed when enabled EngageSpark SMS delivery has no credentials', function () {
+    config()->set('x-change.campaigns.delivery.sms.enabled', true);
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
+    config()->set('x-feedback.transports.sms.sender', 'XCHANGE');
+    config()->set('engagespark.api_key', null);
+    config()->set('engagespark.org_id', null);
+    config()->set('engagespark.sender_id', null);
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'SMS delivery');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['meta']['missing_variables'])->toBe([
+            'ENGAGESPARK_API_KEY',
+            'ENGAGESPARK_ORGANIZATION_ID',
+            'ENGAGESPARK_SENDER_ID',
+        ]);
+});
+
+it('does not require credentials for disabled campaign delivery channels', function () {
+    config()->set('x-change.campaigns.delivery.email.enabled', false);
+    config()->set('x-change.campaigns.delivery.sms.enabled', false);
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $checks = collect(json_decode(Artisan::output(), true)['checks']);
+
+    expect($checks->firstWhere('name', 'campaign email delivery')['passed'])->toBeTrue()
+        ->and($checks->firstWhere('name', 'SMS delivery')['passed'])->toBeTrue();
+});
+
 it('reports published cockpit asset drift as json', function () {
     $exitCode = Artisan::call('x-change:doctor', [
         '--assets' => true,
@@ -66,6 +160,7 @@ it('blocks deployment in strict mode when any readiness check fails', function (
 });
 
 it('reports unsafe synchronous queues and local scheduler locks', function () {
+    config()->set('x-change.deployment.profile', 'netbank');
     config()->set('queue.default', 'sync');
     config()->set('cache.default', 'array');
 
@@ -149,6 +244,12 @@ it('rejects unsafe application settings in production', function () {
             'app_key_configured' => false,
             'https' => false,
             'secure_cookies' => false,
+        ])
+        ->and($check['meta']['missing_variables'])->toBe([
+            'APP_DEBUG',
+            'APP_KEY',
+            'APP_URL',
+            'SESSION_SECURE_COOKIE',
         ]);
 });
 

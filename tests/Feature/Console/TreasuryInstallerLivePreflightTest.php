@@ -61,6 +61,29 @@ it('stops a forced non-interactive install before every side effect when require
         ->not->toContain('x-change:treasury:reconcile-opening');
 });
 
+it('stops installation before every side effect when the deployment profile is not explicit', function () {
+    config()->set('x-change.deployment.profile_explicitly_configured', false);
+    $commands = [];
+    Event::listen(
+        CommandStarting::class,
+        function (CommandStarting $event) use (&$commands): void {
+            $commands[] = $event->command;
+        },
+    );
+
+    $this->artisan('x-change:install', [
+        '--no-treasury' => true,
+        '--no-migrate' => true,
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('Pre-install doctor failed: deployment configuration.')
+        ->expectsOutputToContain('XCHANGE_DEPLOYMENT_PROFILE')
+        ->assertFailed();
+
+    expect($commands)->not->toContain('migrate')
+        ->not->toContain('vendor:publish');
+});
+
 it('requires explicit destructive consent and a bootstrap source before a fresh database install', function () {
     enableNetbankTreasuryForTests();
     $liveProbeCalls = 0;

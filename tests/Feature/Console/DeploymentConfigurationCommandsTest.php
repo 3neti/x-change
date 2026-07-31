@@ -46,7 +46,8 @@ it('fails closed for incomplete live provider configuration', function (): void 
     expect($exitCode)->toBe(1)
         ->and($payload['ready'])->toBeFalse()
         ->and($payload['missing_variables'])->toContain(
-            'NETBANK_FUNDING_CLIENT_SECRET',
+            'NETBANK_CLIENT_SECRET',
+            'NETBANK_DISBURSEMENT_ENDPOINT',
             'XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE',
         );
 });
