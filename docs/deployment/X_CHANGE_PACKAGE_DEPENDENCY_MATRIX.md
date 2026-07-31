@@ -112,7 +112,7 @@ owning work is reviewed and committed or intentionally excluded.
 | --- | --- | --- | --- | --- | ---: | --- | --- |
 | `3neti/emi-core` | runtime | proprietary / private | `3neti/emi-core` | none | 1 | release-after-fix | Review the dirty path, refresh its stale lock or remove the library lock intentionally, run tests, then select a compatible first tag. |
 | `3neti/merchant` | runtime | proprietary / private | `3neti/merchant` | `v1.1.0` | 1 | release-after-fix | Reconcile the dirty path and prove whether a release newer than `v1.1.0` is required. |
-| `3neti/wallet` | runtime | MIT / private-first public candidate | `3neti/wallet` | `v1.1.0` | 2 | release-after-fix | Reconcile dirty paths, resolve the stale lock warning, and validate Treasury interfaces used by x-change. |
+| `3neti/wallet` | runtime | MIT / private-first public candidate | `3neti/wallet` | `v1.1.0` | 2 Finder files only | release-after-fix | [Audit complete](./X_CHANGE_WALLET_RELEASE_AUDIT.md): 91 tests pass, but README, direct framework constraints, Laravel 13 CI, semantic versioning, and clean-consumer validation block release. |
 | `3neti/cash` | runtime | proprietary / private | `3neti/cash` | `v1.2.0` | 0 | release-now | Run package tests and clean-consumer validation against the intended wallet release. |
 | `3neti/contact` | runtime | proprietary / private | `3neti/contact` | `v1.1.0` | 0 | release-now | Validate its `hyperverge` dependency from an external repository. |
 | `3neti/money-issuer` | runtime | proprietary / private | `3neti/money-issuer` | none | 0 | release-now | Run tests and API compatibility review before selecting the first immutable tag. |
@@ -213,6 +213,10 @@ The following order respects observed first-party dependencies:
 
 `emi-paynamics` is a separate optional release lane and must not block the
 initial NetBank-only consumer. `x-legal` remains outside the required closure.
+
+The wallet gate has completed its read-only audit. It remains first in the
+release order and must not be bypassed. See
+[X_CHANGE_WALLET_RELEASE_AUDIT.md](./X_CHANGE_WALLET_RELEASE_AUDIT.md).
 
 ## Per-package release gate
 
