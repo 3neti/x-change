@@ -108,6 +108,47 @@ x-legal                                                   suggested, optional
 of observation. A non-zero value is an absolute no-tag condition until the
 owning work is reviewed and committed or intentionally excluded.
 
+### Immutable release progress — 2026-07-31
+
+The following dependency releases have passed hosted CI and an exact remote-tag
+clean-consumer proof:
+
+| Package | Released version |
+| --- | --- |
+| `3neti/emi-core` | `v2.0.0-beta.1` |
+| `3neti/money-issuer` | `v1.1.0` |
+| `3neti/wallet` | `v2.0.0-beta.1` |
+| `3neti/cash` | `v1.3.0` |
+| `3neti/merchant` | `v1.2.0` |
+| `3neti/laravel-model-channel` | `v1.1.1` |
+| `3neti/hyperverge` | `v2.0.0-beta.1` |
+| `3neti/contact` | `v1.2.0` |
+| `3neti/laravel-vouchers` | `v1.2.0` |
+| `3neti/settlement-envelope` | `v1.2.0` |
+| `3neti/laravel-model-input` | `v1.2.0` |
+| `3neti/instruction` | `v0.3.0` |
+| `3neti/report-registry` | `v1.1.2` |
+| `3neti/form-flow` | `v1.8.0` |
+| `3neti/form-handler-kyc` | `v1.1.0` |
+| `3neti/form-handler-location` | `v1.2.0` |
+| `3neti/form-handler-otp` | `v1.1.0` |
+| `3neti/form-handler-selfie` | `v1.1.0` |
+| `3neti/form-handler-signature` | `v1.2.0` |
+
+The x-change Cockpit source/published-asset boundary is also proven:
+
+- `php artisan x-change:doctor --assets --no-interaction` passes;
+- the package-isolated drift and publish-map tests pass with 8 tests and
+  32 assertions; and
+- host Cockpit differences are generated ownership headers, not canonical
+  source missing from the package.
+
+Therefore no host-to-package UI copy is required before extraction. The next
+release gates begin with `emi-netbank`, `voucher`, `onboarding`, and the
+required `x-*` packages. x-change extraction remains blocked until its local
+path repositories and mutable runtime constraints can be replaced by those
+immutable releases.
+
 | Package | Closure | License / hosting policy | Configured origin | Latest local `v*` tag | Dirty | Classification | Release blocker or next proof |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
 | `3neti/emi-core` | runtime | proprietary / private | `3neti/emi-core` | none | 1 | release-after-fix | Review the dirty path, refresh its stale lock or remove the library lock intentionally, run tests, then select a compatible first tag. |
