@@ -28,6 +28,7 @@ final class LifecycleScenarioBootstrapper
         private readonly MoneyMovementTargetModelContract $moneyMovementTarget,
         private readonly MoneyMovementLifecycleTriggerMatrixContract $moneyMovementTriggers,
         private readonly SystemUserResolverContract $systemUsers,
+        private readonly LifecycleUserModelResolver $userModels,
     ) {}
 
     /**
@@ -128,16 +129,7 @@ final class LifecycleScenarioBootstrapper
 
     public function userModelClass(): string
     {
-        $class = (string) config(
-            'x-change.lifecycle.defaults.user_model',
-            config('auth.providers.users.model', 'App\\Models\\User'),
-        );
-
-        if ($class === '' || ! class_exists($class)) {
-            throw new RuntimeException('Configured lifecycle user model is invalid.');
-        }
-
-        return $class;
+        return $this->userModels->resolve();
     }
 
     public function resolveIssuerModel(int $issuerId): Model

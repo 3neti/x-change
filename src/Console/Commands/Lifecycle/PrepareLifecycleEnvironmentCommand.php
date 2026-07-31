@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Number;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleUserModelResolver;
 use RuntimeException;
 
 class PrepareLifecycleEnvironmentCommand extends Command
@@ -282,7 +284,7 @@ class PrepareLifecycleEnvironmentCommand extends Command
     {
         $issuers = [];
 
-        foreach ((array) config('x-change.lifecycle.scenarios', []) as $scenario) {
+        foreach (app(LifecycleScenarioRepository::class)->all() as $scenario) {
             if (! is_array($scenario)) {
                 continue;
             }
@@ -376,7 +378,7 @@ class PrepareLifecycleEnvironmentCommand extends Command
         }
 
         $usesSystemLifecycleIssuer = collect(
-            (array) config('x-change.lifecycle.scenarios', [])
+            app(LifecycleScenarioRepository::class)->all()
         )->contains(static fn (mixed $scenario): bool => is_array($scenario)
             && data_get($scenario, 'lifecycle.issuer_role') === 'system'
             && data_get($scenario, 'lifecycle.funding_boundary') === 'isolated_compatibility_wallet');
@@ -399,16 +401,7 @@ class PrepareLifecycleEnvironmentCommand extends Command
 
     protected function userModelClass(): string
     {
-        $class = (string) config(
-            'x-change.lifecycle.defaults.user_model',
-            config('auth.providers.users.model', 'App\\Models\\User'),
-        );
-
-        if ($class === '' || ! class_exists($class)) {
-            throw new RuntimeException('Configured lifecycle user model is invalid.');
-        }
-
-        return $class;
+        return app(LifecycleUserModelResolver::class)->resolve();
     }
 
     protected function seedInstructionItems(): void

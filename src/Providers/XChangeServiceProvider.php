@@ -153,6 +153,7 @@ use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\FundingProjectionPublisherContract;
+use LBHurtado\XChange\Contracts\LifecycleScenarioContributor;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\MoneyMovementLifecycleTriggerMatrixContract;
@@ -222,6 +223,8 @@ use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Http\Middleware\RequireInitialPinSetup;
 use LBHurtado\XChange\Http\Responses\MobileFirstRegisterResponse;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleUserModelResolver;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
@@ -407,6 +410,13 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(DeploymentProfileCatalog::class);
         $this->app->singleton(DeploymentTreasuryConnectionConfiguration::class);
         $this->app->singleton(DeploymentConfigurationInspector::class);
+        $this->app->singleton(LifecycleUserModelResolver::class);
+        $this->app->singleton(
+            LifecycleScenarioRepository::class,
+            fn ($app): LifecycleScenarioRepository => new LifecycleScenarioRepository(
+                $app->tagged(LifecycleScenarioContributor::class),
+            ),
+        );
 
         if ($this->mobileFirstAuthEnabled()) {
             $this->app['config']->set('fortify.username', 'mobile');

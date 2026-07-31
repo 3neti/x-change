@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\XChange\Contracts\LifecycleScenarioContributor;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
 
 it('loads lifecycle scenarios from config', function () {
@@ -11,6 +12,43 @@ it('loads lifecycle scenarios from config', function () {
         ->and($repository->keys())->toBeArray()
         ->and($repository->keys())->not->toBeEmpty();
 });
+
+it('adds scenarios from package contributors without replacing the core catalog', function () {
+    $contributor = new class implements LifecycleScenarioContributor
+    {
+        public function lifecycleScenarios(): array
+        {
+            return [
+                'third_party_bank_smoke' => [
+                    'label' => 'Third Party Bank Smoke',
+                    'category' => 'provider',
+                ],
+            ];
+        }
+    };
+
+    $repository = new LifecycleScenarioRepository([$contributor]);
+
+    expect($repository->findOrFail('third_party_bank_smoke'))
+        ->toMatchArray([
+            'key' => 'third_party_bank_smoke',
+            'label' => 'Third Party Bank Smoke',
+            'category' => 'provider',
+        ])
+        ->and($repository->find('basic_cash'))->toBeArray();
+});
+
+it('rejects contributed scenarios that collide with the deployment catalog', function () {
+    $contributor = new class implements LifecycleScenarioContributor
+    {
+        public function lifecycleScenarios(): array
+        {
+            return ['basic_cash' => ['label' => 'Replacement']];
+        }
+    };
+
+    (new LifecycleScenarioRepository([$contributor]))->all();
+})->throws(RuntimeException::class, 'conflicts');
 
 it('finds a lifecycle scenario by key', function () {
     $repository = app(LifecycleScenarioRepository::class);

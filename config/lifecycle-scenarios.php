@@ -26,7 +26,7 @@ return [
         'system_float' => (float) env('XCHANGE_LIFECYCLE_SYSTEM_FLOAT', 1_000_000),
         'user_float' => (float) env('XCHANGE_LIFECYCLE_USER_FLOAT', 10_000),
 
-        'user_model' => env('XCHANGE_LIFECYCLE_USER_MODEL', 'App\\Models\\User'),
+        'user_model' => env('XCHANGE_LIFECYCLE_USER_MODEL'),
     ],
 
     'seeders' => [

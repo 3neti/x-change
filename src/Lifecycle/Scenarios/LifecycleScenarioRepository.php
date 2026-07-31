@@ -5,9 +5,18 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Scenarios;
 
 use InvalidArgumentException;
+use LBHurtado\XChange\Contracts\LifecycleScenarioContributor;
+use RuntimeException;
 
 final class LifecycleScenarioRepository
 {
+    /**
+     * @param  iterable<LifecycleScenarioContributor>  $contributors
+     */
+    public function __construct(
+        private readonly iterable $contributors = [],
+    ) {}
+
     /**
      * @return array<string, array<string, mixed>>
      */
@@ -20,6 +29,19 @@ final class LifecycleScenarioRepository
         }
 
         $normalized = [];
+
+        foreach ($this->contributors as $contributor) {
+            foreach ($contributor->lifecycleScenarios() as $key => $scenario) {
+                if (array_key_exists($key, $scenarios)) {
+                    throw new RuntimeException(sprintf(
+                        'Contributed lifecycle scenario [%s] conflicts with the package or deployment catalog.',
+                        $key,
+                    ));
+                }
+
+                $scenarios[$key] = $scenario;
+            }
+        }
 
         foreach ($scenarios as $key => $scenario) {
             if (! is_string($key)) {
