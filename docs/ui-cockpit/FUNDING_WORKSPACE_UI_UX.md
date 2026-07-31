@@ -85,7 +85,10 @@ The global Cockpit header presents:
 - **Issuance Capacity**
 
 Provider liquidity is not an Account-holder metric. It is visible only in an
-authorized Treasury view.
+authorized Treasury view. A cached value older than the configured freshness
+window is visibly labelled **Stale** and cannot support Issuance Capacity. The
+Treasury-only refresh action and the package-owned five-minute scheduler update
+that cache from the provider without posting Inventory or Positions.
 
 The Funding page must not repeat the same four monetary cards immediately below
 the global header. The page-level summary instead reports funding workflow

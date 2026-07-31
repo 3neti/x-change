@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Cache;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
@@ -75,6 +76,46 @@ it('refreshes provider liquidity without accepting financial facts or posting mo
                 'financial_posting' => false,
             ],
         ]);
+});
+
+it('refreshes the cached provider liquidity from the package-owned command', function () {
+    enableNetbankTreasuryForTests();
+    $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $readiness->shouldReceive('handle')
+        ->once()
+        ->with()
+        ->andReturn([
+            'enabled' => true,
+            'ready' => true,
+            'checked' => true,
+            'account_number_masked' => '********0019',
+            'balance_minor' => 32_838,
+            'available_balance_minor' => 32_838,
+            'currency' => 'PHP',
+            'fetched_at' => now()->toIso8601String(),
+        ]);
+    app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
+
+    $this->artisan('xchange:treasury:refresh-liquidity', ['--json' => true])
+        ->assertSuccessful();
+
+    expect(ProviderBalanceSnapshot::query()->sole())
+        ->available_balance_minor->toBe(32_838)
+        ->refresh_status->toBe('fresh');
+});
+
+it('registers a non-overlapping provider liquidity refresh schedule', function () {
+    config()->set('x-change.funding.liquidity_refresh.scheduled_enabled', true);
+
+    $event = collect(app(Schedule::class)->events())
+        ->first(fn ($event): bool => $event->description === 'xchange:treasury:refresh-liquidity');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('*/5 * * * *')
+        ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->onOneServer)->toBeTrue()
+        ->and($event->expiresAt)->toBe(5)
+        ->and($event->command)->toContain('xchange:treasury:refresh-liquidity');
 });
 
 it('retains the last good snapshot and returns a sanitized failure', function () {

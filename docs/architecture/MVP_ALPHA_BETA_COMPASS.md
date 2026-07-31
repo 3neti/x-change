@@ -390,6 +390,12 @@ development uses the named `x-change-funding`, `x-change-feedback`, and
 and Forge use their managed queue, minutely scheduler, and optional WebSocket
 integrations instead of long-running commands in the web process.
 
+The package scheduler also runs
+`xchange:treasury:refresh-liquidity` every five minutes. It reads the provider
+and updates only the cached liquidity guard; it never posts Inventory or
+Positions. A stale snapshot is labelled `Stale` in the Cockpit header and makes
+Issuance Capacity unavailable until a successful refresh.
+
 Installation writes the manifest only after migrations, system-principal and
 Treasury work, opening reconciliation/capitalization, and required publication
 finish successfully. `--no-treasury` deliberately leaves commissioning

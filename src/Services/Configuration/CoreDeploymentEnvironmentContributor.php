@@ -122,6 +122,13 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 safeExample: 'false',
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_FUNDING_LIQUIDITY_SCHEDULED_REFRESH_ENABLED',
+                description: 'Refresh the cached provider-liquidity guard every five minutes.',
+                category: 'Runtime',
+                configPath: 'x-change.funding.liquidity_refresh.scheduled_enabled',
+                safeExample: 'true',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_REDEMPTION_FEEDBACK_ENABLED',
                 description: 'Enable explicit redemption feedback orchestration.',
                 category: 'Delivery',

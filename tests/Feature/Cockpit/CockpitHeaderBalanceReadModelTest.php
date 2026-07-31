@@ -193,6 +193,41 @@ it('exposes a read-only provider balance summary only to System Treasury', funct
         ->and($readModel['redactions']['provider_balance_exposed'])->toBeTrue();
 });
 
+it('labels stale provider liquidity directly in the visible header value', function () {
+    config(['x-change.cockpit.header_provider_balance.enabled' => true]);
+    $system = enableNetbankTreasuryForTests();
+    $fundingOverview = Mockery::mock(BuildBalanceOverview::class);
+    $fundingOverview->shouldReceive('handle')
+        ->once()
+        ->with($system, null, false)
+        ->andReturn([
+            'balances' => [[
+                'key' => 'netbank_source_account',
+                'authority' => 'provider_source_account',
+                'description' => 'Cached NetBank source account liquidity.',
+                'available_balance_minor' => 140_632,
+                'currency' => 'PHP',
+                'is_stale' => true,
+                'checked_at' => now()->subDay()->toIso8601String(),
+            ]],
+        ]);
+    $provider = new WalletCockpitHeaderReadModelProvider(
+        app(WalletAccessContract::class),
+        $fundingOverview,
+        app(VoucherLiabilitySummaryContract::class),
+    );
+
+    $liquidity = collect($provider->forOperator($system)->toArray()['balances'])
+        ->firstWhere('key', 'live');
+
+    expect($liquidity)
+        ->toMatchArray([
+            'value' => 'Stale · ₱1,406.32',
+            'tone' => 'warning',
+        ])
+        ->and($liquidity['helper'])->toContain('Cached snapshot is stale');
+});
+
 it('hydrates the cockpit dashboard with header balance read-model props', function () {
     app()->forgetInstance(CockpitHeaderReadModelProviderContract::class);
     app()->instance(WalletAccessContract::class, new class implements WalletAccessContract

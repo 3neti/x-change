@@ -170,7 +170,9 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                 'metric' => new CockpitDashboardMetricData(
                     key: 'live',
                     label: $this->providerBalanceLabel($balance),
-                    value: $this->formatMoney($value),
+                    value: $isFresh
+                        ? $this->formatMoney($value)
+                        : 'Stale · '.$this->formatMoney($value),
                     helper: $this->providerBalanceHelper($balance),
                     tone: $isFresh ? 'healthy' : 'warning',
                 ),

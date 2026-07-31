@@ -921,6 +921,10 @@ return [
         'manual_check_middleware' => ['throttle:6,1'],
         'liquidity_refresh' => [
             'middleware' => ['throttle:2,1'],
+            'scheduled_enabled' => (bool) env(
+                'XCHANGE_FUNDING_LIQUIDITY_SCHEDULED_REFRESH_ENABLED',
+                true,
+            ),
             'lock_seconds' => (int) env(
                 'XCHANGE_FUNDING_LIQUIDITY_REFRESH_LOCK_SECONDS',
                 30,

@@ -96,6 +96,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\ProvisionSystemPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ReconcileOpeningTreasuryBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\RedactTreasurySensitiveMetadataCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\RefreshTreasuryLiquidityCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\RepairMissingDisbursementPostingsCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
@@ -1174,6 +1175,7 @@ class XChangeServiceProvider extends ServiceProvider
                 MigrateLegacyAccountBalanceCommand::class,
                 PreflightTreasuryCommand::class,
                 RedactTreasurySensitiveMetadataCommand::class,
+                RefreshTreasuryLiquidityCommand::class,
                 ProvisionSystemPrincipalCommand::class,
                 ProvisionTreasuryCommand::class,
                 ReconcileOpeningTreasuryBalanceCommand::class,
@@ -1263,6 +1265,17 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationSchedule(): void
     {
+        if ((bool) config('x-change.funding.liquidity_refresh.scheduled_enabled', true)) {
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+                $schedule
+                    ->command('xchange:treasury:refresh-liquidity')
+                    ->name('xchange:treasury:refresh-liquidity')
+                    ->everyFiveMinutes()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
         if ((bool) config('x-change.payment.attempts.scheduled_verification_enabled', true)) {
             $batchSize = max(
                 1,
