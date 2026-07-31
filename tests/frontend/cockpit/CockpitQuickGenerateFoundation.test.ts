@@ -311,9 +311,25 @@ describe('Cockpit Quick Generate foundation', () => {
                     allowed_methods: ['POST'],
                 },
             },
+            global: {
+                stubs: {
+                    Teleport: false,
+                },
+            },
         });
 
         await flushPromises();
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-rider-design-editor"]',
+                )
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-design-tabs"]',
+                )
+                .exists(),
+        ).toBe(true);
 
         await wrapper
             .get('[data-testid="cockpit-quick-generate-open-design-button"]')

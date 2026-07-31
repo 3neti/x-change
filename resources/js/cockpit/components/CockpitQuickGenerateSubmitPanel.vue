@@ -672,7 +672,7 @@ const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
 const riderDesignTeleportReady = ref(false);
-const riderDesignTeleportActive = ref(false);
+const riderDesignTeleportTarget = ref<HTMLElement | null>(null);
 const startingPoint = ref<'blank' | 'last' | 'template'>(
     props.lastInstructions ? 'last' : 'template',
 );
@@ -692,8 +692,7 @@ const submissionErrorHeading = ref('Fix these fields before issuing');
 
 hydrateLastInstructions();
 
-onMounted(async (): Promise<void> => {
-    await nextTick();
+onMounted((): void => {
     riderDesignTeleportReady.value = true;
 });
 
@@ -3254,17 +3253,7 @@ const previewStale = computed<boolean>(() => {
     );
 });
 
-watch(canvasView, async (view): Promise<void> => {
-    riderDesignTeleportActive.value = false;
-
-    if (view === 'design') {
-        await nextTick();
-        riderDesignTeleportActive.value =
-            typeof document !== 'undefined' &&
-            document.querySelector('#quick-generate-rider-design-editor') !==
-                null;
-    }
-
+watch(canvasView, (view): void => {
     if (
         view === 'claim' &&
         previewStatus.value === 'idle' &&
@@ -5087,6 +5076,7 @@ function instructionRecord(
                 >
                     <template #design>
                         <div
+                            ref="riderDesignTeleportTarget"
                             id="quick-generate-rider-design-editor"
                             class="h-full overflow-y-auto overscroll-contain pr-1"
                             data-testid="cockpit-quick-generate-rider-design-editor"
@@ -6498,10 +6488,11 @@ function instructionRecord(
                         </button>
                     </div>
                     <Teleport
-                        v-if="riderDesignTeleportReady"
-                        to="#quick-generate-rider-design-editor"
-                        :disabled="!riderDesignTeleportActive"
-                        defer
+                        v-if="
+                            riderDesignTeleportReady &&
+                            riderDesignTeleportTarget !== null
+                        "
+                        :to="riderDesignTeleportTarget"
                     >
                         <div class="grid gap-3">
                             <div
