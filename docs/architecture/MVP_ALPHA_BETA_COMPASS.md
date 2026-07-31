@@ -378,7 +378,11 @@ The public commissioning screen is asset-independent and identifies no
 provider, account, secret, or missing variable. A protected read-only checklist
 uses `XCHANGE_COMMISSIONING_ACCESS_TOKEN`; it reports sanitized checks and
 server commands but cannot edit `.env` or submit credentials. All commissioning
-responses use `no-store`, `noindex`, and `Retry-After` headers.
+responses use `no-store`, `noindex`, and `Retry-After` headers. An unconfigured
+`APP_ENV=local` installation also accepts the known development PIN `537537`.
+That fallback is deliberately unavailable in production, staging, testing, and
+other environments; live deployments must never run with `APP_ENV=local` and
+must configure a strong, unique commissioning token.
 
 Installation writes the manifest only after migrations, system-principal and
 Treasury work, opening reconciliation/capitalization, and required publication

@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+afterEach(function (): void {
+    app()->instance('env', 'testing');
+});
+
 it('protects the detailed commissioning checklist with a rotated session-bound token', function (): void {
     config()->set('x-change.commissioning.enabled', true);
     config()->set('x-change.commissioning.access_token', 'commissioning-secret-one');
@@ -25,3 +29,66 @@ it('protects the detailed commissioning checklist with a rotated session-bound t
 
     $this->get('/x/commissioning/checklist')->assertNotFound();
 });
+
+it('allows the fixed fallback token only for an unconfigured local application', function (): void {
+    app()->instance('env', 'local');
+    config()->set('x-change.commissioning.enabled', true);
+    config()->set('x-change.commissioning.access_token');
+
+    $this->withSession(['_token' => 'commissioning-test-csrf'])
+        ->post('/x/commissioning/checklist', [
+            '_token' => 'commissioning-test-csrf',
+            'access_token' => '537537',
+        ])->assertRedirect('/x/commissioning/checklist');
+
+    $this->get('/x/commissioning/checklist')
+        ->assertSuccessful()
+        ->assertSee('Commission X-Change');
+});
+
+it('uses an explicit local token instead of the fixed fallback', function (): void {
+    app()->instance('env', 'local');
+    config()->set('x-change.commissioning.enabled', true);
+    config()->set('x-change.commissioning.access_token', 'explicit-local-secret');
+
+    $this->withSession(['_token' => 'commissioning-test-csrf'])
+        ->post('/x/commissioning/checklist', [
+            '_token' => 'commissioning-test-csrf',
+            'access_token' => '537537',
+        ])->assertNotFound();
+
+    $this->post('/x/commissioning/checklist', [
+        '_token' => 'commissioning-test-csrf',
+        'access_token' => 'explicit-local-secret',
+    ])->assertRedirect('/x/commissioning/checklist');
+});
+
+it('invalidates a local fallback session when an explicit token is configured', function (): void {
+    app()->instance('env', 'local');
+    config()->set('x-change.commissioning.enabled', true);
+    config()->set('x-change.commissioning.access_token');
+
+    $this->withSession(['_token' => 'commissioning-test-csrf'])
+        ->post('/x/commissioning/checklist', [
+            '_token' => 'commissioning-test-csrf',
+            'access_token' => '537537',
+        ])->assertRedirect('/x/commissioning/checklist');
+
+    config()->set('x-change.commissioning.access_token', 'replacement-secret');
+
+    $this->get('/x/commissioning/checklist')->assertNotFound();
+});
+
+it('rejects the fixed fallback token outside the local environment', function (string $environment): void {
+    app()->instance('env', $environment);
+    config()->set('x-change.commissioning.enabled', true);
+    config()->set('x-change.commissioning.access_token');
+
+    $this->withSession(['_token' => 'commissioning-test-csrf'])
+        ->post('/x/commissioning/checklist', [
+            '_token' => 'commissioning-test-csrf',
+            'access_token' => '537537',
+        ])->assertNotFound();
+
+    $this->get('/x/commissioning/checklist')->assertNotFound();
+})->with(['production', 'staging', 'testing', 'development']);

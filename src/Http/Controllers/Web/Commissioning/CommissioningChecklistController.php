@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Commissioning;
 
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -14,6 +15,7 @@ use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 final readonly class CommissioningChecklistController
 {
     public function __construct(
+        private Application $application,
         private CommissioningStateResolver $commissioning,
         private PreInstallReadinessInspector $readiness,
     ) {}
@@ -31,7 +33,7 @@ final readonly class CommissioningChecklistController
     public function unlock(Request $request): RedirectResponse
     {
         $request->validate(['access_token' => ['required', 'string', 'max:512']]);
-        $configured = (string) config('x-change.commissioning.access_token');
+        $configured = $this->effectiveAccessToken();
 
         abort_unless(
             $configured !== ''
@@ -47,7 +49,7 @@ final readonly class CommissioningChecklistController
 
     private function isAuthorized(Request $request): bool
     {
-        $configured = (string) config('x-change.commissioning.access_token');
+        $configured = $this->effectiveAccessToken();
         $stored = (string) $request->session()->get($this->sessionKey(), '');
 
         return $configured !== ''
@@ -58,5 +60,20 @@ final readonly class CommissioningChecklistController
     private function sessionKey(): string
     {
         return 'x-change.commissioning.authorized';
+    }
+
+    private function effectiveAccessToken(): string
+    {
+        $configured = trim((string) config('x-change.commissioning.access_token'));
+
+        if ($configured !== '') {
+            return $configured;
+        }
+
+        if (! $this->application->environment('local')) {
+            return '';
+        }
+
+        return trim((string) config('x-change.commissioning.local_fallback_access_token'));
     }
 }

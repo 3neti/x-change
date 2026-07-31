@@ -230,7 +230,12 @@ php artisan x-change:doctor --strict
 Set `XCHANGE_COMMISSIONING_ACCESS_TOKEN` to expose the detailed, read-only
 operator checklist at `/x/commissioning/checklist`. The token is submitted by
 POST, never placed in a URL, and rotating it invalidates existing checklist
-sessions. Existing deployments may create their first manifest only through:
+sessions. When and only when `APP_ENV=local` and no token is configured, the
+known development PIN `537537` is accepted for local setup convenience. It is
+never accepted in production, staging, testing, or other environments. Never
+deploy a live provider profile with `APP_ENV=local`; deployments must configure
+a strong, unique token. Existing deployments may create their first manifest
+only through:
 
 ```bash
 php artisan x-change:commissioning:adopt \
