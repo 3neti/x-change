@@ -23,6 +23,9 @@ final readonly class LifecycleScenarioRunOptions
         public bool $acceptPending = false,
         public bool $approvalPipeline = false,
         public bool $liveProvider = false,
+        public bool $liveFeedback = false,
+        public ?string $feedbackEmail = null,
+        public ?string $feedbackMobile = null,
         public bool $confirmLiveTransfer = false,
         public ?string $runReference = null,
     ) {}
@@ -46,6 +49,9 @@ final readonly class LifecycleScenarioRunOptions
             acceptPending: (bool) ($options['accept-pending'] ?? false),
             approvalPipeline: (bool) ($options['approval-pipeline'] ?? false),
             liveProvider: (bool) ($options['live-provider'] ?? false),
+            liveFeedback: (bool) ($options['live-feedback'] ?? false),
+            feedbackEmail: self::stringOrNull($options['feedback-email'] ?? null),
+            feedbackMobile: self::stringOrNull($options['feedback-mobile'] ?? null),
             confirmLiveTransfer: (bool) ($options['confirm-live-transfer'] ?? false),
             runReference: self::stringOrNull($options['run-reference'] ?? null),
         );
@@ -118,6 +124,9 @@ final readonly class LifecycleScenarioRunOptions
             acceptPending: (bool) ($payload['accept_pending'] ?? false),
             approvalPipeline: (bool) ($payload['approval_pipeline'] ?? false),
             liveProvider: (bool) ($payload['live_provider'] ?? false),
+            liveFeedback: (bool) ($payload['live_feedback'] ?? false),
+            feedbackEmail: self::stringOrNull($payload['feedback_email'] ?? null),
+            feedbackMobile: self::stringOrNull($payload['feedback_mobile'] ?? null),
             confirmLiveTransfer: (bool) ($payload['confirm_live_transfer'] ?? false),
             runReference: self::stringOrNull($payload['run_reference'] ?? null),
         );

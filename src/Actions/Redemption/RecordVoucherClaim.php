@@ -13,6 +13,10 @@ class RecordVoucherClaim
 {
     use AsAction;
 
+    public function __construct(
+        protected QueueVoucherRedemptionFeedback $queueFeedback,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $payload
      */
@@ -71,6 +75,8 @@ class RecordVoucherClaim
         ]);
 
         $this->markVoucherRedeemedWhenFullyClaimed($voucher, $result);
+        $claim->setRelation('voucher', $voucher);
+        $this->queueFeedback->handle($claim, $result);
 
         return $claim;
     }

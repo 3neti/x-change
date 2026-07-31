@@ -1242,6 +1242,19 @@ return [
             'date_of_birth' => 'birth_date',
             'otp_code' => 'otp',
         ],
+        'feedback' => [
+            'enabled' => (bool) env('XCHANGE_REDEMPTION_FEEDBACK_ENABLED', true),
+            'queue' => env('XCHANGE_REDEMPTION_FEEDBACK_QUEUE', 'x-change-feedback'),
+            'terminal_claim_statuses' => [
+                'succeeded',
+                'redeemed',
+                'withdrawn',
+            ],
+            'webhook' => [
+                'secret' => env('XCHANGE_REDEMPTION_FEEDBACK_WEBHOOK_SECRET'),
+                'headers' => [],
+            ],
+        ],
     ],
     'payout' => [
         'provider' => env('XCHANGE_PAYOUT_PROVIDER', NetbankPayoutProvider::class),

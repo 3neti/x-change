@@ -150,6 +150,18 @@ final class LifecycleScenarioEngine
             );
         }
 
+        if ($mode === 'feedback_delivery' && $options->liveFeedback && $options->runReference === null) {
+            return $this->result(
+                exitCode: Command::FAILURE,
+                payload: [
+                    'success' => false,
+                    'message' => 'Live feedback lifecycle scenarios require a stable --run-reference.',
+                    'scenario' => $scenarioKey,
+                    'mode' => $mode,
+                ],
+            );
+        }
+
         if (
             ! in_array($mode, ['turnkey_onboarding', 'live_provider_verification'], true)
             && $output->isJson()
@@ -195,6 +207,7 @@ final class LifecycleScenarioEngine
             'treasury_basic_cash',
             'treasury_live_basic_cash',
             'treasury_onboarding_grant',
+            'feedback_delivery',
         ], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,
@@ -272,6 +285,9 @@ final class LifecycleScenarioEngine
             'poll' => $bootstrap->poll,
             'max_polls' => $bootstrap->maxPolls,
             'approval_pipeline' => $options->approvalPipeline,
+            'live_feedback' => $options->liveFeedback,
+            'feedback_email' => $options->feedbackEmail,
+            'feedback_mobile' => $options->feedbackMobile,
             'confirm_live_transfer' => $options->confirmLiveTransfer,
             'run_reference' => $options->runReference,
         ];
@@ -380,6 +396,9 @@ final class LifecycleScenarioEngine
             ...(array) data_get($scenario, '_runtime', []),
             'selected_attempt' => $options->onlyAttempt,
             'approval_pipeline' => $options->approvalPipeline,
+            'live_feedback' => $options->liveFeedback,
+            'feedback_email' => $options->feedbackEmail,
+            'feedback_mobile' => $options->feedbackMobile,
             'confirm_live_transfer' => $options->confirmLiveTransfer,
             'run_reference' => $options->runReference,
             'amount' => $options->amount,

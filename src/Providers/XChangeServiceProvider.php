@@ -57,6 +57,9 @@ use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityComm
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Feedback\ShowFeedbackHistoryCommand;
+use LBHurtado\XChange\Console\Commands\Feedback\TestFeedbackEmailCommand;
+use LBHurtado\XChange\Console\Commands\Feedback\TestFeedbackSmsCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ApproveFundingRequestCommand;
 use LBHurtado\XChange\Console\Commands\Funding\AttestAccountFundingPayCodeJournalIntegrityCommand;
 use LBHurtado\XChange\Console\Commands\Funding\BackfillAccountFundingPayCodeJournalCommand;
@@ -70,6 +73,7 @@ use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioGroupCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OnboardIssuerCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
+use LBHurtado\XChange\Console\Commands\Onboarding\VerifyTestMobileCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
@@ -141,6 +145,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
+use LBHurtado\XChange\Contracts\FeedbackDeliveryJournalWriterContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
@@ -301,6 +306,8 @@ use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionD
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
+use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
+use LBHurtado\XChange\Services\Feedback\XJournalFeedbackDeliveryWriter;
 use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
 use LBHurtado\XChange\Services\Funding\BroadcastFundingProjectionPublisher;
 use LBHurtado\XChange\Services\Funding\ConfigSystemAccountFundingPayCodeAuthorization;
@@ -359,6 +366,7 @@ use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
+use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -380,6 +388,15 @@ class XChangeServiceProvider extends ServiceProvider
         $this->alignVoucherDefaults();
         $this->alignAccountSystemUser();
         $this->alignSettlementEnvelopeDefaults();
+        $this->app->afterResolving(
+            FeedbackChannelRegistryContract::class,
+            static function (FeedbackChannelRegistryContract $registry): void {
+                $registry->register(
+                    'sms',
+                    QueuedEngageSparkSmsFeedbackChannelDriver::class,
+                );
+            },
+        );
         $this->app->singleton(QrPhSimulatorFundingProviderAdapter::class);
         $this->app->tag(
             QrPhSimulatorFundingProviderAdapter::class,
@@ -970,6 +987,11 @@ class XChangeServiceProvider extends ServiceProvider
             ExecutionResultHandoffPipeline::class,
         );
 
+        $this->app->bind(
+            FeedbackDeliveryJournalWriterContract::class,
+            XJournalFeedbackDeliveryWriter::class,
+        );
+
         $this->app->bind(ExecutionResultHandoffSummaryJournalWriterContract::class, function ($app) {
             $service = $this->executionResultHandoffService(
                 'summary_journal_writer',
@@ -1069,6 +1091,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->commands([
                 OnboardIssuerCommand::class,
                 OpenIssuerWalletCommand::class,
+                VerifyTestMobileCommand::class,
                 GetWalletBalanceCommand::class,
                 EstimatePayCodeCostCommand::class,
                 GeneratePayCodeCommand::class,
@@ -1087,6 +1110,9 @@ class XChangeServiceProvider extends ServiceProvider
                 VerifyOpenPaymentAttemptsCommand::class,
                 SyncStandingFundingAddressesCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
+                TestFeedbackEmailCommand::class,
+                TestFeedbackSmsCommand::class,
+                ShowFeedbackHistoryCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
                 RunLifecycleScenarioCommand::class,
@@ -1655,12 +1681,27 @@ class XChangeServiceProvider extends ServiceProvider
             });
 
             Fortify::loginView(fn (Request $request) => Inertia::render('auth/Login', [
-                'canResetPassword' => false,
+                'canResetPassword' => Features::enabled(Features::resetPasswords()),
                 'canRegister' => Features::enabled(Features::registration()),
                 'status' => $request->session()->get('status'),
                 'auth_intent' => app(ClaimAuthenticationIntent::class)->current($request),
             ]));
 
+            Fortify::requestPasswordResetLinkView(
+                fn (Request $request) => Inertia::render(
+                    'x-change/auth/ForgotPin',
+                    ['status' => $request->session()->get('status')],
+                ),
+            );
+            Fortify::resetPasswordView(
+                fn (Request $request) => Inertia::render(
+                    'x-change/auth/ResetPin',
+                    [
+                        'email' => $request->email,
+                        'token' => $request->route('token'),
+                    ],
+                ),
+            );
             Fortify::registerView(fn () => Inertia::render('auth/Register'));
         });
     }

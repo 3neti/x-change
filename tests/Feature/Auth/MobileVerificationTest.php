@@ -155,3 +155,40 @@ it('blocks QR Ph simulation before mobile verification and creates no Funding In
 
     expect(FundingIntent::query()->count())->toBe(0);
 });
+
+it('marks a local test mobile as verified for protected workflow testing', function () {
+    config()->set('auth.providers.users.model', User::class);
+
+    $user = actingAsTestUser();
+    $user->forceFill([
+        'mobile' => '639467438575',
+        'mobile_verified_at' => null,
+    ])->save();
+
+    $this->artisan('x-change:onboarding:verify-test-mobile', [
+        'mobile' => '09467438575',
+    ])
+        ->expectsOutputToContain('Mobile 639467438575 is verified')
+        ->assertSuccessful();
+
+    expect($user->refresh()->getAttribute('mobile_verified_at'))->not->toBeNull();
+});
+
+it('refuses the local test mobile verifier in production without force', function () {
+    config()->set('app.env', 'production');
+    config()->set('auth.providers.users.model', User::class);
+
+    $user = actingAsTestUser();
+    $user->forceFill([
+        'mobile' => '639467438575',
+        'mobile_verified_at' => null,
+    ])->save();
+
+    $this->artisan('x-change:onboarding:verify-test-mobile', [
+        'mobile' => '09467438575',
+    ])
+        ->expectsOutputToContain('limited to local/testing environments')
+        ->assertFailed();
+
+    expect($user->refresh()->getAttribute('mobile_verified_at'))->toBeNull();
+});

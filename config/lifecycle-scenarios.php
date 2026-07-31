@@ -1951,5 +1951,20 @@ return [
             ],
         ],
 
+        'feedback_email_sms' => [
+            'label' => 'Feedback Email and SMS',
+            'description' => 'Previews or directly delivers email and SMS through x-feedback, with append-only x-journal evidence and no voucher or money movement.',
+            'category' => 'feedback',
+            'tags' => ['feedback', 'email', 'sms', 'journal'],
+            'mode' => 'feedback_delivery',
+            'mobile' => env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987'),
+            'feedback' => [
+                'email' => env('XCHANGE_LIFECYCLE_FEEDBACK_EMAIL'),
+                'mobile' => env('XCHANGE_LIFECYCLE_FEEDBACK_MOBILE'),
+                'subject' => 'X-Change lifecycle feedback test',
+                'message' => 'X-Change lifecycle feedback delivery is configured and working.',
+            ],
+        ],
+
     ],
 ];
