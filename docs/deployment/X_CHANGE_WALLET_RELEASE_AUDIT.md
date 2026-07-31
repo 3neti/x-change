@@ -6,12 +6,13 @@ Read-only audit performed on 2026-07-31.
 
 ```text
 package:        3neti/wallet
-repository:     git@github.com:3neti/wallet.git
-branch:         main
-head:           3469f5f4938ace13ea1573bf7c2d01962bfb3444
-remote parity:  HEAD == origin/main
-latest tag:     v1.1.0
-classification: release-after-fix
+repository:       git@github.com:3neti/wallet.git
+branch:           main
+runtime head:     3469f5f4938ace13ea1573bf7c2d01962bfb3444
+cleanup commit:   b9a1706
+remote state:     local main is one cleanup commit ahead of origin/main
+latest tag:       v1.1.0
+classification:   release-after-fix
 ```
 
 No wallet source, configuration, manifest, lock file, repository, remote, or
@@ -45,8 +46,16 @@ docs/architecture/treasury/.DS_Store
 ```
 
 They are untracked Finder metadata. No wallet source or tracked file was dirty.
-They must be removed and ignored before release preparation, but they do not
-represent uncommitted Treasury work.
+They did not represent uncommitted Treasury work.
+
+The cleanup was completed in wallet commit `b9a1706`:
+
+- both Finder files were removed;
+- `.DS_Store` is ignored at every repository depth; and
+- no runtime or Composer file changed.
+
+The wallet worktree is clean after that commit. The cleanup commit has not been
+pushed by this documentation slice.
 
 ## Verification evidence
 
@@ -200,7 +209,8 @@ external actions.
 
 ```text
 source integrity:       pass
-remote parity:          pass
+worktree cleanliness:   pass
+remote parity:          pending cleanup push
 package tests:          pass
 manifest structure:     pass
 release documentation:  fail
