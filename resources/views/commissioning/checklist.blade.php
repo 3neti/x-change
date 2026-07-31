@@ -13,6 +13,13 @@
         <p class="eyebrow">Protected operator checklist</p>
         <h1>Commission X-Change</h1>
         <p>Current state: <strong>{{ str($commissioning->state->value)->replace('_', ' ')->title() }}</strong></p>
+        <p class="checked">Checked {{ $checkedAt->toDayDateTimeString() }}</p>
+        <nav class="actions" aria-label="Commissioning actions">
+            <a class="button secondary" href="{{ route('x-change.commissioning.checklist') }}">Run checks again</a>
+            @if ($commissioning->isOperational())
+                <a class="button" href="{{ route('x-change.cockpit.dashboard') }}">Open Cockpit</a>
+            @endif
+        </nav>
         <ol>
             <li><code>php artisan x-change:configure --profile={{ $readiness['profile'] }}</code></li>
             <li>Supply the missing deployment secrets and runtime values below.</li>
@@ -31,6 +38,20 @@
             <h2>Missing variables</h2>
             <ul>@foreach ($readiness['missing_variables'] as $variable)<li><code>{{ $variable }}</code></li>@endforeach</ul>
         @endif
+        <h2>Runtime processes</h2>
+        <p>Configuration checks cannot prove that workers are running. Keep these responsibilities active after deployment.</p>
+        <h3>Required queues</h3>
+        <p><code>{{ implode(', ', $runtime['queues']) }}</code></p>
+        <h3>Local development</h3>
+        <ul>
+            <li><code>{{ $runtime['local']['queue'] }}</code></li>
+            <li><code>{{ $runtime['local']['scheduler'] }}</code></li>
+            <li><code>{{ $runtime['local']['reverb'] }}</code> — {{ $runtime['broadcasting_required'] ? 'required by the active Reverb configuration' : 'optional while funding broadcasts are disabled' }}</li>
+        </ul>
+        <h3>Laravel Cloud</h3>
+        <ul>@foreach ($runtime['cloud'] as $instruction)<li>{{ $instruction }}</li>@endforeach</ul>
+        <h3>Laravel Forge</h3>
+        <ul>@foreach ($runtime['forge'] as $instruction)<li>{{ $instruction }}</li>@endforeach</ul>
     </section>
 </main>
 </body>

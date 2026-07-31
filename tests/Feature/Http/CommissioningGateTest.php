@@ -50,4 +50,10 @@ it('allows ordinary routes after a matching manifest exists', function (): void 
 
     $this->get('/host-home')->assertSuccessful()->assertSee('host home');
     $this->getJson('/x/ready')->assertSuccessful()->assertJson(['ready' => true]);
+    $this->get('/x/commissioning')
+        ->assertSuccessful()
+        ->assertSee('X-Change is ready')
+        ->assertSee('Run checks again')
+        ->assertSee('Open Cockpit')
+        ->assertDontSee('Operator access token');
 });

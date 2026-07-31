@@ -14,8 +14,13 @@ final readonly class CommissioningStatusController
 
     public function __invoke(): Response
     {
+        $commissioning = $this->commissioning->resolve();
+
         return response()->view('x-change::commissioning.status', [
-            'state' => $this->commissioning->resolve()->state->value,
-        ], Response::HTTP_SERVICE_UNAVAILABLE, EnsureXChangeIsCommissioned::headers());
+            'commissioning' => $commissioning,
+            'checkedAt' => now(),
+        ], $commissioning->isOperational()
+            ? Response::HTTP_OK
+            : Response::HTTP_SERVICE_UNAVAILABLE, EnsureXChangeIsCommissioned::headers());
     }
 }

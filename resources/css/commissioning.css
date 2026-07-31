@@ -16,12 +16,18 @@ dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin: 
 dl div { padding: 1rem; border-radius: 1rem; background: #111827; }
 dt { color: #94a3b8; font-size: .75rem; text-transform: uppercase; }
 dd { margin: .35rem 0 0; font-weight: 700; text-transform: capitalize; }
-.operator { margin-bottom: 0; font-size: .875rem; }
+.operator, .checked { margin-bottom: 0; font-size: .875rem; }
+.checked { color: #94a3b8; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.25rem; }
+.button { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border: 1px solid #f97316; border-radius: .75rem; padding: .65rem .85rem; background: #f97316; color: #111827; font-weight: 800; text-decoration: none; }
+.button.secondary { border-color: #475569; background: #0f172a; color: #f8fafc; }
 form { display: grid; gap: .65rem; margin-top: 1.5rem; }
 label { color: #94a3b8; font-size: .8rem; font-weight: 700; }
 input, button { min-height: 2.75rem; border: 1px solid #475569; border-radius: .75rem; padding: .65rem .85rem; font: inherit; }
 input { background: #0f172a; color: #f8fafc; }
 button { border-color: #f97316; background: #f97316; color: #111827; font-weight: 800; cursor: pointer; }
 li { margin: .65rem 0; color: #cbd5e1; line-height: 1.45; }
+h2 { margin-top: 2rem; }
+h3 { margin: 1.5rem 0 .5rem; color: #e2e8f0; }
 code { color: #fdba74; overflow-wrap: anywhere; }
 @media (max-width: 34rem) { dl { grid-template-columns: 1fr; } }

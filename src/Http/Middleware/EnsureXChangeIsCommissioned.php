@@ -25,15 +25,16 @@ final readonly class EnsureXChangeIsCommissioned
 
     public function handle(Request $request, Closure $next): SymfonyResponse
     {
+        $state = $this->commissioning->resolve();
+
         if (
             ! (bool) config('x-change.commissioning.enabled', true)
             || in_array(trim($request->path(), '/'), self::AllowedPaths, true)
-            || $this->commissioning->resolve()->isOperational()
+            || $state->isOperational()
         ) {
             return $next($request);
         }
 
-        $state = $this->commissioning->resolve();
         $headers = $this->headers();
 
         if ($request->expectsJson() || str_starts_with($request->path(), 'api/')) {
@@ -45,7 +46,8 @@ final readonly class EnsureXChangeIsCommissioned
         }
 
         return response()->view('x-change::commissioning.status', [
-            'state' => $state->state->value,
+            'commissioning' => $state,
+            'checkedAt' => now(),
         ], Response::HTTP_SERVICE_UNAVAILABLE, $headers);
     }
 

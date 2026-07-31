@@ -231,7 +231,7 @@ Set `XCHANGE_COMMISSIONING_ACCESS_TOKEN` to expose the detailed, read-only
 operator checklist at `/x/commissioning/checklist`. The token is submitted by
 POST, never placed in a URL, and rotating it invalidates existing checklist
 sessions. When and only when `APP_ENV=local` and no token is configured, the
-known development PIN `537537` is accepted for local setup convenience. It is
+known development PIN `317537` is accepted for local setup convenience. It is
 never accepted in production, staging, testing, or other environments. Never
 deploy a live provider profile with `APP_ENV=local`; deployments must configure
 a strong, unique token. Existing deployments may create their first manifest
@@ -247,6 +247,21 @@ The adoption command refuses incomplete identity or Treasury topology. The
 installation manifest contains only the profile, connection references,
 package/manifest versions, completion time, and an HMAC fingerprint. It stores
 no credential or provider response.
+
+The protected checklist also records the runtime responsibilities that static
+configuration cannot prove. For local development, keep these processes active:
+
+```bash
+php artisan queue:work database --queue=x-change-funding,x-change-feedback,default --sleep=3 --timeout=60
+php artisan schedule:work
+php artisan reverb:start # only when Reverb broadcasting is enabled
+```
+
+On Laravel Cloud, use Managed Queues or a Worker cluster, enable the Scheduler,
+and attach managed WebSockets when needed. On Laravel Forge, configure the Queue
+Worker, Laravel Scheduler, and optional Reverb integrations in the site UI.
+Production does not run `schedule:work`, and managed Reverb does not run a
+second application-owned `reverb:start` process.
 
 ---
 

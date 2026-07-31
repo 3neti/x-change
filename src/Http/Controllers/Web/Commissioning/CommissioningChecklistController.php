@@ -11,6 +11,7 @@ use Illuminate\Http\Response;
 use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
+use LBHurtado\XChange\Services\Configuration\RuntimeOperationsChecklist;
 
 final readonly class CommissioningChecklistController
 {
@@ -18,6 +19,7 @@ final readonly class CommissioningChecklistController
         private Application $application,
         private CommissioningStateResolver $commissioning,
         private PreInstallReadinessInspector $readiness,
+        private RuntimeOperationsChecklist $runtimeOperations,
     ) {}
 
     public function show(Request $request): Response
@@ -27,6 +29,8 @@ final readonly class CommissioningChecklistController
         return response()->view('x-change::commissioning.checklist', [
             'commissioning' => $this->commissioning->resolve(),
             'readiness' => $this->readiness->inspect(),
+            'runtime' => $this->runtimeOperations->describe(),
+            'checkedAt' => now(),
         ], Response::HTTP_OK, EnsureXChangeIsCommissioned::headers());
     }
 

@@ -23,7 +23,13 @@ it('protects the detailed commissioning checklist with a rotated session-bound t
     $this->get('/x/commissioning/checklist')
         ->assertSuccessful()
         ->assertSee('Commission X-Change')
-        ->assertSee('Deployment Configuration');
+        ->assertSee('Deployment Configuration')
+        ->assertSee('Runtime processes')
+        ->assertSee('x-change-funding, x-change-feedback, default')
+        ->assertSee('php artisan queue:work database --queue=x-change-funding,x-change-feedback,default --sleep=3 --timeout=60')
+        ->assertSee('php artisan schedule:work')
+        ->assertSee('Run checks again')
+        ->assertDontSee('Open Cockpit');
 
     config()->set('x-change.commissioning.access_token', 'commissioning-secret-two');
 
@@ -38,7 +44,7 @@ it('allows the fixed fallback token only for an unconfigured local application',
     $this->withSession(['_token' => 'commissioning-test-csrf'])
         ->post('/x/commissioning/checklist', [
             '_token' => 'commissioning-test-csrf',
-            'access_token' => '537537',
+            'access_token' => '317537',
         ])->assertRedirect('/x/commissioning/checklist');
 
     $this->get('/x/commissioning/checklist')
@@ -54,7 +60,7 @@ it('uses an explicit local token instead of the fixed fallback', function (): vo
     $this->withSession(['_token' => 'commissioning-test-csrf'])
         ->post('/x/commissioning/checklist', [
             '_token' => 'commissioning-test-csrf',
-            'access_token' => '537537',
+            'access_token' => '317537',
         ])->assertNotFound();
 
     $this->post('/x/commissioning/checklist', [
@@ -71,7 +77,7 @@ it('invalidates a local fallback session when an explicit token is configured', 
     $this->withSession(['_token' => 'commissioning-test-csrf'])
         ->post('/x/commissioning/checklist', [
             '_token' => 'commissioning-test-csrf',
-            'access_token' => '537537',
+            'access_token' => '317537',
         ])->assertRedirect('/x/commissioning/checklist');
 
     config()->set('x-change.commissioning.access_token', 'replacement-secret');
@@ -87,7 +93,7 @@ it('rejects the fixed fallback token outside the local environment', function (s
     $this->withSession(['_token' => 'commissioning-test-csrf'])
         ->post('/x/commissioning/checklist', [
             '_token' => 'commissioning-test-csrf',
-            'access_token' => '537537',
+            'access_token' => '317537',
         ])->assertNotFound();
 
     $this->get('/x/commissioning/checklist')->assertNotFound();
