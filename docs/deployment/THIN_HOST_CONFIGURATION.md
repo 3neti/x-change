@@ -75,3 +75,7 @@ Configuration files are not published during normal installation. Provider failu
 The canonical scenario catalog lives in `3neti/x-change/config/lifecycle-scenarios.php`. Hosts should not publish or copy it. The lifecycle user model resolves through the model provider of the configured default authentication guard; `XCHANGE_LIFECYCLE_USER_MODEL` remains an explicit compatibility override.
 
 Provider packages may implement `LifecycleScenarioContributor` and tag the implementation with that contract name. Contributed scenario keys must not replace package or deployment scenarios.
+
+## Source-code changes
+
+Package source is developed in a real local clone and released through immutable Git tags. The host's `vendor/` directory is never a source workspace. For the clone, optional Composer path-link, release, host-adoption, and AI-agent workflow, see [Package development workflow](./PACKAGE_DEVELOPMENT_WORKFLOW.md).
