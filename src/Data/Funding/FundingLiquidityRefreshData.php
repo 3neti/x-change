@@ -14,16 +14,17 @@ final readonly class FundingLiquidityRefreshData
         public int $failed,
         public int $busy,
         public int $unavailable,
+        public int $reviewRequired,
         public array $connections,
     ) {}
 
     public function succeeded(): bool
     {
-        return $this->refreshed > 0;
+        return ($this->refreshed + $this->reviewRequired) > 0;
     }
 
     public function hasIncompleteConnections(): bool
     {
-        return ($this->failed + $this->busy + $this->unavailable) > 0;
+        return ($this->failed + $this->busy + $this->unavailable + $this->reviewRequired) > 0;
     }
 }

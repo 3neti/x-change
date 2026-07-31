@@ -43,6 +43,7 @@ final class RefreshTreasuryLiquidityCommand extends Command
             'failed' => $result->failed,
             'busy' => $result->busy,
             'unavailable' => $result->unavailable,
+            'review_required' => $result->reviewRequired,
             'financial_posting' => false,
         ];
 

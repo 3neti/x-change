@@ -74,6 +74,27 @@ class ProviderBalanceSnapshotStore
         return $snapshot->refresh();
     }
 
+    public function recordReviewRequired(
+        string $providerCode,
+        string $balanceKey,
+        string $reason,
+        string $scopeKey = self::GlobalScope,
+    ): ?ProviderBalanceSnapshot {
+        $snapshot = $this->find($providerCode, $balanceKey, $scopeKey);
+
+        if ($snapshot === null) {
+            return null;
+        }
+
+        $snapshot->forceFill([
+            'refresh_status' => 'review_required',
+            'failure_reason' => $reason,
+            'last_refresh_failed_at' => null,
+        ])->save();
+
+        return $snapshot->refresh();
+    }
+
     private function dateTime(mixed $value): ?CarbonImmutable
     {
         if ($value === null) {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Cache;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryPositionData;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -102,6 +104,58 @@ it('refreshes the cached provider liquidity from the package-owned command', fun
     expect(ProviderBalanceSnapshot::query()->sole())
         ->available_balance_minor->toBe(32_838)
         ->refresh_status->toBe('fresh');
+});
+
+it('requires reconciliation when refreshed provider liquidity is below Treasury Inventory', function () {
+    $operator = enableNetbankTreasuryForTests();
+    $this->actingAs($operator);
+    $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $readiness->shouldReceive('handle')->once()->andReturn([
+        'enabled' => true,
+        'ready' => true,
+        'checked' => true,
+        'balance_minor' => 32_838,
+        'available_balance_minor' => 32_838,
+        'currency' => 'PHP',
+        'fetched_at' => now()->toIso8601String(),
+    ]);
+    app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
+    app()->instance(
+        TreasuryInventoryPositionReadModelContract::class,
+        new class implements TreasuryInventoryPositionReadModelContract
+        {
+            public function find(string $inventoryReference): ?TreasuryInventoryPositionData
+            {
+                return new TreasuryInventoryPositionData(
+                    inventoryReference: $inventoryReference,
+                    settlementResourceReference: 'resource:netbank:corporate-vca',
+                    resourceType: 'cash_at_bank',
+                    currency: 'PHP',
+                    status: 'active',
+                    balanceMinor: 346_038,
+                    version: 1,
+                    lastOperationReference: null,
+                    hasTreasuryFacts: true,
+                );
+            }
+
+            public function operationExists(string $operationReference): bool
+            {
+                return false;
+            }
+        },
+    );
+
+    $this->post(route('x-change.cockpit.funding.liquidity-refreshes.store'))
+        ->assertRedirect(route('x-change.cockpit.funding.index'))
+        ->assertSessionHasErrors([
+            'liquidity_refresh' => 'Provider liquidity was refreshed, but it is below recognized Treasury Inventory. Issuance Capacity remains unavailable pending reconciliation.',
+        ]);
+
+    expect(ProviderBalanceSnapshot::query()->sole())
+        ->available_balance_minor->toBe(32_838)
+        ->refresh_status->toBe('review_required')
+        ->failure_reason->toBe('Provider liquidity is below recognized Treasury Inventory.');
 });
 
 it('registers a non-overlapping provider liquidity refresh schedule', function () {

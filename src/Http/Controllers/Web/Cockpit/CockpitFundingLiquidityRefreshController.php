@@ -38,6 +38,14 @@ final class CockpitFundingLiquidityRefreshController extends Controller
                 ]);
         }
 
+        if ($result->reviewRequired > 0) {
+            return redirect()
+                ->route('x-change.cockpit.funding.index')
+                ->withErrors([
+                    'liquidity_refresh' => 'Provider liquidity was refreshed, but it is below recognized Treasury Inventory. Issuance Capacity remains unavailable pending reconciliation.',
+                ]);
+        }
+
         return redirect()
             ->route('x-change.cockpit.funding.index')
             ->with(

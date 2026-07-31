@@ -6,10 +6,12 @@ namespace LBHurtado\XChange\Actions\Funding;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Cache;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Data\Funding\FundingLiquidityRefreshData;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
+use LBHurtado\XChange\Services\ProviderBalanceSnapshotStore;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use Throwable;
 
@@ -19,6 +21,8 @@ final readonly class RefreshFundingLiquidity
         private TreasuryProviderConnectionCatalog $connections,
         private BuildBalanceOverview $balances,
         private AuditLoggerContract $audit,
+        private TreasuryInventoryPositionReadModelContract $inventories,
+        private ProviderBalanceSnapshotStore $snapshots,
     ) {}
 
     public function handle(Authenticatable $operator): FundingLiquidityRefreshData
@@ -37,6 +41,7 @@ final readonly class RefreshFundingLiquidity
             failed: $this->count($outcomes, 'failed'),
             busy: $this->count($outcomes, 'busy'),
             unavailable: $this->count($outcomes, 'unavailable'),
+            reviewRequired: $this->count($outcomes, 'review_required'),
             connections: $outcomes,
         );
     }
@@ -76,6 +81,15 @@ final readonly class RefreshFundingLiquidity
                 );
             $status = $this->outcome($balance);
 
+            if ($status === 'refreshed' && $this->providerLiquidityIsBelowInventory($connection, $balance)) {
+                $this->snapshots->recordReviewRequired(
+                    $this->runtimeProvider($connection->provider),
+                    (string) ($balance['key'] ?? ''),
+                    'Provider liquidity is below recognized Treasury Inventory.',
+                );
+                $status = 'review_required';
+            }
+
             $this->recordOutcome($operator, $connection, $status);
 
             return $status;
@@ -103,6 +117,27 @@ final readonly class RefreshFundingLiquidity
             ['disabled', 'not_checked', 'unavailable'],
             true,
         ) ? 'unavailable' : 'failed';
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $balance
+     */
+    private function providerLiquidityIsBelowInventory(
+        TreasuryProviderConnectionData $connection,
+        ?array $balance,
+    ): bool {
+        if ($balance === null) {
+            return false;
+        }
+
+        $providerLiquidityMinor = $balance['available_balance_minor']
+            ?? $balance['balance_minor']
+            ?? null;
+        $inventory = $this->inventories->find($connection->inventoryReference);
+
+        return is_numeric($providerLiquidityMinor)
+            && $inventory !== null
+            && (int) $providerLiquidityMinor < $inventory->balanceMinor;
     }
 
     private function runtimeProvider(string $provider): string
