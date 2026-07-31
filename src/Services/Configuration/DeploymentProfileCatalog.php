@@ -29,7 +29,7 @@ final readonly class DeploymentProfileCatalog
 
         if (
             $name === 'development'
-            && mb_strtolower((string) config('app.env')) === 'production'
+            && app()->environment('production')
         ) {
             throw new RuntimeException('The development deployment profile is forbidden in production.');
         }

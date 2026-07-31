@@ -36,10 +36,13 @@ it('requires explicit custom connection references', function (): void {
 });
 
 it('forbids the development profile in production', function (): void {
-    config()->set('app.env', 'production');
+    $environment = app()->environment();
+    app()->instance('env', 'production');
 
     expect(fn () => profileCatalog([])->resolve('development'))
         ->toThrow(RuntimeException::class, 'forbidden');
+
+    app()->instance('env', $environment);
 });
 
 /**

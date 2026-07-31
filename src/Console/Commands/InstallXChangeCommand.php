@@ -56,31 +56,6 @@ class InstallXChangeCommand extends Command
     ): int {
         $this->components->info('Installing X-Change...');
 
-        if ($this->option('profile') !== null) {
-            config()->set('x-change.deployment.profile', $this->option('profile'));
-        }
-
-        try {
-            $deployment = $deploymentConfiguration->inspect();
-        } catch (Throwable $exception) {
-            $this->components->error($exception->getMessage());
-
-            return self::FAILURE;
-        }
-
-        if (! $deployment['ready']) {
-            $this->components->error(
-                'Deployment configuration is incomplete: '
-                .implode(', ', $deployment['missing_variables']).'.',
-            );
-            $this->components->warn(
-                'Run [php artisan x-change:configure --profile='
-                .$deployment['profile'].'] to refresh the sanitized environment checklist.',
-            );
-
-            return self::FAILURE;
-        }
-
         $capitalizationConnections = [];
         $freshDatabase = (bool) $this->option('fresh-database');
         $initializedConnections = [];
@@ -218,6 +193,31 @@ class InstallXChangeCommand extends Command
             $this->components->error(
                 'System-principal provisioning requires '
                 .'[--system-principal-authorization-reference].',
+            );
+
+            return self::FAILURE;
+        }
+
+        if ($this->option('profile') !== null) {
+            config()->set('x-change.deployment.profile', $this->option('profile'));
+        }
+
+        try {
+            $deployment = $deploymentConfiguration->inspect();
+        } catch (Throwable $exception) {
+            $this->components->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if (! $deployment['ready']) {
+            $this->components->error(
+                'Deployment configuration is incomplete: '
+                .implode(', ', $deployment['missing_variables']).'.',
+            );
+            $this->components->warn(
+                'Run [php artisan x-change:configure --profile='
+                .$deployment['profile'].'] to refresh the sanitized environment checklist.',
             );
 
             return self::FAILURE;
@@ -377,8 +377,6 @@ class InstallXChangeCommand extends Command
             $this->components->task('Stamping Cockpit published asset warnings', function () use ($publishedAssets): void {
                 $publishedAssets->applyGeneratedHeaders();
             });
-
-            $this->publishOnboardingAssets($force);
 
             if (! $this->option('no-auth')) {
                 $this->components->task('Publishing mobile-first auth scaffold', function () use ($force): void {
@@ -657,24 +655,6 @@ class InstallXChangeCommand extends Command
         $this->newLine();
 
         return self::SUCCESS;
-    }
-
-    protected function publishOnboardingAssets(bool $force): void
-    {
-        $provider = 'LBHurtado\\Onboarding\\OnboardingServiceProvider';
-
-        if (! class_exists($provider)) {
-            $this->components->warn('3neti/onboarding is not installed; skipping onboarding publish steps.');
-
-            return;
-        }
-
-        $this->components->task('Publishing onboarding config', function () use ($force): void {
-            $this->callSilently('vendor:publish', [
-                '--tag' => 'onboarding-config',
-                '--force' => $force,
-            ]);
-        });
     }
 
     protected function publishOnboardingMigrations(bool $force): void
