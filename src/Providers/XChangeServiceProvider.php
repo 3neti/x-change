@@ -27,6 +27,7 @@ use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
+use LBHurtado\EmiCore\Contracts\DeploymentConnectionContributor;
 use LBHurtado\EmiCore\Contracts\DeploymentEnvironmentContributor;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
@@ -264,7 +265,10 @@ use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\Configuration\CoreDeploymentEnvironmentContributor;
+use LBHurtado\XChange\Services\Configuration\DeploymentConnectionCatalog;
 use LBHurtado\XChange\Services\Configuration\DeploymentEnvironmentCatalog;
+use LBHurtado\XChange\Services\Configuration\DeploymentProfileCatalog;
+use LBHurtado\XChange\Services\Configuration\DeploymentTreasuryConnectionConfiguration;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
 use LBHurtado\XChange\Services\DefaultClaimApprovalExecutionService;
@@ -391,6 +395,14 @@ class XChangeServiceProvider extends ServiceProvider
                 $app->tagged(DeploymentEnvironmentContributor::class),
             ),
         );
+        $this->app->singleton(
+            DeploymentConnectionCatalog::class,
+            fn ($app): DeploymentConnectionCatalog => new DeploymentConnectionCatalog(
+                $app->tagged(DeploymentConnectionContributor::class),
+            ),
+        );
+        $this->app->singleton(DeploymentProfileCatalog::class);
+        $this->app->singleton(DeploymentTreasuryConnectionConfiguration::class);
 
         if ($this->mobileFirstAuthEnabled()) {
             $this->app['config']->set('fortify.username', 'mobile');
@@ -436,8 +448,8 @@ class XChangeServiceProvider extends ServiceProvider
         );
         $this->app->singleton(
             TreasuryProviderConnectionCatalog::class,
-            fn (): TreasuryProviderConnectionCatalog => new TreasuryProviderConnectionCatalog(
-                (array) config('x-change.treasury.connections', []),
+            fn ($app): TreasuryProviderConnectionCatalog => new TreasuryProviderConnectionCatalog(
+                $app->make(DeploymentTreasuryConnectionConfiguration::class)->resolve(),
             ),
         );
         $this->app->singleton(

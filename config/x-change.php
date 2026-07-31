@@ -169,6 +169,10 @@ return [
 
     'deployment' => [
         'profile' => env('XCHANGE_DEPLOYMENT_PROFILE', 'development'),
+        'custom_connections' => array_values(array_filter(array_map(
+            static fn (string $reference): string => trim($reference),
+            explode(',', (string) env('XCHANGE_ACTIVE_CONNECTIONS', '')),
+        ))),
     ],
 
     'product' => [

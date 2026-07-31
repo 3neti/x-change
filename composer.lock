@@ -127,16 +127,16 @@
         },
         {
             "name": "3neti/emi-core",
-            "version": "v2.0.0-beta.3",
+            "version": "v2.0.0-beta.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-core.git",
-                "reference": "e4ec8236451e8137c07dff1dcc2e41218ed75d1a"
+                "reference": "a24155ccc372725e8b33003c3df6b96d33bdfd86"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-core/zipball/e4ec8236451e8137c07dff1dcc2e41218ed75d1a",
-                "reference": "e4ec8236451e8137c07dff1dcc2e41218ed75d1a",
+                "url": "https://api.github.com/repos/3neti/emi-core/zipball/a24155ccc372725e8b33003c3df6b96d33bdfd86",
+                "reference": "a24155ccc372725e8b33003c3df6b96d33bdfd86",
                 "shasum": ""
             },
             "require": {
@@ -176,22 +176,22 @@
             "description": "Provider-agnostic EMI domain: contracts, enums, models, DTOs, events",
             "support": {
                 "issues": "https://github.com/3neti/emi-core/issues",
-                "source": "https://github.com/3neti/emi-core/tree/v2.0.0-beta.3"
+                "source": "https://github.com/3neti/emi-core/tree/v2.0.0-beta.4"
             },
-            "time": "2026-07-31T13:55:30+00:00"
+            "time": "2026-07-31T14:00:22+00:00"
         },
         {
             "name": "3neti/emi-netbank",
-            "version": "v2.1.0",
+            "version": "v2.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-netbank.git",
-                "reference": "2e020403c957a2d9f453f5fc142f37c978bda9a3"
+                "reference": "32f3c6c4ee5ec7e676d788314575ad0fbae34272"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-netbank/zipball/2e020403c957a2d9f453f5fc142f37c978bda9a3",
-                "reference": "2e020403c957a2d9f453f5fc142f37c978bda9a3",
+                "url": "https://api.github.com/repos/3neti/emi-netbank/zipball/32f3c6c4ee5ec7e676d788314575ad0fbae34272",
+                "reference": "32f3c6c4ee5ec7e676d788314575ad0fbae34272",
                 "shasum": ""
             },
             "require": {
@@ -244,22 +244,22 @@
             "description": "NetBank EMI provider adapter for emi-core",
             "support": {
                 "issues": "https://github.com/3neti/emi-netbank/issues",
-                "source": "https://github.com/3neti/emi-netbank/tree/v2.1.0"
+                "source": "https://github.com/3neti/emi-netbank/tree/v2.2.0"
             },
-            "time": "2026-07-31T07:59:10+00:00"
+            "time": "2026-07-31T14:02:50+00:00"
         },
         {
             "name": "3neti/emi-paynamics",
-            "version": "v2.0.0-beta.1",
+            "version": "v2.0.0-beta.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-paynamics.git",
-                "reference": "5d77fe3a45004bfded01e713ad2b8220c528eda2"
+                "reference": "d79214dc5a3409425574df8d793ad1d0872fc449"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-paynamics/zipball/5d77fe3a45004bfded01e713ad2b8220c528eda2",
-                "reference": "5d77fe3a45004bfded01e713ad2b8220c528eda2",
+                "url": "https://api.github.com/repos/3neti/emi-paynamics/zipball/d79214dc5a3409425574df8d793ad1d0872fc449",
+                "reference": "d79214dc5a3409425574df8d793ad1d0872fc449",
                 "shasum": ""
             },
             "require": {
@@ -302,9 +302,9 @@
             "description": "Paynamics Constellation adapter for EMI core",
             "support": {
                 "issues": "https://github.com/3neti/emi-paynamics/issues",
-                "source": "https://github.com/3neti/emi-paynamics/tree/v2.0.0-beta.1"
+                "source": "https://github.com/3neti/emi-paynamics/tree/v2.0.0-beta.2"
             },
-            "time": "2026-07-31T09:56:20+00:00"
+            "time": "2026-07-31T14:04:42+00:00"
         },
         {
             "name": "3neti/form-flow",
