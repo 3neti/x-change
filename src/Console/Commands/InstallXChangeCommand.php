@@ -517,6 +517,7 @@ class InstallXChangeCommand extends Command
             }
         };
 
+        $this->publishHostMigrations($force);
         $this->publishOnboardingMigrations($force);
 
         // Run migrations
@@ -698,6 +699,16 @@ class InstallXChangeCommand extends Command
         $this->components->task('Publishing onboarding migrations', function () use ($force): void {
             $this->callSilently('vendor:publish', [
                 '--tag' => 'onboarding-migrations',
+                '--force' => $force,
+            ]);
+        });
+    }
+
+    protected function publishHostMigrations(bool $force): void
+    {
+        $this->components->task('Publishing x-change host migrations', function () use ($force): void {
+            $this->callSilently('vendor:publish', [
+                '--tag' => 'x-change-host-migrations',
                 '--force' => $force,
             ]);
         });
