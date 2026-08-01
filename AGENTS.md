@@ -1,5 +1,28 @@
 # x-change Agent Notes
 
+## Setup and deployment
+
+Use [DEPLOYMENT.md](./DEPLOYMENT.md) as the canonical deployment runbook.
+
+For normal local work, prefer:
+
+```bash
+php artisan x-change:setup
+```
+
+For deployment, inspect `x-change.deployment.yaml` and preview before applying:
+
+```bash
+php artisan x-change:deploy production --plan
+```
+
+An automated production deployment requires both `--confirm-production` and
+`--no-interaction`. Never add secret values to the manifest or committed
+environment examples. Stop when provider preflight, Treasury reconciliation,
+or remote commissioning fails. Do not replace `x-change:configure`,
+`x-change:install`, or `x-change:doctor`; they remain supported recovery
+primitives used by the simplified orchestration.
+
 ## Live Treasury lifecycle command
 
 When a user asks for the correct syntax for the live sliced Treasury scenario, use this shape:

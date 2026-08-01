@@ -46,7 +46,7 @@ Generate or refresh the package-owned section of the host `.env.example`:
 php artisan x-change:configure --profile=netbank
 ```
 
-The command replaces only the content between the x-change markers. Host-owned content is preserved. Secrets stay blank. The command never writes `.env` and never copies runtime credentials, tokens, account numbers, or application keys.
+The command replaces only the content between the x-change markers. Host-owned content is preserved. Secrets stay blank. `x-change:configure` never writes `.env` and never copies runtime credentials, tokens, account numbers, or application keys. The higher-level `x-change:setup` command may prepare a local `.env` only with explicit consent, an automatic backup, and stable application-key preservation. Production environments remain platform-managed.
 
 Inspect the resolved configuration without making changes:
 

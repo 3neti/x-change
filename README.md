@@ -209,6 +209,16 @@ x-change is designed for:
 
 No central x-change server is required.
 
+The normal workflow is intentionally short:
+
+```bash
+php artisan x-change:setup
+php artisan x-change:deploy production
+```
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for the canonical local, Laravel Cloud,
+automation, recovery, naming, and environment-contract runbook.
+
 ### Commissioning a fresh deployment
 
 X-Change starts fail-closed. Until installation finishes, ordinary web, API,
@@ -216,8 +226,10 @@ claim, payment, authentication, and webhook traffic receives a neutral `503`
 response. Laravel's `/up` endpoint remains available for liveness, while
 `/x/ready` reports whether X-Change is operational.
 
-The package does not accept credentials through the browser and never writes
-the host `.env`. Configure the deployment from the server:
+The package does not accept credentials through the browser. The guided setup
+may update a local `.env` only with explicit consent and an automatic backup;
+production environments remain platform-managed. The lower-level server
+workflow remains supported:
 
 ```bash
 php artisan x-change:configure --profile=netbank
