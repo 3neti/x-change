@@ -59,7 +59,9 @@ use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
+use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
+use LBHurtado\XChange\Console\Commands\DeployXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Feedback\ShowFeedbackHistoryCommand;
@@ -1187,6 +1189,8 @@ class XChangeServiceProvider extends ServiceProvider
                 InstallXChangeCommand::class,
                 SetupXChangeCommand::class,
                 ConfigureXChangeCommand::class,
+                CommissionXChangeCommand::class,
+                DeployXChangeCommand::class,
                 GenerateDeploymentManifestCommand::class,
                 ValidateDeploymentManifestCommand::class,
                 InspectXChangeConfigurationCommand::class,
