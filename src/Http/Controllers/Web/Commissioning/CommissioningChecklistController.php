@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
+use LBHurtado\XChange\Services\Configuration\CommissioningRecoveryGuide;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\RuntimeOperationsChecklist;
@@ -22,17 +23,22 @@ final readonly class CommissioningChecklistController
         private PreInstallReadinessInspector $readiness,
         private RuntimeOperationsChecklist $runtimeOperations,
         private SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
+        private CommissioningRecoveryGuide $recoveryGuide,
     ) {}
 
     public function show(Request $request): Response
     {
         abort_unless($this->isAuthorized($request), Response::HTTP_NOT_FOUND);
 
+        $systemPrincipalAccount = $this->systemPrincipalAccount->inspect();
+
         return response()->view('x-change::commissioning.checklist', [
             'commissioning' => $this->commissioning->resolve(),
             'readiness' => $this->readiness->inspect(),
             'runtime' => $this->runtimeOperations->describe(),
-            'installationChecks' => [$this->systemPrincipalAccount->inspect()],
+            'installationChecks' => [$systemPrincipalAccount],
+            'systemPrincipalRecovery' => $this->recoveryGuide
+                ->forSystemPrincipalAccount($systemPrincipalAccount),
             'checkedAt' => now(),
         ], Response::HTTP_OK, EnsureXChangeIsCommissioned::headers());
     }

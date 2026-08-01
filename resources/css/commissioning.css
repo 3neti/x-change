@@ -30,4 +30,8 @@ li { margin: .65rem 0; color: #cbd5e1; line-height: 1.45; }
 h2 { margin-top: 2rem; }
 h3 { margin: 1.5rem 0 .5rem; color: #e2e8f0; }
 code { color: #fdba74; overflow-wrap: anywhere; }
+.directive { margin-top: 1.5rem; padding: 1rem 1.1rem; border: 1px solid #7c2d12; border-radius: 1rem; background: rgba(124, 45, 18, .16); }
+.directive h2 { margin-top: 0; }
+pre { max-width: 100%; overflow-x: auto; padding: 1rem; border-radius: .75rem; background: #020617; white-space: pre; }
+pre code { overflow-wrap: normal; }
 @media (max-width: 34rem) { dl { grid-template-columns: 1fr; } }

@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 
 afterEach(function (): void {
     app()->instance('env', 'testing');
@@ -31,6 +32,11 @@ it('protects the detailed commissioning checklist with a rotated session-bound t
         ->assertSee('Run checks again')
         ->assertSee('System Principal Account')
         ->assertSee('Action needed')
+        ->assertSee('Complete the System Account')
+        ->assertSee('--provision-system-principal')
+        ->assertSee('deployment:<stable-control-reference>')
+        ->assertSee('php artisan x-change:doctor --strict --no-interaction')
+        ->assertDontSee('--fresh-database')
         ->assertDontSee('Open Cockpit');
 
     config()->set('x-change.commissioning.access_token', 'commissioning-secret-two');
@@ -100,3 +106,21 @@ it('rejects the fixed fallback token outside the local environment', function (s
 
     $this->get('/x/commissioning/checklist')->assertNotFound();
 })->with(['production', 'staging', 'testing', 'development']);
+
+it('hides the recovery directive after the system Account is commissioned', function (): void {
+    config()->set('x-change.commissioning.enabled', true);
+    config()->set('x-change.commissioning.access_token', 'commissioning-secret');
+    provisionTestSystemPrincipalForCommissioning();
+    app(CommissioningManifestRecorder::class)
+        ->record();
+
+    $this->post('/x/commissioning/checklist', [
+        'access_token' => 'commissioning-secret',
+    ])->assertRedirect('/x/commissioning/checklist');
+
+    $this->get('/x/commissioning/checklist')
+        ->assertSuccessful()
+        ->assertSee('Open Cockpit')
+        ->assertDontSee('Complete the System Account')
+        ->assertDontSee('--provision-system-principal');
+});

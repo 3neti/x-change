@@ -34,6 +34,15 @@
                 <li><strong>{{ $check['passed'] ? 'Ready' : 'Action needed' }}</strong> · {{ str($check['name'])->title() }} — {{ $check['message'] }}</li>
             @endforeach
         </ul>
+        @if ($systemPrincipalRecovery !== null)
+            <aside class="directive">
+                <h2>{{ $systemPrincipalRecovery['title'] }}</h2>
+                <p>{{ $systemPrincipalRecovery['description'] }}</p>
+                <pre><code>{{ $systemPrincipalRecovery['command'] }}</code></pre>
+                <p>{{ $systemPrincipalRecovery['reference_guidance'] }}</p>
+                <p>Verify afterward with <code>{{ $systemPrincipalRecovery['verification_command'] }}</code>, then select <strong>Run checks again</strong>.</p>
+            </aside>
+        @endif
         @if ($readiness['missing_variables'] !== [])
             <h2>Missing variables</h2>
             <ul>@foreach ($readiness['missing_variables'] as $variable)<li><code>{{ $variable }}</code></li>@endforeach</ul>
