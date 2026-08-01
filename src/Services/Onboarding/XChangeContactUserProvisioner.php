@@ -20,6 +20,7 @@ final readonly class XChangeContactUserProvisioner implements ContactUserProvisi
     public function __construct(
         private AccountProvisioningContract $accounts,
         private AccountPinSetupState $pinSetup,
+        private OnboardingCredentialPolicy $credentials,
     ) {}
 
     /**
@@ -87,7 +88,10 @@ final readonly class XChangeContactUserProvisioner implements ContactUserProvisi
 
             $user->save();
 
-            if (! $reused) {
+            if (
+                ! $reused
+                && $this->credentials->requiresInvitedAccountPinSetup()
+            ) {
                 $this->pinSetup->markRequired($user);
             }
 

@@ -1190,6 +1190,7 @@ return [
         'auth_enforcement' => env('XCHANGE_ONBOARDING_AUTH_ENFORCEMENT', 'scaffold'),
         'voucher' => [
             'require_otp' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_OTP', true),
+            'require_pin_setup' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP', true),
         ],
         'mobile_verification' => [
             'enabled' => (bool) env('XCHANGE_MOBILE_VERIFICATION_ENABLED', true),

@@ -207,6 +207,10 @@ final readonly class PreInstallReadinessInspector
         $production = $environment === 'production';
         $enabled = (bool) config('x-change.onboarding.mobile_verification.enabled', true);
         $required = (bool) config('x-change.onboarding.voucher.require_otp', true);
+        $pinSetupRequired = (bool) config(
+            'x-change.onboarding.voucher.require_pin_setup',
+            true,
+        );
         $driver = trim((string) config('x-change.withdrawal.otp.driver', 'null'));
         $showsLocalCode = (bool) config(
             'x-change.onboarding.mobile_verification.show_local_code',
@@ -215,6 +219,7 @@ final readonly class PreInstallReadinessInspector
         $ready = ! $production || (
             $enabled
             && $required
+            && $pinSetupRequired
             && ! in_array($driver, ['', 'null', 'log'], true)
             && ! $showsLocalCode
         );
@@ -226,6 +231,10 @@ final readonly class PreInstallReadinessInspector
 
         if ($production && ! $required) {
             $missing[] = 'XCHANGE_ONBOARDING_REQUIRE_OTP';
+        }
+
+        if ($production && ! $pinSetupRequired) {
+            $missing[] = 'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP';
         }
 
         if ($production && in_array($driver, ['', 'null', 'log'], true)) {
@@ -240,11 +249,12 @@ final readonly class PreInstallReadinessInspector
             'production onboarding OTP',
             $ready,
             $ready
-                ? 'onboarding OTP configuration is ready'
-                : 'production onboarding requires a live OTP driver with local code display disabled',
+                ? 'onboarding credential verification is ready'
+                : 'production onboarding requires OTP, PIN setup, a live OTP driver, and hidden local codes',
             [
                 'environment' => $environment,
                 'mobile_verification_enabled' => $enabled,
+                'pin_setup_required' => $pinSetupRequired,
                 'otp_required' => $required,
                 'driver' => $driver,
                 'local_code_visible' => $showsLocalCode,

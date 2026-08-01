@@ -80,6 +80,13 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 safeExample: 'true',
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP',
+                description: 'Require invited Accounts to choose a PIN before entering Cockpit.',
+                category: 'Identity',
+                configPath: 'x-change.onboarding.voucher.require_pin_setup',
+                safeExample: 'true',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_WITHDRAWAL_OTP_DRIVER',
                 description: 'Live OTP provider used by claim and onboarding workflows.',
                 category: 'Identity',

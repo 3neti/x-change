@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
 use LBHurtado\XChange\Services\Onboarding\AccountPinSetupState;
+use LBHurtado\XChange\Services\Onboarding\OnboardingCredentialPolicy;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -19,7 +20,11 @@ it('creates one Account and reuses it on an idempotent onboarding retry', functi
         ));
 
     $pinSetup = app(AccountPinSetupState::class);
-    $service = new XChangeContactUserProvisioner($accounts, $pinSetup);
+    $service = new XChangeContactUserProvisioner(
+        $accounts,
+        $pinSetup,
+        app(OnboardingCredentialPolicy::class),
+    );
     $contact = (object) ['mobile' => '09173011987'];
     $attributes = [
         'name' => 'Maria Santos',
@@ -54,6 +59,7 @@ it('fails closed when an Email belongs to another Account', function () {
     $service = new XChangeContactUserProvisioner(
         $accounts,
         app(AccountPinSetupState::class),
+        app(OnboardingCredentialPolicy::class),
     );
 
     expect(fn () => $service->provision(
@@ -64,4 +70,33 @@ it('fails closed when an Email belongs to another Account', function () {
             'mobile_verified' => true,
         ],
     ))->toThrow(RuntimeException::class, 'Email is already linked to another Account');
+});
+
+it('can temporarily omit invited Account PIN setup outside production', function (): void {
+    config()->set('x-change.onboarding.voucher.require_pin_setup', false);
+    $accounts = Mockery::mock(AccountProvisioningContract::class);
+    $accounts->shouldReceive('provision')->once()->andReturn(
+        new TreasuryAccountPortfolioData(
+            principalReference: 'principal:account:frictionless',
+            positions: [],
+            skippedConnections: [],
+        ),
+    );
+    $pinSetup = app(AccountPinSetupState::class);
+    $service = new XChangeContactUserProvisioner(
+        $accounts,
+        $pinSetup,
+        app(OnboardingCredentialPolicy::class),
+    );
+
+    $result = $service->provision(
+        (object) ['mobile' => '09399236237'],
+        [
+            'name' => 'Sofia Hurtado',
+            'email' => 'sofia@hurtado.ph',
+            'mobile_verified' => true,
+        ],
+    );
+
+    expect($pinSetup->isRequired($result->user->fresh()))->toBeFalse();
 });

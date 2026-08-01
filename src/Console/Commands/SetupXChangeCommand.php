@@ -138,6 +138,9 @@ final class SetupXChangeCommand extends Command
                         'XCHANGE_DEPLOYMENT_PROFILE' => $profile,
                         'XCHANGE_SYSTEM_USER_COLUMN' => 'email',
                         'XCHANGE_SYSTEM_USER_ID' => $systemEmail,
+                        'XCHANGE_MOBILE_VERIFICATION_ENABLED' => 'false',
+                        'XCHANGE_ONBOARDING_REQUIRE_OTP' => 'false',
+                        'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP' => 'false',
                     ],
                 );
                 $plan['environment_result'] = $environmentResult;

@@ -10,11 +10,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
+use LBHurtado\XChange\Services\Onboarding\OnboardingCredentialPolicy;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Throwable;
 
 class CreateNewMobileFirstUser implements CreatesNewUsers
 {
+    public function __construct(
+        private readonly OnboardingCredentialPolicy $credentials,
+    ) {}
+
     /**
      * @param  array<string, string|null>  $input
      */
@@ -45,7 +50,7 @@ class CreateNewMobileFirstUser implements CreatesNewUsers
         $user->forceFill([
             'name' => $input['name'] ?: $mobile,
             'mobile' => $mobile,
-            'mobile_verified_at' => null,
+            'mobile_verified_at' => $this->credentials->initialMobileVerifiedAt(),
             'email' => $input['email'] ?: null,
             'password' => Hash::make((string) $input['password']),
         ]);

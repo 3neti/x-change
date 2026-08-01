@@ -217,6 +217,7 @@ it('rejects a null or locally visible onboarding OTP driver in production', func
     config()->set('app.env', 'production');
     config()->set('x-change.onboarding.mobile_verification.enabled', true);
     config()->set('x-change.onboarding.voucher.require_otp', true);
+    config()->set('x-change.onboarding.voucher.require_pin_setup', false);
     config()->set('x-change.withdrawal.otp.driver', 'null');
     config()->set('x-change.onboarding.mobile_verification.show_local_code', true);
 
@@ -228,12 +229,14 @@ it('rejects a null or locally visible onboarding OTP driver in production', func
     expect($check['passed'])->toBeFalse()
         ->and($check['meta']['driver'])->toBe('null')
         ->and($check['meta']['local_code_visible'])->toBeTrue();
+    expect($check['meta']['pin_setup_required'])->toBeFalse();
 });
 
 it('accepts a configured production onboarding OTP driver', function () {
     config()->set('app.env', 'production');
     config()->set('x-change.onboarding.mobile_verification.enabled', true);
     config()->set('x-change.onboarding.voucher.require_otp', true);
+    config()->set('x-change.onboarding.voucher.require_pin_setup', true);
     config()->set('x-change.withdrawal.otp.driver', 'engagespark');
     config()->set('x-change.onboarding.mobile_verification.show_local_code', false);
 

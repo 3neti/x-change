@@ -41,6 +41,17 @@ it('adopts the host before installation in the one-command workflow', function (
         ->toBeLessThan(strpos($source, "\$this->call('x-change:install'"));
 });
 
+it('keeps the local setup trial frictionless without changing production defaults', function (): void {
+    $source = file_get_contents(
+        (new ReflectionClass(SetupXChangeCommand::class))->getFileName(),
+    );
+
+    expect($source)
+        ->toContain("'XCHANGE_MOBILE_VERIFICATION_ENABLED' => 'false'")
+        ->toContain("'XCHANGE_ONBOARDING_REQUIRE_OTP' => 'false'")
+        ->toContain("'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP' => 'false'");
+});
+
 it('requires explicit local environment writes outside interactive mode', function (): void {
     $this->artisan('x-change:setup', [
         '--profile' => 'development',
