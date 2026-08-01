@@ -205,8 +205,8 @@ final readonly class PreInstallReadinessInspector
     {
         $environment = (string) config('app.env');
         $production = $environment === 'production';
-        $enabled = (bool) config('x-change.onboarding.mobile_verification.enabled', true);
-        $required = (bool) config('x-change.onboarding.voucher.require_otp', true);
+        $enabled = (bool) config('x-change.onboarding.mobile_verification.enabled', false);
+        $required = (bool) config('x-change.onboarding.voucher.require_otp', false);
         $pinSetupRequired = (bool) config(
             'x-change.onboarding.voucher.require_pin_setup',
             true,
@@ -402,7 +402,7 @@ final readonly class PreInstallReadinessInspector
     {
         $campaignEnabled = (bool) config('x-change.campaigns.delivery.sms.enabled');
         $otpEnabled = config('app.env') === 'production'
-            && (bool) config('x-change.onboarding.voucher.require_otp', true);
+            && (bool) config('x-change.onboarding.voucher.require_otp', false);
         $enabled = $campaignEnabled || $otpEnabled;
         $driver = trim((string) config('x-feedback.transports.sms.driver'));
         $sender = trim((string) config('x-feedback.transports.sms.sender'));

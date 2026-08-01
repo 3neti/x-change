@@ -12,7 +12,7 @@ final class OnboardingCredentialPolicy
     {
         return (bool) config(
             'x-change.onboarding.mobile_verification.enabled',
-            true,
+            false,
         );
     }
 

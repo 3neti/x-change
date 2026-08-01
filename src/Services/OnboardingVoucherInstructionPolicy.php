@@ -74,7 +74,7 @@ final class OnboardingVoucherInstructionPolicy
      */
     public function requiresOtp(array $input): bool
     {
-        return (bool) config('x-change.onboarding.voucher.require_otp', true)
+        return (bool) config('x-change.onboarding.voucher.require_otp', false)
             || filled(data_get($input, 'cash.validation.mobile'));
     }
 

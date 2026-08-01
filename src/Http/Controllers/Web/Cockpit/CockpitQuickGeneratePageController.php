@@ -38,7 +38,7 @@ class CockpitQuickGeneratePageController extends Controller
             ),
             'feedback_defaults' => $this->feedbackDefaults($request),
             'onboarding_policy' => [
-                'otp_required' => (bool) config('x-change.onboarding.voucher.require_otp', true),
+                'otp_required' => (bool) config('x-change.onboarding.voucher.require_otp', false),
             ],
             'invitation_preset' => [
                 'enabled' => $request->query('intent') === 'invite',

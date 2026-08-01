@@ -1189,11 +1189,11 @@ return [
         'email_required' => env('XCHANGE_AUTH_EMAIL_REQUIRED', false),
         'auth_enforcement' => env('XCHANGE_ONBOARDING_AUTH_ENFORCEMENT', 'scaffold'),
         'voucher' => [
-            'require_otp' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_OTP', true),
+            'require_otp' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_OTP', false),
             'require_pin_setup' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP', true),
         ],
         'mobile_verification' => [
-            'enabled' => (bool) env('XCHANGE_MOBILE_VERIFICATION_ENABLED', true),
+            'enabled' => (bool) env('XCHANGE_MOBILE_VERIFICATION_ENABLED', false),
             'ttl_minutes' => (int) env('XCHANGE_MOBILE_VERIFICATION_TTL_MINUTES', 10),
             'max_attempts' => (int) env('XCHANGE_MOBILE_VERIFICATION_MAX_ATTEMPTS', 5),
             'hash_key' => env('XCHANGE_MOBILE_VERIFICATION_HASH_KEY', env('APP_KEY')),

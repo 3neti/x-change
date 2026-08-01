@@ -70,14 +70,14 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 description: 'Require verified mobile ownership during production onboarding.',
                 category: 'Identity',
                 configPath: 'x-change.onboarding.mobile_verification.enabled',
-                safeExample: 'true',
+                safeExample: 'false',
             ),
             new EnvironmentVariableData(
                 key: 'XCHANGE_ONBOARDING_REQUIRE_OTP',
                 description: 'Require OTP for onboarding vouchers.',
                 category: 'Identity',
                 configPath: 'x-change.onboarding.voucher.require_otp',
-                safeExample: 'true',
+                safeExample: 'false',
             ),
             new EnvironmentVariableData(
                 key: 'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP',
