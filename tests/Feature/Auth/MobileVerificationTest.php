@@ -14,14 +14,15 @@ use LBHurtado\XChange\Models\MobileVerificationChallenge;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Tests\Fakes\User;
 
-it('creates a mobile-first user as unverified', function () {
+it('creates a mobile-first user as unverified when verification is required', function () {
     if (! interface_exists(CreatesNewUsers::class)) {
         expect(file_get_contents(__DIR__.'/../../../src/Actions/Auth/CreateNewMobileFirstUser.php'))
-            ->toContain("'mobile_verified_at' => null");
+            ->toContain("'mobile_verified_at' => \$this->credentials->initialMobileVerifiedAt()");
 
         return;
     }
 
+    config()->set('x-change.onboarding.mobile_verification.enabled', true);
     config()->set('auth.providers.users.model', User::class);
 
     $user = app(CreateNewMobileFirstUser::class)->create([
