@@ -26,3 +26,21 @@ it('keeps the explicit replacement stub on the additive x-change base model', fu
         ->toContain('class User extends XChangeAuthenticatable')
         ->not->toContain('Bavix\Wallet\Traits');
 });
+
+it('publishes an auth logo component backed by package-owned assets', function (): void {
+    $provider = file_get_contents(
+        (new ReflectionClass(XChangeServiceProvider::class))->getFileName(),
+    );
+    $stub = file_get_contents(
+        dirname(__DIR__, 3).'/stubs/resources/js/components/AppLogoIcon.vue.stub',
+    );
+
+    expect($provider)
+        ->toContain('stubs/resources/js/components/AppLogoIcon.vue.stub')
+        ->toContain("resource_path('js/components/AppLogoIcon.vue')")
+        ->and($stub)
+        ->toContain('/vendor/x-change/images/logo-orange.png')
+        ->toContain('/vendor/x-change/images/logo-silver.png')
+        ->not->toContain("'/images/logo-orange.png'")
+        ->not->toContain("'/images/logo-silver.png'");
+});

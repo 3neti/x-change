@@ -1715,6 +1715,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->publishes([
             $this->packagePath('stubs/migrations/2026_06_17_000000_prepare_users_for_mobile_first_xchange.php.stub') => database_path('migrations/2026_06_17_000000_prepare_users_for_mobile_first_xchange.php'),
             $this->packagePath('stubs/database/factories/UserFactory.php.stub') => database_path('factories/UserFactory.php'),
+            $this->packagePath('stubs/resources/js/components/AppLogoIcon.vue.stub') => resource_path('js/components/AppLogoIcon.vue'),
             $this->packagePath('stubs/resources/js/pages/auth/Login.vue.stub') => resource_path('js/pages/auth/Login.vue'),
             $this->packagePath('stubs/resources/js/pages/auth/Register.vue.stub') => resource_path('js/pages/auth/Register.vue'),
             $this->packagePath('stubs/resources/js/pages/Welcome.vue.stub') => resource_path('js/pages/Welcome.vue'),
