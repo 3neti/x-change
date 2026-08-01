@@ -51,6 +51,7 @@ use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
+use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
@@ -1187,6 +1188,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RepairMissingDisbursementPostingsCommand::class,
                 SimulateTreasuryProviderDepositCommand::class,
                 InstallXChangeCommand::class,
+                AdoptHostCommand::class,
                 SetupXChangeCommand::class,
                 ConfigureXChangeCommand::class,
                 CommissionXChangeCommand::class,
