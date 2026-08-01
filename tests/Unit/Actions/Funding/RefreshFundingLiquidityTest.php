@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
+use LBHurtado\XChange\Services\ProviderBalanceSnapshotStore;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 
 it('forces provider synchronization through the runtime provider adapter', function () {
@@ -42,6 +44,8 @@ it('forces provider synchronization through the runtime provider adapter', funct
         $connections,
         $balances,
         fakeAuditLogger()->reset(),
+        app(TreasuryInventoryPositionReadModelContract::class),
+        app(ProviderBalanceSnapshotStore::class),
     ))->handle($operator);
 
     expect($result)
