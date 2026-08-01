@@ -38,7 +38,10 @@ it('adopts the host before installation in the one-command workflow', function (
     expect($source)
         ->toContain("\$this->call('x-change:host:adopt'")
         ->and(strpos($source, "\$this->call('x-change:host:adopt'"))
-        ->toBeLessThan(strpos($source, "\$this->call('x-change:install'"));
+        ->toBeLessThan(strpos($source, "'x-change:install'"))
+        ->and($source)
+        ->toContain('PHP_BINARY')
+        ->toContain('Process::path(base_path())');
 });
 
 it('keeps the local setup trial frictionless without changing production defaults', function (): void {

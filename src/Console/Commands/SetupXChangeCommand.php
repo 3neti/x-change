@@ -163,19 +163,33 @@ final class SetupXChangeCommand extends Command
                 return $this->renderResult(false, 'host_adoption_failed', $plan);
             }
 
-            $installExitCode = $this->call('x-change:install', [
-                '--profile' => $profile,
-                '--force' => (bool) $this->option('force'),
-                '--no-treasury' => (bool) $this->option('no-treasury'),
-                '--provision-system-principal' => true,
-                '--system-principal-name' => $systemName,
-                '--system-principal-email' => $systemEmail,
-                '--confirm-system-principal' => true,
-                '--no-interaction' => true,
-            ]);
+            $installCommand = [
+                PHP_BINARY,
+                'artisan',
+                'x-change:install',
+                "--profile={$profile}",
+                '--provision-system-principal',
+                "--system-principal-name={$systemName}",
+                "--system-principal-email={$systemEmail}",
+                '--confirm-system-principal',
+                '--no-interaction',
+                ...((bool) $this->option('force') ? ['--force'] : []),
+                ...((bool) $this->option('no-treasury') ? ['--no-treasury'] : []),
+            ];
+            $installResult = Process::path(base_path())
+                ->timeout(900)
+                ->idleTimeout(120)
+                ->run($installCommand, function (string $type, string $output): void {
+                    if (! $this->option('json')) {
+                        $this->output->write($output);
+                    }
+                });
 
-            if ($installExitCode !== self::SUCCESS) {
-                return $this->renderResult(false, 'installation_failed', $plan);
+            if (! $installResult->successful()) {
+                return $this->renderResult(false, 'installation_failed', [
+                    ...$plan,
+                    'install_exit_code' => $installResult->exitCode(),
+                ]);
             }
 
             if (! (bool) $this->option('no-frontend')) {
