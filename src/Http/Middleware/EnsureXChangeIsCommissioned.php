@@ -25,6 +25,13 @@ final readonly class EnsureXChangeIsCommissioned
 
     public function handle(Request $request, Closure $next): SymfonyResponse
     {
+        if (
+            app()->runningUnitTests()
+            && ! (bool) config('x-change.commissioning.enforce_during_tests', false)
+        ) {
+            return $next($request);
+        }
+
         $state = $this->commissioning->resolve();
 
         if (

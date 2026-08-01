@@ -178,6 +178,7 @@ return [
 
     'commissioning' => [
         'enabled' => (bool) env('XCHANGE_COMMISSIONING_ENABLED', true),
+        'enforce_during_tests' => false,
         'access_token' => env('XCHANGE_COMMISSIONING_ACCESS_TOKEN'),
         'local_fallback_access_token' => '317537',
         'retry_after_seconds' => (int) env('XCHANGE_COMMISSIONING_RETRY_AFTER', 300),

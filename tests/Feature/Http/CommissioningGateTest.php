@@ -9,8 +9,15 @@ use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 
 beforeEach(function (): void {
     config()->set('x-change.commissioning.enabled', true);
+    config()->set('x-change.commissioning.enforce_during_tests', true);
     Route::middleware('web')->get('/host-home', fn (): string => 'host home');
     Route::middleware('api')->post('/api/host-webhook', fn (): array => ['accepted' => true]);
+});
+
+it('does not intercept host routes during tests unless explicitly enforced', function (): void {
+    config()->set('x-change.commissioning.enforce_during_tests', false);
+
+    $this->get('/host-home')->assertSuccessful()->assertSee('host home');
 });
 
 it('blocks ordinary html and api routes before commissioning', function (): void {
