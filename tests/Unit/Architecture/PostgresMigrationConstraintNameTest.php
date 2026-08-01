@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\PostgresConnection;
+use Illuminate\Support\Facades\Schema;
+
 it('uses distinct PostgreSQL-safe constraint names for transfer matches', function () {
     $migration = file_get_contents(
         dirname(__DIR__, 3).'/database/migrations/2026_07_27_103900_create_x_change_funding_request_transfer_matches_table.php',
@@ -21,4 +24,58 @@ it('uses distinct PostgreSQL-safe constraint names for transfer matches', functi
     foreach ($constraintNames as $constraintName) {
         expect($migration)->toContain("'{$constraintName}'");
     }
+});
+
+it('compiles every create migration without PostgreSQL identifier collisions', function () {
+    $connection = new class(null, 'x_change_migration_audit') extends PostgresConnection
+    {
+        public function getServerVersion(): string
+        {
+            return '17.0';
+        }
+
+        public function reconnectIfMissingConnection(): void {}
+    };
+    $connection->useDefaultSchemaGrammar();
+
+    $originalSchemaBuilder = Schema::getFacadeRoot();
+    $migrationDirectory = dirname(__DIR__, 3).'/database/migrations';
+    $identifiersByPostgresName = [];
+
+    Schema::swap($connection->getSchemaBuilder());
+
+    try {
+        foreach (glob($migrationDirectory.'/*.php') ?: [] as $migrationPath) {
+            $source = file_get_contents($migrationPath);
+
+            if ($source === false || ! str_contains($source, 'Schema::create(')) {
+                continue;
+            }
+
+            $migration = require $migrationPath;
+            $queries = $connection->pretend(static fn () => $migration->up());
+
+            foreach ($queries as $query) {
+                preg_match_all(
+                    '/\\b(?:constraint|index)\\s+"([^"]+)"/i',
+                    $query['query'],
+                    $matches,
+                );
+
+                foreach ($matches[1] as $identifier) {
+                    $postgresIdentifier = substr($identifier, 0, 63);
+                    $identifiersByPostgresName[$postgresIdentifier][] = basename($migrationPath).': '.$identifier;
+                }
+            }
+        }
+    } finally {
+        Schema::swap($originalSchemaBuilder);
+    }
+
+    $collisions = array_filter(
+        $identifiersByPostgresName,
+        static fn (array $identifiers): bool => count(array_unique($identifiers)) > 1,
+    );
+
+    expect($collisions)->toBe([]);
 });

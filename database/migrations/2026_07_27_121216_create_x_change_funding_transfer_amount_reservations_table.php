@@ -13,8 +13,11 @@ return new class extends Migration
         Schema::create('x_change_funding_transfer_amount_reservations', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('funding_request_id')
-                ->unique()
-                ->constrained('x_change_funding_requests')
+                ->unique('xftram_funding_request_unique')
+                ->constrained(
+                    table: 'x_change_funding_requests',
+                    indexName: 'xftram_funding_request_foreign',
+                )
                 ->restrictOnDelete();
             $table->string('provider_code', 64);
             $table->string('connection_reference', 191);
