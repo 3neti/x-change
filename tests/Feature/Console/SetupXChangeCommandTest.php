@@ -22,6 +22,7 @@ it('renders the complete one-command setup plan without side effects', function 
             'configure',
             'preflight',
             'install',
+            'frontend',
             'manifest',
             'verify',
         ]);

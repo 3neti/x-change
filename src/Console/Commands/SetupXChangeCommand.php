@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Process;
 use LBHurtado\XChange\Services\Configuration\HostApplicationIdentity;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
 use Throwable;
@@ -29,6 +30,7 @@ final class SetupXChangeCommand extends Command
         {--system-principal-name= : Display name for the System Account}
         {--system-principal-email= : Stable System Account email}
         {--no-treasury : Explicitly leave Treasury commissioning incomplete}
+        {--no-frontend : Skip npm dependency installation and production build}
         {--force : Refresh published package resources}
         {--dry-run : Show the setup plan without changing files or state}
         {--json : Output JSON}';
@@ -96,7 +98,14 @@ final class SetupXChangeCommand extends Command
             'profile' => $profile,
             'application' => ['name' => $name, 'url' => $url],
             'write_local_environment' => $writeEnvironment,
-            'steps' => ['configure', 'preflight', 'install', 'manifest', 'verify'],
+            'steps' => [
+                'configure',
+                'preflight',
+                'install',
+                ...((bool) $this->option('no-frontend') ? [] : ['frontend']),
+                'manifest',
+                'verify',
+            ],
         ];
 
         if ($this->option('dry-run')) {
@@ -153,6 +162,26 @@ final class SetupXChangeCommand extends Command
 
             if ($installExitCode !== self::SUCCESS) {
                 return $this->renderResult(false, 'installation_failed', $plan);
+            }
+
+            if (! (bool) $this->option('no-frontend')) {
+                foreach ([['npm', 'install'], ['npm', 'run', 'build']] as $command) {
+                    $result = Process::path(base_path())
+                        ->timeout(900)
+                        ->idleTimeout(120)
+                        ->run($command, function (string $type, string $output): void {
+                            if (! $this->option('json')) {
+                                $this->output->write($output);
+                            }
+                        });
+
+                    if (! $result->successful()) {
+                        return $this->renderResult(false, 'frontend_build_failed', [
+                            ...$plan,
+                            'failed_operation' => implode(' ', $command),
+                        ]);
+                    }
+                }
             }
 
             $manifestExitCode = $this->call('x-change:deployment:generate', [
