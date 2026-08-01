@@ -1722,7 +1722,11 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->publishes([
             $this->packagePath('stubs/tests/Feature/Auth/AuthenticationTest.php.stub') => base_path('tests/Feature/Auth/AuthenticationTest.php'),
+            $this->packagePath('stubs/tests/Feature/Auth/EmailVerificationTest.php.stub') => base_path('tests/Feature/Auth/EmailVerificationTest.php'),
+            $this->packagePath('stubs/tests/Feature/Auth/PasswordResetTest.php.stub') => base_path('tests/Feature/Auth/PasswordResetTest.php'),
             $this->packagePath('stubs/tests/Feature/Auth/RegistrationTest.php.stub') => base_path('tests/Feature/Auth/RegistrationTest.php'),
+            $this->packagePath('stubs/tests/Feature/Auth/TwoFactorChallengeTest.php.stub') => base_path('tests/Feature/Auth/TwoFactorChallengeTest.php'),
+            $this->packagePath('stubs/tests/Feature/Auth/VerificationNotificationTest.php.stub') => base_path('tests/Feature/Auth/VerificationNotificationTest.php'),
         ], 'x-change-auth-tests');
 
         $this->publishes([
