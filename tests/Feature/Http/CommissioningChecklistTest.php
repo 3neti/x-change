@@ -122,6 +122,33 @@ it('hides the recovery directive after the system Account is commissioned', func
     $this->get('/x/commissioning/checklist')
         ->assertSuccessful()
         ->assertSee('Open Cockpit')
+        ->assertSee('Installation Manifest')
+        ->assertSee('recorded installation matches the active deployment configuration')
         ->assertDontSee('Complete the System Account')
+        ->assertDontSee('Confirm the Updated Configuration')
         ->assertDontSee('--provision-system-principal');
+});
+
+it('shows a stale installation manifest as the missing readiness action', function (): void {
+    config()->set('x-change.commissioning.enabled', true);
+    config()->set('x-change.commissioning.access_token', 'commissioning-secret');
+    provisionTestSystemPrincipalForCommissioning();
+
+    $manifest = app(CommissioningManifestRecorder::class)->record();
+    $manifest->forceFill([
+        'configuration_fingerprint' => str_repeat('0', 64),
+    ])->save();
+
+    $this->post('/x/commissioning/checklist', [
+        'access_token' => 'commissioning-secret',
+    ])->assertRedirect('/x/commissioning/checklist');
+
+    $this->get('/x/commissioning/checklist')
+        ->assertSuccessful()
+        ->assertSee('Action needed')
+        ->assertSee('Installation Manifest')
+        ->assertSee('recorded installation does not match the active deployment configuration')
+        ->assertSee('Confirm the Updated Configuration')
+        ->assertSee('php artisan x-change:commissioning:adopt --confirm-existing-installation --no-interaction')
+        ->assertDontSee('Supply the missing deployment secrets');
 });

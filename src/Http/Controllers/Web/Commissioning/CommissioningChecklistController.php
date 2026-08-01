@@ -8,6 +8,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use LBHurtado\XChange\Data\Configuration\CommissioningStateData;
 use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
 use LBHurtado\XChange\Services\Configuration\CommissioningRecoveryGuide;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
@@ -31,14 +32,20 @@ final readonly class CommissioningChecklistController
         abort_unless($this->isAuthorized($request), Response::HTTP_NOT_FOUND);
 
         $systemPrincipalAccount = $this->systemPrincipalAccount->inspect();
+        $commissioning = $this->commissioning->resolve();
 
         return response()->view('x-change::commissioning.checklist', [
-            'commissioning' => $this->commissioning->resolve(),
+            'commissioning' => $commissioning,
             'readiness' => $this->readiness->inspect(),
             'runtime' => $this->runtimeOperations->describe(),
-            'installationChecks' => [$systemPrincipalAccount],
+            'installationChecks' => [
+                $systemPrincipalAccount,
+                $this->installationManifestCheck($commissioning),
+            ],
             'systemPrincipalRecovery' => $this->recoveryGuide
                 ->forSystemPrincipalAccount($systemPrincipalAccount),
+            'commissioningRecovery' => $this->recoveryGuide
+                ->forCommissioningState($commissioning, $systemPrincipalAccount['passed']),
             'checkedAt' => now(),
         ], Response::HTTP_OK, EnsureXChangeIsCommissioned::headers());
     }
@@ -88,5 +95,29 @@ final readonly class CommissioningChecklistController
         }
 
         return trim((string) config('x-change.commissioning.local_fallback_access_token'));
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    private function installationManifestCheck(CommissioningStateData $commissioning): array
+    {
+        return [
+            'name' => 'installation manifest',
+            'passed' => $commissioning->isOperational(),
+            'message' => match ($commissioning->reason) {
+                null => 'recorded installation matches the active deployment configuration',
+                'deployment_configuration_incomplete' => 'deployment configuration must be completed before installation can be recorded',
+                'installation_manifest_table_missing' => 'installation manifest storage has not been installed',
+                'system_principal_account_incomplete' => 'installation cannot be commissioned until the System Account is ready',
+                'installation_manifest_missing' => 'no installation manifest has been recorded',
+                'installation_manifest_stale' => 'recorded installation does not match the active deployment configuration',
+                default => 'commissioning state could not be verified',
+            },
+            'meta' => [
+                'state' => $commissioning->state->value,
+                'reason' => $commissioning->reason,
+            ],
+        ];
     }
 }

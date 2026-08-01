@@ -20,14 +20,6 @@
                 <a class="button" href="{{ route('x-change.cockpit.dashboard') }}">Open Cockpit</a>
             @endif
         </nav>
-        <ol>
-            <li><code>php artisan x-change:configure --profile={{ $readiness['profile'] }}</code></li>
-            <li>Supply the missing deployment secrets and runtime values below.</li>
-            <li><code>php artisan optimize:clear</code></li>
-            <li><code>php artisan x-change:doctor --pre-install --strict</code></li>
-            <li><code>php artisan x-change:install --force --no-interaction</code></li>
-            <li><code>php artisan x-change:doctor --strict</code></li>
-        </ol>
         <h2>Readiness checks</h2>
         <ul>
             @foreach ([...$readiness['checks'], ...$installationChecks] as $check)
@@ -41,6 +33,14 @@
                 <pre><code>{{ $systemPrincipalRecovery['command'] }}</code></pre>
                 <p>The provisioning reference is generated and reused automatically. A deployment control reference remains available as an advanced command option.</p>
                 <p>Verify afterward with <code>{{ $systemPrincipalRecovery['verification_command'] }}</code>, then select <strong>Run checks again</strong>.</p>
+            </aside>
+        @endif
+        @if ($commissioningRecovery !== null)
+            <aside class="directive">
+                <h2>{{ $commissioningRecovery['title'] }}</h2>
+                <p>{{ $commissioningRecovery['description'] }}</p>
+                <pre><code>{{ $commissioningRecovery['command'] }}</code></pre>
+                <p>Verify afterward with <code>{{ $commissioningRecovery['verification_command'] }}</code>, then select <strong>Run checks again</strong>.</p>
             </aside>
         @endif
         @if ($readiness['missing_variables'] !== [])
