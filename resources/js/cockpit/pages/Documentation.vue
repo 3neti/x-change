@@ -4,6 +4,8 @@ import { ArrowUpRight, BookOpen, ChevronRight } from 'lucide-vue-next';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type { CockpitHeaderReadModel } from '../types';
 
+defineOptions({ inheritAttrs: false });
+
 type DocumentationLink = {
     label: string;
     description: string;
