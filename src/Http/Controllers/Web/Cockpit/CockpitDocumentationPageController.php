@@ -34,7 +34,7 @@ final class CockpitDocumentationPageController extends Controller
                         'links' => [
                             ['label' => 'Accounts', 'description' => 'Inspect provider funding destinations.', 'href' => route('x-change.cockpit.accounts.index')],
                             ['label' => 'Runtime Profile', 'description' => 'Inspect active read-model and handoff configuration.', 'href' => route('x-change.cockpit.diagnostics.runtime-profile')],
-                            ['label' => 'Deployment Guide', 'description' => 'Install, commission, and verify a thin host.', 'href' => 'https://github.com/3neti/x-change/blob/main/DEPLOY.md', 'external' => true],
+                            ['label' => 'Deployment Guide', 'description' => 'Install, commission, and verify a thin host.', 'href' => 'https://github.com/3neti/x-change/blob/main/DEPLOYMENT.md', 'external' => true],
                         ],
                     ],
                     [

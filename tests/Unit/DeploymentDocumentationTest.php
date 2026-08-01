@@ -27,6 +27,8 @@ it('documents the simple and advanced deployment workflows', function (): void {
             'x-change-funding,x-change-feedback,default',
             'A webhook permits evidence intake; it does not itself authorize Account',
             'XCHANGE_ONBOARDING_REQUIRE_OTP=true',
+            'php artisan x-change:host:adopt --dry-run --json',
+            '`x-change-shell` tag',
             "Do not edit package code inside the host's `vendor/` directory.",
         )
         ->and($readme)->toContain(
@@ -39,6 +41,7 @@ it('documents the simple and advanced deployment workflows', function (): void {
             "composer require '3neti/x-change:^1.0@beta' -W",
             'php artisan x-change:doctor --pre-install --strict --no-interaction',
             'x-change-funding,x-change-feedback,default',
+            'one responsive sidebar',
             'See [LICENSE.md](./LICENSE.md) for the authoritative license terms.',
         )
         ->and($readme)->not->toContain(

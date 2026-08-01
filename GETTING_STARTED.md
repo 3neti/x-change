@@ -103,6 +103,20 @@ The development setup may temporarily disable onboarding OTP and the invited
 user's initial PIN-setup step. Production commissioning rejects those relaxed
 settings. Ordinary login still requires an established credential.
 
+The same setup command safely adopts a pristine Laravel application shell. It
+replaces the starter Dashboard, Repository, and framework-documentation links
+with the responsive Cockpit navigation, while retaining the host's account
+menu, settings, and logout controls. An unknown customized sidebar is never
+overwritten automatically; integrate it manually or explicitly publish the
+`x-change-shell` tag.
+
+To inspect or repeat only the host adoption step:
+
+```bash
+php artisan x-change:host:adopt --dry-run --json
+php artisan x-change:host:adopt
+```
+
 ## Provider profiles
 
 Choose one profile intentionally:
@@ -179,6 +193,12 @@ XCHANGE_ONBOARDING_REQUIRE_OTP=true
 XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP=true
 XCHANGE_MOBILE_VERIFICATION_SHOW_LOCAL_CODE=false
 ```
+
+New local and testing installations default onboarding OTP and mobile
+verification to disabled so the interface can be evaluated before an SMS OTP
+driver is configured. Production commissioning remains fail-closed and
+requires the controls shown above, a live OTP driver, and hidden local
+verification codes.
 
 Configure a live OTP driver and the selected email and SMS transports before
 enabling those delivery channels. Disabled delivery capabilities should remain

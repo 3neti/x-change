@@ -52,6 +52,12 @@ The authenticated Cockpit is the operating surface for an Account holder:
 The Cockpit uses cached, sanitized read models. Opening a page does not perform
 a provider balance request or execute a financial operation.
 
+The package also supplies the authenticated application navigation shell. A
+pristine Laravel host gets one responsive sidebar for Cockpit workspaces,
+Documentation, settings, and account controls; the starter Repository link and
+the former nested Cockpit sidebar are not retained. Customized host shells are
+detected and left untouched for deliberate integration.
+
 ### Claim and execution
 
 Voucher instructions can compose:
