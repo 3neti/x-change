@@ -135,17 +135,21 @@ final readonly class SystemPrincipalProvisioningService
                     );
                 }
 
+                $onboardingMeta = [
+                    'system_principal' => [
+                        'authorization_reference' => $authorizationReference,
+                        'provisioned_at' => now()->toIso8601String(),
+                        'interactive_login' => false,
+                    ],
+                ];
                 $principal->forceFill([
                     'name' => $name,
                     'email' => $email,
                     'password' => Hash::make(Str::random(64)),
-                    'onboarding_meta' => [
-                        'system_principal' => [
-                            'authorization_reference' => $authorizationReference,
-                            'provisioned_at' => now()->toIso8601String(),
-                            'interactive_login' => false,
-                        ],
-                    ],
+                    'onboarding_meta' => $this->serializeOnboardingMeta(
+                        $principal,
+                        $onboardingMeta,
+                    ),
                 ]);
                 $principal->save();
                 $created = true;
@@ -283,7 +287,7 @@ final readonly class SystemPrincipalProvisioningService
         Model $principal,
         string $authorizationReference,
     ): void {
-        $onboardingMeta = (array) $principal->getAttribute('onboarding_meta');
+        $onboardingMeta = $this->onboardingMeta($principal);
         $existingReference = trim((string) data_get(
             $onboardingMeta,
             'system_principal.authorization_reference',
@@ -310,7 +314,44 @@ final readonly class SystemPrincipalProvisioningService
             ],
         );
 
-        $principal->setAttribute('onboarding_meta', $onboardingMeta);
+        $principal->setAttribute(
+            'onboarding_meta',
+            $this->serializeOnboardingMeta($principal, $onboardingMeta),
+        );
         $principal->save();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function onboardingMeta(Model $principal): array
+    {
+        $onboardingMeta = $principal->getAttribute('onboarding_meta');
+
+        if (is_array($onboardingMeta)) {
+            return $onboardingMeta;
+        }
+
+        if (! is_string($onboardingMeta) || trim($onboardingMeta) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($onboardingMeta, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $onboardingMeta
+     */
+    private function serializeOnboardingMeta(
+        Model $principal,
+        array $onboardingMeta,
+    ): array|string {
+        if ($principal->hasCast('onboarding_meta', ['array', 'json', 'object', 'collection'])) {
+            return $onboardingMeta;
+        }
+
+        return json_encode($onboardingMeta, JSON_THROW_ON_ERROR);
     }
 }

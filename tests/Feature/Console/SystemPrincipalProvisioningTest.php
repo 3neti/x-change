@@ -7,6 +7,7 @@ use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
+use LBHurtado\XChange\Tests\Fakes\UncastUser;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function (): void {
@@ -112,6 +113,28 @@ it('provisions the non-interactive system principal and Account idempotently', f
             $principal->fresh()->onboarding_meta,
             'system_principal.interactive_login',
         ))->toBeFalse();
+});
+
+it('provisions through a stock user model without an onboarding metadata cast', function () {
+    config()->set('x-change.onboarding.issuer_model', UncastUser::class);
+
+    $this->artisan('x-change:system-principal:provision', [
+        '--commit' => true,
+        '--confirm-system-principal' => true,
+        '--json' => true,
+    ])->assertSuccessful();
+
+    $principal = UncastUser::query()->sole();
+    $onboardingMeta = json_decode(
+        (string) $principal->getAttribute('onboarding_meta'),
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    );
+
+    expect(data_get(
+        $onboardingMeta,
+        'system_principal.interactive_login',
+    ))->toBeFalse();
 });
 
 it('rejects a conflicting authorization reference on retry', function () {
