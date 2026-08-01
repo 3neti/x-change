@@ -58,7 +58,7 @@ describe('Cockpit shell layout baseline', () => {
             'Funding',
             'Pay Codes',
             'Campaigns',
-            'Accounts',
+            'Your Account',
             'System Readiness',
             'Documentation',
         ]);

@@ -37,7 +37,7 @@ final class CockpitDocumentationPageController extends Controller
                         'title' => 'Operate x-change',
                         'description' => 'Configuration visibility and deployment guidance for operators.',
                         'links' => array_values(array_filter([
-                            ['label' => 'Accounts', 'description' => 'Inspect provider funding destinations.', 'href' => route('x-change.cockpit.accounts.index')],
+                            ['label' => 'Your Account', 'description' => 'Review funds, issuance capacity, and funding destinations.', 'href' => route('x-change.cockpit.accounts.index')],
                             $this->systemReadinessAccess->isVisible()
                                 ? ['label' => 'System Readiness', 'description' => 'Inspect deployment and operational readiness.', 'href' => route('x-change.cockpit.diagnostics.runtime-profile')]
                                 : null,

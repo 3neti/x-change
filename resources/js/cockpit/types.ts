@@ -413,16 +413,24 @@ export type CockpitFundingQrMerchantProfile = {
     controls_settlement: false;
 };
 
-export type CockpitAccountsPageProps = CockpitHeaderPageProps & {
-    account_read_model: CockpitAccountReadModel;
-    funding_account_notice?: string | null;
-    funding_qr_merchant_profile: CockpitFundingQrMerchantProfile;
-    account_scenario?: {
-        enabled: boolean;
-        mode: 'rollback-only';
-        provider_calls: boolean;
-        balance_changes: boolean;
+export type CockpitDepositorAccountOverview = {
+    schema: 'x-change.cockpit.depositor-account.v1';
+    status: 'available';
+    account: {
+        reference: string;
+        currency: string;
     };
+    funding_destinations: Array<{
+        code: string;
+        label: string;
+        mode: 'shared' | 'dedicated';
+        status: string;
+        display_reference?: string | null;
+    }>;
+};
+
+export type CockpitAccountsPageProps = CockpitHeaderPageProps & {
+    account_overview: CockpitDepositorAccountOverview;
 };
 
 export type CockpitAccountScenarioFact = {

@@ -11,43 +11,14 @@ describe('Cockpit route page adapters', () => {
     it('mounts the Accounts route adapter', () => {
         const wrapper = mount(Accounts, {
             props: {
-                account_read_model: {
-                    schema: 'x-change.cockpit.account-management.v1',
+                account_overview: {
+                    schema: 'x-change.cockpit.depositor-account.v1',
                     status: 'available',
                     account: {
                         reference: 'Account •••• 12345678',
                         currency: 'PHP',
-                        ledger_authority: 'internal-account-ledger',
-                        funding_credit_policy:
-                            'verified-provider-settlement-only',
                     },
-                    providers: [],
-                    connection_history: [],
-                    controls: {
-                        shared_is_default: true,
-                        dedicated_fallback_enabled: false,
-                        pin_confirmation_required: true,
-                        manual_balance_adjustment_enabled: false,
-                        provider_webhook_settlement_required: true,
-                    },
-                    redactions: {
-                        account_numbers: 'masked',
-                        wallet_ids: 'masked',
-                        routing_tokens: 'write-only',
-                        credentials_exposed: false,
-                    },
-                },
-                funding_qr_merchant_profile: {
-                    name: 'Treasury Operator',
-                    city: 'Manila',
-                    merchant_category_code: '0000',
-                    merchant_name_template: '{name}',
-                    category_options: [
-                        { code: '0000', label: 'General/Personal' },
-                    ],
-                    presentation_only: true,
-                    controls_routing: false,
-                    controls_settlement: false,
+                    funding_destinations: [],
                 },
             },
         });

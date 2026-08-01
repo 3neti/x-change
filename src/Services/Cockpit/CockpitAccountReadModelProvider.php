@@ -52,6 +52,56 @@ class CockpitAccountReadModelProvider
     }
 
     /**
+     * @return array{
+     *     schema: string,
+     *     status: string,
+     *     account: array{reference: string, currency: string},
+     *     funding_destinations: array<int, array{
+     *         code: string,
+     *         label: string,
+     *         mode: string,
+     *         status: string,
+     *         display_reference: string|null
+     *     }>
+     * }
+     */
+    public function forDepositor(Model $owner, string $accountReference): array
+    {
+        $providers = [
+            $this->provider($owner, 'netbank', $accountReference),
+            $this->provider($owner, 'paynamics_constellation', $accountReference),
+        ];
+
+        return [
+            'schema' => 'x-change.cockpit.depositor-account.v1',
+            'status' => 'available',
+            'account' => [
+                'reference' => $this->maskedAccountReference($accountReference),
+                'currency' => (string) config('x-change.product.default_currency', 'PHP'),
+            ],
+            'funding_destinations' => array_map(
+                function (array $provider): array {
+                    $mode = (string) $provider['mode'];
+                    $destination = $mode === 'dedicated'
+                        ? $provider['dedicated']
+                        : $provider['shared'];
+
+                    return [
+                        'code' => (string) $provider['code'],
+                        'label' => (string) $provider['label'],
+                        'mode' => $mode,
+                        'status' => (string) $destination['status'],
+                        'display_reference' => is_string($destination['display_reference'] ?? null)
+                            ? $destination['display_reference']
+                            : null,
+                    ];
+                },
+                $providers,
+            ),
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function provider(Model $owner, string $provider, string $accountReference): array

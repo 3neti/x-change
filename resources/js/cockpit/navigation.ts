@@ -38,10 +38,10 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
     },
     {
         key: 'accounts',
-        label: 'Accounts',
+        label: 'Your Account',
         href: '/x/cockpit/accounts',
         group: 'secondary',
-        description: 'Provider funding destinations',
+        description: 'Funds, capacity, and funding destinations',
     },
     {
         key: 'runtime-profile',

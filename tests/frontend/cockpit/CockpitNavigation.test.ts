@@ -16,7 +16,7 @@ describe('Cockpit navigation baseline', () => {
         ]);
 
         expect(cockpitSecondaryNavigation.map((item) => item.label)).toEqual([
-            'Accounts',
+            'Your Account',
             'System Readiness',
             'Documentation',
         ]);

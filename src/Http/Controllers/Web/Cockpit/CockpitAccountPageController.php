@@ -11,7 +11,6 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitAccountReadModelProvider;
-use LBHurtado\XChange\Services\Cockpit\FundingQrMerchantProfileReadModel;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 use RuntimeException;
 
@@ -21,7 +20,6 @@ class CockpitAccountPageController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly CockpitAccountReadModelProvider $accounts,
         private readonly WalletAccessContract $wallets,
-        private readonly FundingQrMerchantProfileReadModel $merchantProfiles,
     ) {}
 
     /**
@@ -40,16 +38,8 @@ class CockpitAccountPageController extends Controller
         Inertia::encryptHistory();
 
         return Inertia::render('x-change/cockpit/Accounts', [
-            ...$this->props->toArray(),
-            'account_read_model' => $this->accounts->forOwner($owner, $accountReference),
-            'funding_account_notice' => $request->session()->pull('funding_account_notice'),
-            'funding_qr_merchant_profile' => $this->merchantProfiles->forOwner($owner),
-            'account_scenario' => [
-                'enabled' => (bool) config('x-change.cockpit.account_scenario.enabled', false),
-                'mode' => 'rollback-only',
-                'provider_calls' => false,
-                'balance_changes' => false,
-            ],
+            ...$this->props->toArray(includeReadModel: false),
+            'account_overview' => $this->accounts->forDepositor($owner, $accountReference),
         ]);
     }
 

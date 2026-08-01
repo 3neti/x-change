@@ -56,7 +56,7 @@ type XChangeSharedProps = {
 
 const page = usePage<XChangeSharedProps>();
 const controlItems = computed<NavItem[]>(() => [
-    { title: 'Accounts', href: accounts.index(), icon: UsersRound },
+    { title: 'Your Account', href: accounts.index(), icon: UsersRound },
     ...(page.props.xchange?.navigation?.system_readiness_visible
         ? [
               {
@@ -94,7 +94,7 @@ const { isCurrentUrl } = useCurrentUrl();
             <SidebarGroup
                 v-for="group in [
                     { label: 'Workspace', items: workspaceItems },
-                    { label: 'Controls', items: controlItems },
+                    { label: 'Account & Help', items: controlItems },
                 ]"
                 :key="group.label"
                 class="px-2 py-0"

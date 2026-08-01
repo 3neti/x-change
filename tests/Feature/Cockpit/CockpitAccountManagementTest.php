@@ -37,7 +37,7 @@ it('publishes package-owned Accounts routes with verified and PIN-confirmed muta
         ->toContain('password.confirm:settings.security.confirm');
 });
 
-it('renders the masked Accounts read model with encrypted Inertia history', function () {
+it('renders a minimal owner-scoped depositor Account projection with encrypted Inertia history', function () {
     $owner = actingAsTestUser();
     $owner->forceFill(['email_verified_at' => now()])->save();
 
@@ -46,16 +46,25 @@ it('renders the masked Accounts read model with encrypted Inertia history', func
 
     $response->assertOk()
         ->assertJsonPath('component', 'x-change/cockpit/Accounts')
-        ->assertJsonPath('props.account_read_model.status', 'available')
-        ->assertJsonPath('props.account_read_model.providers.0.code', 'netbank')
-        ->assertJsonPath('props.account_read_model.providers.0.mode', 'shared')
-        ->assertJsonPath('props.account_read_model.providers.0.shared.display_reference', '•••• 0019 · VCA 91500')
-        ->assertJsonPath('props.account_scenario.enabled', true)
-        ->assertJsonPath('props.account_scenario.mode', 'rollback-only')
-        ->assertJsonPath('props.funding_qr_merchant_profile.presentation_only', true)
-        ->assertJsonPath('props.funding_qr_merchant_profile.controls_routing', false)
-        ->assertJsonPath('props.funding_qr_merchant_profile.controls_settlement', false)
-        ->assertJsonMissing(['113001000019', 'test-vca-alias-token']);
+        ->assertJsonPath('props.account_overview.schema', 'x-change.cockpit.depositor-account.v1')
+        ->assertJsonPath('props.account_overview.status', 'available')
+        ->assertJsonPath('props.account_overview.funding_destinations.0.code', 'netbank')
+        ->assertJsonPath('props.account_overview.funding_destinations.0.mode', 'shared')
+        ->assertJsonPath('props.account_overview.funding_destinations.0.display_reference', '•••• 0019 · VCA 91500')
+        ->assertJsonMissingPath('props.account_read_model')
+        ->assertJsonMissingPath('props.account_scenario')
+        ->assertJsonMissingPath('props.funding_qr_merchant_profile')
+        ->assertJsonMissingPath('props.read_model')
+        ->assertJsonMissing([
+            '113001000019',
+            'test-vca-alias-token',
+            'ledger_authority',
+            'funding_credit_policy',
+            'connection_history',
+            'verification_status',
+            'can_activate',
+            'can_rotate_token',
+        ]);
 
     expect($response->getContent())->toContain('"encryptHistory":true');
 });
