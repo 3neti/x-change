@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import {
     BadgePlus,
     BookOpen,
@@ -35,6 +35,7 @@ import diagnostics from '@/routes/x-change/cockpit/diagnostics';
 import funding from '@/routes/x-change/cockpit/funding';
 import payCodes from '@/routes/x-change/cockpit/pay-codes';
 import type { NavItem } from '@/types';
+import { computed } from 'vue';
 
 // X-CHANGE HOST SHELL · package-owned navigation, account controls remain host-owned.
 const workspaceItems: NavItem[] = [
@@ -45,15 +46,28 @@ const workspaceItems: NavItem[] = [
     { title: 'Campaigns', href: campaigns.index(), icon: Megaphone },
 ];
 
-const controlItems: NavItem[] = [
+type XChangeSharedProps = {
+    xchange?: {
+        navigation?: {
+            system_readiness_visible?: boolean;
+        };
+    };
+};
+
+const page = usePage<XChangeSharedProps>();
+const controlItems = computed<NavItem[]>(() => [
     { title: 'Accounts', href: accounts.index(), icon: UsersRound },
-    {
-        title: 'Runtime Profile',
-        href: diagnostics.runtimeProfile(),
-        icon: RadioTower,
-    },
+    ...(page.props.xchange?.navigation?.system_readiness_visible
+        ? [
+              {
+                  title: 'System Readiness',
+                  href: diagnostics.runtimeProfile(),
+                  icon: RadioTower,
+              },
+          ]
+        : []),
     { title: 'Documentation', href: documentation(), icon: BookOpen },
-];
+]);
 
 const { isCurrentUrl } = useCurrentUrl();
 </script>

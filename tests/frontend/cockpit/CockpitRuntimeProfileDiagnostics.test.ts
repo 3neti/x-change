@@ -1,7 +1,15 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import RuntimeProfile from '../../../resources/js/cockpit/pages/RuntimeProfile.vue';
 import RouteRuntimeProfile from '../../../resources/js/pages/x-change/cockpit/RuntimeProfile.vue';
+
+const routerReloadMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@inertiajs/vue3', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@inertiajs/vue3')>()),
+    Head: { template: '<div><slot /></div>' },
+    router: { reload: routerReloadMock },
+}));
 
 const runtimeProfileReadModel = {
     schema: 'x-change.cockpit.runtime-profile-page.v1',
@@ -47,10 +55,118 @@ const runtimeProfileReadModel = {
             owns_lifecycle_truth: false,
         },
     },
+    system_readiness: {
+        schema: 'x-change.cockpit.system-readiness.v1',
+        status: 'operational',
+        checked_at: '2026-08-01T19:30:00+08:00',
+        summary: {
+            ready: 11,
+            total: 11,
+            attention: 0,
+        },
+        context: {
+            environment: 'local',
+            profile: 'netbank',
+            active_connections: ['netbank-primary'],
+            active_providers: ['netbank'],
+        },
+        sections: [
+            {
+                key: 'deployment',
+                label: 'Deployment',
+                description: 'Identity, application security, and installation state.',
+                status: 'ready',
+                checks: [
+                    {
+                        name: 'installation manifest',
+                        passed: true,
+                        message: 'recorded installation matches the active deployment configuration',
+                    },
+                ],
+            },
+            {
+                key: 'runtime',
+                label: 'Runtime Services',
+                description: 'Durable work, scheduling locks, and live updates.',
+                status: 'ready',
+                checks: [
+                    {
+                        name: 'durable queue runtime',
+                        passed: true,
+                        message: 'queue connection [database] is ready',
+                    },
+                ],
+            },
+            {
+                key: 'delivery',
+                label: 'Delivery And Access',
+                description: 'Recipient verification and communication channels.',
+                status: 'ready',
+                checks: [
+                    {
+                        name: 'SMS delivery',
+                        passed: true,
+                        message: 'SMS delivery uses [engagespark]',
+                    },
+                ],
+            },
+        ],
+        providers: {
+            status: 'ready',
+            active: ['netbank'],
+            connections: ['netbank-primary'],
+            installed_but_disabled: ['paynamics'],
+            capabilities: {
+                'netbank-primary': { ready: true, missing: [] },
+            },
+        },
+        runtime_processes: {
+            queues: ['x-change-funding', 'x-change-feedback', 'default'],
+            local: {
+                queue: 'php artisan queue:work database --queue=x-change-funding,x-change-feedback,default',
+                scheduler: 'php artisan schedule:work',
+            },
+            cloud: [],
+            forge: [],
+            broadcasting_required: false,
+        },
+        technical: {
+            operator_activity: {
+                schema: 'x-change.cockpit.operator-issuance-activity-runtime-profile.v1',
+                status: 'partially_wired',
+                repository_enabled: true,
+                recorder_enabled: true,
+                journal_handoff_enabled: false,
+                action_handoff_enabled: false,
+                feedback_handoff_enabled: false,
+                components: [
+                    {
+                        key: 'repository',
+                        configured: 'database',
+                        enabled: true,
+                        resolved_class: 'DatabaseRepository',
+                        fallback_class: 'NullRepository',
+                        uses_fallback: false,
+                        purpose: 'Durable activity read storage',
+                    },
+                ],
+                safety: {},
+            },
+            legacy_published_config: false,
+        },
+        redactions: {
+            secrets_exposed: false,
+            credentials_exposed: false,
+            account_numbers_exposed: false,
+            provider_payloads_exposed: false,
+            raw_responses_exposed: false,
+            performs_live_provider_checks: false,
+        },
+    },
     copy: {
-        eyebrow: 'Wave 21 · Runtime diagnostics',
-        title: 'Operator Activity Runtime Profile',
-        description: 'Read-only visibility into Cockpit operator activity runtime configuration.',
+        eyebrow: 'Operations',
+        title: 'System Readiness',
+        description: 'Deployment, providers, delivery, and background-work readiness in one safe view.',
     },
     safety: {
         mutates_configuration: false,
@@ -68,59 +184,63 @@ const runtimeProfileReadModel = {
 };
 
 describe('Cockpit runtime profile diagnostics', () => {
-    it('renders runtime profile status, components, and safety facts', () => {
+    it('renders standardized system readiness and keeps technical wiring collapsed', () => {
         const wrapper = mount(RuntimeProfile, {
             props: {
                 runtime_profile_read_model: runtimeProfileReadModel,
+            },
+            global: {
+                stubs: { Head: true },
             },
         });
 
         const text = wrapper.text();
 
-        expect(text).toContain('Operator Activity Runtime Profile');
-        expect(text).toContain('partially_wired');
-        expect(text).toContain('repository');
-        expect(text).toContain('journal_handoff');
-        expect(text).toContain('Durable activity read storage');
-        expect(text).toContain('NullCockpitOperatorIssuanceActivityJournalHandoff');
-        expect(text).toContain('This diagnostics surface is read-only');
-        expect(text).toContain('Runtime capabilities remain explicit opt-in');
-        const header = wrapper.find('[data-testid="cockpit-runtime-profile-header"]');
-        const facts = wrapper.find('[data-testid="cockpit-runtime-profile-header-facts"]');
-        const context = wrapper.find('[data-testid="cockpit-runtime-profile-header-context"]');
+        expect(text).toContain('System Readiness');
+        expect(text).toContain('Operational');
+        expect(text).toContain('Netbank');
+        expect(text).toContain('Providers And Connections');
+        expect(text).toContain('Deployment');
+        expect(text).toContain('Runtime Services');
+        expect(text).toContain('Delivery And Access');
+        expect(text).toContain('Run Checks');
+        expect(text).toContain('Local Development');
+        expect(wrapper.findAll('[data-testid="cockpit-system-readiness-section"]')).toHaveLength(3);
+        expect(wrapper.find('[data-testid="cockpit-system-readiness-runtime-processes"]').attributes('open')).toBeUndefined();
+        expect(wrapper.find('[data-testid="cockpit-system-readiness-technical"]').attributes('open')).toBeUndefined();
+        expect(text).not.toContain('Wave 21');
+        expect(text).not.toContain('defaults_safe');
+    });
 
-        expect(header.classes()).toContain('py-3');
-        expect(header.classes()).not.toContain('p-6');
-        expect(facts.classes()).toContain('p-1.5');
-        expect(facts.findAll('[data-testid="cockpit-runtime-profile-summary-card"]')).toHaveLength(4);
-        expect(context.element.tagName.toLowerCase()).toBe('details');
-        expect(context.attributes('open')).toBeUndefined();
-        expect(context.find('summary').text()).toContain('Runtime profile context');
-        const componentPanel = wrapper.find('[data-testid="cockpit-runtime-profile-components"]');
-        const componentRows = componentPanel.findAll('[data-testid="cockpit-runtime-profile-component"]');
+    it('reruns safe read-model checks without invoking an operational action', async () => {
+        const wrapper = mount(RuntimeProfile, {
+            props: {
+                runtime_profile_read_model: runtimeProfileReadModel,
+            },
+            global: {
+                stubs: { Head: true },
+            },
+        });
 
-        expect(componentPanel.element.tagName.toLowerCase()).toBe('details');
-        expect(componentPanel.attributes('open')).toBeUndefined();
-        expect(componentPanel.find('summary').text()).toContain('2 components');
-        expect(componentRows).toHaveLength(2);
-        expect(componentRows[0].classes()).toContain('p-3');
-        const safetyGrid = wrapper.find('[data-testid="cockpit-runtime-profile-safety-grid"]');
-        const pageSafety = wrapper.find('[data-testid="cockpit-runtime-profile-page-safety"]');
-        const runtimeSafety = wrapper.find('[data-testid="cockpit-runtime-profile-runtime-safety"]');
+        await wrapper
+            .find('[data-testid="cockpit-system-readiness-refresh"]')
+            .trigger('click');
 
-        expect(safetyGrid.classes()).toContain('gap-3');
-        expect(pageSafety.element.tagName.toLowerCase()).toBe('details');
-        expect(pageSafety.attributes('open')).toBeUndefined();
-        expect(pageSafety.find('summary').text()).toContain('8 flags');
-        expect(runtimeSafety.element.tagName.toLowerCase()).toBe('details');
-        expect(runtimeSafety.attributes('open')).toBeUndefined();
-        expect(runtimeSafety.find('summary').text()).toContain('8 flags');
+        expect(routerReloadMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                only: ['runtime_profile_read_model'],
+                preserveScroll: true,
+            }),
+        );
     });
 
     it('does not render mutation affordances or unsafe payload labels', () => {
         const wrapper = mount(RuntimeProfile, {
             props: {
                 runtime_profile_read_model: runtimeProfileReadModel,
+            },
+            global: {
+                stubs: { Head: true },
             },
         });
 
@@ -138,10 +258,13 @@ describe('Cockpit runtime profile diagnostics', () => {
             props: {
                 runtime_profile_read_model: runtimeProfileReadModel,
             },
+            global: {
+                stubs: { Head: true },
+            },
         });
 
         expect(wrapper.find('[data-testid="cockpit-runtime-profile-shell"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Operator Activity Runtime Profile');
-        expect(wrapper.text()).toContain('partially_wired');
+        expect(wrapper.text()).toContain('System Readiness');
+        expect(wrapper.text()).toContain('Operational');
     });
 });

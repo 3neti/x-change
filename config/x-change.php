@@ -209,6 +209,13 @@ return [
     ],
 
     'cockpit' => [
+        'system_readiness' => [
+            'visible' => (bool) env(
+                'XCHANGE_COCKPIT_SYSTEM_READINESS_VISIBLE',
+                false,
+            ),
+        ],
+
         'account_mutation_middleware' => [
             'verified',
             'password.confirm:settings.security.confirm',

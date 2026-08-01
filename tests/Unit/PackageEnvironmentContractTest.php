@@ -71,3 +71,14 @@ it('uses the standard section order', function (): void {
     expect($positions)->not->toContain(false)
         ->and($positions)->toBe($sortedPositions);
 });
+
+it('documents the temporary System Readiness visibility flag without commissioning it', function (): void {
+    $variable = collect((new CoreDeploymentEnvironmentContributor)->environmentVariables())
+        ->firstWhere('key', 'XCHANGE_COCKPIT_SYSTEM_READINESS_VISIBLE');
+
+    expect($variable)->not->toBeNull()
+        ->and($variable->configPath)->toBeNull()
+        ->and($variable->safeExample)->toBe('false')
+        ->and(file_get_contents(dirname(__DIR__, 2).'/config/x-change.php'))
+        ->toContain("'XCHANGE_COCKPIT_SYSTEM_READINESS_VISIBLE',\n                false,");
+});

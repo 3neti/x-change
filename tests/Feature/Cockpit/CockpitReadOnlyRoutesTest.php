@@ -38,8 +38,21 @@ it('renders the cockpit documentation hub without exposing operational secrets',
         ->assertJsonPath('props.documentation.sections.0.title', 'Use x-change')
         ->assertJsonPath('props.documentation.sections.1.title', 'Operate x-change')
         ->assertJsonPath('props.documentation.sections.2.title', 'Build with x-change')
+        ->assertJsonPath('props.xchange.navigation.system_readiness_visible', false)
+        ->assertJsonMissing(['label' => 'System Readiness'])
         ->assertJsonMissingPath('props.documentation.credentials')
         ->assertJsonMissingPath('props.documentation.secrets');
+});
+
+it('includes system readiness navigation when the authenticated workspace is enabled', function (): void {
+    config()->set('x-change.cockpit.system_readiness.visible', true);
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.documentation'))
+        ->assertOk()
+        ->assertJsonPath('props.xchange.navigation.system_readiness_visible', true)
+        ->assertJsonPath('props.documentation.sections.1.links.1.label', 'System Readiness');
 });
 
 it('renders cockpit pages as read-only inertia endpoints', function (string $route, array $parameters, string $component) {
@@ -71,7 +84,6 @@ it('renders cockpit pages as read-only inertia endpoints', function (string $rou
     'dashboard' => ['x-change.cockpit.dashboard', [], 'x-change/cockpit/Dashboard'],
     'funding' => ['x-change.cockpit.funding.index', [], 'x-change/cockpit/Funding'],
     'quick generate' => ['x-change.cockpit.quick-generate', [], 'x-change/cockpit/QuickGenerate'],
-    'runtime profile' => ['x-change.cockpit.diagnostics.runtime-profile', [], 'x-change/cockpit/RuntimeProfile'],
     'pay code explorer' => ['x-change.cockpit.pay-codes.index', [], 'x-change/cockpit/PayCodeExplorer'],
     'voucher detail' => ['x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001'], 'x-change/cockpit/VoucherDetail'],
     'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001'], 'x-change/cockpit/DistributionWorkspace'],
@@ -117,6 +129,7 @@ it('hydrates funding operations with secure read-only controls', function () {
 });
 
 it('renders the runtime profile diagnostics page as read-only configuration visibility', function () {
+    config()->set('x-change.cockpit.system_readiness.visible', true);
     actingAsTestUser();
 
     $this->withHeader('X-Inertia', 'true')
@@ -127,6 +140,11 @@ it('renders the runtime profile diagnostics page as read-only configuration visi
         ->assertJsonPath('props.runtime_profile_read_model.status', 'available')
         ->assertJsonPath('props.runtime_profile_read_model.authorized', true)
         ->assertJsonPath('props.runtime_profile_read_model.read_only', true)
+        ->assertJsonPath('props.runtime_profile_read_model.copy.title', 'System Readiness')
+        ->assertJsonPath('props.runtime_profile_read_model.system_readiness.schema', 'x-change.cockpit.system-readiness.v1')
+        ->assertJsonPath('props.runtime_profile_read_model.system_readiness.context.profile', fn (mixed $profile): bool => is_string($profile) && $profile !== '')
+        ->assertJsonPath('props.runtime_profile_read_model.system_readiness.redactions.secrets_exposed', false)
+        ->assertJsonPath('props.runtime_profile_read_model.system_readiness.redactions.performs_live_provider_checks', false)
         ->assertJsonPath('props.runtime_profile_read_model.profile.schema', 'x-change.cockpit.operator-issuance-activity-runtime-profile.v1')
         ->assertJsonPath('props.runtime_profile_read_model.safety.mutates_configuration', false)
         ->assertJsonPath('props.runtime_profile_read_model.safety.enables_handoffs', false)
@@ -140,6 +158,14 @@ it('renders the runtime profile diagnostics page as read-only configuration visi
         ->assertJsonMissingPath('props.runtime_profile_read_model.raw_payload')
         ->assertJsonMissingPath('props.runtime_profile_read_model.wallet')
         ->assertJsonMissingPath('props.runtime_profile_read_model.mutation_route');
+});
+
+it('hides system readiness from authenticated users by default', function (): void {
+    config()->set('x-change.cockpit.system_readiness.visible', false);
+    actingAsTestUser();
+
+    $this->get(route('x-change.cockpit.diagnostics.runtime-profile'))
+        ->assertNotFound();
 });
 
 it('keeps voucher route context explicit without loading voucher payloads', function () {

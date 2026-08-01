@@ -1,282 +1,440 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import {
+    Activity,
+    CheckCircle2,
+    CircleAlert,
+    CloudCog,
+    MailCheck,
+    RadioTower,
+    RefreshCw,
+    ServerCog,
+    ShieldCheck,
+} from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
-import type { CockpitRuntimeProfileComponent, CockpitRuntimeProfilePageProps } from '../types';
+import type {
+    CockpitRuntimeProfileComponent,
+    CockpitRuntimeProfilePageProps,
+    CockpitSystemReadinessSection,
+} from '../types';
+
+defineOptions({ inheritAttrs: false });
 
 const props = defineProps<CockpitRuntimeProfilePageProps>();
-
+const refreshing = ref(false);
 const readModel = computed(() => props.runtime_profile_read_model);
-const profile = computed(() => readModel.value.profile);
-
+const readiness = computed(() => readModel.value.system_readiness);
+const technicalComponents = computed<CockpitRuntimeProfileComponent[]>(() =>
+    Array.isArray(readiness.value.technical.operator_activity.components)
+        ? readiness.value.technical.operator_activity.components
+        : [],
+);
 const summaryCards = computed(() => [
     {
-        key: 'status',
-        label: 'Runtime status',
-        value: stringValue(profile.value.status),
-        helper: 'Computed from explicit operator activity runtime configuration.',
+        key: 'state',
+        label: 'System State',
+        value:
+            readiness.value.status === 'operational'
+                ? 'Operational'
+                : 'Attention Required',
+        tone:
+            readiness.value.status === 'operational' ? 'healthy' : 'warning',
     },
     {
-        key: 'repository',
-        label: 'Repository',
-        value: profile.value.repository_enabled ? 'configured' : 'fallback',
-        helper: 'Durable operator activity read storage.',
+        key: 'profile',
+        label: 'Deployment Profile',
+        value: titleCase(readiness.value.context.profile),
+        tone: 'neutral',
     },
     {
-        key: 'journal',
-        label: 'Journal handoff',
-        value: profile.value.journal_handoff_enabled ? 'configured' : 'not wired',
-        helper: 'Evidence handoff remains opt-in.',
+        key: 'connections',
+        label: 'Active Connections',
+        value: String(readiness.value.context.active_connections.length),
+        tone: 'neutral',
     },
     {
-        key: 'action-feedback',
-        label: 'Action / Feedback',
-        value: `${profile.value.action_handoff_enabled ? 'action configured' : 'action not wired'} · ${profile.value.feedback_handoff_enabled ? 'feedback configured' : 'feedback not wired'}`,
-        helper: 'Presentation-only action and feedback planning handoffs.',
+        key: 'checks',
+        label: 'Readiness Checks',
+        value: `${readiness.value.summary.ready} of ${readiness.value.summary.total}`,
+        tone: readiness.value.summary.attention === 0 ? 'healthy' : 'warning',
     },
 ]);
 
-const components = computed<CockpitRuntimeProfileComponent[]>(() => {
-    if (!Array.isArray(profile.value.components)) {
-        return [];
-    }
+const sectionIcons = {
+    deployment: ShieldCheck,
+    runtime: ServerCog,
+    delivery: MailCheck,
+};
 
-    return profile.value.components;
-});
-
-const safetyEntries = computed(() => Object.entries(readModel.value.safety ?? {}));
-const runtimeSafetyEntries = computed(() => Object.entries(profile.value.safety ?? {}));
-
-function stringValue(value: unknown): string {
-    if (typeof value === 'string' && value.trim() !== '') {
-        return value.trim();
-    }
-
-    if (typeof value === 'number' || typeof value === 'boolean') {
-        return String(value);
-    }
-
-    return 'unknown';
+function refresh(): void {
+    router.reload({
+        only: ['runtime_profile_read_model'],
+        preserveScroll: true,
+        onStart: () => {
+            refreshing.value = true;
+        },
+        onFinish: () => {
+            refreshing.value = false;
+        },
+    });
 }
 
-function booleanLabel(value: unknown): string {
-    if (value === true) {
-        return 'yes';
+function checkedAt(value: string): string {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return 'Check time unavailable';
     }
 
-    if (value === false) {
-        return 'no';
-    }
+    return `Checked ${new Intl.DateTimeFormat('en-PH', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(date)}`;
+}
 
-    return stringValue(value);
+function titleCase(value: string): string {
+    return value
+        .replaceAll('_', ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function sectionIcon(section: CockpitSystemReadinessSection) {
+    return sectionIcons[section.key as keyof typeof sectionIcons] ?? Activity;
 }
 </script>
 
 <template>
+    <Head title="System Readiness" />
+
     <CockpitLayout
         active-navigation="runtime-profile"
         :cockpit-header-read-model="props.cockpit_header_read_model"
     >
-        <section class="space-y-6" data-testid="cockpit-runtime-profile-shell">
-            <div
-                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-runtime-profile-header"
+        <section
+            class="mx-auto max-w-6xl space-y-5"
+            data-testid="cockpit-runtime-profile-shell"
+        >
+            <header
+                class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-system-readiness-header"
             >
                 <div
-                    class="flex flex-col gap-3 lg:flex-row lg:items-center"
-                    data-testid="cockpit-runtime-profile-header-row"
+                    class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div class="min-w-0 lg:w-72 lg:shrink-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                                {{ runtime_profile_read_model.copy.eyebrow }}
+                    <div class="flex min-w-0 items-center gap-3">
+                        <span
+                            class="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+                        >
+                            <RadioTower class="size-5" />
+                        </span>
+                        <div class="min-w-0">
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+                            >
+                                {{ readModel.copy.eyebrow }}
                             </p>
-                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                read-only
-                            </span>
+                            <h1
+                                class="text-xl font-semibold text-slate-950 dark:text-white"
+                            >
+                                {{ readModel.copy.title }}
+                            </h1>
+                            <p
+                                class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                {{ readModel.copy.description }}
+                            </p>
                         </div>
-                        <h2 class="mt-1 text-lg font-semibold leading-6 text-slate-950 dark:text-slate-50">
-                            {{ runtime_profile_read_model.copy.title }}
-                        </h2>
-                        <p class="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
-                            {{ runtime_profile_read_model.copy.description }}
-                        </p>
                     </div>
 
-                    <dl
-                        class="grid w-full gap-1.5 rounded-lg bg-slate-50 p-1.5 text-xs sm:grid-cols-2 lg:min-w-0 lg:flex-1 xl:grid-cols-4 dark:bg-slate-950"
-                        data-testid="cockpit-runtime-profile-header-facts"
-                    >
-                        <div
-                            v-for="card in summaryCards"
-                            :key="card.key"
-                            class="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
-                            data-testid="cockpit-runtime-profile-summary-card"
-                        >
-                            <dt class="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                {{ card.label }}
-                            </dt>
-                            <dd class="truncate text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50">
-                                {{ card.value }}
-                            </dd>
+                    <div class="flex shrink-0 items-center gap-3">
+                        <div class="text-right">
+                            <p
+                                class="text-xs font-semibold"
+                                :class="
+                                    readiness.status === 'operational'
+                                        ? 'text-emerald-700 dark:text-emerald-300'
+                                        : 'text-amber-700 dark:text-amber-300'
+                                "
+                            >
+                                {{
+                                    readiness.status === 'operational'
+                                        ? 'Operational'
+                                        : 'Attention Required'
+                                }}
+                            </p>
+                            <p
+                                class="text-xs text-slate-500 dark:text-slate-400"
+                            >
+                                {{ checkedAt(readiness.checked_at) }}
+                            </p>
                         </div>
-                    </dl>
+                        <button
+                            type="button"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                            :disabled="refreshing"
+                            data-testid="cockpit-system-readiness-refresh"
+                            @click="refresh"
+                        >
+                            <RefreshCw
+                                class="size-4"
+                                :class="{ 'animate-spin': refreshing }"
+                            />
+                            {{ refreshing ? 'Checking' : 'Run Checks' }}
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <dl
+                class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                data-testid="cockpit-system-readiness-summary"
+            >
+                <div
+                    v-for="card in summaryCards"
+                    :key="card.key"
+                    class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <dt
+                        class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                    >
+                        {{ card.label }}
+                    </dt>
+                    <dd
+                        class="mt-1 text-lg font-semibold"
+                        :class="
+                            card.tone === 'healthy'
+                                ? 'text-emerald-700 dark:text-emerald-300'
+                                : card.tone === 'warning'
+                                  ? 'text-amber-700 dark:text-amber-300'
+                                  : 'text-slate-950 dark:text-white'
+                        "
+                    >
+                        {{ card.value }}
+                    </dd>
+                </div>
+            </dl>
+
+            <section
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-system-readiness-providers"
+            >
+                <div
+                    class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+                >
+                    <div class="flex items-start gap-3">
+                        <span
+                            class="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                            <CloudCog class="size-4" />
+                        </span>
+                        <div>
+                            <h2
+                                class="text-base font-semibold text-slate-950 dark:text-white"
+                            >
+                                Providers And Connections
+                            </h2>
+                            <p
+                                class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                Selected deployment topology and registered
+                                capabilities. No provider call occurs here.
+                            </p>
+                        </div>
+                    </div>
+                    <span
+                        class="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                        :class="
+                            readiness.providers.status === 'ready'
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                        "
+                    >
+                        <CheckCircle2
+                            v-if="readiness.providers.status === 'ready'"
+                            class="size-3.5"
+                        />
+                        <CircleAlert v-else class="size-3.5" />
+                        {{
+                            readiness.providers.status === 'ready'
+                                ? 'Ready'
+                                : 'Attention'
+                        }}
+                    </span>
                 </div>
 
-                <details
-                    class="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800"
-                    data-testid="cockpit-runtime-profile-header-context"
+                <div class="mt-4 grid gap-3 md:grid-cols-3">
+                    <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-950">
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            Active Providers
+                        </p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                            {{ readiness.providers.active.map(titleCase).join(', ') || 'None' }}
+                        </p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-950">
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            Connections
+                        </p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                            {{ readiness.providers.connections.join(', ') || 'None' }}
+                        </p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-950">
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            Available, Not Selected
+                        </p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                            {{ readiness.providers.installed_but_disabled.map(titleCase).join(', ') || 'None' }}
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid gap-4 lg:grid-cols-3">
+                <section
+                    v-for="section in readiness.sections"
+                    :key="section.key"
+                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-system-readiness-section"
                 >
-                    <summary class="cursor-pointer text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400">
-                        Runtime profile context
-                    </summary>
-                    <ul class="mt-2 grid gap-1 text-xs leading-5 text-slate-500 sm:grid-cols-2 dark:text-slate-400">
-                        <li v-for="card in summaryCards" :key="card.key">
-                            <span class="font-semibold text-slate-700 dark:text-slate-300">{{ card.label }}:</span>
-                            {{ card.helper }}
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3">
+                            <span
+                                class="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                            >
+                                <component :is="sectionIcon(section)" class="size-4" />
+                            </span>
+                            <div>
+                                <h2 class="text-sm font-semibold text-slate-950 dark:text-white">
+                                    {{ section.label }}
+                                </h2>
+                                <p class="mt-0.5 text-xs leading-4 text-slate-500 dark:text-slate-400">
+                                    {{ section.description }}
+                                </p>
+                            </div>
+                        </div>
+                        <CheckCircle2
+                            v-if="section.status === 'ready'"
+                            class="size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                        />
+                        <CircleAlert
+                            v-else
+                            class="size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                        />
+                    </div>
+
+                    <ul class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+                        <li
+                            v-for="check in section.checks"
+                            :key="check.name"
+                            class="flex gap-2.5 py-2.5 first:pt-0 last:pb-0"
+                        >
+                            <CheckCircle2
+                                v-if="check.passed"
+                                class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                            />
+                            <CircleAlert
+                                v-else
+                                class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                            />
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                    {{ titleCase(check.name) }}
+                                </p>
+                                <p class="mt-0.5 text-xs leading-4 text-slate-500 dark:text-slate-400">
+                                    {{ check.message }}
+                                </p>
+                            </div>
                         </li>
                     </ul>
-                </details>
+                </section>
             </div>
 
             <details
-                class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-runtime-profile-components"
+                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-system-readiness-runtime-processes"
             >
-                <summary class="flex cursor-pointer list-none flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                            Runtime components
-                        </p>
-                        <h3 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
-                            Explicit configuration and fallbacks
-                        </h3>
-                    </div>
-                    <span class="w-fit rounded-full bg-slate-100 px-2 py-0.5 text-[0.7rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        {{ components.length }} components
-                    </span>
-                </summary>
-
-                <div class="mt-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-                    <div
-                        v-for="component in components"
-                        :key="component.key"
-                        class="grid gap-2 border-b border-slate-200 p-3 last:border-b-0 dark:border-slate-800 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
-                        data-testid="cockpit-runtime-profile-component"
-                    >
+                <summary class="cursor-pointer list-none">
+                    <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="font-mono text-sm font-semibold text-slate-950 dark:text-slate-50">
-                                {{ component.key }}
-                            </p>
-                            <p class="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                                {{ component.purpose }}
-                            </p>
-                            <p
-                                class="mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
-                                :class="component.enabled ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'"
-                            >
-                                {{ component.enabled ? 'configured' : 'fallback' }}
+                            <h2 class="text-sm font-semibold text-slate-950 dark:text-white">
+                                Runtime Responsibilities
+                            </h2>
+                            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                Required queues and deployment processes. Configuration cannot prove workers are running.
                             </p>
                         </div>
-                        <dl class="grid gap-1.5 text-xs">
-                            <div class="grid gap-1 sm:grid-cols-[8rem_minmax(0,1fr)]">
-                                <dt class="font-semibold text-slate-500 dark:text-slate-400">
-                                    Configured
-                                </dt>
-                                <dd class="break-all font-mono text-slate-800 dark:text-slate-200">
-                                    {{ component.configured ?? 'null' }}
-                                </dd>
-                            </div>
-                            <div class="grid gap-1 sm:grid-cols-[8rem_minmax(0,1fr)]">
-                                <dt class="font-semibold text-slate-500 dark:text-slate-400">
-                                    Resolved
-                                </dt>
-                                <dd class="break-all font-mono text-slate-800 dark:text-slate-200">
-                                    {{ component.resolved_class }}
-                                </dd>
-                            </div>
-                            <div class="grid gap-1 sm:grid-cols-[8rem_minmax(0,1fr)]">
-                                <dt class="font-semibold text-slate-500 dark:text-slate-400">
-                                    Fallback
-                                </dt>
-                                <dd class="break-all font-mono text-slate-800 dark:text-slate-200">
-                                    {{ component.fallback_class }}
-                                </dd>
-                            </div>
-                        </dl>
+                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            {{ readiness.runtime_processes.queues.length }} queues
+                        </span>
+                    </div>
+                </summary>
+                <div class="mt-3 grid gap-3 border-t border-slate-200 pt-3 md:grid-cols-2 dark:border-slate-800">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Required Queues</p>
+                        <p class="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">
+                            {{ readiness.runtime_processes.queues.join(', ') }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Broadcasting</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {{ readiness.runtime_processes.broadcasting_required ? 'Reverb is required.' : 'Reverb is optional while broadcasts are disabled.' }}
+                        </p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Local Development</p>
+                        <div class="mt-1.5 grid gap-1.5">
+                            <code
+                                v-for="(command, key) in readiness.runtime_processes.local"
+                                :key="key"
+                                class="overflow-x-auto rounded-lg bg-slate-950 px-3 py-2 text-[0.7rem] text-slate-200"
+                            >{{ command }}</code>
+                        </div>
                     </div>
                 </div>
             </details>
 
-            <div
-                class="grid gap-3 lg:grid-cols-2"
-                data-testid="cockpit-runtime-profile-safety-grid"
+            <details
+                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-system-readiness-technical"
             >
-                <details
-                    class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-runtime-profile-page-safety"
-                >
-                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
+                <summary class="cursor-pointer list-none">
+                    <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                                Page safety
+                            <h2 class="text-sm font-semibold text-slate-950 dark:text-white">
+                                Technical Details
+                            </h2>
+                            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                Adapter wiring for implementation and support teams.
                             </p>
-                            <h3 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
-                                This diagnostics surface is read-only
-                            </h3>
                         </div>
-                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.7rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                            {{ safetyEntries.length }} flags
+                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            {{ technicalComponents.length }} components
                         </span>
-                    </summary>
-                    <dl class="mt-3 grid gap-1.5 border-t border-slate-200 pt-3 dark:border-slate-800">
-                        <div
-                            v-for="[key, value] in safetyEntries"
-                            :key="key"
-                            class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs dark:bg-slate-950"
-                        >
-                            <dt class="font-mono text-slate-600 dark:text-slate-300">
-                                {{ key }}
-                            </dt>
-                            <dd class="font-semibold text-slate-950 dark:text-slate-50">
-                                {{ booleanLabel(value) }}
-                            </dd>
-                        </div>
-                    </dl>
-                </details>
-
-                <details
-                    class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-runtime-profile-runtime-safety"
-                >
-                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
+                    </div>
+                </summary>
+                <div class="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div
+                        v-for="component in technicalComponents"
+                        :key="component.key"
+                        class="grid gap-1 border-b border-slate-200 px-3 py-2.5 last:border-b-0 sm:grid-cols-[11rem_minmax(0,1fr)] dark:border-slate-800"
+                    >
                         <div>
-                            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                                Runtime safety
+                            <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                {{ titleCase(component.key) }}
                             </p>
-                            <h3 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
-                                Runtime capabilities remain explicit opt-in
-                            </h3>
+                            <p class="text-[0.7rem] text-slate-500 dark:text-slate-400">
+                                {{ component.enabled ? 'Configured' : 'Safe fallback' }}
+                            </p>
                         </div>
-                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.7rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                            {{ runtimeSafetyEntries.length }} flags
-                        </span>
-                    </summary>
-                    <dl class="mt-3 grid gap-1.5 border-t border-slate-200 pt-3 dark:border-slate-800">
-                        <div
-                            v-for="[key, value] in runtimeSafetyEntries"
-                            :key="key"
-                            class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs dark:bg-slate-950"
-                        >
-                            <dt class="font-mono text-slate-600 dark:text-slate-300">
-                                {{ key }}
-                            </dt>
-                            <dd class="font-semibold text-slate-950 dark:text-slate-50">
-                                {{ booleanLabel(value) }}
-                            </dd>
-                        </div>
-                    </dl>
-                </details>
-            </div>
+                        <p class="break-all font-mono text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
+                            {{ component.resolved_class }}
+                        </p>
+                    </div>
+                </div>
+            </details>
         </section>
     </CockpitLayout>
 </template>

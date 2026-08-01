@@ -21,6 +21,12 @@ it('builds a read-only cockpit runtime profile page prop contract', function () 
         ->and($props['runtime_profile_read_model']['status'])->toBe('available')
         ->and($props['runtime_profile_read_model']['authorized'])->toBeTrue()
         ->and($props['runtime_profile_read_model']['read_only'])->toBeTrue()
+        ->and($props['runtime_profile_read_model']['copy']['title'])->toBe('System Readiness')
+        ->and($props['runtime_profile_read_model']['system_readiness']['schema'])->toBe('x-change.cockpit.system-readiness.v1')
+        ->and($props['runtime_profile_read_model']['system_readiness']['summary']['total'])->toBeGreaterThan(0)
+        ->and($props['runtime_profile_read_model']['system_readiness']['sections'])->toHaveCount(3)
+        ->and($props['runtime_profile_read_model']['system_readiness']['redactions']['secrets_exposed'])->toBeFalse()
+        ->and($props['runtime_profile_read_model']['system_readiness']['redactions']['performs_live_provider_checks'])->toBeFalse()
         ->and($props['runtime_profile_read_model']['profile']['schema'])->toBe('x-change.cockpit.operator-issuance-activity-runtime-profile.v1')
         ->and($props['runtime_profile_read_model']['safety'])->toMatchArray([
             'mutates_configuration' => false,

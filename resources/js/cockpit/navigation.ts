@@ -45,10 +45,10 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
     },
     {
         key: 'runtime-profile',
-        label: 'Runtime Profile',
+        label: 'System Readiness',
         href: '/x/cockpit/diagnostics/runtime-profile',
         group: 'secondary',
-        description: 'Read-only handoff configuration',
+        description: 'Deployment and operational readiness',
     },
     {
         key: 'documentation',

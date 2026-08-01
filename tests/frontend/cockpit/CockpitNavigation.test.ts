@@ -13,20 +13,15 @@ describe('Cockpit navigation baseline', () => {
             'Funding',
             'Pay Codes',
             'Campaigns',
-            'Templates',
-            'Contacts',
-            'Operations',
-            'Reports',
         ]);
 
         expect(cockpitSecondaryNavigation.map((item) => item.label)).toEqual([
             'Accounts',
-            'Runtime Profile',
-            'Approvals',
-            'Administration',
+            'System Readiness',
+            'Documentation',
         ]);
 
-        expect(cockpitNavigationItems).toHaveLength(13);
+        expect(cockpitNavigationItems).toHaveLength(8);
     });
 
     it('marks only implemented Cockpit routes as enabled navigation links', () => {
@@ -45,16 +40,10 @@ describe('Cockpit navigation baseline', () => {
             'campaigns',
             'accounts',
             'runtime-profile',
+            'documentation',
         ]);
 
-        expect(disabledItems.map((item) => item.key)).toEqual([
-            'templates',
-            'contacts',
-            'operations',
-            'reports',
-            'approvals',
-            'administration',
-        ]);
+        expect(disabledItems).toHaveLength(0);
 
         for (const item of disabledItems) {
             expect(item.disabledLabel).toBe('Coming soon');

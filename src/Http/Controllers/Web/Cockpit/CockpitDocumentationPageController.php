@@ -7,9 +7,14 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessAccess;
 
 final class CockpitDocumentationPageController extends Controller
 {
+    public function __construct(
+        private readonly CockpitSystemReadinessAccess $systemReadinessAccess,
+    ) {}
+
     public function __invoke(): Response
     {
         return Inertia::render('x-change/cockpit/Documentation', [
@@ -31,11 +36,13 @@ final class CockpitDocumentationPageController extends Controller
                         'key' => 'operate',
                         'title' => 'Operate x-change',
                         'description' => 'Configuration visibility and deployment guidance for operators.',
-                        'links' => [
+                        'links' => array_values(array_filter([
                             ['label' => 'Accounts', 'description' => 'Inspect provider funding destinations.', 'href' => route('x-change.cockpit.accounts.index')],
-                            ['label' => 'Runtime Profile', 'description' => 'Inspect active read-model and handoff configuration.', 'href' => route('x-change.cockpit.diagnostics.runtime-profile')],
+                            $this->systemReadinessAccess->isVisible()
+                                ? ['label' => 'System Readiness', 'description' => 'Inspect deployment and operational readiness.', 'href' => route('x-change.cockpit.diagnostics.runtime-profile')]
+                                : null,
                             ['label' => 'Deployment Guide', 'description' => 'Install, commission, and verify a thin host.', 'href' => 'https://github.com/3neti/x-change/blob/main/DEPLOYMENT.md', 'external' => true],
-                        ],
+                        ])),
                     ],
                     [
                         'key' => 'build',

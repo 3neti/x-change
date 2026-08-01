@@ -14,6 +14,8 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
             'X-CHANGE HOST SHELL',
             "title: 'Cockpit'",
             "title: 'Documentation'",
+            "title: 'System Readiness'",
+            'system_readiness_visible',
             '<NavUser />',
         )
         ->not->toContain('Repository')

@@ -28,6 +28,13 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 secret: true,
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_COCKPIT_SYSTEM_READINESS_VISIBLE',
+                description: 'Expose the authenticated System Readiness workspace before role-based access is enabled.',
+                category: 'X-Change',
+                configPath: null,
+                safeExample: 'false',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_SYSTEM_USER_ID',
                 description: 'Stable email of the non-interactive system principal.',
                 category: 'Identity',

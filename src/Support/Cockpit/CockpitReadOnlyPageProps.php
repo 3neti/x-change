@@ -11,12 +11,14 @@ use LBHurtado\XChange\Data\Cockpit\CockpitDistributionWorkspaceReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivitySearchFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
+use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessInspector;
 
 class CockpitReadOnlyPageProps
 {
     public function __construct(
         private readonly CockpitReadModelProviderContract $readModels,
         private readonly CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
+        private readonly CockpitSystemReadinessInspector $systemReadiness,
     ) {}
 
     /**
@@ -274,10 +276,11 @@ class CockpitReadOnlyPageProps
                 'authorized' => true,
                 'read_only' => true,
                 'profile' => $this->operatorActivityRuntimeProfile->inspect()->toArray(),
+                'system_readiness' => $this->systemReadiness->inspect(),
                 'copy' => [
-                    'eyebrow' => 'Wave 21 · Runtime diagnostics',
-                    'title' => 'Operator Activity Runtime Profile',
-                    'description' => 'Read-only visibility into Cockpit operator activity runtime configuration. This page does not enable handoffs, write journal entries, compose actions, send feedback, call providers, mutate vouchers, or move money.',
+                    'eyebrow' => 'Operations',
+                    'title' => 'System Readiness',
+                    'description' => 'Deployment, providers, delivery, and background-work readiness in one safe view.',
                 ],
                 'safety' => [
                     'mutates_configuration' => false,

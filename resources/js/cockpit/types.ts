@@ -1018,12 +1018,64 @@ export type CockpitRuntimeProfile = {
     safety: Record<string, unknown>;
 };
 
+export type CockpitSystemReadinessCheck = {
+    name: string;
+    passed: boolean;
+    message: string;
+};
+
+export type CockpitSystemReadinessSection = {
+    key: string;
+    label: string;
+    description: string;
+    status: 'ready' | 'attention';
+    checks: CockpitSystemReadinessCheck[];
+};
+
+export type CockpitSystemReadiness = {
+    schema: string;
+    status: 'operational' | 'attention_required';
+    checked_at: string;
+    summary: {
+        ready: number;
+        total: number;
+        attention: number;
+    };
+    context: {
+        environment: string;
+        profile: string;
+        active_connections: string[];
+        active_providers: string[];
+    };
+    sections: CockpitSystemReadinessSection[];
+    providers: {
+        status: 'ready' | 'attention';
+        active: string[];
+        connections: string[];
+        installed_but_disabled: string[];
+        capabilities: Record<string, { ready: boolean; missing: string[] }>;
+    };
+    runtime_processes: {
+        queues: string[];
+        local: Record<string, string>;
+        cloud: string[];
+        forge: string[];
+        broadcasting_required: boolean;
+    };
+    technical: {
+        operator_activity: CockpitRuntimeProfile;
+        legacy_published_config: boolean;
+    };
+    redactions: Record<string, boolean>;
+};
+
 export type CockpitRuntimeProfileReadModel = {
     schema: string;
     status: string;
     authorized: boolean;
     read_only: boolean;
     profile: CockpitRuntimeProfile;
+    system_readiness: CockpitSystemReadiness;
     copy: {
         eyebrow: string;
         title: string;

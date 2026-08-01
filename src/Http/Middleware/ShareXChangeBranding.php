@@ -7,10 +7,15 @@ namespace LBHurtado\XChange\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessAccess;
 use Symfony\Component\HttpFoundation\Response;
 
 class ShareXChangeBranding
 {
+    public function __construct(
+        private readonly CockpitSystemReadinessAccess $systemReadinessAccess,
+    ) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         Inertia::share('xchange', [
@@ -18,6 +23,9 @@ class ShareXChangeBranding
                 'name' => (string) config('x-change.branding.name', config('x-change.product.name', 'X-Change')),
                 'logo_light' => (string) config('x-change.branding.logo_light', '/vendor/x-change/images/logo-orange.png'),
                 'logo_dark' => (string) config('x-change.branding.logo_dark', '/vendor/x-change/images/logo-silver.png'),
+            ],
+            'navigation' => [
+                'system_readiness_visible' => $this->systemReadinessAccess->isVisible(),
             ],
         ]);
 
