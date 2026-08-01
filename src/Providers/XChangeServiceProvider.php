@@ -1678,6 +1678,8 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/js/types/voucher.d.ts') => resource_path('js/types/voucher.d.ts'),
             $this->packagePath('resources/js/components/InputError.vue') => resource_path('js/components/InputError.vue'),
             $this->packagePath('resources/js/components/x-change-shared-tabs') => resource_path('js/components/ui/tabs'),
+            $this->packagePath('resources/js/components/x-change-shared-alert-dialog') => resource_path('js/components/ui/alert-dialog'),
+            $this->packagePath('resources/js/components/x-change-shared-textarea') => resource_path('js/components/ui/textarea'),
 
             // Form-flow shared dependencies
             $this->packagePath('resources/js/components/x-change-shared-financial') => resource_path('js/components/financial'),

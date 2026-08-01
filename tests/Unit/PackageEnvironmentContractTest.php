@@ -29,6 +29,15 @@ it('keeps the canonical package example and merge stub aligned with descriptors'
         ->and(environmentKeysFrom($mergeStub))->toBe($descriptorKeys);
 });
 
+it('ships the shared UI primitives required by published form-flow pages', function () {
+    $packageRoot = dirname(__DIR__, 2);
+
+    expect($packageRoot.'/resources/js/components/x-change-shared-alert-dialog/index.ts')
+        ->toBeFile()
+        ->and($packageRoot.'/resources/js/components/x-change-shared-textarea/index.ts')
+        ->toBeFile();
+});
+
 it('keeps known secret examples empty', function (): void {
     $contents = file_get_contents(dirname(__DIR__, 2).'/.env.example');
     $variables = (new CoreDeploymentEnvironmentContributor)->environmentVariables();
