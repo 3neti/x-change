@@ -72,6 +72,7 @@ use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeC
 use LBHurtado\XChange\Console\Commands\Funding\SyncStandingFundingAddressesCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyFundingRequestBackingCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
+use LBHurtado\XChange\Console\Commands\GenerateDeploymentManifestCommand;
 use LBHurtado\XChange\Console\Commands\InspectXChangeConfigurationCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
@@ -99,6 +100,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\RedactTreasurySensitiveMetadataC
 use LBHurtado\XChange\Console\Commands\Treasury\RefreshTreasuryLiquidityCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\RepairMissingDisbursementPostingsCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
+use LBHurtado\XChange\Console\Commands\ValidateDeploymentManifestCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
@@ -1183,6 +1185,8 @@ class XChangeServiceProvider extends ServiceProvider
                 SimulateTreasuryProviderDepositCommand::class,
                 InstallXChangeCommand::class,
                 ConfigureXChangeCommand::class,
+                GenerateDeploymentManifestCommand::class,
+                ValidateDeploymentManifestCommand::class,
                 InspectXChangeConfigurationCommand::class,
                 DoctorXChangeCommand::class,
                 CommissioningStatusCommand::class,

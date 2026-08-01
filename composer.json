@@ -49,7 +49,6 @@
         "3neti/emi-core": "^2.0@beta",
         "3neti/emi-netbank": "^2.1",
         "3neti/emi-paynamics": "^2.0@beta",
-        "3neti/onboarding": "^1.0",
         "3neti/form-flow": "^1.8",
         "3neti/form-handler-kyc": "^1.1",
         "3neti/form-handler-location": "^1.2",
@@ -60,12 +59,13 @@
         "3neti/laravel-model-channel": "^1.1",
         "3neti/merchant": "^1.2",
         "3neti/money-issuer": "^1.1",
+        "3neti/onboarding": "^1.0",
         "3neti/report-registry": "^1.1",
         "3neti/voucher": "^1.0@beta",
         "3neti/wallet": "^2.0@beta",
-        "3neti/x-commerce": "^1.0",
         "3neti/x-action": "^1.0",
         "3neti/x-campaign": "^1.0",
+        "3neti/x-commerce": "^1.0",
         "3neti/x-feedback": "^1.0",
         "3neti/x-journal": "^1.0",
         "3neti/x-ray": "^1.0",
@@ -78,7 +78,8 @@
         "illuminate/queue": "^13.0",
         "illuminate/routing": "^13.0",
         "illuminate/support": "^13.0",
-        "spatie/laravel-data": "^4.21"
+        "spatie/laravel-data": "^4.21",
+        "symfony/yaml": "^7.4"
     },
     "suggest": {
         "3neti/x-legal": "Provides jurisdiction-aware advisory Treasury vocabulary and policy traceability."
