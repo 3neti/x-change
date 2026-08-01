@@ -52,10 +52,9 @@ final readonly class EnsureXChangeIsCommissioned
             ], Response::HTTP_SERVICE_UNAVAILABLE, $headers);
         }
 
-        return response()->view('x-change::commissioning.status', [
-            'commissioning' => $state,
-            'checkedAt' => now(),
-        ], Response::HTTP_SERVICE_UNAVAILABLE, $headers);
+        return redirect()
+            ->route('x-change.commissioning.status')
+            ->withHeaders($headers);
     }
 
     /** @return array<string, string> */

@@ -22,8 +22,7 @@ it('does not intercept host routes during tests unless explicitly enforced', fun
 
 it('blocks ordinary html and api routes before commissioning', function (): void {
     $this->get('/host-home')
-        ->assertServiceUnavailable()
-        ->assertSee('X-Change is being commissioned')
+        ->assertRedirect('/x/commissioning')
         ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
         ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
 
@@ -81,7 +80,7 @@ it('blocks ordinary routes when the system principal disappears after commission
     ]);
     $principal->delete();
 
-    $this->get('/host-home')->assertServiceUnavailable();
+    $this->get('/host-home')->assertRedirect('/x/commissioning');
     $this->getJson('/x/ready')
         ->assertServiceUnavailable()
         ->assertJson([
