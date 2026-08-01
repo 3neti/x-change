@@ -3,6 +3,10 @@
 This is the canonical operator and AI-agent runbook for applications built on
 `3neti/x-change`.
 
+For a first installation and the handoff between application developers, bank
+integration teams, DevOps, and Treasury operations, begin with
+[GETTING_STARTED.md](./GETTING_STARTED.md).
+
 ## The short version
 
 Create a normal Laravel application and install the package:

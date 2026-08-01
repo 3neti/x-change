@@ -216,6 +216,9 @@ php artisan x-change:setup
 php artisan x-change:deploy production
 ```
 
+Start with [GETTING_STARTED.md](./GETTING_STARTED.md) for the bank developer,
+DevOps, provider-integration, and first-commissioning walkthrough.
+
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for the canonical local, Laravel Cloud,
 automation, recovery, naming, and environment-contract runbook.
 
