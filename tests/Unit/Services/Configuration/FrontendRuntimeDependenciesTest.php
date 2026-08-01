@@ -11,6 +11,7 @@ it('declares the runtime dependencies required by package-owned frontend assets'
         '--save',
         '@laravel/echo-vue@^2.4.0',
         '@vueuse/core@^12.8.2',
+        'axios@^1.16.0',
         'dompurify@^3.4.2',
         'lucide-vue-next@^0.468.0',
         'marked@^18.0.7',
