@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
+use LBHurtado\XChange\Services\Configuration\FrontendRuntimeDependencies;
 use LBHurtado\XChange\Services\Configuration\HostApplicationIdentity;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
 use Throwable;
@@ -39,6 +40,7 @@ final class SetupXChangeCommand extends Command
 
     public function handle(
         HostApplicationIdentity $identity,
+        FrontendRuntimeDependencies $frontendDependencies,
         LocalEnvironmentFileWriter $environment,
     ): int {
         $interactive = $this->input->isInteractive() && ! $this->option('json');
@@ -165,7 +167,10 @@ final class SetupXChangeCommand extends Command
             }
 
             if (! (bool) $this->option('no-frontend')) {
-                foreach ([['npm', 'install'], ['npm', 'run', 'build']] as $command) {
+                foreach ([
+                    $frontendDependencies->npmInstallCommand(),
+                    ['npm', 'run', 'build'],
+                ] as $command) {
                     $result = Process::path(base_path())
                         ->timeout(900)
                         ->idleTimeout(120)
