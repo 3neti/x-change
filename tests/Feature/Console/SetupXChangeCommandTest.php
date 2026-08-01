@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\XChange\Console\Commands\SetupXChangeCommand;
 
 it('renders the complete one-command setup plan without side effects', function (): void {
     $exitCode = Artisan::call('x-change:setup', [
@@ -20,12 +21,24 @@ it('renders the complete one-command setup plan without side effects', function 
         ->and($payload['write_local_environment'])->toBeFalse()
         ->and($payload['steps'])->toBe([
             'configure',
+            'adopt_host',
             'preflight',
             'install',
             'frontend',
             'manifest',
             'verify',
         ]);
+});
+
+it('adopts the host before installation in the one-command workflow', function (): void {
+    $source = file_get_contents(
+        (new ReflectionClass(SetupXChangeCommand::class))->getFileName(),
+    );
+
+    expect($source)
+        ->toContain("\$this->call('x-change:host:adopt'")
+        ->and(strpos($source, "\$this->call('x-change:host:adopt'"))
+        ->toBeLessThan(strpos($source, "\$this->call('x-change:install'"));
 });
 
 it('requires explicit local environment writes outside interactive mode', function (): void {

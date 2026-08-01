@@ -102,6 +102,7 @@ final class SetupXChangeCommand extends Command
             'write_local_environment' => $writeEnvironment,
             'steps' => [
                 'configure',
+                'adopt_host',
                 'preflight',
                 'install',
                 ...((bool) $this->option('no-frontend') ? [] : ['frontend']),
@@ -150,6 +151,14 @@ final class SetupXChangeCommand extends Command
                 'x-change.payout.system_user_column' => 'email',
                 'x-change.payout.system_user_id' => $systemEmail,
             ]);
+
+            $adoptionExitCode = $this->call('x-change:host:adopt', [
+                '--json' => (bool) $this->option('json'),
+            ]);
+
+            if ($adoptionExitCode !== self::SUCCESS) {
+                return $this->renderResult(false, 'host_adoption_failed', $plan);
+            }
 
             $installExitCode = $this->call('x-change:install', [
                 '--profile' => $profile,
