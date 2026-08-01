@@ -17,6 +17,7 @@ final readonly class SystemPrincipalProvisioningService
 {
     public function __construct(
         private WalletProvisioningContract $accounts,
+        private SystemPrincipalAuthorizationReferenceResolver $authorizationReferences,
     ) {}
 
     public function inspect(?string $name = null, ?string $email = null): SystemPrincipalProvisioningData
@@ -30,18 +31,10 @@ final readonly class SystemPrincipalProvisioningService
     }
 
     public function provision(
-        string $authorizationReference,
+        ?string $authorizationReference = null,
         ?string $name = null,
         ?string $email = null,
     ): SystemPrincipalProvisioningData {
-        $authorizationReference = trim($authorizationReference);
-
-        if ($authorizationReference === '') {
-            throw new TreasuryConfigurationException(
-                'System-principal provisioning requires a stable authorization reference.',
-            );
-        }
-
         return $this->resolve(
             name: $name,
             email: $email,
@@ -60,7 +53,7 @@ final readonly class SystemPrincipalProvisioningService
     private function resolve(
         ?string $name,
         ?string $email,
-        string $authorizationReference,
+        ?string $authorizationReference,
         bool $commit,
     ): SystemPrincipalProvisioningData {
         [
@@ -123,6 +116,15 @@ final readonly class SystemPrincipalProvisioningService
 
             $principal = $matches->first();
             $created = false;
+            $authorizationReference = $this->authorizationReferences->resolve(
+                explicitReference: $authorizationReference,
+                persistedReference: $principal instanceof Model
+                    ? data_get($principal->getAttribute('onboarding_meta'), 'system_principal.authorization_reference')
+                    : null,
+                model: $modelClass,
+                identifierColumn: $identifierColumn,
+                identifier: $configuredIdentifier,
+            );
 
             if (! $principal instanceof Model) {
                 $principal = new $modelClass;

@@ -34,7 +34,8 @@ it('protects the detailed commissioning checklist with a rotated session-bound t
         ->assertSee('Action needed')
         ->assertSee('Complete the System Account')
         ->assertSee('--provision-system-principal')
-        ->assertSee('deployment:<stable-control-reference>')
+        ->assertSee('generated and reused automatically')
+        ->assertDontSee('--system-principal-authorization-reference')
         ->assertSee('php artisan x-change:doctor --strict --no-interaction')
         ->assertDontSee('--fresh-database')
         ->assertDontSee('Open Cockpit');

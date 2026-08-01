@@ -26,26 +26,58 @@ it('previews system-principal creation without mutating an Account', function ()
     expect(User::query()->count())->toBe(0);
 });
 
-it('requires explicit commit controls', function (array $options, string $message) {
+it('requires explicit confirmation before committing', function (): void {
     $this->artisan('x-change:system-principal:provision', [
         '--json' => true,
         '--commit' => true,
-        ...$options,
     ])
-        ->expectsOutputToContain($message)
+        ->expectsOutputToContain('--confirm-system-principal')
         ->assertFailed();
 
     expect(User::query()->count())->toBe(0);
-})->with([
-    'confirmation' => [
-        [],
-        '--confirm-system-principal',
-    ],
-    'authorization reference' => [
-        ['--confirm-system-principal' => true],
-        '--authorization-reference',
-    ],
-]);
+});
+
+it('generates and reuses a stable provisioning reference automatically', function (): void {
+    $arguments = [
+        '--commit' => true,
+        '--confirm-system-principal' => true,
+        '--json' => true,
+    ];
+
+    $this->artisan('x-change:system-principal:provision', $arguments)
+        ->assertSuccessful();
+
+    $principal = User::query()->sole();
+    $reference = (string) data_get(
+        $principal->onboarding_meta,
+        'system_principal.authorization_reference',
+    );
+
+    config()->set('app.key', 'base64:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=');
+
+    $this->artisan('x-change:system-principal:provision', $arguments)
+        ->assertSuccessful();
+
+    expect($reference)->toStartWith('system-principal:auto:v1:')
+        ->and(data_get(
+            $principal->fresh()->onboarding_meta,
+            'system_principal.authorization_reference',
+        ))->toBe($reference);
+});
+
+it('fails before mutation when an automatic reference has no stable application key', function (): void {
+    config()->set('app.key');
+
+    $this->artisan('x-change:system-principal:provision', [
+        '--commit' => true,
+        '--confirm-system-principal' => true,
+        '--json' => true,
+    ])
+        ->expectsOutputToContain('stable application key')
+        ->assertFailed();
+
+    expect(User::query()->count())->toBe(0);
+});
 
 it('provisions the non-interactive system principal and Account idempotently', function () {
     $arguments = [
@@ -138,7 +170,6 @@ it('allows the installer to provision the sole fresh-database Account without a 
         '--provision-system-principal' => true,
         '--system-principal-name' => 'Alpha System Principal',
         '--system-principal-email' => 'system-alpha@example.test',
-        '--system-principal-authorization-reference' => 'deployment:alpha-001',
         '--confirm-system-principal' => true,
         '--no-auth' => true,
         '--no-auth-tests' => true,
@@ -178,7 +209,6 @@ it('rejects an unstable system-principal identifier before a fresh database rese
         '--fresh-database' => true,
         '--confirm-database-reset' => true,
         '--provision-system-principal' => true,
-        '--system-principal-authorization-reference' => 'deployment:alpha-001',
         '--confirm-system-principal' => true,
         '--no-interaction' => true,
     ])

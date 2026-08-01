@@ -13,7 +13,7 @@ final class ProvisionSystemPrincipalCommand extends Command
     protected $signature = 'x-change:system-principal:provision
         {--name= : Display name for a newly created system principal}
         {--email= : Email; must match XCHANGE_SYSTEM_USER_ID}
-        {--authorization-reference= : Stable deployment or control authorization}
+        {--authorization-reference= : Optional stable deployment or control reference override}
         {--commit : Create or adopt the configured system principal}
         {--confirm-system-principal : Confirm this non-interactive Account is the system principal}
         {--json : Emit a machine-readable result}';
@@ -31,20 +31,10 @@ final class ProvisionSystemPrincipalCommand extends Command
             );
         }
 
-        if (
-            $commit
-            && trim((string) $this->option('authorization-reference')) === ''
-        ) {
-            return $this->reject(
-                'Committing system-principal provisioning requires '
-                .'[--authorization-reference].',
-            );
-        }
-
         try {
             $result = $commit
                 ? $provisioning->provision(
-                    authorizationReference: (string) $this->option(
+                    authorizationReference: $this->nullableOption(
                         'authorization-reference',
                     ),
                     name: $this->nullableOption('name'),

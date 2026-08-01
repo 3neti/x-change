@@ -39,7 +39,7 @@
                 <h2>{{ $systemPrincipalRecovery['title'] }}</h2>
                 <p>{{ $systemPrincipalRecovery['description'] }}</p>
                 <pre><code>{{ $systemPrincipalRecovery['command'] }}</code></pre>
-                <p>{{ $systemPrincipalRecovery['reference_guidance'] }}</p>
+                <p>The provisioning reference is generated and reused automatically. A deployment control reference remains available as an advanced command option.</p>
                 <p>Verify afterward with <code>{{ $systemPrincipalRecovery['verification_command'] }}</code>, then select <strong>Run checks again</strong>.</p>
             </aside>
         @endif

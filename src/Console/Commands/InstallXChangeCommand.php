@@ -42,7 +42,7 @@ class InstallXChangeCommand extends Command
         {--provision-system-principal : Create or adopt the configured non-interactive system principal}
         {--system-principal-name= : Display name for a newly created system principal}
         {--system-principal-email= : Email; must match XCHANGE_SYSTEM_USER_ID}
-        {--system-principal-authorization-reference= : Stable deployment or control authorization}
+        {--system-principal-authorization-reference= : Optional stable system-principal reference override}
         {--confirm-system-principal : Confirm this Account is the system principal}';
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
@@ -205,20 +205,6 @@ class InstallXChangeCommand extends Command
 
                 return self::FAILURE;
             }
-        }
-
-        if (
-            (bool) $this->option('provision-system-principal')
-            && trim((string) $this->option(
-                'system-principal-authorization-reference',
-            )) === ''
-        ) {
-            $this->components->error(
-                'System-principal provisioning requires '
-                .'[--system-principal-authorization-reference].',
-            );
-
-            return self::FAILURE;
         }
 
         if ($this->option('profile') !== null) {
@@ -605,7 +591,7 @@ class InstallXChangeCommand extends Command
             $exitCode = $this->call('x-change:system-principal:provision', [
                 '--name' => $this->option('system-principal-name'),
                 '--email' => $this->option('system-principal-email'),
-                '--authorization-reference' => (string) $this->option(
+                '--authorization-reference' => $this->option(
                     'system-principal-authorization-reference',
                 ),
                 '--commit' => true,
