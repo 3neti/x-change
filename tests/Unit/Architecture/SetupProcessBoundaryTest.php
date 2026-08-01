@@ -15,5 +15,8 @@ it('loads an adopted host model in a fresh PHP process before provisioning', fun
     expect($adoption)->toBeInt()
         ->and($installation)->toBeInt()->toBeGreaterThan($adoption)
         ->and($process)->toBeInt()->toBeGreaterThan($installation)
-        ->and($source)->not->toContain("\$this->call('x-change:install'");
+        ->and($source)->not->toContain("\$this->call('x-change:install'")
+        ->not->toContain("\$this->call('x-change:doctor'")
+        ->toContain("'x-change:doctor',")
+        ->toContain("'--strict',");
 });

@@ -25,11 +25,21 @@ test('new users can register', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('x-change.onboarding.mobile-verification.show'));
+    $verificationRequired = (bool) config(
+        'x-change.onboarding.mobile_verification.enabled',
+        true,
+    );
+    $response->assertRedirect($verificationRequired
+        ? route('x-change.onboarding.mobile-verification.show')
+        : '/x/cockpit');
 
     $this->assertDatabaseHas('users', [
         'name' => 'Test User',
         'mobile' => '639171234567',
         'email' => null,
     ]);
+
+    if (! $verificationRequired) {
+        expect(auth()->user()->mobile_verified_at)->not->toBeNull();
+    }
 });

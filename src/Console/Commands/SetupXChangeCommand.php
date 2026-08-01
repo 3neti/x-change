@@ -226,12 +226,25 @@ final class SetupXChangeCommand extends Command
                 return $this->renderResult(false, 'manifest_failed', $plan);
             }
 
-            $doctorExitCode = $this->call('x-change:doctor', [
-                '--strict' => true,
-            ]);
+            $doctorResult = Process::path(base_path())
+                ->timeout(300)
+                ->idleTimeout(60)
+                ->run([
+                    PHP_BINARY,
+                    'artisan',
+                    'x-change:doctor',
+                    '--strict',
+                ], function (string $type, string $output): void {
+                    if (! $this->option('json')) {
+                        $this->output->write($output);
+                    }
+                });
 
-            if ($doctorExitCode !== self::SUCCESS) {
-                return $this->renderResult(false, 'verification_failed', $plan);
+            if (! $doctorResult->successful()) {
+                return $this->renderResult(false, 'verification_failed', [
+                    ...$plan,
+                    'doctor_exit_code' => $doctorResult->exitCode(),
+                ]);
             }
         } catch (Throwable $exception) {
             return $this->renderResult(false, $exception->getMessage(), $plan);
