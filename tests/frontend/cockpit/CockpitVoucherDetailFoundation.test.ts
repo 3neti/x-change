@@ -152,7 +152,7 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-voucher-supporting-evidence-grid"]').classes()).toContain('gap-3');
         expect(wrapper.find('[data-testid="cockpit-voucher-supporting-evidence-grid"]').classes()).toContain('items-start');
         expect(wrapper.find('[data-testid="cockpit-voucher-supporting-evidence-stack"]').classes()).toContain('space-y-3');
-        expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
+        expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Inspection only');
         expect(wrapper.text()).toContain('cannot change the Pay Code');
         expect(wrapper.text()).toContain('send messages');

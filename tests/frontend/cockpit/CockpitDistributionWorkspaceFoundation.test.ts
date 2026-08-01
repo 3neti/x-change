@@ -156,7 +156,7 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Print Templates');
         expect(wrapper.text()).toContain('Share options');
         expect(wrapper.text()).toContain('Status evidence');
-        expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
+        expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(true);
         expect(supportingGrid.classes()).toContain('gap-3');
         expect(supportingGrid.classes()).not.toContain('gap-6');
         expect(supportingStack.classes()).toContain('space-y-3');

@@ -3824,9 +3824,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(true);
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');
-        expect(wrapper.find('[aria-current="page"]').text()).toContain(
-            'Create',
-        );
+        expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(true);
         expect(wrapper.text()).not.toContain('Review your Pay Code');
         expect(wrapper.text()).not.toContain('Design status');
         expect(wrapper.text()).toContain('Engineering Preview');

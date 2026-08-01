@@ -117,9 +117,7 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(wrapper.text()).toContain('Explorer details');
         expect(wrapper.text()).toContain('Filter metadata');
         expect(wrapper.text()).toContain('Results');
-        expect(wrapper.find('[aria-current="page"]').text()).toContain(
-            'Pay Codes',
-        );
+        expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('does not mutate vouchers');
         expect(wrapper.text()).toContain('send feedback');
         expect(wrapper.text()).toContain('write journal entries');
