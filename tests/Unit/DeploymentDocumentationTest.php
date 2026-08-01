@@ -5,6 +5,7 @@ declare(strict_types=1);
 it('documents the simple and advanced deployment workflows', function (): void {
     $contents = file_get_contents(dirname(__DIR__, 2).'/DEPLOYMENT.md');
     $gettingStarted = file_get_contents(dirname(__DIR__, 2).'/GETTING_STARTED.md');
+    $readme = file_get_contents(dirname(__DIR__, 2).'/README.md');
 
     expect($contents)->toContain(
         'php artisan x-change:setup',
@@ -27,5 +28,22 @@ it('documents the simple and advanced deployment workflows', function (): void {
             'A webhook permits evidence intake; it does not itself authorize Account',
             'XCHANGE_ONBOARDING_REQUIRE_OTP=true',
             "Do not edit package code inside the host's `vendor/` directory.",
+        )
+        ->and($readme)->toContain(
+            'Settlement Operating System',
+            'A Pay Code does not itself hold money',
+            'Provider Inventory',
+            'Treasury Positions',
+            'Pay Code obligations',
+            'GETTING_STARTED.md',
+            "composer require '3neti/x-change:^1.0@beta' -W",
+            'php artisan x-change:doctor --pre-install --strict --no-interaction',
+            'x-change-funding,x-change-feedback,default',
+            'See [LICENSE.md](./LICENSE.md) for the authoritative license terms.',
+        )
+        ->and($readme)->not->toContain(
+            'wallet-backed',
+            'Revenue Model (For Banks)',
+            'POST /pay-codes/{code}/claim/start',
         );
 });
