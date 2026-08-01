@@ -22,7 +22,9 @@ final readonly class HostApplicationIdentity
                 : 'x-'.Str::headline($directoryName);
         }
 
-        if (! str_starts_with($displayName, 'x-')) {
+        if (str_starts_with(mb_strtolower($displayName), 'x-')) {
+            $displayName = 'x-'.mb_substr($displayName, 2);
+        } else {
             $displayName = 'x-'.$displayName;
         }
 
