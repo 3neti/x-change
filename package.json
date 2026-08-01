@@ -12,6 +12,7 @@
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/test-utils": "^2.4.10",
     "@vueuse/core": "^12.8.2",
+    "dompurify": "^3.4.2",
     "jsdom": "^29.1.1",
     "lucide-vue-next": "^0.468.0",
     "marked": "^18.0.7",
