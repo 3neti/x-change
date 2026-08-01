@@ -6,16 +6,24 @@ namespace LBHurtado\XChange\Services\Configuration;
 
 use Composer\InstalledVersions;
 use LBHurtado\XChange\Models\XChangeInstallationManifest;
+use RuntimeException;
 
 final readonly class CommissioningManifestRecorder
 {
     public function __construct(
         private DeploymentConfigurationInspector $deployment,
         private CommissioningConfigurationFingerprint $fingerprint,
+        private SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
     ) {}
 
     public function record(): XChangeInstallationManifest
     {
+        if (! $this->systemPrincipalAccount->inspect()['passed']) {
+            throw new RuntimeException(
+                'Commissioning requires a persisted non-interactive system principal and Account.',
+            );
+        }
+
         $deployment = $this->deployment->inspect();
 
         return XChangeInstallationManifest::query()->updateOrCreate(

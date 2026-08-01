@@ -29,6 +29,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\WithdrawalDisbursementExecutionData;
+use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -73,6 +74,18 @@ function actingAsTestUser(int $amount = 1_000_000): User
     fundTestUserWallet($user, $amount);
 
     return $user;
+}
+
+function provisionTestSystemPrincipalForCommissioning(): User
+{
+    config()->set('x-change.payout.system_user_column', 'email');
+    config()->set('x-change.payout.system_user_id', 'system@example.test');
+    config()->set('x-change.payout.system_wallet_slug', 'platform');
+
+    app(SystemPrincipalProvisioningService::class)
+        ->provision('test:commissioning-system-principal');
+
+    return User::query()->where('email', 'system@example.test')->sole();
 }
 
 function fundTestUserWallet(User $user, int $amount = 1_000_000): void
@@ -198,6 +211,13 @@ function enableNetbankTreasuryForTests(): User
         'email' => 'test-system-treasury+'.Str::uuid().'@example.com',
         'password' => 'not-a-login-credential',
     ]);
+    config()->set('x-change.payout.system_user_column', 'email');
+    config()->set('x-change.payout.system_user_id', $system->email);
+    config()->set('x-change.payout.system_wallet_slug', 'platform');
+    app(SystemPrincipalProvisioningService::class)->provision(
+        'test:netbank-treasury-system-principal',
+    );
+    $system->refresh();
     $provider = new class implements SettlementProvider
     {
         public function manifest(): ProviderCapabilityManifestData

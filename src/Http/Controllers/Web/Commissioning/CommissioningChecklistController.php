@@ -12,6 +12,7 @@ use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\RuntimeOperationsChecklist;
+use LBHurtado\XChange\Services\Configuration\SystemPrincipalAccountReadinessInspector;
 
 final readonly class CommissioningChecklistController
 {
@@ -20,6 +21,7 @@ final readonly class CommissioningChecklistController
         private CommissioningStateResolver $commissioning,
         private PreInstallReadinessInspector $readiness,
         private RuntimeOperationsChecklist $runtimeOperations,
+        private SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
     ) {}
 
     public function show(Request $request): Response
@@ -30,6 +32,7 @@ final readonly class CommissioningChecklistController
             'commissioning' => $this->commissioning->resolve(),
             'readiness' => $this->readiness->inspect(),
             'runtime' => $this->runtimeOperations->describe(),
+            'installationChecks' => [$this->systemPrincipalAccount->inspect()],
             'checkedAt' => now(),
         ], Response::HTTP_OK, EnsureXChangeIsCommissioned::headers());
     }

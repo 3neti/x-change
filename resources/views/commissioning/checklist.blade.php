@@ -30,7 +30,7 @@
         </ol>
         <h2>Readiness checks</h2>
         <ul>
-            @foreach ($readiness['checks'] as $check)
+            @foreach ([...$readiness['checks'], ...$installationChecks] as $check)
                 <li><strong>{{ $check['passed'] ? 'Ready' : 'Action needed' }}</strong> · {{ str($check['name'])->title() }} — {{ $check['message'] }}</li>
             @endforeach
         </ul>

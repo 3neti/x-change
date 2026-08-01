@@ -260,6 +260,10 @@ it('resets initialized Treasury and recognizes the current provider balance from
             }
         },
     );
+    config()->set(
+        'x-change.payout.system_user_id',
+        FreshInstallerBootstrapSeeder::SYSTEM_EMAIL,
+    );
     forgetInstallerTreasuryServices();
     $providerAmountMinor = 95_632;
     app('migrator')->path(Orchestra\Testbench\default_migration_path());
@@ -267,7 +271,11 @@ it('resets initialized Treasury and recognizes the current provider balance from
     $this->artisan('x-change:install', [
         '--fresh-database' => true,
         '--confirm-database-reset' => true,
-        '--seeder' => '\\'.FreshInstallerBootstrapSeeder::class,
+        '--provision-system-principal' => true,
+        '--system-principal-name' => 'Fresh Installer System',
+        '--system-principal-email' => FreshInstallerBootstrapSeeder::SYSTEM_EMAIL,
+        '--system-principal-authorization-reference' => 'test:fresh-installer-system-principal',
+        '--confirm-system-principal' => true,
         '--force' => true,
         '--no-auth' => true,
         '--no-settings' => true,

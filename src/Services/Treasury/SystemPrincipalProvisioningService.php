@@ -89,7 +89,8 @@ final readonly class SystemPrincipalProvisioningService
                 status: $principal instanceof Model ? 'existing' : 'would_create',
                 committed: false,
                 created: false,
-                accountReady: false,
+                accountReady: $principal instanceof Model
+                    && $this->hasSystemAccount($principal),
                 model: $modelClass,
                 identifierColumn: $identifierColumn,
                 identifier: $configuredIdentifier,
@@ -176,6 +177,17 @@ final readonly class SystemPrincipalProvisioningService
                 authorizationReference: $authorizationReference,
             );
         }, attempts: 3);
+    }
+
+    private function hasSystemAccount(Model $principal): bool
+    {
+        return method_exists($principal, 'wallet')
+            && $principal->wallet()
+                ->where('slug', (string) config(
+                    'x-change.payout.system_wallet_slug',
+                    'platform',
+                ))
+                ->exists();
     }
 
     /**

@@ -23,6 +23,28 @@ it('runs a strict pre-install doctor without requiring post-install tables', fun
         ->and($payload['success'])->toBeTrue()
         ->and(collect($payload['checks'])->pluck('name'))
         ->not->toContain('onboarding sessions table');
+    expect(collect($payload['checks'])->pluck('name'))
+        ->not->toContain('system principal account');
+});
+
+it('fails strict runtime readiness without the persisted system principal Account', function (): void {
+    config()->set('x-change.payout.system_user_column', 'email');
+    config()->set('x-change.payout.system_user_id', 'missing-system@example.test');
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'system principal account');
+
+    expect($exitCode)->toBe(1)
+        ->and($check['passed'])->toBeFalse()
+        ->and($check['meta'])->toBe([
+            'principal_persisted' => false,
+            'system_designation_present' => false,
+            'account_ready' => false,
+        ]);
 });
 
 it('requires an explicitly configured deployment profile', function () {

@@ -38,6 +38,8 @@ it('exposes public commissioning and operational readiness safely', function ():
 });
 
 it('allows ordinary routes after a matching manifest exists', function (): void {
+    provisionTestSystemPrincipalForCommissioning();
+
     XChangeInstallationManifest::query()->create([
         'key' => CommissioningStateResolver::ManifestKey,
         'manifest_version' => CommissioningStateResolver::ManifestVersion,
@@ -56,4 +58,27 @@ it('allows ordinary routes after a matching manifest exists', function (): void 
         ->assertSee('Run checks again')
         ->assertSee('Open Cockpit')
         ->assertDontSee('Operator access token');
+});
+
+it('blocks ordinary routes when the system principal disappears after commissioning', function (): void {
+    $principal = provisionTestSystemPrincipalForCommissioning();
+
+    XChangeInstallationManifest::query()->create([
+        'key' => CommissioningStateResolver::ManifestKey,
+        'manifest_version' => CommissioningStateResolver::ManifestVersion,
+        'package_version' => 'test',
+        'profile' => 'development',
+        'active_connection_references' => [],
+        'configuration_fingerprint' => app(CommissioningConfigurationFingerprint::class)->current(),
+        'completed_at' => now(),
+    ]);
+    $principal->delete();
+
+    $this->get('/host-home')->assertServiceUnavailable();
+    $this->getJson('/x/ready')
+        ->assertServiceUnavailable()
+        ->assertJson([
+            'ready' => false,
+            'state' => 'installation_incomplete',
+        ]);
 });

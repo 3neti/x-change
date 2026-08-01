@@ -38,6 +38,7 @@ final class AdoptCommissioningManifestCommand extends Command
             if (
                 ! $inspection['ready']
                 || $principalState->status !== 'existing'
+                || ! $principalState->accountReady
                 || $treasuryState->uninitialized !== []
                 || $treasuryState->incomplete !== []
                 || $treasuryState->initialized === []

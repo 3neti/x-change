@@ -11,6 +11,8 @@ it('reports commissioning status without exposing configuration values', functio
 });
 
 it('records a sanitized manifest idempotently', function (): void {
+    provisionTestSystemPrincipalForCommissioning();
+
     $recorder = app(CommissioningManifestRecorder::class);
 
     $first = $recorder->record();
@@ -22,6 +24,13 @@ it('records a sanitized manifest idempotently', function (): void {
         ->and($second->active_connection_references)->toBe([])
         ->and($second->getAttributes())->not->toHaveKey('configuration');
 });
+
+it('refuses to record a manifest without the system principal Account', function (): void {
+    app(CommissioningManifestRecorder::class)->record();
+})->throws(
+    RuntimeException::class,
+    'Commissioning requires a persisted non-interactive system principal and Account.',
+);
 
 it('refuses adoption without explicit operator confirmation', function (): void {
     $this->artisan('x-change:commissioning:adopt')->assertFailed();

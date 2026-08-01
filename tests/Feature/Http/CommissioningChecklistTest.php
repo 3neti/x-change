@@ -29,6 +29,8 @@ it('protects the detailed commissioning checklist with a rotated session-bound t
         ->assertSee('php artisan queue:work database --queue=x-change-funding,x-change-feedback,default --sleep=3 --timeout=60')
         ->assertSee('php artisan schedule:work')
         ->assertSee('Run checks again')
+        ->assertSee('System Principal Account')
+        ->assertSee('Action needed')
         ->assertDontSee('Open Cockpit');
 
     config()->set('x-change.commissioning.access_token', 'commissioning-secret-two');

@@ -19,6 +19,7 @@ final readonly class CommissioningStateResolver
     public function __construct(
         private PreInstallReadinessInspector $readiness,
         private CommissioningConfigurationFingerprint $fingerprint,
+        private SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
     ) {}
 
     public function resolve(): CommissioningStateData
@@ -40,6 +41,14 @@ final readonly class CommissioningStateResolver
                     CommissioningState::ReadyToInstall,
                     $readiness['profile'],
                     reason: 'installation_manifest_table_missing',
+                );
+            }
+
+            if (! $this->systemPrincipalAccount->inspect()['passed']) {
+                return new CommissioningStateData(
+                    CommissioningState::InstallationIncomplete,
+                    $readiness['profile'],
+                    reason: 'system_principal_account_incomplete',
                 );
             }
 

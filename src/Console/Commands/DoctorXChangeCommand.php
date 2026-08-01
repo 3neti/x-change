@@ -11,6 +11,7 @@ use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
+use LBHurtado\XChange\Services\Configuration\SystemPrincipalAccountReadinessInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use Throwable;
 
@@ -32,6 +33,7 @@ class DoctorXChangeCommand extends Command
         CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
         PreInstallReadinessInspector $preInstallReadiness,
         CommissioningStateResolver $commissioning,
+        SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
     ): int {
         $checks = $this->option('pre-install')
             ? $preInstallReadiness->inspect()['checks']
@@ -42,6 +44,7 @@ class DoctorXChangeCommand extends Command
             : [
                 $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
                 ...$preInstallReadiness->inspect()['checks'],
+                $systemPrincipalAccount->inspect(),
                 $this->commissioningCheck($commissioning),
                 $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
                 $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
