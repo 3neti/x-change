@@ -8,7 +8,7 @@ it('loads an adopted host model in a fresh PHP process before provisioning', fun
     $source = file_get_contents(
         (new ReflectionClass(SetupXChangeCommand::class))->getFileName(),
     );
-    $adoption = strpos($source, "\$this->call('x-change:host:adopt'");
+    $adoption = strpos($source, '$hostUserModel->adopt()');
     $installation = strpos($source, "'x-change:install'", $adoption);
     $process = strpos($source, 'Process::path(base_path())', $installation);
 

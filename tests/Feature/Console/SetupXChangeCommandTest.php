@@ -36,12 +36,23 @@ it('adopts the host before installation in the one-command workflow', function (
     );
 
     expect($source)
-        ->toContain("\$this->call('x-change:host:adopt'")
-        ->and(strpos($source, "\$this->call('x-change:host:adopt'"))
+        ->toContain('$hostUserModel->adopt()')
+        ->and(strpos($source, '$hostUserModel->adopt()'))
         ->toBeLessThan(strpos($source, "'x-change:install'"))
         ->and($source)
         ->toContain('PHP_BINARY')
         ->toContain('Process::path(base_path())');
+});
+
+it('refreshes owned starter files only on first adoption or explicit force', function (): void {
+    $source = file_get_contents(
+        (new ReflectionClass(SetupXChangeCommand::class))->getFileName(),
+    );
+
+    expect($source)
+        ->toContain("\$refreshOwnedScaffold = (bool) \$this->option('force')")
+        ->toContain("|| \$adoption['changed']")
+        ->toContain("...(\$refreshOwnedScaffold ? ['--force'] : [])");
 });
 
 it('keeps the local setup trial frictionless without changing production defaults', function (): void {

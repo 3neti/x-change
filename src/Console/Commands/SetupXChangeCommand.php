@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Process;
 use LBHurtado\XChange\Services\Configuration\FrontendRuntimeDependencies;
 use LBHurtado\XChange\Services\Configuration\HostApplicationIdentity;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
+use LBHurtado\XChange\Services\Host\HostUserModelAdopter;
 use Throwable;
 
 use function Laravel\Prompts\confirm;
@@ -42,6 +43,7 @@ final class SetupXChangeCommand extends Command
         HostApplicationIdentity $identity,
         FrontendRuntimeDependencies $frontendDependencies,
         LocalEnvironmentFileWriter $environment,
+        HostUserModelAdopter $hostUserModel,
     ): int {
         $interactive = $this->input->isInteractive() && ! $this->option('json');
         $target = trim((string) $this->option('target'));
@@ -155,13 +157,11 @@ final class SetupXChangeCommand extends Command
                 'x-change.payout.system_user_id' => $systemEmail,
             ]);
 
-            $adoptionExitCode = $this->call('x-change:host:adopt', [
-                '--json' => (bool) $this->option('json'),
-            ]);
-
-            if ($adoptionExitCode !== self::SUCCESS) {
-                return $this->renderResult(false, 'host_adoption_failed', $plan);
-            }
+            $adoption = $hostUserModel->adopt();
+            $refreshOwnedScaffold = (bool) $this->option('force')
+                || $adoption['changed'];
+            $plan['host_adoption'] = $adoption;
+            $plan['refresh_owned_scaffold'] = $refreshOwnedScaffold;
 
             $installCommand = [
                 PHP_BINARY,
@@ -173,7 +173,7 @@ final class SetupXChangeCommand extends Command
                 "--system-principal-email={$systemEmail}",
                 '--confirm-system-principal',
                 '--no-interaction',
-                ...((bool) $this->option('force') ? ['--force'] : []),
+                ...($refreshOwnedScaffold ? ['--force'] : []),
                 ...((bool) $this->option('no-treasury') ? ['--no-treasury'] : []),
             ];
             $installResult = Process::path(base_path())
