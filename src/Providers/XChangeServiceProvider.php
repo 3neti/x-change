@@ -1697,6 +1697,10 @@ class XChangeServiceProvider extends ServiceProvider
         ], 'x-change-ui');
 
         $this->publishes([
+            $this->packagePath('stubs/resources/js/components/AppSidebar.vue.stub') => resource_path('js/components/AppSidebar.vue'),
+        ], 'x-change-shell');
+
+        $this->publishes([
             $this->packagePath('resources/assets/images') => public_path('vendor/x-change/images'),
             $this->packagePath('resources/assets/favicon.ico') => public_path('vendor/x-change/favicon.ico'),
             $this->packagePath('resources/assets/favicon.png') => public_path('vendor/x-change/favicon.png'),

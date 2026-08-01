@@ -2,11 +2,11 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import CockpitBalanceHud from '../../../resources/js/cockpit/components/CockpitBalanceHud.vue';
 import CockpitGlobalHeader from '../../../resources/js/cockpit/components/CockpitGlobalHeader.vue';
-import CockpitSidebar from '../../../resources/js/cockpit/components/CockpitSidebar.vue';
 import CockpitLayout from '../../../resources/js/cockpit/layouts/CockpitLayout.vue';
+import { cockpitNavigationItems } from '../../../resources/js/cockpit/navigation';
 
 describe('Cockpit shell layout baseline', () => {
-    it('renders the operator shell with global header sidebar and workspace', () => {
+    it('renders the operator workspace without a nested application sidebar', () => {
         const wrapper = mount(CockpitLayout, {
             props: {
                 institution: 'DBP Pay Code',
@@ -40,45 +40,28 @@ describe('Cockpit shell layout baseline', () => {
         expect(
             wrapper.find('[data-testid="cockpit-global-header"]').text(),
         ).toContain('DBP Pay Code');
-        expect(
-            wrapper.find('[data-testid="cockpit-sidebar"]').text(),
-        ).toContain('Pay Codes');
-        expect(wrapper.find('[aria-current="page"]').text()).toContain(
-            'Pay Codes',
+        expect(wrapper.find('[data-testid="cockpit-sidebar"]').exists()).toBe(
+            false,
         );
         expect(
             wrapper.find('[data-testid="cockpit-workspace"]').text(),
         ).toContain('Operator workspace');
     });
 
-    it('renders planned Cockpit navigation items as disabled coming soon entries', () => {
-        const wrapper = mount(CockpitSidebar, {
-            props: {
-                activeKey: 'dashboard',
-            },
-        });
-
-        const disabledItems = wrapper.findAll(
-            '[data-testid="cockpit-nav-item-disabled"]',
-        );
-        const disabledText = disabledItems.map((item) => item.text()).join(' ');
-
-        expect(disabledItems).toHaveLength(6);
-        expect(disabledText).not.toContain('Funding');
-        expect(disabledText).toContain('Operations');
-        expect(disabledText).toContain('Coming soon');
-
+    it('keeps the live navigation concise and excludes placeholder destinations', () => {
         expect(
-            wrapper
-                .findAll('[data-testid="cockpit-nav-item"]')
-                .map((item) => item.text())
-                .join(' '),
-        ).toContain('Funding');
-
-        for (const item of disabledItems) {
-            expect(item.attributes('aria-disabled')).toBe('true');
-            expect(item.attributes('href')).toBeUndefined();
-        }
+            cockpitNavigationItems.every((item) => item.enabled !== false),
+        ).toBe(true);
+        expect(cockpitNavigationItems.map((item) => item.label)).toEqual([
+            'Cockpit',
+            'Create',
+            'Funding',
+            'Pay Codes',
+            'Campaigns',
+            'Accounts',
+            'Runtime Profile',
+            'Documentation',
+        ]);
     });
 
     it('hydrates the global balance HUD from the shared cockpit header read model', () => {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Services\Host\HostApplicationShellAdopter;
 use LBHurtado\XChange\Services\Host\HostUserModelAdopter;
 use Throwable;
 
@@ -16,10 +17,13 @@ final class AdoptHostCommand extends Command
 
     protected $description = 'Safely add x-change capabilities to the host authentication model';
 
-    public function handle(HostUserModelAdopter $adopter): int
-    {
+    public function handle(
+        HostUserModelAdopter $adopter,
+        HostApplicationShellAdopter $applicationShell,
+    ): int {
         try {
             $result = $adopter->adopt(commit: ! (bool) $this->option('dry-run'));
+            $shellResult = $applicationShell->adopt(commit: ! (bool) $this->option('dry-run'));
         } catch (Throwable $exception) {
             if ((bool) $this->option('json')) {
                 $this->line((string) json_encode([
@@ -38,6 +42,7 @@ final class AdoptHostCommand extends Command
             'schema' => 'x-change.host-adoption.v1',
             'success' => true,
             ...$result,
+            'application_shell' => $shellResult,
         ];
 
         if ((bool) $this->option('json')) {
@@ -47,6 +52,11 @@ final class AdoptHostCommand extends Command
                 'adopted' => 'Host User model adopted without replacing its existing capabilities.',
                 'would_adopt' => 'Host User model is compatible and would be adopted.',
                 default => 'Host User model is already adopted.',
+            });
+            $this->components->info(match ($shellResult['status']) {
+                'adopted' => 'Host application shell adopted with Cockpit navigation.',
+                'would_adopt' => 'Host application shell is compatible and would be adopted.',
+                default => 'Host application shell is already adopted.',
             });
         }
 

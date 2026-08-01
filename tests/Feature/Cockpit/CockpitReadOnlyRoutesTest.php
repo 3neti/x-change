@@ -19,10 +19,27 @@ it('registers read-only cockpit routes under the x cockpit namespace', function 
     expect(route('x-change.cockpit.dashboard'))->toBe('http://localhost/x/cockpit')
         ->and(route('x-change.cockpit.funding.index'))->toBe('http://localhost/x/cockpit/funding')
         ->and(route('x-change.cockpit.quick-generate'))->toBe('http://localhost/x/cockpit/quick-generate')
+        ->and(route('x-change.cockpit.documentation'))->toBe('http://localhost/x/cockpit/documentation')
         ->and(route('x-change.cockpit.diagnostics.runtime-profile'))->toBe('http://localhost/x/cockpit/diagnostics/runtime-profile')
         ->and(route('x-change.cockpit.pay-codes.index'))->toBe('http://localhost/x/cockpit/pay-codes')
         ->and(route('x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001')
         ->and(route('x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001/distribution');
+});
+
+it('renders the cockpit documentation hub without exposing operational secrets', function (): void {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.documentation'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Documentation')
+        ->assertJsonPath('props.documentation.schema', 'x-change.cockpit.documentation.v1')
+        ->assertJsonCount(3, 'props.documentation.sections')
+        ->assertJsonPath('props.documentation.sections.0.title', 'Use x-change')
+        ->assertJsonPath('props.documentation.sections.1.title', 'Operate x-change')
+        ->assertJsonPath('props.documentation.sections.2.title', 'Build with x-change')
+        ->assertJsonMissingPath('props.documentation.credentials')
+        ->assertJsonMissingPath('props.documentation.secrets');
 });
 
 it('renders cockpit pages as read-only inertia endpoints', function (string $route, array $parameters, string $component) {

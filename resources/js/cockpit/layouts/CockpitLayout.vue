@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import CockpitGlobalHeader from '../components/CockpitGlobalHeader.vue';
-import CockpitSidebar from '../components/CockpitSidebar.vue';
 import type { CockpitBalanceMetric, CockpitHeaderReadModel } from '../types';
 
 const props = withDefaults(
@@ -44,24 +43,20 @@ const headerOperatingIdentity = computed(
         class="min-h-screen bg-slate-100 text-slate-950 dark:bg-slate-950 dark:text-slate-50"
         data-testid="cockpit-layout"
     >
-        <div class="flex min-h-screen">
-            <CockpitSidebar :active-key="activeNavigation" />
+        <div class="flex min-h-screen min-w-0 flex-col">
+            <CockpitGlobalHeader
+                :institution="institution"
+                :operating-identity="headerOperatingIdentity"
+                :connectivity="connectivity"
+                :balances="headerBalances"
+            />
 
-            <div class="flex min-w-0 flex-1 flex-col">
-                <CockpitGlobalHeader
-                    :institution="institution"
-                    :operating-identity="headerOperatingIdentity"
-                    :connectivity="connectivity"
-                    :balances="headerBalances"
-                />
-
-                <main
-                    class="flex-1 overflow-y-auto p-4 lg:p-6"
-                    data-testid="cockpit-workspace"
-                >
-                    <slot />
-                </main>
-            </div>
+            <main
+                class="flex-1 overflow-y-auto p-4 lg:p-6"
+                data-testid="cockpit-workspace"
+            >
+                <slot />
+            </main>
         </div>
     </div>
 </template>

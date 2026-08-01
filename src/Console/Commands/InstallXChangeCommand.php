@@ -9,6 +9,7 @@ use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
+use LBHurtado\XChange\Services\Host\HostApplicationShellAdopter;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
@@ -57,6 +58,7 @@ class InstallXChangeCommand extends Command
         PreInstallReadinessInspector $preInstallReadiness,
         SystemPrincipalProvisioningService $systemPrincipalProvisioning,
         CommissioningManifestRecorder $commissioningManifests,
+        HostApplicationShellAdopter $hostApplicationShell,
     ): int {
         $this->components->info('Installing X-Change...');
 
@@ -379,7 +381,17 @@ class InstallXChangeCommand extends Command
 
         $force = (bool) $this->option('force');
 
-        $publishResources = function () use ($force, $publishedAssets): void {
+        if (! $force) {
+            try {
+                $hostApplicationShell->adopt(commit: false);
+            } catch (Throwable $exception) {
+                $this->components->error($exception->getMessage());
+
+                return self::FAILURE;
+            }
+        }
+
+        $publishResources = function () use ($force, $hostApplicationShell, $publishedAssets): void {
             $this->call('vendor:publish', [
                 '--tag' => 'x-change-form-flow-drivers',
                 '--force' => $this->option('force'),
@@ -389,6 +401,17 @@ class InstallXChangeCommand extends Command
             $this->components->task('Publishing UI files', function () use ($force): void {
                 $this->callSilently('vendor:publish', [
                     '--tag' => 'x-change-ui',
+                    '--force' => $force,
+                ]);
+            });
+
+            $this->components->task('Publishing the x-change application shell', function () use ($force, $hostApplicationShell): void {
+                if (! $force) {
+                    $hostApplicationShell->adopt();
+                }
+
+                $this->callSilently('vendor:publish', [
+                    '--tag' => 'x-change-shell',
                     '--force' => $force,
                 ]);
             });

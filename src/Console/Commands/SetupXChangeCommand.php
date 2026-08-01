@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Process;
 use LBHurtado\XChange\Services\Configuration\FrontendRuntimeDependencies;
 use LBHurtado\XChange\Services\Configuration\HostApplicationIdentity;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
+use LBHurtado\XChange\Services\Host\HostApplicationShellAdopter;
 use LBHurtado\XChange\Services\Host\HostUserModelAdopter;
 use Throwable;
 
@@ -44,6 +45,7 @@ final class SetupXChangeCommand extends Command
         FrontendRuntimeDependencies $frontendDependencies,
         LocalEnvironmentFileWriter $environment,
         HostUserModelAdopter $hostUserModel,
+        HostApplicationShellAdopter $hostApplicationShell,
     ): int {
         $interactive = $this->input->isInteractive() && ! $this->option('json');
         $target = trim((string) $this->option('target'));
@@ -158,9 +160,12 @@ final class SetupXChangeCommand extends Command
             ]);
 
             $adoption = $hostUserModel->adopt();
+            $shellAdoption = $hostApplicationShell->adopt();
             $refreshOwnedScaffold = (bool) $this->option('force')
-                || $adoption['changed'];
+                || $adoption['changed']
+                || $shellAdoption['changed'];
             $plan['host_adoption'] = $adoption;
+            $plan['application_shell_adoption'] = $shellAdoption;
             $plan['refresh_owned_scaffold'] = $refreshOwnedScaffold;
 
             $installCommand = [

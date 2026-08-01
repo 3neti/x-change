@@ -1,0 +1,114 @@
+<script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
+import {
+    BadgePlus,
+    BookOpen,
+    CircleGauge,
+    FileStack,
+    Landmark,
+    Megaphone,
+    RadioTower,
+    UsersRound,
+} from 'lucide-vue-next';
+import AppLogo from '@/components/AppLogo.vue';
+import NavUser from '@/components/NavUser.vue';
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+} from '@/components/ui/sidebar';
+import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import {
+    dashboard,
+    documentation,
+    quickGenerate,
+} from '@/routes/x-change/cockpit';
+import accounts from '@/routes/x-change/cockpit/accounts';
+import campaigns from '@/routes/x-change/cockpit/campaigns';
+import diagnostics from '@/routes/x-change/cockpit/diagnostics';
+import funding from '@/routes/x-change/cockpit/funding';
+import payCodes from '@/routes/x-change/cockpit/pay-codes';
+import type { NavItem } from '@/types';
+
+// X-CHANGE HOST SHELL · package-owned navigation, account controls remain host-owned.
+const workspaceItems: NavItem[] = [
+    { title: 'Cockpit', href: dashboard(), icon: CircleGauge },
+    { title: 'Create', href: quickGenerate(), icon: BadgePlus },
+    { title: 'Funding', href: funding.index(), icon: Landmark },
+    { title: 'Pay Codes', href: payCodes.index(), icon: FileStack },
+    { title: 'Campaigns', href: campaigns.index(), icon: Megaphone },
+];
+
+const controlItems: NavItem[] = [
+    { title: 'Accounts', href: accounts.index(), icon: UsersRound },
+    {
+        title: 'Runtime Profile',
+        href: diagnostics.runtimeProfile(),
+        icon: RadioTower,
+    },
+    { title: 'Documentation', href: documentation(), icon: BookOpen },
+];
+
+const { isCurrentUrl } = useCurrentUrl();
+</script>
+
+<template>
+    <Sidebar
+        collapsible="icon"
+        variant="inset"
+        data-testid="x-change-application-sidebar"
+    >
+        <SidebarHeader>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton size="lg" as-child>
+                        <Link :href="dashboard()" aria-label="Open Cockpit">
+                            <AppLogo />
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+        </SidebarHeader>
+
+        <SidebarContent>
+            <SidebarGroup
+                v-for="group in [
+                    { label: 'Workspace', items: workspaceItems },
+                    { label: 'Controls', items: controlItems },
+                ]"
+                :key="group.label"
+                class="px-2 py-0"
+            >
+                <SidebarGroupLabel>{{ group.label }}</SidebarGroupLabel>
+                <SidebarMenu>
+                    <SidebarMenuItem
+                        v-for="item in group.items"
+                        :key="item.title"
+                    >
+                        <SidebarMenuButton
+                            as-child
+                            :is-active="isCurrentUrl(item.href)"
+                            :tooltip="item.title"
+                        >
+                            <Link :href="item.href" prefetch>
+                                <component :is="item.icon" />
+                                <span>{{ item.title }}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter>
+            <NavUser />
+        </SidebarFooter>
+    </Sidebar>
+    <slot />
+</template>
