@@ -90,18 +90,37 @@ final class DeployXChangeCommand extends Command
         }
 
         $commands = [
-            ['cloud', 'deploy', $application, $environment, '-n'],
-            ['cloud', 'deploy:monitor', $application, $environment, '-n'],
-            [
+            'deploy' => ['cloud', 'deploy', $application, $environment, '-n'],
+            'deploy:monitor' => ['cloud', 'deploy:monitor', $application, $environment, '-n'],
+            'command:run:commission' => [
                 'cloud',
                 'command:run',
                 $environment,
                 '--cmd=php artisan x-change:commission --no-interaction',
                 '-n',
             ],
+            'command:run:assets' => [
+                'cloud',
+                'command:run',
+                $environment,
+                '--cmd=php artisan x-change:doctor --assets --strict',
+                '-n',
+            ],
         ];
 
-        foreach ($commands as $command) {
+        foreach ($commands as $operation => $command) {
+            $cloudCommand = (string) $command[1];
+            $help = Process::path(base_path())
+                ->timeout(30)
+                ->run(['cloud', $cloudCommand, '-h', '-n']);
+
+            if (! $help->successful()) {
+                return $this->renderResult(false, 'Laravel Cloud CLI command is unavailable.', [
+                    ...$plan,
+                    'failed_operation' => $operation,
+                ]);
+            }
+
             $result = Process::path(base_path())
                 ->timeout(900)
                 ->idleTimeout(120)
@@ -114,7 +133,7 @@ final class DeployXChangeCommand extends Command
             if (! $result->successful()) {
                 return $this->renderResult(false, 'Deployment command failed safely.', [
                     ...$plan,
-                    'failed_operation' => $command[1],
+                    'failed_operation' => $operation,
                 ]);
             }
         }

@@ -76,6 +76,44 @@ it('deploys monitors and commissions through whitelisted cloud commands', functi
             '--cmd=php artisan x-change:commission --no-interaction',
             '-n',
         ]);
+        Process::assertRan(fn ($process): bool => $process->command === [
+            'cloud',
+            'command:run',
+            'staging',
+            '--cmd=php artisan x-change:doctor --assets --strict',
+            '-n',
+        ]);
+    } finally {
+        @unlink($path);
+    }
+});
+
+it('never commissions after a failed deployment', function (): void {
+    Process::fake([
+        '*' => Process::sequence()
+            ->push(Process::result(output: 'deploy help'))
+            ->push(Process::result(exitCode: 1, errorOutput: 'build failed')),
+    ]);
+    $path = tempnam(sys_get_temp_dir(), 'xchange-deployment-');
+
+    try {
+        $this->artisan('x-change:deployment:generate', [
+            '--target' => 'laravel-cloud',
+            '--profile' => 'development',
+            '--path' => $path,
+        ])->assertSuccessful();
+
+        $this->artisan('x-change:deploy', [
+            'environment' => 'staging',
+            '--application' => 'x-payout',
+            '--path' => $path,
+            '--confirm-production' => true,
+            '--json' => true,
+        ])->expectsOutputToContain('"failed_operation": "deploy"')
+            ->assertFailed();
+
+        Process::assertNotRan(fn ($process): bool => is_array($process->command)
+            && in_array('x-change:commission --no-interaction', $process->command, true));
     } finally {
         @unlink($path);
     }
