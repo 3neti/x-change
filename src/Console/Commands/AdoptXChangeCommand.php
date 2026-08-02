@@ -38,6 +38,15 @@ final class AdoptXChangeCommand extends Command
                 trim((string) ($this->option('composer-path') ?: base_path('composer.json'))),
                 ! $dryRun,
             );
+
+            if (! $dryRun && $this->call('x-change:publish', [
+                '--scope' => 'build',
+                '--force' => true,
+                '--verify' => true,
+                '--no-interaction' => true,
+            ]) !== self::SUCCESS) {
+                return $this->renderResult(false, 'Initial X-Change build publication failed.');
+            }
         } catch (Throwable $exception) {
             return $this->renderResult(false, $exception->getMessage());
         }
