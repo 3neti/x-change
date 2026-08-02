@@ -101,3 +101,32 @@ it('fails closed when a required build publication is unavailable', function ():
         ->and($result['summary']['unavailable'])->toBe(1)
         ->and($result['resources'][0]['passed'])->toBeFalse();
 });
+
+it('reports an unavailable optional build publication without failing verification', function (): void {
+    $catalog = new PublicationCatalog([
+        new class implements XChangePublicationContributor
+        {
+            public function publications(): iterable
+            {
+                yield new PublicationDefinitionData(
+                    id: 'optional.generated',
+                    owner: '3neti/optional',
+                    scope: PublicationScope::Build,
+                    invocation: PublicationInvocation::Tag,
+                    target: 'optional-generated-build-inputs',
+                    overwritePolicy: PublicationOverwritePolicy::AlwaysGenerated,
+                    description: 'Optional generated input.',
+                    required: false,
+                    available: false,
+                    generated: true,
+                );
+            }
+        },
+    ]);
+
+    $result = (new PublicationVerifier($catalog, new PublishedAssetDriftDetector))->inspectBuild();
+
+    expect($result['passed'])->toBeTrue()
+        ->and($result['summary']['unavailable'])->toBe(1)
+        ->and($result['resources'][0]['passed'])->toBeTrue();
+});

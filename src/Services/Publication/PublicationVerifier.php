@@ -99,10 +99,9 @@ final readonly class PublicationVerifier
             );
         }
 
-        $passed = $summary['stale'] === 0
-            && $summary['missing'] === 0
-            && $summary['unavailable'] === 0
-            && $summary['unregistered'] === 0;
+        $passed = collect($resources)->every(
+            static fn (array $resource): bool => $resource['passed'],
+        );
 
         return [
             'name' => 'generated build inputs',

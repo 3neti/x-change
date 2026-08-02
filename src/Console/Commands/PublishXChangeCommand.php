@@ -48,7 +48,13 @@ final class PublishXChangeCommand extends Command
                 array_values((array) $this->option('except')),
             );
 
-            if ($scope === PublicationScope::Build && ! (bool) $this->option('dry-run')) {
+            $publishedIds = array_column($result['results'], 'id');
+
+            if (
+                $scope === PublicationScope::Build
+                && ! (bool) $this->option('dry-run')
+                && in_array('x-change.ui', $publishedIds, true)
+            ) {
                 $result['generated_headers'] = $publishedAssets->applyGeneratedHeaders();
             }
 
