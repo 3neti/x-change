@@ -10,7 +10,6 @@ use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Host\HostApplicationShellAdopter;
-use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
@@ -49,7 +48,6 @@ class InstallXChangeCommand extends Command
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
 
     public function handle(
-        PublishedAssetDriftDetector $publishedAssets,
         TreasuryConfigurationValidator $treasuryConfiguration,
         TreasuryInitializationStateService $treasuryInitialization,
         TreasuryOpeningCapitalizationPolicyResolver $capitalizationPolicies,
@@ -431,7 +429,6 @@ class InstallXChangeCommand extends Command
             $force,
             $hostApplicationShell,
             $installExclusions,
-            $publishedAssets,
         ): bool {
             if (! $force) {
                 $hostApplicationShell->adopt();
@@ -445,8 +442,6 @@ class InstallXChangeCommand extends Command
             ]) !== self::SUCCESS) {
                 return false;
             }
-
-            $publishedAssets->applyGeneratedHeaders();
 
             return $this->call('x-change:publish', [
                 '--scope' => 'install',

@@ -12,7 +12,7 @@ use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimePro
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\SystemPrincipalAccountReadinessInspector;
-use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
+use LBHurtado\XChange\Services\Publication\PublicationVerifier;
 use Throwable;
 
 class DoctorXChangeCommand extends Command
@@ -29,7 +29,7 @@ class DoctorXChangeCommand extends Command
     public function handle(
         XChangeProviderTopologyResolverContract $topologies,
         ProviderRuntimeSettingsResolverContract $settings,
-        PublishedAssetDriftDetector $publishedAssets,
+        PublicationVerifier $publications,
         CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
         PreInstallReadinessInspector $preInstallReadiness,
         CommissioningStateResolver $commissioning,
@@ -40,7 +40,7 @@ class DoctorXChangeCommand extends Command
             : ($this->option('operator-activity-runtime')
             ? [$this->operatorActivityRuntimeProfileCheck($operatorActivityRuntimeProfile)]
             : ($this->option('assets')
-            ? [$this->publishedAssetCheck($publishedAssets)]
+            ? [$this->publishedAssetCheck($publications)]
             : [
                 $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
                 ...$preInstallReadiness->inspect()['checks'],
@@ -106,12 +106,13 @@ class DoctorXChangeCommand extends Command
     /**
      * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
      */
-    protected function publishedAssetCheck(PublishedAssetDriftDetector $publishedAssets): array
+    protected function publishedAssetCheck(PublicationVerifier $publications): array
     {
-        $result = $publishedAssets->inspect();
+        $result = $publications->inspectBuild();
 
         return $this->check($result['name'], $result['passed'], $result['message'], [
             'summary' => $result['summary'],
+            'resources' => $result['resources'],
             'files' => $result['files'],
         ]);
     }

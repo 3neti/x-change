@@ -23,9 +23,7 @@ resources:
 build:
   commands:
     - composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-    - php artisan vendor:publish --tag=x-change-ui --force --no-interaction
-    - php artisan vendor:publish --tag=x-change-assets --force --no-interaction
-    - php artisan vendor:publish --tag=x-rider-ui --force --no-interaction
+    - php artisan x-change:doctor --assets --strict --no-interaction
     - npm ci --audit false
     - npm run build
 deploy:
@@ -40,4 +38,3 @@ safety:
   automatic_database_reset: false
   automatic_provider_transfer: false
   unexplained_treasury_difference: block
-

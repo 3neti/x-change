@@ -8,6 +8,8 @@ use Illuminate\Console\Command;
 use LBHurtado\XChange\Enums\PublicationScope;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\Publication\PublicationPublisher;
+use LBHurtado\XChange\Services\Publication\PublicationVerifier;
+use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use Throwable;
 
 final class PublishXChangeCommand extends Command
@@ -23,8 +25,12 @@ final class PublishXChangeCommand extends Command
 
     protected $description = 'Publish the declared X-Change package resources for one safe scope.';
 
-    public function handle(PublicationCatalog $catalog, PublicationPublisher $publisher): int
-    {
+    public function handle(
+        PublicationCatalog $catalog,
+        PublicationPublisher $publisher,
+        PublicationVerifier $verifier,
+        PublishedAssetDriftDetector $publishedAssets,
+    ): int {
         $scope = PublicationScope::tryFrom(mb_strtolower(trim((string) $this->option('scope'))));
 
         if (! $scope instanceof PublicationScope) {
@@ -41,6 +47,25 @@ final class PublishXChangeCommand extends Command
                 array_values((array) $this->option('only')),
                 array_values((array) $this->option('except')),
             );
+
+            if ($scope === PublicationScope::Build && ! (bool) $this->option('dry-run')) {
+                $result['generated_headers'] = $publishedAssets->applyGeneratedHeaders();
+            }
+
+            if (
+                $scope === PublicationScope::Build
+                && (bool) $this->option('verify')
+                && ! (bool) $this->option('dry-run')
+            ) {
+                $result['verification'] = $verifier->inspectBuild(
+                    array_values((array) $this->option('only')),
+                    array_values((array) $this->option('except')),
+                );
+
+                if (! $result['verification']['passed']) {
+                    throw new \RuntimeException($result['verification']['message']);
+                }
+            }
         } catch (Throwable $exception) {
             return $this->renderFailure($exception->getMessage());
         }

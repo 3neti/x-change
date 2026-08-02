@@ -3,8 +3,13 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\XChange\Contracts\Publication\XChangePublicationContributor;
+use LBHurtado\XChange\Data\Publication\PublicationDefinitionData;
+use LBHurtado\XChange\Enums\PublicationInvocation;
+use LBHurtado\XChange\Enums\PublicationOverwritePolicy;
+use LBHurtado\XChange\Enums\PublicationScope;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
-use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
+use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 
 it('reports x-change doctor checks as json', function () {
     $this->artisan('x-change:doctor --json')
@@ -136,15 +141,12 @@ it('reports published cockpit asset drift as json', function () {
     $payload = json_decode(Artisan::output(), true);
 
     expect($exitCode)->toBe(0)
-        ->and($payload['checks'][0]['name'])->toBe('published cockpit assets')
-        ->and($payload['checks'][0]['meta'])->toHaveKeys(['summary', 'files']);
+        ->and($payload['checks'][0]['name'])->toBe('generated build inputs')
+        ->and($payload['checks'][0]['meta'])->toHaveKeys(['summary', 'resources', 'files']);
 });
 
 it('keeps ordinary diagnostics non-blocking while reporting failed readiness', function () {
-    app()->instance(
-        PublishedAssetDriftDetector::class,
-        failingPublishedAssetDriftDetector(),
-    );
+    app()->instance(PublicationCatalog::class, failingBuildPublicationCatalog());
 
     $exitCode = Artisan::call('x-change:doctor', [
         '--assets' => true,
@@ -163,10 +165,7 @@ it('keeps ordinary diagnostics non-blocking while reporting failed readiness', f
 });
 
 it('blocks deployment in strict mode when any readiness check fails', function () {
-    app()->instance(
-        PublishedAssetDriftDetector::class,
-        failingPublishedAssetDriftDetector(),
-    );
+    app()->instance(PublicationCatalog::class, failingBuildPublicationCatalog());
 
     $exitCode = Artisan::call('x-change:doctor', [
         '--assets' => true,
@@ -328,25 +327,25 @@ it('reports explicitly enabled cockpit operator activity runtime components thro
         ->and($repository['resolved_class'])->toBe(DatabaseCockpitOperatorIssuanceActivityRepository::class);
 });
 
-function failingPublishedAssetDriftDetector(): PublishedAssetDriftDetector
+function failingBuildPublicationCatalog(): PublicationCatalog
 {
-    return new class extends PublishedAssetDriftDetector
-    {
-        public function inspect(?array $mappings = null): array
+    return new PublicationCatalog([
+        new class implements XChangePublicationContributor
         {
-            return [
-                'name' => 'published cockpit assets',
-                'passed' => false,
-                'message' => 'published Cockpit assets have drift from package source',
-                'summary' => [
-                    'checked' => 1,
-                    'ok' => 0,
-                    'stale' => 1,
-                    'missing' => 0,
-                    'extra' => 0,
-                ],
-                'files' => [],
-            ];
-        }
-    };
+            public function publications(): iterable
+            {
+                yield new PublicationDefinitionData(
+                    id: 'missing.generated',
+                    owner: '3neti/missing',
+                    scope: PublicationScope::Build,
+                    invocation: PublicationInvocation::Tag,
+                    target: 'missing-generated-build-inputs',
+                    overwritePolicy: PublicationOverwritePolicy::AlwaysGenerated,
+                    description: 'Missing generated input.',
+                    available: false,
+                    generated: true,
+                );
+            }
+        },
+    ]);
 }

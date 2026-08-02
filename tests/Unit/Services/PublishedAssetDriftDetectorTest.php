@@ -70,7 +70,7 @@ it('reports stale missing and extra published cockpit assets', function () {
         ->toEqualCanonicalizing(['stale', 'missing', 'extra']);
 });
 
-it('ignores generated install headers while comparing published cockpit assets', function () {
+it('ignores generated publication headers while comparing published cockpit assets', function () {
     $source = cockpitDriftTempPath('source');
     $target = cockpitDriftTempPath('target');
 
@@ -92,6 +92,27 @@ it('ignores generated install headers while comparing published cockpit assets',
     expect($result['passed'])->toBeTrue()
         ->and($result['summary']['stale'])->toBe(0)
         ->and($result['files'][0]['status'])->toBe('ok');
+});
+
+it('keeps legacy install headers compatible during publication migration', function () {
+    $detector = new PublishedAssetDriftDetector;
+    $contents = "/*\n * ".PublishedAssetDriftDetector::LegacyGeneratedHeaderId."\n * legacy\n */\nexport const ready = true;\n";
+
+    expect($detector->stripGeneratedHeader($contents))->toBe("export const ready = true;\n");
+});
+
+it('compares individual published files', function () {
+    $source = cockpitDriftTempPath('source/input.ts');
+    $target = cockpitDriftTempPath('target/output.ts');
+    mkdir(dirname($source), 0777, true);
+    mkdir(dirname($target), 0777, true);
+    file_put_contents($source, 'export const ready = true;');
+    file_put_contents($target, 'export const ready = true;');
+
+    $result = (new PublishedAssetDriftDetector)->inspect([$source => $target]);
+
+    expect($result['passed'])->toBeTrue()
+        ->and($result['summary']['ok'])->toBe(1);
 });
 
 it('generates TypeScript warning headers without trailing whitespace', function () {
