@@ -5,6 +5,17 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 
+beforeEach(function (): void {
+    config()->set(
+        'x-change.deployment.cloud_checkpoint_path',
+        sys_get_temp_dir().'/xchange-cloud-checkpoints-'.spl_object_id($this).'.json',
+    );
+});
+
+afterEach(function (): void {
+    @unlink((string) config('x-change.deployment.cloud_checkpoint_path'));
+});
+
 it('exposes a side-effect-free commissioning plan', function (): void {
     $exitCode = Artisan::call('x-change:commission', [
         '--profile' => 'netbank',

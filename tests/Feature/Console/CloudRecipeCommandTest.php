@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Process;
+use LBHurtado\XChange\Contracts\Deployment\CloudStateReaderContract;
+use LBHurtado\XChange\Services\Deployment\DeploymentCheckpointRepository;
+
 it('exposes the package Cloud plan through the umbrella command', function (): void {
     $path = tempnam(sys_get_temp_dir(), 'xchange-cloud-');
     @unlink($path);
@@ -18,6 +23,57 @@ it('exposes the package Cloud plan through the umbrella command', function (): v
             ->assertSuccessful();
     } finally {
         @unlink($path);
+    }
+});
+
+it('rechecks live state before resuming from a sanitized checkpoint', function (): void {
+    app()->instance(CloudStateReaderContract::class, new class implements CloudStateReaderContract
+    {
+        public function read(string $application, string $environment): array
+        {
+            return [
+                'application' => ['exists' => true],
+                'environment' => ['exists' => true],
+                'resources' => [
+                    'database' => ['attached' => true],
+                    'cache' => ['attached' => true],
+                    'compute' => ['attached' => true],
+                    'websockets' => ['attached' => false],
+                ],
+                'runtime' => [
+                    'queues' => ['x-change-funding', 'x-change-feedback', 'default'],
+                    'scheduler' => true,
+                ],
+            ];
+        }
+    });
+    Process::fake();
+    $manifestPath = tempnam(sys_get_temp_dir(), 'xchange-resume-manifest-');
+    $checkpointPath = tempnam(sys_get_temp_dir(), 'xchange-resume-checkpoint-');
+    @unlink($manifestPath);
+    @unlink($checkpointPath);
+    config()->set('x-change.deployment.cloud_checkpoint_path', $checkpointPath);
+    (new DeploymentCheckpointRepository(new Filesystem))->record(
+        'staging', str_repeat('a', 64), str_repeat('b', 64), 'deploy', 'failed', $checkpointPath,
+    );
+
+    try {
+        $this->artisan('x-change:cloud', [
+            'operation' => 'resume',
+            '--environment' => 'staging',
+            '--application' => 'x-payout',
+            '--profile' => 'development',
+            '--path' => $manifestPath,
+            '--confirm-production' => true,
+            '--json' => true,
+        ])->assertSuccessful();
+
+        Process::assertRan(fn ($process): bool => $process->command === [
+            'cloud', 'deploy', 'x-payout', 'staging', '-n',
+        ]);
+    } finally {
+        @unlink($manifestPath);
+        @unlink($checkpointPath);
     }
 });
 

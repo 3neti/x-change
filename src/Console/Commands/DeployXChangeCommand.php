@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
+use LBHurtado\XChange\Services\Deployment\DeploymentCheckpointRepository;
 use LBHurtado\XChange\Services\Deployment\DeploymentManifestGenerator;
 use LBHurtado\XChange\Services\Deployment\DeploymentManifestRepository;
 use Throwable;
@@ -31,6 +32,7 @@ final class DeployXChangeCommand extends Command
     public function handle(
         DeploymentManifestGenerator $generator,
         DeploymentManifestRepository $manifests,
+        DeploymentCheckpointRepository $checkpoints,
     ): int {
         $path = trim((string) ($this->option('path') ?: base_path(
             'x-change.deployment.yaml',
@@ -131,11 +133,27 @@ final class DeployXChangeCommand extends Command
                 });
 
             if (! $result->successful()) {
+                $checkpoints->record(
+                    $environment,
+                    (string) $manifest['recipe']['hash'],
+                    (string) $manifest['manifest_hash'],
+                    (string) $operation,
+                    'failed',
+                );
+
                 return $this->renderResult(false, 'Deployment command failed safely.', [
                     ...$plan,
                     'failed_operation' => $operation,
                 ]);
             }
+
+            $checkpoints->record(
+                $environment,
+                (string) $manifest['recipe']['hash'],
+                (string) $manifest['manifest_hash'],
+                (string) $operation,
+                'succeeded',
+            );
         }
 
         if ($interactive) {

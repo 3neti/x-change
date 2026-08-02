@@ -174,6 +174,7 @@ return [
             static fn (string $reference): string => trim($reference),
             explode(',', (string) env('XCHANGE_ACTIVE_CONNECTIONS', '')),
         ))),
+        'cloud_checkpoint_path' => storage_path('app/x-change/cloud-deployment-checkpoints.json'),
     ],
 
     'commissioning' => [

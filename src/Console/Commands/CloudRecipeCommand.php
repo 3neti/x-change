@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use LBHurtado\XChange\Services\Deployment\CloudDeploymentPlanner;
 use LBHurtado\XChange\Services\Deployment\CloudInfrastructureApplier;
+use LBHurtado\XChange\Services\Deployment\DeploymentCheckpointRepository;
 use LBHurtado\XChange\Services\Deployment\DeploymentManifestGenerator;
 use LBHurtado\XChange\Services\Deployment\DeploymentManifestRepository;
 use Throwable;
@@ -37,6 +38,7 @@ final class CloudRecipeCommand extends Command
         CloudInfrastructureApplier $applier,
         DeploymentManifestGenerator $generator,
         DeploymentManifestRepository $manifests,
+        DeploymentCheckpointRepository $checkpoints,
     ): int {
         $operation = trim((string) $this->argument('operation'));
 
@@ -48,9 +50,48 @@ final class CloudRecipeCommand extends Command
                 '--no-interaction' => true,
             ]),
             'apply' => $this->apply($applier, $generator, $manifests),
-            'resume' => $this->notAvailableYet($operation),
+            'resume' => $this->resume($planner, $generator, $manifests, $checkpoints),
             default => $this->invalidOperation($operation),
         };
+    }
+
+    private function resume(
+        CloudDeploymentPlanner $planner,
+        DeploymentManifestGenerator $generator,
+        DeploymentManifestRepository $manifests,
+        DeploymentCheckpointRepository $checkpoints,
+    ): int {
+        $path = trim((string) ($this->option('path') ?: base_path('x-change.deployment.yaml')));
+
+        try {
+            if (! is_file($path)) {
+                $manifests->write($path, $generator->generate('laravel-cloud', $this->option('profile')));
+            }
+
+            $manifest = $manifests->read($path);
+            $application = trim((string) ($this->option('application') ?: $manifest['application']['slug']));
+            $environment = trim((string) $this->option('environment'));
+            $plan = $planner->plan($manifest, $application, $environment);
+            $history = $checkpoints->read();
+        } catch (Throwable $exception) {
+            $this->components->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if ($plan['changes_required']) {
+            $this->components->error('Cloud state has drifted or is incomplete; run plan and apply before resuming deployment.');
+
+            return self::FAILURE;
+        }
+
+        if ($history === []) {
+            $this->components->error('No deployment checkpoint exists; use ship for the first deployment.');
+
+            return self::FAILURE;
+        }
+
+        return $this->callDeploy(plan: false);
     }
 
     private function apply(
