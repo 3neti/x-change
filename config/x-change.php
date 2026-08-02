@@ -1197,11 +1197,11 @@ return [
         'email_required' => env('XCHANGE_AUTH_EMAIL_REQUIRED', false),
         'auth_enforcement' => env('XCHANGE_ONBOARDING_AUTH_ENFORCEMENT', 'scaffold'),
         'voucher' => [
-            'require_otp' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_OTP', false),
+            'require_otp' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_OTP', true),
             'require_pin_setup' => (bool) env('XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP', true),
         ],
         'mobile_verification' => [
-            'enabled' => (bool) env('XCHANGE_MOBILE_VERIFICATION_ENABLED', false),
+            'enabled' => (bool) env('XCHANGE_MOBILE_VERIFICATION_ENABLED', true),
             'ttl_minutes' => (int) env('XCHANGE_MOBILE_VERIFICATION_TTL_MINUTES', 10),
             'max_attempts' => (int) env('XCHANGE_MOBILE_VERIFICATION_MAX_ATTEMPTS', 5),
             'hash_key' => env('XCHANGE_MOBILE_VERIFICATION_HASH_KEY', env('APP_KEY')),
@@ -1210,6 +1210,15 @@ return [
                 'XCHANGE_MOBILE_VERIFICATION_SHOW_LOCAL_CODE',
                 env('APP_ENV') !== 'production',
             ),
+        ],
+        'identity_otp' => [
+            'driver' => env('XCHANGE_IDENTITY_OTP_DRIVER', 'unavailable'),
+            'purpose' => env('XCHANGE_IDENTITY_OTP_PURPOSE', 'onboarding.account'),
+            'base_url' => env('TXTCMDR_API_URL', 'https://txtcmdr.test'),
+            'token' => env('TXTCMDR_API_TOKEN'),
+            'connect_timeout' => (int) env('TXTCMDR_CONNECT_TIMEOUT', 5),
+            'timeout' => (int) env('TXTCMDR_TIMEOUT', 15),
+            'verify_ssl' => (bool) env('TXTCMDR_VERIFY_SSL', true),
         ],
     ],
 

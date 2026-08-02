@@ -33,6 +33,9 @@ use LBHurtado\EmiCore\Contracts\DeploymentEnvironmentContributor;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
+use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
+use LBHurtado\FormHandlerOtp\Services\TxtcmdrOtpChallengeGateway;
+use LBHurtado\FormHandlerOtp\Services\UnavailableOtpChallengeGateway;
 use LBHurtado\Onboarding\Contracts\ContactUserProvisionerContract;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
@@ -409,6 +412,13 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('config/x-change.php'),
             'x-change'
         );
+        $this->configureIdentityOtpGateway();
+        $this->app->singleton(OtpChallengeGateway::class, function ($app): OtpChallengeGateway {
+            return match (config('x-change.onboarding.identity_otp.driver', 'unavailable')) {
+                'txtcmdr' => $app->make(TxtcmdrOtpChallengeGateway::class),
+                default => $app->make(UnavailableOtpChallengeGateway::class),
+            };
+        });
         $this->mergeLifecycleScenarioDefaults();
 
         $this->app->singleton(CoreDeploymentEnvironmentContributor::class);
@@ -1143,6 +1153,35 @@ class XChangeServiceProvider extends ServiceProvider
             ClaimApprovalStatusResolver::class,
             DefaultClaimApprovalStatusResolver::class,
         );
+    }
+
+    private function configureIdentityOtpGateway(): void
+    {
+        config([
+            'otp-handler.driver' => config(
+                'x-change.onboarding.identity_otp.driver',
+                'unavailable',
+            ),
+            'otp-handler.txtcmdr.base_url' => config(
+                'x-change.onboarding.identity_otp.base_url',
+                'https://txtcmdr.test',
+            ),
+            'otp-handler.txtcmdr.api_token' => config(
+                'x-change.onboarding.identity_otp.token',
+            ),
+            'otp-handler.txtcmdr.connect_timeout' => config(
+                'x-change.onboarding.identity_otp.connect_timeout',
+                5,
+            ),
+            'otp-handler.txtcmdr.timeout' => config(
+                'x-change.onboarding.identity_otp.timeout',
+                15,
+            ),
+            'otp-handler.txtcmdr.verify_ssl' => config(
+                'x-change.onboarding.identity_otp.verify_ssl',
+                true,
+            ),
+        ]);
     }
 
     public function boot(): void

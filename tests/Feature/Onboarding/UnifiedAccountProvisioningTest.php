@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
 use LBHurtado\XChange\Actions\Auth\StartMobileVerification;
 use LBHurtado\XChange\Actions\Auth\VerifyMobileVerification;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
@@ -9,6 +10,12 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
 use LBHurtado\XChange\Services\Onboarding\DefaultAccountProvisioningService;
+use LBHurtado\XChange\Tests\Fakes\FakeOtpChallengeGateway;
+
+beforeEach(function () {
+    config()->set('x-change.onboarding.identity_otp.driver', 'txtcmdr');
+    app()->instance(OtpChallengeGateway::class, new FakeOtpChallengeGateway);
+});
 
 it('opens the local Account before provisioning its Treasury portfolio', function () {
     $user = actingAsTestUser();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
+use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\StartMobileVerification;
 use LBHurtado\XChange\Actions\Auth\VerifyMobileVerification;
@@ -12,7 +13,14 @@ use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\MobileVerificationChallenge;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
+use LBHurtado\XChange\Tests\Fakes\FakeOtpChallengeGateway;
 use LBHurtado\XChange\Tests\Fakes\User;
+
+beforeEach(function () {
+    config()->set('x-change.onboarding.identity_otp.driver', 'txtcmdr');
+    config()->set('x-change.onboarding.identity_otp.purpose', 'onboarding.account');
+    app()->instance(OtpChallengeGateway::class, new FakeOtpChallengeGateway);
+});
 
 it('creates a mobile-first user as unverified when verification is required', function () {
     if (! interface_exists(CreatesNewUsers::class)) {
@@ -47,7 +55,9 @@ it('stores only a hashed mobile when requesting an onboarding code', function ()
     $challenge = app(StartMobileVerification::class)->handle($user);
 
     expect($challenge->status)->toBe('pending')
-        ->and($challenge->provider)->toBe('null')
+        ->and($challenge->provider)->toBe('txtcmdr')
+        ->and($challenge->purpose)->toBe('onboarding.account')
+        ->and($challenge->provider_challenge_reference)->toBe('otp-'.$challenge->reference)
         ->and($challenge->mobile_hash)->toHaveLength(64)
         ->and($challenge->mobile_hash)->not->toBe('639173011987')
         ->and(json_encode($challenge->getAttributes()))->not->toContain('639173011987');
@@ -82,8 +92,8 @@ it('verifies the mobile only after the OTP provider confirms the code', function
         ->and($user->refresh()->getAttribute('mobile_verified_at'))->not->toBeNull();
 });
 
-it('refuses the null OTP driver outside explicitly allowed environments', function () {
-    config()->set('x-change.onboarding.mobile_verification.allow_null_driver_environments', []);
+it('refuses an unavailable identity OTP driver', function () {
+    config()->set('x-change.onboarding.identity_otp.driver', 'unavailable');
     $user = actingAsTestUser();
     $user->forceFill([
         'mobile' => '639173011987',
@@ -94,6 +104,42 @@ it('refuses the null OTP driver outside explicitly allowed environments', functi
         ->toThrow(ValidationException::class, 'delivery is not configured');
 
     expect(MobileVerificationChallenge::query()->count())->toBe(0);
+});
+
+it('rejects a successful OTP response carrying another challenge proof', function () {
+    $gateway = new FakeOtpChallengeGateway;
+    $gateway->proofReference = 'otp-another-challenge';
+    app()->instance(OtpChallengeGateway::class, $gateway);
+
+    $user = actingAsTestUser();
+    $user->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => null,
+    ])->save();
+    app(StartMobileVerification::class)->handle($user);
+
+    expect(fn () => app(VerifyMobileVerification::class)->handle($user, '000000'))
+        ->toThrow(ValidationException::class, 'another challenge');
+
+    expect($user->refresh()->getAttribute('mobile_verified_at'))->toBeNull();
+});
+
+it('rejects a successful OTP response carrying another purpose', function () {
+    $gateway = new FakeOtpChallengeGateway;
+    $gateway->proofPurpose = 'withdrawal.approval';
+    app()->instance(OtpChallengeGateway::class, $gateway);
+
+    $user = actingAsTestUser();
+    $user->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => null,
+    ])->save();
+    app(StartMobileVerification::class)->handle($user);
+
+    expect(fn () => app(VerifyMobileVerification::class)->handle($user, '000000'))
+        ->toThrow(ValidationException::class, 'another challenge');
+
+    expect($user->refresh()->getAttribute('mobile_verified_at'))->toBeNull();
 });
 
 it('renders the mobile verification page without exposing the full mobile', function () {

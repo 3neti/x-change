@@ -12,8 +12,8 @@ use LBHurtado\XChange\Actions\Auth\StartMobileVerification;
 use LBHurtado\XChange\Actions\Auth\VerifyMobileVerification;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Lifecycle\Support\SimulatedIdentityOtpChallengeGateway;
 use LBHurtado\XChange\Models\FundingIntent;
-use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Throwable;
 
@@ -22,7 +22,7 @@ final class QrPhUnknownMobileOnboardingScenarioRunner implements ScenarioRunnerC
     public function __construct(
         private readonly DatabaseManager $databases,
         private readonly WalletAccessContract $wallets,
-        private readonly NullWithdrawalOtpApprovalService $simulatedOtp,
+        private readonly SimulatedIdentityOtpChallengeGateway $simulatedOtp,
         private readonly AccountProvisioningContract $accounts,
         private readonly QrPhFundingSimulationScenarioRunner $funding,
     ) {}
@@ -50,11 +50,11 @@ final class QrPhUnknownMobileOnboardingScenarioRunner implements ScenarioRunnerC
         $connection = $this->databases->connection();
         $startingLevel = $connection->transactionLevel();
         $startingState = $this->stateDigest($context->issuer);
-        $originalOtpDriver = config('x-change.withdrawal.otp.driver');
+        $originalOtpDriver = config('x-change.onboarding.identity_otp.driver');
         $result = [];
         $exitCode = Command::SUCCESS;
 
-        config()->set('x-change.withdrawal.otp.driver', 'null');
+        config()->set('x-change.onboarding.identity_otp.driver', 'simulation');
         $connection->beginTransaction();
 
         try {
@@ -73,7 +73,7 @@ final class QrPhUnknownMobileOnboardingScenarioRunner implements ScenarioRunnerC
                 $connection->rollBack();
             }
 
-            config()->set('x-change.withdrawal.otp.driver', $originalOtpDriver);
+            config()->set('x-change.onboarding.identity_otp.driver', $originalOtpDriver);
         }
 
         $rollbackCompleted = $connection->transactionLevel() === $startingLevel

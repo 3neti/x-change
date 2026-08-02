@@ -16,10 +16,13 @@ final class MobileVerificationChallenge extends Model
         'user_id',
         'mobile_hash',
         'provider',
+        'purpose',
+        'provider_challenge_reference',
         'status',
         'attempts',
         'expires_at',
         'verified_at',
+        'provider_verified_at',
     ];
 
     protected $hidden = [
@@ -32,6 +35,7 @@ final class MobileVerificationChallenge extends Model
             'attempts' => 'integer',
             'expires_at' => 'immutable_datetime',
             'verified_at' => 'immutable_datetime',
+            'provider_verified_at' => 'immutable_datetime',
         ];
     }
 }

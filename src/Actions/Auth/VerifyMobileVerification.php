@@ -5,19 +5,22 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Auth;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
+use LBHurtado\FormHandlerOtp\Data\OtpVerificationProofData;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
-use LBHurtado\XChange\Contracts\WithdrawalOtpApprovalServiceContract;
 use LBHurtado\XChange\Models\MobileVerificationChallenge;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LogicException;
+use Throwable;
 
 final class VerifyMobileVerification
 {
     public function __construct(
-        private readonly WithdrawalOtpApprovalServiceContract $otp,
+        private readonly OtpChallengeGateway $otp,
         private readonly AccountProvisioningContract $accounts,
     ) {}
 
@@ -85,13 +88,19 @@ final class VerifyMobileVerification
             ]);
         }
 
-        $verified = $this->otp->verify($mobile, $challenge->reference, $code, [
-            'purpose' => 'mobile_onboarding',
-            'user_type' => $user::class,
-            'user_id' => (string) $user->getKey(),
-        ]);
+        $providerReference = trim((string) $challenge->provider_challenge_reference);
 
-        if (! $verified) {
+        if ($providerReference === '') {
+            $challenge->forceFill(['status' => 'delivery_failed'])->save();
+
+            throw ValidationException::withMessages([
+                'code' => 'This verification challenge is incomplete. Request a new code.',
+            ]);
+        }
+
+        $result = $this->otp->verify($providerReference, $code);
+
+        if (! $result->ok || ! $result->proof instanceof OtpVerificationProofData) {
             $attempts = $challenge->attempts + 1;
             $challenge->forceFill([
                 'attempts' => $attempts,
@@ -103,26 +112,62 @@ final class VerifyMobileVerification
             ]);
         }
 
-        return DB::transaction(function () use ($user, $challenge): MobileVerificationChallenge {
+        $providerVerifiedAt = $this->validatedProof($challenge, $result->proof);
+
+        return DB::transaction(function () use ($user, $challenge, $providerVerifiedAt): MobileVerificationChallenge {
             $lockedChallenge = MobileVerificationChallenge::query()
                 ->lockForUpdate()
                 ->findOrFail($challenge->getKey());
             $lockedUser = $user->newQuery()
                 ->lockForUpdate()
                 ->findOrFail($user->getKey());
-            $verifiedAt = now();
+
+            if ($lockedChallenge->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'code' => 'This verification challenge is no longer active.',
+                ]);
+            }
 
             $lockedChallenge->forceFill([
                 'status' => 'verified',
-                'verified_at' => $verifiedAt,
+                'verified_at' => $providerVerifiedAt,
+                'provider_verified_at' => $providerVerifiedAt,
             ])->save();
             $lockedUser->forceFill([
-                'mobile_verified_at' => $verifiedAt,
+                'mobile_verified_at' => $providerVerifiedAt,
             ])->save();
             $this->accounts->provision($lockedUser);
 
             return $lockedChallenge->refresh();
         }, attempts: 3);
+    }
+
+    private function validatedProof(
+        MobileVerificationChallenge $challenge,
+        OtpVerificationProofData $proof,
+    ): Carbon {
+        if (! hash_equals((string) $challenge->provider_challenge_reference, $proof->reference)
+            || ! hash_equals($challenge->purpose, $proof->purpose)) {
+            throw ValidationException::withMessages([
+                'code' => 'The verification provider returned evidence for another challenge.',
+            ]);
+        }
+
+        try {
+            $verifiedAt = Carbon::parse($proof->verified_at);
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'code' => 'The verification provider returned invalid evidence.',
+            ]);
+        }
+
+        if ($verifiedAt->isFuture() || $verifiedAt->lessThan($challenge->created_at)) {
+            throw ValidationException::withMessages([
+                'code' => 'The verification provider returned stale evidence.',
+            ]);
+        }
+
+        return $verifiedAt;
     }
 
     private function mobileHash(string $mobile): string
