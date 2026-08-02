@@ -15,6 +15,8 @@ final class PublishXChangeCommand extends Command
     protected $signature = 'x-change:publish
         {--scope=build : build, install, or advanced}
         {--force : Overwrite resources allowed by the selected publication scope}
+        {--only=* : Restrict publication to these declared IDs}
+        {--except=* : Exclude these declared IDs}
         {--dry-run : Render the publication plan without changing files}
         {--verify : Verify declared publication targets after publishing}
         {--json : Render a machine-readable result}';
@@ -36,6 +38,8 @@ final class PublishXChangeCommand extends Command
                 (bool) $this->option('force'),
                 (bool) $this->option('dry-run'),
                 (bool) $this->option('verify'),
+                array_values((array) $this->option('only')),
+                array_values((array) $this->option('except')),
             );
         } catch (Throwable $exception) {
             return $this->renderFailure($exception->getMessage());

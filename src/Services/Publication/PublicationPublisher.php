@@ -28,12 +28,14 @@ final readonly class PublicationPublisher
         bool $force,
         bool $dryRun,
         bool $verify,
+        array $only = [],
+        array $except = [],
     ): array {
         if ($scope === PublicationScope::Build && ! $force) {
             throw new RuntimeException('Build publication requires explicit --force because generated files are package-owned.');
         }
 
-        $definitions = $catalog->definitions($scope);
+        $definitions = $this->select($catalog->definitions($scope), $only, $except);
         $this->assertReady($definitions, $force);
         $results = [];
 
@@ -81,6 +83,29 @@ final readonly class PublicationPublisher
             'force' => $force,
             'results' => $results,
         ];
+    }
+
+    /**
+     * @param  list<PublicationDefinitionData>  $definitions
+     * @param  list<string>  $only
+     * @param  list<string>  $except
+     * @return list<PublicationDefinitionData>
+     */
+    private function select(array $definitions, array $only, array $except): array
+    {
+        $known = array_column($definitions, 'id');
+        $requested = array_values(array_unique([...$only, ...$except]));
+        $unknown = array_values(array_diff($requested, $known));
+
+        if ($unknown !== []) {
+            throw new RuntimeException('Unknown publication IDs: '.implode(', ', $unknown).'.');
+        }
+
+        return array_values(array_filter(
+            $definitions,
+            static fn (PublicationDefinitionData $definition): bool => ($only === [] || in_array($definition->id, $only, true))
+                && ! in_array($definition->id, $except, true),
+        ));
     }
 
     /** @param list<PublicationDefinitionData> $definitions */

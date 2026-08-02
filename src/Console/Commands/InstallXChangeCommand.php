@@ -391,157 +391,73 @@ class InstallXChangeCommand extends Command
             }
         }
 
-        $publishResources = function () use ($force, $hostApplicationShell, $publishedAssets): void {
-            $this->call('vendor:publish', [
-                '--tag' => 'x-change-form-flow-drivers',
-                '--force' => $this->option('force'),
-            ]);
+        $buildExclusions = $this->buildPublicationExclusions();
+        $installExclusions = $this->installPublicationExclusions();
 
-            // Publish UI (pages, components, layouts, composables)
-            $this->components->task('Publishing UI files', function () use ($force): void {
-                $this->callSilently('vendor:publish', [
-                    '--tag' => 'x-change-ui',
-                    '--force' => $force,
-                ]);
-            });
+        if ($this->callSilently('x-change:publish', [
+            '--scope' => 'build',
+            '--force' => true,
+            '--dry-run' => true,
+            '--except' => $buildExclusions,
+        ]) !== self::SUCCESS) {
+            $this->components->error('Required build publications are unavailable; X-Change installation is incomplete.');
 
-            $this->components->task('Publishing the x-change application shell', function () use ($force, $hostApplicationShell): void {
-                if (! $force) {
-                    $hostApplicationShell->adopt();
-                }
+            return self::FAILURE;
+        }
 
-                $this->callSilently('vendor:publish', [
-                    '--tag' => 'x-change-shell',
-                    '--force' => $force,
-                ]);
-            });
+        if ($this->callSilently('x-change:publish', [
+            '--scope' => 'install',
+            '--force' => $force,
+            '--dry-run' => true,
+            '--except' => $installExclusions,
+        ]) !== self::SUCCESS) {
+            $this->components->error('Required install publications are unavailable; X-Change installation is incomplete.');
 
-            $this->components->task('Stamping Cockpit published asset warnings', function () use ($publishedAssets): void {
-                $publishedAssets->applyGeneratedHeaders();
-            });
+            return self::FAILURE;
+        }
 
-            if (! $this->option('no-auth')) {
-                $this->components->task('Publishing mobile-first auth scaffold', function () use ($force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-change-auth',
-                        '--force' => $force,
-                    ]);
-                });
+        if ($this->callSilently('x-change:publish', [
+            '--scope' => 'install',
+            '--force' => $force,
+            '--only' => ['x-change.host-migrations', 'onboarding.migrations'],
+        ]) !== self::SUCCESS) {
+            $this->components->error('Migration publication failed; X-Change installation is incomplete.');
 
-                if (! $this->option('no-auth-tests')) {
-                    $this->components->task('Publishing mobile-first auth tests', function () use ($force): void {
-                        $this->callSilently('vendor:publish', [
-                            '--tag' => 'x-change-auth-tests',
-                            '--force' => $force,
-                        ]);
-                    });
-                } else {
-                    $this->components->warn('Skipping mobile-first auth test scaffold publishing.');
-                }
-            } else {
-                $this->components->warn('Skipping mobile-first auth scaffold publishing.');
+            return self::FAILURE;
+        }
+
+        $publishResources = function () use (
+            $buildExclusions,
+            $force,
+            $hostApplicationShell,
+            $installExclusions,
+            $publishedAssets,
+        ): bool {
+            if (! $force) {
+                $hostApplicationShell->adopt();
             }
 
-            if (! $this->option('no-settings')) {
-                $this->components->task('Publishing mobile-first settings scaffold', function () use ($force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-change-settings',
-                        '--force' => $force,
-                    ]);
-                });
-
-                if (! $this->option('no-settings-tests')) {
-                    $this->components->task('Publishing mobile-first settings tests', function () use ($force): void {
-                        $this->callSilently('vendor:publish', [
-                            '--tag' => 'x-change-settings-tests',
-                            '--force' => $force,
-                        ]);
-                    });
-                } else {
-                    $this->components->warn('Skipping mobile-first settings test scaffold publishing.');
-                }
-            } else {
-                $this->components->warn('Skipping mobile-first settings scaffold publishing.');
+            if ($this->call('x-change:publish', [
+                '--scope' => 'build',
+                '--force' => true,
+                '--verify' => true,
+                '--except' => $buildExclusions,
+            ]) !== self::SUCCESS) {
+                return false;
             }
 
-            // Publish branding assets
-            if (! $this->option('no-assets')) {
-                $this->components->task('Publishing branding assets', function () use ($force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--tag' => 'x-change-assets',
-                        '--force' => $force,
-                    ]);
-                });
-            }
+            $publishedAssets->applyGeneratedHeaders();
 
-            // Publish form-flow and handler assets (if installed)
-            if (! $this->option('no-handlers')) {
-                $formFlowProviders = [
-                    'LBHurtado\FormFlowManager\FormFlowServiceProvider',
-                    'LBHurtado\FormHandlerKYC\KYCHandlerServiceProvider',
-                    'LBHurtado\FormHandlerLocation\LocationHandlerServiceProvider',
-                    'LBHurtado\FormHandlerOtp\OtpHandlerServiceProvider',
-                    'LBHurtado\FormHandlerSelfie\SelfieHandlerServiceProvider',
-                    'LBHurtado\FormHandlerSignature\SignatureHandlerServiceProvider',
-                ];
-
-                foreach ($formFlowProviders as $provider) {
-                    if (class_exists($provider)) {
-                        $shortName = class_basename($provider);
-                        $this->components->task("Publishing {$shortName}", function () use ($provider, $force): void {
-                            $this->callSilently('vendor:publish', [
-                                '--provider' => $provider,
-                                '--force' => $force,
-                            ]);
-                        });
-                    }
-                }
-            }
-
-            // Publish x-rider UI/components if installed
-            if (! $this->option('no-rider')) {
-                $provider = 'LBHurtado\\XRider\\XRiderServiceProvider';
-
-                if (class_exists($provider)) {
-                    $this->components->task('Publishing x-rider UI files', function () use ($force): void {
-                        $this->callSilently('vendor:publish', [
-                            '--tag' => 'x-rider-ui',
-                            '--force' => $force,
-                        ]);
-                    });
-
-                    $this->components->task('Publishing x-rider drivers', function () use ($force): void {
-                        $this->callSilently('vendor:publish', [
-                            '--tag' => 'x-rider-drivers',
-                            '--force' => $force,
-                        ]);
-                    });
-                }
-            }
-
-            if (! $this->option('no-x-ray')) {
-                $provider = 'LBHurtado\\XRay\\XRayServiceProvider';
-
-                if (class_exists($provider)) {
-                    $this->components->task('Publishing x-ray config', function () use ($force): void {
-                        $this->callSilently('vendor:publish', [
-                            '--tag' => 'x-ray-config',
-                            '--force' => $force,
-                        ]);
-                    });
-
-                    $this->components->task('Publishing x-ray UI files', function () use ($force): void {
-                        $this->callSilently('vendor:publish', [
-                            '--tag' => 'x-ray-assets',
-                            '--force' => $force,
-                        ]);
-                    });
-                }
-            }
+            return $this->call('x-change:publish', [
+                '--scope' => 'install',
+                '--force' => $force,
+                '--except' => [
+                    ...$installExclusions,
+                    'x-change.host-migrations',
+                    'onboarding.migrations',
+                ],
+            ]) === self::SUCCESS;
         };
-
-        $this->publishHostMigrations($force);
-        $this->publishOnboardingMigrations($force);
 
         // Run migrations
         if (! $this->option('no-migrate')) {
@@ -690,7 +606,11 @@ class InstallXChangeCommand extends Command
             );
         }
 
-        $publishResources();
+        if (! $publishResources()) {
+            $this->components->error('Resource publication failed; X-Change installation is incomplete.');
+
+            return self::FAILURE;
+        }
 
         if (! $this->option('no-treasury')) {
             $commissioningManifests->record();
@@ -711,29 +631,56 @@ class InstallXChangeCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function publishOnboardingMigrations(bool $force): void
+    /** @return list<string> */
+    private function buildPublicationExclusions(): array
     {
-        $provider = 'LBHurtado\\Onboarding\\OnboardingServiceProvider';
+        $exclusions = [];
 
-        if (! class_exists($provider)) {
-            return;
+        if ((bool) $this->option('no-assets')) {
+            $exclusions[] = 'x-change.assets';
         }
 
-        $this->components->task('Publishing onboarding migrations', function () use ($force): void {
-            $this->callSilently('vendor:publish', [
-                '--tag' => 'onboarding-migrations',
-                '--force' => $force,
-            ]);
-        });
+        if ((bool) $this->option('no-handlers')) {
+            $exclusions = [
+                ...$exclusions,
+                'form-flow.drivers',
+                'form-flow.views',
+                'form-handler.kyc.ui',
+                'form-handler.location.ui',
+                'form-handler.otp.ui',
+                'form-handler.selfie.ui',
+                'form-handler.signature.ui',
+            ];
+        }
+
+        if ((bool) $this->option('no-rider')) {
+            $exclusions = [...$exclusions, 'x-rider.drivers', 'x-rider.ui'];
+        }
+
+        if ((bool) $this->option('no-x-ray')) {
+            $exclusions[] = 'x-ray.ui';
+        }
+
+        return $exclusions;
     }
 
-    protected function publishHostMigrations(bool $force): void
+    /** @return list<string> */
+    private function installPublicationExclusions(): array
     {
-        $this->components->task('Publishing x-change host migrations', function () use ($force): void {
-            $this->callSilently('vendor:publish', [
-                '--tag' => 'x-change-host-migrations',
-                '--force' => $force,
-            ]);
-        });
+        $exclusions = [];
+
+        if ((bool) $this->option('no-auth')) {
+            $exclusions = [...$exclusions, 'x-change.auth', 'x-change.auth-tests'];
+        } elseif ((bool) $this->option('no-auth-tests')) {
+            $exclusions[] = 'x-change.auth-tests';
+        }
+
+        if ((bool) $this->option('no-settings')) {
+            $exclusions = [...$exclusions, 'x-change.settings', 'x-change.settings-tests'];
+        } elseif ((bool) $this->option('no-settings-tests')) {
+            $exclusions[] = 'x-change.settings-tests';
+        }
+
+        return $exclusions;
     }
 }
