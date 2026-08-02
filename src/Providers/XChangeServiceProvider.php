@@ -365,6 +365,7 @@ use LBHurtado\XChange\Services\PayoutProviderResolver;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
+use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
@@ -430,6 +431,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(DeploymentProfileCatalog::class);
         $this->app->singleton(DeploymentTreasuryConnectionConfiguration::class);
         $this->app->singleton(DeploymentConfigurationInspector::class);
+        $this->app->singleton(CorePublicationContributor::class);
+        $this->app->tag(
+            CorePublicationContributor::class,
+            XChangePublicationContributor::class,
+        );
         $this->app->singleton(
             PublicationCatalog::class,
             fn ($app): PublicationCatalog => new PublicationCatalog(
@@ -1740,6 +1746,14 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('stubs/resources/js/pages/auth/Register.vue.stub') => resource_path('js/pages/auth/Register.vue'),
             $this->packagePath('stubs/resources/js/pages/Welcome.vue.stub') => resource_path('js/pages/Welcome.vue'),
         ], 'x-change-auth');
+
+        $this->publishes([
+            $this->packagePath('stubs/database/factories/UserFactory.php.stub') => database_path('factories/UserFactory.php'),
+            $this->packagePath('stubs/resources/js/components/AppLogoIcon.vue.stub') => resource_path('js/components/AppLogoIcon.vue'),
+            $this->packagePath('stubs/resources/js/pages/auth/Login.vue.stub') => resource_path('js/pages/auth/Login.vue'),
+            $this->packagePath('stubs/resources/js/pages/auth/Register.vue.stub') => resource_path('js/pages/auth/Register.vue'),
+            $this->packagePath('stubs/resources/js/pages/Welcome.vue.stub') => resource_path('js/pages/Welcome.vue'),
+        ], 'x-change-auth-scaffold');
 
         $this->publishes([
             $this->packagePath('stubs/app/Models/User.php.stub') => app_path('Models/User.php'),
