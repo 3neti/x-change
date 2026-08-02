@@ -12,6 +12,7 @@ it('exposes the package Cloud plan through the umbrella command', function (): v
             '--environment' => 'staging',
             '--profile' => 'development',
             '--path' => $path,
+            '--offline' => true,
             '--json' => true,
         ])->expectsOutputToContain('"status": "planned"')
             ->assertSuccessful();
