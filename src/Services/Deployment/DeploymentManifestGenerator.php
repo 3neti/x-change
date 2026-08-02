@@ -12,13 +12,17 @@ use LBHurtado\XChange\Services\Configuration\RuntimeOperationsChecklist;
 
 final readonly class DeploymentManifestGenerator
 {
-    public const Schema = '3neti.x-change.deployment.v1';
+    public const LegacySchema = '3neti.x-change.deployment.v1';
+
+    public const Schema = '3neti.x-change.deployment.v2';
 
     public function __construct(
         private DeploymentProfileCatalog $profiles,
         private DeploymentEnvironmentCatalog $environment,
         private HostApplicationIdentity $identity,
         private RuntimeOperationsChecklist $runtime,
+        private CloudRecipeRepository $recipes,
+        private DeploymentManifestHasher $hasher,
     ) {}
 
     /**
@@ -46,8 +50,15 @@ final readonly class DeploymentManifestGenerator
         sort($secrets);
         $runtime = $this->runtime->describe();
 
-        return [
+        $recipe = $this->recipes->read();
+        $manifest = [
             'schema' => self::Schema,
+            'recipe' => [
+                'schema' => $recipe['schema'],
+                'version' => $recipe['version'],
+                'target' => $recipe['target'],
+                'hash' => $this->recipes->hash(),
+            ],
             'application' => [
                 ...$identity,
                 'environment' => $target === 'local' ? 'local' : 'production',
@@ -93,5 +104,9 @@ final readonly class DeploymentManifestGenerator
                 'require_production_confirmation' => true,
             ],
         ];
+
+        $manifest['manifest_hash'] = $this->hasher->hash($manifest);
+
+        return $manifest;
     }
 }

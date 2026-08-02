@@ -8,6 +8,11 @@ use RuntimeException;
 
 final readonly class DeploymentManifestValidator
 {
+    public function __construct(
+        private CloudRecipeRepository $recipes,
+        private DeploymentManifestHasher $hasher,
+    ) {}
+
     private const Targets = ['local', 'laravel-cloud', 'forge', 'custom'];
 
     private const Operations = [
@@ -27,6 +32,19 @@ final readonly class DeploymentManifestValidator
     {
         if (($manifest['schema'] ?? null) !== DeploymentManifestGenerator::Schema) {
             throw new RuntimeException('Unsupported x-change deployment manifest schema.');
+        }
+
+        $recipe = $manifest['recipe'] ?? null;
+
+        if (! is_array($recipe)
+            || ($recipe['schema'] ?? null) !== CloudRecipeRepository::Schema
+            || ($recipe['target'] ?? null) !== 'laravel-cloud'
+            || ($recipe['hash'] ?? null) !== $this->recipes->hash()) {
+            throw new RuntimeException('Deployment manifest does not match the package-owned Cloud recipe.');
+        }
+
+        if (($manifest['manifest_hash'] ?? null) !== $this->hasher->hash($manifest)) {
+            throw new RuntimeException('Deployment manifest integrity hash is invalid.');
         }
 
         $target = $manifest['deployment']['target'] ?? null;

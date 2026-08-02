@@ -50,3 +50,16 @@ it('documents the simple and advanced deployment workflows', function (): void {
             'POST /pay-codes/{code}/claim/start',
         );
 });
+
+it('ships a canonical secret-free Laravel Cloud recipe', function (): void {
+    $packageRoot = dirname(__DIR__, 2);
+    $recipe = file_get_contents($packageRoot.'/resources/deployment/laravel-cloud.yaml');
+    $compass = file_get_contents($packageRoot.'/docs/deployment/X_CHANGE_CLOUD_RECIPE.md');
+
+    expect($recipe)->toContain('3neti.x-change.cloud-recipe.v1')
+        ->toContain('x-change-funding')
+        ->toContain('php artisan migrate --force')
+        ->not->toContain('CLIENT_SECRET=')
+        ->and($compass)->toContain('composer x-change:cloud:ship')
+        ->toContain('never manufactures a balancing entry');
+});

@@ -13,6 +13,7 @@ final readonly class DeploymentManifestRepository
     public function __construct(
         private Filesystem $files,
         private DeploymentManifestValidator $validator,
+        private DeploymentManifestUpgrader $upgrader,
     ) {}
 
     /**
@@ -20,6 +21,15 @@ final readonly class DeploymentManifestRepository
      */
     public function write(string $path, array $manifest): void
     {
+        if ($this->files->exists($path)) {
+            $existing = Yaml::parseFile($path);
+
+            if (is_array($existing) && isset($existing['host']) && ! isset($manifest['host'])) {
+                $manifest['host'] = $existing['host'];
+                $manifest = $this->upgrader->upgrade($manifest);
+            }
+        }
+
         $this->validator->validate($manifest);
         $directory = dirname($path);
 
@@ -54,6 +64,7 @@ final readonly class DeploymentManifestRepository
             throw new RuntimeException('Deployment manifest must contain a YAML mapping.');
         }
 
+        $manifest = $this->upgrader->upgrade($manifest);
         $this->validator->validate($manifest);
 
         return $manifest;

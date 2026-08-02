@@ -1,0 +1,43 @@
+schema: 3neti.x-change.cloud-recipe.v1
+version: 1
+target: laravel-cloud
+resources:
+  database:
+    engine: postgresql
+    required: true
+  cache:
+    shared: true
+    required: true
+  compute:
+    required: true
+  workers:
+    queues:
+      - x-change-funding
+      - x-change-feedback
+      - default
+    timeout_seconds: 60
+  scheduler:
+    required: true
+  websockets:
+    required_when: broadcasting_enabled
+build:
+  commands:
+    - composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+    - php artisan vendor:publish --tag=x-change-ui --force --no-interaction
+    - php artisan vendor:publish --tag=x-change-assets --force --no-interaction
+    - php artisan vendor:publish --tag=x-rider-ui --force --no-interaction
+    - npm ci --audit false
+    - npm run build
+deploy:
+  commands:
+    - php artisan migrate --force
+commission:
+  preview: php artisan x-change:commission --dry-run --json --no-interaction
+  execute: php artisan x-change:commission --no-interaction
+  verify: php artisan x-change:doctor --strict --no-interaction
+safety:
+  secrets_in_manifest: false
+  automatic_database_reset: false
+  automatic_provider_transfer: false
+  unexplained_treasury_difference: block
+
