@@ -5,6 +5,11 @@ platform. It is a **Settlement Operating System** around Pay Codes,
 provider-authoritative Account funding, Treasury positions, claims, campaigns,
 and auditable delivery workflows.
 
+Deployment and commissioning are package-owned. Start with
+[Getting Started](./GETTING_STARTED.md), then use the
+[X-Change Cloud Recipe](./docs/deployment/X_CHANGE_CLOUD_RECIPE.md) for a
+reviewable Laravel Cloud plan, apply, ship, resume, and acceptance workflow.
+
 It is designed for banks, electronic money issuers, regulated financial
 operators, and application teams that need programmable settlement without
 making a user-facing Account balance pretend to be a bank balance.

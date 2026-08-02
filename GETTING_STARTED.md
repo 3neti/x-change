@@ -8,6 +8,9 @@ Use this document for the first successful adoption. Use
 [DEPLOYMENT.md](./DEPLOYMENT.md) for routine deployment, recovery, and command
 details.
 
+For the repeatable Laravel Cloud desired-state workflow, see the
+[X-Change Cloud Recipe](./docs/deployment/X_CHANGE_CLOUD_RECIPE.md).
+
 ## What you are installing
 
 `3neti/x-change` is the orchestration package for an institution-hosted

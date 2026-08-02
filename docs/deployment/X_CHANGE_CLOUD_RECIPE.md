@@ -1,6 +1,6 @@
 # Proposed X-Change Cloud Recipe
 
-Status: proposed implementation compass
+Status: implemented package recipe; optional application skeleton deferred
 
 This document defines the repeatable Laravel Cloud recipe for applications
 built on `3neti/x-change`. It records the deployment path proven by the
@@ -15,6 +15,21 @@ composer x-change:cloud:ship -- --environment=staging --profile=netbank
 
 The command must expose its plan, stop at financial authority boundaries, and
 leave enough evidence for another operator or AI agent to resume safely.
+
+Adopt the root Composer aliases once in an existing host:
+
+```bash
+php artisan x-change:adopt
+```
+
+The normal reviewable sequence is:
+
+```bash
+composer x-change:cloud:plan -- --environment=staging --profile=netbank
+composer x-change:cloud:ship -- --environment=staging --profile=netbank \
+  --confirm-apply --confirm-production
+vendor/bin/x-change-cloud accept --url=https://example.laravel.cloud --json
+```
 
 ## Product boundary
 
@@ -323,9 +338,11 @@ Each slice is committed only after its focused tests pass.
    - Deploy a pristine host, run strict diagnostics, inspect the Cockpit in a
      browser, and verify Treasury reconciliation without moving real money.
 
-8. **Optional application skeleton**
+8. **Optional application skeleton (deferred)**
    - Publish `3neti/x-change-app` only after the existing-host adoption path is
-     stable, so both routes remain thin wrappers over the same recipe.
+   stable, so both routes remain thin wrappers over the same recipe. This is a
+   separate package/repository decision and is not required by the implemented
+   existing-host recipe.
 
 ## Required tests
 
@@ -364,4 +381,3 @@ sanitized blocker.
 - [Laravel Cloud CLI](https://cloud.laravel.com/docs/api/cli)
 - [Composer scripts](https://getcomposer.org/doc/articles/scripts.md)
 - [Composer package schema and `extra`](https://getcomposer.org/doc/04-schema.md)
-

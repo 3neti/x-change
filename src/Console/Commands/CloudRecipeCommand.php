@@ -47,7 +47,7 @@ final class CloudRecipeCommand extends Command
 
         return match ($operation) {
             'plan' => $this->plan($planner, $generator, $manifests),
-            'ship' => $this->callDeploy(plan: false),
+            'ship' => $this->ship($planner, $applier, $generator, $manifests),
             'verify' => $this->call('x-change:doctor', [
                 '--strict' => true,
                 '--no-interaction' => true,
@@ -57,6 +57,52 @@ final class CloudRecipeCommand extends Command
             'accept' => $this->accept($acceptance),
             default => $this->invalidOperation($operation),
         };
+    }
+
+    private function ship(
+        CloudDeploymentPlanner $planner,
+        CloudInfrastructureApplier $applier,
+        DeploymentManifestGenerator $generator,
+        DeploymentManifestRepository $manifests,
+    ): int {
+        $path = trim((string) ($this->option('path') ?: base_path('x-change.deployment.yaml')));
+
+        try {
+            if (! is_file($path) || $this->option('profile') !== null) {
+                $manifests->write($path, $generator->generate('laravel-cloud', $this->option('profile')));
+            }
+
+            $manifest = $manifests->read($path);
+            $application = trim((string) ($this->option('application') ?: $manifest['application']['slug']));
+            $environment = trim((string) $this->option('environment'));
+            $plan = $planner->plan($manifest, $application, $environment);
+
+            if ($plan['changes_required']) {
+                if (! (bool) $this->option('confirm-apply')) {
+                    $this->components->error('Cloud state differs from the recipe; review plan and rerun ship with --confirm-apply.');
+
+                    return self::FAILURE;
+                }
+
+                $result = $applier->apply($manifest, $application, $environment, $this->applyOptions());
+
+                if ($result['requires_replan']) {
+                    $plan = $planner->plan($manifest, $application, $environment);
+
+                    if ($plan['changes_required']) {
+                        $this->components->error('Cloud changed successfully but still requires a fresh plan before deployment. Rerun ship.');
+
+                        return self::FAILURE;
+                    }
+                }
+            }
+        } catch (Throwable $exception) {
+            $this->components->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        return $this->callDeploy(plan: false);
     }
 
     private function accept(CloudStagingAcceptance $acceptance): int
@@ -150,14 +196,7 @@ final class CloudRecipeCommand extends Command
                 $manifest,
                 trim((string) ($this->option('application') ?: $manifest['application']['slug'])),
                 trim((string) $this->option('environment')),
-                [
-                    'region' => trim((string) $this->option('region')),
-                    'database_preset' => trim((string) $this->option('database-preset')),
-                    'database_type' => trim((string) $this->option('database-type')),
-                    'cache_type' => trim((string) $this->option('cache-type')),
-                    'cache_size' => trim((string) $this->option('cache-size')),
-                    'compute_size' => trim((string) $this->option('compute-size')),
-                ],
+                $this->applyOptions(),
             );
         } catch (Throwable $exception) {
             $this->components->error($exception->getMessage());
@@ -174,6 +213,21 @@ final class CloudRecipeCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @return array{region: string, database_preset: string, database_type: string, cache_type: string, cache_size: string, compute_size: string}
+     */
+    private function applyOptions(): array
+    {
+        return [
+            'region' => trim((string) $this->option('region')),
+            'database_preset' => trim((string) $this->option('database-preset')),
+            'database_type' => trim((string) $this->option('database-type')),
+            'cache_type' => trim((string) $this->option('cache-type')),
+            'cache_size' => trim((string) $this->option('cache-size')),
+            'compute_size' => trim((string) $this->option('compute-size')),
+        ];
     }
 
     private function plan(

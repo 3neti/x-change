@@ -89,6 +89,54 @@ it('rechecks live state before resuming from a sanitized checkpoint', function (
     }
 });
 
+it('ships a converged Cloud environment through the single recipe command', function (): void {
+    app()->instance(CloudStateReaderContract::class, new class implements CloudStateReaderContract
+    {
+        public function read(string $application, string $environment): array
+        {
+            return [
+                'application' => ['exists' => true],
+                'environment' => ['exists' => true],
+                'resources' => [
+                    'database' => ['attached' => true],
+                    'cache' => ['attached' => true],
+                    'compute' => ['attached' => true],
+                    'websockets' => ['attached' => false],
+                ],
+                'runtime' => [
+                    'queues' => ['x-change-funding', 'x-change-feedback', 'default'],
+                    'scheduler' => true,
+                ],
+            ];
+        }
+    });
+    Process::fake();
+    $manifestPath = tempnam(sys_get_temp_dir(), 'xchange-ship-manifest-');
+    $checkpointPath = tempnam(sys_get_temp_dir(), 'xchange-ship-checkpoint-');
+    @unlink($manifestPath);
+    @unlink($checkpointPath);
+    config()->set('x-change.deployment.cloud_checkpoint_path', $checkpointPath);
+
+    try {
+        $this->artisan('x-change:cloud', [
+            'operation' => 'ship',
+            '--environment' => 'staging',
+            '--application' => 'x-payout',
+            '--profile' => 'development',
+            '--path' => $manifestPath,
+            '--confirm-production' => true,
+            '--json' => true,
+        ])->assertSuccessful();
+
+        Process::assertRan(fn ($process): bool => $process->command === [
+            'cloud', 'deploy', 'x-payout', 'staging', '-n',
+        ]);
+    } finally {
+        @unlink($manifestPath);
+        @unlink($checkpointPath);
+    }
+});
+
 it('requires explicit confirmation before applying Cloud infrastructure', function (): void {
     $this->artisan('x-change:cloud', ['operation' => 'apply'])
         ->expectsOutputToContain('requires --confirm-apply')
