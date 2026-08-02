@@ -131,7 +131,7 @@ clean-consumer proof:
 | `3neti/form-flow` | `v1.8.0` |
 | `3neti/form-handler-kyc` | `v1.1.0` |
 | `3neti/form-handler-location` | `v1.2.0` |
-| `3neti/form-handler-otp` | `v1.1.0` |
+| `3neti/form-handler-otp` | `v1.2.0` |
 | `3neti/form-handler-selfie` | `v1.1.0` |
 | `3neti/form-handler-signature` | `v1.2.0` |
 
@@ -167,7 +167,7 @@ immutable releases.
 | `3neti/form-flow` | runtime | MIT / private-first public candidate | `3neti/form-flow` | `v1.7.15` | 8 | release-after-fix | Reconcile eight dirty paths and run its existing CI workflow before deciding the next tag. |
 | `3neti/form-handler-kyc` | runtime | MIT / private-first public candidate | `3neti/form-handler-kyc` | `v1.0.2` | 4 | release-after-fix | Reconcile dirty paths and validate against the selected form-flow and HyperVerge releases. |
 | `3neti/form-handler-location` | runtime | MIT / private-first public candidate | `3neti/form-handler-location` | `v1.1.1` | 4 | release-after-fix | Reconcile dirty paths and validate against the selected form-flow release. |
-| `3neti/form-handler-otp` | runtime | MIT / private-first public candidate | `3neti/form-handler-otp` | `v1.0.0` | 2 | release-after-fix | Reconcile dirty paths, resolve the stale lock warning, and prove production OTP behavior. |
+| `3neti/form-handler-otp` | runtime | MIT / private-first public candidate | `3neti/form-handler-otp` | `v1.2.0` | 0 | released | Provider-neutral challenge gateway, explicit send/resend flow, structured proof transport, and production tests are published. |
 | `3neti/form-handler-selfie` | runtime | MIT / private-first public candidate | `3neti/form-handler-selfie` | `v1.0.1` | 3 | release-after-fix | Reconcile dirty paths and validate against the selected form-flow release. |
 | `3neti/form-handler-signature` | runtime | MIT / private-first public candidate | `3neti/form-handler-signature` | `v1.1.1` | 3 | release-after-fix | Reconcile dirty paths and validate against the selected form-flow release. |
 | `3neti/x-commerce` | runtime | MIT / private-first public candidate | `3neti/x-commerce` | none | 21 | release-after-fix | Reconcile 21 dirty paths, run pricing/waterfall tests, and select a first release only after API review. |

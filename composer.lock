@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fe4d7ed305b76f43020e82b5925fa3bc",
+    "content-hash": "8584c1a5eb34bcf8c34f34883243b857",
     "packages": [
         {
             "name": "3neti/cash",
@@ -497,16 +497,16 @@
         },
         {
             "name": "3neti/form-handler-otp",
-            "version": "v1.1.0",
+            "version": "v1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-otp.git",
-                "reference": "8b78c4f55b7cd0fa95db7af1586b3072fb2bff2e"
+                "reference": "d5b7f58237cd5b83b9fe24f2a6d3108e0ddaceb7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-otp/zipball/8b78c4f55b7cd0fa95db7af1586b3072fb2bff2e",
-                "reference": "8b78c4f55b7cd0fa95db7af1586b3072fb2bff2e",
+                "url": "https://api.github.com/repos/3neti/form-handler-otp/zipball/d5b7f58237cd5b83b9fe24f2a6d3108e0ddaceb7",
+                "reference": "d5b7f58237cd5b83b9fe24f2a6d3108e0ddaceb7",
                 "shasum": ""
             },
             "require": {
@@ -548,9 +548,9 @@
             "description": "OTP verification handler for form flow system",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-otp/issues",
-                "source": "https://github.com/3neti/form-handler-otp/tree/v1.1.0"
+                "source": "https://github.com/3neti/form-handler-otp/tree/v1.2.0"
             },
-            "time": "2026-07-31T07:08:45+00:00"
+            "time": "2026-08-02T06:20:09+00:00"
         },
         {
             "name": "3neti/form-handler-selfie",

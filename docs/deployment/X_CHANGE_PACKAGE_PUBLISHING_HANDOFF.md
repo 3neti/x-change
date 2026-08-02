@@ -100,7 +100,7 @@ The following packages are the initial x-change runtime closure. The agent must 
 | `3neti/form-flow` | Claim/issuance form orchestration | `v1.7.15` exists | 1 |
 | `3neti/form-handler-kyc` | KYC form handler | `v1.0.2` exists | 1 |
 | `3neti/form-handler-location` | Location form handler | `v1.1.1` exists | 1 |
-| `3neti/form-handler-otp` | OTP form handler | `v1.0.0` exists | 1 |
+| `3neti/form-handler-otp` | OTP form handler | `v1.2.0` published with explicit provider-authoritative challenges | 1 |
 | `3neti/form-handler-selfie` | Selfie form handler | `v1.0.1` exists | 1 |
 | `3neti/form-handler-signature` | Signature form handler | `v1.1.1` exists | 1 |
 | `3neti/x-commerce` | Commerce integration | No local `v*` tag observed | 1 |

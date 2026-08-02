@@ -52,7 +52,7 @@
         "3neti/form-flow": "^1.8",
         "3neti/form-handler-kyc": "^1.1",
         "3neti/form-handler-location": "^1.2",
-        "3neti/form-handler-otp": "^1.1",
+        "3neti/form-handler-otp": "^1.2",
         "3neti/form-handler-selfie": "^1.1",
         "3neti/form-handler-signature": "^1.2",
         "3neti/instruction": "^0.2",
