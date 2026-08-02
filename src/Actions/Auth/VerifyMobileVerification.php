@@ -29,7 +29,7 @@ final class VerifyMobileVerification
         $challenge = MobileVerificationChallenge::query()
             ->where('user_type', $user::class)
             ->where('user_id', (string) $user->getKey())
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'expired'])
             ->latest('id')
             ->first();
 
@@ -50,17 +50,9 @@ final class VerifyMobileVerification
     ): MobileVerificationChallenge {
         $challenge->refresh();
 
-        if ($challenge->status !== 'pending') {
+        if (! in_array($challenge->status, ['pending', 'expired'], true)) {
             throw ValidationException::withMessages([
                 'code' => 'This verification challenge is no longer active.',
-            ]);
-        }
-
-        if ($challenge->expires_at->isPast()) {
-            $challenge->forceFill(['status' => 'expired'])->save();
-
-            throw ValidationException::withMessages([
-                'code' => 'This verification code has expired.',
             ]);
         }
 
@@ -102,13 +94,18 @@ final class VerifyMobileVerification
 
         if (! $result->ok || ! $result->proof instanceof OtpVerificationProofData) {
             $attempts = $challenge->attempts + 1;
+            $expired = $result->reason === 'expired';
             $challenge->forceFill([
                 'attempts' => $attempts,
-                'status' => $attempts >= $maxAttempts ? 'locked' : 'pending',
+                'status' => $expired
+                    ? 'expired'
+                    : ($attempts >= $maxAttempts ? 'locked' : 'pending'),
             ])->save();
 
             throw ValidationException::withMessages([
-                'code' => 'The verification code is invalid.',
+                'code' => $expired
+                    ? 'This verification code has expired.'
+                    : 'The verification code is invalid.',
             ]);
         }
 
@@ -122,7 +119,7 @@ final class VerifyMobileVerification
                 ->lockForUpdate()
                 ->findOrFail($user->getKey());
 
-            if ($lockedChallenge->status !== 'pending') {
+            if (! in_array($lockedChallenge->status, ['pending', 'expired'], true)) {
                 throw ValidationException::withMessages([
                     'code' => 'This verification challenge is no longer active.',
                 ]);
@@ -161,7 +158,18 @@ final class VerifyMobileVerification
             ]);
         }
 
-        if ($verifiedAt->isFuture() || $verifiedAt->lessThan($challenge->created_at)) {
+        $now = now();
+        $clockSkewSeconds = max(0, (int) config(
+            'x-change.onboarding.identity_otp.clock_skew_seconds',
+            30,
+        ));
+        $proofTtlMinutes = max(1, (int) config(
+            'x-change.onboarding.identity_otp.proof_ttl_minutes',
+            15,
+        ));
+
+        if ($verifiedAt->greaterThan($now->copy()->addSeconds($clockSkewSeconds))
+            || $verifiedAt->lessThan($now->copy()->subMinutes($proofTtlMinutes))) {
             throw ValidationException::withMessages([
                 'code' => 'The verification provider returned stale evidence.',
             ]);

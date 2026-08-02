@@ -20,6 +20,10 @@ final class FakeOtpChallengeGateway implements OtpChallengeGateway
 
     public ?string $proofPurpose = null;
 
+    public ?string $proofVerifiedAt = null;
+
+    public ?string $failureReason = null;
+
     public function create(OtpChallengeRequestData $request): OtpChallengeData
     {
         $this->request = $request;
@@ -47,6 +51,15 @@ final class FakeOtpChallengeGateway implements OtpChallengeGateway
 
     public function verify(string $challengeReference, string $code): OtpVerificationResultData
     {
+        if ($this->failureReason !== null) {
+            return new OtpVerificationResultData(
+                ok: false,
+                reason: $this->failureReason,
+                attempts: 1,
+                status: $this->failureReason,
+            );
+        }
+
         if (! hash_equals($this->expectedCode, $code)) {
             return new OtpVerificationResultData(
                 ok: false,
@@ -62,7 +75,7 @@ final class FakeOtpChallengeGateway implements OtpChallengeGateway
             proof: new OtpVerificationProofData(
                 reference: $this->proofReference ?? $challengeReference,
                 purpose: $this->proofPurpose ?? 'onboarding.account',
-                verified_at: now()->toIso8601String(),
+                verified_at: $this->proofVerifiedAt ?? now()->utc()->toIso8601String(),
             ),
             attempts: 1,
             status: 'verified',

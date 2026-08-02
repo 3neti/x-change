@@ -142,6 +142,71 @@ it('rejects a successful OTP response carrying another purpose', function () {
     expect($user->refresh()->getAttribute('mobile_verified_at'))->toBeNull();
 });
 
+it('rejects an otherwise valid provider proof outside the freshness window', function () {
+    $gateway = new FakeOtpChallengeGateway;
+    $gateway->proofVerifiedAt = now()->subMinutes(16)->utc()->toIso8601String();
+    app()->instance(OtpChallengeGateway::class, $gateway);
+
+    $user = actingAsTestUser();
+    $user->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => null,
+    ])->save();
+    app(StartMobileVerification::class)->handle($user);
+
+    expect(fn () => app(VerifyMobileVerification::class)->handle($user, '000000'))
+        ->toThrow(ValidationException::class, 'stale evidence');
+
+    expect($user->refresh()->getAttribute('mobile_verified_at'))->toBeNull();
+});
+
+it('recovers an on-time provider verification after the local challenge expires', function () {
+    $user = actingAsTestUser();
+    $user->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => null,
+    ])->save();
+    $challenge = app(StartMobileVerification::class)->handle($user);
+    $challenge->forceFill([
+        'status' => 'expired',
+        'expires_at' => now()->subMinute(),
+    ])->save();
+    $accounts = Mockery::mock(AccountProvisioningContract::class);
+    $accounts->shouldReceive('provision')
+        ->once()
+        ->andReturn(new TreasuryAccountPortfolioData(
+            principalReference: 'principal:account:mobile-verification-recovery',
+            positions: [],
+            skippedConnections: [],
+        ));
+    app()->instance(AccountProvisioningContract::class, $accounts);
+
+    $verified = app(VerifyMobileVerification::class)->handle($user, '000000');
+
+    expect($verified->status)->toBe('verified')
+        ->and($user->refresh()->getAttribute('mobile_verified_at'))->not->toBeNull();
+});
+
+it('marks a provider-expired verification as expired', function () {
+    $gateway = new FakeOtpChallengeGateway;
+    $gateway->failureReason = 'expired';
+    app()->instance(OtpChallengeGateway::class, $gateway);
+
+    $user = actingAsTestUser();
+    $user->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => null,
+    ])->save();
+    $challenge = app(StartMobileVerification::class)->handle($user);
+    $challenge->forceFill(['expires_at' => now()->subMinute()])->save();
+
+    expect(fn () => app(VerifyMobileVerification::class)->handle($user, '000000'))
+        ->toThrow(ValidationException::class, 'verification code has expired');
+
+    expect($challenge->refresh()->status)->toBe('expired')
+        ->and($user->refresh()->getAttribute('mobile_verified_at'))->toBeNull();
+});
+
 it('renders the mobile verification page without exposing the full mobile', function () {
     $user = actingAsTestUser();
     $user->forceFill([

@@ -172,6 +172,24 @@ assets. It does not own onboarding business logic.
   stripped before ordinary Voucher redemption; only a one-way audit hash is
   retained in the execution result.
 
+### 2026-08-02 — Slice 19 live identity OTP acceptance completed
+
+- Deployed txtcmdr `v1.1.0` to Laravel Cloud and provisioned an x-change
+  client token limited to `otp:request` and `otp:verify`.
+- Added the dedicated managed `txtcmdr-otp` worker and proved a real challenge
+  reaches the `ready` delivery state without using the default queue.
+- Completed a live verification through x-change using txtcmdr's immutable
+  provider proof. Mobile verification and Account provisioning committed
+  atomically; Treasury and provider balances were untouched.
+- Corrected proof freshness validation to compare the provider UTC timestamp
+  with a bounded current-time window instead of an application-timezone
+  database timestamp.
+- Added provider-authoritative recovery for a proof verified on time when the
+  local challenge expires before x-change can persist it. A provider-expired
+  proof remains rejected and the local challenge remains expired.
+- Focused mobile verification and Account provisioning verification passes:
+  17 tests and 66 assertions.
+
 ### 2026-07-30 — Slice 16 core accounting completed
 
 - Extended the guarded system Account Funding Pay Code issuer with an explicit
