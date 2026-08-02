@@ -223,6 +223,46 @@ php artisan x-change:doctor --strict
 All commands delegate to the same configuration, installation, and readiness
 services. There is no separate financial initialization path for AI agents.
 
+## Package publication
+
+The host consumes some package-owned frontend and driver files as Vite or
+runtime build inputs. They are governed by one catalog and one command:
+
+```bash
+php artisan x-change:publish --scope=build --force --verify --no-interaction
+```
+
+`x-change:adopt` idempotently adds that command to the root application's
+Composer `post-autoload-dump` script immediately after Laravel package
+discovery. Composer executes scripts from the root package only, so declaring a
+script inside the x-change dependency would not run it during host install or
+update. The explicit root hook is therefore both visible and portable.
+
+Publication has three boundaries:
+
+| Scope | Contents | Automatic overwrite |
+| --- | --- | --- |
+| `build` | Package-owned Vue, TypeScript, public assets, Form Flow drivers and views, handler stubs, Rider, and X-Ray build inputs | Yes; always generated |
+| `install` | Host shell, auth/settings scaffolds, and package migrations | Only through setup/install policy |
+| `advanced` | Published configuration, scripts, and optional override surfaces | Never automatically |
+
+`x-change:install` delegates to these same scopes; it does not maintain a
+second list of publish tags. Configuration is not part of automatic
+publication. Package defaults remain authoritative unless an operator
+explicitly publishes a complete advanced override.
+
+Cloud builds run this check after Composer:
+
+```bash
+php artisan x-change:doctor --assets --strict --no-interaction
+```
+
+It verifies the full catalog, not only Cockpit files. This intentionally makes
+`composer install --no-scripts` fail before the frontend build unless the
+operator explicitly ran the unified build publisher. It also detects missing
+provider packages, unregistered tags, stale generated files, and missing
+targets without treating unrelated host-owned files as drift.
+
 ## Runtime responsibilities
 
 Local development normally keeps these processes active:

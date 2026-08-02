@@ -16,6 +16,9 @@ it('documents the simple and advanced deployment workflows', function (): void {
         'php artisan x-change:commission --no-interaction',
         'x-change.deployment.yaml',
         'The simple commands do not deprecate the existing primitives.',
+        'php artisan x-change:publish --scope=build --force --verify --no-interaction',
+        'Composer executes scripts from the root package only',
+        '`advanced`',
         'GETTING_STARTED.md',
     )
         ->and($gettingStarted)->toContain(
@@ -28,6 +31,8 @@ it('documents the simple and advanced deployment workflows', function (): void {
             'A webhook permits evidence intake; it does not itself authorize Account',
             'XCHANGE_ONBOARDING_REQUIRE_OTP=true',
             'php artisan x-change:host:adopt --dry-run --json',
+            'php artisan x-change:publish --scope=build --dry-run --force --json',
+            'x-change:doctor --assets --strict',
             '`x-change-shell` tag',
             "Do not edit package code inside the host's `vendor/` directory.",
         )
@@ -41,6 +46,8 @@ it('documents the simple and advanced deployment workflows', function (): void {
             "composer require '3neti/x-change:^1.0@beta' -W",
             'php artisan x-change:doctor --pre-install --strict --no-interaction',
             'x-change-funding,x-change-feedback,default',
+            'x-change:publish',
+            'x-change:doctor --assets --strict',
             'one responsive sidebar',
             'See [LICENSE.md](./LICENSE.md) for the authoritative license terms.',
         )
@@ -59,8 +66,12 @@ it('ships a canonical secret-free Laravel Cloud recipe', function (): void {
     expect($recipe)->toContain('3neti.x-change.cloud-recipe.v1')
         ->toContain('x-change-funding')
         ->toContain('php artisan migrate --force')
+        ->toContain('php artisan x-change:doctor --assets --strict --no-interaction')
+        ->not->toContain('vendor:publish --tag=')
         ->not->toContain('CLIENT_SECRET=')
         ->and($compass)->toContain('composer x-change:cloud:ship')
+        ->toContain('Composer `post-autoload-dump` hook')
+        ->toContain('Do not duplicate individual `vendor:publish` calls')
         ->toContain('never manufactures a balancing entry');
 });
 

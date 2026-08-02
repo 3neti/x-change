@@ -207,19 +207,26 @@ The canonical Cloud build command is:
 
 ```bash
 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-
-php artisan vendor:publish --tag=x-change-ui --force --no-interaction
-php artisan vendor:publish --tag=x-change-assets --force --no-interaction
-php artisan vendor:publish --tag=x-rider-ui --force --no-interaction
-
+php artisan x-change:doctor --assets --strict --no-interaction
 npm ci --audit false
 npm run build
 ```
 
+The root application's Composer `post-autoload-dump` hook invokes the unified
+build publisher after Laravel package discovery. It publishes every declared
+generated build input from x-change, Form Flow, the form handlers, Rider, and
+X-Ray. The explicit doctor command proves the hook ran and fails closed when a
+build uses `composer install --no-scripts`, a required provider is absent, or a
+published input is stale or missing.
+
 Frontend publication remains a build input until the Cockpit can be consumed
-without host-published Vite sources. The recipe must verify that the production
-manifest contains the Cockpit entry points before allowing deployment to
-continue.
+without host-published Vite sources. Host-owned files in shared frontend
+folders are ignored by the verifier; package-owned generated files must match
+their installed package source exactly.
+
+Do not duplicate individual `vendor:publish` calls in a Cloud build. The
+publication catalog is the source of truth and grows when a contributing
+package adds a declared build resource.
 
 ### 4. Deploy and monitor
 

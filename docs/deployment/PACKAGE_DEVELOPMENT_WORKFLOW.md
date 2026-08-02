@@ -81,8 +81,8 @@ While this override is active:
 - Republish UI changes explicitly, then verify drift and compile the host:
 
 ```bash
-php artisan vendor:publish --tag=x-change-ui --force
-php artisan x-change:doctor --assets --no-interaction
+php artisan x-change:publish --scope=build --force --verify --no-interaction
+php artisan x-change:doctor --assets --strict --no-interaction
 npm run build
 ```
 
@@ -123,8 +123,8 @@ Adopt it in the host:
 ```bash
 cd /Users/rli/PhpstormProjects/x-change-sandbox
 composer update 3neti/x-change --with-all-dependencies --no-interaction
-php artisan vendor:publish --tag=x-change-ui --force
-php artisan x-change:doctor --assets --no-interaction
+php artisan x-change:publish --scope=build --force --verify --no-interaction
+php artisan x-change:doctor --assets --strict --no-interaction
 php -d memory_limit=2G artisan test --compact tests/Unit/ExternalPackageBoundaryTest.php
 npm run build
 composer validate --strict

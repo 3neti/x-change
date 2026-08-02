@@ -191,6 +191,11 @@ profile, safely adopts a conventional Laravel User model, installs the package,
 builds the frontend, provisions the non-interactive System Account, and runs
 strict verification.
 
+Adopted hosts use a root Composer hook to refresh the package-owned build
+inputs through `x-change:publish`; `x-change:doctor --assets --strict` verifies
+the complete Form Flow, handler, Rider, X-Ray, and Cockpit publication catalog.
+Configuration is never part of that automatic overwrite boundary.
+
 For automation:
 
 ```bash

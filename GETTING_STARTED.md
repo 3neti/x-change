@@ -102,6 +102,20 @@ Finish by checking readiness:
 php artisan x-change:doctor --strict --no-interaction
 ```
 
+The setup/adoption workflow also installs a visible root Composer hook that
+keeps all package-owned Vite and runtime build inputs synchronized after future
+Composer installs and updates. To inspect that boundary directly:
+
+```bash
+php artisan x-change:publish --scope=build --dry-run --force --json
+php artisan x-change:doctor --assets --strict --no-interaction
+```
+
+Do not maintain a handwritten list of `vendor:publish` tags in CI or Laravel
+Cloud. Form Flow, handlers, Rider, X-Ray, and future contributors register in
+the same package publication catalog. Configuration and host-customizable
+scaffolds are deliberately outside automatic build publication.
+
 The development setup may temporarily disable onboarding OTP and the invited
 user's initial PIN-setup step. Production commissioning rejects those relaxed
 settings. Ordinary login still requires an established credential.
