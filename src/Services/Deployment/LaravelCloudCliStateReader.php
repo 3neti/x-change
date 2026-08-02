@@ -49,6 +49,7 @@ final readonly class LaravelCloudCliStateReader implements CloudStateReaderContr
             ? $matchedEnvironment['instances']
             : [];
         $instanceId = $this->firstInstanceId($instances);
+        $schedulerEnabled = $this->firstInstanceUsesScheduler($instances);
         $processes = $instanceId === null
             ? []
             : $this->runJson('background-process:list', [
@@ -65,7 +66,7 @@ final readonly class LaravelCloudCliStateReader implements CloudStateReaderContr
             'resources' => [
                 'database' => ['attached' => filled($matchedEnvironment['databaseSchemaId'] ?? null)],
                 'cache' => ['attached' => filled($matchedEnvironment['cacheId'] ?? null)],
-                'compute' => ['attached' => $instances !== []],
+                'compute' => ['attached' => $instances !== [], 'instance_id' => $instanceId],
                 'websockets' => ['attached' => filled($matchedEnvironment['websocketApplicationId'] ?? null)],
             ],
             'runtime' => [
@@ -77,7 +78,7 @@ final readonly class LaravelCloudCliStateReader implements CloudStateReaderContr
                     ->unique()
                     ->values()
                     ->all(),
-                'scheduler' => 'unknown',
+                'scheduler' => $schedulerEnabled,
             ],
         ];
     }
@@ -115,6 +116,16 @@ final readonly class LaravelCloudCliStateReader implements CloudStateReaderContr
         }
 
         return is_array($first) && filled($first['id'] ?? null) ? (string) $first['id'] : null;
+    }
+
+    /** @param array<mixed> $instances */
+    private function firstInstanceUsesScheduler(array $instances): bool|string
+    {
+        $first = $instances[0] ?? null;
+
+        return is_array($first) && is_bool($first['usesScheduler'] ?? null)
+            ? $first['usesScheduler']
+            : 'unknown';
     }
 
     /** @return array<string, mixed> */

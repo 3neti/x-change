@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
 use LBHurtado\XChange\Services\Deployment\CloudDeploymentPlanner;
+use LBHurtado\XChange\Services\Deployment\CloudInfrastructureApplier;
 use LBHurtado\XChange\Services\Deployment\DeploymentManifestGenerator;
 use LBHurtado\XChange\Services\Deployment\DeploymentManifestRepository;
 use Throwable;
@@ -19,6 +20,13 @@ final class CloudRecipeCommand extends Command
         {--profile= : Provider profile}
         {--path= : Deployment manifest path}
         {--confirm-production : Explicit production consent}
+        {--confirm-apply : Permit the declared infrastructure changes}
+        {--region=us-east-2 : Laravel Cloud region}
+        {--database-preset=dev : Laravel Cloud database preset}
+        {--database-type=postgres18 : Laravel Cloud database type}
+        {--cache-type=redis : Laravel Cloud cache type}
+        {--cache-size=flex-1 : Laravel Cloud cache size}
+        {--compute-size=flex-1 : Laravel Cloud compute size}
         {--offline : Render desired state without reading Laravel Cloud}
         {--json : Render machine-readable output}';
 
@@ -26,6 +34,7 @@ final class CloudRecipeCommand extends Command
 
     public function handle(
         CloudDeploymentPlanner $planner,
+        CloudInfrastructureApplier $applier,
         DeploymentManifestGenerator $generator,
         DeploymentManifestRepository $manifests,
     ): int {
@@ -38,9 +47,59 @@ final class CloudRecipeCommand extends Command
                 '--strict' => true,
                 '--no-interaction' => true,
             ]),
-            'apply', 'resume' => $this->notAvailableYet($operation),
+            'apply' => $this->apply($applier, $generator, $manifests),
+            'resume' => $this->notAvailableYet($operation),
             default => $this->invalidOperation($operation),
         };
+    }
+
+    private function apply(
+        CloudInfrastructureApplier $applier,
+        DeploymentManifestGenerator $generator,
+        DeploymentManifestRepository $manifests,
+    ): int {
+        if (! (bool) $this->option('confirm-apply')) {
+            $this->components->error('Cloud infrastructure apply requires --confirm-apply.');
+
+            return self::FAILURE;
+        }
+
+        $path = trim((string) ($this->option('path') ?: base_path('x-change.deployment.yaml')));
+
+        try {
+            if (! is_file($path) || $this->option('profile') !== null) {
+                $manifests->write($path, $generator->generate('laravel-cloud', $this->option('profile')));
+            }
+
+            $manifest = $manifests->read($path);
+            $result = $applier->apply(
+                $manifest,
+                trim((string) ($this->option('application') ?: $manifest['application']['slug'])),
+                trim((string) $this->option('environment')),
+                [
+                    'region' => trim((string) $this->option('region')),
+                    'database_preset' => trim((string) $this->option('database-preset')),
+                    'database_type' => trim((string) $this->option('database-type')),
+                    'cache_type' => trim((string) $this->option('cache-type')),
+                    'cache_size' => trim((string) $this->option('cache-size')),
+                    'compute_size' => trim((string) $this->option('compute-size')),
+                ],
+            );
+        } catch (Throwable $exception) {
+            $this->components->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if ((bool) $this->option('json')) {
+            $this->line((string) json_encode($result, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        } else {
+            $this->components->info($result['status'] === 'no_changes'
+                ? 'Laravel Cloud infrastructure already matches the recipe.'
+                : 'Declared Laravel Cloud infrastructure changes were applied; re-plan before deployment.');
+        }
+
+        return self::SUCCESS;
     }
 
     private function plan(

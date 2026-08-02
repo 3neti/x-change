@@ -21,8 +21,8 @@ it('exposes the package Cloud plan through the umbrella command', function (): v
     }
 });
 
-it('fails closed for Cloud operations without an installed adapter', function (): void {
+it('requires explicit confirmation before applying Cloud infrastructure', function (): void {
     $this->artisan('x-change:cloud', ['operation' => 'apply'])
-        ->expectsOutputToContain('not enabled until its idempotent adapter is installed')
+        ->expectsOutputToContain('requires --confirm-apply')
         ->assertFailed();
 });

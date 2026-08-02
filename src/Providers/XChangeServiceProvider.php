@@ -147,6 +147,7 @@ use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
+use LBHurtado\XChange\Contracts\Deployment\CloudMutationGatewayContract;
 use LBHurtado\XChange\Contracts\Deployment\CloudStateReaderContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
@@ -319,6 +320,7 @@ use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\DefaultXChangeOnboardingGateway;
+use LBHurtado\XChange\Services\Deployment\LaravelCloudCliMutationGateway;
 use LBHurtado\XChange\Services\Deployment\LaravelCloudCliStateReader;
 use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
@@ -426,6 +428,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(DeploymentTreasuryConnectionConfiguration::class);
         $this->app->singleton(DeploymentConfigurationInspector::class);
         $this->app->singleton(CloudStateReaderContract::class, LaravelCloudCliStateReader::class);
+        $this->app->singleton(CloudMutationGatewayContract::class, LaravelCloudCliMutationGateway::class);
         $this->app->singleton(LifecycleUserModelResolver::class);
         $this->app->singleton(
             LifecycleScenarioRepository::class,
