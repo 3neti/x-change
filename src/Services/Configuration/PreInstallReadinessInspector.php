@@ -211,17 +211,17 @@ final readonly class PreInstallReadinessInspector
             'x-change.onboarding.voucher.require_pin_setup',
             true,
         );
-        $driver = trim((string) config('x-change.withdrawal.otp.driver', 'null'));
-        $showsLocalCode = (bool) config(
-            'x-change.onboarding.mobile_verification.show_local_code',
-            false,
-        );
+        $driver = trim((string) config('x-change.onboarding.identity_otp.driver', 'unavailable'));
+        $tokenConfigured = filled(config('x-change.onboarding.identity_otp.token'));
+        $baseUrl = trim((string) config('x-change.onboarding.identity_otp.base_url', ''));
+        $secureEndpoint = str_starts_with($baseUrl, 'https://');
         $ready = ! $production || (
             $enabled
             && $required
             && $pinSetupRequired
-            && ! in_array($driver, ['', 'null', 'log'], true)
-            && ! $showsLocalCode
+            && $driver === 'txtcmdr'
+            && $tokenConfigured
+            && $secureEndpoint
         );
         $missing = [];
 
@@ -237,12 +237,16 @@ final readonly class PreInstallReadinessInspector
             $missing[] = 'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP';
         }
 
-        if ($production && in_array($driver, ['', 'null', 'log'], true)) {
-            $missing[] = 'XCHANGE_WITHDRAWAL_OTP_DRIVER';
+        if ($production && $driver !== 'txtcmdr') {
+            $missing[] = 'XCHANGE_IDENTITY_OTP_DRIVER';
         }
 
-        if ($production && $showsLocalCode) {
-            $missing[] = 'XCHANGE_MOBILE_VERIFICATION_SHOW_LOCAL_CODE';
+        if ($production && ! $tokenConfigured) {
+            $missing[] = 'TXTCMDR_API_TOKEN';
+        }
+
+        if ($production && ! $secureEndpoint) {
+            $missing[] = 'TXTCMDR_API_URL';
         }
 
         return $this->check(
@@ -250,14 +254,15 @@ final readonly class PreInstallReadinessInspector
             $ready,
             $ready
                 ? 'onboarding credential verification is ready'
-                : 'production onboarding requires OTP, PIN setup, a live OTP driver, and hidden local codes',
+                : 'production onboarding requires OTP, PIN setup, and a secured txtcmdr identity-verification gateway',
             [
                 'environment' => $environment,
                 'mobile_verification_enabled' => $enabled,
                 'pin_setup_required' => $pinSetupRequired,
                 'otp_required' => $required,
                 'driver' => $driver,
-                'local_code_visible' => $showsLocalCode,
+                'token_configured' => $tokenConfigured,
+                'secure_endpoint' => $secureEndpoint,
                 'missing_variables' => $missing,
             ],
         );

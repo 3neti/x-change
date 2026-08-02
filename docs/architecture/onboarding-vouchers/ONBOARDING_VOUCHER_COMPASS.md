@@ -25,9 +25,9 @@ Authenticated claimant handoff to Cockpit
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture
-Current slice: Treasury-Backed Onboarding Grant
-Status: Slices 0–16 complete
-Last updated: 2026-07-30
+Current slice: Authoritative Identity OTP
+Status: Slices 0–18 complete
+Last updated: 2026-08-02
 
 | Slice | Name | Status |
 |---|---|---|
@@ -48,6 +48,8 @@ Last updated: 2026-07-30
 | 14 | Unified Rider Fallback Policy | Completed |
 | 15 | Truthful Ledger and Browser Payee Acceptance | Completed |
 | 16 | Treasury-Backed Onboarding Grant | Completed |
+| 17 | Provider-Neutral OTP Challenge Gateway | Completed |
+| 18 | Structured Identity Proof Execution Boundary | Completed |
 
 ## Settled Decisions
 
@@ -80,11 +82,17 @@ Last updated: 2026-07-30
 - The first onboarding workflow collects Full Name, Email, and Mobile.
 - It does not collect an editable amount or an external payout destination.
 - OTP is an authentication safeguard, not claimant profile data.
+- The OTP form step sends only after an explicit claimant action. Rendering a
+  claim never sends an SMS.
+- The canonical identity purpose is `onboarding.account`; payout authorization
+  uses a separate driver and purpose.
 - `XCHANGE_ONBOARDING_REQUIRE_OTP` defaults to `true`.
 - The sandbox may set it to `false` for local testing.
 - A specific-mobile restriction always forces OTP, even when the local
   onboarding override is disabled.
 - Production diagnostics must fail closed when onboarding OTP is disabled.
+- Production diagnostics also require `XCHANGE_IDENTITY_OTP_DRIVER=txtcmdr`,
+  an HTTPS `TXTCMDR_API_URL`, and a scoped `TXTCMDR_API_TOKEN`.
 
 ### Authentication
 
@@ -95,6 +103,9 @@ Last updated: 2026-07-30
 - Successful manual authentication regenerates the session identifier.
 - OTPs, PINs, and raw identity evidence never enter Voucher metadata, claim
   workflow descriptors, or journal payloads.
+- The execution engine accepts only a server-collected proof containing the
+  provider challenge reference, `onboarding.account` purpose, verified mobile,
+  and a fresh verification time. A raw code or timestamp is insufficient.
 
 ### Commercial ownership
 
@@ -116,6 +127,8 @@ Last updated: 2026-07-30
 | `3neti/x-commerce` | Canonical versioned onboarding price |
 | `3neti/instruction` | Instruction product and revenue projection |
 | `3neti/onboarding` | Identity and account-provisioning capability |
+| `3neti/form-handler-otp` | Provider-neutral challenge gateway, explicit send/resend UI, and structured proof transport |
+| `3neti/txtcmdr` | Versioned OTP authority, queued SMS delivery, challenge ownership, and atomic verification |
 | `3neti/x-change` | Normalization, claim compilation, orchestration, Cockpit UX, and authenticated handoff |
 
 The host application may provide environment configuration and published
@@ -134,8 +147,30 @@ assets. It does not own onboarding business logic.
    consume the same normalized dependency policy.
 8. Authentication occurs only after the workflow reaches its authorized
    handoff point.
+9. A proof for another challenge, purpose, or mobile cannot provision an
+   Account.
+10. OTP delivery jobs contain only a challenge identifier and run on the
+    dedicated `txtcmdr-otp` queue in the txtcmdr deployment.
 
 ## Slice Log
+
+### 2026-08-02 — Slices 17–18 authoritative identity OTP completed
+
+- Published txtcmdr `v1.1.0` with authenticated, owner-bound `/api/v1/otp`
+  challenge endpoints, idempotent creation, replay-safe verification, and
+  dedicated queued delivery.
+- Added a provider-neutral gateway to the OTP Form Flow handler. The handler
+  no longer sends while rendering and never returns a raw OTP to x-change.
+- Separated claimant identity verification from the withdrawal/Paynamics OTP
+  authorization contract.
+- Persisted the provider challenge reference and purpose on the local
+  onboarding challenge while retaining only a keyed hash of the mobile.
+- Removed the local `000000` browser disclosure. Simulated OTP remains limited
+  to rollback-only lifecycle runners and is never a deployment driver.
+- Made the onboarding execution driver fail closed unless Form Flow supplies a
+  fresh, mobile-bound `onboarding.account` proof. Provider references are
+  stripped before ordinary Voucher redemption; only a one-way audit hash is
+  retained in the execution result.
 
 ### 2026-07-30 — Slice 16 core accounting completed
 

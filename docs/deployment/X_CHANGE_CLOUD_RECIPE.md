@@ -281,6 +281,10 @@ acceptance confirms:
 - no real-money transfer occurs during automated acceptance.
 
 Production additionally requires live OTP and production security controls.
+A live identity setup uses `XCHANGE_IDENTITY_OTP_DRIVER=txtcmdr`, an HTTPS
+`TXTCMDR_API_URL`, and a scoped `TXTCMDR_API_TOKEN`. This is independent of
+`XCHANGE_WITHDRAWAL_OTP_DRIVER`, which authorizes provider payouts. The
+txtcmdr service must run a worker for its dedicated `txtcmdr-otp` queue.
 A staging environment may explicitly disable OTP for testing, but that setting
 must be visible and must block production promotion.
 

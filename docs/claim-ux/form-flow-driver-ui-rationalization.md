@@ -96,7 +96,7 @@ The relevant form-flow and handler configuration surfaces are:
 - `KYC_POLLING_INTERVAL`
 - `KYC_AUTO_REDIRECT_DELAY`
 - `OTP_LABEL`
-- `OTP_SMS_PROVIDER`
+- `XCHANGE_IDENTITY_OTP_DRIVER`
 - `TXTCMDR_API_URL`
 - `TXTCMDR_API_TOKEN`
 - `OTP_MAX_RESENDS`
@@ -133,6 +133,13 @@ Its major steps are:
 Important boundary:
 
 The form-flow `otp` handler is redeemer-side phone verification. Paynamics payout OTP is issuer-side payout authorization. They must remain separate surfaces even if they eventually share visual components.
+
+The redeemer handler uses the versioned txtcmdr challenge API. Opening or
+rendering the OTP step has no delivery side effect: the claimant explicitly
+selects **Send verification code**, and resend is a separate throttled action.
+Successful verification returns structured proof to Form Flow; neither the
+raw code nor a locally generated fallback reaches x-change. txtcmdr workers
+must consume the dedicated `txtcmdr-otp` queue in the txtcmdr deployment.
 
 ## UX Findings
 

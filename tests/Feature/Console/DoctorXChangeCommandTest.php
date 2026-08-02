@@ -212,13 +212,14 @@ it('accepts durable queues and a shared scheduler lock cache', function () {
         ->and($checks->firstWhere('name', 'shared scheduler lock cache')['passed'])->toBeTrue();
 });
 
-it('rejects a null or locally visible onboarding OTP driver in production', function () {
+it('rejects an unavailable identity OTP gateway in production', function () {
     config()->set('app.env', 'production');
     config()->set('x-change.onboarding.mobile_verification.enabled', true);
     config()->set('x-change.onboarding.voucher.require_otp', true);
     config()->set('x-change.onboarding.voucher.require_pin_setup', false);
-    config()->set('x-change.withdrawal.otp.driver', 'null');
-    config()->set('x-change.onboarding.mobile_verification.show_local_code', true);
+    config()->set('x-change.onboarding.identity_otp.driver', 'unavailable');
+    config()->set('x-change.onboarding.identity_otp.token', null);
+    config()->set('x-change.onboarding.identity_otp.base_url', 'http://txtcmdr.test');
 
     Artisan::call('x-change:doctor', ['--json' => true]);
 
@@ -226,8 +227,9 @@ it('rejects a null or locally visible onboarding OTP driver in production', func
         ->firstWhere('name', 'production onboarding OTP');
 
     expect($check['passed'])->toBeFalse()
-        ->and($check['meta']['driver'])->toBe('null')
-        ->and($check['meta']['local_code_visible'])->toBeTrue();
+        ->and($check['meta']['driver'])->toBe('unavailable')
+        ->and($check['meta']['token_configured'])->toBeFalse()
+        ->and($check['meta']['secure_endpoint'])->toBeFalse();
     expect($check['meta']['pin_setup_required'])->toBeFalse();
 });
 
@@ -236,8 +238,9 @@ it('accepts a configured production onboarding OTP driver', function () {
     config()->set('x-change.onboarding.mobile_verification.enabled', true);
     config()->set('x-change.onboarding.voucher.require_otp', true);
     config()->set('x-change.onboarding.voucher.require_pin_setup', true);
-    config()->set('x-change.withdrawal.otp.driver', 'engagespark');
-    config()->set('x-change.onboarding.mobile_verification.show_local_code', false);
+    config()->set('x-change.onboarding.identity_otp.driver', 'txtcmdr');
+    config()->set('x-change.onboarding.identity_otp.token', 'test-token');
+    config()->set('x-change.onboarding.identity_otp.base_url', 'https://txtcmdr.example.test');
 
     Artisan::call('x-change:doctor', ['--json' => true]);
 
@@ -245,8 +248,9 @@ it('accepts a configured production onboarding OTP driver', function () {
         ->firstWhere('name', 'production onboarding OTP');
 
     expect($check['passed'])->toBeTrue()
-        ->and($check['meta']['driver'])->toBe('engagespark')
-        ->and($check['meta']['local_code_visible'])->toBeFalse();
+        ->and($check['meta']['driver'])->toBe('txtcmdr')
+        ->and($check['meta']['token_configured'])->toBeTrue()
+        ->and($check['meta']['secure_endpoint'])->toBeTrue();
 });
 
 it('rejects unsafe application settings in production', function () {

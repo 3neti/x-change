@@ -48,25 +48,8 @@ final class MobileVerificationPageController extends Controller
                 'expires_at' => $challenge->expires_at?->toIso8601String(),
                 'attempts' => $challenge->attempts,
             ],
-            'local_code' => $this->localCode(),
             'status' => $request->session()->get('status'),
             'auth_intent' => app(ClaimAuthenticationIntent::class)->current($request),
         ]);
-    }
-
-    private function localCode(): ?string
-    {
-        if (
-            config('x-change.withdrawal.otp.driver', 'null') === 'null'
-            && (bool) config('x-change.onboarding.mobile_verification.show_local_code', false)
-            && app()->environment((array) config(
-                'x-change.onboarding.mobile_verification.allow_null_driver_environments',
-                ['local', 'testing'],
-            ))
-        ) {
-            return '000000';
-        }
-
-        return null;
     }
 }

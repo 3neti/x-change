@@ -1,222 +1,205 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, useForm } from "@inertiajs/vue3";
+import { computed } from "vue";
 import {
-    challenge,
-    verify,
-} from '@/routes/x-change/onboarding/mobile-verification';
+  challenge,
+  verify,
+} from "@/routes/x-change/onboarding/mobile-verification";
 
 type Challenge = {
-    status: string;
-    expires_at?: string | null;
-    attempts: number;
+  status: string;
+  expires_at?: string | null;
+  attempts: number;
 };
 
 type AuthIntent = {
-    type: 'campaign_authorization' | 'onboarding_claimant_handoff';
-    authentication_mode?: 'authenticated_officer' | 'claimant_handoff';
-    code: string;
-    title: string;
-    description: string;
-    intended_url: string;
+  type: "campaign_authorization" | "onboarding_claimant_handoff";
+  authentication_mode?: "authenticated_officer" | "claimant_handoff";
+  code: string;
+  title: string;
+  description: string;
+  intended_url: string;
 };
 
 const props = defineProps<{
-    mobile: string;
-    verified: boolean;
-    challenge?: Challenge | null;
-    local_code?: string | null;
-    status?: string | null;
-    auth_intent?: AuthIntent | null;
+  mobile: string;
+  verified: boolean;
+  challenge?: Challenge | null;
+  status?: string | null;
+  auth_intent?: AuthIntent | null;
 }>();
 
 const challengeForm = useForm({});
 const verifyForm = useForm({
-    code: '',
+  code: "",
 });
 
 const isCampaignAuthorization = computed(
-    () => props.auth_intent?.type === 'campaign_authorization',
+  () => props.auth_intent?.type === "campaign_authorization",
 );
 const isOnboardingClaimantHandoff = computed(
-    () => props.auth_intent?.type === 'onboarding_claimant_handoff',
+  () => props.auth_intent?.type === "onboarding_claimant_handoff",
 );
 
 const eyebrow = computed(() =>
-    isCampaignAuthorization.value
-        ? 'Officer authorization'
-        : isOnboardingClaimantHandoff.value
-          ? 'Pay Code onboarding'
-        : 'Secure onboarding',
+  isCampaignAuthorization.value
+    ? "Officer authorization"
+    : isOnboardingClaimantHandoff.value
+      ? "Pay Code onboarding"
+      : "Secure onboarding",
 );
 
 const title = computed(() =>
-    isCampaignAuthorization.value
-        ? 'Verify your officer mobile'
-        : isOnboardingClaimantHandoff.value
-          ? 'Verify your recipient mobile'
-        : 'Verify your mobile',
+  isCampaignAuthorization.value
+    ? "Verify your officer mobile"
+    : isOnboardingClaimantHandoff.value
+      ? "Verify your recipient mobile"
+      : "Verify your mobile",
 );
 
 const description = computed(() =>
-    isCampaignAuthorization.value
-        ? 'Campaign authorization requires a verified officer mobile before the worksheet can be approved.'
-        : isOnboardingClaimantHandoff.value
-          ? 'Verify the mobile collected by this Pay Code before Account setup is completed.'
-        : 'Protected actions such as campaign authorization and account funding need a mobile number verified here first.',
+  isCampaignAuthorization.value
+    ? "Campaign authorization requires a verified officer mobile before the worksheet can be approved."
+    : isOnboardingClaimantHandoff.value
+      ? "Verify the mobile collected by this Pay Code before Account setup is completed."
+      : "Protected actions such as campaign authorization and account funding need a mobile number verified here first.",
 );
 
 const verifiedDescription = computed(() =>
-    isCampaignAuthorization.value
-        ? 'Your mobile is verified. Return to the approval Pay Code to continue campaign authorization.'
-        : isOnboardingClaimantHandoff.value
-          ? 'Your mobile is verified. Continue the Pay Code claim to finish Account setup.'
-        : 'Your mobile is verified and can now be used for protected x-change actions such as campaign authorization and funding readiness checks.',
+  isCampaignAuthorization.value
+    ? "Your mobile is verified. Return to the approval Pay Code to continue campaign authorization."
+    : isOnboardingClaimantHandoff.value
+      ? "Your mobile is verified. Continue the Pay Code claim to finish Account setup."
+      : "Your mobile is verified and can now be used for protected x-change actions such as campaign authorization and funding readiness checks.",
 );
 
 function requestCode(): void {
-    challengeForm.post(challenge(), {
-        preserveScroll: true,
-    });
+  challengeForm.post(challenge(), {
+    preserveScroll: true,
+  });
 }
 
 function submitCode(): void {
-    verifyForm.post(verify(), {
-        preserveScroll: true,
-    });
+  verifyForm.post(verify(), {
+    preserveScroll: true,
+  });
 }
 </script>
 
 <template>
-    <Head title="Verify mobile" />
+  <Head title="Verify mobile" />
 
-    <main
-        class="min-h-screen bg-slate-100 px-4 py-10 text-slate-950 dark:bg-slate-950 dark:text-white"
+  <main
+    class="min-h-screen bg-slate-100 px-4 py-10 text-slate-950 dark:bg-slate-950 dark:text-white"
+  >
+    <section
+      class="mx-auto max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      data-testid="mobile-verification-page"
     >
-        <section
-            class="mx-auto max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-            data-testid="mobile-verification-page"
+      <header class="bg-slate-950 px-6 py-6 text-white">
+        <p
+          class="text-xs font-semibold tracking-[0.18em] text-sky-300 uppercase"
         >
-            <header class="bg-slate-950 px-6 py-6 text-white">
-                <p
-                    class="text-xs font-semibold tracking-[0.18em] text-sky-300 uppercase"
-                >
-                    {{ eyebrow }}
-                </p>
-                <h1 class="mt-2 text-2xl font-semibold">{{ title }}</h1>
-                <p class="mt-2 text-sm leading-6 text-slate-300">
-                    {{ description }}
-                </p>
-            </header>
+          {{ eyebrow }}
+        </p>
+        <h1 class="mt-2 text-2xl font-semibold">{{ title }}</h1>
+        <p class="mt-2 text-sm leading-6 text-slate-300">
+          {{ description }}
+        </p>
+      </header>
 
-            <div class="space-y-5 p-6">
-                <div
-                    v-if="status"
-                    class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
-                    role="status"
-                >
-                    {{ status }}
-                </div>
+      <div class="space-y-5 p-6">
+        <div
+          v-if="status"
+          class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+          role="status"
+        >
+          {{ status }}
+        </div>
 
-                <div
-                    class="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-800"
-                >
-                    <div>
-                        <p class="text-xs text-slate-500">Mobile identity</p>
-                        <p class="mt-1 font-semibold">{{ mobile }}</p>
-                    </div>
-                    <span
-                        class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                        :class="
-                            verified
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
-                        "
-                    >
-                        {{ verified ? 'Verified' : 'Verification required' }}
-                    </span>
-                </div>
+        <div
+          class="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-800"
+        >
+          <div>
+            <p class="text-xs text-slate-500">Mobile identity</p>
+            <p class="mt-1 font-semibold">{{ mobile }}</p>
+          </div>
+          <span
+            class="rounded-full px-2.5 py-1 text-xs font-semibold"
+            :class="
+              verified
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+            "
+          >
+            {{ verified ? "Verified" : "Verification required" }}
+          </span>
+        </div>
 
-                <div v-if="!verified" class="space-y-4">
-                    <button
-                        type="button"
-                        class="h-11 w-full rounded-lg border border-sky-300 bg-sky-50 px-4 text-sm font-semibold text-sky-800 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
-                        :disabled="challengeForm.processing"
-                        data-testid="request-mobile-verification"
-                        @click="requestCode"
-                    >
-                        {{
-                            challengeForm.processing
-                                ? 'Requesting code…'
-                                : challenge?.status === 'pending'
-                                  ? 'Request a new code'
-                                  : 'Send verification code'
-                        }}
-                    </button>
+        <div v-if="!verified" class="space-y-4">
+          <button
+            type="button"
+            class="h-11 w-full rounded-lg border border-sky-300 bg-sky-50 px-4 text-sm font-semibold text-sky-800 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
+            :disabled="challengeForm.processing"
+            data-testid="request-mobile-verification"
+            @click="requestCode"
+          >
+            {{
+              challengeForm.processing
+                ? "Requesting code…"
+                : challenge?.status === "pending"
+                  ? "Request a new code"
+                  : "Send verification code"
+            }}
+          </button>
 
-                    <form class="space-y-3" @submit.prevent="submitCode">
-                        <label class="block">
-                            <span
-                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                            >
-                                Six-digit code
-                            </span>
-                            <input
-                                v-model="verifyForm.code"
-                                inputmode="numeric"
-                                autocomplete="one-time-code"
-                                maxlength="6"
-                                placeholder="000000"
-                                class="mt-1.5 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-center font-mono text-xl tracking-[0.35em] outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
-                                data-testid="mobile-verification-code"
-                            />
-                            <span
-                                v-if="verifyForm.errors.code"
-                                class="mt-1 block text-xs text-rose-600"
-                            >
-                                {{ verifyForm.errors.code }}
-                            </span>
-                        </label>
-                        <button
-                            type="submit"
-                            class="h-11 w-full rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="
-                                verifyForm.processing ||
-                                verifyForm.code.length !== 6
-                            "
-                            data-testid="submit-mobile-verification"
-                        >
-                            {{
-                                verifyForm.processing
-                                    ? 'Verifying…'
-                                    : 'Verify mobile'
-                            }}
-                        </button>
-                    </form>
+          <form class="space-y-3" @submit.prevent="submitCode">
+            <label class="block">
+              <span
+                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+              >
+                Six-digit code
+              </span>
+              <input
+                v-model="verifyForm.code"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
+                placeholder="000000"
+                class="mt-1.5 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-center font-mono text-xl tracking-[0.35em] outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
+                data-testid="mobile-verification-code"
+              />
+              <span
+                v-if="verifyForm.errors.code"
+                class="mt-1 block text-xs text-rose-600"
+              >
+                {{ verifyForm.errors.code }}
+              </span>
+            </label>
+            <button
+              type="submit"
+              class="h-11 w-full rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+              :disabled="verifyForm.processing || verifyForm.code.length !== 6"
+              data-testid="submit-mobile-verification"
+            >
+              {{ verifyForm.processing ? "Verifying…" : "Verify mobile" }}
+            </button>
+          </form>
+        </div>
 
-                    <p
-                        v-if="local_code"
-                        class="rounded-lg bg-violet-50 px-3 py-2 text-xs leading-5 text-violet-800 dark:bg-violet-950/40 dark:text-violet-200"
-                    >
-                        Local simulation code:
-                        <strong class="font-mono">{{ local_code }}</strong
-                        >. This hint is never available in production.
-                    </p>
-                </div>
+        <p
+          v-else
+          class="text-sm leading-6 text-emerald-700 dark:text-emerald-300"
+        >
+          {{ verifiedDescription }}
+        </p>
 
-                <p
-                    v-else
-                    class="text-sm leading-6 text-emerald-700 dark:text-emerald-300"
-                >
-                    {{ verifiedDescription }}
-                </p>
-
-                <p class="text-xs leading-5 text-slate-500">
-                    Verification proves mobile ownership. It does not send
-                    campaign messages, create funding intents, call providers,
-                    or credit an account by itself.
-                </p>
-            </div>
-        </section>
-    </main>
+        <p class="text-xs leading-5 text-slate-500">
+          Verification proves mobile ownership. It does not send campaign
+          messages, create funding intents, call providers, or credit an account
+          by itself.
+        </p>
+      </div>
+    </section>
+  </main>
 </template>

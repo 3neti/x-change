@@ -156,7 +156,7 @@ it('renders the mobile verification page without exposing the full mobile', func
         ->assertJsonPath('component', 'x-change/onboarding/MobileVerification')
         ->assertJsonPath('props.mobile', '63••••••1987')
         ->assertJsonPath('props.verified', false)
-        ->assertJsonPath('props.local_code', '000000')
+        ->assertJsonMissingPath('props.local_code')
         ->assertJsonMissing(['639173011987']);
 });
 
