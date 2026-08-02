@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Services\Onboarding\OnboardingCredentialPolicy;
 
-it('defaults onboarding OTP off while retaining invited Account PIN setup', function (): void {
+it('defaults onboarding OTP on while retaining invited Account PIN setup', function (): void {
     $policy = app(OnboardingCredentialPolicy::class);
 
-    expect($policy->requiresMobileVerification())->toBeFalse()
+    expect($policy->requiresMobileVerification())->toBeTrue()
         ->and($policy->requiresInvitedAccountPinSetup())->toBeTrue()
-        ->and($policy->initialMobileVerifiedAt())->not->toBeNull();
+        ->and($policy->initialMobileVerifiedAt())->toBeNull();
 });
 
 it('supports an explicit frictionless local onboarding trial', function (): void {
