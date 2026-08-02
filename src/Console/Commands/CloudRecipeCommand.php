@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use LBHurtado\XChange\Services\Deployment\CloudDeploymentPlanner;
 use LBHurtado\XChange\Services\Deployment\CloudInfrastructureApplier;
+use LBHurtado\XChange\Services\Deployment\CloudStagingAcceptance;
 use LBHurtado\XChange\Services\Deployment\DeploymentCheckpointRepository;
 use LBHurtado\XChange\Services\Deployment\DeploymentManifestGenerator;
 use LBHurtado\XChange\Services\Deployment\DeploymentManifestRepository;
@@ -15,7 +16,7 @@ use Throwable;
 final class CloudRecipeCommand extends Command
 {
     protected $signature = 'x-change:cloud
-        {operation=plan : plan, apply, verify, ship, or resume}
+        {operation=plan : plan, apply, verify, ship, resume, or accept}
         {--environment=staging : Laravel Cloud environment}
         {--application= : Laravel Cloud application ID or name}
         {--profile= : Provider profile}
@@ -29,6 +30,7 @@ final class CloudRecipeCommand extends Command
         {--cache-size=flex-1 : Laravel Cloud cache size}
         {--compute-size=flex-1 : Laravel Cloud compute size}
         {--offline : Render desired state without reading Laravel Cloud}
+        {--url= : Absolute application URL for staging acceptance}
         {--json : Render machine-readable output}';
 
     protected $description = 'Plan, apply, verify, ship, or resume the package-owned Cloud recipe.';
@@ -39,6 +41,7 @@ final class CloudRecipeCommand extends Command
         DeploymentManifestGenerator $generator,
         DeploymentManifestRepository $manifests,
         DeploymentCheckpointRepository $checkpoints,
+        CloudStagingAcceptance $acceptance,
     ): int {
         $operation = trim((string) $this->argument('operation'));
 
@@ -51,8 +54,38 @@ final class CloudRecipeCommand extends Command
             ]),
             'apply' => $this->apply($applier, $generator, $manifests),
             'resume' => $this->resume($planner, $generator, $manifests, $checkpoints),
+            'accept' => $this->accept($acceptance),
             default => $this->invalidOperation($operation),
         };
+    }
+
+    private function accept(CloudStagingAcceptance $acceptance): int
+    {
+        $url = trim((string) $this->option('url'));
+
+        if ($url === '') {
+            $this->components->error('Cloud acceptance requires --url.');
+
+            return self::FAILURE;
+        }
+
+        try {
+            $result = $acceptance->inspect($url);
+        } catch (Throwable $exception) {
+            $this->components->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if ((bool) $this->option('json')) {
+            $this->line((string) json_encode($result, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        } elseif ($result['success']) {
+            $this->components->info('Staging HTTP acceptance passed without provider or money movement.');
+        } else {
+            $this->components->error('Staging HTTP acceptance failed.');
+        }
+
+        return $result['success'] ? self::SUCCESS : self::FAILURE;
     }
 
     private function resume(

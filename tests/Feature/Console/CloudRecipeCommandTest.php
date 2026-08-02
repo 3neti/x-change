@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use LBHurtado\XChange\Contracts\Deployment\CloudStateReaderContract;
 use LBHurtado\XChange\Services\Deployment\DeploymentCheckpointRepository;
@@ -24,6 +25,17 @@ it('exposes the package Cloud plan through the umbrella command', function (): v
     } finally {
         @unlink($path);
     }
+});
+
+it('runs safe staging HTTP acceptance through the Cloud entry point', function (): void {
+    Http::fake(['https://x-bank.example/*' => Http::response('ready')]);
+
+    $this->artisan('x-change:cloud', [
+        'operation' => 'accept',
+        '--url' => 'https://x-bank.example',
+        '--json' => true,
+    ])->expectsOutputToContain('"real_money_transfer": false')
+        ->assertSuccessful();
 });
 
 it('rechecks live state before resuming from a sanitized checkpoint', function (): void {
