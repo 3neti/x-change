@@ -89,6 +89,7 @@ use LBHurtado\XChange\Console\Commands\Onboarding\VerifyTestMobileCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
+use LBHurtado\XChange\Console\Commands\PublishXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
@@ -176,6 +177,7 @@ use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Contracts\Publication\XChangePublicationContributor;
 use LBHurtado\XChange\Contracts\ReconciliationLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
@@ -363,6 +365,7 @@ use LBHurtado\XChange\Services\PayoutProviderResolver;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
+use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
@@ -427,6 +430,12 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(DeploymentProfileCatalog::class);
         $this->app->singleton(DeploymentTreasuryConnectionConfiguration::class);
         $this->app->singleton(DeploymentConfigurationInspector::class);
+        $this->app->singleton(
+            PublicationCatalog::class,
+            fn ($app): PublicationCatalog => new PublicationCatalog(
+                $app->tagged(XChangePublicationContributor::class),
+            ),
+        );
         $this->app->singleton(CloudStateReaderContract::class, LaravelCloudCliStateReader::class);
         $this->app->singleton(CloudMutationGatewayContract::class, LaravelCloudCliMutationGateway::class);
         $this->app->singleton(LifecycleUserModelResolver::class);
@@ -1196,6 +1205,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RepairMissingDisbursementPostingsCommand::class,
                 SimulateTreasuryProviderDepositCommand::class,
                 InstallXChangeCommand::class,
+                PublishXChangeCommand::class,
                 AdoptHostCommand::class,
                 AdoptXChangeCommand::class,
                 SetupXChangeCommand::class,
