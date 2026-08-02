@@ -1219,6 +1219,7 @@ return [
             'connect_timeout' => (int) env('TXTCMDR_CONNECT_TIMEOUT', 5),
             'timeout' => (int) env('TXTCMDR_TIMEOUT', 15),
             'verify_ssl' => (bool) env('TXTCMDR_VERIFY_SSL', true),
+            'proof_ttl_minutes' => (int) env('XCHANGE_IDENTITY_OTP_PROOF_TTL_MINUTES', 15),
         ],
     ],
 

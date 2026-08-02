@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Execution;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Onboarding\Actions\PromoteContactToUser;
 use LBHurtado\Voucher\Contracts\ExecutionDriverContract;
@@ -18,6 +19,7 @@ use LBHurtado\XChange\Exceptions\OnboardingVoucherExecutionFailed;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Onboarding\OnboardingVoucherClaimantAuthenticator;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
+use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Throwable;
 
 final readonly class OnboardingAccountProvisioningExecutionDriver implements ExecutionDriverContract
@@ -50,9 +52,9 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             'onboarding.mobile_verification_required',
             true,
         );
-        $verifiedAt = $this->verifiedAt($inputs);
+        $verificationProof = $this->verificationProof($inputs);
 
-        if ($verificationRequired && $verifiedAt === null) {
+        if ($verificationRequired && $verificationProof === null) {
             return ExecutionResultData::failed(
                 driver: $this->key(),
                 failure: 'mobile_verification_required',
@@ -63,7 +65,7 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             return DB::transaction(fn (): ExecutionResultData => $this->executeAtomically(
                 $context,
                 $inputs,
-                $verifiedAt,
+                $verificationProof,
             ));
         } catch (OnboardingVoucherExecutionFailed $exception) {
             return ExecutionResultData::failed(
@@ -84,17 +86,18 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
 
     /**
      * @param  array<string, mixed>  $inputs
+     * @param  array{reference:string,purpose:string,verified_at:string}|null  $verificationProof
      */
     private function executeAtomically(
         ExecutionContextData $context,
         array $inputs,
-        ?string $verifiedAt,
+        ?array $verificationProof,
     ): ExecutionResultData {
         $promotion = $this->promoteContact->handle($context->contact, [
             'name' => data_get($inputs, 'full_name', data_get($inputs, 'name')),
             'email' => data_get($inputs, 'email'),
             'mobile' => data_get($inputs, 'mobile', $context->contact->mobile),
-            'mobile_verified' => $verifiedAt !== null,
+            'mobile_verified' => $verificationProof !== null,
         ]);
 
         if (! $promotion->promoted || ! $promotion->user instanceof Authenticatable) {
@@ -133,6 +136,9 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
                 'principal_reference' => data_get($promotion->meta, 'principal_reference'),
                 'position_count' => (int) data_get($promotion->meta, 'position_count', 0),
                 'claimant_authentication_scheduled' => $handoffScheduled,
+                'identity_verification_reference_hash' => $verificationProof !== null
+                    ? hash('sha256', $verificationProof['reference'])
+                    : null,
                 'settlement_mode' => $settlement['mode'],
                 'treasury_operation_reference' => $settlement['treasury_operation_reference'],
             ],
@@ -192,18 +198,52 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
     /**
      * @param  array<string, mixed>  $inputs
      */
-    private function verifiedAt(array $inputs): ?string
+    private function verificationProof(array $inputs): ?array
     {
-        foreach ([
-            data_get($inputs, 'otp_verification.verified_at'),
-            data_get($inputs, 'verified_at'),
-        ] as $value) {
-            if (is_string($value) && trim($value) !== '') {
-                return $value;
-            }
+        $reference = data_get($inputs, 'otp.verification_reference');
+        $purpose = data_get($inputs, 'otp.verification_purpose');
+        $verifiedAt = data_get($inputs, 'otp.verified_at');
+        $proofMobileValue = data_get($inputs, 'otp.mobile');
+        $claimMobileValue = data_get($inputs, 'mobile');
+        $proofMobile = MobileNumber::normalize(
+            is_string($proofMobileValue) ? $proofMobileValue : null,
+        );
+        $claimMobile = MobileNumber::normalize(
+            is_string($claimMobileValue) ? $claimMobileValue : null,
+        );
+        $expectedPurpose = (string) config(
+            'x-change.onboarding.identity_otp.purpose',
+            'onboarding.account',
+        );
+
+        if (! is_string($reference) || trim($reference) === ''
+            || ! is_string($purpose) || ! hash_equals($expectedPurpose, $purpose)
+            || ! is_string($verifiedAt) || trim($verifiedAt) === ''
+            || $proofMobile === null || $claimMobile === null
+            || ! hash_equals($claimMobile, $proofMobile)) {
+            return null;
         }
 
-        return null;
+        try {
+            $verified = Carbon::parse($verifiedAt);
+        } catch (Throwable) {
+            return null;
+        }
+
+        $ttlMinutes = max(1, (int) config(
+            'x-change.onboarding.identity_otp.proof_ttl_minutes',
+            15,
+        ));
+
+        if ($verified->isFuture() || $verified->lessThan(now()->subMinutes($ttlMinutes))) {
+            return null;
+        }
+
+        return [
+            'reference' => trim($reference),
+            'purpose' => $purpose,
+            'verified_at' => $verified->toIso8601String(),
+        ];
     }
 
     private function withoutSensitiveAuthenticationEvidence(
@@ -221,10 +261,17 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             'otp_verification.otp_code',
         ]);
 
-        if ($this->verifiedAt($inputs) !== null) {
+        if ($this->verificationProof($inputs) !== null) {
             data_set($inputs, 'otp.value', 'verified');
             data_set($inputs, 'otp.verified', true);
         }
+
+        Arr::forget($inputs, [
+            'verification_reference',
+            'verification_purpose',
+            'otp.verification_reference',
+            'otp.verification_purpose',
+        ]);
 
         data_set($meta, 'inputs', $inputs);
 

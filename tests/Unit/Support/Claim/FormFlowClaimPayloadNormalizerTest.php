@@ -219,3 +219,41 @@ it('aliases date of birth to birth date for voucher input validation', function 
     expect($payload['inputs']['date_of_birth'])->toBe('1990-01-01')
         ->and($payload['inputs']['birth_date'])->toBe('1990-01-01');
 });
+
+it('normalizes a structured OTP proof without retaining the raw code', function (): void {
+    $payload = $this->normalizer->normalize([
+        'wallet_info' => ['mobile' => '+639173011987'],
+        'otp_verification' => [
+            'mobile' => '+639173011987',
+            'otp_code' => '123456',
+            'verified_at' => '2026-08-02T12:00:00+08:00',
+            'reference_id' => 'flow-01',
+            'verification_reference' => 'otp-challenge-01',
+            'verification_purpose' => 'onboarding.account',
+        ],
+    ]);
+
+    expect($payload['inputs']['otp'])
+        ->toMatchArray([
+            'mobile' => '+639173011987',
+            'verified_at' => '2026-08-02T12:00:00+08:00',
+            'reference_id' => 'flow-01',
+            'verification_reference' => 'otp-challenge-01',
+            'verification_purpose' => 'onboarding.account',
+        ])
+        ->not->toHaveKey('otp_code')
+        ->and(json_encode($payload, JSON_THROW_ON_ERROR))->not->toContain('123456');
+});
+
+it('does not infer OTP verification from a raw code and client timestamp', function (): void {
+    $payload = $this->normalizer->normalize([
+        'otp_verification' => [
+            'mobile' => '+639173011987',
+            'otp_code' => '123456',
+            'verified_at' => now()->toIso8601String(),
+        ],
+    ]);
+
+    expect($payload['inputs'])->not->toHaveKey('otp')
+        ->and($payload['inputs'])->not->toHaveKey('otp_verified');
+});

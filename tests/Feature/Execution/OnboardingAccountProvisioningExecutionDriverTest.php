@@ -108,7 +108,7 @@ it('fails before account mutation when required mobile verification evidence is 
         ->and($result->failure)->toBe('mobile_verification_required');
 });
 
-it('provisions the account and strips raw OTP evidence before Voucher redemption', function () {
+it('provisions the account from structured proof and strips provider evidence before Voucher redemption', function () {
     $user = actingAsTestUser();
     auth()->logout();
 
@@ -129,18 +129,20 @@ it('provisions the account and strips raw OTP evidence before Voucher redemption
             ],
         ));
 
+    $verifiedAt = now()->subMinute()->toIso8601String();
     $defaultDriver = Mockery::mock(DefaultExecutionDriver::class);
     $defaultDriver->shouldReceive('execute')
         ->once()
-        ->with(Mockery::on(function (ExecutionContextData $context): bool {
+        ->with(Mockery::on(function (ExecutionContextData $context) use ($verifiedAt): bool {
             $inputs = (array) data_get($context->meta, 'inputs', []);
 
             return ! array_key_exists('otp_code', $inputs)
-                && data_get($inputs, 'otp.verified_at') === '2026-07-30T12:00:00+08:00'
+                && data_get($inputs, 'otp.verified_at') === $verifiedAt
                 && data_get($inputs, 'otp.otp_code') === null
+                && data_get($inputs, 'otp.verification_reference') === null
+                && data_get($inputs, 'otp.verification_purpose') === null
                 && data_get($inputs, 'otp.value') === 'verified'
-                && data_get($inputs, 'otp.verified') === true
-                && data_get($inputs, 'verified_at') === '2026-07-30T12:00:00+08:00';
+                && data_get($inputs, 'otp.verified') === true;
         }))
         ->andReturn(ExecutionResultData::succeeded('default'));
 
@@ -155,19 +157,45 @@ it('provisions the account and strips raw OTP evidence before Voucher redemption
     $result = $driver->execute(onboardingExecutionContext([
         'full_name' => 'Maria Santos',
         'email' => 'maria@example.test',
-        'otp_code' => '123456',
+        'mobile' => '639173011987',
         'otp' => [
-            'otp_code' => '123456',
-            'verified_at' => '2026-07-30T12:00:00+08:00',
+            'mobile' => '+639173011987',
+            'verified_at' => $verifiedAt,
+            'verification_reference' => 'otp-proof-01',
+            'verification_purpose' => 'onboarding.account',
         ],
-        'verified_at' => '2026-07-30T12:00:00+08:00',
     ]));
 
     expect($result->successful)->toBeTrue()
         ->and($result->driver)->toBe(OnboardingVoucherInstructionPolicy::ExecutionDriver)
         ->and($result->metadata)->not->toHaveKey('mobile')
         ->and($result->metadata)->not->toHaveKey('email')
-        ->and(json_encode($result->toArray()))->not->toContain('123456');
+        ->and($result->metadata['identity_verification_reference_hash'])
+        ->toBe(hash('sha256', 'otp-proof-01'))
+        ->and(json_encode($result->toArray()))->not->toContain('otp-proof-01');
+});
+
+it('rejects legacy raw OTP and timestamp markers without structured provider proof', function () {
+    $provisioner = Mockery::mock(ContactUserProvisionerContract::class);
+    $provisioner->shouldNotReceive('provision');
+    $defaultDriver = Mockery::mock(DefaultExecutionDriver::class);
+    $defaultDriver->shouldNotReceive('execute');
+    $driver = new OnboardingAccountProvisioningExecutionDriver(
+        new PromoteContactToUser($provisioner),
+        $defaultDriver,
+        app(DispatchVoucherClaimOutcome::class),
+        app(OnboardingVoucherClaimantAuthenticator::class),
+        Request::create('/x/claim/ONBD-1234'),
+    );
+
+    $result = $driver->execute(onboardingExecutionContext([
+        'mobile' => '639173011987',
+        'otp_code' => '123456',
+        'verified_at' => now()->toIso8601String(),
+    ]));
+
+    expect($result->successful)->toBeFalse()
+        ->and($result->failure)->toBe('mobile_verification_required');
 });
 
 it('does not require OTP evidence when the persisted onboarding policy disabled it', function () {

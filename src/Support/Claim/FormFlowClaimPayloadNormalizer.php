@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Support\Claim;
 
+use Illuminate\Support\Arr;
+
 class FormFlowClaimPayloadNormalizer
 {
     public function normalize(array $collectedData): array
@@ -26,7 +28,11 @@ class FormFlowClaimPayloadNormalizer
             'slice_ids' => $flatData['slice_ids'] ?? [],
             'settlement_rail' => $flatData['settlement_rail'] ?? null,
             'inputs' => $inputs,
-            '_flat_data' => $flatData,
+            '_flat_data' => Arr::except($flatData, [
+                'otp_code',
+                'verification_reference',
+                'verification_purpose',
+            ]),
         ];
     }
 
@@ -46,7 +52,17 @@ class FormFlowClaimPayloadNormalizer
     protected function buildInputs(array $flatData, array $collectedData): array
     {
         $inputs = collect($flatData)
-            ->except(['recipient_country', 'amount', 'settlement_rail', 'slice_ids'])
+            ->except([
+                'recipient_country',
+                'amount',
+                'settlement_rail',
+                'slice_ids',
+                'otp_code',
+                'verified_at',
+                'reference_id',
+                'verification_reference',
+                'verification_purpose',
+            ])
             ->toArray();
 
         $kycData = $this->extractKycData($flatData, $collectedData);
@@ -186,18 +202,23 @@ class FormFlowClaimPayloadNormalizer
 
     protected function extractOtpData(array $flatData): array
     {
-        $otpCode = $flatData['otp_code'] ?? null;
+        $reference = $flatData['verification_reference'] ?? null;
+        $purpose = $flatData['verification_purpose'] ?? null;
+        $verifiedAt = $flatData['verified_at'] ?? null;
 
-        if (! $otpCode) {
+        if (! is_string($reference) || trim($reference) === ''
+            || ! is_string($purpose) || trim($purpose) === ''
+            || ! is_string($verifiedAt) || trim($verifiedAt) === '') {
             return [];
         }
 
         return [
-            'otp_code' => $otpCode,
             'verified' => true,
-            'otp_verified' => true,
-            'verified_at' => $flatData['verified_at'] ?? now()->toIso8601String(),
+            'verified_at' => $verifiedAt,
             'reference_id' => $flatData['reference_id'] ?? null,
+            'verification_reference' => $reference,
+            'verification_purpose' => $purpose,
+            'mobile' => $flatData['mobile'] ?? null,
         ];
     }
 }

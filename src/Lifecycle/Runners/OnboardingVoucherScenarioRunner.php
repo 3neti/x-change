@@ -68,7 +68,7 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
                         'name' => $name,
                         'email' => $email,
                         'mobile' => $mobile,
-                    ] + $this->verificationEvidence($mobileVerificationRequired),
+                    ] + $this->verificationEvidence($mobileVerificationRequired, $mobile),
                 ],
             );
         } catch (Throwable $exception) {
@@ -236,7 +236,7 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
     /**
      * @return array<string, mixed>
      */
-    private function verificationEvidence(bool $required): array
+    private function verificationEvidence(bool $required, string $mobile): array
     {
         if (! $required) {
             return [];
@@ -245,14 +245,16 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
         $verifiedAt = now()->toIso8601String();
 
         return [
-            'verified_at' => $verifiedAt,
             'otp' => [
+                'mobile' => $mobile,
                 'verified_at' => $verifiedAt,
+                'verification_reference' => 'simulation:'.hash('sha256', $verifiedAt),
+                'verification_purpose' => (string) config(
+                    'x-change.onboarding.identity_otp.purpose',
+                    'onboarding.account',
+                ),
             ],
             'otp_verified' => true,
-            'otp_verification' => [
-                'verified_at' => $verifiedAt,
-            ],
         ];
     }
 

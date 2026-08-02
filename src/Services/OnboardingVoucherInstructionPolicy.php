@@ -58,6 +58,10 @@ final class OnboardingVoucherInstructionPolicy
             'workflow_key' => self::WorkflowKey,
             'required_claim_fields' => ['full_name', 'email', 'mobile'],
             'mobile_verification_required' => $requiresOtp,
+            'mobile_verification_purpose' => config(
+                'x-change.onboarding.identity_otp.purpose',
+                'onboarding.account',
+            ),
             'authentication_mode' => 'claimant_handoff',
         ]);
         Arr::set(

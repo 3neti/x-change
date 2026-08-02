@@ -57,6 +57,14 @@ final class FormFlowClaimWorkflowMutator
         $step['config'] = (array) ($step['config'] ?? []);
         $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
 
+        if (($step['handler'] ?? null) === 'otp'
+            && ($workflow->review['onboarding'] ?? false) === true) {
+            $step['config']['purpose'] = config(
+                'x-change.onboarding.identity_otp.purpose',
+                'onboarding.account',
+            );
+        }
+
         if (($step['config']['step_name'] ?? null) !== 'wallet_info') {
             $step['config']['fields'] = $this->markRequiredFields(
                 (array) ($step['config']['fields'] ?? []),

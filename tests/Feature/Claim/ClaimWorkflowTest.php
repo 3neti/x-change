@@ -154,6 +154,10 @@ it('compiles onboarding account provisioning without payout fields or route gues
                         ],
                     ],
                 ],
+                [
+                    'handler' => 'otp',
+                    'config' => ['step_name' => 'otp_verification'],
+                ],
             ],
         ]),
         $workflow,
@@ -162,6 +166,7 @@ it('compiles onboarding account provisioning without payout fields or route gues
     $payload = $instructions->toArray();
     $walletStep = $payload['steps'][0]['config'];
     $bioStep = $payload['steps'][1]['config'];
+    $otpStep = $payload['steps'][2]['config'];
 
     expect($workflow->key)->toBe('onboarding.account-provisioning.v1')
         ->and($workflow->requires_mobile)->toBeTrue()
@@ -177,6 +182,7 @@ it('compiles onboarding account provisioning without payout fields or route gues
         ->and($bioStep['fields'][0]['required'])->toBeTrue()
         ->and($bioStep['fields'][1]['required'])->toBeTrue()
         ->and($bioStep['claim_workflow']['key'])->toBe('onboarding.account-provisioning.v1')
+        ->and($otpStep['purpose'])->toBe('onboarding.account')
         ->and($payload['metadata']['claim_workflow']['confirmation_label'])
         ->toBe('Create My Account');
 });
