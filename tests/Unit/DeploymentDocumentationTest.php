@@ -63,3 +63,15 @@ it('ships a canonical secret-free Laravel Cloud recipe', function (): void {
         ->and($compass)->toContain('composer x-change:cloud:ship')
         ->toContain('never manufactures a balancing entry');
 });
+
+it('exposes Cloud metadata and an explicit package executable without a Composer plugin', function (): void {
+    $packageRoot = dirname(__DIR__, 2);
+    $composer = json_decode(file_get_contents($packageRoot.'/composer.json'), true, flags: JSON_THROW_ON_ERROR);
+    $executable = file_get_contents($packageRoot.'/bin/x-change-cloud');
+
+    expect($composer['bin'])->toContain('bin/x-change-cloud')
+        ->and($composer['extra']['x-change']['cloud-recipe'])->toBe('resources/deployment/laravel-cloud.yaml')
+        ->and($composer['extra'])->not->toHaveKey('composer-plugin')
+        ->and($executable)->toContain("'x-change:cloud'")
+        ->not->toContain('shell_exec');
+});

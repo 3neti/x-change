@@ -102,7 +102,15 @@
             "LBHurtado\\XChange\\Tests\\": "tests/"
         }
     },
+    "bin": [
+        "bin/x-change-cloud"
+    ],
     "extra": {
+        "x-change": {
+            "cloud-recipe": "resources/deployment/laravel-cloud.yaml",
+            "deployment-guide": "docs/deployment/X_CHANGE_CLOUD_RECIPE.md",
+            "adopt-command": "x-change:adopt"
+        },
         "laravel": {
             "providers": [
                 "LBHurtado\\XChange\\Providers\\XChangeServiceProvider"

@@ -52,11 +52,13 @@ use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
+use LBHurtado\XChange\Console\Commands\AdoptXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SnapshotRiderSplashArtworkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
+use LBHurtado\XChange\Console\Commands\CloudRecipeCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
@@ -1189,9 +1191,11 @@ class XChangeServiceProvider extends ServiceProvider
                 SimulateTreasuryProviderDepositCommand::class,
                 InstallXChangeCommand::class,
                 AdoptHostCommand::class,
+                AdoptXChangeCommand::class,
                 SetupXChangeCommand::class,
                 ConfigureXChangeCommand::class,
                 CommissionXChangeCommand::class,
+                CloudRecipeCommand::class,
                 DeployXChangeCommand::class,
                 GenerateDeploymentManifestCommand::class,
                 ValidateDeploymentManifestCommand::class,
