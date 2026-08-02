@@ -99,6 +99,19 @@ final class SetupXChangeCommand extends Command
             (bool) $this->option('write-env')
             || ($interactive && confirm('Prepare the local .env file?', true))
         );
+        $localEnvironment = [
+            'APP_NAME' => $name,
+            'APP_ENV' => 'local',
+            'APP_DEBUG' => 'true',
+            'APP_URL' => $url,
+            'XCHANGE_DEPLOYMENT_PROFILE' => $profile,
+            'XCHANGE_SYSTEM_USER_COLUMN' => 'email',
+            'XCHANGE_SYSTEM_USER_ID' => $systemEmail,
+            'XCHANGE_MOBILE_VERIFICATION_ENABLED' => 'false',
+            'XCHANGE_ONBOARDING_REQUIRE_OTP' => 'false',
+            'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP' => 'false',
+        ];
+        $processEnvironment = $writeEnvironment ? $localEnvironment : [];
         $plan = [
             'target' => $target,
             'profile' => $profile,
@@ -134,18 +147,7 @@ final class SetupXChangeCommand extends Command
                 $environmentResult = $environment->write(
                     path: $this->option('env-path') ?: base_path('.env'),
                     examplePath: $this->option('env-example-path') ?: base_path('.env.example'),
-                    values: [
-                        'APP_NAME' => $name,
-                        'APP_ENV' => 'local',
-                        'APP_DEBUG' => 'true',
-                        'APP_URL' => $url,
-                        'XCHANGE_DEPLOYMENT_PROFILE' => $profile,
-                        'XCHANGE_SYSTEM_USER_COLUMN' => 'email',
-                        'XCHANGE_SYSTEM_USER_ID' => $systemEmail,
-                        'XCHANGE_MOBILE_VERIFICATION_ENABLED' => 'false',
-                        'XCHANGE_ONBOARDING_REQUIRE_OTP' => 'false',
-                        'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP' => 'false',
-                    ],
+                    values: $localEnvironment,
                 );
                 $plan['environment_result'] = $environmentResult;
             }
@@ -182,6 +184,7 @@ final class SetupXChangeCommand extends Command
                 ...((bool) $this->option('no-treasury') ? ['--no-treasury'] : []),
             ];
             $installResult = Process::path(base_path())
+                ->env($processEnvironment)
                 ->timeout(900)
                 ->idleTimeout(120)
                 ->run($installCommand, function (string $type, string $output): void {
@@ -203,6 +206,7 @@ final class SetupXChangeCommand extends Command
                     ['npm', 'run', 'build'],
                 ] as $command) {
                     $result = Process::path(base_path())
+                        ->env($processEnvironment)
                         ->timeout(900)
                         ->idleTimeout(120)
                         ->run($command, function (string $type, string $output): void {
@@ -232,6 +236,7 @@ final class SetupXChangeCommand extends Command
             }
 
             $doctorResult = Process::path(base_path())
+                ->env($processEnvironment)
                 ->timeout(300)
                 ->idleTimeout(60)
                 ->run([

@@ -20,3 +20,15 @@ it('loads an adopted host model in a fresh PHP process before provisioning', fun
         ->toContain("'x-change:doctor',")
         ->toContain("'--strict',");
 });
+
+it('passes the newly written local environment to every child process', function (): void {
+    $source = file_get_contents(
+        (new ReflectionClass(SetupXChangeCommand::class))->getFileName(),
+    );
+
+    expect($source)
+        ->toContain('$processEnvironment = $writeEnvironment ? $localEnvironment : [];')
+        ->and(substr_count($source, '->env($processEnvironment)'))->toBe(3)
+        ->and(strpos($source, '->env($processEnvironment)'))
+        ->toBeGreaterThan(strpos($source, '$environment->write('));
+});
