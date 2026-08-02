@@ -290,3 +290,43 @@ unsafe. In particular, they never:
 - infer system capitalization ownership;
 - authorize or repeat provider transfers;
 - execute undeclared manifest operations.
+
+## Deployment adapter roadmap
+
+Laravel Cloud is the reference deployment implementation. Future platform
+support must remain an adapter around the same package-owned operational
+contract:
+
+```text
+provision infrastructure
+→ inject environment values and secrets
+→ install dependencies and publish generated build inputs
+→ commission x-change
+→ build frontend assets
+→ start workers, scheduler, and optional WebSockets
+→ run the strict doctor
+→ perform acceptance checks
+```
+
+The adapters must reuse `x-change:configure`, `x-change:install`,
+`x-change:commission`, `x-change:publish`, and `x-change:doctor`. They must not
+introduce platform-specific financial initialization or duplicate package
+installation logic.
+
+### TODO
+
+- [ ] Laravel Forge adapter: generate a deployment script, named queue-worker
+  definitions, scheduler entry, optional Reverb daemon, health checks, rollback
+  instructions, and a Forge-oriented acceptance command.
+- [ ] AWS ECS/Fargate adapter: model separate web, worker, scheduler, and
+  optional Reverb services using RDS, ElastiCache, Secrets Manager, S3,
+  CloudWatch, and load-balancer health checks.
+- [ ] Conventional container adapter: publish a production image/runtime
+  contract that works with Docker Compose without embedding deployment secrets
+  or provider credentials.
+- [ ] Kubernetes adapter: add manifests or Helm-compatible values only after
+  the container contract is proven, including migrations, workers, scheduler,
+  readiness probes, autoscaling, and secret injection.
+- [ ] Cross-platform acceptance: require the same commissioning manifest,
+  strict doctor result, queue/scheduler readiness, Treasury safeguards, and
+  browser smoke checks on every supported target.
