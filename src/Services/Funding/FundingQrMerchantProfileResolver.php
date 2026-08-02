@@ -33,6 +33,10 @@ final class FundingQrMerchantProfileResolver
             $merchant,
             (string) config('x-change.product.name', 'X-Change'),
         );
+        $displayName = $this->boundedDisplayName(
+            $displayName,
+            trim((string) $merchant->name),
+        );
         $city = trim((string) $merchant->city);
         $city = $city !== ''
             ? $city
@@ -54,5 +58,20 @@ final class FundingQrMerchantProfileResolver
             profileFingerprint: $fingerprint,
             metadataVersion: self::MetadataVersion,
         );
+    }
+
+    private function boundedDisplayName(string $displayName, string $merchantName): string
+    {
+        $maximumLength = max(1, (int) config('merchant.qr_profile.name_max_length', 25));
+
+        if (mb_strlen($displayName, 'UTF-8') <= $maximumLength) {
+            return $displayName;
+        }
+
+        $fallback = $merchantName !== ''
+            ? $merchantName
+            : $displayName;
+
+        return mb_substr($fallback, 0, $maximumLength, 'UTF-8');
     }
 }
