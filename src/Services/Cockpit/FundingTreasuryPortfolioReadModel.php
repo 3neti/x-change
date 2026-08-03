@@ -100,7 +100,7 @@ final readonly class FundingTreasuryPortfolioReadModel
             'connections' => $connections,
             'accounting_boundary' => [
                 'provider_outflow' => 'provider_principal_only',
-                'sender_system_charge' => 'deferred_accounting_wave',
+                'sender_system_charge' => 'immutable_commercial_waterfall',
                 'provider_liquidity_source' => 'cached_projection_only',
             ],
             'redactions' => [

@@ -252,7 +252,10 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
 
         $issuanceCapacityMinor = max(
             0,
-            min($internalBalanceMinor, $providerLiquidityMinor) - $outstandingLiabilityMinor,
+            min(
+                $internalBalanceMinor,
+                $providerLiquidityMinor - $outstandingLiabilityMinor,
+            ),
         );
 
         return new CockpitDashboardMetricData(

@@ -136,7 +136,7 @@ it('caps issuance capacity by internal balance and fresh provider headroom after
         ->and($readModel['balances'][2]['value'])->toContain($expectedValue);
 })->with([
     'provider headroom is lower than internal balance' => [500_000, 240_000, 25_000, false, '2,150.00'],
-    'internal balance is lower than provider liquidity' => [100_000, 500_000, 25_000, false, '750.00'],
+    'client funds already exclude the outstanding reserve' => [100_000, 500_000, 25_000, false, '1,000.00'],
     'outstanding pay codes exhaust provider liquidity' => [500_000, 240_000, 260_000, false, '0.00'],
     'stale provider liquidity fails closed' => [500_000, 240_000, 25_000, true, 'Not available'],
 ]);
