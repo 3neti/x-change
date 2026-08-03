@@ -1302,6 +1302,7 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         'x-change.cockpit.campaigns.fulfillments.pay-codes.store',
         'x-change.cockpit.campaigns.deliveries.store',
         'x-change.cockpit.campaigns.deliveries.retries.store',
+        'x-change.cockpit.campaigns.deliveries.resends.store',
         'x-change.cockpit.campaigns.fulfillments.bank-transfers.store',
         'x-change.cockpit.campaigns.fulfillments.bank-transfers.reconciliations.store',
         'x-change.cockpit.campaigns.fulfillments.fallbacks.store',
