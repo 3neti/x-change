@@ -16,6 +16,7 @@ use LBHurtado\XChange\Actions\Commercial\PostCommercialSale;
 use LBHurtado\XChange\Actions\Commercial\ReverseCommercialSale;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
@@ -65,9 +66,9 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(5_00);
 
     $reversal = app(ReverseCommercialSale::class);
-    $reversed = $reversal->execute($snapshot->reference, 'commercial-refund:posting');
+    $reversed = $reversal->execute($snapshot->reference, 'administrative-void:posting');
     $reversalOperationCount = TreasuryPositionOperation::query()->count();
-    $replayedReversal = $reversal->execute($snapshot->reference, 'commercial-refund:posting');
+    $replayedReversal = $reversal->execute($snapshot->reference, 'administrative-void:posting');
 
     expect($reversed->status)->toBe('reversed')
         ->and($replayedReversal->getKey())->toBe($reversed->getKey())
@@ -78,6 +79,65 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         ->and(commercialSalePositionBalance($positions['product_revenue']))->toBe(0)
         ->and(commercialSalePositionBalance($positions['partner_commission']))->toBe(0)
         ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(0);
+});
+
+it('rejects unsupported commercial reversal reasons', function () {
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 25_00, 'unsupported-reversal');
+    $snapshot = commercialSaleSnapshot('acceptance:unsupported-reversal');
+
+    app(PostCommercialSale::class)->execute(
+        $snapshot,
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+    );
+
+    expect(fn () => app(ReverseCommercialSale::class)->execute(
+        $snapshot->reference,
+        'commercial-refund:unsupported',
+    ))->toThrow(CommercialSaleConflict::class, 'failed-issuance or administrative-void')
+        ->and(CommercialSale::query()->sole()->status)->toBe('posted');
+});
+
+it('does not reverse commercial revenue after a provider cost was settled', function () {
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 25_00, 'settled-cost-reversal');
+    $snapshot = commercialSaleSnapshot('acceptance:settled-cost-reversal');
+    $sale = app(PostCommercialSale::class)->execute(
+        $snapshot,
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+    );
+    $allocation = $sale->allocations()->where('category', 'provider_cost')->sole();
+
+    CommercialProviderCostSettlement::query()->create([
+        'commercial_sale_id' => $sale->getKey(),
+        'commercial_allocation_id' => $allocation->getKey(),
+        'idempotency_key' => 'provider-cost:settled-reversal-guard',
+        'request_hash' => str_repeat('a', 64),
+        'provider' => 'netbank',
+        'connection_reference' => 'netbank-primary',
+        'evidence_type' => 'account_debit',
+        'evidence_reference' => 'netbank:settled-reversal-guard',
+        'cash_movement_observed' => true,
+        'expected_amount_minor' => $allocation->amount_minor,
+        'observed_amount_minor' => $allocation->amount_minor,
+        'variance_amount_minor' => 0,
+        'currency' => 'PHP',
+        'status' => 'settled',
+        'metadata' => [],
+        'observed_at' => now(),
+        'settled_at' => now(),
+    ]);
+
+    expect(fn () => app(ReverseCommercialSale::class)->execute(
+        $snapshot->reference,
+        'administrative-void:settled-cost',
+    ))->toThrow(CommercialSaleConflict::class, 'after provider cost settlement')
+        ->and(commercialSalePositionBalance($positions['product_revenue']))->toBe(8_00)
+        ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(5_00);
 });
 
 it('rolls the whole sale back when a waterfall destination is unavailable', function () {
