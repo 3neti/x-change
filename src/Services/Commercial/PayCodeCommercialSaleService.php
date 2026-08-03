@@ -9,6 +9,7 @@ use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Commercial\PostCommercialSale;
+use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
@@ -30,6 +31,8 @@ class PayCodeCommercialSaleService
         private readonly TreasuryAccountPortfolioProvisioningContract $accountPortfolios,
         private readonly TreasuryProvisioningService $systemPortfolio,
         private readonly TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private readonly CommercialPartnerResolverContract $partners,
+        private readonly CommercialPartnerPositionService $partnerPositions,
     ) {}
 
     /**
@@ -85,9 +88,30 @@ class PayCodeCommercialSaleService
         $destinations = [];
 
         foreach ((array) config('x-change.commercial.pay_code.destination_purposes', []) as $rule => $purpose) {
+            $positionPurpose = TreasuryPositionPurpose::from((string) $purpose);
+
+            if ($positionPurpose === TreasuryPositionPurpose::PartnerCommissionPayable) {
+                $partnerReference = $attribution->participants['partner']
+                    ?? $attribution->participants['originator']
+                    ?? 'partner:direct';
+                $partner = $this->partners->resolve($partnerReference);
+
+                if (! $partner instanceof Model) {
+                    throw new CommercialSaleConflict(
+                        "Commercial partner [{$partnerReference}] cannot be resolved.",
+                    );
+                }
+
+                $destinations[(string) $rule] = $this->partnerPositions
+                    ->provision($partner, $connection)
+                    ->positionReference;
+
+                continue;
+            }
+
             $destinations[(string) $rule] = $this->position(
                 $systemPortfolio->positions,
-                TreasuryPositionPurpose::from((string) $purpose),
+                $positionPurpose,
             )->positionReference;
         }
 
@@ -177,7 +201,7 @@ class PayCodeCommercialSaleService
             ?->recipientReference;
         $partnerReference = $attribution->participants['partner']
             ?? $attribution->participants['originator']
-            ?? null;
+            ?? 'partner:direct';
 
         return new CommercialAccountingContextData(
             schemaVersion: (int) config(

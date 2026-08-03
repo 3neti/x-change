@@ -154,6 +154,7 @@ use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
+use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\Deployment\CloudMutationGatewayContract;
 use LBHurtado\XChange\Contracts\Deployment\CloudStateReaderContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
@@ -290,6 +291,7 @@ use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
+use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\Configuration\CoreDeploymentEnvironmentContributor;
@@ -442,6 +444,10 @@ class XChangeServiceProvider extends ServiceProvider
             ),
         );
         $this->app->singleton(DeploymentProfileCatalog::class);
+        $this->app->singleton(
+            CommercialPartnerResolverContract::class,
+            ConfigCommercialPartnerResolver::class,
+        );
         $this->app->singleton(DeploymentTreasuryConnectionConfiguration::class);
         $this->app->singleton(DeploymentConfigurationInspector::class);
         $this->app->singleton(CorePublicationContributor::class);

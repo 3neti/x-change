@@ -12,6 +12,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\Commercial\SettleCommercialProviderCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
@@ -26,6 +27,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 it('generates a pay code end to end and debits the issuer wallet', function () {
     $user = actingAsTestUser(1_000_000);
@@ -514,6 +516,91 @@ it('settles provider costs only from exact authoritative cash-movement evidence'
             observedAt: now()->toRfc3339String(),
             idempotencyKey: 'provider-cost:exact',
         )))->toThrow(CommercialSaleConflict::class, 'different evidence');
+});
+
+it('accrues an attributed partner commission to the partner principal', function () {
+    $user = actingAsTestUser(0);
+    $system = enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $user,
+        ['netbank-primary'],
+    );
+    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
+        accountReference: 'wallet:'.$user->wallet->uuid,
+        provider: 'netbank',
+        amountMinor: 50_000,
+        currency: 'PHP',
+        evidenceReference: 'netbank:partner-commission-attribution',
+    );
+    $partner = User::query()->create([
+        'name' => 'Accredited Marketing Partner',
+        'email' => 'partner@example.test',
+        'password' => 'not-a-login-credential',
+    ]);
+    $partners = Mockery::mock(CommercialPartnerResolverContract::class);
+    $partners->shouldReceive('resolve')
+        ->once()
+        ->with('partner:marketing-42')
+        ->andReturn($partner);
+    app()->instance(CommercialPartnerResolverContract::class, $partners);
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')
+        ->once()
+        ->andReturn(FundingDecisionData::allowed(
+            authority: 'local_ledger',
+            availableMinor: 50_000,
+            requiredMinor: 50_000,
+            currency: 'PHP',
+            meta: [
+                'provider' => 'netbank',
+                'topology' => 'ledger_pooled',
+            ],
+        ));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+
+    $result = app(GeneratePayCode::class)->handle(validPayCodePayload(
+        12.50,
+        'INSTAPAY',
+        [
+            'inputs' => ['fields' => ['mobile']],
+            'feedback' => [
+                'email' => null,
+                'mobile' => null,
+                'webhook' => null,
+            ],
+            'provider' => 'netbank',
+            'metadata' => [
+                'issuer_id' => (string) $user->getKey(),
+                'commercial_attribution' => [
+                    'partner' => 'partner:marketing-42',
+                ],
+            ],
+        ],
+    ));
+
+    $sale = CommercialSale::query()
+        ->where('source_commercial_event_reference', 'pay-code-generation:voucher:'.$result->voucher_id)
+        ->sole();
+    $allocation = CommercialAllocation::query()
+        ->where('commercial_sale_id', $sale->getKey())
+        ->where('category', 'partner_commission')
+        ->sole();
+    $partnerPosition = TreasuryPosition::query()
+        ->where('position_reference', $allocation->destination_position_reference)
+        ->whereMorphedTo('principal', $partner)
+        ->sole();
+
+    expect($allocation->recipient_reference)->toBe('partner:direct')
+        ->and(data_get($sale->snapshot, 'accounting_context.partner_reference'))
+        ->toBe('partner:marketing-42')
+        ->and((int) Wallet::query()
+            ->findOrFail($partnerPosition->internal_ledger_id)
+            ->balanceInt)->toBe(100)
+        ->and(treasuryPositionBalanceForPurpose(
+            TreasuryPositionPurpose::PartnerCommissionPayable,
+            $system,
+        ))->toBe(0);
 });
 
 it('characterizes that cancellation does not credit issuer wallet funds today', function () {

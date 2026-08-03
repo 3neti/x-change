@@ -1110,6 +1110,9 @@ return [
             'schema_version' => 2,
             'recognition_policy_reference' => 'recognition:pay-code-issuance:v1',
         ],
+        'partners' => [
+            'principals' => [],
+        ],
         'pay_code' => [
             'catalog' => 'pay_code',
             'waterfall' => [
