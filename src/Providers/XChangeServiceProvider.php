@@ -1373,6 +1373,22 @@ class XChangeServiceProvider extends ServiceProvider
             });
         }
 
+        if ((bool) config('x-change.disbursement.reconciliation.scheduled_enabled', true)) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.disbursement.reconciliation.scheduled_batch_size', 50),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:reconcile:pending --limit={$batchSize}")
+                    ->name('xchange:reconcile:pending')
+                    ->everyMinute()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
         if ((bool) config('x-change.funding.scheduled_verification_enabled', true)) {
             $batchSize = max(
                 1,

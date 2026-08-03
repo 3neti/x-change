@@ -2086,6 +2086,19 @@ return [
         ],
     ],
 
+    'disbursement' => [
+        'reconciliation' => [
+            'scheduled_enabled' => (bool) env(
+                'XCHANGE_DISBURSEMENT_RECONCILIATION_SCHEDULED_ENABLED',
+                true,
+            ),
+            'scheduled_batch_size' => (int) env(
+                'XCHANGE_DISBURSEMENT_RECONCILIATION_SCHEDULED_BATCH_SIZE',
+                50,
+            ),
+        ],
+    ],
+
     'payment_qr' => [
         'renderer' => env('XCHANGE_PAYMENT_QR_RENDERER', 'json'),
 

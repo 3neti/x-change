@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Console\Scheduling\Schedule;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 
@@ -56,4 +57,16 @@ it('reconciles pending records through the console command', function () {
         ->expectsOutput('Updated: 1')
         ->expectsOutput("TEST-1234 [{$record->id}]: pending -> succeeded (updated)")
         ->assertSuccessful();
+});
+
+it('registers package-owned pending disbursement reconciliation every minute', function () {
+    $event = collect(app(Schedule::class)->events())
+        ->first(fn ($event): bool => $event->description === 'xchange:reconcile:pending');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('* * * * *')
+        ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->onOneServer)->toBeTrue()
+        ->and($event->expiresAt)->toBe(5)
+        ->and($event->command)->toContain('xchange:reconcile:pending --limit=50');
 });
