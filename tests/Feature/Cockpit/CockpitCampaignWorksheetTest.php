@@ -20,7 +20,9 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\ConvergeCampaignFeedbackDelivery;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
+use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignPayCodeDeliveries;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
+use LBHurtado\XChange\Actions\Campaigns\RecordCampaignDeliveryAttempt;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Jobs\Campaigns\ConvergeCampaignFeedbackDeliveryJob;
@@ -1222,6 +1224,98 @@ it('uses the canonical claim path in beneficiary Pay Code sms', function () {
             && str_contains($job->message, '/x/claim/'.$smsFulfillment->pay_code)
             && ! str_contains($job->message, '/x/claim?APPR-'),
     );
+});
+
+it('resends only the latest completed beneficiary delivery as a linked append-only attempt', function () {
+    Queue::fake([DispatchCampaignFeedbackJob::class]);
+    config()->set('x-change.campaigns.delivery.sms.enabled', true);
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    $owner = actingAsTestUser();
+    fundCampaignOwnerClientFunds(
+        $owner,
+        100_000,
+        'netbank:campaign-completed-sms-resend',
+    );
+    $officer = actingAsTestUser();
+    $officer->forceFill(['mobile' => '09173011987'])->save();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-completed-sms-resend-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Completed SMS Resend',
+        fulfillmentMode: 'pay_code_distribution',
+        rows: [
+            new CampaignWorksheetRowData(
+                null,
+                1,
+                ['name' => 'Anaïs Santos', 'mobile' => '09467438575'],
+                2_500,
+            ),
+        ],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+
+    $this->actingAs($owner);
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+    $this->actingAs($officer);
+    app(CampaignWorksheetAuthorizationExecutionService::class)->execute(
+        Voucher::query()->where('code', $authorization->approval_pay_code)->sole(),
+        ['mobile' => '09173011987'],
+    );
+    $this->actingAs($owner)
+        ->post(route('x-change.cockpit.campaigns.fulfillments.pay-codes.store', $worksheet->reference))
+        ->assertRedirect();
+    $this->post(route('x-change.cockpit.campaigns.deliveries.store', [
+        'worksheet' => $worksheet->reference,
+        'channel' => 'sms',
+    ]))->assertRedirect();
+
+    $completed = CampaignDeliveryAttempt::query()->with('events')->sole();
+    app(RecordCampaignDeliveryAttempt::class)->appendTerminalIfOpen(
+        $completed,
+        'completed',
+        providerStatus: 'ACCEPTED',
+    );
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertOk()
+        ->assertJsonPath('props.delivery.attempts.0.reference', $completed->reference)
+        ->assertJsonPath('props.delivery.attempts.0.status', 'completed')
+        ->assertJsonPath('props.delivery.attempts.0.can_resend', true);
+
+    $this->post(route('x-change.cockpit.campaigns.deliveries.resends.store', [
+        'worksheet' => $worksheet->reference,
+        'attempt' => $completed->reference,
+    ]))
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', 'SMS delivery resend queued.');
+
+    $resend = CampaignDeliveryAttempt::query()
+        ->where('retry_of_reference', $completed->reference)
+        ->with('events')
+        ->sole();
+
+    expect($resend->attempt_number)->toBe(2)
+        ->and($resend->metadata)->toMatchArray([
+            'purpose' => 'beneficiary_pay_code',
+            'resend_reason' => 'recipient_reported_missing',
+        ])
+        ->and($resend->events->pluck('event_type')->all())->toBe(['requested', 'queued'])
+        ->and(CampaignDeliveryAttempt::query()->count())->toBe(2);
+
+    Queue::assertPushedOn(
+        'x-change-feedback',
+        DispatchCampaignFeedbackJob::class,
+        fn (DispatchCampaignFeedbackJob $job): bool => $job->attemptId === $resend->getKey()
+            && $job->recipient === '09467438575',
+    );
+
+    expect(app(DispatchCampaignPayCodeDeliveries::class)->resendCompleted($completed, $owner))
+        ->toBe('already_queued')
+        ->and(CampaignDeliveryAttempt::query()->count())->toBe(2);
 });
 
 it('rejects campaign messaging while its explicit runtime gate is disabled', function () {

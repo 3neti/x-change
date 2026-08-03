@@ -578,6 +578,9 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('v-if="plannedCount() > 0"');
         expect(page).toContain('data-testid="campaign-delivery-controls"');
         expect(page).toContain('Download the list or send through an enabled');
+        expect(page).toContain('attempt.can_resend');
+        expect(page).toContain('Confirm Resend');
+        expect(page).toContain('deliveries.resends.store({');
         expect(page).toContain('Download CSV');
         expect(page).toContain('SMS Disabled');
         expect(page).toContain('Email Disabled');

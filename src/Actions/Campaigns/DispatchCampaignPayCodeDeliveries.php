@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Campaigns;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
@@ -76,12 +77,52 @@ final readonly class DispatchCampaignPayCodeDeliveries
         );
     }
 
+    public function resendCompleted(CampaignDeliveryAttempt $previous, Model $actor): string
+    {
+        return DB::transaction(function () use ($previous, $actor): string {
+            $lockedPrevious = CampaignDeliveryAttempt::query()
+                ->with(['authorization', 'fulfillment.row', 'events'])
+                ->lockForUpdate()
+                ->findOrFail($previous->getKey());
+
+            if (CampaignDeliveryAttempt::query()
+                ->where('retry_of_reference', $lockedPrevious->reference)
+                ->exists()) {
+                return 'already_queued';
+            }
+
+            $lastEvent = $lockedPrevious->events->last();
+            $latestAttemptId = CampaignDeliveryAttempt::query()
+                ->where('campaign_worksheet_fulfillment_id', $lockedPrevious->campaign_worksheet_fulfillment_id)
+                ->where('channel', $lockedPrevious->channel)
+                ->max('id');
+
+            if ($lastEvent?->event_type !== 'completed'
+                || data_get($lockedPrevious->metadata, 'purpose') !== 'beneficiary_pay_code'
+                || ! $lockedPrevious->authorization instanceof CampaignWorksheetAuthorization
+                || ! $lockedPrevious->fulfillment instanceof CampaignWorksheetFulfillment
+                || $latestAttemptId !== $lockedPrevious->getKey()) {
+                throw new RuntimeException('Only the latest completed beneficiary delivery can be resent.');
+            }
+
+            return $this->dispatch(
+                $lockedPrevious->authorization,
+                $lockedPrevious->fulfillment,
+                $actor,
+                $lockedPrevious->channel,
+                (string) $lockedPrevious->reference,
+                'recipient_reported_missing',
+            );
+        });
+    }
+
     private function dispatch(
         CampaignWorksheetAuthorization $authorization,
         CampaignWorksheetFulfillment $fulfillment,
         Model $actor,
         string $channel,
         ?string $retryOfReference = null,
+        ?string $resendReason = null,
     ): string {
         $beneficiary = (array) ($fulfillment->row?->beneficiary_ciphertext ?? []);
         $route = $channel === 'sms'
@@ -104,6 +145,7 @@ final readonly class DispatchCampaignPayCodeDeliveries
                     'purpose' => 'beneficiary_pay_code',
                     'pay_code' => $fulfillment->pay_code,
                     'recipient_type' => 'campaign_beneficiary',
+                    ...($resendReason === null ? [] : ['resend_reason' => $resendReason]),
                 ],
             );
             $this->deliveryAttempts->append($attempt, 'blocked', safeErrorCode: 'recipient_route_missing');
@@ -128,6 +170,7 @@ final readonly class DispatchCampaignPayCodeDeliveries
             metadata: [
                 'pay_code' => $fulfillment->pay_code,
                 'recipient_type' => 'campaign_beneficiary',
+                ...($resendReason === null ? [] : ['resend_reason' => $resendReason]),
             ],
         );
 

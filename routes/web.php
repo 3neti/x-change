@@ -25,6 +25,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankT
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferReconciliationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetDeliveryController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetDeliveryResendController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetDeliveryRetryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetExportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFallbackController;
@@ -175,6 +176,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/{worksheet}/deliveries/{attempt}/retries', [CockpitCampaignWorksheetDeliveryRetryController::class, 'store'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.campaigns.deliveries.retries.store');
+        Route::post('campaigns/{worksheet}/deliveries/{attempt}/resends', [CockpitCampaignWorksheetDeliveryResendController::class, 'store'])
+            ->middleware('throttle:3,1')
+            ->name('x-change.cockpit.campaigns.deliveries.resends.store');
         Route::post('campaigns/{worksheet}/fulfillments/bank-transfers', [CockpitCampaignWorksheetBankTransferDispatchController::class, 'store'])
             ->middleware('throttle:2,1')
             ->name('x-change.cockpit.campaigns.fulfillments.bank-transfers.store');

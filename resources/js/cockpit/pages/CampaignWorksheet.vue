@@ -70,6 +70,7 @@ type DeliveryAttempt = {
     safe_error_code: string | null;
     requested_at: string | null;
     can_retry: boolean;
+    can_resend: boolean;
 };
 type Delivery = {
     channels: { sms: boolean; email: boolean };
@@ -103,6 +104,7 @@ const transferForm = useForm({});
 const reconciliationForm = useForm({});
 const fallbackForm = useForm({});
 const deliveryForm = useForm({});
+const resendConfirmation = ref<string | null>(null);
 const approvalDeliveryForm = useForm({
     recipient: '',
     request_token: crypto.randomUUID(),
@@ -200,6 +202,19 @@ const retryDelivery = (reference: string): void =>
             attempt: reference,
         }).url,
         { preserveScroll: true },
+    );
+const resendDelivery = (reference: string): void =>
+    deliveryForm.post(
+        deliveries.resends.store({
+            worksheet: props.worksheet.reference,
+            attempt: reference,
+        }).url,
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                resendConfirmation.value = null;
+            },
+        },
     );
 const sendApproval = (): void => {
     if (!props.authorization.reference) return;
@@ -761,15 +776,53 @@ const sendApproval = (): void => {
                             class="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 capitalize dark:bg-slate-800 dark:text-slate-300"
                             >{{ attempt.status }}</span
                         >
-                        <button
-                            v-if="attempt.can_retry"
-                            type="button"
-                            :disabled="deliveryForm.processing"
-                            class="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-950 disabled:opacity-50 dark:text-slate-300 dark:hover:text-white"
-                            @click="retryDelivery(attempt.reference)"
-                        >
-                            <RotateCcw class="size-3.5" /> Retry
-                        </button>
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                            <button
+                                v-if="attempt.can_retry"
+                                type="button"
+                                :disabled="deliveryForm.processing"
+                                class="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-950 disabled:opacity-50 dark:text-slate-300 dark:hover:text-white"
+                                @click="retryDelivery(attempt.reference)"
+                            >
+                                <RotateCcw class="size-3.5" /> Retry
+                            </button>
+                            <button
+                                v-if="
+                                    attempt.can_resend &&
+                                    resendConfirmation !== attempt.reference
+                                "
+                                type="button"
+                                :disabled="deliveryForm.processing"
+                                class="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-sky-600 dark:hover:text-sky-300"
+                                :aria-label="`Resend ${attempt.channel.toUpperCase()} for ${attempt.pay_code ?? attempt.beneficiary}`"
+                                @click="resendConfirmation = attempt.reference"
+                            >
+                                <Send class="size-3.5" /> Resend
+                            </button>
+                            <template
+                                v-if="
+                                    attempt.can_resend &&
+                                    resendConfirmation === attempt.reference
+                                "
+                            >
+                                <button
+                                    type="button"
+                                    :disabled="deliveryForm.processing"
+                                    class="inline-flex items-center gap-1 rounded-lg bg-sky-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50"
+                                    @click="resendDelivery(attempt.reference)"
+                                >
+                                    <Send class="size-3.5" /> Confirm Resend
+                                </button>
+                                <button
+                                    type="button"
+                                    :disabled="deliveryForm.processing"
+                                    class="text-xs font-semibold text-slate-500 hover:text-slate-900 disabled:opacity-50 dark:text-slate-400 dark:hover:text-white"
+                                    @click="resendConfirmation = null"
+                                >
+                                    Cancel
+                                </button>
+                            </template>
+                        </div>
                     </article>
                 </div>
             </section>

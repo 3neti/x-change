@@ -403,17 +403,27 @@ class CockpitCampaignWorksheetController extends Controller
             ];
         }
 
+        $latestBeneficiaryAttempts = [];
         $attempts = CampaignDeliveryAttempt::query()
             ->with(['events', 'fulfillment.row'])
             ->where('campaign_worksheet_authorization_id', $authorization->getKey())
             ->latest('id')
             ->limit(20)
             ->get()
-            ->map(function (CampaignDeliveryAttempt $attempt): array {
+            ->map(function (CampaignDeliveryAttempt $attempt) use (&$latestBeneficiaryAttempts): array {
                 $lastEvent = $attempt->events->last();
                 $beneficiary = (array) ($attempt->fulfillment?->row?->beneficiary_ciphertext ?? []);
                 $metadata = (array) $attempt->metadata;
                 $purpose = (string) ($metadata['purpose'] ?? ($attempt->channel === 'export' ? 'beneficiary_export' : 'beneficiary_delivery'));
+                $beneficiaryAttemptKey = $attempt->campaign_worksheet_fulfillment_id === null
+                    ? null
+                    : $attempt->campaign_worksheet_fulfillment_id.':'.$attempt->channel;
+                $isLatestBeneficiaryAttempt = $beneficiaryAttemptKey !== null
+                    && ! isset($latestBeneficiaryAttempts[$beneficiaryAttemptKey]);
+
+                if ($beneficiaryAttemptKey !== null) {
+                    $latestBeneficiaryAttempts[$beneficiaryAttemptKey] = true;
+                }
 
                 return [
                     'reference' => (string) $attempt->reference,
@@ -427,6 +437,10 @@ class CockpitCampaignWorksheetController extends Controller
                     'safe_error_code' => $lastEvent?->safe_error_code,
                     'requested_at' => $attempt->requested_at?->toIso8601String(),
                     'can_retry' => in_array($lastEvent?->event_type, ['failed', 'blocked'], true)
+                        && (bool) config("x-change.campaigns.delivery.{$attempt->channel}.enabled", false),
+                    'can_resend' => $isLatestBeneficiaryAttempt
+                        && $purpose === 'beneficiary_pay_code'
+                        && $lastEvent?->event_type === 'completed'
                         && (bool) config("x-change.campaigns.delivery.{$attempt->channel}.enabled", false),
                 ];
             })
