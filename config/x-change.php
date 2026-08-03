@@ -1106,6 +1106,10 @@ return [
 
     'commercial' => [
         'enabled' => (bool) env('XCHANGE_COMMERCIAL_WATERFALL_ENABLED', true),
+        'accounting' => [
+            'schema_version' => 2,
+            'recognition_policy_reference' => 'recognition:pay-code-issuance:v1',
+        ],
         'pay_code' => [
             'catalog' => 'pay_code',
             'waterfall' => [

@@ -16,7 +16,9 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
+use LBHurtado\XCommerce\Data\CommercialAccountingContextData;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
+use LBHurtado\XCommerce\Data\CommercialQuoteData;
 use LBHurtado\XCommerce\Services\DeterministicCommercialSaleFactory;
 
 class PayCodeCommercialSaleService
@@ -54,16 +56,23 @@ class PayCodeCommercialSaleService
         $accountPortfolio = $this->accountPortfolios->provision($issuer, [$connection->reference]);
         $systemPortfolio = $this->systemPortfolio->provision([$connection->reference]);
         $buyerReference = $this->principalReferences->resolve($issuer);
+        $attribution = $this->attribution($input, $voucherId);
         $quote = $this->quotes->quote(
             instructions: $instructions,
             sourceCommercialEventReference: 'pay-code-generation:voucher:'.$voucherId,
-            attribution: $this->attribution($input, $voucherId),
+            attribution: $attribution,
         );
         $snapshot = (new DeterministicCommercialSaleFactory)->accept(
             quote: $quote,
             acceptanceEventReference: 'pay-code-issued:voucher:'.$voucherId,
             buyerReference: $buyerReference,
             acceptedAt: (string) ($issued['issued_at'] ?? now()->toRfc3339String()),
+            accountingContext: $this->accountingContext(
+                input: $input,
+                connection: $connection,
+                attribution: $attribution,
+                quote: $quote,
+            ),
         );
         $source = $this->position(
             $accountPortfolio->positions,
@@ -148,6 +157,48 @@ class PayCodeCommercialSaleService
             reference: 'attribution:pay-code:voucher:'.$voucherId,
             version: 1,
             participants: $participants,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function accountingContext(
+        array $input,
+        TreasuryProviderConnectionData $connection,
+        CommercialAttributionSnapshotData $attribution,
+        CommercialQuoteData $quote,
+    ): CommercialAccountingContextData {
+        $providerCostMinor = collect($quote->allocationPlan->lines)
+            ->where('category', 'provider_cost')
+            ->sum('amountMinor');
+        $productReference = collect($quote->allocationPlan->lines)
+            ->firstWhere('category', 'product_revenue')
+            ?->recipientReference;
+        $partnerReference = $attribution->participants['partner']
+            ?? $attribution->participants['originator']
+            ?? null;
+
+        return new CommercialAccountingContextData(
+            schemaVersion: (int) config(
+                'x-change.commercial.accounting.schema_version',
+                2,
+            ),
+            provider: $connection->provider,
+            connectionReference: $connection->reference,
+            settlementRail: (string) data_get(
+                $input,
+                'cash.settlement_rail',
+                'UNSPECIFIED',
+            ),
+            currency: $connection->currency,
+            productReference: (string) ($productReference ?? 'product:pay-code'),
+            recognitionPolicyReference: (string) config(
+                'x-change.commercial.accounting.recognition_policy_reference',
+                'recognition:pay-code-issuance:v1',
+            ),
+            expectedProviderCostMinor: (int) $providerCostMinor,
+            partnerReference: $partnerReference,
         );
     }
 

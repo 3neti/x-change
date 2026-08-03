@@ -335,6 +335,16 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
 
     expect($accountDebitMinor)->toBe($principalMinor + $commercialChargeMinor)
         ->and($sale->total_price_minor)->toBe($commercialChargeMinor)
+        ->and(data_get($sale->snapshot, 'accounting_context'))->toMatchArray([
+            'schema_version' => 2,
+            'provider' => 'netbank',
+            'connection_reference' => 'netbank-primary',
+            'settlement_rail' => 'INSTAPAY',
+            'currency' => 'PHP',
+            'product_reference' => 'product:pay-code',
+            'recognition_policy_reference' => 'recognition:pay-code-issuance:v1',
+            'expected_provider_cost_minor' => 1_000,
+        ])
         ->and($allocationTotalMinor)->toBe($commercialChargeMinor)
         ->and(CommercialAllocation::query()->where('commercial_sale_id', $sale->getKey())->count())
         ->toBe(4)
