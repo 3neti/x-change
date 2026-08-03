@@ -62,6 +62,18 @@ final readonly class SettleCommercialProviderCost
                 ->where('category', 'provider_cost')
                 ->lockForUpdate()
                 ->sole();
+            $settled = CommercialProviderCostSettlement::query()
+                ->where('commercial_allocation_id', $allocation->getKey())
+                ->where('status', 'settled')
+                ->lockForUpdate()
+                ->first();
+
+            if ($settled instanceof CommercialProviderCostSettlement) {
+                throw new CommercialSaleConflict(
+                    'Provider cost allocation is already settled.',
+                );
+            }
+
             $context = (array) data_get($sale->snapshot, 'accounting_context', []);
 
             $this->assertEvidenceMatchesSale(

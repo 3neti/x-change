@@ -10,13 +10,17 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Actions\Commercial\ApprovePartnerCommissionPayout;
+use LBHurtado\XChange\Actions\Commercial\RequestPartnerCommissionPayout;
 use LBHurtado\XChange\Actions\Commercial\SettleCommercialProviderCost;
+use LBHurtado\XChange\Actions\Commercial\SettlePartnerCommissionPayout;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Data\Commercial\PartnerCommissionPayoutEvidenceData;
 use LBHurtado\XChange\Data\Commercial\ProviderCostEvidenceData;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\FundingDecisionData;
@@ -27,6 +31,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
+use LBHurtado\XChange\Models\PartnerCommissionPayout;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('generates a pay code end to end and debits the issuer wallet', function () {
@@ -516,6 +521,19 @@ it('settles provider costs only from exact authoritative cash-movement evidence'
             observedAt: now()->toRfc3339String(),
             idempotencyKey: 'provider-cost:exact',
         )))->toThrow(CommercialSaleConflict::class, 'different evidence');
+
+    expect(fn () => $settlement->execute(new ProviderCostEvidenceData(
+        commercialSaleReference: $sale->reference,
+        provider: 'netbank',
+        connectionReference: 'netbank-primary',
+        evidenceType: 'account_debit',
+        evidenceReference: 'netbank:fee-debit:duplicate',
+        cashMovementObserved: true,
+        observedAmountMinor: 1_000,
+        currency: 'PHP',
+        observedAt: now()->toRfc3339String(),
+        idempotencyKey: 'provider-cost:duplicate',
+    )))->toThrow(CommercialSaleConflict::class, 'already settled');
 });
 
 it('accrues an attributed partner commission to the partner principal', function () {
@@ -532,6 +550,10 @@ it('accrues an attributed partner commission to the partner principal', function
         amountMinor: 50_000,
         currency: 'PHP',
         evidenceReference: 'netbank:partner-commission-attribution',
+    );
+    recognizeAccountingInventoryForTest(
+        50_000,
+        'partner-commission-payout',
     );
     $partner = User::query()->create([
         'name' => 'Accredited Marketing Partner',
@@ -601,6 +623,55 @@ it('accrues an attributed partner commission to the partner principal', function
             TreasuryPositionPurpose::PartnerCommissionPayable,
             $system,
         ))->toBe(0);
+
+    $request = app(RequestPartnerCommissionPayout::class)->execute(
+        commercialSaleReference: $sale->reference,
+        makerReference: 'operator:maker-15',
+        idempotencyKey: 'partner-payout-request:marketing-42',
+    );
+    $requestReplay = app(RequestPartnerCommissionPayout::class)->execute(
+        commercialSaleReference: $sale->reference,
+        makerReference: 'operator:maker-15',
+        idempotencyKey: 'partner-payout-request:marketing-42',
+    );
+
+    expect($request->status)->toBe('awaiting_approval')
+        ->and($requestReplay->getKey())->toBe($request->getKey())
+        ->and(fn () => app(ApprovePartnerCommissionPayout::class)->execute(
+            $request,
+            'operator:maker-15',
+            'partner-payout-approval:invalid',
+        ))->toThrow(CommercialSaleConflict::class, 'must be different');
+
+    $approved = app(ApprovePartnerCommissionPayout::class)->execute(
+        $request,
+        'operator:checker-16',
+        'partner-payout-approval:marketing-42',
+    );
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+    $evidence = new PartnerCommissionPayoutEvidenceData(
+        evidenceReference: 'netbank:partner-payout:marketing-42',
+        provider: 'netbank',
+        connectionReference: 'netbank-primary',
+        amountMinor: 100,
+        currency: 'PHP',
+        observedAt: now()->toRfc3339String(),
+        idempotencyKey: 'partner-payout-settlement:marketing-42',
+    );
+    $settled = app(SettlePartnerCommissionPayout::class)->execute($approved, $evidence);
+    $settledReplay = app(SettlePartnerCommissionPayout::class)->execute($approved, $evidence);
+
+    expect($approved->status)->toBe('approved')
+        ->and($settled->status)->toBe('settled')
+        ->and($settledReplay->getKey())->toBe($settled->getKey())
+        ->and($settled->maker_reference)->toBe('operator:maker-15')
+        ->and($settled->checker_reference)->toBe('operator:checker-16')
+        ->and((int) Wallet::query()
+            ->findOrFail($partnerPosition->internal_ledger_id)
+            ->balanceInt)->toBe(0)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))
+        ->toBe($inventoryBefore - 100)
+        ->and(PartnerCommissionPayout::query()->count())->toBe(1);
 });
 
 it('characterizes that cancellation does not credit issuer wallet funds today', function () {
