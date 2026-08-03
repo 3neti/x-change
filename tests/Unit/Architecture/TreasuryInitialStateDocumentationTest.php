@@ -21,6 +21,6 @@ it('documents the provider-neutral Treasury initial state and operating controls
         ->toContain('never debits Client Funds')
         ->toContain('already_repaired')
         ->toContain('No form, command, webhook body, or operator can directly set Internal Balance.')
-        ->toContain('max(0, min(Internal Balance, Provider Liquidity) - Outstanding Pay Codes)')
+        ->toContain('max(0, min(Client Funds, Provider Liquidity - Outstanding Pay Codes))')
         ->toContain('x-legal remains advisory');
 });

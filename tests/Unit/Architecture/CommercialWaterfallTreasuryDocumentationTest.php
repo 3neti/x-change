@@ -19,7 +19,7 @@ it('documents the Pay Code commercial waterfall and its remaining accounting gat
         ->toContain('Partner Commission Payable')
         ->toContain('A reversal creates exact compensating Treasury movements')
         ->toContain('Percentage rules, caps, taxes, royalties')
-        ->toContain('must still be wired into every production issue, cancel, expire, and claim path')
+        ->toContain('Pay Code principal reservation, terminal release, and provider-confirmed claim settlement are Treasury-position based and idempotent')
         ->and($cockpitCompass)
         ->toContain('Quick Generate Treasury Movement Preview / Result Explanation')
         ->toContain('Before issuance')

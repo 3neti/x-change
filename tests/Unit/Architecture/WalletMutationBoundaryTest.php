@@ -10,6 +10,7 @@ it('keeps direct Bavix wallet deposits out of x-change production code', functio
         'src/Actions/Payment/CollectVoucherFunds.php',
         'src/Services/Funding/BavixFundingAccountCredit.php',
         'src/Services/Payment/ProviderWalletCollectionPosting.php',
+        'src/Services/Treasury/TreasuryCompatibilityLedgerSynchronizer.php',
     ];
 
     $violations = collect(File::allFiles($packageRoot.'/src'))
@@ -30,6 +31,7 @@ it('keeps direct Bavix wallet withdrawals inside approved wallet boundaries', fu
         'src/Services/WithdrawalLifecycleService.php',
         'src/Services/WalletAccessService.php',
         'src/Services/Funding/BavixFundingAccountCredit.php',
+        'src/Services/Treasury/TreasuryCompatibilityLedgerSynchronizer.php',
     ];
 
     $packageRoot = dirname(__DIR__, 3);
