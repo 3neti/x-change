@@ -101,6 +101,7 @@ use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
 use LBHurtado\XChange\Console\Commands\SetupXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AttestCommercialAccountingCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\BackfillCommercialAccountingJournalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillDisbursementSettlementJournalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillStandingFundingPositionsCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\CapitalizeTreasuryOpeningBalanceCommand;
@@ -1251,6 +1252,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RunLifecycleScenarioGroupCommand::class,
                 BackfillDisbursementSettlementJournalCommand::class,
                 AttestCommercialAccountingCommand::class,
+                BackfillCommercialAccountingJournalCommand::class,
                 BackfillStandingFundingPositionsCommand::class,
                 CapitalizeTreasuryOpeningBalanceCommand::class,
                 CorrectLegacyPayCodeFeePostingCommand::class,

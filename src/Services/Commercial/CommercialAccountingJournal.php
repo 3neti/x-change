@@ -209,7 +209,7 @@ final readonly class CommercialAccountingJournal
             idempotencyKey: 'x-change:commercial:'.$sale->reference
                 .':allocation:'.$allocation->policy_rule_reference,
             payload: [
-                'status' => $allocation->status,
+                'status' => 'posted',
                 'sequence' => $allocation->sequence,
                 'line_type' => $allocation->line_type,
                 'category' => $allocation->category,

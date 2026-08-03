@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionProvisioningContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
@@ -226,6 +228,61 @@ it('rejects a changed sale snapshot under the same acceptance event', function (
         $destinations,
     ))->toThrow(CommercialSaleConflict::class, 'different immutable sale snapshot')
         ->and(CommercialSale::query()->count())->toBe(1);
+});
+
+it('previews and guardedly backfills only reconstructible commercial journal events', function () {
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 25_00, 'journal-backfill');
+    $snapshot = commercialSaleSnapshot('acceptance:journal-backfill');
+    $sale = app(PostCommercialSale::class)->execute(
+        $snapshot,
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+    );
+    DB::table('execution_journal_entries')
+        ->where('correlation_id', 'commercial-sale:'.$sale->reference)
+        ->delete();
+
+    expect(Artisan::call(
+        'x-change:treasury:backfill-commercial-accounting-journal',
+        ['--sale' => [$sale->reference], '--json' => true],
+    ))->toBe(0);
+    $preview = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($preview['mode'])->toBe('preview')
+        ->and($preview['sales'][0]['journal_complete'])->toBeFalse()
+        ->and($preview['sales'][0]['can_backfill'])->toBeTrue()
+        ->and($preview['sales'][0]['raw_provider_evidence_inferred'])->toBeFalse()
+        ->and(ExecutionJournalEntry::query()->count())->toBe(0)
+        ->and(Artisan::call(
+            'x-change:treasury:backfill-commercial-accounting-journal',
+            [
+                '--sale' => [$sale->reference],
+                '--commit' => true,
+                '--json' => true,
+            ],
+        ))->toBe(1);
+
+    expect(Artisan::call(
+        'x-change:treasury:backfill-commercial-accounting-journal',
+        [
+            '--sale' => [$sale->reference],
+            '--commit' => true,
+            '--authorization-reference' => 'control:journal-backfill-2026-001',
+            '--json' => true,
+        ],
+    ))->toBe(0);
+    $committed = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($committed['mode'])->toBe('commit')
+        ->and($committed['sales'][0]['journal_complete'])->toBeTrue()
+        ->and($committed['sales'][0]['snapshot_rewritten'])->toBeFalse()
+        ->and($committed['sales'][0]['authorization_reference_recorded'])
+        ->toHaveLength(64)
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', 'commercial-sale:'.$sale->reference)
+            ->count())->toBe(6);
 });
 
 /**
