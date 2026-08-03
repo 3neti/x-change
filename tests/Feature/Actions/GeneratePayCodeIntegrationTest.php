@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Bavix\Wallet\Models\Wallet;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
@@ -16,6 +17,8 @@ use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialSale;
 
 it('generates a pay code end to end and debits the issuer wallet', function () {
     $user = actingAsTestUser(1_000_000);
@@ -260,6 +263,118 @@ it('fails closed when the compatibility ledger exceeds authoritative Client Fund
         ->and(Voucher::query()->count())->toBe($voucherCount);
 });
 
+it('characterizes the complete Treasury issuance waterfall and cancellation boundary', function () {
+    $user = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $user,
+        ['netbank-primary'],
+    );
+    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
+        accountReference: 'wallet:'.$user->wallet->uuid,
+        provider: 'netbank',
+        amountMinor: 50_000,
+        currency: 'PHP',
+        evidenceReference: 'netbank:accounting-characterization',
+    );
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')
+        ->once()
+        ->andReturn(FundingDecisionData::allowed(
+            authority: 'local_ledger',
+            availableMinor: 50_000,
+            requiredMinor: 50_000,
+            currency: 'PHP',
+            meta: [
+                'provider' => 'netbank',
+                'topology' => 'ledger_pooled',
+            ],
+        ));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+    $clientFundsBefore = treasuryPositionBalanceForPurpose(
+        TreasuryPositionPurpose::ClientFunds,
+        $user,
+    );
+
+    $result = app(GeneratePayCode::class)->handle(validPayCodePayload(
+        12.50,
+        'INSTAPAY',
+        [
+            'inputs' => ['fields' => ['mobile']],
+            'feedback' => [
+                'email' => null,
+                'mobile' => null,
+                'webhook' => null,
+            ],
+            'provider' => 'netbank',
+            'metadata' => [
+                'issuer_id' => (string) $user->getKey(),
+            ],
+        ],
+    ));
+
+    $principalMinor = 1_250;
+    $commercialChargeMinor = (int) round($result->cost->total * 100);
+    $accountDebitMinor = (int) round($result->cost->account_debit * 100);
+    $sale = CommercialSale::query()
+        ->with('allocations')
+        ->where('source_commercial_event_reference', 'pay-code-generation:voucher:'.$result->voucher_id)
+        ->sole();
+    $allocationTotalMinor = (int) $sale->allocations->sum('amount_minor');
+    $commercialBalances = collect([
+        TreasuryPositionPurpose::ProviderCostPayable,
+        TreasuryPositionPurpose::ProductRevenue,
+        TreasuryPositionPurpose::PartnerCommissionPayable,
+        TreasuryPositionPurpose::CommercialRevenue,
+    ])->mapWithKeys(fn (TreasuryPositionPurpose $purpose): array => [
+        $purpose->value => treasuryPositionBalanceForPurpose($purpose),
+    ]);
+
+    expect($accountDebitMinor)->toBe($principalMinor + $commercialChargeMinor)
+        ->and($sale->total_price_minor)->toBe($commercialChargeMinor)
+        ->and($allocationTotalMinor)->toBe($commercialChargeMinor)
+        ->and(CommercialAllocation::query()->where('commercial_sale_id', $sale->getKey())->count())
+        ->toBe(4)
+        ->and(treasuryPositionBalanceForPurpose(
+            TreasuryPositionPurpose::ClientFunds,
+            $user,
+        ))->toBe($clientFundsBefore - $accountDebitMinor)
+        ->and(treasuryPositionBalanceForPurpose(
+            TreasuryPositionPurpose::PayCodeReserve,
+            $user,
+        ))->toBe($principalMinor)
+        ->and(treasuryPositionBalanceForPurpose(
+            TreasuryPositionPurpose::CommercialClearing,
+        ))->toBe(0)
+        ->and((int) $commercialBalances->sum())->toBe($commercialChargeMinor)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore);
+
+    app(VoucherLifecycleServiceContract::class)->cancel(
+        (string) $result->voucher_id,
+        ['reason' => 'accounting_characterization'],
+    );
+
+    expect(treasuryPositionBalanceForPurpose(
+        TreasuryPositionPurpose::ClientFunds,
+        $user,
+    ))->toBe($clientFundsBefore - $commercialChargeMinor)
+        ->and(treasuryPositionBalanceForPurpose(
+            TreasuryPositionPurpose::PayCodeReserve,
+            $user,
+        ))->toBe(0)
+        ->and((int) collect([
+            TreasuryPositionPurpose::ProviderCostPayable,
+            TreasuryPositionPurpose::ProductRevenue,
+            TreasuryPositionPurpose::PartnerCommissionPayable,
+            TreasuryPositionPurpose::CommercialRevenue,
+        ])->sum(fn (TreasuryPositionPurpose $purpose): int => treasuryPositionBalanceForPurpose($purpose)))
+        ->toBe($commercialChargeMinor)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore);
+});
+
 it('characterizes that cancellation does not credit issuer wallet funds today', function () {
     $user = actingAsTestUser(1_000_000);
     $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
@@ -299,3 +414,21 @@ it('characterizes that expiry does not credit issuer wallet funds today', functi
 
     expect((int) $wallet->balance)->toBe($afterIssuance);
 });
+
+function treasuryPositionBalanceForPurpose(
+    TreasuryPositionPurpose $purpose,
+    mixed $principal = null,
+): int {
+    return (int) TreasuryPosition::query()
+        ->when(
+            $principal !== null,
+            fn ($query) => $query->whereMorphedTo('principal', $principal),
+        )
+        ->where('provider', 'netbank')
+        ->where('connection_reference', 'netbank-primary')
+        ->where('purpose', $purpose)
+        ->get()
+        ->sum(fn (TreasuryPosition $position): int => (int) Wallet::query()
+            ->findOrFail($position->internal_ledger_id)
+            ->balanceInt);
+}
