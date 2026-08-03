@@ -10,6 +10,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitFundingReadModelData;
+use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
+use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -41,6 +43,16 @@ class FundingCockpitReadModelProvider
             ->whereIn('funding_intent_id', $intentIds)
             ->latest('settled_at')
             ->get();
+        $settledStandingReceipts = AccountFundingReceipt::query()
+            ->where('status', AccountFundingReceiptStatus::Settled)
+            ->whereHas(
+                'standingFundingAddress',
+                fn (Builder $query): Builder => $query
+                    ->where('owner_type', $actorType)
+                    ->where('owner_id', $actorId),
+            )
+            ->latest('settled_at')
+            ->get();
         $openSuspenseCases = FundingSuspenseCase::query()
             ->whereIn('funding_intent_id', $intentIds)
             ->whereIn('status', ['open', 'monitoring'])
@@ -63,7 +75,13 @@ class FundingCockpitReadModelProvider
             : [];
 
         return new CockpitFundingReadModelData(
-            summary: $this->summary($operationalIntentsQuery, $settlements, $openSuspenseCases, $activeRecoveries),
+            summary: $this->summary(
+                $operationalIntentsQuery,
+                $settlements,
+                $settledStandingReceipts,
+                $openSuspenseCases,
+                $activeRecoveries,
+            ),
             providers: $this->providers($actorType, $actorId),
             intents: $this->intents($operationalIntentsQuery),
             suspense_cases: $this->suspenseCases(
@@ -107,6 +125,7 @@ class FundingCockpitReadModelProvider
     /**
      * @param  Builder<FundingIntent>  $intentsQuery
      * @param  Collection<int, FundingSettlement>  $settlements
+     * @param  Collection<int, AccountFundingReceipt>  $standingReceipts
      * @param  Collection<int, FundingSuspenseCase>  $suspenseCases
      * @param  Collection<int, FundingRecovery>  $recoveries
      * @return array<string, int|string>
@@ -114,11 +133,16 @@ class FundingCockpitReadModelProvider
     private function summary(
         Builder $intentsQuery,
         Collection $settlements,
+        Collection $standingReceipts,
         Collection $suspenseCases,
         Collection $recoveries,
     ): array {
-        $currency = $this->currency($settlements->first()?->currency);
-        $settledMinor = (int) $settlements->sum('net_amount_minor');
+        $currency = $this->currency(
+            $settlements->first()?->currency
+                ?? $standingReceipts->first()?->currency,
+        );
+        $settledMinor = (int) $settlements->sum('net_amount_minor')
+            + (int) $standingReceipts->sum('net_amount_minor');
         $recoveryMinor = (int) $recoveries->sum('outstanding_amount_minor');
 
         return [

@@ -8,11 +8,13 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\ProviderAccountLink;
+use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -128,6 +130,32 @@ it('presents account scoped funding controls without exposing Treasury oversight
         ->not->toContain((string) $settledIntent->provider_request_id)
         ->not->toContain((string) $settledIntent->account_reference)
         ->not->toContain('001234567890');
+});
+
+it('combines settled intents and recognized reusable address receipts for the owner', function () {
+    enableNetbankTreasuryForTests();
+
+    $operator = actingAsTestUser(0);
+    $otherOperator = User::query()->create([
+        'name' => 'Other Account Holder',
+        'email' => 'other+'.Str::uuid().'@example.com',
+        'password' => bcrypt('password'),
+    ]);
+    fundTestUserWallet($otherOperator, 0);
+    $wallet = $operator->wallet()->where('slug', 'platform')->firstOrFail();
+
+    app(SettleVerifiedFundingIntent::class)->handle(
+        fundingCockpitVerifiedIntent($operator, $wallet),
+    );
+    fundingCockpitSettledStandingReceipt($operator, 5_000);
+    fundingCockpitSettledStandingReceipt($otherOperator, 99_000);
+
+    $summary = app(FundingCockpitReadModelProvider::class)
+        ->forOperator($operator)
+        ->toArray()['summary'];
+
+    expect($summary['settled_funding'])->toBe('₱299.50')
+        ->and(AccountFundingReceipt::query()->count())->toBe(2);
 });
 
 it('exposes provider-wide Treasury oversight only to the resolved system principal', function () {
@@ -376,5 +404,50 @@ function fundingCockpitObservation(
         'verification_source' => 'transaction_history',
         'payload_hash' => hash('sha256', 'payload-'.$status.'-'.$transactionId),
         'metadata' => ['destination_verified' => true],
+    ]);
+}
+
+function fundingCockpitSettledStandingReceipt(
+    User $operator,
+    int $netAmountMinor,
+): AccountFundingReceipt {
+    $reference = (string) Str::ulid();
+    $address = StandingFundingAddress::query()->forceCreate([
+        'reference' => $reference,
+        'binding_key' => hash('sha256', 'funding-cockpit-address-'.$reference),
+        'owner_type' => $operator::class,
+        'owner_id' => $operator->getKey(),
+        'account_reference' => 'wallet:'.$operator->wallet->uuid,
+        'provider_code' => 'netbank',
+        'purpose' => 'account_funding',
+        'recognition_mode' => 'automatic',
+        'status' => 'active',
+        'version' => 1,
+        'provider_reference' => 'funding-cockpit-address-'.$reference,
+        'funding_address_ciphertext' => '9150009173011987',
+        'funding_address_hash' => hash('sha256', '9150009173011987-'.$reference),
+        'currency' => 'PHP',
+        'activated_at' => now()->subMinute(),
+    ]);
+    $observation = fundingCockpitObservation();
+
+    return AccountFundingReceipt::query()->forceCreate([
+        'reference' => (string) Str::ulid(),
+        'standing_funding_address_id' => $address->getKey(),
+        'provider_funding_observation_id' => $observation->getKey(),
+        'provider_transaction_key' => hash('sha256', 'funding-cockpit-receipt-'.$reference),
+        'provider_code' => 'netbank',
+        'account_reference' => 'wallet:'.$operator->wallet->uuid,
+        'purpose' => 'account_funding',
+        'recognition_mode_snapshot' => 'automatic',
+        'status' => 'settled',
+        'gross_amount_minor' => $netAmountMinor,
+        'fee_amount_minor' => 0,
+        'net_amount_minor' => $netAmountMinor,
+        'currency' => 'PHP',
+        'treasury_operation_reference' => 'funding-cockpit-recognition-'.$reference,
+        'wallet_transaction_id' => abs(crc32($reference)) + 1,
+        'observed_at' => now()->subSecond(),
+        'settled_at' => now(),
     ]);
 }
