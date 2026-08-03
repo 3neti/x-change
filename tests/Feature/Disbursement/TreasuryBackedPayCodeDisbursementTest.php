@@ -15,10 +15,13 @@ use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
+use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
 it('pays a treasury-backed pay code without a legacy cash entity', function (): void {
     Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
@@ -62,16 +65,184 @@ it('pays a treasury-backed pay code without a legacy cash entity', function (): 
             TreasuryPositionPurpose::PayCodeReserve,
         ))->toBe($reserveBefore - 2_000)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))
-        ->toBe($inventoryBefore - 2_000);
+        ->toBe($inventoryBefore - 2_000)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.disbursement.settled')
+            ->where('subject_id', (string) $voucher->getKey())
+            ->count())->toBe(1);
     expect(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole())
         ->status->toBe('succeeded')
         ->disbursed_amount_minor->toBe(2_000);
+    $journal = ExecutionJournalEntry::query()
+        ->where('event_type', 'pay_code.disbursement.settled')
+        ->sole();
+    expect($journal->correlation_id)->toBe('pay-code-disbursement:'.$voucher->code)
+        ->and($journal->execution_id)->toBe((string) $reconciliation->getKey())
+        ->and($journal->money['minor_amount'])->toBe(2_000)
+        ->and($journal->money['currency'])->toBe('PHP')
+        ->and($journal->payload['provider_status'])->toBe('succeeded')
+        ->and($journal->payload['internal_status'])->toBe('finalized')
+        ->and($journal->metadata['accounting_authority'])
+        ->toBe('treasury_position_operations');
+
+    DisbursementConfirmed::dispatch($reconciliation->fresh());
+
+    expect(ExecutionJournalEntry::query()
+        ->where('event_type', 'pay_code.disbursement.settled')
+        ->where('subject_id', (string) $voucher->getKey())
+        ->count())->toBe(1);
     $provider->assertDisburseCalledTimes(1);
     expect($provider->lastRequest?->amount)->toBe(20.0)
         ->and($provider->lastRequest?->bank_code)->toBe('GXCHPHM2XXX')
         ->and($provider->lastRequest?->account_number)->toBe('09173011987')
         ->and($provider->lastRequest?->external_id)->toBe((string) $voucher->getKey())
         ->and($provider->lastRequest?->external_code)->toBe($voucher->code);
+});
+
+it('journals settlement reached through scheduled provider reconciliation', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()
+        ->willReturnPendingResult(
+            transactionId: 'NETBANK-TREASURY-PENDING-1',
+            provider: 'netbank',
+        )
+        ->willResolveCheckStatusAsSuccessful(
+            transactionId: 'NETBANK-TREASURY-PENDING-1',
+            provider: 'netbank',
+        );
+    $reserveBefore = treasuryBackedPayoutPositionBalance(
+        $issuer,
+        TreasuryPositionPurpose::PayCodeReserve,
+    );
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+        ],
+    ]);
+
+    $reconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+
+    expect($result->status)->toBe('pending_review')
+        ->and($reconciliation->status)->toBe('pending')
+        ->and($reconciliation->internal_status)->not->toBe('finalized')
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.disbursement.settled')
+            ->count())->toBe(0);
+
+    $this->artisan('xchange:reconcile:pending', ['--json' => true])
+        ->assertSuccessful();
+
+    expect($reconciliation->refresh()->status)->toBe('succeeded')
+        ->and($reconciliation->internal_status)->toBe('finalized')
+        ->and(data_get(
+            $voucher->refresh()->metadata,
+            'treasury.pay_code_reservation.status',
+        ))->toBe('settled')
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe($reserveBefore - 2_000)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))
+        ->toBe($inventoryBefore - 2_000)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.disbursement.settled')
+            ->where('subject_id', (string) $voucher->getKey())
+            ->count())->toBe(1)
+        ->and($provider->disburseCallCount)->toBe(1)
+        ->and($provider->checkStatusCallCount)->toBe(1);
+
+    $this->artisan('xchange:reconcile:pending', ['--json' => true])
+        ->assertSuccessful();
+
+    expect(ExecutionJournalEntry::query()
+        ->where('event_type', 'pay_code.disbursement.settled')
+        ->where('subject_id', (string) $voucher->getKey())
+        ->count())->toBe(1)
+        ->and($provider->disburseCallCount)->toBe(1)
+        ->and($provider->checkStatusCallCount)->toBe(1);
+});
+
+it('retries a provider-confirmed settlement when its journal write initially fails', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(
+        transactionId: 'NETBANK-TREASURY-JOURNAL-RETRY-1',
+        provider: 'netbank',
+    );
+    $provider->willResolveCheckStatusAsSuccessful(
+        transactionId: 'NETBANK-TREASURY-JOURNAL-RETRY-1',
+        provider: 'netbank',
+    );
+    $realRecorder = app(ExecutionJournalRecorder::class);
+    $failingRecorder = Mockery::mock(ExecutionJournalRecorder::class);
+    $failingRecorder->shouldReceive('record')
+        ->once()
+        ->andThrow(new RuntimeException('Synthetic journal outage.'));
+    $this->app->instance(ExecutionJournalRecorder::class, $failingRecorder);
+    $reserveBefore = treasuryBackedPayoutPositionBalance(
+        $issuer,
+        TreasuryPositionPurpose::PayCodeReserve,
+    );
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+        ],
+    ]);
+
+    $reconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+
+    expect($result->status)->toBe('succeeded')
+        ->and($reconciliation->status)->toBe('succeeded')
+        ->and($reconciliation->internal_status)->toBe('journal_pending')
+        ->and(data_get(
+            $voucher->refresh()->metadata,
+            'treasury.pay_code_reservation.status',
+        ))->toBe('settled')
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe($reserveBefore - 2_000)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))
+        ->toBe($inventoryBefore - 2_000)
+        ->and(ExecutionJournalEntry::query()->count())->toBe(0)
+        ->and($provider->disburseCallCount)->toBe(1);
+
+    $this->app->instance(ExecutionJournalRecorder::class, $realRecorder);
+
+    $this->artisan('xchange:reconcile:pending', ['--json' => true])
+        ->assertSuccessful();
+
+    expect($reconciliation->refresh()->internal_status)->toBe('finalized')
+        ->and(data_get(
+            $voucher->refresh()->metadata,
+            'treasury.pay_code_reservation.status',
+        ))->toBe('settled')
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe($reserveBefore - 2_000)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))
+        ->toBe($inventoryBefore - 2_000)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.disbursement.settled')
+            ->count())->toBe(1)
+        ->and($provider->disburseCallCount)->toBe(1)
+        ->and($provider->checkStatusCallCount)->toBe(1);
 });
 
 function treasuryBackedPayoutPositionBalance(

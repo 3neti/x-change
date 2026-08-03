@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Listeners;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
@@ -12,12 +13,15 @@ use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Treasury\PayCodeDisbursementSettlementJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
+use Throwable;
 
 final readonly class HandleConfirmedDisbursement
 {
     public function __construct(
         private TreasuryPayCodeAccountingService $accounting,
+        private PayCodeDisbursementSettlementJournal $journal,
     ) {}
 
     public function handle(DisbursementConfirmed $event): void
@@ -32,6 +36,15 @@ final readonly class HandleConfirmedDisbursement
         $reservation = data_get($voucher->metadata, 'treasury.pay_code_reservation', []);
 
         if (data_get($reservation, 'status') === 'settled') {
+            $journalRecorded = $this->recordSettlementJournal(
+                $voucher,
+                $reconciliation,
+            );
+            $reconciliation->forceFill([
+                'internal_status' => $journalRecorded
+                    ? 'finalized'
+                    : 'journal_pending',
+            ])->save();
             $this->convergeRedemptionReadModels($voucher, $reconciliation, $reservation);
 
             return;
@@ -54,24 +67,34 @@ final readonly class HandleConfirmedDisbursement
             return;
         }
 
-        $this->accounting->settle(
-            accountOwner: $owner,
-            voucher: $voucher,
-            reconciliation: $reconciliation,
-            connectionReference: (string) data_get($reservation, 'connection_reference'),
-            reservedPrincipalMinor: (int) data_get($reservation, 'amount_minor'),
-        );
+        DB::transaction(function () use ($owner, $reconciliation, $reservation, $voucher): void {
+            $this->accounting->settle(
+                accountOwner: $owner,
+                voucher: $voucher,
+                reconciliation: $reconciliation,
+                connectionReference: (string) data_get($reservation, 'connection_reference'),
+                reservedPrincipalMinor: (int) data_get($reservation, 'amount_minor'),
+            );
 
-        $metadata = (array) $voucher->refresh()->metadata;
-        data_set($metadata, 'treasury.pay_code_reservation.status', 'settled');
-        data_set($metadata, 'treasury.pay_code_reservation.settled_at', now()->toIso8601String());
-        data_set($metadata, 'disbursement.status', 'completed');
-        data_set($metadata, 'disbursement.gateway', $reconciliation->provider);
-        data_set($metadata, 'disbursement.transaction_id', $reconciliation->provider_transaction_id);
-        data_set($metadata, 'disbursement.requires_reconciliation', false);
-        $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+            $metadata = (array) $voucher->refresh()->metadata;
+            data_set($metadata, 'treasury.pay_code_reservation.status', 'settled');
+            data_set($metadata, 'treasury.pay_code_reservation.settled_at', now()->toIso8601String());
+            data_set($metadata, 'disbursement.status', 'completed');
+            data_set($metadata, 'disbursement.gateway', $reconciliation->provider);
+            data_set($metadata, 'disbursement.transaction_id', $reconciliation->provider_transaction_id);
+            data_set($metadata, 'disbursement.requires_reconciliation', false);
+            $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
 
-        $reconciliation->forceFill(['internal_status' => 'finalized'])->save();
+            $journalRecorded = $this->recordSettlementJournal(
+                $voucher,
+                $reconciliation,
+            );
+            $reconciliation->forceFill([
+                'internal_status' => $journalRecorded
+                    ? 'finalized'
+                    : 'journal_pending',
+            ])->save();
+        }, attempts: 5);
 
         $this->convergeRedemptionReadModels($voucher, $reconciliation, $reservation);
 
@@ -83,6 +106,25 @@ final readonly class HandleConfirmedDisbursement
         ]);
 
         $this->queueTerminalFeedback($voucher, $reconciliation);
+    }
+
+    private function recordSettlementJournal(
+        Voucher $voucher,
+        DisbursementReconciliation $reconciliation,
+    ): bool {
+        try {
+            $this->journal->record($voucher, $reconciliation);
+
+            return true;
+        } catch (Throwable $exception) {
+            Log::error('[XChange] Confirmed disbursement journal handoff is pending.', [
+                'voucher_code' => $voucher->code,
+                'reconciliation_id' => $reconciliation->getKey(),
+                'exception' => $exception::class,
+            ]);
+
+            return false;
+        }
     }
 
     /**

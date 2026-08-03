@@ -84,7 +84,13 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
         $model->fill($updates);
         $model->save();
 
-        if ($beforeStatus !== 'succeeded' && $resolvedStatus === 'succeeded') {
+        if (
+            $resolvedStatus === 'succeeded'
+            && (
+                $beforeStatus !== 'succeeded'
+                || $model->internal_status !== 'finalized'
+            )
+        ) {
             Event::dispatch(new DisbursementConfirmed($model->fresh()));
         }
 

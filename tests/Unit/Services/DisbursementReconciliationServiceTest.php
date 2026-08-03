@@ -154,3 +154,49 @@ it('reconciles a trusted provider failure without leaving stale review flags', f
 
     Event::assertNotDispatched(DisbursementConfirmed::class);
 });
+
+it('redispatches confirmation for a succeeded reconciliation whose internal posting is incomplete', function () {
+    Event::fake();
+
+    $record = DisbursementReconciliation::query()->create([
+        'voucher_id' => 12,
+        'voucher_code' => 'TEST-INCOMPLETE',
+        'claim_type' => 'withdraw',
+        'provider' => 'netbank',
+        'provider_reference' => 'TEST-INCOMPLETE-09173011987',
+        'provider_transaction_id' => '409729887',
+        'status' => 'succeeded',
+        'internal_status' => 'recorded',
+        'amount' => 25,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******1987',
+        'settlement_rail' => 'INSTAPAY',
+        'attempt_count' => 1,
+        'needs_review' => false,
+        'completed_at' => now(),
+    ]);
+    $fetcher = Mockery::mock(DisbursementStatusFetcherContract::class);
+    $fetcher->shouldReceive('fetch')->once()->andReturn([
+        'status' => 'completed',
+        'metadata' => [
+            'operation_id' => '409729887',
+            'status' => 'Completed',
+        ],
+    ]);
+    $resolver = Mockery::mock(DisbursementStatusResolverContract::class);
+    $resolver->shouldReceive('resolveFromFetchedStatus')
+        ->once()
+        ->andReturn('succeeded');
+    $store = Mockery::mock(DisbursementReconciliationStoreContract::class);
+
+    $result = (new DefaultDisbursementReconciliationService(
+        $store,
+        $fetcher,
+        $resolver,
+    ))->reconcile($record);
+
+    expect($result['resolved_status'])->toBe('succeeded')
+        ->and($result['updated'])->toBeFalse();
+    Event::assertDispatched(DisbursementConfirmed::class);
+});

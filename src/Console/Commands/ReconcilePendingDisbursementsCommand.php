@@ -27,6 +27,14 @@ class ReconcilePendingDisbursementsCommand extends Command
                     ->orWhere(function ($subQuery) {
                         $subQuery->where('status', 'failed')
                             ->where('needs_review', true);
+                    })
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->where('status', 'succeeded')
+                            ->where(function ($internalStatusQuery) {
+                                $internalStatusQuery
+                                    ->whereNull('internal_status')
+                                    ->orWhere('internal_status', '!=', 'finalized');
+                            });
                     });
             })
             ->orderBy('attempted_at')
