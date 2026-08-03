@@ -244,6 +244,40 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(summary.text()).not.toContain('must-not-render');
     });
 
+    it('renders sanitized redemption details separately from the face value', () => {
+        const redemptionReadModel = structuredClone(readModel);
+        redemptionReadModel.voucher.summary.redemption = {
+            status: 'succeeded',
+            amount_minor: 2000,
+            currency: 'PHP',
+            provider: 'netbank',
+            settlement_rail: 'INSTAPAY',
+            bank_code: 'GXCHPHM2XXX',
+            account_number_masked: '*******1987',
+            provider_transaction_id: '409669715',
+            completed_at: '2026-08-03T12:00:00+08:00',
+        };
+
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: redemptionReadModel,
+            },
+        });
+        const redemption = wrapper.find('[data-testid="cockpit-voucher-detail-redemption-summary"]');
+
+        expect(redemption.exists()).toBe(true);
+        expect(redemption.text()).toContain('Redemption');
+        expect(redemption.text()).toContain('Paid');
+        expect(redemption.text()).toContain('₱20.00');
+        expect(redemption.text()).toContain('NetBank');
+        expect(redemption.text()).toContain('InstaPay');
+        expect(redemption.text()).toContain('GCash · *******1987');
+        expect(redemption.text()).toContain('409669715');
+        expect(redemption.text()).not.toContain('raw_request');
+        expect(redemption.text()).not.toContain('raw_response');
+    });
+
     it('copies the primary summary claim URL through the browser clipboard only', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
 

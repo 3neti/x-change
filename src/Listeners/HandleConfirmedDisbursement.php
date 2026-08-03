@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Listeners;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
@@ -31,6 +32,8 @@ final readonly class HandleConfirmedDisbursement
         $reservation = data_get($voucher->metadata, 'treasury.pay_code_reservation', []);
 
         if (data_get($reservation, 'status') === 'settled') {
+            $this->convergeRedemptionReadModels($voucher, $reconciliation, $reservation);
+
             return;
         }
 
@@ -70,6 +73,8 @@ final readonly class HandleConfirmedDisbursement
 
         $reconciliation->forceFill(['internal_status' => 'finalized'])->save();
 
+        $this->convergeRedemptionReadModels($voucher, $reconciliation, $reservation);
+
         Log::info('[XChange] Disbursement confirmed', [
             'reconciliation_id' => $reconciliation->id,
             'voucher_code' => $reconciliation->voucher_code,
@@ -78,6 +83,56 @@ final readonly class HandleConfirmedDisbursement
         ]);
 
         $this->queueTerminalFeedback($voucher, $reconciliation);
+    }
+
+    /**
+     * @param  array<string, mixed>  $reservation
+     */
+    private function convergeRedemptionReadModels(
+        Voucher $voucher,
+        DisbursementReconciliation $reconciliation,
+        array $reservation,
+    ): void {
+        if ($reconciliation->status !== 'succeeded') {
+            return;
+        }
+
+        $claim = VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('id')
+            ->first();
+
+        if ($claim instanceof VoucherClaim) {
+            $claim->forceFill([
+                'status' => 'succeeded',
+                'disbursed_amount_minor' => (int) data_get($reservation, 'amount_minor', 0),
+                'completed_at' => $reconciliation->completed_at ?? now(),
+                'failure_message' => null,
+            ])->save();
+        }
+
+        $fulfillment = CampaignWorksheetFulfillment::query()
+            ->where('pay_code', $voucher->code)
+            ->first();
+
+        if (! $fulfillment instanceof CampaignWorksheetFulfillment) {
+            return;
+        }
+
+        $metadata = (array) $fulfillment->metadata;
+        $metadata['settlement'] = [
+            'status' => 'succeeded',
+            'amount_minor' => (int) data_get($reservation, 'amount_minor', 0),
+            'currency' => (string) data_get($reservation, 'currency', 'PHP'),
+            'provider' => $reconciliation->provider,
+            'settlement_rail' => $reconciliation->settlement_rail,
+            'completed_at' => $reconciliation->completed_at?->toIso8601String(),
+        ];
+        $fulfillment->forceFill([
+            'status' => 'completed',
+            'provider_transfer_reference' => $reconciliation->provider_transaction_id,
+            'metadata' => $metadata,
+        ])->save();
     }
 
     private function queueTerminalFeedback(

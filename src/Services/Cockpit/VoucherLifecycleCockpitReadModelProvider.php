@@ -1454,6 +1454,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'starts_at' => $detail['starts_at'] ?? null,
             'expires_at' => $detail['expires_at'] ?? null,
             'redeemed_at' => $detail['redeemed_at'] ?? null,
+            'redemption' => $detail['redemption'] ?? null,
         ])
             ->filter(fn (mixed $value, string $key): bool => $key === 'redeemed_at' || $value !== null)
             ->all();

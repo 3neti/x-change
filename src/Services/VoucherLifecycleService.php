@@ -314,6 +314,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
             'instructions' => $this->instructionsArray($voucher),
             'claims' => $this->claimsArray($voucher),
+            'redemption' => $this->redemptionSummary($voucher),
             'approval' => $approval,
         ];
     }
@@ -347,6 +348,12 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             return (float) $amount;
         }
 
+        $instructionAmount = data_get($this->instructionsArray($voucher), 'cash.amount');
+
+        if (is_numeric($instructionAmount)) {
+            return (float) $instructionAmount;
+        }
+
         return 0.0;
     }
 
@@ -364,7 +371,52 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             return $amount->getCurrency()->getCurrencyCode();
         }
 
+        $instructionCurrency = data_get($this->instructionsArray($voucher), 'cash.currency');
+
+        if (is_string($instructionCurrency) && $instructionCurrency !== '') {
+            return $instructionCurrency;
+        }
+
         return 'PHP';
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function redemptionSummary(Voucher $voucher): ?array
+    {
+        $claim = VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('id')
+            ->first();
+        $reconciliation = DisbursementReconciliation::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('id')
+            ->first();
+
+        if (! $claim instanceof VoucherClaim && ! $reconciliation instanceof DisbursementReconciliation) {
+            return null;
+        }
+
+        $amountMinor = $claim?->disbursed_amount_minor
+            ?? ($reconciliation?->amount !== null
+                ? (int) round((float) $reconciliation->amount * 100)
+                : null)
+            ?? data_get($voucher->metadata, 'treasury.pay_code_reservation.amount_minor');
+
+        return [
+            'status' => $reconciliation?->status ?? $claim?->status ?? 'redeemed',
+            'amount_minor' => is_numeric($amountMinor) ? (int) $amountMinor : null,
+            'currency' => $reconciliation?->currency ?? $claim?->currency ?? $this->currency($voucher),
+            'provider' => $reconciliation?->provider,
+            'settlement_rail' => $reconciliation?->settlement_rail,
+            'bank_code' => $reconciliation?->bank_code ?? $claim?->bank_code,
+            'account_number_masked' => $reconciliation?->account_number_masked
+                ?? $claim?->account_number_masked,
+            'provider_transaction_id' => $reconciliation?->provider_transaction_id,
+            'completed_at' => $reconciliation?->completed_at?->toIso8601String()
+                ?? $claim?->completed_at?->toIso8601String(),
+        ];
     }
 
     protected function issuerId(Voucher $voucher): ?int

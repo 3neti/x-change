@@ -51,6 +51,24 @@ const distributionLinksPolicy = computed(() => {
 const distributionLinksAvailable = computed(() => beneficiaryRedeemUrl.value !== null || beneficiaryRedeemPath.value !== null);
 const amountDisplay = computed(() => moneyValue(summary.value.amount, stringValue(summary.value.currency)));
 const claimStateDisplay = computed(() => claimState(summary.value.claimed, summary.value.fully_claimed));
+const redemption = computed<Record<string, unknown> | null>(() => objectValue(summary.value.redemption));
+const redemptionStatus = computed(() => settlementStatusLabel(stringValue(redemption.value?.status)));
+const redemptionAmount = computed(() => {
+    const amountMinor = numberValue(redemption.value?.amount_minor);
+
+    return amountMinor === null
+        ? 'Not available'
+        : moneyValue(amountMinor / 100, stringValue(redemption.value?.currency));
+});
+const redemptionProvider = computed(() => providerLabel(stringValue(redemption.value?.provider)));
+const redemptionRail = computed(() => settlementRailLabel(stringValue(redemption.value?.settlement_rail)));
+const redemptionDestination = computed(() => {
+    const bank = institutionLabel(stringValue(redemption.value?.bank_code));
+    const account = stringValue(redemption.value?.account_number_masked);
+
+    return [bank, account].filter((value): value is string => value !== null).join(' · ') || 'Not available';
+});
+const redemptionReference = computed(() => stringValue(redemption.value?.provider_transaction_id) ?? 'Pending');
 const availabilityDisplay = computed(() => availabilityWindow(summary.value.starts_at, summary.value.expires_at));
 const distributionWorkspaceHref = computed(() => `/x/cockpit/pay-codes/${encodeURIComponent(code.value)}/distribution`);
 const explorerHref = computed(() => '/x/cockpit/pay-codes');
@@ -373,6 +391,49 @@ function campaignValueLabel(value: unknown, labels: Record<string, string>): str
     }
 
     return labels[normalized] ?? normalized;
+}
+
+function titleValue(value: string | null): string | null {
+    if (!value) {
+        return null;
+    }
+
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function institutionLabel(value: string | null): string | null {
+    if (!value) {
+        return null;
+    }
+
+    return {
+        GXCHPHM2XXX: 'GCash',
+        PAPHPHM1XXX: 'Maya',
+    }[value] ?? value;
+}
+
+function providerLabel(value: string | null): string {
+    return {
+        netbank: 'NetBank',
+        paynamics: 'Paynamics',
+    }[value?.toLowerCase() ?? ''] ?? titleValue(value) ?? 'Not available';
+}
+
+function settlementRailLabel(value: string | null): string {
+    return {
+        INSTAPAY: 'InstaPay',
+        PESONET: 'PESONet',
+    }[value?.toUpperCase() ?? ''] ?? value ?? 'Not available';
+}
+
+function settlementStatusLabel(value: string | null): string {
+    return {
+        succeeded: 'Paid',
+        completed: 'Paid',
+        pending: 'Pending',
+        unknown: 'Needs Review',
+        failed: 'Failed',
+    }[value ?? ''] ?? titleValue(value) ?? 'Recorded';
 }
 
 function moneyValue(value: unknown, currency: string | null = 'PHP'): string {
@@ -872,6 +933,43 @@ function policyLabel(value: string): string {
                         </p>
                     </div>
                 </dl>
+
+                <section
+                    v-if="redemption"
+                    class="mt-3 rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    data-testid="cockpit-voucher-detail-redemption-summary"
+                >
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                            Redemption
+                        </p>
+                        <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
+                            {{ redemptionStatus }}
+                        </span>
+                    </div>
+                    <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
+                        <div>
+                            <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Paid Amount</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ redemptionAmount }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Provider</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ redemptionProvider }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Rail</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ redemptionRail }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Destination</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ redemptionDestination }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Transaction</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">{{ redemptionReference }}</dd>
+                        </div>
+                    </dl>
+                </section>
 
                 <div class="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
                     <div class="rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/60 dark:bg-slate-950/70">

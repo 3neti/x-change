@@ -158,6 +158,10 @@ it('resumes the known pre-provider reference persistence failure exactly once', 
             $voucher->refresh()->metadata,
             'treasury.pay_code_reservation.status',
         ))->toBe('settled');
+    expect(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole())
+        ->status->toBe('succeeded')
+        ->disbursed_amount_minor->toBe(2_000)
+        ->completed_at->not->toBeNull();
     $provider->assertDisburseCalledTimes(1);
 
     $this->artisan('xchange:disbursement:resume-missing-treasury', [

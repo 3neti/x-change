@@ -7,6 +7,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 
@@ -27,6 +28,24 @@ it('lists vouchers as lifecycle summaries', function () {
         ->and($result[0]['voucher_id'])->toBe($voucher->id)
         ->and($result[0]['code'])->toBe($voucher->code)
         ->and($result[0]['currency'])->toBe((string) data_get($voucher, 'cash.currency', 'PHP'));
+});
+
+it('uses immutable instructions for treasury-backed voucher face value', function () {
+    $voucher = issueVoucher(validVoucherInstructions(amount: 20));
+    $voucher->voucherEntities()->delete();
+    $voucher = $voucher->fresh();
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('list')
+        ->once()
+        ->with([])
+        ->andReturn([$voucher]);
+
+    $result = (new VoucherLifecycleService($access))->list([]);
+
+    expect($voucher->cash)->toBeNull()
+        ->and($result[0]['amount'])->toBe(20.0)
+        ->and($result[0]['currency'])->toBe('PHP');
 });
 
 it('includes pending approval summary for vouchers requiring Paynamics OTP approval', function () {
@@ -205,6 +224,61 @@ it('includes dates, instructions, and claims in detail response', function () {
     // Claims
     expect($result)->toHaveKey('claims')
         ->and($result['claims'])->toBeArray();
+});
+
+it('includes sanitized authoritative redemption details', function () {
+    $voucher = issueVoucher(validVoucherInstructions(amount: 20));
+    $voucher->voucherEntities()->delete();
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'withdraw',
+        'status' => 'succeeded',
+        'requested_amount_minor' => 2_000,
+        'disbursed_amount_minor' => 2_000,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******1987',
+        'completed_at' => now(),
+    ]);
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_code' => $voucher->code,
+        'claim_type' => 'withdraw',
+        'provider' => 'netbank',
+        'provider_reference' => $voucher->code.'-09173011987-S2',
+        'provider_transaction_id' => '409669715',
+        'status' => 'succeeded',
+        'internal_status' => 'finalized',
+        'amount' => 20,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******1987',
+        'settlement_rail' => 'INSTAPAY',
+        'completed_at' => now(),
+    ]);
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('findByCodeOrFail')
+        ->once()
+        ->with($voucher->code)
+        ->andReturn($voucher->fresh());
+
+    $result = (new VoucherLifecycleService($access))->showByCode($voucher->code);
+
+    expect($result['amount'])->toBe(20.0)
+        ->and($result['redemption'])->toMatchArray([
+            'status' => 'succeeded',
+            'amount_minor' => 2_000,
+            'currency' => 'PHP',
+            'provider' => 'netbank',
+            'settlement_rail' => 'INSTAPAY',
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number_masked' => '*******1987',
+            'provider_transaction_id' => '409669715',
+        ])
+        ->and($result['redemption'])->not->toHaveKeys(['raw_request', 'raw_response']);
 });
 
 it('returns voucher status', function () {
