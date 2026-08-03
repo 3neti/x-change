@@ -30,6 +30,8 @@ use LBHurtado\XCommerce\Enums\CommercialWaterfallLineType;
 use LBHurtado\XCommerce\Services\DeterministicCommercialQuoteBuilder;
 use LBHurtado\XCommerce\Services\DeterministicCommercialSaleFactory;
 use LBHurtado\XCommerce\Services\DeterministicCommercialWaterfallCalculator;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
 it('posts and reverses an immutable commercial sale exactly once', function () {
     $positions = commercialSalePositions();
@@ -63,7 +65,10 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         ->and(commercialSalePositionBalance($positions['provider_cost']))->toBe(10_00)
         ->and(commercialSalePositionBalance($positions['product_revenue']))->toBe(8_00)
         ->and(commercialSalePositionBalance($positions['partner_commission']))->toBe(2_00)
-        ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(5_00);
+        ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(5_00)
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', 'commercial-sale:'.$snapshot->reference)
+            ->count())->toBe(6);
 
     $reversal = app(ReverseCommercialSale::class);
     $reversed = $reversal->execute($snapshot->reference, 'administrative-void:posting');
@@ -78,7 +83,19 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         ->and(commercialSalePositionBalance($positions['provider_cost']))->toBe(0)
         ->and(commercialSalePositionBalance($positions['product_revenue']))->toBe(0)
         ->and(commercialSalePositionBalance($positions['partner_commission']))->toBe(0)
-        ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(0);
+        ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(0)
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', 'commercial-sale:'.$snapshot->reference)
+            ->pluck('event_type')
+            ->all())->toBe([
+                'commercial.sale.accepted',
+                'commercial.charge.posted',
+                'commercial.allocation.posted',
+                'commercial.allocation.posted',
+                'commercial.allocation.posted',
+                'commercial.allocation.posted',
+                'commercial.sale.reversed',
+            ]);
 });
 
 it('rejects unsupported commercial reversal reasons', function () {
@@ -159,6 +176,32 @@ it('rolls the whole sale back when a waterfall destination is unavailable', func
         ->and(CommercialAllocation::query()->count())->toBe(0)
         ->and(TreasuryPositionOperation::query()->count())->toBe($operationCount)
         ->and(commercialSalePositionBalance($positions['client_funds']))->toBe(25_00);
+});
+
+it('rolls accounting back when its journal cannot be persisted', function () {
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 25_00, 'journal-rollback');
+    $snapshot = commercialSaleSnapshot('acceptance:journal-rollback');
+    $recorder = Mockery::mock(ExecutionJournalRecorder::class);
+    $recorder->shouldReceive('record')
+        ->once()
+        ->andThrow(new RuntimeException('journal unavailable'));
+    app()->instance(ExecutionJournalRecorder::class, $recorder);
+
+    expect(fn () => app(PostCommercialSale::class)->execute(
+        $snapshot,
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+    ))->toThrow(RuntimeException::class, 'journal unavailable')
+        ->and(CommercialSale::query()->count())->toBe(0)
+        ->and(CommercialAllocation::query()->count())->toBe(0)
+        ->and(commercialSalePositionBalance($positions['client_funds']))->toBe(25_00)
+        ->and(commercialSalePositionBalance($positions['commercial_clearing']))->toBe(0)
+        ->and(commercialSalePositionBalance($positions['provider_cost']))->toBe(0)
+        ->and(commercialSalePositionBalance($positions['product_revenue']))->toBe(0)
+        ->and(commercialSalePositionBalance($positions['partner_commission']))->toBe(0)
+        ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(0);
 });
 
 it('rejects a changed sale snapshot under the same acceptance event', function () {

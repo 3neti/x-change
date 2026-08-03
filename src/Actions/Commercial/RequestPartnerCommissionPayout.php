@@ -10,9 +10,14 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 
 final readonly class RequestPartnerCommissionPayout
 {
+    public function __construct(
+        private CommercialAccountingJournal $journal,
+    ) {}
+
     /**
      * @param  array<string, scalar|null>  $metadata
      *
@@ -101,7 +106,7 @@ final readonly class RequestPartnerCommissionPayout
                 );
             }
 
-            return PartnerCommissionPayout::query()->create([
+            $payout = PartnerCommissionPayout::query()->create([
                 'commercial_sale_id' => $sale->getKey(),
                 'commercial_allocation_id' => $allocation->getKey(),
                 'partner_reference' => $partnerReference,
@@ -117,6 +122,10 @@ final readonly class RequestPartnerCommissionPayout
                 'metadata' => $request['metadata'],
                 'requested_at' => now(),
             ]);
+
+            $this->journal->recordPartnerPayoutRequested($payout);
+
+            return $payout;
         }, attempts: 5);
     }
 }

@@ -33,6 +33,7 @@ use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('generates a pay code end to end and debits the issuer wallet', function () {
     $user = actingAsTestUser(1_000_000);
@@ -509,6 +510,14 @@ it('settles provider costs only from exact authoritative cash-movement evidence'
         ))->toBe($providerCostBefore - 1_000)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore - 1_000)
         ->and(CommercialProviderCostSettlement::query()->count())->toBe(2)
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', 'commercial-sale:'.$sale->reference)
+            ->where('event_type', 'like', 'commercial.provider_cost.%')
+            ->pluck('event_type')
+            ->all())->toBe([
+                'commercial.provider_cost.review_required',
+                'commercial.provider_cost.settled',
+            ])
         ->and(fn () => $settlement->execute(new ProviderCostEvidenceData(
             commercialSaleReference: $sale->reference,
             provider: 'netbank',
@@ -671,7 +680,16 @@ it('accrues an attributed partner commission to the partner principal', function
             ->balanceInt)->toBe(0)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))
         ->toBe($inventoryBefore - 100)
-        ->and(PartnerCommissionPayout::query()->count())->toBe(1);
+        ->and(PartnerCommissionPayout::query()->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', 'commercial-sale:'.$sale->reference)
+            ->where('event_type', 'like', 'commercial.partner_commission.%')
+            ->pluck('event_type')
+            ->all())->toBe([
+                'commercial.partner_commission.requested',
+                'commercial.partner_commission.approved',
+                'commercial.partner_commission.settled',
+            ]);
 });
 
 it('characterizes that cancellation does not credit issuer wallet funds today', function () {

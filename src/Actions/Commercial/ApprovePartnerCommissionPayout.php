@@ -7,9 +7,14 @@ namespace LBHurtado\XChange\Actions\Commercial;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 
 final readonly class ApprovePartnerCommissionPayout
 {
+    public function __construct(
+        private CommercialAccountingJournal $journal,
+    ) {}
+
     public function execute(
         PartnerCommissionPayout $payout,
         string $checkerReference,
@@ -67,7 +72,10 @@ final readonly class ApprovePartnerCommissionPayout
                     'updated_at' => now(),
                 ]);
 
-            return $locked->fresh();
+            $approved = $locked->fresh();
+            $this->journal->recordPartnerPayoutApproved($approved);
+
+            return $approved;
         }, attempts: 5);
     }
 }

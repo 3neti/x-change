@@ -10,6 +10,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionCommercialReversalData;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialSale;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use LBHurtado\XChange\Services\Commercial\CommercialSaleReversalPolicy;
 
 final readonly class ReverseCommercialSale
@@ -17,6 +18,7 @@ final readonly class ReverseCommercialSale
     public function __construct(
         private TreasuryPositionOperationContract $positionOperations,
         private CommercialSaleReversalPolicy $policy,
+        private CommercialAccountingJournal $journal,
     ) {}
 
     public function execute(string $commercialSaleReference, string $reasonReference): CommercialSale
@@ -116,7 +118,10 @@ final readonly class ReverseCommercialSale
                     'updated_at' => now(),
                 ]);
 
-            return $sale->fresh('allocations');
+            $reversed = $sale->fresh('allocations');
+            $this->journal->recordSaleReversed($reversed, $reason);
+
+            return $reversed;
         }, attempts: 5);
     }
 }

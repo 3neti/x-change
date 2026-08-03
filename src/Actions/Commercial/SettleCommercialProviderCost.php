@@ -15,6 +15,7 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 
 final readonly class SettleCommercialProviderCost
@@ -23,6 +24,7 @@ final readonly class SettleCommercialProviderCost
         private TreasuryPositionOperationContract $positionOperations,
         private TreasuryInventoryOperationContract $inventoryOperations,
         private TreasuryProviderConnectionCatalog $connections,
+        private CommercialAccountingJournal $journal,
     ) {}
 
     /**
@@ -149,7 +151,7 @@ final readonly class SettleCommercialProviderCost
                 $inventoryOperationReference = $inventoryOperation->operationReference;
             }
 
-            return CommercialProviderCostSettlement::query()->create([
+            $settlement = CommercialProviderCostSettlement::query()->create([
                 'commercial_sale_id' => $sale->getKey(),
                 'commercial_allocation_id' => $allocation->getKey(),
                 'idempotency_key' => $evidence->idempotencyKey,
@@ -170,6 +172,10 @@ final readonly class SettleCommercialProviderCost
                 'observed_at' => $evidence->observedAt,
                 'settled_at' => $status === 'settled' ? now() : null,
             ]);
+
+            $this->journal->recordProviderCostOutcome($settlement);
+
+            return $settlement;
         }, attempts: 5);
     }
 

@@ -12,6 +12,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionCommercialChargeData;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialSale;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
 use LBHurtado\XCommerce\Data\CommercialSaleSnapshotData;
 
@@ -19,6 +20,7 @@ final readonly class PostCommercialSale
 {
     public function __construct(
         private TreasuryPositionOperationContract $positionOperations,
+        private CommercialAccountingJournal $journal,
     ) {}
 
     /**
@@ -157,7 +159,10 @@ final readonly class PostCommercialSale
                     'updated_at' => now(),
                 ]);
 
-            return $sale->fresh('allocations');
+            $posted = $sale->fresh('allocations');
+            $this->journal->recordSalePosted($posted);
+
+            return $posted;
         }, attempts: 5);
     }
 

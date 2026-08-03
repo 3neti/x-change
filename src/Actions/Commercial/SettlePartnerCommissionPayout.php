@@ -13,6 +13,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionPayableSettlementData;
 use LBHurtado\XChange\Data\Commercial\PartnerCommissionPayoutEvidenceData;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 
 final readonly class SettlePartnerCommissionPayout
@@ -21,6 +22,7 @@ final readonly class SettlePartnerCommissionPayout
         private TreasuryPositionOperationContract $positionOperations,
         private TreasuryInventoryOperationContract $inventoryOperations,
         private TreasuryProviderConnectionCatalog $connections,
+        private CommercialAccountingJournal $journal,
     ) {}
 
     /**
@@ -133,7 +135,10 @@ final readonly class SettlePartnerCommissionPayout
                     'updated_at' => now(),
                 ]);
 
-            return $locked->fresh();
+            $settled = $locked->fresh();
+            $this->journal->recordPartnerPayoutSettled($settled);
+
+            return $settled;
         }, attempts: 5);
     }
 }
