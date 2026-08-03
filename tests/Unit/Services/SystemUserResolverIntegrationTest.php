@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Providers\XChangeServiceProvider;
+use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function () {
@@ -48,4 +49,23 @@ it('keeps the legacy wallet configuration aligned for compatibility', function (
     expect(config('account.system_user.model'))->toBe($candidate['model'])
         ->and(config('account.system_user.identifier'))->toBe($candidate['identifier'])
         ->and(config('account.system_user.identifier_column'))->toBe($candidate['identifier_column']);
+});
+
+it('resolves the payout system wallet through a non-numeric system principal identity', function () {
+    $systemPrincipal = User::query()->create([
+        'name' => 'Email Treasury Principal',
+        'email' => 'email-treasury-principal@example.com',
+        'password' => 'not-a-login-credential',
+    ]);
+    $platformWallet = $systemPrincipal->wallet;
+    config()->set('x-change.payout.system_user_column', 'email');
+    config()->set('x-change.payout.system_user_id', $systemPrincipal->email);
+
+    $method = new ReflectionMethod(XChangeServiceProvider::class, 'alignAccountSystemUser');
+    $method->setAccessible(true);
+    $method->invoke(new XChangeServiceProvider(app()));
+
+    $resolved = app(SystemWalletProxy::class)->resolve();
+
+    expect($resolved->getKey())->toBe($platformWallet->getKey());
 });

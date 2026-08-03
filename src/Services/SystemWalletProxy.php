@@ -6,24 +6,19 @@ namespace LBHurtado\XChange\Services;
 
 use Bavix\Wallet\Interfaces\Wallet;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
+use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use RuntimeException;
 
 class SystemWalletProxy implements WalletProxy
 {
+    public function __construct(
+        private readonly SystemUserResolverContract $systemUsers,
+    ) {}
+
     public function resolve(): Wallet
     {
-        $modelClass = $this->systemUserModelClass();
-        $systemUserId = $this->systemUserId();
+        $user = $this->systemUsers->resolve();
         $walletSlug = $this->walletSlug();
-
-        $user = $modelClass::query()->find($systemUserId);
-
-        if (! $user) {
-            throw new RuntimeException(sprintf(
-                'Configured system user [%s] was not found.',
-                (string) $systemUserId
-            ));
-        }
 
         $wallet = $this->resolveWalletFromUser($user, $walletSlug);
 
@@ -35,35 +30,6 @@ class SystemWalletProxy implements WalletProxy
         }
 
         return $wallet;
-    }
-
-    protected function systemUserModelClass(): string
-    {
-        $modelClass = config('x-change.onboarding.issuer_model');
-
-        if (! is_string($modelClass) || $modelClass === '') {
-            throw new RuntimeException('No system user model configured.');
-        }
-
-        if (! class_exists($modelClass)) {
-            throw new RuntimeException(sprintf(
-                'Configured system user model [%s] does not exist.',
-                $modelClass
-            ));
-        }
-
-        return $modelClass;
-    }
-
-    protected function systemUserId(): int|string
-    {
-        $systemUserId = config('x-change.payout.system_user_id');
-
-        if ($systemUserId === null || $systemUserId === '') {
-            throw new RuntimeException('No payout system user ID configured.');
-        }
-
-        return $systemUserId;
     }
 
     protected function walletSlug(): string
