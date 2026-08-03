@@ -146,6 +146,12 @@ class SubmitPayCodeClaim
     protected function normalizeResult(Voucher $voucher, mixed $result, array $payload): SubmitPayCodeClaimResultData
     {
         if ($result instanceof RedeemPayCodeResultData) {
+            $treasuryDisbursement = $this->treasuryDisbursementResult($voucher);
+
+            if ($treasuryDisbursement !== null) {
+                return $treasuryDisbursement;
+            }
+
             $isDivisible = $this->safeBoolMethod($voucher, 'isDivisible');
 
             $remainingBalance = null;
@@ -190,6 +196,46 @@ class SubmitPayCodeClaim
         }
 
         throw new \RuntimeException('Unsupported claim execution result type: '.get_debug_type($result));
+    }
+
+    protected function treasuryDisbursementResult(
+        Voucher $voucher,
+    ): ?SubmitPayCodeClaimResultData {
+        if (data_get(
+            $voucher->metadata,
+            'treasury.pay_code_reservation',
+        ) === null) {
+            return null;
+        }
+
+        $disbursement = data_get($voucher->refresh()->metadata, 'disbursement');
+
+        if (! is_array($disbursement)) {
+            return null;
+        }
+
+        $status = (string) data_get($disbursement, 'status', 'pending');
+        $succeeded = in_array($status, ['succeeded', 'completed'], true)
+            && data_get($disbursement, 'requires_reconciliation') !== true;
+        $amount = (float) data_get($disbursement, 'amount', 0);
+
+        return new SubmitPayCodeClaimResultData(
+            voucher_code: (string) $voucher->code,
+            claim_type: 'redeem',
+            claimed: true,
+            status: $succeeded ? 'succeeded' : 'pending_review',
+            requested_amount: $amount,
+            disbursed_amount: $succeeded ? $amount : 0,
+            currency: (string) data_get($disbursement, 'currency', 'PHP'),
+            remaining_balance: 0,
+            fully_claimed: true,
+            disbursement: $disbursement,
+            messages: [
+                $succeeded
+                    ? 'Pay Code redeemed and paid successfully.'
+                    : 'Pay Code redeemed; provider settlement requires review.',
+            ],
+        );
     }
 
     protected function toFloatOrNull(mixed $value): ?float

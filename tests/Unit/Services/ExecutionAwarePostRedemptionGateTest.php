@@ -54,3 +54,28 @@ it('preserves the ordinary payout pipeline for ordinary Vouchers', function (): 
 
     expect($result)->toBe('continued:CASH-NORMAL');
 });
+
+it('does not reinterpret an account-funding reserve as a provider payout', function (): void {
+    $voucher = (new Voucher)->forceFill([
+        'code' => 'FUND-SAFE',
+        'metadata' => [
+            'instructions' => [
+                'claim' => [
+                    'default_outcome' => 'account_funding',
+                ],
+            ],
+            'treasury' => [
+                'pay_code_reservation' => [
+                    'status' => 'reserved',
+                ],
+            ],
+        ],
+    ]);
+
+    $result = app(ExecutionAwarePostRedemptionGate::class)->handle(
+        $voucher,
+        static fn (Voucher $continued): string => 'continued:'.$continued->code,
+    );
+
+    expect($result)->toBe('continued:FUND-SAFE');
+});

@@ -11,6 +11,10 @@ use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 
 final class ExecutionAwarePostRedemptionGate
 {
+    public function __construct(
+        private readonly TreasuryBackedPayCodeDisbursement $treasuryDisbursements,
+    ) {}
+
     public function handle(Voucher $voucher, Closure $next): mixed
     {
         $mode = data_get(
@@ -19,6 +23,17 @@ final class ExecutionAwarePostRedemptionGate
         );
 
         if ($mode !== OnboardingVoucherInstructionPolicy::PostRedemptionMode) {
+            if (data_get(
+                $voucher->metadata,
+                'treasury.pay_code_reservation.status',
+            ) === 'reserved' && data_get(
+                $voucher->metadata,
+                'instructions.claim.default_outcome',
+                'provider_disbursement',
+            ) === 'provider_disbursement') {
+                return $this->treasuryDisbursements->handle($voucher);
+            }
+
             return $next($voucher);
         }
 
