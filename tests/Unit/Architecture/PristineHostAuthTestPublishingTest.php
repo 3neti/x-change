@@ -25,9 +25,15 @@ it('preserves Laravel passkey props in the x-change security scaffold', function
     $controller = file_get_contents(
         dirname(__DIR__, 3).'/stubs/app/Http/Controllers/Settings/SecurityController.php.stub',
     );
+    $securityTest = file_get_contents(
+        dirname(__DIR__, 3).'/stubs/tests/Feature/Settings/SecurityTest.php.stub',
+    );
 
     expect($controller)
         ->toContain("'canManagePasskeys' => Features::canManagePasskeys()")
         ->toContain('->passkeys()')
-        ->toContain("'passwordRules' => Password::defaults()->toPasswordRulesString()");
+        ->toContain("'passwordRules' => Password::defaults()->toPasswordRulesString()")
+        ->and($securityTest)
+        ->toContain("config(['fortify.features' => [")
+        ->toContain('Features::passkeys([');
 });
