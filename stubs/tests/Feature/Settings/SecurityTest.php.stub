@@ -11,15 +11,10 @@ uses(RefreshDatabase::class);
 test('security page is displayed', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
-    config(['fortify.features' => [
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-        ]),
-        Features::passkeys([
-            'confirmPassword' => true,
-        ]),
-    ]]);
+    Features::twoFactorAuthentication([
+        'confirm' => true,
+        'confirmPassword' => true,
+    ]);
 
     $user = User::factory()->create();
 
@@ -28,7 +23,7 @@ test('security page is displayed', function () {
         ->get(route('security.edit'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('settings/Security')
-            ->where('canManagePasskeys', true)
+            ->where('canManagePasskeys', Features::canManagePasskeys())
             ->where('passkeys', [])
             ->where('canManageTwoFactor', true)
             ->where('twoFactorEnabled', false),

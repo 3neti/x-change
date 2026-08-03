@@ -34,6 +34,5 @@ it('preserves Laravel passkey props in the x-change security scaffold', function
         ->toContain('->passkeys()')
         ->toContain("'passwordRules' => Password::defaults()->toPasswordRulesString()")
         ->and($securityTest)
-        ->toContain("config(['fortify.features' => [")
-        ->toContain('Features::passkeys([');
+        ->toContain("->where('canManagePasskeys', Features::canManagePasskeys())");
 });
