@@ -72,6 +72,7 @@ enum VoucherFlowType: string
             'redeemable' => 'disbursable',
             'payable' => 'collectible',
             'campaign_worksheet_authorization' => 'settlement',
+            'campaign_fulfillment' => 'disbursable',
         ], (array) config('x-change.voucher_flow_types.aliases', []));
 
         $value = (string) ($aliases[$value] ?? $value);

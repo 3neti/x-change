@@ -17,6 +17,7 @@ it('normalizes legacy flow aliases', function () {
     expect(VoucherFlowType::normalize('redeemable'))->toBe(VoucherFlowType::Disbursable);
     expect(VoucherFlowType::normalize('payable'))->toBe(VoucherFlowType::Collectible);
     expect(VoucherFlowType::normalize('campaign_worksheet_authorization'))->toBe(VoucherFlowType::Settlement);
+    expect(VoucherFlowType::normalize('campaign_fulfillment'))->toBe(VoucherFlowType::Disbursable);
 });
 
 it('falls back to disbursable by default', function () {

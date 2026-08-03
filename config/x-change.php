@@ -1876,6 +1876,8 @@ return [
         'aliases' => [
             'redeemable' => 'disbursable',
             'payable' => 'collectible',
+            'campaign_worksheet_authorization' => 'settlement',
+            'campaign_fulfillment' => 'disbursable',
         ],
     ],
 

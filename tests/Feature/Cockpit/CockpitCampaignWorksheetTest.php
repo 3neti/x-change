@@ -842,6 +842,8 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
         ->and(data_get($issuedVouchers[1]->instructions, 'onboarding'))->toBeTrue()
         ->and(data_get($issuedVouchers[0]->instructions, 'inputs.fields.0')->value)->toBe('name')
         ->and(data_get($issuedVouchers[0]->instructions, 'feedback.mobile'))->not->toBeNull()
+        ->and(data_get($issuedVouchers[0]->instructions, 'metadata.flow_type'))->toBe('disbursable')
+        ->and(data_get($issuedVouchers[1]->instructions, 'metadata.flow_type'))->toBe('disbursable')
         ->and($authorization->fulfillments->first()->metadata['instruction_blueprint_hash'])
         ->toBe($authorization->instruction_blueprint_hash);
 

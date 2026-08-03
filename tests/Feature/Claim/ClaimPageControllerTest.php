@@ -50,6 +50,21 @@ it('does not admit a collectible Pay Code into the outward claim experience', fu
         ->assertJsonPath('props.code', (string) $voucher->code);
 });
 
+it('admits legacy campaign fulfillment Pay Codes into the outward claim experience', function () {
+    $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [
+        'metadata' => [
+            'flow_type' => 'campaign_fulfillment',
+            'source' => 'campaign',
+        ],
+    ]));
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/claim/Entry')
+        ->assertJsonPath('props.initial_code', (string) $voucher->code);
+});
+
 it('routes unauthenticated campaign officer authorization to an explicit login handoff', function () {
     $issuer = campaignAuthorizationClaimPageUser();
     $repository = app(CampaignWorksheetRepository::class);

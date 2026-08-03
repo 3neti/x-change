@@ -94,7 +94,7 @@ final readonly class CampaignVoucherInstructionCompiler
                 'profile' => 'voucher.claim.v1',
             ],
             'metadata' => [
-                'flow_type' => 'campaign_fulfillment',
+                'flow_type' => 'disbursable',
                 'issuer_id' => (string) $owner->getKey(),
                 'campaign_id' => (string) $worksheet->reference,
                 'campaign_name' => (string) $worksheet->name,
