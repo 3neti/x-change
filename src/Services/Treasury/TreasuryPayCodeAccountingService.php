@@ -322,7 +322,7 @@ final readonly class TreasuryPayCodeAccountingService
                     -1,
                 )) * 100,
             )
-            : (int) ($voucherClaim?->disbursed_amount_minor ?? -1);
+            : (int) ($voucherClaim?->requested_amount_minor ?? -1);
         $configuredRailFeeMinor = (int) data_get(
             $voucher->metadata,
             'disbursement.fee_amount',

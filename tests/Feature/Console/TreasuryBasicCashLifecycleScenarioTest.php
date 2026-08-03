@@ -110,21 +110,21 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
             'basic_cash.instruction_fee_position_backed',
         ))->toBeTrue()
         ->and(data_get($result->payload, 'basic_cash.escrow_position_backed'))
-        ->toBeFalse()
+        ->toBeTrue()
         ->and(data_get(
             $result->payload,
             'basic_cash.legacy_compatibility_amount_minor',
-        ))->toBe(1_250)
+        ))->toBe(0)
         ->and(data_get(
             $result->payload,
             'basic_cash.legacy_balance_after_minor',
-        ))->toBe(0)
+        ))->toBe(7_250)
         ->and(data_get($result->payload, 'basic_cash.issued'))->toBeTrue()
         ->and(data_get($result->payload, 'basic_cash.claimed'))->toBeFalse()
         ->and(data_get(
             $result->payload,
             'balances.after_issuance.wallet_balance_minor',
-        ))->toBe(8_500)
+        ))->toBe(7_250)
         ->and(data_get(
             $result->payload,
             'balances.after_issuance.outstanding_liability_minor',
@@ -143,6 +143,16 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
         ))->toBe(1_500)
         ->and(data_get($result->payload, 'commercial_sale.allocation_count'))
         ->toBe(4)
+        ->and(data_get($result->payload, 'commercial_sale.accounting_context.schema_version'))
+        ->toBe(2)
+        ->and(data_get($result->payload, 'commercial_sale.accounting_context.expected_provider_cost_minor'))
+        ->toBe(1_000)
+        ->and(data_get($result->payload, 'commercial_sale.attestation.ready'))
+        ->toBeTrue()
+        ->and(data_get($result->payload, 'commercial_sale.attestation.issue_count'))
+        ->toBe(0)
+        ->and(data_get($result->payload, 'commercial_sale.journal_events'))
+        ->toHaveCount(6)
         ->and(data_get(
             $result->payload,
             'commercial_sale.catalog.reference',
@@ -151,14 +161,16 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
             $result->payload,
             'commercial_sale.waterfall_policy.reference',
         ))->toBe('pay-code-commercial-waterfall')
-        ->and(data_get($result->payload, 'steps'))->toHaveCount(8)
+        ->and(data_get($result->payload, 'steps'))->toHaveCount(9)
         ->and(data_get($result->payload, 'steps.0.key'))
         ->toBe('provider_evidence_verified')
         ->and(data_get($result->payload, 'steps.4.key'))
         ->toBe('commercial_waterfall_posted')
         ->and(data_get($result->payload, 'steps.5.key'))
+        ->toBe('commercial_accounting_attested')
+        ->and(data_get($result->payload, 'steps.6.key'))
         ->toBe('basic_cash_issued')
-        ->and(data_get($result->payload, 'steps.7.key'))
+        ->and(data_get($result->payload, 'steps.8.key'))
         ->toBe('issuance_capacity_reduced')
         ->and([
             ProviderFundingObservation::query()->count(),

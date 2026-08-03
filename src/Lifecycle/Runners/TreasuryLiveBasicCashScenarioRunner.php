@@ -15,12 +15,16 @@ use LBHurtado\XChange\Data\Treasury\TreasuryPayCodeSettlementData;
 use LBHurtado\XChange\Enums\TreasuryOpeningBalanceStatus;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleMoneyRunStore;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
+use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
+use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\LifecycleMoneyRun;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingAttestation;
 use LBHurtado\XChange\Services\Treasury\TreasuryLifecycleAccountingSnapshot;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use Throwable;
 
 final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunnerContract
@@ -33,6 +37,7 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryLifecycleAccountingSnapshot $accounting,
         private TreasuryPayCodeAccountingService $payCodeAccounting,
+        private CommercialAccountingAttestation $commercialAccounting,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -217,6 +222,13 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 attempts: 5,
             );
             $afterIssuance = $this->accounting->capture($context->issuer);
+            $commercialSale = CommercialSale::query()
+                ->with('allocations')
+                ->where(
+                    'source_commercial_event_reference',
+                    'pay-code-generation:voucher:'.$bootstrap->voucher->getKey(),
+                )
+                ->first();
             $claims = [];
             $settlements = [];
             $afterClaims = [];
@@ -312,6 +324,21 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
             $accountingStatus = $this->accountingStatus(
                 $postTransfer->connections,
             );
+            $commercialAttestation = $this->commercialAccounting->inspect([
+                $connectionReference,
+            ]);
+            $commercialJournalEvents = ExecutionJournalEntry::query()
+                ->when(
+                    $commercialSale instanceof CommercialSale,
+                    fn ($query) => $query->where(
+                        'correlation_id',
+                        'commercial-sale:'.$commercialSale->reference,
+                    ),
+                    fn ($query) => $query->whereRaw('1 = 0'),
+                )
+                ->where('event_type', 'like', 'commercial.%')
+                ->pluck('event_type')
+                ->all();
             $success = $transferSucceeded
                 && $accountingStatus === 'reconciled';
             $senderSystemChargeMinor = (int) round(
@@ -362,7 +389,9 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                         $settlements,
                     )),
                     'sender_system_charge_minor' => $senderSystemChargeMinor,
-                    'sender_system_charge_status' => 'legacy_compatibility_ledger',
+                    'sender_system_charge_status' => $commercialSale instanceof CommercialSale
+                        ? 'commercial_positions_posted'
+                        : 'legacy_compatibility_ledger',
                     'currency' => $currency,
                     'settlements' => array_map(
                         fn (TreasuryPayCodeSettlementData $settlement): array => $this->settlementPayload(
@@ -390,13 +419,55 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                     'after_issuance' => $afterIssuance,
                     'after_claims' => $afterClaims,
                     'after_claim' => $afterClaim,
+                    'commercial' => $commercialSale instanceof CommercialSale ? [
+                        'sale_reference' => $commercialSale->reference,
+                        'status' => $commercialSale->status,
+                        'total_minor' => $commercialSale->total_price_minor,
+                        'accounting_context' => data_get(
+                            $commercialSale->snapshot,
+                            'accounting_context',
+                        ),
+                        'allocations' => $commercialSale->allocations
+                            ->map(static fn ($allocation): array => [
+                                'sequence' => $allocation->sequence,
+                                'category' => $allocation->category,
+                                'recipient_reference' => $allocation->recipient_reference,
+                                'amount_minor' => $allocation->amount_minor,
+                                'status' => $allocation->status,
+                            ])
+                            ->values()
+                            ->all(),
+                        'provider_cost_status' => CommercialProviderCostSettlement::query()
+                            ->where('commercial_sale_id', $commercialSale->getKey())
+                            ->where('status', 'settled')
+                            ->exists()
+                            ? 'settled_from_authoritative_evidence'
+                            : 'awaiting_authoritative_cash_movement',
+                        'journal_events' => $commercialJournalEvents,
+                        'attestation' => [
+                            'ready' => $commercialAttestation['ready'],
+                            'issue_count' => $commercialAttestation['issue_count'],
+                        ],
+                    ] : [
+                        'status' => 'not_recorded',
+                        'reason' => 'commercial-accounting-disabled',
+                        'allocations' => [],
+                        'journal_events' => [],
+                        'attestation' => [
+                            'ready' => $commercialAttestation['ready'],
+                            'issue_count' => $commercialAttestation['issue_count'],
+                        ],
+                    ],
                 ],
                 'idempotency' => $this->idempotency($run, false),
                 'accounting_boundary' => [
                     'funding_and_opening_balance' => 'treasury_position_based',
-                    'pay_code_escrow_and_fees' => 'provider_principal_reserved_with_legacy_compatibility_mirror',
+                    'pay_code_escrow_and_fees' => 'treasury_positions_with_immutable_commercial_waterfall',
                     'outbound_treasury_posting' => 'provider_principal_only',
-                    'sender_system_charge' => 'legacy_compatibility_ledger',
+                    'sender_system_charge' => $commercialSale instanceof CommercialSale
+                        ? 'commercial_positions_posted_at_issuance'
+                        : 'legacy_compatibility_ledger',
+                    'provider_cost' => 'settled_only_from_authoritative_cash_movement_evidence',
                     'post_transfer_provider_sync' => $accountingStatus,
                 ],
             ]);
@@ -418,6 +489,10 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 payload: $result,
             );
         } catch (Throwable $exception) {
+            if (app()->runningUnitTests()) {
+                throw $exception;
+            }
+
             if ($run->voucher_id !== null) {
                 $this->runs->fail(
                     $run->refresh(),

@@ -13,7 +13,6 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContra
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
-use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
@@ -22,7 +21,9 @@ use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingAttestation;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use Throwable;
 
 final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
@@ -46,7 +47,6 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
     public function __construct(
         private readonly DatabaseManager $databases,
         private readonly WalletAccessContract $wallets,
-        private readonly FundingAccountCreditContract $legacyAccounts,
         private readonly AccountBalanceReadModelContract $accountBalances,
         private readonly VoucherLiabilitySummaryContract $liabilities,
         private readonly LifecycleScenarioRepository $scenarios,
@@ -55,6 +55,7 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
         private readonly TreasuryProviderConnectionCatalog $connections,
         private readonly TreasuryInventoryPositionReadModelContract $inventories,
         private readonly SettleVerifiedFundingIntent $settleFunding,
+        private readonly CommercialAccountingAttestation $commercialAccounting,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -230,8 +231,6 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
         $basicCashAmountMinor = (int) round(
             (float) data_get($baseScenario, 'amount', 25) * 100,
         );
-        $legacyCompatibilityAmountMinor = $basicCashAmountMinor;
-        $legacyBalanceBefore = (int) $this->wallets->getBalance($account);
         $liabilityBeforeFunding = $this->liabilities
             ->forIssuer($context->issuer)
             ->toArray();
@@ -277,17 +276,6 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
             ->forIssuer($context->issuer)
             ->toArray();
 
-        if ($legacyCompatibilityAmountMinor > 0) {
-            $this->legacyAccounts->credit(
-                $account,
-                $legacyCompatibilityAmountMinor,
-                [
-                    'source' => 'treasury_basic_cash_lifecycle',
-                    'purpose' => 'rollback_only_pay_code_compatibility',
-                ],
-            );
-        }
-
         $basicCash = $this->bootstrapper->bootstrap(
             scenario: $baseScenario,
             issuerOption: (string) $context->issuer->getKey(),
@@ -302,6 +290,14 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
             ->sole();
         $commercialAllocationMinor = (int) $commercialSale->allocations
             ->sum('amount_minor');
+        $commercialJournalEvents = ExecutionJournalEntry::query()
+            ->where('correlation_id', 'commercial-sale:'.$commercialSale->reference)
+            ->where('event_type', 'like', 'commercial.%')
+            ->pluck('event_type')
+            ->all();
+        $commercialAttestation = $this->commercialAccounting->inspect([
+            $connectionReference,
+        ]);
         $liabilityAfterIssuance = $this->liabilities
             ->forIssuer($context->issuer)
             ->toArray();
@@ -336,13 +332,17 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
         $success = $settlement->net_amount_minor === $amountMinor
             && $balanceAfterFunding === $amountMinor
             && $balanceAfterReplay === $balanceAfterFunding
-            && $balanceAfterIssuance === $balanceAfterFunding - $compatibilityFeeMinor
-            && $legacyBalanceAfterIssuance === $legacyBalanceBefore
+            && $balanceAfterIssuance === $balanceAfterFunding
+                - $basicCashAmountMinor
+                - $compatibilityFeeMinor
+            && $legacyBalanceAfterIssuance === $balanceAfterIssuance
             && $liabilityIncrease === $basicCashAmountMinor
             && $capacityBefore - $capacityAfter === $basicCashAmountMinor + $compatibilityFeeMinor
             && $commercialSale->status === 'posted'
             && $commercialSale->total_price_minor === $compatibilityFeeMinor
-            && $commercialAllocationMinor === $compatibilityFeeMinor;
+            && $commercialAllocationMinor === $compatibilityFeeMinor
+            && $commercialAttestation['ready'] === true
+            && count($commercialJournalEvents) === 2 + $commercialSale->allocations->count();
 
         return [
             'success' => $success,
@@ -406,8 +406,22 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                         'Allocated fee' => $this->money($commercialAllocationMinor),
                         'Commercial Position backed' => 'Yes',
                         'Allocation legs' => (string) $commercialSale->allocations->count(),
-                        'Pay Code escrow Position backed' => 'No',
+                        'Pay Code escrow Position backed' => 'Yes',
                         'Fixture persisted' => 'No',
+                    ],
+                ),
+                $this->step(
+                    'commercial_accounting_attested',
+                    'Inventory, Positions, waterfall totals, and journal evidence reconcile',
+                    $commercialAttestation['ready'] ? 'balanced' : 'review_required',
+                    [
+                        'Inventory equals Positions' => collect($commercialAttestation['connections'])
+                            ->every(static fn (array $row): bool => $row['difference_minor'] === 0)
+                            ? 'Yes'
+                            : 'No',
+                        'Commercial Clearing' => 'Zero',
+                        'Journal events' => (string) count($commercialJournalEvents),
+                        'Issues' => (string) $commercialAttestation['issue_count'],
                     ],
                 ),
                 $this->step(
@@ -455,9 +469,10 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                 'amount_minor' => $basicCashAmountMinor,
                 'instruction_fee_minor' => $compatibilityFeeMinor,
                 'instruction_fee_position_backed' => true,
-                'escrow_position_backed' => false,
-                'legacy_compatibility_amount_minor' => $legacyCompatibilityAmountMinor,
+                'escrow_position_backed' => true,
+                'legacy_compatibility_amount_minor' => 0,
                 'legacy_balance_after_minor' => $legacyBalanceAfterIssuance,
+                'client_funds_after_minor' => $balanceAfterIssuance,
                 'issued' => true,
                 'claimed' => false,
             ],
@@ -474,6 +489,10 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                     'reference' => $commercialSale->waterfall_policy_reference,
                     'version' => $commercialSale->waterfall_policy_version,
                 ],
+                'accounting_context' => data_get(
+                    $commercialSale->snapshot,
+                    'accounting_context',
+                ),
                 'allocations' => $commercialSale->allocations
                     ->map(static fn ($allocation): array => [
                         'sequence' => $allocation->sequence,
@@ -484,6 +503,12 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                     ])
                     ->values()
                     ->all(),
+                'journal_events' => $commercialJournalEvents,
+                'attestation' => [
+                    'ready' => $commercialAttestation['ready'],
+                    'issue_count' => $commercialAttestation['issue_count'],
+                    'connections' => $commercialAttestation['connections'],
+                ],
             ],
             'balances' => [
                 'before_funding' => $liabilityBeforeFunding,
@@ -654,14 +679,13 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
     }
 
     private function issuanceCapacity(
-        int $internalBalanceMinor,
+        int $clientFundsMinor,
         int $providerLiquidityMinor,
-        int $outstandingMinor,
+        int $reserveMinor,
     ): int {
         return max(
             0,
-            min($internalBalanceMinor, $providerLiquidityMinor)
-                - $outstandingMinor,
+            min($clientFundsMinor, $providerLiquidityMinor - $reserveMinor),
         );
     }
 
