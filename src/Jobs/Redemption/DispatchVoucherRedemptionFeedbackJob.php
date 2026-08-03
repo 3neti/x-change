@@ -33,6 +33,7 @@ final class DispatchVoucherRedemptionFeedbackJob implements ShouldBeUnique, Shou
 
     public function __construct(
         public readonly int $voucherClaimId,
+        public readonly ?string $outcomeFingerprint = null,
     ) {
         $this->onQueue((string) config(
             'x-change.redemption.feedback.queue',
@@ -55,7 +56,11 @@ final class DispatchVoucherRedemptionFeedbackJob implements ShouldBeUnique, Shou
 
     public function uniqueId(): string
     {
-        return 'voucher-redemption-feedback:'.$this->voucherClaimId;
+        return implode(':', [
+            'voucher-redemption-feedback',
+            (string) $this->voucherClaimId,
+            $this->outcomeFingerprint ?? 'claim-recorded',
+        ]);
     }
 
     public function handle(DispatchVoucherRedemptionFeedback $dispatch): void

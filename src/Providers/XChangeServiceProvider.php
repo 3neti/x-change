@@ -69,6 +69,7 @@ use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
 use LBHurtado\XChange\Console\Commands\DeployXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
+use LBHurtado\XChange\Console\Commands\Disbursement\RetryFailedPayCodeDisbursementCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Feedback\ShowFeedbackHistoryCommand;
 use LBHurtado\XChange\Console\Commands\Feedback\TestFeedbackEmailCommand;
@@ -1217,6 +1218,7 @@ class XChangeServiceProvider extends ServiceProvider
                 SubmitPayCodeClaimCommand::class,
                 SnapshotRiderSplashArtworkCommand::class,
                 CheckDisbursementStatusCommand::class,
+                RetryFailedPayCodeDisbursementCommand::class,
                 AttestAccountFundingPayCodeJournalIntegrityCommand::class,
                 ApproveFundingRequestCommand::class,
                 BackfillAccountFundingPayCodeJournalCommand::class,

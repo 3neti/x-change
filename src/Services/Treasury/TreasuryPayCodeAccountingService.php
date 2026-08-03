@@ -312,7 +312,7 @@ final readonly class TreasuryPayCodeAccountingService
             : VoucherClaim::query()
                 ->where('voucher_id', $voucher->getKey())
                 ->where('claim_number', $sliceNumber)
-                ->whereIn('status', ['succeeded', 'withdrawn'])
+                ->whereIn('status', ['succeeded', 'withdrawn', 'redeemed'])
                 ->first();
         $evidenceAmountMinor = $sliceNumber === null
             ? (int) round(
