@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
+import CockpitPayCodeRecordWorkspace from '../components/CockpitPayCodeRecordWorkspace.vue';
 import CockpitVoucherAuditPanel from '../components/CockpitVoucherAuditPanel.vue';
 import CockpitVoucherDistributionPanel from '../components/CockpitVoucherDistributionPanel.vue';
 import CockpitVoucherEvidencePanel from '../components/CockpitVoucherEvidencePanel.vue';
@@ -849,6 +850,18 @@ function policyLabel(value: string): string {
                 </details>
             </div>
 
+            <CockpitPayCodeRecordWorkspace
+                :code="code"
+                :status="status"
+                :voucher="props.read_model?.voucher"
+                :journal="props.read_model?.journal"
+                :feedback="props.read_model?.feedback"
+                :claim-url="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
+                :distribution-url="distributionWorkspaceHref"
+                :explorer-url="explorerHref"
+            />
+
+            <div class="hidden" aria-hidden="true" data-testid="cockpit-voucher-detail-legacy-projection">
             <section
                 class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
                 data-testid="cockpit-voucher-detail-primary-summary"
@@ -1406,6 +1419,7 @@ function policyLabel(value: string): string {
                         />
                     </div>
                 </div>
+            </div>
             </div>
         </section>
     </CockpitLayout>
