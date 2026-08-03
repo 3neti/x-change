@@ -4324,3 +4324,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/641-runtime-profile-compact-diagnostics-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only safety-panel compression closure; no safety values, runtime opt-in rules, configuration mutation, component resolution, handoff enablement, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.
 - Next recommended checkpoint: browser acceptance of the compact Runtime Profile header, component inventory, and safety summaries; then select the next Cockpit completion pass.
+
+## 2026-08-04 Update — Pay Code Record Workspace
+
+- `/x/cockpit/pay-codes/{code}` now presents one operator record with five visual views: Overview, Instructions, Claim & Evidence, Settlement, and Audit.
+- Amounts carry an explicit authority. A Treasury reservation is primary when present; settlement targets, issued face value, paid claims, and remaining value remain separately identifiable instead of being collapsed into one ambiguous amount.
+- Treasury-backed means principal is recognized in provider-attributed Treasury Positions. The legacy Cash entity is a compatibility value artifact and is not proof of current provider liquidity. A Pay Code may temporarily carry both while Treasury remains authoritative.
+- Settlement Envelope remains the evidence, readiness, and authorization container. It does not hold money and does not replace Treasury or the execution engine.
+- Claim inputs are translated into a safe operator projection. Mobile and email are masked; OTP and secrets are never returned; image evidence is omitted from page props.
+- Selfies, signatures, KYC images, and envelope documents use owner/system-principal-authorized, throttled, `no-store` reveal endpoints. Every successful reveal records `pay_code.evidence.viewed` in x-journal without persisting the binary payload.
+- Reading this workspace performs no provider call, execution, delivery, voucher mutation, journal mutation other than the explicit sensitive-evidence access record, or money movement.
