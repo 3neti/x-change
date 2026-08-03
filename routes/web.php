@@ -51,6 +51,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestReviewCo
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransferCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeEvidenceController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingInspectionController;
@@ -356,6 +357,13 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::prefix('pay-codes')->group(function (): void {
             Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');
             Route::get('{code}/distribution', CockpitDistributionWorkspacePageController::class)->name('x-change.cockpit.pay-codes.distribution');
+            Route::get(
+                '{code}/evidence/{source}/{evidence}',
+                CockpitPayCodeEvidenceController::class,
+            )->whereIn('source', ['input', 'envelope'])
+                ->whereNumber('evidence')
+                ->middleware('throttle:30,1')
+                ->name('x-change.cockpit.pay-codes.evidence.show');
             Route::get('{code}', CockpitVoucherDetailPageController::class)->name('x-change.cockpit.pay-codes.show');
         });
     });

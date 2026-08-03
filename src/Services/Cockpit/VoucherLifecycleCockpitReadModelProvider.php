@@ -71,6 +71,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly ?CockpitCampaignIssuanceDraftAdapterContract $campaignDraftAdapter = null,
         private readonly ?VoucherLiabilitySummaryContract $liabilities = null,
         private readonly ?MoneyMovementAccountingDecisionContract $moneyMovementDecision = null,
+        private readonly ?CockpitPayCodeDetailProjection $payCodeDetails = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -124,6 +125,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             correlationId: $query->correlationId,
         ));
         $summary = $this->summary($detail, $code);
+        $detailProjection = $this->payCodeDetails ?? new CockpitPayCodeDetailProjection;
         $execution = $fallback->execution;
         $journal = $this->integrations?->journal($query) ?? $fallback->journal;
         $actions = $this->integrations?->actions($query) ?? $fallback->actions;
@@ -135,6 +137,11 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 code: $this->summaryCode($detail, $code),
                 status: $this->summaryStatus($detail),
                 summary: $summary,
+                overview: $detailProjection->overview($detail),
+                instructions: $detailProjection->instructions($detail),
+                claims: $detailProjection->claims($detail),
+                settlement: $detailProjection->settlement($detail),
+                treasury: $detailProjection->treasury($detail),
                 evidence_summary: $this->voucherEvidenceSummary(
                     summary: $summary,
                     executionStatus: $execution->status,
@@ -149,14 +156,15 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'id',
                         'voucher_id',
                         'issuer_id',
-                        'instructions',
-                        'claims',
                         'approval',
                         'provider_payload',
                         'raw_payload',
                         'wallet',
                         'provider',
                     ],
+                    'instructions' => 'human-readable-whitelist',
+                    'claim_evidence' => 'authorized-summary-with-protected-artifacts',
+                    'settlement_envelope' => 'readiness-summary-without-payload',
                 ],
                 authorized: true,
             ),

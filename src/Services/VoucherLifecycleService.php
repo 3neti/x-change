@@ -296,6 +296,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
     {
         $status = $this->statusLabel($voucher);
         $approval = $this->approvalSummary($voucher);
+        $operational = $this->operationalSummary($voucher);
 
         return [
             'id' => $voucher->id,
@@ -312,11 +313,295 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'expires_at' => $voucher->expires_at?->toIso8601String(),
             'starts_at' => $voucher->starts_at?->toIso8601String(),
             'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
+            'capability' => [
+                'key' => $operational->capability_key,
+                'label' => $operational->capability_label,
+                'voucher_type_label' => $operational->voucher_type_label,
+            ],
+            'party' => $this->partySummary($voucher),
+            'amounts' => $this->amountFacts($voucher),
             'instructions' => $this->instructionsArray($voucher),
             'claims' => $this->claimsArray($voucher),
+            'claim_evidence' => $this->claimEvidenceArray($voucher),
             'redemption' => $this->redemptionSummary($voucher),
+            'backing' => $this->backingSummary($voucher),
+            'settlement_envelope' => $this->settlementEnvelopeSummary($voucher),
             'approval' => $approval,
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function amountFacts(Voucher $voucher): array
+    {
+        $instructions = $this->instructionsArray($voucher) ?? [];
+        $currency = $this->currency($voucher);
+        $faceAmountMinor = (int) round($this->amount($voucher) * 100);
+        $targetAmount = data_get($voucher, 'target_amount')
+            ?? data_get($instructions, 'target_amount');
+        $targetAmountMinor = is_numeric($targetAmount)
+            ? (int) round((float) $targetAmount * 100)
+            : null;
+        $reservedAmountMinor = data_get(
+            $voucher->metadata,
+            'treasury.pay_code_reservation.amount_minor',
+        );
+        $disbursedAmountMinor = VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->sum('disbursed_amount_minor');
+        $latestRemaining = VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('id')
+            ->value('remaining_balance_minor');
+
+        return collect([
+            [
+                'key' => 'face_value',
+                'label' => 'Pay Code Value',
+                'amount_minor' => $faceAmountMinor,
+                'currency' => $currency,
+                'authority' => 'voucher_instructions',
+                'primary' => $reservedAmountMinor === null && $targetAmountMinor === null,
+            ],
+            is_numeric($targetAmountMinor) ? [
+                'key' => 'target_value',
+                'label' => 'Target Value',
+                'amount_minor' => (int) $targetAmountMinor,
+                'currency' => $currency,
+                'authority' => 'settlement_target',
+                'primary' => $reservedAmountMinor === null,
+            ] : null,
+            is_numeric($reservedAmountMinor) ? [
+                'key' => 'reserved_principal',
+                'label' => 'Reserved Principal',
+                'amount_minor' => (int) $reservedAmountMinor,
+                'currency' => (string) data_get(
+                    $voucher->metadata,
+                    'treasury.pay_code_reservation.currency',
+                    $currency,
+                ),
+                'authority' => 'treasury_position',
+                'primary' => true,
+            ] : null,
+            $disbursedAmountMinor > 0 ? [
+                'key' => 'paid_amount',
+                'label' => 'Paid Amount',
+                'amount_minor' => (int) $disbursedAmountMinor,
+                'currency' => $currency,
+                'authority' => 'voucher_claims',
+                'primary' => false,
+            ] : null,
+            is_numeric($latestRemaining) ? [
+                'key' => 'remaining_value',
+                'label' => 'Remaining Value',
+                'amount_minor' => (int) $latestRemaining,
+                'currency' => $currency,
+                'authority' => 'latest_claim',
+                'primary' => false,
+            ] : null,
+        ])->filter()->values()->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function backingSummary(Voucher $voucher): array
+    {
+        $reservation = data_get($voucher->metadata, 'treasury.pay_code_reservation');
+
+        if (is_array($reservation) && $reservation !== []) {
+            return [
+                'mode' => 'treasury_position',
+                'label' => 'Treasury Backing',
+                'status' => (string) ($reservation['status'] ?? 'reserved'),
+                'amount_minor' => is_numeric($reservation['amount_minor'] ?? null)
+                    ? (int) $reservation['amount_minor']
+                    : null,
+                'currency' => $reservation['currency'] ?? $this->currency($voucher),
+                'provider' => $reservation['provider'] ?? null,
+                'connection_reference' => $reservation['connection_reference'] ?? null,
+                'operation_reference' => $reservation['operation_reference'] ?? null,
+                'cash_entity_present' => $voucher->cash !== null,
+                'provider_calls_on_read' => false,
+            ];
+        }
+
+        if ($voucher->cash !== null) {
+            return [
+                'mode' => 'legacy_cash_entity',
+                'label' => 'Legacy Backing',
+                'status' => 'cash_entity',
+                'amount_minor' => (int) round($this->amount($voucher) * 100),
+                'currency' => $this->currency($voucher),
+                'cash_entity_present' => true,
+                'provider_calls_on_read' => false,
+            ];
+        }
+
+        return [
+            'mode' => 'unverified',
+            'label' => 'Backing Unverified',
+            'status' => 'not_available',
+            'amount_minor' => null,
+            'currency' => $this->currency($voucher),
+            'cash_entity_present' => false,
+            'provider_calls_on_read' => false,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function claimEvidenceArray(Voucher $voucher): array
+    {
+        return $voucher->inputs()
+            ->oldest('id')
+            ->get()
+            ->map(function (Model $input) use ($voucher): array {
+                $name = (string) $input->getAttribute('name');
+                $value = $input->getAttribute('value');
+                $kind = $this->evidenceKind($name, $value);
+                $sensitive = in_array($name, [
+                    'otp',
+                    'secret',
+                    'signature',
+                    'selfie',
+                    'kyc',
+                    'kyc_id_front',
+                    'kyc_id_back',
+                ], true);
+
+                return [
+                    'id' => (int) $input->getKey(),
+                    'key' => $name,
+                    'label' => Str::headline($name),
+                    'kind' => $kind,
+                    'status' => 'captured',
+                    'value' => $sensitive
+                        ? null
+                        : $this->safeEvidenceValue($name, $value),
+                    'revealable' => in_array($kind, ['image', 'document'], true),
+                    'reveal_href' => in_array($kind, ['image', 'document'], true)
+                        && Route::has('x-change.cockpit.pay-codes.evidence.show')
+                            ? route('x-change.cockpit.pay-codes.evidence.show', [
+                                'code' => $voucher->code,
+                                'source' => 'input',
+                                'evidence' => $input->getKey(),
+                            ])
+                            : null,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function settlementEnvelopeSummary(Voucher $voucher): array
+    {
+        $envelope = $voucher->envelope()
+            ->with(['checklistItems', 'attachments', 'signals'])
+            ->first();
+
+        if ($envelope === null) {
+            return [
+                'available' => false,
+                'required' => false,
+                'status' => 'not_attached',
+            ];
+        }
+
+        return [
+            'available' => true,
+            'required' => true,
+            'reference' => $envelope->reference_code,
+            'driver' => $envelope->driver_id,
+            'driver_version' => $envelope->driver_version,
+            'status' => $envelope->status->value,
+            'payload_version' => $envelope->payload_version,
+            'settleable' => $envelope->isSettleable(),
+            'checklist' => $envelope->getChecklistStatus(),
+            'gates' => collect($envelope->gates_cache ?? [])
+                ->map(fn (mixed $value, mixed $key): array => [
+                    'key' => (string) $key,
+                    'label' => Str::headline((string) $key),
+                    'satisfied' => $value === true,
+                ])->values()->all(),
+            'signals' => $envelope->signals->map(fn (Model $signal): array => [
+                'key' => (string) $signal->getAttribute('key'),
+                'label' => Str::headline((string) $signal->getAttribute('key')),
+                'source' => $signal->getAttribute('source'),
+                'present' => filled($signal->getAttribute('value')),
+            ])->values()->all(),
+            'attachments' => $envelope->attachments->map(fn (Model $attachment): array => [
+                'id' => (int) $attachment->getKey(),
+                'label' => (string) $attachment->getAttribute('original_filename'),
+                'document_type' => (string) $attachment->getAttribute('doc_type'),
+                'mime_type' => (string) $attachment->getAttribute('mime_type'),
+                'size' => (int) $attachment->getAttribute('size'),
+                'review_status' => (string) $attachment->getAttribute('review_status'),
+                'reveal_href' => Route::has('x-change.cockpit.pay-codes.evidence.show')
+                    ? route('x-change.cockpit.pay-codes.evidence.show', [
+                        'code' => $voucher->code,
+                        'source' => 'envelope',
+                        'evidence' => $attachment->getKey(),
+                    ])
+                    : null,
+            ])->values()->all(),
+            'timestamps' => [
+                'created_at' => $envelope->created_at?->toIso8601String(),
+                'locked_at' => $envelope->locked_at?->toIso8601String(),
+                'settled_at' => $envelope->settled_at?->toIso8601String(),
+                'cancelled_at' => $envelope->cancelled_at?->toIso8601String(),
+            ],
+            'payload_exposed' => false,
+        ];
+    }
+
+    protected function evidenceKind(string $name, mixed $value): string
+    {
+        if (in_array($name, ['selfie', 'signature', 'kyc_id_front', 'kyc_id_back'], true)) {
+            return 'image';
+        }
+
+        if ($name === 'location') {
+            return 'location';
+        }
+
+        if ($name === 'kyc' || str_starts_with($name, 'kyc_')) {
+            return 'verification';
+        }
+
+        return 'text';
+    }
+
+    protected function safeEvidenceValue(string $name, mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        if ($name === 'mobile') {
+            return $this->maskedMobile($normalized);
+        }
+
+        if ($name === 'email') {
+            [$local, $domain] = array_pad(explode('@', $normalized, 2), 2, null);
+
+            return $domain === null
+                ? 'Redacted'
+                : Str::substr($local, 0, 1).'•••@'.$domain;
+        }
+
+        return Str::limit($normalized, 240);
     }
 
     protected function toStatusArray(Voucher $voucher): array
@@ -544,13 +829,19 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
     {
         return $voucher->claims
             ->map(fn ($claim) => [
+                'id' => (int) $claim->getKey(),
                 'claim_number' => $claim->claim_number,
                 'claim_type' => $claim->claim_type,
+                'settlement_mode' => $claim->settlement_mode,
                 'status' => $claim->status,
+                'requested_amount_minor' => $claim->requested_amount_minor,
                 'disbursed_amount_minor' => $claim->disbursed_amount_minor,
+                'remaining_balance_minor' => $claim->remaining_balance_minor,
                 'currency' => $claim->currency,
+                'claimer_mobile_masked' => $this->maskedMobile($claim->claimer_mobile),
                 'bank_code' => $claim->bank_code,
                 'account_number_masked' => $claim->account_number_masked,
+                'reference' => $claim->reference,
                 'attempted_at' => $claim->attempted_at?->toIso8601String(),
                 'completed_at' => $claim->completed_at?->toIso8601String(),
                 'failure_message' => $claim->failure_message,

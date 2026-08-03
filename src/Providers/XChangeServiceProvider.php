@@ -270,6 +270,7 @@ use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Claim\StoredRiderStampClaimShareCardRenderer;
+use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailProjection;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftAuditMetadataBuilder;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftCompiler;
@@ -653,6 +654,7 @@ class XChangeServiceProvider extends ServiceProvider
                 operatorIssuanceActivity: $app->make(DurableCockpitOperatorIssuanceActivityReadModelProvider::class),
                 liabilities: $app->make(VoucherLiabilitySummaryContract::class),
                 moneyMovementDecision: $app->make(MoneyMovementAccountingDecisionContract::class),
+                payCodeDetails: $app->make(CockpitPayCodeDetailProjection::class),
             );
         });
         $this->app->singleton(
