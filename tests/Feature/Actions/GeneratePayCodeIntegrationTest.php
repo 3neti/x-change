@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Support\Facades\Artisan;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -543,6 +544,30 @@ it('settles provider costs only from exact authoritative cash-movement evidence'
         observedAt: now()->toRfc3339String(),
         idempotencyKey: 'provider-cost:duplicate',
     )))->toThrow(CommercialSaleConflict::class, 'already settled');
+
+    expect(Artisan::call('x-change:treasury:attest-commercial-accounting', [
+        '--connection' => ['netbank-primary'],
+        '--json' => true,
+    ]))->toBe(0);
+    $balanced = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($balanced['ready'])->toBeTrue()
+        ->and($balanced['issue_count'])->toBe(0)
+        ->and($balanced['connections'][0]['difference_minor'])->toBe(0);
+
+    CommercialAllocation::query()
+        ->whereKey($sale->allocations()->where('category', 'product_revenue')->sole()->getKey())
+        ->increment('amount_minor');
+
+    expect(Artisan::call('x-change:treasury:attest-commercial-accounting', [
+        '--connection' => ['netbank-primary'],
+        '--json' => true,
+    ]))->toBe(1);
+    $unbalanced = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($unbalanced['ready'])->toBeFalse()
+        ->and(collect($unbalanced['issues'])->pluck('code')->all())
+        ->toContain('allocation_total_mismatch');
 });
 
 it('accrues an attributed partner commission to the partner principal', function () {
