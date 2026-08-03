@@ -31,10 +31,13 @@ final class RecordCampaignDeliveryAttempt
         array $metadata = [],
     ): CampaignDeliveryAttempt {
         $attempt = DB::transaction(function () use ($authorization, $channel, $actor, $idempotencyKey, $fulfillment, $recipientRoute, $retryOfReference, $metadata): CampaignDeliveryAttempt {
+            CampaignWorksheetAuthorization::query()
+                ->lockForUpdate()
+                ->findOrFail($authorization->getKey());
+
             $attemptNumber = CampaignDeliveryAttempt::query()
                 ->where('campaign_worksheet_authorization_id', $authorization->getKey())
                 ->where('channel', $channel)
-                ->lockForUpdate()
                 ->max('attempt_number');
 
             $attempt = CampaignDeliveryAttempt::query()->create([
@@ -73,9 +76,12 @@ final class RecordCampaignDeliveryAttempt
         array $metadata = [],
     ): CampaignDeliveryAttemptEvent {
         $event = DB::transaction(function () use ($attempt, $eventType, $providerStatus, $providerDeliveryReference, $safeErrorCode, $metadata): CampaignDeliveryAttemptEvent {
-            $sequence = (int) $attempt->events()->lockForUpdate()->max('sequence') + 1;
+            $lockedAttempt = CampaignDeliveryAttempt::query()
+                ->lockForUpdate()
+                ->findOrFail($attempt->getKey());
+            $sequence = (int) $lockedAttempt->events()->max('sequence') + 1;
 
-            return $attempt->events()->create([
+            return $lockedAttempt->events()->create([
                 'sequence' => $sequence,
                 'event_type' => $eventType,
                 'provider_status' => $providerStatus,
@@ -125,9 +131,7 @@ final class RecordCampaignDeliveryAttempt
                 return [$existing, false];
             }
 
-            $sequence = (int) $lockedAttempt->events()
-                ->lockForUpdate()
-                ->max('sequence') + 1;
+            $sequence = (int) $lockedAttempt->events()->max('sequence') + 1;
             $event = $lockedAttempt->events()->create([
                 'sequence' => $sequence,
                 'event_type' => $eventType,
