@@ -556,7 +556,8 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('<CockpitCampaignPayCodeExperience');
         expect(page).toContain('Recipients');
         expect(page).toContain('<CockpitCampaignWorksheetBeneficiaries');
-        expect(page).toContain("isDraft() ? 'Draft' : 'Authorized'");
+        expect(page).toContain('const worksheetDisplayStatus = computed');
+        expect(page).toContain("? 'Completed'");
         expect(page).not.toContain('Private Worksheet');
         expect(page).toContain(
             'data-testid="campaign-create-approval-pay-code"',
@@ -571,6 +572,9 @@ describe('Cockpit campaign worksheets', () => {
         ).toBeLessThan(page.indexOf('<CockpitCampaignImportWorkspace'));
         expect(page).toContain('v-if="isDraft()"');
         expect(page).toContain('Pay Codes Issued');
+        expect(page).toContain('Campaign Complete');
+        expect(page).toContain('completed_count');
+        expect(page).toContain('recipient payments are');
         expect(page).toContain('Bank Transfers Unavailable');
         expect(page).toContain('props.direct_bank_transfer_enabled');
         expect(page).toContain('Recipients Ready');

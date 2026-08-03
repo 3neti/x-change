@@ -855,6 +855,15 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
 
     expect($authorization->fulfillments()->where('status', 'issued')->count())->toBe(2)
         ->and($authorization->fulfillments()->whereNotNull('pay_code')->count())->toBe(2);
+
+    $authorization->fulfillments()->update(['status' => 'completed']);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertOk()
+        ->assertJsonPath('props.fulfillment_summary.planned_count', 0)
+        ->assertJsonPath('props.fulfillment_summary.issued_count', 0)
+        ->assertJsonPath('props.fulfillment_summary.completed_count', 2);
 });
 
 it('rolls back campaign Pay Code issuance when Client Funds are insufficient', function () {

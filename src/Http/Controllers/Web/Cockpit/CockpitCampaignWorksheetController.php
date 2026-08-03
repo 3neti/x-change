@@ -295,12 +295,13 @@ class CockpitCampaignWorksheetController extends Controller
             ->withCount([
                 'fulfillments as planned_count' => fn ($query) => $query->where('status', 'planned'),
                 'fulfillments as issued_count' => fn ($query) => $query->where('status', 'issued'),
+                'fulfillments as completed_count' => fn ($query) => $query->where('status', 'completed'),
                 'fulfillments as provider_ready_count' => fn ($query) => $query->where('status', 'awaiting_provider_dispatch'),
                 'fulfillments as fallback_count' => fn ($query) => $query->where('status', 'fallback_planned'),
             ])
             ->latest('id')
             ->first()
-            ?->only(['planned_count', 'issued_count', 'provider_ready_count', 'fallback_count']) ?? [];
+            ?->only(['planned_count', 'issued_count', 'completed_count', 'provider_ready_count', 'fallback_count']) ?? [];
     }
 
     /** @return array<string, int|string|null> */

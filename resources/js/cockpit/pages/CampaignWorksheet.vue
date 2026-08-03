@@ -124,7 +124,24 @@ const peso = (minor: number) =>
     }).format(minor / 100);
 const plannedCount = (): number => props.fulfillment_summary.planned_count ?? 0;
 const issuedCount = (): number => props.fulfillment_summary.issued_count ?? 0;
+const completedCount = (): number =>
+    props.fulfillment_summary.completed_count ?? 0;
 const isDraft = (): boolean => props.worksheet.status === 'draft';
+const readableLabel = (value: string): string =>
+    value
+        .replaceAll('_', ' ')
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const isCampaignComplete = computed(
+    () =>
+        props.worksheet.status === 'authorized' &&
+        props.worksheet.rows.length > 0 &&
+        completedCount() === props.worksheet.rows.length,
+);
+const worksheetDisplayStatus = computed(() =>
+    isCampaignComplete.value
+        ? 'Completed'
+        : readableLabel(props.worksheet.status),
+);
 const hasPendingImportRows = computed(() =>
     props.imports.some((item) => item.unapplied_valid_count > 0),
 );
@@ -132,12 +149,14 @@ const representativeRow = computed(() => props.worksheet.rows[0]);
 const worksheetTotalMinor = computed(() =>
     props.worksheet.rows.reduce((total, row) => total + row.amount_minor, 0),
 );
-const readableLabel = (value: string): string =>
-    value
-        .replaceAll('_', ' ')
-        .replace(/\b\w/g, (letter) => letter.toUpperCase());
 const fulfillmentReadinessDescription = (): string => {
     const count = plannedCount();
+
+    if (isCampaignComplete.value) {
+        return completedCount() === 1
+            ? 'The recipient payment is complete.'
+            : `All ${completedCount()} recipient payments are complete.`;
+    }
 
     if (count === 0 && issuedCount() > 0) {
         return `All ${issuedCount()} ${issuedCount() === 1 ? 'Pay Code is' : 'Pay Codes are'} ready to distribute.`;
@@ -264,9 +283,14 @@ const sendApproval = (): void => {
                                     {{ readableLabel(props.worksheet.profile) }}
                                 </span>
                                 <span
-                                    class="rounded-full bg-orange-50 px-2 py-0.5 text-[0.65rem] font-semibold text-orange-700 dark:bg-orange-950/50 dark:text-orange-200"
+                                    :class="
+                                        isCampaignComplete
+                                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200'
+                                            : 'bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-200'
+                                    "
+                                    class="rounded-full px-2 py-0.5 text-[0.65rem] font-semibold"
                                 >
-                                    {{ readableLabel(props.worksheet.status) }}
+                                    {{ worksheetDisplayStatus }}
                                 </span>
                             </div>
                             <h1
@@ -361,7 +385,7 @@ const sendApproval = (): void => {
                                 <span
                                     class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                 >
-                                    {{ isDraft() ? 'Draft' : 'Authorized' }}
+                                    {{ worksheetDisplayStatus }}
                                 </span>
                             </div>
                             <p
@@ -518,11 +542,13 @@ const sendApproval = (): void => {
                             class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50"
                         >
                             {{
-                                plannedCount() > 0
-                                    ? 'Recipients Ready'
-                                    : issuedCount() > 0
-                                      ? 'Pay Codes Issued'
-                                      : 'Preparing Pay Codes'
+                                isCampaignComplete
+                                    ? 'Campaign Complete'
+                                    : plannedCount() > 0
+                                      ? 'Recipients Ready'
+                                      : issuedCount() > 0
+                                        ? 'Pay Codes Issued'
+                                        : 'Preparing Pay Codes'
                             }}
                         </h2>
                         <p
@@ -640,7 +666,7 @@ const sendApproval = (): void => {
             </section>
             <section
                 v-if="props.worksheet.status === 'authorized'"
-                class="grid grid-cols-2 gap-3 sm:grid-cols-4"
+                class="grid grid-cols-2 gap-3 sm:grid-cols-5"
             >
                 <div
                     v-for="[label, value] in [
@@ -649,6 +675,10 @@ const sendApproval = (): void => {
                             props.fulfillment_summary.planned_count ?? 0,
                         ],
                         ['Issued', props.fulfillment_summary.issued_count ?? 0],
+                        [
+                            'Completed',
+                            props.fulfillment_summary.completed_count ?? 0,
+                        ],
                         [
                             'Provider Ready',
                             props.fulfillment_summary.provider_ready_count ?? 0,
