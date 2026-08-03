@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Support\Facades\Bus;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
@@ -21,6 +22,157 @@ use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 
 it('pays a treasury-backed pay code without a legacy cash entity', function (): void {
     Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(
+        transactionId: 'NETBANK-TREASURY-PAYOUT-1',
+        provider: 'netbank',
+    );
+    $reserveBefore = treasuryBackedPayoutPositionBalance(
+        $issuer,
+        TreasuryPositionPurpose::PayCodeReserve,
+    );
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+        ],
+    ]);
+
+    $reconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+
+    expect($result->claimed)->toBeTrue()
+        ->and($result->status)->toBe('succeeded')
+        ->and($result->disbursed_amount)->toBe(20.0)
+        ->and($voucher->refresh()->cash)->toBeNull()
+        ->and($reconciliation->status)->toBe('succeeded')
+        ->and($reconciliation->provider_transaction_id)->toBe('NETBANK-TREASURY-PAYOUT-1')
+        ->and($reconciliation->internal_status)->toBe('finalized')
+        ->and(data_get(
+            $voucher->metadata,
+            'treasury.pay_code_reservation.status',
+        ))->toBe('settled')
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe($reserveBefore - 2_000)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))
+        ->toBe($inventoryBefore - 2_000);
+    expect(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole())
+        ->status->toBe('succeeded')
+        ->disbursed_amount_minor->toBe(2_000);
+    $provider->assertDisburseCalledTimes(1);
+    expect($provider->lastRequest?->amount)->toBe(20.0)
+        ->and($provider->lastRequest?->bank_code)->toBe('GXCHPHM2XXX')
+        ->and($provider->lastRequest?->account_number)->toBe('09173011987')
+        ->and($provider->lastRequest?->external_id)->toBe((string) $voucher->getKey())
+        ->and($provider->lastRequest?->external_code)->toBe($voucher->code);
+});
+
+function treasuryBackedPayoutPositionBalance(
+    object $owner,
+    TreasuryPositionPurpose $purpose,
+): int {
+    $position = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $owner)
+        ->where('connection_reference', 'netbank-primary')
+        ->where('purpose', $purpose)
+        ->sole();
+
+    return (int) Wallet::query()
+        ->findOrFail($position->internal_ledger_id)
+        ->balance;
+}
+
+it('refuses missing Treasury payout recovery without explicit provider confirmation', function (): void {
+    $provider = fakePayoutProvider();
+
+    $this->artisan('xchange:disbursement:resume-missing-treasury', [
+        'code' => 'CAMP-SAFE',
+        '--json' => true,
+    ])->assertFailed();
+
+    $provider->assertNoDisbursementAttempted();
+});
+
+it('resumes the known pre-provider reference persistence failure exactly once', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(
+        transactionId: 'NETBANK-TREASURY-RECOVERY-1',
+        provider: 'netbank',
+    );
+    $providerReference = $voucher->code.'-09173011987-S2';
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_code' => $voucher->code,
+        'claim_type' => 'withdraw',
+        'provider' => 'unknown',
+        'provider_reference' => $providerReference,
+        'status' => 'unknown',
+        'internal_status' => 'recorded',
+        'amount' => 20,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******1987',
+        'settlement_rail' => 'INSTAPAY',
+        'attempt_count' => 1,
+        'attempted_at' => now(),
+        'needs_review' => true,
+        'review_reason' => 'Gateway outcome uncertain',
+        'error_message' => 'null external_reference_code on disbursement_attempts',
+    ]);
+
+    $claim = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+        ],
+    ]);
+
+    expect($claim->claimed)->toBeTrue();
+    $provider->assertNoDisbursementAttempted();
+
+    $this->artisan('xchange:disbursement:resume-missing-treasury', [
+        'code' => $voucher->code,
+        '--confirm-no-provider-transfer' => true,
+        '--json' => true,
+    ])->assertSuccessful();
+
+    $reconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+
+    expect($reconciliation->status)->toBe('succeeded')
+        ->and($reconciliation->provider_transaction_id)->toBe('NETBANK-TREASURY-RECOVERY-1')
+        ->and($reconciliation->needs_review)->toBeFalse()
+        ->and($reconciliation->error_message)->toBeNull()
+        ->and(data_get(
+            $voucher->refresh()->metadata,
+            'treasury.pay_code_reservation.status',
+        ))->toBe('settled');
+    $provider->assertDisburseCalledTimes(1);
+
+    $this->artisan('xchange:disbursement:resume-missing-treasury', [
+        'code' => $voucher->code,
+        '--confirm-no-provider-transfer' => true,
+        '--json' => true,
+    ])->assertFailed();
+    $provider->assertDisburseCalledTimes(1);
+});
+
+/**
+ * @return array{issuer: object, voucher: Voucher}
+ */
+function treasuryBackedVoucherForPayout(): array
+{
     $issuer = actingAsTestUser();
     enableNetbankTreasuryForTests();
     app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
@@ -74,77 +226,6 @@ it('pays a treasury-backed pay code without a legacy cash entity', function (): 
         providerPrincipalMinor: 2_000,
         currency: 'PHP',
     );
-    $provider = fakePayoutProvider()->willReturnSuccessfulResult(
-        transactionId: 'NETBANK-TREASURY-PAYOUT-1',
-        provider: 'netbank',
-    );
-    $reserveBefore = treasuryBackedPayoutPositionBalance(
-        $issuer,
-        TreasuryPositionPurpose::PayCodeReserve,
-    );
-    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
 
-    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
-        'mobile' => '09173011987',
-        'recipient_country' => 'PH',
-        'bank_account' => [
-            'bank_code' => 'GXCHPHM2XXX',
-            'account_number' => '09173011987',
-        ],
-    ]);
-
-    $reconciliation = DisbursementReconciliation::query()
-        ->where('voucher_id', $voucher->getKey())
-        ->sole();
-
-    expect($result->claimed)->toBeTrue()
-        ->and($result->status)->toBe('succeeded')
-        ->and($result->disbursed_amount)->toBe(20.0)
-        ->and($voucher->refresh()->cash)->toBeNull()
-        ->and($reconciliation->status)->toBe('succeeded')
-        ->and($reconciliation->provider_transaction_id)->toBe('NETBANK-TREASURY-PAYOUT-1')
-        ->and($reconciliation->internal_status)->toBe('finalized')
-        ->and(data_get(
-            $voucher->metadata,
-            'treasury.pay_code_reservation.status',
-        ))->toBe('settled')
-        ->and(treasuryBackedPayoutPositionBalance(
-            $issuer,
-            TreasuryPositionPurpose::PayCodeReserve,
-        ))->toBe($reserveBefore - 2_000)
-        ->and((int) TreasuryInventory::query()->sum('balance_minor'))
-        ->toBe($inventoryBefore - 2_000);
-    expect(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole())
-        ->status->toBe('succeeded')
-        ->disbursed_amount_minor->toBe(2_000);
-    $provider->assertDisburseCalledTimes(1);
-    expect($provider->lastRequest?->amount)->toBe(20.0)
-        ->and($provider->lastRequest?->bank_code)->toBe('GXCHPHM2XXX')
-        ->and($provider->lastRequest?->account_number)->toBe('09173011987');
-});
-
-function treasuryBackedPayoutPositionBalance(
-    object $owner,
-    TreasuryPositionPurpose $purpose,
-): int {
-    $position = TreasuryPosition::query()
-        ->whereMorphedTo('principal', $owner)
-        ->where('connection_reference', 'netbank-primary')
-        ->where('purpose', $purpose)
-        ->sole();
-
-    return (int) Wallet::query()
-        ->findOrFail($position->internal_ledger_id)
-        ->balance;
+    return compact('issuer', 'voucher');
 }
-
-it('refuses missing Treasury payout recovery without explicit provider confirmation', function (): void {
-    $provider = fakePayoutProvider();
-
-    $this->artisan('xchange:disbursement:resume-missing-treasury', [
-        'code' => 'CAMP-SAFE',
-        '--json' => true,
-    ])->assertFailed();
-
-    $provider->assertNoDisbursementAttempted();
-});

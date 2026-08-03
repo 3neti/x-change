@@ -26,8 +26,10 @@ final readonly class TreasuryBackedPayCodeDisbursement
         private WithdrawalDisbursementExecutor $disbursements,
     ) {}
 
-    public function handle(Voucher $voucher): Voucher
-    {
+    public function handle(
+        Voucher $voucher,
+        bool $resumeKnownPreProviderFailure = false,
+    ): Voucher {
         $lock = Cache::lock(
             'x-change:treasury-pay-code-disbursement:'.$voucher->getKey(),
             120,
@@ -49,8 +51,17 @@ final readonly class TreasuryBackedPayCodeDisbursement
                 return $voucher;
             }
 
-            if ($this->existingAttempt($voucher) instanceof DisbursementReconciliation) {
-                return $voucher;
+            $existingAttempt = $this->existingAttempt($voucher);
+
+            if ($existingAttempt instanceof DisbursementReconciliation) {
+                if (
+                    ! $resumeKnownPreProviderFailure
+                    || ! $this->isKnownPreProviderPersistenceFailure($existingAttempt)
+                ) {
+                    return $voucher;
+                }
+
+                $this->prepareKnownPreProviderFailureForRetry($existingAttempt);
             }
 
             $contact = $voucher->contact;
@@ -127,6 +138,39 @@ final readonly class TreasuryBackedPayCodeDisbursement
             ->where('voucher_id', $voucher->getKey())
             ->latest('id')
             ->first();
+    }
+
+    public function isKnownPreProviderPersistenceFailure(
+        DisbursementReconciliation $reconciliation,
+    ): bool {
+        $error = (string) $reconciliation->error_message;
+
+        return $reconciliation->provider === 'unknown'
+            && $reconciliation->provider_transaction_id === null
+            && $reconciliation->status === 'unknown'
+            && $reconciliation->needs_review
+            && str_contains($error, 'disbursement_attempts')
+            && str_contains($error, 'external_reference_code');
+    }
+
+    private function prepareKnownPreProviderFailureForRetry(
+        DisbursementReconciliation $reconciliation,
+    ): void {
+        $metadata = (array) $reconciliation->meta;
+        $metadata['pre_provider_recovery'] = [
+            'reason' => 'missing_external_reference_code',
+            'resumed_at' => now()->toIso8601String(),
+        ];
+
+        $reconciliation->forceFill([
+            'status' => 'intent',
+            'internal_status' => 'intent',
+            'needs_review' => false,
+            'review_reason' => null,
+            'error_message' => null,
+            'raw_response' => null,
+            'meta' => $metadata,
+        ])->save();
     }
 
     /**

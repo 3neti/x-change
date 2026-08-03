@@ -30,17 +30,28 @@ final readonly class ResumeMissingTreasuryPayCodeDisbursement
             ->where('code', mb_strtoupper(trim($code)))
             ->firstOrFail();
 
+        $existingAttempt = DisbursementReconciliation::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('id')
+            ->first();
+
         if (
             $voucher->redeemed_at === null
             || data_get($voucher->metadata, 'treasury.pay_code_reservation.status') !== 'reserved'
-            || DisbursementReconciliation::query()->where('voucher_id', $voucher->getKey())->exists()
+            || (
+                $existingAttempt instanceof DisbursementReconciliation
+                && ! $this->disbursements->isKnownPreProviderPersistenceFailure($existingAttempt)
+            )
         ) {
             throw new RuntimeException(
                 'The Pay Code is not eligible for missing Treasury disbursement recovery.',
             );
         }
 
-        $voucher = $this->disbursements->handle($voucher);
+        $voucher = $this->disbursements->handle(
+            $voucher,
+            $existingAttempt instanceof DisbursementReconciliation,
+        );
         $reconciliation = DisbursementReconciliation::query()
             ->where('voucher_id', $voucher->getKey())
             ->latest('id')

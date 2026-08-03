@@ -3,9 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\Contact\Classes\BankAccount;
-use LBHurtado\Contact\Models\Contact;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
-use Spatie\SchemalessAttributes\SchemalessAttributes;
 
 // TODO: Strengthen this once PayoutRequestData exposes recipient identity fields
 // or recipient normalization is extracted into a dedicated service.
@@ -31,7 +29,10 @@ it('builds a payout request from withdrawal context', function () {
         ->and($request->amount)->toBe(750.00)
         ->and($request->account_number)->toBe('09173011987')
         ->and($request->bank_code)->toBe('GXCHPHM2XXX')
-        ->and($request->settlement_rail)->toBe('INSTAPAY');
+        ->and($request->settlement_rail)->toBe('INSTAPAY')
+        ->and($request->external_id)->toBe((string) $voucher->getKey())
+        ->and($request->external_code)->toBe($voucher->code)
+        ->and($request->mobile)->toBe('09171234567');
 });
 
 it('uses configured settlement rail from voucher instructions', function () {

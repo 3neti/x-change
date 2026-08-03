@@ -37,6 +37,10 @@ class WithdrawalPayoutRequestFactory
             'recipient_name' => $contact->name ?: $contact->mobile ?: 'Voucher Recipient',
             'recipient_mobile' => (new PhoneNumber($contact->mobile, 'PH'))->formatE164(),
             'settlement_rail' => $via,
+            'external_id' => (string) $voucher->getKey(),
+            'external_code' => $voucher->code,
+            'user_id' => $voucher->owner_id !== null ? (int) $voucher->owner_id : null,
+            'mobile' => $contact->mobile,
         ]);
     }
 }
