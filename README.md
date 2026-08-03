@@ -138,6 +138,18 @@ Financial mutations are expected to be:
 - append-only in their journal and reconciliation evidence;
 - fail-closed when topology, authority, or liquidity is unresolved.
 
+Commercial charges are accepted as an immutable, versioned x-commerce sale and
+posted through Commercial Clearing into provider-cost payables, product
+revenue, attributed partner payables, and commercial revenue. Provider costs
+and partner commissions leave Inventory only from exact settlement evidence;
+partner payouts additionally require independent maker-checker approval.
+
+Operators can verify the complete boundary without moving money:
+
+```bash
+php artisan x-change:treasury:attest-commercial-accounting --json --no-interaction
+```
+
 ## Package architecture
 
 x-change is the orchestration package. Its collaborators provide bounded

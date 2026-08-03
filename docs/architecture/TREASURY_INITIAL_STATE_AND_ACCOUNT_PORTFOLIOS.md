@@ -442,10 +442,10 @@ Large deposits use the same rule. An operator does not type “₱2,000,000” i
 - **Issuance Capacity** is:
 
 ```text
-max(0, min(Internal Balance, Provider Liquidity) - Outstanding Pay Codes)
+max(0, min(Client Funds, Provider Liquidity - Outstanding Pay Codes))
 ```
 
-Capacity therefore cannot exceed either attributed client funds or provider liquidity, and it is reduced by outstanding Pay Codes.
+Client Funds already excludes value moved into Pay Code Reserve. The formula therefore subtracts the reserve from provider liquidity, not from Client Funds a second time. Capacity cannot exceed either spendable attributed funds or provider liquidity remaining after the outstanding obligation.
 
 ## Pay Code commercial waterfall
 
@@ -468,13 +468,34 @@ Account Client Funds → system Commercial Clearing
           └─→ Commercial Revenue residual
 ```
 
-The accepted snapshot contains the catalog version, policy version, attribution version, quote lines, and exact allocation plan. x-change persists that snapshot before posting the Treasury movements. It does not recompute old sales from current configuration.
+The accepted snapshot contains the catalog version, policy version, attribution version, quote lines, exact allocation plan, provider, connection, rail, currency, product, recognition policy, expected provider cost, and attributed partner. x-change persists that versioned context before posting the Treasury movements. It does not recompute old sales from current configuration.
 
 One database transaction creates the sale, charges Client Funds, and allocates every waterfall leg. Any failed leg rolls back the entire sale. The acceptance event and Treasury operation references are unique, so a repeated issuance handoff returns the original posting without a second debit. A reversal creates exact compensating Treasury movements; it never edits or deletes the original sale or ledger operations.
 
-Provider cost payable is a commercial classification, not proof that a bank has already deducted cash. Actual external settlement remains subject to provider evidence and reconciliation. Partner commission payable records the amount and recipient reference produced by the accepted attribution snapshot; a later controlled payout workflow is still required to discharge that payable.
+Provider cost payable is a commercial classification, not proof that a bank has already deducted cash. It is discharged only when exact provider, connection, currency, and amount evidence proves an external cash movement. Invoices or unmatched observations remain pending or under review and do not reduce Inventory.
 
-Percentage rules, caps, taxes, royalties, partner payment, invoice collection, and provider-wallet topology posting remain separately gated extensions. They must add versioned policy contracts and cannot mutate version 1 history.
+Partner commission payable belongs to the attributed partner principal, not a generic system bucket. Its payout requires a maker request, a different checker, and exact settlement evidence. The resulting Position and Inventory reductions are atomic and idempotent.
+
+Ordinary Pay Code cancellation or expiry releases unclaimed principal from Pay Code Reserve to Client Funds. It does not refund an already accepted issuance charge. A full commercial reversal is limited to a failed issuance or an explicit administrative void before provider-cost settlement or partner-payout control has begun.
+
+Every accepted sale, charge, allocation, evidence outcome, partner control, settlement, and reversal writes an idempotent x-journal event in the same database transaction as its accounting state. Inspect the invariant without calling a provider:
+
+```bash
+php artisan x-change:treasury:attest-commercial-accounting --json --no-interaction
+```
+
+For legacy sales, preview reconstructible journal gaps first:
+
+```bash
+php artisan x-change:treasury:backfill-commercial-accounting-journal \
+    --sale=<commercial-sale-reference> \
+    --json \
+    --no-interaction
+```
+
+Appending the safe subset requires `--commit` and a stable `--authorization-reference`. The command never rewrites immutable sale snapshots, invents provider evidence, or fabricates a missing reversal reason.
+
+Percentage rules, caps, taxes, royalties, invoice collection, and additional provider-topology policies remain separately gated extensions. They must add versioned policy contracts and cannot mutate prior history.
 
 The posting boundary is controlled by `XCHANGE_COMMERCIAL_WATERFALL_ENABLED`. Keep it disabled while upgrading an existing installation until the migrations have run and `xchange:treasury:provision` has created exactly one active provider connection with all commercial Positions. Enabling it makes a missing or ambiguous connection a hard issuance failure; x-change will not silently fall back to unclassified revenue accounting.
 
@@ -531,7 +552,7 @@ The live Treasury lifecycle now pilots provider-aware Pay Code accounting. Each 
 
 The configured provider rail fee is informational unless authoritative provider evidence shows that the provider deducted it from the controlled account. NetBank's observed payout flow moves only the beneficiary principal. The sender's system charge is a separate economic leg and must never be posted as NetBank cash movement.
 
-The canonical Pay Code liability and existing execution ledger remain as a compatibility mirror during this pilot. Non-zero sender commercial charges now debit the provider-specific Client Funds Position into Commercial Clearing and post the accepted x-commerce waterfall. Pay Code principal reservation, release, and settlement must still be wired into every production issue, cancel, expire, and claim path before the pilot becomes the system-wide accounting boundary.
+The canonical Pay Code liability and existing execution ledger remain a compatibility read model. Non-zero sender commercial charges debit the provider-specific Client Funds Position into Commercial Clearing and post the accepted x-commerce waterfall. Pay Code principal reservation, terminal release, and provider-confirmed claim settlement are Treasury-position based and idempotent.
 
 Post-transfer balance checks are deliberately observational. They never recognize a positive difference because the provider may briefly return a stale pre-payout balance. A positive difference is `provider_sync_pending`; rerunning the same lifecycle reference checks again without repeating the transfer. A provider balance below internal attribution, or any Inventory/Position mismatch, remains `review_required`.
 
