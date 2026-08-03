@@ -159,6 +159,21 @@ const pageTone = computed(() =>
                 />
 
                 <div
+                    v-if="pageTone.isPending"
+                    data-testid="provider-payout-pending-region"
+                    role="status"
+                    class="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 text-left"
+                >
+                    <p class="text-sm font-semibold text-foreground">
+                        Claim accepted · payout pending
+                    </p>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        The Pay Code has been claimed. Funds are released only
+                        after the payment provider confirms the transfer.
+                    </p>
+                </div>
+
+                <div
                     v-if="hasSuccessVisualStages"
                     data-testid="success-stage-region"
                     class="space-y-4"

@@ -102,6 +102,28 @@ it('delivers configured email sms and webhook feedback through x-feedback', func
         ->and(FeedbackDeliveryRecord::query()->where('channel', 'webhook')->value('status'))->toBe('queued');
 });
 
+it('reports a reconciliation-required payout as pending rather than successful', function () {
+    Mail::fake();
+
+    $voucher = redemptionFeedbackVoucher('TEST-FEEDBACK-PENDING', [
+        'email' => 'issuer@example.test',
+    ]);
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'disbursement.status', 'pending');
+    data_set($metadata, 'disbursement.requires_reconciliation', true);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $claim = redemptionFeedbackClaim($voucher);
+
+    app(DispatchVoucherRedemptionFeedback::class)->handle($claim->getKey());
+
+    Mail::assertSent(
+        FeedbackEmailMessage::class,
+        fn (FeedbackEmailMessage $mail): bool => $mail->intent->key === 'voucher.redemption.pending'
+            && $mail->intent->message->body === 'Pay Code TEST-FEEDBACK-PENDING was claimed. Provider payout is pending verification.'
+            && ! str_contains($mail->intent->message->body, 'successfully'),
+    );
+});
+
 it('does not redeliver channels that already have durable terminal evidence', function () {
     Mail::fake();
     Bus::fake([DeliverQueuedFeedbackSmsJob::class]);

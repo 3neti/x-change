@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Redemption;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
 use LBHurtado\XFeedback\Data\FeedbackChannelData;
 use LBHurtado\XFeedback\Data\FeedbackDeliveryData;
 use LBHurtado\XFeedback\Data\FeedbackIntentData;
@@ -20,6 +21,7 @@ final readonly class DispatchVoucherRedemptionFeedback
 
     public function __construct(
         private DeliverAndJournalFeedback $delivery,
+        private XChangeRiderOutcomeResolver $outcomes,
     ) {}
 
     public function handle(int $voucherClaimId): void
@@ -35,13 +37,15 @@ final readonly class DispatchVoucherRedemptionFeedback
         $retryableChannels = [];
 
         foreach ($this->routes($claim->voucher) as $channel => $route) {
+            $outcome = $this->outcomes->forVoucher($claim->voucher)->value;
             $result = $this->delivery->handle(
-                intent: $this->intent($claim, $channel, $route),
+                intent: $this->intent($claim, $channel, $route, $outcome),
                 channel: $channel,
                 runReference: sprintf(
-                    'voucher-redemption:%s:%s',
+                    'voucher-redemption:%s:%s:%s',
                     $claim->getKey(),
                     $channel,
+                    $outcome,
                 ),
                 send: true,
             );
@@ -108,21 +112,31 @@ final readonly class DispatchVoucherRedemptionFeedback
         return $voucher->instructions->feedback->toArray();
     }
 
-    private function intent(VoucherClaim $claim, string $channel, string $route): FeedbackIntentData
-    {
+    private function intent(
+        VoucherClaim $claim,
+        string $channel,
+        string $route,
+        string $outcome,
+    ): FeedbackIntentData {
         $voucher = $claim->voucher;
+        $pending = $outcome === 'accepted_pending';
 
         return FeedbackIntentData::forEvent(
-            key: self::IntentKey,
-            eventType: self::IntentKey,
+            key: $pending ? 'voucher.redemption.pending' : self::IntentKey,
+            eventType: $pending ? 'voucher.redemption.pending' : self::IntentKey,
             message: new FeedbackMessageData(
-                title: 'Pay Code redeemed',
-                body: sprintf('Pay Code %s was redeemed successfully.', $voucher->code),
-                summary: sprintf('Pay Code %s redeemed', $voucher->code),
+                title: $pending ? 'Pay Code claim pending' : 'Pay Code redeemed',
+                body: $pending
+                    ? sprintf('Pay Code %s was claimed. Provider payout is pending verification.', $voucher->code)
+                    : sprintf('Pay Code %s was redeemed and paid successfully.', $voucher->code),
+                summary: $pending
+                    ? sprintf('Pay Code %s payout pending', $voucher->code)
+                    : sprintf('Pay Code %s redeemed and paid', $voucher->code),
                 variables: [
                     'voucher_code' => $voucher->code,
                     'claim_id' => $claim->getKey(),
                     'claim_status' => $claim->status,
+                    'claim_outcome' => $outcome,
                 ],
                 meta: [
                     'provider_delivery' => true,
@@ -151,6 +165,7 @@ final readonly class DispatchVoucherRedemptionFeedback
             meta: [
                 'claim_id' => $claim->getKey(),
                 'claim_status' => $claim->status,
+                'claim_outcome' => $outcome,
                 'delivery_only' => true,
                 'owns_lifecycle_truth' => false,
             ],

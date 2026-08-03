@@ -31,6 +31,15 @@ describe('success page tone', () => {
         });
     });
 
+    it('uses pending tone for provider accepted-pending outcomes', () => {
+        expect(resolveSuccessPageTone({
+            claimOutcome: 'accepted_pending',
+        })).toMatchObject({
+            isPending: true,
+            iconClass: 'text-amber-500',
+        });
+    });
+
     it('uses pending tone when rider state is pending', () => {
         expect(resolveSuccessPageTone({
             compiledClaimStatus: 'success',

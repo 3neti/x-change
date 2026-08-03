@@ -10,7 +10,7 @@ export type SuccessPageTone = {
 };
 
 function isPendingValue(value: string | null | undefined): boolean {
-    return value === 'pending';
+    return value === 'pending' || value === 'accepted_pending';
 }
 
 export function resolveSuccessPageTone(input: SuccessPageToneInput): SuccessPageTone {

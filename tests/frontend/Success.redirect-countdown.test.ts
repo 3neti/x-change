@@ -89,6 +89,27 @@ const baseProps = {
 };
 
 describe('claim Success redirect countdown rendering', () => {
+    it('keeps provider payout pending visible above rider content', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claimOutcome: 'accepted_pending',
+                rider: {
+                    ...baseProps.rider,
+                    state: 'accepted_pending',
+                    success: {
+                        enabled: true,
+                        content: 'Beta lifecycle',
+                    },
+                },
+            },
+        });
+
+        expect(
+            wrapper.find('[data-testid="provider-payout-pending-region"]').text(),
+        ).toContain('Claim accepted · payout pending');
+    });
+
     it('renders RiderCountdown when compiled redirect countdown is enabled', () => {
         const wrapper = mount(Success, {
             props: baseProps,

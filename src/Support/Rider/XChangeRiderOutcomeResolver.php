@@ -11,6 +11,10 @@ class XChangeRiderOutcomeResolver
     {
         $status = $this->disbursementStatus($voucher);
 
+        if ($this->requiresReconciliation($voucher)) {
+            return RiderOutcomeState::AcceptedPending;
+        }
+
         if (
             $this->isPending($status)
             && $this->shouldTreatPendingWithLocalDisbursementAsSuccess()
@@ -24,6 +28,14 @@ class XChangeRiderOutcomeResolver
         }
 
         return RiderOutcomeState::AcceptedSuccess;
+    }
+
+    protected function requiresReconciliation(Voucher $voucher): bool
+    {
+        return data_get(
+            $voucher->metadata ?? [],
+            'disbursement.requires_reconciliation',
+        ) === true;
     }
 
     protected function shouldTreatPendingWithLocalDisbursementAsSuccess(): bool

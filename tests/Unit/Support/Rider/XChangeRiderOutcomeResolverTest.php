@@ -6,7 +6,7 @@ use LBHurtado\XRider\Enums\RiderOutcomeState;
 
 function riderOutcomeVoucherWithMetadata(array $metadata = []): Voucher
 {
-    $voucher = new Voucher();
+    $voucher = new Voucher;
 
     $voucher->forceFill([
         'metadata' => $metadata,
@@ -16,7 +16,7 @@ function riderOutcomeVoucherWithMetadata(array $metadata = []): Voucher
 }
 
 it('defaults ordinary vouchers to accepted success', function () {
-    $resolver = new XChangeRiderOutcomeResolver();
+    $resolver = new XChangeRiderOutcomeResolver;
 
     $outcome = $resolver->forVoucher(
         riderOutcomeVoucherWithMetadata()
@@ -26,7 +26,7 @@ it('defaults ordinary vouchers to accepted success', function () {
 });
 
 it('treats pending disbursement status as accepted pending', function () {
-    $resolver = new XChangeRiderOutcomeResolver();
+    $resolver = new XChangeRiderOutcomeResolver;
 
     $outcome = $resolver->forVoucher(
         riderOutcomeVoucherWithMetadata([
@@ -39,8 +39,27 @@ it('treats pending disbursement status as accepted pending', function () {
     expect($outcome)->toBe(RiderOutcomeState::AcceptedPending);
 });
 
+it('keeps a reconciliation-required payout pending even with a local marker', function () {
+    config()->set(
+        'x-change.rider.outcomes.treat_pending_with_local_disbursement_as_success',
+        true,
+    );
+    $resolver = new XChangeRiderOutcomeResolver;
+    $outcome = $resolver->forVoucher(
+        riderOutcomeVoucherWithMetadata([
+            'disbursement' => [
+                'status' => 'pending',
+                'cash_withdrawal_uuid' => 'local-withdrawal',
+                'requires_reconciliation' => true,
+            ],
+        ]),
+    );
+
+    expect($outcome)->toBe(RiderOutcomeState::AcceptedPending);
+});
+
 it('treats processing payout status as accepted pending', function () {
-    $resolver = new XChangeRiderOutcomeResolver();
+    $resolver = new XChangeRiderOutcomeResolver;
 
     $outcome = $resolver->forVoucher(
         riderOutcomeVoucherWithMetadata([
@@ -54,7 +73,7 @@ it('treats processing payout status as accepted pending', function () {
 });
 
 it('does not treat successful disbursement status as pending', function () {
-    $resolver = new XChangeRiderOutcomeResolver();
+    $resolver = new XChangeRiderOutcomeResolver;
 
     $outcome = $resolver->forVoucher(
         riderOutcomeVoucherWithMetadata([
