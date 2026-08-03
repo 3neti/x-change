@@ -2,12 +2,20 @@
 
 declare(strict_types=1);
 
+use Bavix\Wallet\Models\Wallet;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\DebitData;
+use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 
 it('generates a pay code end to end and debits the issuer wallet', function () {
     $user = actingAsTestUser(1_000_000);
@@ -117,6 +125,139 @@ it('fails end to end when issuer wallet cannot afford pay code generation', func
 
     expect(fn () => $action->handle($payload))
         ->toThrow(InsufficientWalletBalance::class);
+});
+
+it('synchronizes the compatibility ledger and reserves Treasury principal for issuance', function () {
+    $user = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $user,
+        ['netbank-primary'],
+    );
+    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
+        accountReference: 'wallet:'.$user->wallet->uuid,
+        provider: 'netbank',
+        amountMinor: 5_000,
+        currency: 'PHP',
+        evidenceReference: 'netbank:cockpit-issuance:compatibility-sync',
+    );
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')
+        ->once()
+        ->andReturn(FundingDecisionData::allowed(
+            authority: 'local_ledger',
+            availableMinor: 5_000,
+            requiredMinor: 2_420,
+            currency: 'PHP',
+            meta: [
+                'provider' => 'netbank',
+                'topology' => 'ledger_pooled',
+            ],
+        ));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+
+    expect((int) $wallet->balanceInt)->toBe(0);
+
+    $result = app(GeneratePayCode::class)->handle(validPayCodePayload(
+        5,
+        'INSTAPAY',
+        [
+            'inputs' => ['fields' => ['mobile']],
+            'feedback' => [
+                'email' => null,
+                'mobile' => null,
+                'webhook' => null,
+            ],
+            'provider' => 'netbank',
+            'metadata' => [
+                'issuer_id' => (string) $user->getKey(),
+            ],
+        ],
+    ));
+
+    $wallet->refresh();
+    $accountDebitMinor = (int) round(
+        ($result->cost->account_debit ?? (5 + $result->cost->total)) * 100,
+    );
+    $clientFundsMinor = treasuryClientFundsLedger($user)->getBalanceIntAttribute();
+    $payCodeReserve = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $user)
+        ->where('provider', 'netbank')
+        ->where('purpose', TreasuryPositionPurpose::PayCodeReserve)
+        ->sole();
+    $payCodeReserveMinor = Wallet::query()
+        ->findOrFail($payCodeReserve->internal_ledger_id)
+        ->getBalanceIntAttribute();
+
+    expect($result->wallet['balance_before'])->toBe(5_000)
+        ->and((int) $wallet->balanceInt)->toBe(5_000 - $accountDebitMinor)
+        ->and($clientFundsMinor)->toBe(5_000 - $accountDebitMinor)
+        ->and($payCodeReserveMinor)->toBe(500)
+        ->and(data_get(
+            Voucher::query()->findOrFail($result->voucher_id)->metadata,
+            'treasury.pay_code_reservation.amount_minor',
+        ))->toBe(500);
+});
+
+it('fails closed when the compatibility ledger exceeds authoritative Client Funds', function () {
+    $user = actingAsTestUser(6_000);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $user,
+        ['netbank-primary'],
+    );
+    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
+        accountReference: 'wallet:'.$user->wallet->uuid,
+        provider: 'netbank',
+        amountMinor: 5_000,
+        currency: 'PHP',
+        evidenceReference: 'netbank:cockpit-issuance:over-attribution',
+    );
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')
+        ->once()
+        ->andReturn(FundingDecisionData::allowed(
+            authority: 'local_ledger',
+            availableMinor: 5_000,
+            requiredMinor: 2_420,
+            currency: 'PHP',
+            meta: [
+                'provider' => 'netbank',
+                'topology' => 'ledger_pooled',
+            ],
+        ));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $voucherCount = Voucher::query()->count();
+
+    expect(fn () => app(GeneratePayCode::class)->handle(validPayCodePayload(
+        5,
+        'INSTAPAY',
+        [
+            'inputs' => ['fields' => ['mobile']],
+            'feedback' => [
+                'email' => null,
+                'mobile' => null,
+                'webhook' => null,
+            ],
+            'provider' => 'netbank',
+            'metadata' => [
+                'issuer_id' => (string) $user->getKey(),
+            ],
+        ],
+    )))->toThrow(
+        PayCodeIssuanceFailed::class,
+        'The Pay Code compatibility ledger exceeds authoritative Client Funds and requires review.',
+    );
+
+    $wallet->refresh();
+
+    expect((int) $wallet->balanceInt)->toBe(6_000)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(5_000)
+        ->and(Voucher::query()->count())->toBe($voucherCount);
 });
 
 it('characterizes that cancellation does not credit issuer wallet funds today', function () {

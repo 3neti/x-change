@@ -28,6 +28,8 @@ use LBHurtado\XChange\Services\Funding\PreparePayCodeAccountFundingIssuance;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 use LBHurtado\XChange\Services\PayCodeIssuanceTransaction;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
+use LBHurtado\XChange\Services\Treasury\PreparePayCodeTreasuryIssuance;
+use LBHurtado\XChange\Services\Treasury\TreasuryCompatibilityLedgerSynchronizer;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 use RuntimeException;
 
@@ -48,6 +50,8 @@ class GeneratePayCode
         protected ?PayCodeCommercialSaleService $commercialSales = null,
         protected ?PreparePayCodeAccountFundingIssuance $accountFunding = null,
         protected ?RiderSplashArtworkSnapshotterContract $splashArtwork = null,
+        protected ?TreasuryCompatibilityLedgerSynchronizer $compatibilityLedger = null,
+        protected ?PreparePayCodeTreasuryIssuance $treasuryIssuance = null,
     ) {}
 
     /**
@@ -105,7 +109,6 @@ class GeneratePayCode
         $input = $this->splashArtwork()->prepare($input);
         $wallet = $this->resolveIssuanceWallet($issuer, $input);
         $estimate = $this->estimatePayCodeCost->handle($input);
-        $balanceBefore = $this->wallets->getBalance($wallet);
         $funding = $this->fundingPolicy()->assertCanIssue(
             owner: $issuer,
             localWallet: $wallet,
@@ -121,11 +124,19 @@ class GeneratePayCode
             ],
         );
 
-        return app(PayCodeIssuanceTransaction::class)->run(function () use ($issuer, $wallet, $input, $estimate, $balanceBefore, $funding): GeneratePayCodeResultData {
+        return app(PayCodeIssuanceTransaction::class)->run(function () use ($issuer, $wallet, $input, $estimate, $funding): GeneratePayCodeResultData {
+            $this->synchronizeCompatibilityLedger($issuer, $wallet, $funding);
+            $balanceBefore = $this->wallets->getBalance($wallet);
             $issued = $this->issuance->issue($issuer, $input);
             $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
                 ? $this->allocateCommercialRevenue($issuer, $input, $issued, $estimate, $funding)
                 : $this->providerWalletAllocationPlaceholder($funding);
+            $this->reserveTreasuryPrincipal(
+                issuer: $issuer,
+                input: $input,
+                issued: $issued,
+                funding: $funding,
+            );
             $this->prepareAccountFunding(
                 issuer: $issuer,
                 input: $input,
@@ -133,6 +144,7 @@ class GeneratePayCode
                 allocation: $allocation,
                 funding: $funding,
             );
+            $this->reconcileCompatibilityLedger($issuer, $wallet, $funding);
 
             $balanceAfter = $this->wallets->getBalance($wallet);
 
@@ -327,6 +339,53 @@ class GeneratePayCode
         return $this->accountFunding ??= app(
             PreparePayCodeAccountFundingIssuance::class,
         );
+    }
+
+    protected function synchronizeCompatibilityLedger(
+        mixed $issuer,
+        mixed $wallet,
+        FundingDecisionData $funding,
+    ): void {
+        if (! $issuer instanceof Model) {
+            return;
+        }
+
+        ($this->compatibilityLedger ??= app(
+            TreasuryCompatibilityLedgerSynchronizer::class,
+        ))->synchronize($issuer, $wallet, $funding);
+    }
+
+    protected function reconcileCompatibilityLedger(
+        mixed $issuer,
+        mixed $wallet,
+        FundingDecisionData $funding,
+    ): void {
+        if (! $issuer instanceof Model) {
+            return;
+        }
+
+        ($this->compatibilityLedger ??= app(
+            TreasuryCompatibilityLedgerSynchronizer::class,
+        ))->reconcileAfterIssuance($issuer, $wallet, $funding);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @param  array<string, mixed>  $issued
+     */
+    protected function reserveTreasuryPrincipal(
+        mixed $issuer,
+        array $input,
+        array $issued,
+        FundingDecisionData $funding,
+    ): void {
+        if (! $issuer instanceof Model) {
+            return;
+        }
+
+        ($this->treasuryIssuance ??= app(
+            PreparePayCodeTreasuryIssuance::class,
+        ))->handle($issuer, $input, $issued, $funding);
     }
 
     protected function requiredIssuanceAmount(array $input, PricingEstimateData $estimate): float

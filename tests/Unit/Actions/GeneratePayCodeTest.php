@@ -319,10 +319,7 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
         ->with($issuer)
         ->andReturn($wallet);
 
-    $wallets->shouldReceive('getBalance')
-        ->once()
-        ->with($wallet)
-        ->andReturn(100.0);
+    $wallets->shouldNotReceive('getBalance');
 
     $funding = Mockery::mock(ProviderFundingPolicyContract::class);
     $funding->shouldReceive('assertCanIssue')
