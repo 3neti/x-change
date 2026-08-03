@@ -28,6 +28,7 @@ it('builds a read-only cockpit runtime profile page prop contract', function () 
         ->and($props['runtime_profile_read_model']['system_readiness']['redactions']['secrets_exposed'])->toBeFalse()
         ->and($props['runtime_profile_read_model']['system_readiness']['redactions']['performs_live_provider_checks'])->toBeFalse()
         ->and($props['runtime_profile_read_model']['profile']['schema'])->toBe('x-change.cockpit.operator-issuance-activity-runtime-profile.v1')
+        ->and($props['runtime_profile_read_model']['commercial_accounting'])->toBeNull()
         ->and($props['runtime_profile_read_model']['safety'])->toMatchArray([
             'mutates_configuration' => false,
             'enables_handoffs' => false,

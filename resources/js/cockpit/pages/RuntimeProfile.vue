@@ -5,6 +5,7 @@ import {
     CheckCircle2,
     CircleAlert,
     CloudCog,
+    Landmark,
     MailCheck,
     RadioTower,
     RefreshCw,
@@ -25,6 +26,9 @@ const props = defineProps<CockpitRuntimeProfilePageProps>();
 const refreshing = ref(false);
 const readModel = computed(() => props.runtime_profile_read_model);
 const readiness = computed(() => readModel.value.system_readiness);
+const commercialAccounting = computed(
+    () => readModel.value.commercial_accounting,
+);
 const technicalComponents = computed<CockpitRuntimeProfileComponent[]>(() =>
     Array.isArray(readiness.value.technical.operator_activity.components)
         ? readiness.value.technical.operator_activity.components
@@ -101,6 +105,17 @@ function titleCase(value: string): string {
 
 function sectionIcon(section: CockpitSystemReadinessSection) {
     return sectionIcons[section.key as keyof typeof sectionIcons] ?? Activity;
+}
+
+function money(value: number | null, currency: string): string {
+    if (value === null) {
+        return 'Unavailable';
+    }
+
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency,
+    }).format(value / 100);
 }
 </script>
 
@@ -350,6 +365,107 @@ function sectionIcon(section: CockpitSystemReadinessSection) {
                     </ul>
                 </section>
             </div>
+
+            <section
+                v-if="commercialAccounting"
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-commercial-accounting-attestation"
+            >
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="flex items-start gap-3">
+                        <span
+                            class="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                            <Landmark class="size-4" />
+                        </span>
+                        <div>
+                            <h2 class="text-base font-semibold text-slate-950 dark:text-white">
+                                Commercial Accounting
+                            </h2>
+                            <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                                Inventory, Positions, allocations, payouts, and journal evidence.
+                            </p>
+                        </div>
+                    </div>
+                    <span
+                        class="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                        :class="
+                            commercialAccounting.ready
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                        "
+                    >
+                        <CheckCircle2 v-if="commercialAccounting.ready" class="size-3.5" />
+                        <CircleAlert v-else class="size-3.5" />
+                        {{ commercialAccounting.ready ? 'Balanced' : 'Review Required' }}
+                    </span>
+                </div>
+
+                <dl class="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-950">
+                        <dt class="text-xs font-semibold text-slate-500 dark:text-slate-400">Sales</dt>
+                        <dd class="mt-1 text-base font-semibold text-slate-950 dark:text-white">
+                            {{ commercialAccounting.commercial_sales }}
+                        </dd>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-950">
+                        <dt class="text-xs font-semibold text-slate-500 dark:text-slate-400">Provider Costs Settled</dt>
+                        <dd class="mt-1 text-base font-semibold text-slate-950 dark:text-white">
+                            {{ commercialAccounting.provider_cost_settlements }}
+                        </dd>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-950">
+                        <dt class="text-xs font-semibold text-slate-500 dark:text-slate-400">Partner Payouts</dt>
+                        <dd class="mt-1 text-base font-semibold text-slate-950 dark:text-white">
+                            {{ commercialAccounting.partner_commission_payouts }}
+                        </dd>
+                    </div>
+                </dl>
+
+                <div
+                    v-if="commercialAccounting.connections.length > 0"
+                    class="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
+                >
+                    <div
+                        v-for="connection in commercialAccounting.connections"
+                        :key="connection.reference"
+                        class="grid gap-3 border-b border-slate-200 px-3 py-2.5 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center dark:border-slate-800"
+                    >
+                        <div class="min-w-0">
+                            <p class="truncate text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                {{ connection.reference }}
+                            </p>
+                            <p class="text-[0.7rem] text-slate-500 dark:text-slate-400">
+                                {{ titleCase(connection.provider) }} · {{ connection.currency }}
+                            </p>
+                        </div>
+                        <p class="text-xs text-slate-600 dark:text-slate-300">
+                            Inventory {{ money(connection.inventory_balance_minor, connection.currency) }}
+                        </p>
+                        <p class="text-xs text-slate-600 dark:text-slate-300">
+                            Positions {{ money(connection.position_balance_minor, connection.currency) }}
+                        </p>
+                    </div>
+                </div>
+
+                <details
+                    v-if="commercialAccounting.issue_count > 0"
+                    class="mt-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2.5 dark:border-amber-900/60 dark:bg-amber-950/20"
+                >
+                    <summary class="cursor-pointer text-xs font-semibold text-amber-800 dark:text-amber-200">
+                        {{ commercialAccounting.issue_count }} accounting issue{{ commercialAccounting.issue_count === 1 ? '' : 's' }}
+                    </summary>
+                    <ul class="mt-2 space-y-1">
+                        <li
+                            v-for="(issue, index) in commercialAccounting.issues"
+                            :key="`${issue.code}-${index}`"
+                            class="text-xs text-amber-800 dark:text-amber-200"
+                        >
+                            {{ titleCase(issue.code) }}
+                        </li>
+                    </ul>
+                </details>
+            </section>
 
             <details
                 class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"

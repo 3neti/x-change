@@ -154,10 +154,31 @@ it('renders the runtime profile diagnostics page as read-only configuration visi
         ->assertJsonPath('props.runtime_profile_read_model.safety.calls_provider', false)
         ->assertJsonPath('props.runtime_profile_read_model.safety.moves_money', false)
         ->assertJsonPath('props.runtime_profile_read_model.redactions.payloads', 'runtime-configuration-class-names-only')
+        ->assertJsonPath('props.runtime_profile_read_model.commercial_accounting', null)
         ->assertJsonMissingPath('props.runtime_profile_read_model.provider_payload')
         ->assertJsonMissingPath('props.runtime_profile_read_model.raw_payload')
         ->assertJsonMissingPath('props.runtime_profile_read_model.wallet')
         ->assertJsonMissingPath('props.runtime_profile_read_model.mutation_route');
+});
+
+it('shows commercial accounting attestation only to the system principal', function () {
+    config()->set('x-change.cockpit.system_readiness.visible', true);
+    $system = enableNetbankTreasuryForTests();
+    $this->actingAs($system);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.diagnostics.runtime-profile'))
+        ->assertOk()
+        ->assertJsonPath(
+            'props.runtime_profile_read_model.commercial_accounting.schema',
+            'x-change.commercial-accounting-attestation.v1',
+        )
+        ->assertJsonPath(
+            'props.runtime_profile_read_model.redactions.commercial_accounting_exposed',
+            true,
+        )
+        ->assertJsonMissingPath('props.runtime_profile_read_model.commercial_accounting.credentials')
+        ->assertJsonMissingPath('props.runtime_profile_read_model.commercial_accounting.provider_payload');
 });
 
 it('hides system readiness from authenticated users by default', function (): void {

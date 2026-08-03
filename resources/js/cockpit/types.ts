@@ -1084,6 +1084,7 @@ export type CockpitRuntimeProfileReadModel = {
     read_only: boolean;
     profile: CockpitRuntimeProfile;
     system_readiness: CockpitSystemReadiness;
+    commercial_accounting: CockpitCommercialAccountingAttestation | null;
     copy: {
         eyebrow: string;
         title: string;
@@ -1091,6 +1092,30 @@ export type CockpitRuntimeProfileReadModel = {
     };
     safety: Record<string, unknown>;
     redactions: CockpitReadModelRedactions;
+};
+
+export type CockpitCommercialAccountingAttestation = {
+    schema: string;
+    ready: boolean;
+    connections: Array<{
+        reference: string;
+        provider: string;
+        currency: string;
+        inventory_balance_minor: number | null;
+        position_balance_minor: number;
+        difference_minor: number | null;
+    }>;
+    commercial_sales: number;
+    provider_cost_settlements: number;
+    partner_commission_payouts: number;
+    issue_count: number;
+    issues: Array<{
+        code: string;
+        commercial_sale_reference?: string;
+        position_reference?: string;
+        connection_reference?: string;
+    }>;
+    inspected_at: string;
 };
 
 export type CockpitRuntimeProfilePageProps = CockpitHeaderPageProps & {

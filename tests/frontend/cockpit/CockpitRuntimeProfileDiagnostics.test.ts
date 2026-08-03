@@ -163,6 +163,7 @@ const runtimeProfileReadModel = {
             performs_live_provider_checks: false,
         },
     },
+    commercial_accounting: null,
     copy: {
         eyebrow: 'Operations',
         title: 'System Readiness',
@@ -251,6 +252,49 @@ describe('Cockpit runtime profile diagnostics', () => {
         expect(text).not.toContain('provider_payload');
         expect(text).not.toContain('raw_payload');
         expect(text).not.toContain('wallet_data');
+    });
+
+    it('shows balanced commercial accounting only when the server authorizes it', () => {
+        const wrapper = mount(RuntimeProfile, {
+            props: {
+                runtime_profile_read_model: {
+                    ...runtimeProfileReadModel,
+                    commercial_accounting: {
+                        schema: 'x-change.commercial-accounting-attestation.v1',
+                        ready: true,
+                        connections: [
+                            {
+                                reference: 'netbank-primary',
+                                provider: 'netbank',
+                                currency: 'PHP',
+                                inventory_balance_minor: 95_632,
+                                position_balance_minor: 95_632,
+                                difference_minor: 0,
+                            },
+                        ],
+                        commercial_sales: 3,
+                        provider_cost_settlements: 1,
+                        partner_commission_payouts: 1,
+                        issue_count: 0,
+                        issues: [],
+                        inspected_at: '2026-08-03T12:00:00+08:00',
+                    },
+                },
+            },
+            global: {
+                stubs: { Head: true },
+            },
+        });
+
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-commercial-accounting-attestation"]',
+            ).exists(),
+        ).toBe(true);
+        expect(wrapper.text()).toContain('Commercial Accounting');
+        expect(wrapper.text()).toContain('Balanced');
+        expect(wrapper.text()).toContain('Inventory ₱956.32');
+        expect(wrapper.text()).toContain('Positions ₱956.32');
     });
 
     it('forwards route adapter props into the runtime profile page', () => {

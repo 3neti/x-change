@@ -12,6 +12,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivitySearchFilterDa
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
 use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessInspector;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingAttestation;
+use Throwable;
 
 class CockpitReadOnlyPageProps
 {
@@ -19,6 +21,7 @@ class CockpitReadOnlyPageProps
         private readonly CockpitReadModelProviderContract $readModels,
         private readonly CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
         private readonly CockpitSystemReadinessInspector $systemReadiness,
+        private readonly CommercialAccountingAttestation $commercialAccounting,
     ) {}
 
     /**
@@ -266,8 +269,13 @@ class CockpitReadOnlyPageProps
     /**
      * @return array<string, mixed>
      */
-    public function toRuntimeProfileArray(): array
-    {
+    public function toRuntimeProfileArray(
+        bool $includeCommercialAccounting = false,
+    ): array {
+        $commercialAccounting = $includeCommercialAccounting
+            ? $this->commercialAccountingAttestation()
+            : null;
+
         return [
             ...$this->toArray(),
             'runtime_profile_read_model' => [
@@ -277,6 +285,7 @@ class CockpitReadOnlyPageProps
                 'read_only' => true,
                 'profile' => $this->operatorActivityRuntimeProfile->inspect()->toArray(),
                 'system_readiness' => $this->systemReadiness->inspect(),
+                'commercial_accounting' => $commercialAccounting,
                 'copy' => [
                     'eyebrow' => 'Operations',
                     'title' => 'System Readiness',
@@ -297,10 +306,35 @@ class CockpitReadOnlyPageProps
                     'raw_payloads_exposed' => false,
                     'provider_payloads_exposed' => false,
                     'wallet_data_exposed' => false,
+                    'commercial_accounting_exposed' => $commercialAccounting !== null,
                     'secrets_exposed' => false,
                 ],
             ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function commercialAccountingAttestation(): array
+    {
+        try {
+            return $this->commercialAccounting->inspect();
+        } catch (Throwable) {
+            return [
+                'schema' => 'x-change.commercial-accounting-attestation.v1',
+                'ready' => false,
+                'connections' => [],
+                'commercial_sales' => 0,
+                'provider_cost_settlements' => 0,
+                'partner_commission_payouts' => 0,
+                'issue_count' => 1,
+                'issues' => [[
+                    'code' => 'attestation_unavailable',
+                ]],
+                'inspected_at' => now()->toIso8601String(),
+            ];
+        }
     }
 
     /**
