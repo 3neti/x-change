@@ -132,6 +132,48 @@ it('does not require credentials for disabled campaign delivery channels', funct
         ->and($checks->firstWhere('name', 'SMS delivery')['passed'])->toBeTrue();
 });
 
+it('reports unavailable optional instruction services without failing strict readiness', function (): void {
+    config()->set('x-change.instruction_capabilities.required', []);
+    config()->set('location-handler.opencage_api_key', null);
+    config()->set('location-handler.map_provider', 'mapbox');
+    config()->set('location-handler.mapbox_token', null);
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--pre-install' => true,
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'instruction services');
+
+    expect($exitCode)->toBe(0)
+        ->and($check['passed'])->toBeTrue()
+        ->and($check['meta']['unavailable'])->toContain('location')
+        ->and($check['meta']['missing_variables'])->toBe([]);
+});
+
+it('fails strict readiness when a required instruction service is unavailable', function (): void {
+    config()->set('x-change.instruction_capabilities.required', ['location']);
+    config()->set('location-handler.opencage_api_key', null);
+    config()->set('location-handler.map_provider', 'mapbox');
+    config()->set('location-handler.mapbox_token', null);
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--pre-install' => true,
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'instruction services');
+
+    expect($exitCode)->toBe(1)
+        ->and($check['passed'])->toBeFalse()
+        ->and($check['meta']['missing_variables'])->toBe([
+            'MAPBOX_TOKEN',
+            'OPENCAGE_API_KEY',
+        ]);
+});
+
 it('reports published cockpit asset drift as json', function () {
     $exitCode = Artisan::call('x-change:doctor', [
         '--assets' => true,

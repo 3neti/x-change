@@ -56,6 +56,7 @@ it('uses the standard section order', function (): void {
     $sections = [
         'Activation And Profile',
         'Identity And Authorization',
+        'Instruction Services',
         'Treasury And Accounting',
         'Delivery',
         'Queues And Scheduling',

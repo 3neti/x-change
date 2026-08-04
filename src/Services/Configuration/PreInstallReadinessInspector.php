@@ -10,6 +10,7 @@ final readonly class PreInstallReadinessInspector
 {
     public function __construct(
         private DeploymentConfigurationInspector $deploymentConfiguration,
+        private InstructionCapabilityReadinessRegistry $instructionCapabilities,
     ) {}
 
     /**
@@ -33,6 +34,7 @@ final readonly class PreInstallReadinessInspector
             $this->systemPrincipalIdentityCheck($liveProfile),
             $this->productionApplicationSecurityCheck(),
             $this->productionOnboardingOtpCheck(),
+            $this->instructionCapabilityCheck(),
             $this->queueRuntimeCheck($liveProfile),
             $this->schedulerLockCacheCheck($liveProfile),
             $this->emailDeliveryCheck(),
@@ -59,6 +61,48 @@ final readonly class PreInstallReadinessInspector
             'missing_variables' => $missing,
             'checks' => $checks,
         ];
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    private function instructionCapabilityCheck(): array
+    {
+        $capabilities = $this->instructionCapabilities->all();
+        $required = array_values(array_filter(
+            (array) config('x-change.instruction_capabilities.required', []),
+            static fn (mixed $key): bool => is_string($key) && trim($key) !== '',
+        ));
+        $unavailable = collect($capabilities)
+            ->filter(static fn ($capability): bool => ! $capability->issuanceAllowed);
+        $requiredUnavailable = collect($required)
+            ->filter(fn (string $key): bool => ! ($capabilities[$key]->issuanceAllowed ?? false))
+            ->values();
+        $missingVariables = $requiredUnavailable
+            ->flatMap(fn (string $key): array => $capabilities[$key]->missingConfiguration ?? [])
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+        $passed = $requiredUnavailable->isEmpty();
+
+        return $this->check(
+            'instruction services',
+            $passed,
+            $passed
+                ? sprintf(
+                    '%d instruction services ready; %d optional services unavailable',
+                    collect($capabilities)->where('issuanceAllowed', true)->count(),
+                    $unavailable->count(),
+                )
+                : 'required instruction services are unavailable: '.$requiredUnavailable->implode(', '),
+            [
+                'required' => $required,
+                'unavailable' => $unavailable->keys()->values()->all(),
+                'capabilities' => $this->instructionCapabilities->sanitized(),
+                'missing_variables' => $missingVariables,
+            ],
+        );
     }
 
     /**

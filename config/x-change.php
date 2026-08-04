@@ -177,6 +177,13 @@ return [
         'cloud_checkpoint_path' => storage_path('app/x-change/cloud-deployment-checkpoints.json'),
     ],
 
+    'instruction_capabilities' => [
+        'required' => array_values(array_filter(array_map(
+            static fn (string $capability): string => trim($capability),
+            explode(',', (string) env('XCHANGE_REQUIRED_INSTRUCTION_CAPABILITIES', '')),
+        ))),
+    ],
+
     'commissioning' => [
         'enabled' => (bool) env('XCHANGE_COMMISSIONING_ENABLED', true),
         'enforce_during_tests' => false,
