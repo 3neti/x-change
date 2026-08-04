@@ -23,6 +23,7 @@ use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
+use LBHurtado\XChange\Exceptions\IncompleteClaimEvidence;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
@@ -55,6 +56,33 @@ it('blocks preview Pay Codes before selecting an execution path', function (): v
             RuntimeException::class,
             'Claim experience preview Pay Codes cannot be executed.',
         );
+});
+
+it('blocks execution before selecting an executor when required evidence is missing', function (): void {
+    $voucher = (new Voucher)->forceFill([
+        'code' => 'EVID-MISSING',
+        'metadata' => [
+            'instructions' => [
+                'inputs' => ['fields' => ['name', 'selfie', 'signature']],
+                'metadata' => [
+                    'claim_evidence' => [
+                        'requirements' => ['name', 'selfie', 'signature'],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+    $factory = Mockery::mock(ClaimExecutionFactoryContract::class);
+    $factory->shouldNotReceive('make');
+    $recordVoucherClaim = Mockery::mock(RecordVoucherClaim::class);
+    $recordVoucherClaim->shouldNotReceive('handle');
+
+    expect(fn () => (new SubmitPayCodeClaim($factory, $recordVoucherClaim))->handle($voucher, [
+        'inputs' => [
+            'name' => 'Amelia Hurtado',
+            'selfie' => 'data:image/jpeg;base64,c2VsZmll',
+        ],
+    ]))->toThrow(IncompleteClaimEvidence::class, 'signature');
 });
 
 it('submits a claim through the selected executor and normalizes redeem result', function () {

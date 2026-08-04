@@ -24,6 +24,7 @@ use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
+use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
@@ -64,6 +65,8 @@ class SubmitPayCodeClaim
         $payload = $this->namedSlices()->enrichClaimPayload($voucher, $payload);
 
         $this->guardClaimantProvisioning($voucher, $payload);
+
+        app(ClaimEvidenceRequirements::class)->assertComplete($voucher, $payload);
 
         $executor = $this->factory->make($voucher, $payload);
 
