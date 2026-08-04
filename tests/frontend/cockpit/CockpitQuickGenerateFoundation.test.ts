@@ -56,6 +56,65 @@ function quickGenerateEngineeringPreview(
 }
 
 describe('Cockpit Quick Generate foundation', () => {
+    it('disables unavailable evidence while allowing an incompatible saved design to remove it', async () => {
+        const capability = {
+            key: 'location',
+            label: 'Location',
+            status: 'unavailable' as const,
+            issuance_allowed: false,
+            claim_retryable: true,
+            reason: 'Location services are not configured.',
+            missing_configuration: ['MAPBOX_TOKEN'],
+            source: 'form-handler-location',
+        };
+        const baseProps = {
+            templates: cockpitQuickGenerateTemplates,
+            mutationContract: {
+                runtime_enabled: true,
+                route: 'x-change.cockpit.quick-generate.store',
+                route_url: '/x/cockpit/quick-generate',
+                allowed_methods: ['POST'],
+            },
+            instructionCapabilities: { location: capability },
+        };
+        const blank = mount(CockpitQuickGenerateSubmitPanel, {
+            props: baseProps,
+        });
+
+        expect(blank.get('input[value="location"]').attributes('disabled')).toBeDefined();
+
+        const saved = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                ...baseProps,
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-04T00:00:00Z',
+                    instructions: {
+                        cash: { amount: 25, currency: 'PHP' },
+                        inputs: { fields: ['location'] },
+                    },
+                },
+            },
+        });
+
+        await flushPromises();
+
+        expect(saved.get('input[value="location"]').element).toMatchObject({
+            checked: true,
+            disabled: false,
+        });
+        expect(
+            saved.get(
+                '[data-testid="cockpit-quick-generate-capability-warning"]',
+            ).text(),
+        ).toContain('Location services are not configured.');
+        expect(
+            saved
+                .get('[data-testid="cockpit-quick-generate-submit-button"]')
+                .attributes('disabled'),
+        ).toBeDefined();
+    });
+
     it('brands a blank Pay Code canvas without inventing claim details', () => {
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {

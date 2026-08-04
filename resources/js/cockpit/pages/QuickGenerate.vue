@@ -1155,6 +1155,9 @@ function stringValue(value: unknown): string | null {
                     "
                     :last-instructions="props.last_instructions"
                     :saved-templates="props.saved_templates ?? []"
+                    :instruction-capabilities="
+                        props.instruction_capabilities ?? {}
+                    "
                     :templates="templates"
                 />
             </div>

@@ -23,6 +23,8 @@ import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
     CockpitClaimExperiencePreviewManifest,
+    CockpitInstructionCapabilityReadiness,
+    CockpitInstructionCapabilityReadinessMap,
     CockpitQuickGenerateClaimPreviewContract,
     CockpitQuickGenerateDraftContract,
     CockpitQuickGenerateFeedbackDefaults,
@@ -82,13 +84,39 @@ const props = withDefaults(
         onboardingPreset?: boolean;
         lastInstructions?: CockpitQuickGenerateLastInstructions | null;
         savedTemplates?: CockpitSavedPayCodeTemplate[];
+        instructionCapabilities?: CockpitInstructionCapabilityReadinessMap;
         templates: CockpitQuickGenerateTemplate[];
     }>(),
     {
         onboardingOtpRequired: true,
         onboardingPreset: false,
+        instructionCapabilities: () => ({}),
     },
 );
+
+function capabilityReadiness(
+    key: string,
+): CockpitInstructionCapabilityReadiness | null {
+    return props.instructionCapabilities[key] ?? null;
+}
+
+function capabilityUnavailable(key: string): boolean {
+    return capabilityReadiness(key)?.issuance_allowed === false;
+}
+
+function capabilitySelectionDisabled(key: string, selected: boolean): boolean {
+    return processing.value || (capabilityUnavailable(key) && !selected);
+}
+
+function capabilityReason(key: string, fallback: string): string {
+    return capabilityReadiness(key)?.reason ?? fallback;
+}
+
+function inputFieldCapability(field: string): string | null {
+    return ['location', 'kyc', 'otp', 'selfie', 'signature'].includes(field)
+        ? field
+        : null;
+}
 
 const emit = defineEmits<{
     submitStart: [payload: Record<string, unknown>];
@@ -1691,11 +1719,65 @@ watch(feedbackWebhook, (): void => {
     feedbackWebhookEnabled.value = feedbackMatchesDefault('webhook');
 });
 
+const selectedUnavailableCapabilities = computed<
+    CockpitInstructionCapabilityReadiness[]
+>(() => {
+    const selected = new Set<string>();
+
+    selectedInputFieldValues.value.forEach((field) => {
+        const capability = inputFieldCapability(field);
+
+        if (capability !== null) {
+            selected.add(capability);
+        }
+    });
+
+    if (requireLocationValidation.value) {
+        selected.add('location');
+    }
+
+    if (verificationKyc.value) {
+        selected.add('kyc');
+    }
+
+    if (verificationOtp.value || onboardingOtpEnforced.value) {
+        selected.add('otp');
+    }
+
+    if (verificationSelfie.value) {
+        selected.add('selfie');
+    }
+
+    if (signatureRequired.value) {
+        selected.add('signature');
+    }
+
+    if (feedbackMobileEnabled.value) {
+        selected.add('feedback.sms');
+    }
+
+    if (feedbackEmailEnabled.value) {
+        selected.add('feedback.email');
+    }
+
+    if (feedbackWebhookEnabled.value) {
+        selected.add('feedback.webhook');
+    }
+
+    return [...selected]
+        .map((key) => capabilityReadiness(key))
+        .filter(
+            (capability): capability is CockpitInstructionCapabilityReadiness =>
+                capability?.issuance_allowed === false,
+        );
+});
+
 const canSubmit = computed<boolean>(() => {
     return (
         props.mutationContract?.runtime_enabled === true &&
         routeUrl.value !== null &&
         allowedMethods.value.includes('POST') &&
+        selectedUnavailableCapabilities.value.length === 0 &&
         feedbackValid.value &&
         namedClaimSliceValidationMessage.value === null &&
         claimRecipientError.value === null &&
@@ -5378,7 +5460,12 @@ function instructionRecord(
                                         value="provider_disbursement"
                                         class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
                                         data-testid="cockpit-quick-generate-claim-outcome-provider"
-                                        :disabled="processing"
+                                        :disabled="
+                                            capabilitySelectionDisabled(
+                                                'feedback.email',
+                                                feedbackEmailEnabled,
+                                            )
+                                        "
                                     />
                                     <span>
                                         <span
@@ -5918,6 +6005,12 @@ function instructionRecord(
                                 v-for="field in voucherInputFieldOptions"
                                 :key="field.value"
                                 class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                :class="{
+                                    'border-amber-200 bg-amber-50/70 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200':
+                                        inputFieldCapability(field.value) !==
+                                            null &&
+                                        capabilityUnavailable(field.value),
+                                }"
                             >
                                 <input
                                     v-model="selectedInputFieldValues"
@@ -5925,8 +6018,15 @@ function instructionRecord(
                                     :value="field.value"
                                     class="rounded border-slate-300"
                                     :disabled="
-                                        processing ||
-                                        isOnboardingFieldLocked(field.value)
+                                        isOnboardingFieldLocked(field.value) ||
+                                        (inputFieldCapability(field.value) !==
+                                            null &&
+                                            capabilitySelectionDisabled(
+                                                field.value,
+                                                selectedInputFieldValues.includes(
+                                                    field.value,
+                                                ),
+                                            ))
                                     "
                                     :data-onboarding-locked="
                                         isOnboardingFieldLocked(field.value)
@@ -5939,7 +6039,16 @@ function instructionRecord(
                                     <span
                                         class="mt-0.5 block text-[11px] font-normal text-slate-500 dark:text-slate-400"
                                     >
-                                        {{ field.helper }}
+                                        {{
+                                            inputFieldCapability(field.value) !==
+                                                null &&
+                                            capabilityUnavailable(field.value)
+                                                ? capabilityReason(
+                                                      field.value,
+                                                      field.helper,
+                                                  )
+                                                : field.helper
+                                        }}
                                     </span>
                                 </span>
                             </label>
@@ -6070,15 +6179,26 @@ function instructionRecord(
                                         v-model="requireLocationValidation"
                                         type="checkbox"
                                         class="mt-0.5 rounded border-violet-300"
-                                        :disabled="processing"
+                                        :disabled="
+                                            capabilitySelectionDisabled(
+                                                'location',
+                                                requireLocationValidation,
+                                            )
+                                        "
                                     />
                                     <span class="grid gap-0.5">
                                         <span>Require Location Radius</span>
                                         <span
                                             class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
                                         >
-                                            Require the claim to occur within
-                                            the allowed area.
+                                            {{
+                                                capabilityUnavailable('location')
+                                                    ? capabilityReason(
+                                                          'location',
+                                                          'Location evidence is unavailable.',
+                                                      )
+                                                    : 'Require the claim to occur within the allowed area.'
+                                            }}
                                         </span>
                                     </span>
                                 </label>
@@ -6126,14 +6246,26 @@ function instructionRecord(
                                         v-model="verificationKyc"
                                         type="checkbox"
                                         class="mt-0.5 rounded border-sky-300"
-                                        :disabled="processing"
+                                        :disabled="
+                                            capabilitySelectionDisabled(
+                                                'kyc',
+                                                verificationKyc,
+                                            )
+                                        "
                                     />
                                     <span class="grid gap-0.5">
                                         <span>KYC</span>
                                         <span
                                             class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
                                         >
-                                            Verify the recipient’s identity.
+                                            {{
+                                                capabilityUnavailable('kyc')
+                                                    ? capabilityReason(
+                                                          'kyc',
+                                                          'KYC is unavailable.',
+                                                      )
+                                                    : 'Verify the recipient’s identity.'
+                                            }}
                                         </span>
                                     </span>
                                 </label>
@@ -6145,7 +6277,11 @@ function instructionRecord(
                                         type="checkbox"
                                         class="mt-0.5 rounded border-sky-300"
                                         :disabled="
-                                            processing || onboardingOtpEnforced
+                                            onboardingOtpEnforced ||
+                                            capabilitySelectionDisabled(
+                                                'otp',
+                                                verificationOtp,
+                                            )
                                         "
                                     />
                                     <span class="grid gap-0.5">
@@ -6153,7 +6289,14 @@ function instructionRecord(
                                         <span
                                             class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
                                         >
-                                            Confirm a one-time passcode.
+                                            {{
+                                                capabilityUnavailable('otp')
+                                                    ? capabilityReason(
+                                                          'otp',
+                                                          'OTP is unavailable.',
+                                                      )
+                                                    : 'Confirm a one-time passcode.'
+                                            }}
                                         </span>
                                     </span>
                                 </label>
@@ -6164,7 +6307,12 @@ function instructionRecord(
                                         v-model="verificationSelfie"
                                         type="checkbox"
                                         class="mt-0.5 rounded border-sky-300"
-                                        :disabled="processing"
+                                        :disabled="
+                                            capabilitySelectionDisabled(
+                                                'selfie',
+                                                verificationSelfie,
+                                            )
+                                        "
                                     />
                                     <span class="grid gap-0.5">
                                         <span>Selfie</span>
@@ -6183,7 +6331,12 @@ function instructionRecord(
                                         type="checkbox"
                                         class="mt-0.5 rounded border-sky-300"
                                         data-testid="cockpit-quick-generate-signature-required"
-                                        :disabled="processing"
+                                        :disabled="
+                                            capabilitySelectionDisabled(
+                                                'signature',
+                                                signatureRequired,
+                                            )
+                                        "
                                     />
                                     <span class="grid gap-0.5">
                                         <span>Require Signature</span>
@@ -7655,8 +7808,15 @@ function instructionRecord(
                                             class="block text-[11px] text-violet-700 dark:text-violet-200"
                                         >
                                             {{
-                                                defaultFeedbackEmail ||
-                                                'No Saved Email'
+                                                capabilityUnavailable(
+                                                    'feedback.email',
+                                                )
+                                                    ? capabilityReason(
+                                                          'feedback.email',
+                                                          'Email delivery is unavailable.',
+                                                      )
+                                                    : defaultFeedbackEmail ||
+                                                      'No Saved Email'
                                             }}
                                         </span>
                                     </span>
@@ -7669,7 +7829,12 @@ function instructionRecord(
                                         type="checkbox"
                                         class="mt-0.5 rounded border-violet-300"
                                         data-testid="cockpit-quick-generate-feedback-mobile-toggle"
-                                        :disabled="processing"
+                                        :disabled="
+                                            capabilitySelectionDisabled(
+                                                'feedback.sms',
+                                                feedbackMobileEnabled,
+                                            )
+                                        "
                                         @change="
                                             toggleFeedbackChannel(
                                                 'mobile',
@@ -7685,8 +7850,15 @@ function instructionRecord(
                                             class="block text-[11px] text-violet-700 dark:text-violet-200"
                                         >
                                             {{
-                                                defaultFeedbackMobile ||
-                                                'No Saved Mobile Number'
+                                                capabilityUnavailable(
+                                                    'feedback.sms',
+                                                )
+                                                    ? capabilityReason(
+                                                          'feedback.sms',
+                                                          'SMS delivery is unavailable.',
+                                                      )
+                                                    : defaultFeedbackMobile ||
+                                                      'No Saved Mobile Number'
                                             }}
                                         </span>
                                     </span>
@@ -7699,7 +7871,12 @@ function instructionRecord(
                                         type="checkbox"
                                         class="mt-0.5 rounded border-violet-300"
                                         data-testid="cockpit-quick-generate-feedback-webhook-toggle"
-                                        :disabled="processing"
+                                        :disabled="
+                                            capabilitySelectionDisabled(
+                                                'feedback.webhook',
+                                                feedbackWebhookEnabled,
+                                            )
+                                        "
                                         @change="
                                             toggleFeedbackChannel(
                                                 'webhook',
@@ -8640,6 +8817,23 @@ function instructionRecord(
                 </details>
             </div>
         </details>
+
+        <section
+            v-if="selectedUnavailableCapabilities.length > 0"
+            class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100"
+            data-testid="cockpit-quick-generate-capability-warning"
+        >
+            <p class="font-semibold">This design needs unavailable services</p>
+            <ul class="mt-2 space-y-1">
+                <li
+                    v-for="capability in selectedUnavailableCapabilities"
+                    :key="capability.key"
+                >
+                    {{ capability.label }} — {{ capability.reason }} Remove it
+                    before issuing.
+                </li>
+            </ul>
+        </section>
 
         <details
             class="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-300 shadow-sm"

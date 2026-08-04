@@ -41,3 +41,22 @@ it('hydrates the effective onboarding OTP policy without exposing configuration 
         ->assertJsonMissingPath('props.onboarding_policy.otp_secret')
         ->assertJsonMissingPath('props.onboarding_policy.provider');
 });
+
+it('hydrates sanitized instruction capability readiness', function (): void {
+    config()->set('location-handler.opencage_api_key', 'open-cage-secret');
+    config()->set('location-handler.map_provider', 'mapbox');
+    config()->set('location-handler.mapbox_token', null);
+
+    actingAsTestUser();
+
+    $response = $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('props.instruction_capabilities.location.status', 'unavailable')
+        ->assertJsonPath('props.instruction_capabilities.location.issuance_allowed', false)
+        ->assertJsonPath('props.instruction_capabilities.location.missing_configuration.0', 'MAPBOX_TOKEN');
+
+    expect($response->getContent())
+        ->not->toContain('open-cage-secret');
+});

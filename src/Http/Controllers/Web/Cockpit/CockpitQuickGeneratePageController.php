@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
+use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 class CockpitQuickGeneratePageController extends Controller
@@ -18,6 +19,7 @@ class CockpitQuickGeneratePageController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly QuickGenerateLastInstructionsStore $lastInstructions,
         private readonly PayCodeTemplateReadModel $templates,
+        private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -46,6 +48,7 @@ class CockpitQuickGeneratePageController extends Controller
             ],
             'last_instructions' => $this->lastInstructions->for($request->user()),
             'saved_templates' => $this->templates->for($request->user()),
+            'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
         ]);
     }
 

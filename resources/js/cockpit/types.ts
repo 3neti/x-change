@@ -1557,7 +1557,24 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     invitation_preset?: CockpitQuickGenerateInvitationPreset;
     last_instructions?: CockpitQuickGenerateLastInstructions | null;
     saved_templates?: CockpitSavedPayCodeTemplate[];
+    instruction_capabilities?: CockpitInstructionCapabilityReadinessMap;
 };
+
+export type CockpitInstructionCapabilityReadiness = {
+    key: string;
+    label: string;
+    status: 'ready' | 'simulation' | 'degraded' | 'unavailable';
+    issuance_allowed: boolean;
+    claim_retryable: boolean;
+    reason?: string | null;
+    missing_configuration: string[];
+    source: string;
+};
+
+export type CockpitInstructionCapabilityReadinessMap = Record<
+    string,
+    CockpitInstructionCapabilityReadiness
+>;
 
 export type CockpitQuickGenerateOnboardingPolicy = {
     otp_required: boolean;
