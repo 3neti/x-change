@@ -15,7 +15,32 @@ This map is the short-form companion to the larger claim UX notes. It describes 
 3. If the voucher uses form-flow, the shell hands off to `/form-flow/{flowId}`.
 4. The form-flow generic form collects mobile, amount, and destination fields according to the compiled step config.
 5. The confirmation stage submits the claim.
-6. Success renders in x-change, then rider message/splash/redirect behavior follows the compiled claim experience.
+6. x-change compares the submitted fields with the immutable claim-evidence requirements captured at Pay Code issuance.
+7. Required evidence is normalized and persisted against a prepared claim attempt before an execution driver may contact a bank, EMI, or settlement service.
+8. Success renders in x-change, then rider message/splash/redirect behavior follows the compiled claim experience.
+
+## Durable Claim Evidence
+
+New Pay Codes snapshot their evidence requirements as scalar keys under `instructions.metadata.custom.claim_evidence`. The execution boundary fails closed when a required item is absent or when a verification requirement such as OTP or KYC is not verified.
+
+Each claim owns its evidence records. Voucher-wide input records remain a compatibility projection and must not be used to associate evidence with a claimant. This prevents evidence from divisible, retried, or subsequent claims from being mixed.
+
+- Text and structured values are encrypted at rest.
+- Selfies, signatures, KYC images, and location maps use content-addressed private storage.
+- Raw binary evidence is never included in Inertia page props, logs, or journal payloads.
+- Media is revealed only through the owner/system-authorized, `no-store` evidence endpoint.
+- Every reveal writes `pay_code.evidence.viewed` without copying the artifact into the journal.
+- OTP codes are never retained; only the verified state, safe reference, and verification time are evidence.
+- The claim stores a SHA-256 evidence-manifest reference. When a Settlement Envelope exists, x-change attaches the manifest hash and completeness state as claim-specific envelope signals.
+
+The Cockpit separates four concepts:
+
+1. **Claim Requirements** — what issuance required.
+2. **Captured Evidence** — what a particular claim supplied.
+3. **Verification Results** — what OTP, KYC, or another authority confirmed.
+4. **Payout Outcome** — whether provider settlement succeeded, remains pending, or was rejected.
+
+Claims completed before this boundary are shown honestly as legacy evidence that was not retained; missing historical values are never reconstructed.
 
 ## Paynamics OTP Journey
 

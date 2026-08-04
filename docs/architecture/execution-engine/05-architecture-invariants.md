@@ -33,3 +33,12 @@ The current `DefaultSettlementExecutionService` is a readiness-gated pending stu
 ## Future Test Guards
 
 When their corresponding slices are authorized, add source/dependency tests for concrete voucher imports, default-driver compatibility, registry-only resolution, instruction immutability, structured results, claim/driver separation, and new-driver isolation.
+## Claim Evidence Before Execution
+
+- A Pay Code with required claim inputs carries an immutable, versioned evidence-requirements snapshot.
+- Required evidence must be complete before an execution driver is selected or invoked.
+- The prepared claim attempt and its evidence manifest are durable before any provider call or money movement.
+- Provider failure does not delete, return, or reassign captured evidence.
+- Evidence belongs to one claim attempt, never merely to the voucher as a whole.
+- Settlement Envelopes reference evidence manifests and hashes; they do not embed raw personal or binary evidence.
+- OTP secrets and raw KYC provider payloads are never durable claim evidence.
