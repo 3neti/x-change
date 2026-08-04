@@ -59,7 +59,7 @@ it('records a voucher claim row from a normalized claim result', function () {
                 'latitude' => 14.5995,
                 'longitude' => 121.0288,
                 'formatted_address' => 'Makati City',
-                'map' => 'data:image/png;base64,map',
+                'map' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
             ],
         ],
     ]);
@@ -84,6 +84,12 @@ it('records a voucher claim row from a normalized claim result', function () {
         (string) $voucher->inputs()->where('name', 'location')->value('value'),
         true,
         flags: JSON_THROW_ON_ERROR,
+    ))->toMatchArray([
+        'stored' => true,
+    ]);
+    expect(data_get(
+        $claim->evidence()->where('requirement_key', 'location')->sole()->payload,
+        'value',
     ))->toMatchArray([
         'latitude' => 14.5995,
         'longitude' => 121.0288,

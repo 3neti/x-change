@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Storage;
+use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('projects authoritative values, readable instructions, and backing without raw payloads', function (): void {
@@ -109,6 +112,68 @@ it('reveals binary claim evidence only through a no-store audited endpoint', fun
     expect(data_get($entry->payload, 'evidence_type'))->toBe('signature')
         ->and(data_get($entry->payload, 'binary_payload_persisted'))->toBeFalse()
         ->and(data_get($entry->metadata, 'sensitive_access'))->toBeTrue();
+});
+
+it('projects new evidence per claim and reveals its private content-addressed artifact', function (): void {
+    Storage::fake('local');
+    $owner = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(20.00, overrides: [
+        'inputs' => ['fields' => ['name', 'selfie', 'signature']],
+    ]));
+    $png = base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        true,
+    );
+    $claim = app(RecordVoucherClaim::class)->handle(
+        $voucher,
+        new SubmitPayCodeClaimResultData(
+            voucher_code: $voucher->code,
+            claim_type: 'redeem',
+            claimed: true,
+            status: 'succeeded',
+            requested_amount: 20,
+            disbursed_amount: 20,
+            currency: 'PHP',
+            remaining_balance: 0,
+            fully_claimed: true,
+            disbursement: [],
+            messages: ['Claim completed.'],
+        ),
+        [
+            'inputs' => [
+                'name' => 'Amelia Hurtado',
+                'selfie' => 'data:image/png;base64,'.base64_encode($png),
+                'signature' => 'data:image/png;base64,'.base64_encode($png),
+            ],
+        ],
+    );
+    $selfie = $claim->evidence()->where('requirement_key', 'selfie')->sole();
+
+    Storage::disk('local')->assertExists((string) $selfie->artifact_path);
+
+    $page = $this->actingAs($owner)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', $voucher->code))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.claims.records.0.evidence.required_count', 3)
+        ->assertJsonPath('props.read_model.voucher.claims.records.0.evidence.captured_count', 3)
+        ->assertJsonPath('props.read_model.voucher.claims.records.0.evidence.complete', true)
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.1.claim_id', $claim->getKey())
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.1.group', 'media')
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.1.revealable', true)
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.1.legacy', false);
+
+    expect($page->getContent())->not->toContain(base64_encode($png));
+
+    $this->get(route('x-change.cockpit.pay-codes.evidence.show', [
+        'code' => $voucher->code,
+        'source' => 'claim',
+        'evidence' => $selfie->getKey(),
+    ]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png')
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
+        ->assertContent($png);
 });
 
 it('presents captured location evidence with an audited map reveal', function (): void {

@@ -1914,6 +1914,14 @@ return [
     ],
 
     'claim' => [
+        'evidence' => [
+            'disk' => env('XCHANGE_CLAIM_EVIDENCE_DISK', 'local'),
+            'directory' => env(
+                'XCHANGE_CLAIM_EVIDENCE_DIRECTORY',
+                'x-change/claim-evidence',
+            ),
+            'manifest_version' => 1,
+        ],
         'public_read_middleware' => [
             'throttle:60,1',
         ],

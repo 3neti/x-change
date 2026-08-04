@@ -21,6 +21,8 @@ use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherClaimEvidence;
+use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use RuntimeException;
 
 class VoucherLifecycleService implements VoucherLifecycleServiceContract
@@ -478,6 +480,42 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
      */
     protected function claimEvidenceArray(Voucher $voucher): array
     {
+        $evidence = VoucherClaimEvidence::query()
+            ->with('claim:id,claim_number')
+            ->where('voucher_id', $voucher->getKey())
+            ->oldest('id')
+            ->get();
+
+        if ($evidence->isNotEmpty()) {
+            return $evidence->map(function (VoucherClaimEvidence $item) use ($voucher): array {
+                $revealable = filled($item->artifact_path);
+
+                return [
+                    'id' => (int) $item->getKey(),
+                    'claim_id' => (int) $item->voucher_claim_id,
+                    'claim_number' => $item->claim?->claim_number,
+                    'key' => $item->requirement_key,
+                    'label' => Str::headline($item->requirement_key),
+                    'group' => $this->evidenceGroup($item->requirement_key),
+                    'kind' => $item->kind->value,
+                    'status' => $item->status->value,
+                    'value' => $item->summary,
+                    'captured_at' => $item->captured_at?->toIso8601String(),
+                    'verified_at' => $item->verified_at?->toIso8601String(),
+                    'revealable' => $revealable,
+                    'reveal_href' => $revealable
+                        && Route::has('x-change.cockpit.pay-codes.evidence.show')
+                            ? route('x-change.cockpit.pay-codes.evidence.show', [
+                                'code' => $voucher->code,
+                                'source' => 'claim',
+                                'evidence' => $item->getKey(),
+                            ])
+                            : null,
+                    'legacy' => false,
+                ];
+            })->values()->all();
+        }
+
         return $voucher->inputs()
             ->oldest('id')
             ->get()
@@ -500,8 +538,11 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
                 return [
                     'id' => (int) $input->getKey(),
+                    'claim_id' => null,
+                    'claim_number' => null,
                     'key' => $name,
                     'label' => Str::headline($name),
+                    'group' => $this->evidenceGroup($name),
                     'kind' => $kind,
                     'status' => 'captured',
                     'value' => $sensitive
@@ -516,10 +557,23 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                                 'evidence' => $input->getKey(),
                             ])
                             : null,
+                    'legacy' => true,
                 ];
             })
             ->values()
             ->all();
+    }
+
+    protected function evidenceGroup(string $name): string
+    {
+        return match (true) {
+            in_array($name, ['name', 'birth_date'], true) => 'identity',
+            in_array($name, ['mobile', 'email', 'address'], true) => 'contact',
+            $name === 'location' => 'location',
+            in_array($name, ['selfie', 'signature', 'kyc_id_front', 'kyc_id_back'], true) => 'media',
+            $name === 'kyc' || str_starts_with($name, 'kyc_') || str_starts_with($name, 'otp') => 'verification',
+            default => 'other',
+        };
     }
 
     /**
@@ -903,7 +957,12 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
      */
     protected function claimsArray(Voucher $voucher): array
     {
-        return $voucher->claims
+        $requiredCount = count(app(ClaimEvidenceRequirements::class)->forVoucher($voucher));
+
+        return $voucher->claims()
+            ->withCount('evidence')
+            ->oldest('claim_number')
+            ->get()
             ->map(fn ($claim) => [
                 'id' => (int) $claim->getKey(),
                 'claim_number' => $claim->claim_number,
@@ -921,6 +980,13 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 'attempted_at' => $claim->attempted_at?->toIso8601String(),
                 'completed_at' => $claim->completed_at?->toIso8601String(),
                 'failure_message' => $claim->failure_message,
+                'evidence' => [
+                    'required_count' => $requiredCount,
+                    'captured_count' => (int) $claim->evidence_count,
+                    'complete' => $requiredCount === 0
+                        || (int) $claim->evidence_count >= $requiredCount,
+                    'manifest_version' => data_get($claim->meta, 'evidence.manifest_version'),
+                ],
             ])
             ->values()
             ->all();

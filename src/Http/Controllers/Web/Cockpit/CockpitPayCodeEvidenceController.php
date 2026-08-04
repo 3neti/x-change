@@ -11,6 +11,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\SettlementEnvelope\Models\EnvelopeAttachment;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeEvidenceAccessJournal;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -39,6 +40,7 @@ final class CockpitPayCodeEvidenceController extends Controller
 
         [$contents, $mimeType, $filename, $evidenceType] = match ($source) {
             'input' => $this->inputEvidence($voucher, $evidence),
+            'claim' => $this->claimEvidence($voucher, $evidence),
             'envelope' => $this->envelopeEvidence($voucher, $evidence),
             default => abort(404),
         };
@@ -62,6 +64,48 @@ final class CockpitPayCodeEvidenceController extends Controller
             'X-Content-Type-Options' => 'nosniff',
             'X-Robots-Tag' => 'noindex, nofollow, noarchive',
         ]);
+    }
+
+    /** @return array{string, string, string, string} */
+    private function claimEvidence(mixed $voucher, int $evidence): array
+    {
+        $item = VoucherClaimEvidence::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->findOrFail($evidence);
+
+        abort_unless(
+            filled($item->artifact_disk)
+            && filled($item->artifact_path)
+            && filled($item->mime_type)
+            && filled($item->sha256),
+            404,
+        );
+
+        try {
+            $contents = Storage::disk((string) $item->artifact_disk)
+                ->get((string) $item->artifact_path);
+        } catch (FileNotFoundException) {
+            abort(404);
+        }
+
+        abort_unless(hash_equals((string) $item->sha256, hash('sha256', $contents)), 404);
+
+        return [
+            $contents,
+            (string) $item->mime_type,
+            $item->requirement_key.'.'.$this->extension((string) $item->mime_type),
+            $item->requirement_key,
+        ];
+    }
+
+    private function extension(string $mimeType): string
+    {
+        return match ($mimeType) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => abort(404),
+        };
     }
 
     /** @return array{string, string, string, string} */

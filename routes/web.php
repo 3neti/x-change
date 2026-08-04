@@ -361,7 +361,7 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             Route::get(
                 '{code}/evidence/{source}/{evidence}',
                 CockpitPayCodeEvidenceController::class,
-            )->whereIn('source', ['input', 'envelope'])
+            )->whereIn('source', ['claim', 'input', 'envelope'])
                 ->whereNumber('evidence')
                 ->middleware('throttle:30,1')
                 ->name('x-change.cockpit.pay-codes.evidence.show');

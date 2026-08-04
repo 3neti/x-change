@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Redemption;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use JsonException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\ClaimEvidenceKind;
 use LBHurtado\XChange\Enums\ClaimEvidenceStatus;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
+use RuntimeException;
 
 final class PersistVoucherClaimEvidence
 {
@@ -33,16 +36,9 @@ final class PersistVoucherClaimEvidence
                 continue;
             }
 
-            /** @var Model $input */
-            $input = $voucher->inputs()->create([
-                'name' => $normalizedName,
-                'value' => $normalizedValue,
-            ]);
-
-            $inputIds[] = (int) $input->getKey();
-
             $kind = $this->kind($normalizedName);
             $verified = $this->isVerified($normalizedName, $value);
+            $artifact = $this->storeArtifact($voucher, $claim, $normalizedName, $value);
             $evidenceRecord = VoucherClaimEvidence::query()->firstOrCreate([
                 'voucher_claim_id' => $claim->getKey(),
                 'requirement_key' => $normalizedName,
@@ -53,15 +49,35 @@ final class PersistVoucherClaimEvidence
                     ? ClaimEvidenceStatus::Verified
                     : ClaimEvidenceStatus::Captured,
                 'summary' => $this->summary($normalizedName, $value),
-                'payload' => ['value' => $value],
+                'payload' => $this->safePayload($normalizedName, $value, $artifact !== null),
+                'artifact_disk' => $artifact['disk'] ?? null,
+                'artifact_path' => $artifact['path'] ?? null,
+                'mime_type' => $artifact['mime_type'] ?? null,
+                'size' => $artifact['size'] ?? null,
+                'sha256' => $artifact['sha256'] ?? null,
                 'captured_at' => now(),
                 'verified_at' => $verified ? now() : null,
                 'metadata' => [
                     'manifest_version' => 1,
-                    'legacy_input_id' => $input->getKey(),
                 ],
             ]);
             $evidenceIds[] = (int) $evidenceRecord->getKey();
+
+            /** @var Model $input */
+            $input = $voucher->inputs()->create([
+                'name' => $normalizedName,
+                'value' => $artifact === null
+                    ? $normalizedValue
+                    : json_encode([
+                        'claim_evidence_id' => $evidenceRecord->getKey(),
+                        'stored' => true,
+                    ], JSON_THROW_ON_ERROR),
+            ]);
+            $inputIds[] = (int) $input->getKey();
+
+            $metadata = (array) $evidenceRecord->metadata;
+            $metadata['legacy_input_id'] = $input->getKey();
+            $evidenceRecord->forceFill(['metadata' => $metadata])->save();
         }
 
         if ($inputIds !== []) {
@@ -149,6 +165,114 @@ final class PersistVoucherClaimEvidence
 
         $summary = trim((string) $value);
 
+        if ($name === 'mobile') {
+            $digits = preg_replace('/\D+/', '', $summary);
+
+            return is_string($digits) && strlen($digits) >= 4
+                ? '•••• '.substr($digits, -4)
+                : 'Mobile captured';
+        }
+
+        if ($name === 'email' && str_contains($summary, '@')) {
+            [$local, $domain] = explode('@', $summary, 2);
+
+            return mb_substr($local, 0, 1).'•••@'.$domain;
+        }
+
         return $summary === '' ? null : mb_substr($summary, 0, 255);
+    }
+
+    /** @return array{disk: string, path: string, mime_type: string, size: int, sha256: string}|null */
+    private function storeArtifact(
+        Voucher $voucher,
+        VoucherClaim $claim,
+        string $name,
+        mixed $value,
+    ): ?array {
+        $encoded = $name === 'location' && is_array($value)
+            ? data_get($value, 'map')
+            : $value;
+
+        if (! in_array($name, ['selfie', 'signature', 'kyc_id_front', 'kyc_id_back', 'location'], true)
+            || ! is_string($encoded)
+            || trim($encoded) === '') {
+            return null;
+        }
+
+        $contents = $this->decodeImage($encoded);
+
+        if ($contents === null) {
+            throw new RuntimeException(sprintf('Claim evidence [%s] is not a valid image.', $name));
+        }
+
+        $mimeType = (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents) ?: '';
+        $extension = match ($mimeType) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => throw new RuntimeException(sprintf('Claim evidence [%s] has an unsupported image type.', $name)),
+        };
+        $sha256 = hash('sha256', $contents);
+        $disk = (string) config('x-change.claim.evidence.disk', 'local');
+        $directory = trim((string) config(
+            'x-change.claim.evidence.directory',
+            'x-change/claim-evidence',
+        ), '/');
+        $path = sprintf(
+            '%s/%s/%s/%s-%s.%s',
+            $directory,
+            $voucher->getKey(),
+            $claim->getKey(),
+            $name,
+            $sha256,
+            $extension,
+        );
+
+        if (! Storage::disk($disk)->put($path, $contents)) {
+            throw new RuntimeException(sprintf('Claim evidence [%s] could not be stored.', $name));
+        }
+
+        return [
+            'disk' => $disk,
+            'path' => $path,
+            'mime_type' => $mimeType,
+            'size' => strlen($contents),
+            'sha256' => $sha256,
+        ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function safePayload(string $name, mixed $value, bool $artifactStored): ?array
+    {
+        if ($name === 'location' && is_array($value)) {
+            return ['value' => Arr::except($value, ['map'])];
+        }
+
+        if (in_array($name, ['selfie', 'signature', 'kyc_id_front', 'kyc_id_back'], true)) {
+            return $artifactStored ? ['artifact_stored' => true] : null;
+        }
+
+        if ($name === 'kyc' && is_array($value)) {
+            return ['value' => Arr::except($value, [
+                'selfie',
+                'id_card_full',
+                'id_card_cropped',
+                'kyc_id_front',
+                'kyc_id_back',
+            ])];
+        }
+
+        return ['value' => $value];
+    }
+
+    private function decodeImage(string $value): ?string
+    {
+        if (preg_match('/^data:[^;]+;base64,(.+)$/s', $value, $matches) === 1) {
+            $value = $matches[1];
+        }
+
+        $decoded = base64_decode(preg_replace('/\s+/', '', $value) ?? '', true);
+
+        return is_string($decoded) && $decoded !== '' ? $decoded : null;
     }
 }
