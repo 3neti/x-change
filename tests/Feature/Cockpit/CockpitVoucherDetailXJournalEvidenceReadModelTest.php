@@ -9,7 +9,7 @@ it('hydrates voucher detail with real x-journal read-only evidence entries', fun
 
     $voucher = issueVoucher(validVoucherInstructions(125.00));
 
-    ExecutionJournalEntry::query()->create([
+    $legacyEntry = ExecutionJournalEntry::query()->create([
         'reference_number' => 'ERN-COCKPIT-VOUCHER-EVIDENCE-001',
         'event_type' => 'voucher.audit.recorded',
         'occurred_at' => now(),
@@ -50,6 +50,28 @@ it('hydrates voucher detail with real x-journal read-only evidence entries', fun
         ],
     ]);
 
+    $payCodeEntry = $legacyEntry->replicate();
+    $payCodeEntry->forceFill([
+        'reference_number' => 'ERN-COCKPIT-PAY-CODE-001',
+        'event_type' => 'execution.result.recorded',
+        'occurred_at' => now()->subSecond(),
+        'subject_type' => 'pay_code',
+        'subject_id' => $voucher->code,
+        'correlation_id' => $voucher->code,
+        'subject' => ['type' => 'pay_code', 'id' => $voucher->code],
+    ])->save();
+
+    $voucherEntry = $legacyEntry->replicate();
+    $voucherEntry->forceFill([
+        'reference_number' => 'ERN-COCKPIT-VOUCHER-ID-001',
+        'event_type' => 'treasury.pay_code.disbursement.settled',
+        'occurred_at' => now()->subSeconds(2),
+        'subject_type' => 'voucher',
+        'subject_id' => (string) $voucher->getKey(),
+        'correlation_id' => 'pay-code-disbursement:'.$voucher->code,
+        'subject' => ['type' => 'voucher', 'id' => (string) $voucher->getKey()],
+    ])->save();
+
     $response = $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
         ->assertOk()
@@ -78,4 +100,13 @@ it('hydrates voucher detail with real x-journal read-only evidence entries', fun
         ->and(data_get($entry, 'payload.raw_payload'))->toBe('[redacted]')
         ->and(data_get($entry, 'payload.provider_payload'))->toBe('[redacted]')
         ->and(data_get($entry, 'metadata.wallet'))->toBe('[redacted]');
+
+    expect(collect(data_get($response->json(), 'props.read_model.journal.entries'))
+        ->pluck('reference_number')
+        ->all())
+        ->toContain(
+            'ERN-COCKPIT-VOUCHER-EVIDENCE-001',
+            'ERN-COCKPIT-PAY-CODE-001',
+            'ERN-COCKPIT-VOUCHER-ID-001',
+        );
 });

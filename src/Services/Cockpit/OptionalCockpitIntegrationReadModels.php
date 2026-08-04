@@ -23,8 +23,14 @@ class OptionalCockpitIntegrationReadModels
         private readonly CockpitRedactorContract $redactor,
     ) {}
 
-    public function journal(CockpitReadModelQueryData $query): CockpitJournalReadModelData
-    {
+    /**
+     * @param  array<int, string>  $feedbackDeliveryIds
+     */
+    public function journal(
+        CockpitReadModelQueryData $query,
+        ?string $voucherId = null,
+        array $feedbackDeliveryIds = [],
+    ): CockpitJournalReadModelData {
         $service = $this->resolveOptionalService('journal.reader');
 
         if ($service === null || ! method_exists($service, 'read')) {
@@ -32,19 +38,34 @@ class OptionalCockpitIntegrationReadModels
         }
 
         try {
-            $result = $service->read($this->journalQuery($query));
-            $payload = $this->redact($this->arrayValue($result));
+            $entries = collect($this->journalReferences($query, $voucherId, $feedbackDeliveryIds))
+                ->flatMap(function (array $reference) use ($service, $query): array {
+                    $result = $service->read($this->journalQuery(
+                        query: $query,
+                        subjectType: $reference['subject_type'] ?? null,
+                        subjectId: $reference['subject_id'] ?? null,
+                        correlationId: $reference['correlation_id'] ?? null,
+                    ));
+                    $payload = $this->redact($this->arrayValue($result));
+
+                    return $this->listValue($payload['entries'] ?? []);
+                })
+                ->unique(fn (array $entry): string => $this->journalEntryIdentity($entry))
+                ->sortByDesc(fn (array $entry): string => $this->nonEmptyString($entry['occurred_at'] ?? null) ?? '')
+                ->take(20)
+                ->values()
+                ->all();
 
             return new CockpitJournalReadModelData(
                 status: 'available',
-                entries: $this->listValue($payload['entries'] ?? []),
+                entries: $entries,
                 redactions: [
                     'payloads' => 'journal-evidence-summary-only',
                     'source' => 'x-journal',
                     'evidence_only' => true,
                     'lifecycle_truth' => false,
                     'writes_journal_entries' => false,
-                    'pagination' => $payload['metadata']['pagination'] ?? null,
+                    'query_count' => count($this->journalReferences($query, $voucherId, $feedbackDeliveryIds)),
                 ],
                 authorized: true,
             );
@@ -93,7 +114,10 @@ class OptionalCockpitIntegrationReadModels
         }
     }
 
-    public function feedback(CockpitReadModelQueryData $query): CockpitFeedbackReadModelData
+    /**
+     * @param  array<int, string>  $feedbackDeliveryIds
+     */
+    public function feedback(CockpitReadModelQueryData $query, array $feedbackDeliveryIds = []): CockpitFeedbackReadModelData
     {
         $service = $this->resolveOptionalService('feedback.console');
 
@@ -102,12 +126,28 @@ class OptionalCockpitIntegrationReadModels
         }
 
         try {
-            $result = $service->history($this->feedbackFilters($query));
-            $payload = $this->redact($this->arrayValue($result));
+            $history = $service->history($this->feedbackFilters($query));
+            $historyPayload = $this->redact($this->arrayValue($history));
+            $deliveries = collect($this->feedbackDeliveries($historyPayload));
+
+            if (method_exists($service, 'status')) {
+                foreach ($feedbackDeliveryIds as $deliveryId) {
+                    try {
+                        $record = $this->redact($this->arrayValue($service->status($deliveryId)));
+                        $deliveries->push($this->feedbackDelivery($record));
+                    } catch (Throwable) {
+                        continue;
+                    }
+                }
+            }
 
             return new CockpitFeedbackReadModelData(
                 status: 'available',
-                deliveries: $this->feedbackDeliveries($payload),
+                deliveries: $deliveries
+                    ->filter()
+                    ->unique(fn (array $delivery): string => (string) ($delivery['delivery_id'] ?? ''))
+                    ->values()
+                    ->all(),
                 redactions: [
                     'payloads' => 'communication-delivery-summary-only',
                     'source' => 'x-feedback',
@@ -264,8 +304,65 @@ class OptionalCockpitIntegrationReadModels
             : $defaults[$key] ?? null;
     }
 
-    private function journalQuery(CockpitReadModelQueryData $query): mixed
+    /**
+     * @param  array<int, string>  $feedbackDeliveryIds
+     * @return array<int, array{subject_type?: string, subject_id?: string, correlation_id?: string}>
+     */
+    private function journalReferences(
+        CockpitReadModelQueryData $query,
+        ?string $voucherId,
+        array $feedbackDeliveryIds,
+    ): array {
+        $references = [];
+        $code = $this->nonEmptyString($query->code);
+        $voucherId = $this->nonEmptyString($voucherId);
+
+        if ($code !== null) {
+            $references[] = ['subject_type' => 'pay_code', 'subject_id' => $code];
+            $references[] = ['subject_type' => 'voucher', 'subject_id' => $code];
+            $references[] = ['correlation_id' => $code];
+        }
+
+        if ($voucherId !== null) {
+            $references[] = ['subject_type' => 'voucher', 'subject_id' => $voucherId];
+        }
+
+        foreach ($feedbackDeliveryIds as $deliveryId) {
+            $deliveryId = $this->nonEmptyString($deliveryId);
+
+            if ($deliveryId !== null) {
+                $references[] = ['subject_type' => 'feedback_delivery', 'subject_id' => $deliveryId];
+            }
+        }
+
+        $correlationId = $this->nonEmptyString($query->correlationId);
+
+        if ($correlationId !== null && $correlationId !== $code) {
+            $references[] = ['correlation_id' => $correlationId];
+        }
+
+        return collect($references)
+            ->unique(fn (array $reference): string => json_encode($reference, JSON_THROW_ON_ERROR))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $entry
+     */
+    private function journalEntryIdentity(array $entry): string
     {
+        return $this->nonEmptyString($entry['reference_number'] ?? null)
+            ?? $this->nonEmptyString($entry['id'] ?? null)
+            ?? hash('sha256', json_encode($entry, JSON_THROW_ON_ERROR));
+    }
+
+    private function journalQuery(
+        CockpitReadModelQueryData $query,
+        ?string $subjectType = null,
+        ?string $subjectId = null,
+        ?string $correlationId = null,
+    ): mixed {
         $actorClass = $this->fqcn('XJournal', 'Data\\JournalAccessActorData');
         $retrievalClass = $this->fqcn('XJournal', 'Data\\JournalRetrievalQueryData');
         $profileClass = $this->fqcn('XJournal', 'Data\\JournalVisibilityProfileData');
@@ -285,10 +382,10 @@ class OptionalCockpitIntegrationReadModels
                     'metadata' => ['source' => 'x-change.cockpit'],
                 ]),
                 query: new $retrievalClass(
-                    subjectType: 'voucher',
-                    subjectId: $query->code,
-                    correlationId: $query->correlationId,
-                    limit: 5,
+                    subjectType: $subjectType,
+                    subjectId: $subjectId,
+                    correlationId: $correlationId,
+                    limit: 20,
                     order: 'desc',
                 ),
                 visibilityProfile: $profileClass::fromArray(['name' => 'redacted']),
@@ -310,10 +407,10 @@ class OptionalCockpitIntegrationReadModels
                 'permissions' => ['x-journal.view'],
             ],
             'query' => [
-                'subject_type' => 'voucher',
-                'subject_id' => $query->code,
-                'correlation_id' => $query->correlationId,
-                'limit' => 5,
+                'subject_type' => $subjectType,
+                'subject_id' => $subjectId,
+                'correlation_id' => $correlationId,
+                'limit' => 20,
                 'order' => 'desc',
             ],
             'visibility_profile' => ['name' => 'redacted'],
@@ -805,24 +902,33 @@ class OptionalCockpitIntegrationReadModels
     private function feedbackDeliveries(array $payload): array
     {
         return collect($this->listValue($payload['records'] ?? []))
-            ->map(fn (array $record): array => array_filter([
-                'delivery_id' => $record['delivery_id'] ?? null,
-                'intent_key' => $record['intent_key'] ?? null,
-                'channel' => $record['channel'] ?? null,
-                'status' => $record['status'] ?? null,
-                'attempt_count' => $record['attempt_count'] ?? null,
-                'max_attempts' => $record['max_attempts'] ?? null,
-                'provider_status' => $record['provider_status'] ?? null,
-                'correlation_id' => $record['correlation_id'] ?? null,
-                'last_attempted_at' => $record['last_attempted_at'] ?? null,
-                'delivered_at' => $record['delivered_at'] ?? null,
-                'failed_at' => $record['failed_at'] ?? null,
-                'expires_at' => $record['expires_at'] ?? null,
-                'in_app_state' => $record['in_app_state'] ?? null,
-                'meta' => $this->arrayValue($record['meta'] ?? []),
-            ], fn (mixed $value): bool => $value !== null))
+            ->map(fn (array $record): array => $this->feedbackDelivery($record))
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     * @return array<string, mixed>
+     */
+    private function feedbackDelivery(array $record): array
+    {
+        return array_filter([
+            'delivery_id' => $record['delivery_id'] ?? null,
+            'intent_key' => $record['intent_key'] ?? null,
+            'channel' => $record['channel'] ?? null,
+            'status' => $record['status'] ?? null,
+            'attempt_count' => $record['attempt_count'] ?? null,
+            'max_attempts' => $record['max_attempts'] ?? null,
+            'provider_status' => $record['provider_status'] ?? null,
+            'correlation_id' => $record['correlation_id'] ?? null,
+            'last_attempted_at' => $record['last_attempted_at'] ?? null,
+            'delivered_at' => $record['delivered_at'] ?? null,
+            'failed_at' => $record['failed_at'] ?? null,
+            'expires_at' => $record['expires_at'] ?? null,
+            'in_app_state' => $record['in_app_state'] ?? null,
+            'meta' => $this->arrayValue($record['meta'] ?? []),
+        ], fn (mixed $value): bool => $value !== null);
     }
 
     private function journalUnavailable(string $reason, ?Throwable $exception = null): CockpitJournalReadModelData

@@ -72,6 +72,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly ?VoucherLiabilitySummaryContract $liabilities = null,
         private readonly ?MoneyMovementAccountingDecisionContract $moneyMovementDecision = null,
         private readonly ?CockpitPayCodeDetailProjection $payCodeDetails = null,
+        private readonly ?CockpitPayCodeIntegrationReferenceResolver $integrationReferences = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -126,10 +127,13 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         ));
         $summary = $this->summary($detail, $code);
         $detailProjection = $this->payCodeDetails ?? new CockpitPayCodeDetailProjection;
+        $integrationReferences = $this->integrationReferences ?? new CockpitPayCodeIntegrationReferenceResolver;
+        $feedbackDeliveryIds = $integrationReferences->feedbackDeliveryIds($code);
+        $voucherId = $this->nullableString($detail['voucher_id'] ?? $detail['id'] ?? null);
         $execution = $fallback->execution;
-        $journal = $this->integrations?->journal($query) ?? $fallback->journal;
+        $journal = $this->integrations?->journal($query, $voucherId, $feedbackDeliveryIds) ?? $fallback->journal;
         $actions = $this->integrations?->actions($query) ?? $fallback->actions;
-        $feedback = $this->integrations?->feedback($query) ?? $fallback->feedback;
+        $feedback = $this->integrations?->feedback($query, $feedbackDeliveryIds) ?? $fallback->feedback;
 
         return new CockpitReadModelBundleData(
             code: $this->summaryCode($detail, $code),
