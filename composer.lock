@@ -440,16 +440,16 @@
         },
         {
             "name": "3neti/form-handler-location",
-            "version": "v1.2.0",
+            "version": "v1.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-location.git",
-                "reference": "9ccf9a68ac343b2b47a372f5c4db80f62d84a2ae"
+                "reference": "a72756f028660f14436231ccd8e268adb6b9572e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-location/zipball/9ccf9a68ac343b2b47a372f5c4db80f62d84a2ae",
-                "reference": "9ccf9a68ac343b2b47a372f5c4db80f62d84a2ae",
+                "url": "https://api.github.com/repos/3neti/form-handler-location/zipball/a72756f028660f14436231ccd8e268adb6b9572e",
+                "reference": "a72756f028660f14436231ccd8e268adb6b9572e",
                 "shasum": ""
             },
             "require": {
@@ -491,9 +491,9 @@
             "description": "Location capture handler for form flow system",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-location/issues",
-                "source": "https://github.com/3neti/form-handler-location/tree/v1.2.0"
+                "source": "https://github.com/3neti/form-handler-location/tree/v1.2.1"
             },
-            "time": "2026-07-31T06:50:30+00:00"
+            "time": "2026-08-04T10:46:02+00:00"
         },
         {
             "name": "3neti/form-handler-otp",
