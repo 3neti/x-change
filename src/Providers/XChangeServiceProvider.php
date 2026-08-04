@@ -177,6 +177,7 @@ use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\FundingProjectionPublisherContract;
+use LBHurtado\XChange\Contracts\InstructionCapabilityContributor;
 use LBHurtado\XChange\Contracts\LifecycleScenarioContributor;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
@@ -298,11 +299,13 @@ use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\Configuration\CoreDeploymentEnvironmentContributor;
+use LBHurtado\XChange\Services\Configuration\CoreInstructionCapabilityContributor;
 use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
 use LBHurtado\XChange\Services\Configuration\DeploymentConnectionCatalog;
 use LBHurtado\XChange\Services\Configuration\DeploymentEnvironmentCatalog;
 use LBHurtado\XChange\Services\Configuration\DeploymentProfileCatalog;
 use LBHurtado\XChange\Services\Configuration\DeploymentTreasuryConnectionConfiguration;
+use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
 use LBHurtado\XChange\Services\DefaultClaimApprovalExecutionService;
@@ -438,6 +441,17 @@ class XChangeServiceProvider extends ServiceProvider
             DeploymentEnvironmentCatalog::class,
             fn ($app): DeploymentEnvironmentCatalog => new DeploymentEnvironmentCatalog(
                 $app->tagged(DeploymentEnvironmentContributor::class),
+            ),
+        );
+        $this->app->singleton(CoreInstructionCapabilityContributor::class);
+        $this->app->tag(
+            CoreInstructionCapabilityContributor::class,
+            InstructionCapabilityContributor::class,
+        );
+        $this->app->singleton(
+            InstructionCapabilityReadinessRegistry::class,
+            fn ($app): InstructionCapabilityReadinessRegistry => new InstructionCapabilityReadinessRegistry(
+                $app->tagged(InstructionCapabilityContributor::class),
             ),
         );
         $this->app->singleton(

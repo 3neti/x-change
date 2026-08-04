@@ -24,6 +24,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
+use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
 use LBHurtado\XChange\Services\Funding\PreparePayCodeAccountFundingIssuance;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 use LBHurtado\XChange\Services\PayCodeIssuanceTransaction;
@@ -60,6 +61,7 @@ class GeneratePayCode
     public function handle(array $input): GeneratePayCodeResultData
     {
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
+        app(InstructionCapabilityIssuanceGuard::class)->ensureAvailable($input);
 
         $issuer = $this->users->resolve($input);
 
