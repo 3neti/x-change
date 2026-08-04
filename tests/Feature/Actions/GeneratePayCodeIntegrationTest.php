@@ -96,7 +96,9 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
 it('does not emit the brick math float deprecation during voucher cash persistence', function () {
     $user = actingAsTestUser(1_000_000);
 
-    $payload = array_merge(validPayCodePayload(25.0), [
+    $payload = array_merge(validPayCodePayload(25.0, 'INSTAPAY', [
+        'inputs' => ['fields' => ['selfie']],
+    ]), [
         'issuer_id' => $user->id,
     ]);
 
@@ -130,6 +132,10 @@ it('does not emit the brick math float deprecation during voucher cash persisten
 
     expect($result)->toBeInstanceOf(GeneratePayCodeResultData::class)
         ->and($result->amount)->toBe(25.0)
+        ->and(data_get(
+            Voucher::query()->findOrFail($result->voucher_id)->instructions,
+            'metadata.custom.claim_evidence.requirements',
+        ))->toContain('selfie', 'signature')
         ->and($deprecations)->toBeEmpty();
 });
 

@@ -18,7 +18,7 @@ it('snapshots typed issuance requirements as stable scalar values', function ():
         ],
     ]);
 
-    expect(data_get($issuance, 'metadata.claim_evidence'))->toMatchArray([
+    expect(data_get($issuance, 'metadata.custom.claim_evidence'))->toMatchArray([
         'manifest_version' => 1,
         'requirements' => ['name', 'location', 'selfie'],
         'required_count' => 3,

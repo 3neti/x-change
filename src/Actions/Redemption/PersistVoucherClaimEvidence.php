@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
+use LBHurtado\SettlementEnvelope\Models\EnvelopeSignal;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\ClaimEvidenceKind;
 use LBHurtado\XChange\Enums\ClaimEvidenceStatus;
@@ -81,12 +82,16 @@ final class PersistVoucherClaimEvidence
         }
 
         if ($inputIds !== []) {
+            $manifestHash = $this->manifestHash($claim);
             $meta = (array) $claim->meta;
             data_set($meta, 'evidence.input_ids', $inputIds);
             data_set($meta, 'evidence.record_ids', $evidenceIds);
             data_set($meta, 'evidence.manifest_version', 1);
+            data_set($meta, 'evidence.manifest_sha256', $manifestHash);
+            data_set($meta, 'evidence.captured_count', count($evidenceIds));
             data_set($meta, 'evidence.persisted', true);
             $claim->forceFill(['meta' => $meta])->save();
+            $this->attachManifestToSettlementEnvelope($voucher, $claim, $manifestHash);
         }
 
         return [
@@ -274,5 +279,51 @@ final class PersistVoucherClaimEvidence
         $decoded = base64_decode(preg_replace('/\s+/', '', $value) ?? '', true);
 
         return is_string($decoded) && $decoded !== '' ? $decoded : null;
+    }
+
+    private function manifestHash(VoucherClaim $claim): string
+    {
+        $manifest = $claim->evidence()
+            ->orderBy('requirement_key')
+            ->get()
+            ->map(static fn (VoucherClaimEvidence $item): array => [
+                'key' => $item->requirement_key,
+                'kind' => $item->kind->value,
+                'status' => $item->status->value,
+                'artifact_sha256' => $item->sha256,
+            ])
+            ->values()
+            ->all();
+
+        return hash('sha256', json_encode(
+            $manifest,
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
+        ));
+    }
+
+    private function attachManifestToSettlementEnvelope(
+        Voucher $voucher,
+        VoucherClaim $claim,
+        string $manifestHash,
+    ): void {
+        $envelope = $voucher->envelope()->first();
+
+        if ($envelope === null) {
+            return;
+        }
+
+        EnvelopeSignal::setSignal(
+            envelope: $envelope,
+            key: 'claim_evidence_manifest_'.$claim->claim_number,
+            value: $manifestHash,
+            type: 'string',
+            source: 'x-change',
+        );
+        EnvelopeSignal::setSignal(
+            envelope: $envelope,
+            key: 'claim_evidence_complete_'.$claim->claim_number,
+            value: true,
+            source: 'x-change',
+        );
     }
 }

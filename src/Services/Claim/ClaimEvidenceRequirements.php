@@ -20,7 +20,7 @@ final class ClaimEvidenceRequirements
             data_get($issuance, 'inputs.fields', []),
         );
 
-        data_set($issuance, 'metadata.claim_evidence', [
+        data_set($issuance, 'metadata.custom.claim_evidence', [
             'manifest_version' => 1,
             'requirements' => $requirements,
             'required_count' => count($requirements),
@@ -59,7 +59,9 @@ final class ClaimEvidenceRequirements
         $instructions = is_array($voucher->metadata)
             ? (array) data_get($voucher->metadata, 'instructions', [])
             : [];
-        $snapshot = data_get($instructions, 'metadata.claim_evidence.requirements');
+        $snapshot = data_get($instructions, 'metadata.custom.claim_evidence.requirements')
+            ?? data_get($instructions, 'rules.claim_evidence.requirements')
+            ?? data_get($instructions, 'metadata.claim_evidence.requirements');
 
         return $this->normalizeRequirements(
             is_array($snapshot)

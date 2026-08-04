@@ -98,6 +98,8 @@ it('records a voucher claim row from a normalized claim result', function () {
     expect(data_get($claim->fresh()->meta, 'evidence.persisted'))->toBeTrue()
         ->and(data_get($claim->fresh()->meta, 'evidence.input_ids'))->toHaveCount(2)
         ->and(data_get($claim->fresh()->meta, 'evidence.record_ids'))->toHaveCount(2)
+        ->and(data_get($claim->fresh()->meta, 'evidence.manifest_sha256'))->toMatch('/^[a-f0-9]{64}$/')
+        ->and(data_get($claim->fresh()->meta, 'evidence.captured_count'))->toBe(2)
         ->and(VoucherClaimEvidence::query()->whereBelongsTo($claim, 'claim')->count())->toBe(2)
         ->and($claim->evidence()->where('requirement_key', 'name')->value('summary'))->toBe('Juan Dela Cruz')
         ->and($claim->evidence()->where('requirement_key', 'location')->value('summary'))->toBe('Makati City');
