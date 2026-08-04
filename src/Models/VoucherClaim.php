@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use LBHurtado\Voucher\Models\Voucher;
 
 class VoucherClaim extends Model
@@ -48,6 +49,11 @@ class VoucherClaim extends Model
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
+    }
+
+    public function evidence(): HasMany
+    {
+        return $this->hasMany(VoucherClaimEvidence::class, 'voucher_claim_id');
     }
 
     public function getRequestedAmountAttribute(): ?float
