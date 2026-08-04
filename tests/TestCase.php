@@ -127,6 +127,17 @@ abstract class TestCase extends Orchestra
         $app['config']->set('x-change.deployment.profile_explicitly_configured', true);
         $app['config']->set('x-change.commissioning.enabled', false);
 
+        // The package testbench explicitly provisions safe, non-production
+        // capability doubles. Individual readiness tests override these values
+        // to exercise fail-closed production and missing-configuration paths.
+        $app['config']->set('location-handler.opencage_api_key', 'test-opencage-key');
+        $app['config']->set('location-handler.map_provider', 'mapbox');
+        $app['config']->set('location-handler.mapbox_token', 'test-mapbox-token');
+        $app['config']->set('kyc-handler.use_fake', true);
+        $app['config']->set('otp-handler.driver', 'txtcmdr');
+        $app['config']->set('otp-handler.txtcmdr.base_url', 'https://txtcmdr.example.test');
+        $app['config']->set('otp-handler.txtcmdr.api_token', 'test-txtcmdr-token');
+
         $app['config']->set('x-change.product.name', 'X-Change');
         $app['config']->set('x-change.product.code', 'x-change');
         $app['config']->set('x-change.product.default_currency', 'PHP');
