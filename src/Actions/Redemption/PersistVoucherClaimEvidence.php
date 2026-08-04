@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
-use LBHurtado\SettlementEnvelope\Models\EnvelopeSignal;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\ClaimEvidenceKind;
 use LBHurtado\XChange\Enums\ClaimEvidenceStatus;
@@ -312,18 +311,19 @@ final class PersistVoucherClaimEvidence
             return;
         }
 
-        EnvelopeSignal::setSignal(
-            envelope: $envelope,
-            key: 'claim_evidence_manifest_'.$claim->claim_number,
-            value: $manifestHash,
-            type: 'string',
-            source: 'x-change',
-        );
-        EnvelopeSignal::setSignal(
-            envelope: $envelope,
-            key: 'claim_evidence_complete_'.$claim->claim_number,
-            value: true,
-            source: 'x-change',
-        );
+        $envelope->signals()->updateOrCreate([
+            'key' => 'claim_evidence_manifest_'.$claim->claim_number,
+        ], [
+            'value' => $manifestHash,
+            'type' => 'string',
+            'source' => 'x-change',
+        ]);
+        $envelope->signals()->updateOrCreate([
+            'key' => 'claim_evidence_complete_'.$claim->claim_number,
+        ], [
+            'value' => 'true',
+            'type' => 'boolean',
+            'source' => 'x-change',
+        ]);
     }
 }
