@@ -124,6 +124,34 @@ it('reports a reconciliation-required payout as pending rather than successful',
     );
 });
 
+it('reports a rejected payout as correctable without undoing the claim', function () {
+    Mail::fake();
+
+    $voucher = redemptionFeedbackVoucher('TEST-FEEDBACK-REJECTED', [
+        'email' => 'issuer@example.test',
+    ]);
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'disbursement.status', 'rejected');
+    data_set($metadata, 'disbursement.requires_reconciliation', false);
+    data_set($metadata, 'disbursement.requires_recovery', true);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $claim = redemptionFeedbackClaim($voucher);
+    $claim->forceFill([
+        'status' => 'payout_rejected',
+        'failure_message' => 'AC01 (Incorrect account number)',
+    ])->save();
+
+    app(DispatchVoucherRedemptionFeedback::class)->handle($claim->getKey());
+
+    Mail::assertSent(
+        FeedbackEmailMessage::class,
+        fn (FeedbackEmailMessage $mail): bool => $mail->intent->key === 'voucher.payout.rejected'
+            && str_contains($mail->intent->message->body, 'receiving institution rejected')
+            && str_contains($mail->intent->message->body, 'funds remain protected')
+            && ! str_contains($mail->intent->message->body, 'paid successfully'),
+    );
+});
+
 it('does not redeliver channels that already have durable terminal evidence', function () {
     Mail::fake();
     Bus::fake([DeliverQueuedFeedbackSmsJob::class]);

@@ -231,6 +231,7 @@ use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
+use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Exceptions\FundingProviderUnavailable;
@@ -253,6 +254,7 @@ use LBHurtado\XChange\Http\Responses\MobileFirstRegisterResponse;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleUserModelResolver;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
+use LBHurtado\XChange\Listeners\HandleRejectedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
@@ -1314,6 +1316,11 @@ class XChangeServiceProvider extends ServiceProvider
         Event::listen(
             DisbursementConfirmed::class,
             HandleConfirmedDisbursement::class
+        );
+
+        Event::listen(
+            DisbursementRejected::class,
+            HandleRejectedDisbursement::class
         );
     }
 

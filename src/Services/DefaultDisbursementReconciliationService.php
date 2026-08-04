@@ -11,6 +11,7 @@ use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Data\Reconciliation\DisbursementReconciliationData;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
+use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 
 class DefaultDisbursementReconciliationService implements DisbursementReconciliationContract
@@ -77,6 +78,10 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
             $updates['completed_at'] = now();
         }
 
+        if ($resolvedStatus === 'failed' && $trustsFailure && ! $model->completed_at) {
+            $updates['completed_at'] = now();
+        }
+
         if (in_array($resolvedStatus, ['succeeded', 'failed'], true)) {
             $updates['next_retry_at'] = null;
         }
@@ -92,6 +97,14 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
             )
         ) {
             Event::dispatch(new DisbursementConfirmed($model->fresh()));
+        }
+
+        if (
+            $resolvedStatus === 'failed'
+            && $trustsFailure
+            && $model->internal_status !== 'recovery_opened'
+        ) {
+            Event::dispatch(new DisbursementRejected($model->fresh()));
         }
 
         return [

@@ -85,3 +85,19 @@ it('does not treat successful disbursement status as pending', function () {
 
     expect($outcome)->toBe(RiderOutcomeState::AcceptedSuccess);
 });
+
+it('treats a provider-rejected payout as rejected even when recovery is required', function () {
+    $resolver = new XChangeRiderOutcomeResolver;
+
+    $outcome = $resolver->forVoucher(
+        riderOutcomeVoucherWithMetadata([
+            'disbursement' => [
+                'status' => 'rejected',
+                'requires_recovery' => true,
+                'requires_reconciliation' => false,
+            ],
+        ]),
+    );
+
+    expect($outcome)->toBe(RiderOutcomeState::RejectedFailure);
+});

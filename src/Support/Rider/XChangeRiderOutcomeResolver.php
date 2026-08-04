@@ -11,6 +11,10 @@ class XChangeRiderOutcomeResolver
     {
         $status = $this->disbursementStatus($voucher);
 
+        if ($this->isRejected($status)) {
+            return RiderOutcomeState::RejectedFailure;
+        }
+
         if ($this->requiresReconciliation($voucher)) {
             return RiderOutcomeState::AcceptedPending;
         }
@@ -80,6 +84,16 @@ class XChangeRiderOutcomeResolver
             'in_progress',
             'for_reconciliation',
             'reconciling',
+        ], true);
+    }
+
+    protected function isRejected(?string $status): bool
+    {
+        return in_array($status, [
+            'failed',
+            'rejected',
+            'declined',
+            'cancelled',
         ], true);
     }
 }

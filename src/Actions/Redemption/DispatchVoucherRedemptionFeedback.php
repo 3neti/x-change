@@ -69,7 +69,7 @@ final readonly class DispatchVoucherRedemptionFeedback
             return false;
         }
 
-        return in_array(
+        return $claim->status === 'payout_rejected' || in_array(
             $claim->status,
             (array) config('x-change.redemption.feedback.terminal_claim_statuses', [
                 'succeeded',
@@ -120,18 +120,28 @@ final readonly class DispatchVoucherRedemptionFeedback
     ): FeedbackIntentData {
         $voucher = $claim->voucher;
         $pending = $outcome === 'accepted_pending';
+        $rejected = $outcome === 'rejected_failure';
+        $eventKey = $rejected
+            ? 'voucher.payout.rejected'
+            : ($pending ? 'voucher.redemption.pending' : self::IntentKey);
 
         return FeedbackIntentData::forEvent(
-            key: $pending ? 'voucher.redemption.pending' : self::IntentKey,
-            eventType: $pending ? 'voucher.redemption.pending' : self::IntentKey,
+            key: $eventKey,
+            eventType: $eventKey,
             message: new FeedbackMessageData(
-                title: $pending ? 'Pay Code claim pending' : 'Pay Code redeemed',
-                body: $pending
-                    ? sprintf('Pay Code %s was claimed. Provider payout is pending verification.', $voucher->code)
-                    : sprintf('Pay Code %s was redeemed and paid successfully.', $voucher->code),
-                summary: $pending
-                    ? sprintf('Pay Code %s payout pending', $voucher->code)
-                    : sprintf('Pay Code %s redeemed and paid', $voucher->code),
+                title: $rejected
+                    ? 'Pay Code payout needs correction'
+                    : ($pending ? 'Pay Code claim pending' : 'Pay Code redeemed'),
+                body: $rejected
+                    ? sprintf('Pay Code %s was claimed, but the receiving institution rejected the payout destination. The funds remain protected while the destination is corrected.', $voucher->code)
+                    : ($pending
+                        ? sprintf('Pay Code %s was claimed. Provider payout is pending verification.', $voucher->code)
+                        : sprintf('Pay Code %s was redeemed and paid successfully.', $voucher->code)),
+                summary: $rejected
+                    ? sprintf('Pay Code %s payout destination rejected', $voucher->code)
+                    : ($pending
+                        ? sprintf('Pay Code %s payout pending', $voucher->code)
+                        : sprintf('Pay Code %s redeemed and paid', $voucher->code)),
                 variables: [
                     'voucher_code' => $voucher->code,
                     'claim_id' => $claim->getKey(),

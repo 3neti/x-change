@@ -16,6 +16,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
+use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -168,6 +169,93 @@ it('journals settlement reached through scheduled provider reconciliation', func
         ->count())->toBe(1)
         ->and($provider->disburseCallCount)->toBe(1)
         ->and($provider->checkStatusCallCount)->toBe(1);
+});
+
+it('holds a provider-rejected payout for beneficiary correction without changing inventory', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnPendingResult(
+        transactionId: 'NETBANK-TREASURY-REJECTED-1',
+        provider: 'netbank',
+    );
+    $reserveBefore = treasuryBackedPayoutPositionBalance(
+        $issuer,
+        TreasuryPositionPurpose::PayCodeReserve,
+    );
+    $payableBefore = treasuryBackedPayoutPositionBalance(
+        $issuer,
+        TreasuryPositionPurpose::BeneficiaryPayoutPayable,
+    );
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+        ],
+    ]);
+    $reconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+    $reconciliation->forceFill([
+        'status' => 'failed',
+        'needs_review' => false,
+        'error_message' => 'AC01 (Incorrect account number)',
+        'completed_at' => now(),
+    ])->save();
+
+    DisbursementRejected::dispatch($reconciliation->fresh());
+
+    expect($result->status)->toBe('pending_review')
+        ->and($reconciliation->refresh()->internal_status)->toBe('recovery_opened')
+        ->and(data_get(
+            $voucher->refresh()->metadata,
+            'treasury.pay_code_reservation.status',
+        ))->toBe('recovery_pending')
+        ->and(data_get($voucher->metadata, 'disbursement.status'))->toBe('rejected')
+        ->and(data_get($voucher->metadata, 'disbursement.requires_recovery'))->toBeTrue()
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe($reserveBefore - 2_000)
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::BeneficiaryPayoutPayable,
+        ))->toBe($payableBefore + 2_000)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.disbursement.rejected')
+            ->where('subject_id', (string) $voucher->getKey())
+            ->count())->toBe(1);
+
+    $claim = VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole();
+    expect($claim->status)->toBe('payout_rejected')
+        ->and($claim->disbursed_amount_minor)->toBe(0)
+        ->and($claim->failure_message)->toBe('AC01 (Incorrect account number)');
+    Bus::assertDispatched(
+        DispatchVoucherRedemptionFeedbackJob::class,
+        fn (DispatchVoucherRedemptionFeedbackJob $job): bool => $job->outcomeFingerprint
+            === 'provider-rejected:NETBANK-TREASURY-REJECTED-1',
+    );
+
+    DisbursementRejected::dispatch($reconciliation->fresh());
+
+    expect(treasuryBackedPayoutPositionBalance(
+        $issuer,
+        TreasuryPositionPurpose::PayCodeReserve,
+    ))->toBe($reserveBefore - 2_000)
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::BeneficiaryPayoutPayable,
+        ))->toBe($payableBefore + 2_000)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.disbursement.rejected')
+            ->where('subject_id', (string) $voucher->getKey())
+            ->count())->toBe(1);
+    $provider->assertDisburseCalledTimes(1);
 });
 
 it('retries a provider-confirmed settlement when its journal write initially fails', function (): void {

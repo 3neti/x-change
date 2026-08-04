@@ -7,6 +7,7 @@ use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
+use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 
@@ -153,6 +154,7 @@ it('reconciles a trusted provider failure without leaving stale review flags', f
         ->and($record->next_retry_at)->toBeNull();
 
     Event::assertNotDispatched(DisbursementConfirmed::class);
+    Event::assertDispatched(DisbursementRejected::class);
 });
 
 it('redispatches confirmation for a succeeded reconciliation whose internal posting is incomplete', function () {

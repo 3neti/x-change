@@ -52,6 +52,7 @@ final readonly class TreasuryAccountPortfolioProvisioningService implements Trea
             foreach ([
                 [TreasuryPositionPurpose::ClientFunds, 'client'],
                 [TreasuryPositionPurpose::PayCodeReserve, 'pay-code-reserve'],
+                [TreasuryPositionPurpose::BeneficiaryPayoutPayable, 'beneficiary-payout-payable'],
             ] as [$purpose, $referencePrefix]) {
                 $scope = implode('|', [
                     $principalReference,

@@ -1340,16 +1340,16 @@
         },
         {
             "name": "3neti/wallet",
-            "version": "v2.0.0-beta.2",
+            "version": "v2.0.0-beta.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/wallet.git",
-                "reference": "d76843865c7e9dcfbc16a96a9d87c062d8317dc9"
+                "reference": "fe6f8f3be112b2e39fc4a7363ba22d8ffb864409"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/wallet/zipball/d76843865c7e9dcfbc16a96a9d87c062d8317dc9",
-                "reference": "d76843865c7e9dcfbc16a96a9d87c062d8317dc9",
+                "url": "https://api.github.com/repos/3neti/wallet/zipball/fe6f8f3be112b2e39fc4a7363ba22d8ffb864409",
+                "reference": "fe6f8f3be112b2e39fc4a7363ba22d8ffb864409",
                 "shasum": ""
             },
             "require": {
@@ -1391,9 +1391,9 @@
             "description": "Custom wallet for X-Change",
             "support": {
                 "issues": "https://github.com/3neti/wallet/issues",
-                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.2"
+                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.3"
             },
-            "time": "2026-08-03T13:59:11+00:00"
+            "time": "2026-08-04T12:59:04+00:00"
         },
         {
             "name": "3neti/x-action",

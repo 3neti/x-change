@@ -13,6 +13,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryAdjustmentData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionDerecognitionData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionPayoutRecoveryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReleaseData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
@@ -191,6 +192,77 @@ final readonly class TreasuryPayCodeAccountingService
         );
     }
 
+    public function holdRejectedPayout(
+        Model $accountOwner,
+        Voucher $voucher,
+        DisbursementReconciliation $reconciliation,
+    ): TreasuryPositionPayoutRecoveryData {
+        $reservation = (array) data_get(
+            $voucher->metadata,
+            'treasury.pay_code_reservation',
+            [],
+        );
+        $amountMinor = (int) data_get($reservation, 'amount_minor', 0);
+        $currency = mb_strtoupper((string) data_get($reservation, 'currency'));
+        $connection = $this->connection(
+            (string) data_get($reservation, 'connection_reference'),
+            $currency,
+        );
+
+        if (
+            data_get($reservation, 'status') !== 'reserved'
+            || $reconciliation->status !== 'failed'
+            || ! filled($reconciliation->provider_transaction_id)
+            || (int) round(((float) $reconciliation->amount) * 100) !== $amountMinor
+            || $amountMinor <= 0
+        ) {
+            throw new TreasuryConfigurationException(
+                'The provider rejection does not support a beneficiary payout recovery hold.',
+            );
+        }
+
+        $positions = $this->portfolios->provision(
+            $accountOwner,
+            [$connection->reference],
+        )->positions;
+        $reserve = $this->position(
+            $positions,
+            TreasuryPositionPurpose::PayCodeReserve,
+        );
+        $payable = $this->position(
+            $positions,
+            TreasuryPositionPurpose::BeneficiaryPayoutPayable,
+        );
+        $scope = hash('sha256', implode('|', [
+            $connection->provider,
+            $connection->reference,
+            (string) $voucher->getKey(),
+            (string) $reconciliation->getKey(),
+            (string) $reconciliation->provider_transaction_id,
+            (string) $amountMinor,
+        ]));
+
+        return $this->positionOperations->holdPayoutRecovery(
+            new TreasuryPositionPayoutRecoveryData(
+                operationReference: 'pay-code-payout-recovery-hold:'.$scope,
+                sourcePositionReference: $reserve->positionReference,
+                destinationPositionReference: $payable->positionReference,
+                amountMinor: $amountMinor,
+                currency: $connection->currency,
+                idempotencyKey: 'pay-code-payout-recovery-hold-key:'.$scope,
+                externalReference: $connection->provider.':'.$reconciliation->provider_transaction_id,
+                metadata: [
+                    'source' => 'x_change_provider_disbursement_rejection',
+                    'pay_code_id' => (int) $voucher->getKey(),
+                    'disbursement_reconciliation_id' => (int) $reconciliation->getKey(),
+                    'provider' => $connection->provider,
+                    'connection_reference' => $connection->reference,
+                    'provider_inventory_changed' => false,
+                ],
+            ),
+        );
+    }
+
     public function settle(
         Model $accountOwner,
         Voucher $voucher,
@@ -203,9 +275,15 @@ final readonly class TreasuryPayCodeAccountingService
         [$beneficiaryAmountMinor, $configuredRailFeeMinor] =
             $this->settlementAmounts($voucher, $reconciliation, $connection);
         $providerPrincipalMinor = $beneficiaryAmountMinor;
+        $settlementSourcePurpose = data_get(
+            $voucher->metadata,
+            'treasury.pay_code_reservation.status',
+        ) === 'recovery_pending'
+            ? TreasuryPositionPurpose::BeneficiaryPayoutPayable
+            : TreasuryPositionPurpose::PayCodeReserve;
         $reserve = $this->position(
             $this->accountPositions($accountOwner, $connection),
-            TreasuryPositionPurpose::PayCodeReserve,
+            $settlementSourcePurpose,
         );
         $reservationScope = $this->scope(
             $connection,

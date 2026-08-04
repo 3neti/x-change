@@ -50,7 +50,7 @@ final readonly class HandleConfirmedDisbursement
             return;
         }
 
-        if (data_get($reservation, 'status') !== 'reserved') {
+        if (! in_array(data_get($reservation, 'status'), ['reserved', 'recovery_pending'], true)) {
             $this->queueTerminalFeedback($voucher, $reconciliation);
 
             return;
