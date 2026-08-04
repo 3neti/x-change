@@ -53,6 +53,12 @@ const voucher = {
         claimer_mobile_masked: "•••• 1987",
         attempted_at: "2026-08-03T08:15:00+08:00",
         completed_at: "2026-08-03T08:19:00+08:00",
+        evidence: {
+          required_count: 1,
+          captured_count: 1,
+          complete: true,
+          manifest_version: 1,
+        },
       },
     ],
     evidence: [
@@ -60,11 +66,14 @@ const voucher = {
         id: 44,
         key: "signature",
         label: "Signature",
+        group: "media",
         kind: "image",
         status: "captured",
         value: null,
         revealable: true,
         reveal_href: "/x/cockpit/pay-codes/CAMP-CB2L/evidence/input/44",
+        claim_number: 1,
+        legacy: false,
       },
     ],
   },
@@ -137,6 +146,12 @@ describe("Cockpit Pay Code record workspace", () => {
 
     expect(wrapper.get('[data-testid="pay-code-claim-tab"]').text()).toContain(
       "Access is recorded",
+    );
+    expect(
+      wrapper.get('[data-testid="claim-evidence-coverage"]').text(),
+    ).toContain("1 of 1 required items captured");
+    expect(wrapper.get('[data-testid="pay-code-claim-tab"]').text()).toContain(
+      "Selfie & Signature",
     );
     expect(wrapper.find('img[src*="/evidence/input/44"]').exists()).toBe(false);
 
@@ -237,12 +252,8 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(overviewWarning.text()).toContain(
       "Claim completed · Payout needs correction",
     );
-    expect(overviewWarning.text()).toContain(
-      "AC01 (Incorrect account number)",
-    );
-    expect(overviewWarning.text()).toContain(
-      "principal remains protected",
-    );
+    expect(overviewWarning.text()).toContain("AC01 (Incorrect account number)");
+    expect(overviewWarning.text()).toContain("principal remains protected");
 
     await wrapper
       .get('[data-testid="pay-code-overview-review-correction"]')
@@ -252,9 +263,14 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(rejection.text()).toContain("Claim recorded · Payout rejected");
     expect(rejection.text()).toContain("AC01 (Incorrect account number)");
     expect(rejection.text()).toContain("principal remains protected");
-    expect(rejection.text()).toContain("receiving institution still makes the final decision");
-    expect(wrapper.get('[data-testid="pay-code-payout-correction-form"]').attributes('action'))
-      .toBe('/x/cockpit/pay-codes/LM52/payout-corrections');
+    expect(rejection.text()).toContain(
+      "receiving institution still makes the final decision",
+    );
+    expect(
+      wrapper
+        .get('[data-testid="pay-code-payout-correction-form"]')
+        .attributes("action"),
+    ).toBe("/x/cockpit/pay-codes/LM52/payout-corrections");
   });
 
   it("shows exact journal and delivery evidence with its delivery time", async () => {
