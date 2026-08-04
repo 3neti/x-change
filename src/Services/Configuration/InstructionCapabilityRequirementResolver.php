@@ -43,7 +43,11 @@ final class InstructionCapabilityRequirementResolver
         }
 
         foreach (['sms' => 'mobile', 'email' => 'email', 'webhook' => 'webhook'] as $channel => $field) {
-            if ($this->configured(data_get($instructions, "feedback.{$field}"))) {
+            $blueprintChannels = (array) data_get($instructions, 'feedback.channels', []);
+
+            if ($this->configured(data_get($instructions, "feedback.{$field}"))
+                || in_array($field, $blueprintChannels, true)
+                || in_array($channel, $blueprintChannels, true)) {
                 $required[] = "feedback.{$channel}";
             }
         }

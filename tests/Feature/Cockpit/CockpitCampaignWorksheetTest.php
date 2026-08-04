@@ -193,6 +193,49 @@ it('lets only the draft owner save one encrypted Pay Code experience for every b
         ->assertForbidden();
 });
 
+it('blocks worksheet freeze when its Pay Code experience requires an unavailable service', function (): void {
+    config()->set('location-handler.opencage_api_key', null);
+    config()->set('location-handler.map_provider', 'mapbox');
+    config()->set('location-handler.mapbox_token', null);
+
+    $owner = actingAsTestUser();
+    $repository = app(CampaignWorksheetRepository::class);
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-unavailable-location',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Location Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, [
+            'name' => 'Maria Santos',
+            'mobile' => '09173011987',
+        ], 12_500)],
+        instructionBlueprint: [
+            'inputs' => ['fields' => ['location']],
+        ],
+    ));
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertOk()
+        ->assertJsonPath('props.instruction_capabilities.location.issuance_allowed', false)
+        ->assertJsonPath(
+            'props.instruction_capability_blockers.0',
+            'Location evidence is unavailable until reverse-geocoding and map services are configured.',
+        );
+
+    $this->from(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->post(route('x-change.cockpit.campaigns.authorizations.store', $worksheet->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHasErrors('validation.location');
+
+    expect($repository->findForOwner(
+        (string) $worksheet->reference,
+        $owner->getMorphClass(),
+        (string) $owner->getKey(),
+    )?->status)->toBe('draft');
+});
+
 it('scrutinizes a worksheet before creating a campaign and converts selected valid rows', function () {
     $owner = actingAsTestUser();
 

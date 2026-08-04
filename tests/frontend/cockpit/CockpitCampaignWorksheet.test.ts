@@ -443,6 +443,57 @@ describe('Cockpit campaign worksheets', () => {
         );
     });
 
+    it('keeps an unavailable saved service removable but blocks campaign approval readiness', async () => {
+        const wrapper = mount(CockpitCampaignPayCodeExperience, {
+            props: {
+                worksheetReference: worksheet.reference,
+                worksheetName: worksheet.name,
+                fulfillmentMode: worksheet.fulfillment_mode,
+                status: 'draft',
+                currency: 'PHP',
+                beneficiaryCount: 2,
+                representativeAmountMinor: 12_500,
+                representativeRecipient: '09173011987',
+                blueprint: { inputs: { fields: ['location'] } },
+                revision: 1,
+                instructionCapabilities: {
+                    location: {
+                        key: 'location',
+                        label: 'Location',
+                        status: 'unavailable',
+                        issuance_allowed: false,
+                        claim_retryable: true,
+                        reason: 'Location services are not configured.',
+                        missing_configuration: ['OPENCAGE_API_KEY'],
+                        source: 'form-handler-location',
+                    },
+                },
+            },
+        });
+
+        const claimTab = wrapper
+            .findAll('button')
+            .find((button) => button.text().trim() === 'Claim');
+        await claimTab?.trigger('click');
+
+        const location = wrapper.get('input[value="location"]');
+        expect(location.element).toMatchObject({
+            checked: true,
+            disabled: false,
+        });
+        expect(
+            wrapper
+                .get('[data-testid="campaign-instruction-capability-warning"]')
+                .text(),
+        ).toContain('Location services are not configured.');
+        expect(
+            wrapper
+                .findAll('button')
+                .find((button) => button.text().includes('Save Changes'))
+                ?.attributes('disabled'),
+        ).toBeDefined();
+    });
+
     it('propagates account onboarding as a locked campaign-wide instruction', async () => {
         const wrapper = mount(CockpitCampaignPayCodeExperience, {
             props: {

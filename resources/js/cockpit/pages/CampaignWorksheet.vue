@@ -26,7 +26,10 @@ import CockpitCampaignImportWorkspace, {
     type CampaignImport,
 } from '../components/CockpitCampaignImportWorkspace.vue';
 import CockpitCampaignPayCodeExperience from '../components/CockpitCampaignPayCodeExperience.vue';
-import type { CockpitHeaderPageProps } from '../types';
+import type {
+    CockpitHeaderPageProps,
+    CockpitInstructionCapabilityReadinessMap,
+} from '../types';
 
 type Worksheet = {
     reference: string;
@@ -85,6 +88,8 @@ type Props = CockpitHeaderPageProps & {
     direct_bank_transfer_enabled: boolean;
     onboarding_otp_required?: boolean;
     delivery: Delivery;
+    instruction_capabilities?: CockpitInstructionCapabilityReadinessMap;
+    instruction_capability_blockers?: string[];
 };
 const props = defineProps<Props>();
 const form = useForm({
@@ -321,7 +326,7 @@ const sendApproval = (): void => {
                                     Total
                                 </dt>
                                 <dd
-                                    class="mt-0.5 text-sm font-semibold whitespace-nowrap text-slate-950 dark:text-slate-50"
+                                    class="mt-0.5 whitespace-nowrap text-sm font-semibold text-slate-950 dark:text-slate-50"
                                 >
                                     {{ peso(worksheetTotalMinor) }}
                                 </dd>
@@ -366,6 +371,7 @@ const sendApproval = (): void => {
                 :revision="props.worksheet.instruction_blueprint_revision"
                 :blueprint-hash="props.worksheet.instruction_blueprint_hash"
                 :onboarding-otp-required="props.onboarding_otp_required ?? true"
+                :instruction-capabilities="props.instruction_capabilities ?? {}"
             />
 
             <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
@@ -408,6 +414,8 @@ const sendApproval = (): void => {
                             :disabled="
                                 props.worksheet.rows.length === 0 ||
                                 hasPendingImportRows ||
+                                (props.instruction_capability_blockers
+                                    ?.length ?? 0) > 0 ||
                                 authorizationForm.processing
                             "
                             class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-100 dark:text-slate-950"
@@ -420,6 +428,19 @@ const sendApproval = (): void => {
                                     : 'Request Approval'
                             }}
                         </button>
+                    </div>
+                    <div
+                        v-if="
+                            isDraft() &&
+                            (props.instruction_capability_blockers?.length ??
+                                0) > 0
+                        "
+                        class="border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100"
+                        data-testid="campaign-approval-capability-warning"
+                    >
+                        Update the Recipient Experience before requesting
+                        approval:
+                        {{ props.instruction_capability_blockers?.join(' ') }}
                     </div>
                     <CockpitCampaignWorksheetBeneficiaries
                         :rows="props.worksheet.rows"
@@ -534,7 +555,7 @@ const sendApproval = (): void => {
                 >
                     <div>
                         <p
-                            class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                            class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                         >
                             Issuance
                         </p>
@@ -585,7 +606,7 @@ const sendApproval = (): void => {
                 >
                     <div>
                         <p
-                            class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                            class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                         >
                             Bank Transfers
                         </p>
@@ -713,7 +734,7 @@ const sendApproval = (): void => {
                 >
                     <div>
                         <p
-                            class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                            class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                         >
                             Distribution
                         </p>
@@ -803,10 +824,12 @@ const sendApproval = (): void => {
                             </p>
                         </div>
                         <span
-                            class="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 capitalize dark:bg-slate-800 dark:text-slate-300"
+                            class="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold capitalize text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                             >{{ attempt.status }}</span
                         >
-                        <div class="flex flex-wrap items-center justify-end gap-2">
+                        <div
+                            class="flex flex-wrap items-center justify-end gap-2"
+                        >
                             <button
                                 v-if="attempt.can_retry"
                                 type="button"
@@ -865,7 +888,7 @@ const sendApproval = (): void => {
                 class="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/30"
             >
                 <p
-                    class="text-[0.65rem] font-semibold tracking-[0.18em] text-amber-800 uppercase dark:text-amber-200"
+                    class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:text-amber-200"
                 >
                     Approval
                 </p>
@@ -975,7 +998,7 @@ const sendApproval = (): void => {
                     <span
                         v-for="attempt in approvalDeliveryAttempts"
                         :key="attempt.reference"
-                        class="rounded-full border border-amber-300 bg-white/80 px-2.5 py-1 text-xs font-semibold text-slate-600 capitalize dark:border-amber-800 dark:bg-slate-950/70 dark:text-slate-300"
+                        class="rounded-full border border-amber-300 bg-white/80 px-2.5 py-1 text-xs font-semibold capitalize text-slate-600 dark:border-amber-800 dark:bg-slate-950/70 dark:text-slate-300"
                         >{{ attempt.channel }} · {{ attempt.status }}</span
                     >
                 </div>
@@ -1000,7 +1023,7 @@ const sendApproval = (): void => {
                 >
                     <div>
                         <p
-                            class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                            class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                         >
                             Results
                         </p>

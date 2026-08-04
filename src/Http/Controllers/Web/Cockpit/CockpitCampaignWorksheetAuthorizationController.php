@@ -11,6 +11,7 @@ use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\AuthorizeCampaignWorksheetRequest;
+use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
 use RuntimeException;
 
 class CockpitCampaignWorksheetAuthorizationController extends Controller
@@ -19,6 +20,7 @@ class CockpitCampaignWorksheetAuthorizationController extends Controller
         private readonly CampaignWorksheetRepository $worksheets,
         private readonly CampaignWorksheetImportRepository $imports,
         private readonly IssueCampaignWorksheetApprovalPayCode $approvalPayCodes,
+        private readonly InstructionCapabilityIssuanceGuard $instructionCapabilities,
     ) {}
 
     public function store(AuthorizeCampaignWorksheetRequest $request, string $worksheet): RedirectResponse
@@ -39,6 +41,18 @@ class CockpitCampaignWorksheetAuthorizationController extends Controller
                     'Add or discard every valid staged import before freezing the worksheet.',
                 );
             }
+
+            $campaign = $this->worksheets->findForOwner(
+                $worksheet,
+                $owner->getMorphClass(),
+                (string) $owner->getAuthIdentifier(),
+            );
+
+            if ($campaign === null) {
+                throw new InvalidArgumentException('The Campaign worksheet was not found.');
+            }
+
+            $this->instructionCapabilities->ensureAvailable($campaign->instructionBlueprint);
 
             $this->worksheets->freeze($worksheet, $owner->getMorphClass(), (string) $owner->getAuthIdentifier());
             $authorization = $this->approvalPayCodes->handle($worksheet, $owner);

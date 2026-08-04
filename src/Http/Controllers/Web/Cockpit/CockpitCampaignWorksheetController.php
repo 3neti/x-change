@@ -25,6 +25,8 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
+use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
 
 class CockpitCampaignWorksheetController extends Controller
 {
@@ -32,6 +34,8 @@ class CockpitCampaignWorksheetController extends Controller
         private readonly CampaignWorksheetRepository $worksheets,
         private readonly CampaignWorksheetImportRepository $imports,
         private readonly CampaignWorksheetIntakeRepository $intakes,
+        private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
+        private readonly InstructionCapabilityRequirementResolver $instructionCapabilityRequirements,
     ) {}
 
     public function index(Request $request): Response
@@ -64,8 +68,10 @@ class CockpitCampaignWorksheetController extends Controller
 
     public function show(Request $request, string $worksheet): Response
     {
+        $worksheetReadModel = $this->worksheetFor($worksheet, $request->user());
+
         return Inertia::render('x-change/cockpit/CampaignWorksheet', [
-            'worksheet' => $this->worksheetFor($worksheet, $request->user()),
+            'worksheet' => $worksheetReadModel,
             'imports' => $this->importsFor($worksheet, $request->user()),
             'fulfillment_summary' => $this->fulfillmentSummaryFor($worksheet, $request->user()),
             'authorization' => $this->authorizationFor($worksheet, $request->user()),
@@ -73,7 +79,25 @@ class CockpitCampaignWorksheetController extends Controller
             'direct_bank_transfer_enabled' => (bool) config('x-change.campaigns.netbank_dispatch.enabled', false),
             'onboarding_otp_required' => (bool) config('x-change.onboarding.voucher.require_otp', false),
             'delivery' => $this->deliveryFor($worksheet, $request->user()),
+            'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
+            'instruction_capability_blockers' => $this->instructionCapabilityBlockers(
+                (array) data_get($worksheetReadModel, 'instruction_blueprint', []),
+            ),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return list<string>
+     */
+    private function instructionCapabilityBlockers(array $instructions): array
+    {
+        return collect($this->instructionCapabilityRequirements->forInstructions($instructions))
+            ->map(fn (string $key) => $this->instructionCapabilities->find($key))
+            ->filter(fn ($capability): bool => $capability !== null && ! $capability->issuanceAllowed)
+            ->map(fn ($capability): string => $capability->reason ?? sprintf('%s is unavailable.', $capability->label))
+            ->values()
+            ->all();
     }
 
     public function destroy(Request $request, string $worksheet): RedirectResponse

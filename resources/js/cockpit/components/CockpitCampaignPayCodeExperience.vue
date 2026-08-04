@@ -13,6 +13,10 @@ import {
 import { computed, ref, watch } from 'vue';
 import voucherBlueprint from '@/routes/x-change/cockpit/campaigns/voucher-blueprint';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
+import type {
+    CockpitInstructionCapabilityReadiness,
+    CockpitInstructionCapabilityReadinessMap,
+} from '../types';
 
 type Blueprint = {
     onboarding?: boolean;
@@ -47,9 +51,11 @@ const props = withDefaults(
         revision: number;
         blueprintHash?: string | null;
         onboardingOtpRequired?: boolean;
+        instructionCapabilities?: CockpitInstructionCapabilityReadinessMap;
     }>(),
     {
         onboardingOtpRequired: true,
+        instructionCapabilities: () => ({}),
     },
 );
 
@@ -163,6 +169,41 @@ const onboardingOtpEnforced = computed(
             /^(\+|09|639|63)/.test(props.representativeRecipient ?? '')),
 );
 
+const capabilityReadiness = (
+    key: string,
+): CockpitInstructionCapabilityReadiness | null =>
+    props.instructionCapabilities[key] ?? null;
+const capabilityUnavailable = (key: string): boolean =>
+    capabilityReadiness(key)?.issuance_allowed === false;
+const capabilityForFeedbackChannel = (channel: string): string =>
+    channel === 'mobile' ? 'feedback.sms' : `feedback.${channel}`;
+const selectedUnavailableCapabilities = computed<
+    CockpitInstructionCapabilityReadiness[]
+>(() => {
+    const selected = new Set<string>();
+
+    form.blueprint.inputs.fields.forEach((field) => {
+        if (['location', 'kyc', 'otp', 'selfie', 'signature'].includes(field)) {
+            selected.add(field);
+        }
+    });
+    validationOptions.forEach(([key]) => {
+        if (form.blueprint.validation[key].required) {
+            selected.add(key);
+        }
+    });
+    form.blueprint.feedback.channels.forEach((channel) => {
+        selected.add(capabilityForFeedbackChannel(channel));
+    });
+
+    return [...selected]
+        .map((key) => capabilityReadiness(key))
+        .filter(
+            (capability): capability is CockpitInstructionCapabilityReadiness =>
+                capability?.issuance_allowed === false,
+        );
+});
+
 function applyOnboardingDependencies(): void {
     if (!form.blueprint.onboarding) {
         return;
@@ -239,6 +280,10 @@ const shortHash = computed(() =>
 );
 
 function save(): void {
+    if (selectedUnavailableCapabilities.value.length > 0) {
+        return;
+    }
+
     form.put(voucherBlueprint.update(props.worksheetReference).url, {
         preserveScroll: true,
     });
@@ -260,7 +305,7 @@ function selectEditor(key: EditorKey): void {
             <div>
                 <div class="flex flex-wrap items-center gap-2">
                     <p
-                        class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                        class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                     >
                         {{ scopeLabel }}
                     </p>
@@ -285,7 +330,10 @@ function selectEditor(key: EditorKey): void {
                 <button
                     v-if="isDraft"
                     type="button"
-                    :disabled="form.processing"
+                    :disabled="
+                        form.processing ||
+                        selectedUnavailableCapabilities.length > 0
+                    "
                     class="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-950"
                     @click="save"
                 >
@@ -299,7 +347,7 @@ function selectEditor(key: EditorKey): void {
             class="grid gap-0 xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]"
         >
             <div
-                class="border-b border-slate-200 p-4 xl:border-r xl:border-b-0 dark:border-slate-800"
+                class="border-b border-slate-200 p-4 xl:border-b-0 xl:border-r dark:border-slate-800"
             >
                 <nav
                     class="mb-4 grid grid-cols-3 rounded-xl bg-slate-100 p-1 dark:bg-slate-950"
@@ -343,13 +391,13 @@ function selectEditor(key: EditorKey): void {
                             Rider Link
                             <span class="relative">
                                 <Link2
-                                    class="pointer-events-none absolute top-2.5 left-3 size-4 text-slate-400"
+                                    class="pointer-events-none absolute left-3 top-2.5 size-4 text-slate-400"
                                 />
                                 <input
                                     v-model="form.blueprint.rider.url"
                                     type="url"
                                     placeholder="https://"
-                                    class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pr-3 pl-9 text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                                    class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                                 />
                             </span>
                         </label>
@@ -483,6 +531,10 @@ function selectEditor(key: EditorKey): void {
                                     v-for="[value, label] in inputOptions"
                                     :key="value"
                                     class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                                    :class="{
+                                        'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100':
+                                            capabilityUnavailable(value),
+                                    }"
                                 >
                                     <input
                                         v-model="form.blueprint.inputs.fields"
@@ -492,7 +544,11 @@ function selectEditor(key: EditorKey): void {
                                         :disabled="
                                             onboardingLockedFields.includes(
                                                 value,
-                                            )
+                                            ) ||
+                                            (capabilityUnavailable(value) &&
+                                                !form.blueprint.inputs.fields.includes(
+                                                    value,
+                                                ))
                                         "
                                         :data-onboarding-locked="
                                             onboardingLockedFields.includes(
@@ -517,6 +573,10 @@ function selectEditor(key: EditorKey): void {
                                     v-for="[value, label] in validationOptions"
                                     :key="value"
                                     class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                                    :class="{
+                                        'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100':
+                                            capabilityUnavailable(value),
+                                    }"
                                 >
                                     <input
                                         v-model="
@@ -526,8 +586,12 @@ function selectEditor(key: EditorKey): void {
                                         type="checkbox"
                                         class="rounded border-slate-300 text-orange-600"
                                         :disabled="
-                                            value === 'otp' &&
-                                            onboardingOtpEnforced
+                                            (value === 'otp' &&
+                                                onboardingOtpEnforced) ||
+                                            (capabilityUnavailable(value) &&
+                                                !form.blueprint.validation[
+                                                    value
+                                                ].required)
                                         "
                                     />
                                     {{ label }}
@@ -587,6 +651,14 @@ function selectEditor(key: EditorKey): void {
                                     ]"
                                     :key="value"
                                     class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                                    :class="{
+                                        'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100':
+                                            capabilityUnavailable(
+                                                capabilityForFeedbackChannel(
+                                                    value,
+                                                ),
+                                            ),
+                                    }"
                                 >
                                     <input
                                         v-model="
@@ -595,10 +667,39 @@ function selectEditor(key: EditorKey): void {
                                         type="checkbox"
                                         :value="value"
                                         class="rounded border-slate-300 text-orange-600"
+                                        :disabled="
+                                            capabilityUnavailable(
+                                                capabilityForFeedbackChannel(
+                                                    value,
+                                                ),
+                                            ) &&
+                                            !form.blueprint.feedback.channels.includes(
+                                                value,
+                                            )
+                                        "
                                     />
                                     {{ label }}
                                 </label>
                             </div>
+                        </div>
+                        <div
+                            v-if="selectedUnavailableCapabilities.length > 0"
+                            class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100"
+                            data-testid="campaign-instruction-capability-warning"
+                        >
+                            <p class="font-semibold">
+                                Remove unavailable services before saving or
+                                requesting approval
+                            </p>
+                            <ul class="mt-2 space-y-1">
+                                <li
+                                    v-for="capability in selectedUnavailableCapabilities"
+                                    :key="capability.key"
+                                >
+                                    {{ capability.label }} —
+                                    {{ capability.reason }}
+                                </li>
+                            </ul>
                         </div>
                     </template>
                 </fieldset>
