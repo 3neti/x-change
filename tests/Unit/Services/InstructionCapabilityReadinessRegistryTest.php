@@ -47,6 +47,21 @@ it('marks location unavailable when either authoritative service is missing', fu
         ->and($location->missingConfiguration)->toBe(['MAPBOX_TOKEN']);
 });
 
+it('marks location unavailable when provider credentials contain whitespace', function (): void {
+    config()->set('location-handler.opencage_api_key', "open-cage\ncredential");
+    config()->set('location-handler.mapbox_token', ' mapbox-credential ');
+
+    $location = app(InstructionCapabilityReadinessRegistry::class)->find('location');
+
+    expect($location)->not->toBeNull()
+        ->and($location->status)->toBe('unavailable')
+        ->and($location->issuanceAllowed)->toBeFalse()
+        ->and($location->missingConfiguration)->toBe([
+            'OPENCAGE_API_KEY',
+            'MAPBOX_TOKEN',
+        ]);
+});
+
 it('allows explicitly simulated KYC only outside production', function (): void {
     config()->set('kyc-handler.use_fake', true);
 

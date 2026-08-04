@@ -268,6 +268,14 @@ final class CoreInstructionCapabilityContributor implements InstructionCapabilit
 
     private function configured(mixed $value): bool
     {
-        return is_scalar($value) && trim((string) $value) !== '';
+        if (! is_scalar($value)) {
+            return false;
+        }
+
+        $configuredValue = (string) $value;
+
+        return $configuredValue !== ''
+            && trim($configuredValue) === $configuredValue
+            && preg_match('/\s/u', $configuredValue) !== 1;
     }
 }
