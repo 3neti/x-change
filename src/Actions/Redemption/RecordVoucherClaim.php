@@ -37,8 +37,6 @@ class RecordVoucherClaim
             return $settledAccountFundingClaim;
         }
 
-        $nextClaimNumber = (int) $voucher->claims()->count() + 1;
-
         $requestedAmount = $result->requested_amount;
         $disbursedAmount = $result->disbursed_amount;
         $remainingBalance = $result->remaining_balance;
@@ -46,9 +44,8 @@ class RecordVoucherClaim
         $bankCode = data_get($payload, 'bank_account.bank_code', data_get($payload, 'bank_code'));
         $accountNumber = data_get($payload, 'bank_account.account_number', data_get($payload, 'account_number'));
 
-        $claim = VoucherClaim::query()->create([
+        $attributes = [
             'voucher_id' => $voucher->getKey(),
-            'claim_number' => $nextClaimNumber,
             'claim_type' => (string) ($result->claim_type ?: 'claim'),
             'status' => $this->normalizeStatus((string) $result->status),
             'requested_amount_minor' => $this->toMinorUnits($requestedAmount),
@@ -73,19 +70,50 @@ class RecordVoucherClaim
                     'selected' => data_get($payload, '_named_slices.selected', []),
                 ],
             ],
-        ]);
+        ];
 
-        $this->persistEvidence->handle(
-            $voucher,
-            $claim,
-            (array) data_get($payload, 'inputs', []),
-        );
+        $claim = $this->preparedClaim($voucher, $payload);
+
+        if ($claim instanceof VoucherClaim) {
+            $attributes['meta'] = array_replace_recursive(
+                (array) $claim->meta,
+                $attributes['meta'],
+                ['evidence' => ['execution_status' => 'finalized']],
+            );
+            $claim->forceFill($attributes)->save();
+        } else {
+            $attributes['claim_number'] = (int) $voucher->claims()->count() + 1;
+            $claim = VoucherClaim::query()->create($attributes);
+        }
+
+        if ($claim->evidence()->doesntExist()) {
+            $this->persistEvidence->handle(
+                $voucher,
+                $claim,
+                (array) data_get($payload, 'inputs', []),
+            );
+        }
 
         $this->markVoucherRedeemedWhenFullyClaimed($voucher, $result);
         $claim->setRelation('voucher', $voucher);
         $this->queueFeedback->handle($claim, $result);
 
         return $claim;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function preparedClaim(Voucher $voucher, array $payload): ?VoucherClaim
+    {
+        $claimId = data_get($payload, '_meta.prepared_claim_id');
+
+        if (! is_numeric($claimId)) {
+            return null;
+        }
+
+        return VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->whereKey((int) $claimId)
+            ->first();
     }
 
     protected function settledAccountFundingClaim(

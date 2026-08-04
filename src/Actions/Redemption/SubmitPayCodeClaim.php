@@ -23,6 +23,7 @@ use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
@@ -68,6 +69,12 @@ class SubmitPayCodeClaim
 
         app(ClaimEvidenceRequirements::class)->assertComplete($voucher, $payload);
 
+        $preparedClaim = app(PrepareVoucherClaimEvidence::class)->handle($voucher, $payload);
+
+        if ($preparedClaim instanceof VoucherClaim) {
+            data_set($payload, '_meta.prepared_claim_id', $preparedClaim->getKey());
+        }
+
         $executor = $this->factory->make($voucher, $payload);
 
         try {
@@ -84,6 +91,8 @@ class SubmitPayCodeClaim
                     ->fromException($voucher, $e)
             );
         } catch (Throwable $e) {
+            $this->markPreparedClaimExecutionFailed($preparedClaim, $e);
+
             if ($this->shouldReplayApprovedPaynamicsPayout($voucher, $payload, $e)) {
                 return $this->replayApprovedPaynamicsPayout($voucher, $payload);
             }
@@ -131,6 +140,24 @@ class SubmitPayCodeClaim
         $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
 
         return $normalized;
+    }
+
+    private function markPreparedClaimExecutionFailed(?VoucherClaim $claim, Throwable $exception): void
+    {
+        if (! $claim instanceof VoucherClaim || $claim->status !== 'prepared') {
+            return;
+        }
+
+        $meta = (array) $claim->meta;
+        data_set($meta, 'evidence.execution_status', 'failed_before_finalization');
+        data_set($meta, 'evidence.execution_exception', $exception::class);
+
+        $claim->forceFill([
+            'status' => 'execution_failed',
+            'failure_message' => 'Claim execution failed after evidence capture.',
+            'completed_at' => now(),
+            'meta' => $meta,
+        ])->save();
     }
 
     protected function namedSlices(): NamedVoucherSliceService
