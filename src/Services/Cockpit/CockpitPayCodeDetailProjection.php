@@ -39,7 +39,7 @@ final class CockpitPayCodeDetailProjection
         $instructions = $this->array($detail['instructions'] ?? []);
         $cash = $this->array($instructions['cash'] ?? []);
         $validation = $this->array($cash['validation'] ?? []);
-        $inputs = $this->list(data_get($instructions, 'inputs.fields', []));
+        $inputs = $this->inputFields($instructions);
         $feedback = $this->array($instructions['feedback'] ?? []);
         $rider = $this->array($instructions['rider'] ?? []);
         $execution = $this->array($instructions['execution'] ?? []);
@@ -168,8 +168,18 @@ final class CockpitPayCodeDetailProjection
     private function labels(array $values): array
     {
         return collect($values)
-            ->filter(fn (mixed $value): bool => is_scalar($value) && filled($value))
-            ->map(fn (mixed $value): string => Str::headline((string) $value))
+            ->map(static function (mixed $value): ?string {
+                if ($value instanceof \BackedEnum) {
+                    $value = $value->value;
+                } elseif ($value instanceof \UnitEnum) {
+                    $value = $value->name;
+                }
+
+                return is_scalar($value) && filled($value)
+                    ? Str::headline((string) $value)
+                    : null;
+            })
+            ->filter()
             ->values()
             ->all();
     }
@@ -203,6 +213,21 @@ final class CockpitPayCodeDetailProjection
         }
 
         return Str::headline((string) ($value['source'] ?? $value['artwork_source'] ?? 'configured'));
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array<int, mixed>
+     */
+    private function inputFields(array $instructions): array
+    {
+        $inputs = $instructions['inputs'] ?? [];
+
+        if (is_array($inputs) && Arr::isList($inputs)) {
+            return $inputs;
+        }
+
+        return $this->list(data_get($inputs, 'fields', []));
     }
 
     /** @return array<string, mixed> */
