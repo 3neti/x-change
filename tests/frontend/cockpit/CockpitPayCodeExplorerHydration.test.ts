@@ -745,6 +745,54 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileStatusBadges[2].text()).toBe('Awaiting Approval');
     });
 
+    it('keeps redeemed as the lifecycle while surfacing rejected payout attention', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: {
+                    ...payCodesReadModel,
+                    records: [
+                        {
+                            ...payCodesReadModel.records[0],
+                            status: 'redeemed',
+                            display_status: 'redeemed',
+                            attention: {
+                                key: 'payout_rejected',
+                                label: 'Payout rejected',
+                                message: 'AC01 (Incorrect account number)',
+                                tone: 'critical',
+                            },
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-status-badge"]').text(),
+        ).toBe('Redeemed');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-mobile-status-badge"]')
+                .text(),
+        ).toBe('Redeemed');
+
+        const desktopAttention = wrapper.get(
+            '[data-testid="cockpit-pay-code-row-attention"]',
+        );
+        expect(desktopAttention.text()).toContain('Payout rejected');
+        expect(desktopAttention.attributes('title')).toBe(
+            'AC01 (Incorrect account number)',
+        );
+
+        const mobileAttention = wrapper.get(
+            '[data-testid="cockpit-pay-code-mobile-attention"]',
+        );
+        expect(mobileAttention.text()).toContain('Payout rejected');
+        expect(mobileAttention.text()).toContain(
+            'AC01 (Incorrect account number)',
+        );
+    });
+
     it('renders scan-friendly amount values without mutating amount facts', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

@@ -386,6 +386,34 @@ function number(value: unknown): number {
         class="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]"
         data-testid="pay-code-overview-tab"
       >
+        <article
+          v-if="payoutRejected"
+          class="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between xl:col-span-2 dark:border-rose-900/70 dark:bg-rose-950/30"
+          data-testid="pay-code-overview-payout-warning"
+        >
+          <div class="flex min-w-0 items-start gap-3">
+            <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-200">
+              <CircleAlert class="size-4" />
+            </span>
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-rose-950 dark:text-rose-100">
+                Claim completed · Payout needs correction
+              </h3>
+              <p class="mt-1 text-xs leading-5 text-rose-800 dark:text-rose-200">
+                {{ rejectionReason }} The principal remains protected for this beneficiary.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-100 dark:hover:bg-rose-900/60"
+            data-testid="pay-code-overview-review-correction"
+            @click="activeTab = 'claim'"
+          >
+            Review correction
+            <ChevronRight class="size-4" />
+          </button>
+        </article>
         <div class="space-y-5">
           <div>
             <div class="flex items-center gap-2">

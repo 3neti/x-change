@@ -25,6 +25,7 @@ class CockpitPayCodeListRecordData extends Data
         public readonly CockpitPayCodeTimingData $timing,
         public readonly string $owner,
         public readonly ?string $last_activity,
+        public readonly ?CockpitPayCodeAttentionData $attention = null,
         public readonly array $actions = [],
     ) {}
 }

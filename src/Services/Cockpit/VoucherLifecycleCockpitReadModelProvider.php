@@ -21,6 +21,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitDashboardPipelineStageData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardRiskSignalData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeAttentionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeCapabilityData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeExplorerFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeExplorerStatsData;
@@ -1504,7 +1505,27 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     ?? $row['created_at']
                     ?? null
             ),
+            attention: $this->payCodeAttention($row),
             actions: $this->payCodeRowActions($code),
+        );
+    }
+
+    private function payCodeAttention(array $row): ?CockpitPayCodeAttentionData
+    {
+        $attention = is_array($row['attention'] ?? null) ? $row['attention'] : [];
+        $key = $this->nullableString($attention['key'] ?? null);
+        $label = $this->nullableString($attention['label'] ?? null);
+        $message = $this->nullableString($attention['message'] ?? null);
+
+        if ($key === null || $label === null || $message === null) {
+            return null;
+        }
+
+        return new CockpitPayCodeAttentionData(
+            key: $key,
+            label: $label,
+            message: $message,
+            tone: $this->stringValue($attention['tone'] ?? null, 'critical'),
         );
     }
 

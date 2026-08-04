@@ -231,9 +231,21 @@ describe("Cockpit Pay Code record workspace", () => {
       },
     });
 
+    const overviewWarning = wrapper.get(
+      '[data-testid="pay-code-overview-payout-warning"]',
+    );
+    expect(overviewWarning.text()).toContain(
+      "Claim completed · Payout needs correction",
+    );
+    expect(overviewWarning.text()).toContain(
+      "AC01 (Incorrect account number)",
+    );
+    expect(overviewWarning.text()).toContain(
+      "principal remains protected",
+    );
+
     await wrapper
-      .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Claim & Evidence"))!
+      .get('[data-testid="pay-code-overview-review-correction"]')
       .trigger("click");
 
     const rejection = wrapper.get('[data-testid="pay-code-payout-rejected"]');

@@ -53,6 +53,31 @@ it('projects a claimed contact without exposing the full mobile number', functio
         ->and(json_encode($record))->not->toContain('09171234567');
 });
 
+it('projects a rejected payout as separate attention without changing the redeemed lifecycle', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher();
+    $metadata = $voucher->metadata;
+
+    data_set($metadata, 'disbursement.requires_recovery', true);
+    data_set($metadata, 'disbursement.rejection_reason', 'AC01 (Incorrect account number)');
+
+    $voucher->forceFill([
+        'metadata' => $metadata,
+        'redeemed_at' => now(),
+    ])->save();
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index'))
+        ->assertOk()
+        ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.status', 'redeemed')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.attention.key', 'payout_rejected')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.attention.label', 'Payout rejected')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.attention.message', 'AC01 (Incorrect account number)')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.attention.tone', 'critical');
+});
+
 it('projects capability instructions target and timing without raw instruction payloads', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(overrides: [

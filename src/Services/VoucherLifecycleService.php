@@ -168,7 +168,29 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 'expires_at' => $voucher->expires_at?->toIso8601String(),
                 'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
             ],
+            'attention' => $this->payoutAttention($voucher),
             'approval' => $approval,
+        ];
+    }
+
+    /**
+     * @return array{key: string, label: string, message: string, tone: string}|null
+     */
+    protected function payoutAttention(Voucher $voucher): ?array
+    {
+        if (data_get($voucher->metadata, 'disbursement.requires_recovery') !== true) {
+            return null;
+        }
+
+        $reason = $this->nullableDisplayValue(
+            data_get($voucher->metadata, 'disbursement.rejection_reason'),
+        ) ?? 'The receiving institution rejected the payout destination.';
+
+        return [
+            'key' => 'payout_rejected',
+            'label' => 'Payout rejected',
+            'message' => $reason,
+            'tone' => 'critical',
         ];
     }
 
