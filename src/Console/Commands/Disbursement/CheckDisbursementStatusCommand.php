@@ -176,7 +176,7 @@ class CheckDisbursementStatusCommand extends Command
         if ($payload['resolved_status'] === 'failed') {
             return [
                 'severity' => 'failed',
-                'action' => 'review_rejection_before_reissue',
+                'action' => 'correct_destination_and_retry',
                 'message' => $this->failureGuidanceMessage($payload),
             ];
         }
@@ -204,9 +204,9 @@ class CheckDisbursementStatusCommand extends Command
         $reason = $payload['rejection_reason'] ?: $payload['error_message'];
 
         if (is_string($reason) && trim($reason) !== '') {
-            return 'Provider rejected the payout: '.trim($reason).'. Confirm the destination details before issuing a replacement Pay Code.';
+            return 'Provider rejected the payout: '.trim($reason).'. Correct the destination and retry the payout under the same Pay Code.';
         }
 
-        return 'Provider rejected the payout. Confirm the destination details before issuing a replacement Pay Code.';
+        return 'Provider rejected the payout. Correct the destination and retry the payout under the same Pay Code.';
     }
 }

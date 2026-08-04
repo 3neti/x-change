@@ -67,6 +67,6 @@ it('reports operator guidance for trusted provider rejections', function () {
         ->and($payload['resolved_status'])->toBe('failed')
         ->and($payload['rejection_reason'])->toBe('AC06 (Blocked account)')
         ->and($payload['status_details'][0]['message'])->toBe('AC06 (Blocked account)')
-        ->and($payload['operator_guidance']['action'])->toBe('review_rejection_before_reissue')
-        ->and($payload['operator_guidance']['message'])->toBe('Provider rejected the payout: AC06 (Blocked account). Confirm the destination details before issuing a replacement Pay Code.');
+        ->and($payload['operator_guidance']['action'])->toBe('correct_destination_and_retry')
+        ->and($payload['operator_guidance']['message'])->toBe('Provider rejected the payout: AC06 (Blocked account). Correct the destination and retry the payout under the same Pay Code.');
 });
