@@ -23,7 +23,18 @@ it('registers read-only cockpit routes under the x cockpit namespace', function 
         ->and(route('x-change.cockpit.diagnostics.runtime-profile'))->toBe('http://localhost/x/cockpit/diagnostics/runtime-profile')
         ->and(route('x-change.cockpit.pay-codes.index'))->toBe('http://localhost/x/cockpit/pay-codes')
         ->and(route('x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001')
+        ->and(route('x-change.cockpit.pay-codes.payout-corrections.store', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001/payout-corrections')
         ->and(route('x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001/distribution');
+});
+
+it('requires authentication before accepting a Pay Code payout correction', function (): void {
+    $this->postJson(route(
+        'x-change.cockpit.pay-codes.payout-corrections.store',
+        ['code' => 'PC-READY-001'],
+    ), [
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number' => '09173011987',
+    ])->assertUnauthorized();
 });
 
 it('renders the cockpit documentation hub without exposing operational secrets', function (): void {
@@ -1280,7 +1291,7 @@ it('requires authentication for cockpit routes', function (string $route, array 
     'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']],
 ]);
 
-it('registers only the guarded issuance, funding, and Account Cockpit mutation routes', function () {
+it('registers only the guarded issuance, funding, payout recovery, and Account Cockpit mutation routes', function () {
     $mutatingRoutes = collect(Route::getRoutes())
         ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.'))
         ->filter(fn ($route): bool => collect($route->methods())
@@ -1334,6 +1345,7 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         'x-change.cockpit.quick-generate.artwork-previews.store',
         'x-change.cockpit.pay-code-templates.store',
         'x-change.cockpit.pay-code-templates.update',
+        'x-change.cockpit.pay-codes.payout-corrections.store',
     ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())
         ->toBe(CockpitFundingIntentController::class)
         ->and(Route::getRoutes()->getByName('x-change.cockpit.funding.scenarios.qrph.store')?->getActionName())

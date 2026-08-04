@@ -208,6 +208,43 @@ describe("Cockpit Pay Code record workspace", () => {
     );
   });
 
+  it("separates a recorded claim from a rejected payout and offers same-code correction", async () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "LM52",
+        status: "redeemed",
+        voucher,
+        redemption: {
+          status: "failed",
+          claim_status: "payout_rejected",
+          payout_status: "failed",
+          amount_minor: 100_000,
+          currency: "PHP",
+          bank_code: "GXCHPHM2XXX",
+          account_number_masked: "*******6025",
+          rejection_reason: "AC01 (Incorrect account number)",
+          requires_recovery: true,
+          can_correct_destination: true,
+        },
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Claim & Evidence"))!
+      .trigger("click");
+
+    const rejection = wrapper.get('[data-testid="pay-code-payout-rejected"]');
+    expect(rejection.text()).toContain("Claim recorded · Payout rejected");
+    expect(rejection.text()).toContain("AC01 (Incorrect account number)");
+    expect(rejection.text()).toContain("principal remains protected");
+    expect(rejection.text()).toContain("receiving institution still makes the final decision");
+    expect(wrapper.get('[data-testid="pay-code-payout-correction-form"]').attributes('action'))
+      .toBe('/x/cockpit/pay-codes/LM52/payout-corrections');
+  });
+
   it("shows exact journal and delivery evidence with its delivery time", async () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {

@@ -184,9 +184,11 @@ use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\MoneyMovementLifecycleTriggerMatrixContract;
 use LBHurtado\XChange\Contracts\MoneyMovementTargetModelContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
+use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Contracts\ProviderPayoutDestinationValidationContract;
 use LBHurtado\XChange\Contracts\Publication\XChangePublicationContributor;
 use LBHurtado\XChange\Contracts\ReconciliationLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
@@ -340,6 +342,8 @@ use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\DefaultXChangeOnboardingGateway;
 use LBHurtado\XChange\Services\Deployment\LaravelCloudCliMutationGateway;
 use LBHurtado\XChange\Services\Deployment\LaravelCloudCliStateReader;
+use LBHurtado\XChange\Services\Disbursement\LayeredPayoutDestinationValidator;
+use LBHurtado\XChange\Services\Disbursement\UnavailableProviderPayoutDestinationValidation;
 use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffPipeline;
@@ -823,6 +827,15 @@ class XChangeServiceProvider extends ServiceProvider
 
             return $app->make($service);
         });
+
+        $this->app->bind(
+            ProviderPayoutDestinationValidationContract::class,
+            UnavailableProviderPayoutDestinationValidation::class,
+        );
+        $this->app->bind(
+            PayoutDestinationValidatorContract::class,
+            LayeredPayoutDestinationValidator::class,
+        );
 
         $this->app->bind(DisbursementStatusFetcherContract::class, function ($app) {
             $service = config(

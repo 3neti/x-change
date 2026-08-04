@@ -19,6 +19,7 @@ use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
 use RuntimeException;
 
@@ -683,14 +684,22 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             return null;
         }
 
-        $amountMinor = $claim?->disbursed_amount_minor
-            ?? ($reconciliation?->amount !== null
+        $revision = PayoutDestinationRevision::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('version')
+            ->first();
+        $amountMinor = ($reconciliation?->amount !== null
                 ? (int) round((float) $reconciliation->amount * 100)
                 : null)
+            ?? $claim?->requested_amount_minor
+            ?? $claim?->disbursed_amount_minor
             ?? data_get($voucher->metadata, 'treasury.pay_code_reservation.amount_minor');
+        $requiresRecovery = data_get($voucher->metadata, 'disbursement.requires_recovery') === true;
 
         return [
             'status' => $reconciliation?->status ?? $claim?->status ?? 'redeemed',
+            'claim_status' => $claim?->status ?? 'redeemed',
+            'payout_status' => $reconciliation?->status,
             'amount_minor' => is_numeric($amountMinor) ? (int) $amountMinor : null,
             'currency' => $reconciliation?->currency ?? $claim?->currency ?? $this->currency($voucher),
             'provider' => $reconciliation?->provider,
@@ -699,6 +708,20 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'account_number_masked' => $reconciliation?->account_number_masked
                 ?? $claim?->account_number_masked,
             'provider_transaction_id' => $reconciliation?->provider_transaction_id,
+            'rejection_reason' => $reconciliation?->error_message,
+            'requires_recovery' => $requiresRecovery,
+            'can_correct_destination' => $requiresRecovery
+                && data_get($voucher->metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending'
+                && $claim?->status === 'payout_rejected',
+            'destination_revision' => $revision instanceof PayoutDestinationRevision ? [
+                'reference' => $revision->reference,
+                'version' => $revision->version,
+                'bank_code' => $revision->bank_code,
+                'account_number_masked' => $revision->account_number_masked,
+                'validation_status' => $revision->validation_status,
+                'validation_message' => data_get($revision->validation_metadata, 'message'),
+                'recorded_at' => $revision->recorded_at?->toIso8601String(),
+            ] : null,
             'completed_at' => $reconciliation?->completed_at?->toIso8601String()
                 ?? $claim?->completed_at?->toIso8601String(),
         ];

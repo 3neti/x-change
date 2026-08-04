@@ -281,6 +281,70 @@ it('includes sanitized authoritative redemption details', function () {
         ->and($result['redemption'])->not->toHaveKeys(['raw_request', 'raw_response']);
 });
 
+it('separates a completed claim from its rejected provider payout', function () {
+    $voucher = issueVoucher(validVoucherInstructions(amount: 1000));
+    $voucher->voucherEntities()->delete();
+    $metadata = (array) $voucher->metadata;
+    data_set($metadata, 'treasury.pay_code_reservation.status', 'recovery_pending');
+    data_set($metadata, 'treasury.pay_code_reservation.amount_minor', 100_000);
+    data_set($metadata, 'disbursement.status', 'rejected');
+    data_set($metadata, 'disbursement.requires_recovery', true);
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'withdraw',
+        'status' => 'payout_rejected',
+        'requested_amount_minor' => 100_000,
+        'disbursed_amount_minor' => 0,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******6025',
+        'completed_at' => now(),
+        'failure_message' => 'AC01 (Incorrect account number)',
+    ]);
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_code' => $voucher->code,
+        'claim_type' => 'withdraw',
+        'provider' => 'netbank',
+        'provider_reference' => $voucher->code.'-09707616025-S1',
+        'provider_transaction_id' => '410402088',
+        'status' => 'failed',
+        'internal_status' => 'recovery_opened',
+        'amount' => 1000,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******6025',
+        'settlement_rail' => 'INSTAPAY',
+        'needs_review' => false,
+        'error_message' => 'AC01 (Incorrect account number)',
+        'completed_at' => now(),
+    ]);
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('findByCodeOrFail')
+        ->once()
+        ->with($voucher->code)
+        ->andReturn($voucher->fresh());
+
+    $result = (new VoucherLifecycleService($access))->showByCode($voucher->code);
+
+    expect($result['redemption'])->toMatchArray([
+        'status' => 'failed',
+        'claim_status' => 'payout_rejected',
+        'payout_status' => 'failed',
+        'amount_minor' => 100_000,
+        'provider_transaction_id' => '410402088',
+        'rejection_reason' => 'AC01 (Incorrect account number)',
+        'requires_recovery' => true,
+        'can_correct_destination' => true,
+    ])->and($result['redemption'])->not->toHaveKeys([
+        'raw_request',
+        'raw_response',
+        'account_number_ciphertext',
+    ]);
+});
+
 it('returns voucher status', function () {
     $voucher = issueVoucher();
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CockpitPayCodePayoutCorrectionController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodePayoutCorrectionController";
+import { Form } from "@inertiajs/vue3";
 import {
   Activity,
   BadgeCheck,
@@ -7,6 +9,7 @@ import {
   Check,
   ChevronRight,
   CircleDollarSign,
+  CircleAlert,
   ClipboardCheck,
   Clock3,
   ExternalLink,
@@ -19,6 +22,7 @@ import {
   Landmark,
   MapPin,
   ReceiptText,
+  RotateCcw,
   ScanFace,
   Send,
   ShieldCheck,
@@ -45,6 +49,7 @@ const props = defineProps<{
   voucher?: CockpitVoucherReadModel;
   journal?: CockpitDependentReadModel;
   feedback?: CockpitDependentReadModel;
+  redemption?: Record<string, unknown> | null;
   claimUrl?: string | null;
   distributionUrl: string;
   explorerUrl: string;
@@ -73,6 +78,21 @@ const evidence = computed(() => list(claims.value.evidence));
 const envelope = computed(() => record(settlement.value.envelope));
 const journalEntries = computed(() => list(props.journal?.entries));
 const deliveries = computed(() => list(props.feedback?.deliveries));
+const redemption = computed(() => record(props.redemption));
+const payoutRejected = computed(
+  () =>
+    text(redemption.value.payout_status) === "failed" ||
+    text(redemption.value.status) === "failed" ||
+    redemption.value.requires_recovery === true,
+);
+const canCorrectDestination = computed(
+  () => redemption.value.can_correct_destination === true,
+);
+const rejectionReason = computed(
+  () =>
+    text(redemption.value.rejection_reason) ||
+    "The receiving institution rejected the payout destination.",
+);
 
 const tabs = computed(() => [
   {
@@ -573,6 +593,86 @@ function number(value: unknown): number {
         class="space-y-5"
         data-testid="pay-code-claim-tab"
       >
+        <article
+          v-if="payoutRejected"
+          class="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/70 dark:bg-rose-950/30"
+          data-testid="pay-code-payout-rejected"
+        >
+          <div class="flex items-start gap-3">
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-200">
+              <CircleAlert class="h-4 w-4" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 class="text-sm font-semibold text-rose-950 dark:text-rose-100">
+                    Claim recorded · Payout rejected
+                  </h3>
+                  <p class="mt-1 text-xs leading-5 text-rose-800 dark:text-rose-200">
+                    {{ rejectionReason }} The principal remains protected for this beneficiary and was not returned to the issuer.
+                  </p>
+                </div>
+                <span class="rounded-full bg-rose-100 px-2.5 py-1 text-[0.65rem] font-semibold text-rose-800 dark:bg-rose-900/60 dark:text-rose-100">
+                  Destination correction required
+                </span>
+              </div>
+
+              <Form
+                v-if="canCorrectDestination"
+                v-bind="CockpitPayCodePayoutCorrectionController.form({ code })"
+                reset-on-success
+                #default="{ errors, processing }"
+                class="mt-4 grid gap-3 border-t border-rose-200 pt-4 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,0.7fr)_minmax(12rem,1fr)_minmax(11rem,0.8fr)_auto] dark:border-rose-900/70"
+                data-testid="pay-code-payout-correction-form"
+              >
+                <label class="grid gap-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  Bank or Wallet
+                  <input
+                    name="bank_code"
+                    :value="text(redemption.bank_code)"
+                    autocomplete="off"
+                    class="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-rose-900"
+                  />
+                  <span v-if="errors.bank_code" class="font-normal text-rose-700 dark:text-rose-300">{{ errors.bank_code }}</span>
+                </label>
+                <label class="grid gap-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  Correct Account Number
+                  <input
+                    name="account_number"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="Enter the corrected destination"
+                    class="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-rose-900"
+                  />
+                  <span v-if="errors.account_number" class="font-normal text-rose-700 dark:text-rose-300">{{ errors.account_number }}</span>
+                </label>
+                <label class="grid gap-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  Contact Mobile <span class="font-normal text-slate-500">(optional)</span>
+                  <input
+                    name="mobile"
+                    inputmode="tel"
+                    autocomplete="tel"
+                    placeholder="09•••••••••"
+                    class="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-rose-900"
+                  />
+                  <span v-if="errors.mobile" class="font-normal text-rose-700 dark:text-rose-300">{{ errors.mobile }}</span>
+                </label>
+                <button
+                  type="submit"
+                  :disabled="processing"
+                  class="inline-flex h-10 self-end items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <RotateCcw class="h-4 w-4" />
+                  {{ processing ? "Checking & submitting…" : "Correct & retry payout" }}
+                </button>
+                <p class="text-[0.7rem] leading-5 text-rose-800 sm:col-span-2 xl:col-span-4 dark:text-rose-200">
+                  x-change checks the institution and account format before submission. When the provider has no account-inquiry service, the receiving institution still makes the final decision. The original claim and rejected attempt remain unchanged.
+                </p>
+              </Form>
+            </div>
+          </div>
+        </article>
+
         <div class="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div>
             <div class="flex items-center gap-2">
