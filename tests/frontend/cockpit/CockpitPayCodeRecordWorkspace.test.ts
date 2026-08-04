@@ -51,6 +51,8 @@ const voucher = {
         disbursed_amount_minor: 2_000,
         currency: "PHP",
         claimer_mobile_masked: "•••• 1987",
+        attempted_at: "2026-08-03T08:15:00+08:00",
+        completed_at: "2026-08-03T08:19:00+08:00",
       },
     ],
     evidence: [
@@ -175,5 +177,81 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(settlement).toContain(
       "The Settlement Envelope proves readiness. Treasury Backing proves where the money is held.",
     );
+  });
+
+  it("distinguishes lifecycle closure from payout completion", async () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    const overview = wrapper
+      .get('[data-testid="pay-code-overview-tab"]')
+      .text();
+    expect(overview).toContain("Voucher Closed");
+    expect(overview).toContain(
+      "Voucher Closed marks the lifecycle transition. Payout completion is recorded separately under Claim & Evidence.",
+    );
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Claim & Evidence"))!
+      .trigger("click");
+
+    expect(wrapper.get('[data-testid="pay-code-claim-tab"]').text()).toContain(
+      "Payout completed",
+    );
+  });
+
+  it("shows exact journal and delivery evidence with its delivery time", async () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        journal: {
+          status: "available",
+          authorized: true,
+          entries: [
+            {
+              reference_number: "ERN-001",
+              event_type: "treasury.pay_code.disbursement.settled",
+              occurred_at: "2026-08-03T08:19:00+08:00",
+            },
+          ],
+        },
+        feedback: {
+          status: "available",
+          authorized: true,
+          deliveries: [
+            {
+              delivery_id: "delivery-001",
+              channel: "sms",
+              status: "sent",
+              provider_status: "ACCEPTED",
+              delivered_at: "2026-08-03T08:01:00+08:00",
+            },
+          ],
+        },
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Audit"))!
+      .trigger("click");
+
+    const audit = wrapper.get('[data-testid="pay-code-audit-tab"]').text();
+    expect(audit).toContain("Treasury Pay Code Disbursement Settled");
+    expect(audit).toContain("Sms");
+    expect(audit).toContain("Accepted");
+    expect(audit).toContain("Delivered");
   });
 });

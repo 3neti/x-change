@@ -201,8 +201,18 @@ function formatDate(value: unknown): string {
       }).format(date);
 }
 
+function claimTimingLabel(claim: DetailRecord): string {
+  if (text(claim.completed_at)) {
+    return text(claim.status) === "paid"
+      ? "Payout completed"
+      : "Claim completed";
+  }
+
+  return "Claim attempted";
+}
+
 function title(value: unknown): string {
-  const normalized = text(value).replaceAll("_", " ").replaceAll("-", " ");
+  const normalized = text(value).replace(/[._-]+/g, " ");
 
   return normalized.replace(/\b\w/g, (character) => character.toUpperCase());
 }
@@ -432,7 +442,9 @@ function number(value: unknown): number {
               <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {{ title(backing.mode) }} · {{ title(backing.status) }}
               </p>
-              <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+              <p
+                class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
+              >
                 {{ backingExplanation }}
               </p>
             </article>
@@ -458,7 +470,7 @@ function number(value: unknown): number {
                 },
                 { label: 'Expires', value: record(overview.timing).expires_at },
                 {
-                  label: 'Claimed',
+                  label: 'Voucher Closed',
                   value: record(overview.timing).redeemed_at,
                 },
               ]"
@@ -480,6 +492,12 @@ function number(value: unknown): number {
               </p>
             </li>
           </ol>
+          <p
+            class="mt-4 text-[0.7rem] leading-5 text-slate-500 dark:text-slate-400"
+          >
+            Voucher Closed marks the lifecycle transition. Payout completion is
+            recorded separately under Claim &amp; Evidence.
+          </p>
         </aside>
       </section>
 
@@ -580,6 +598,7 @@ function number(value: unknown): number {
                       class="mt-1 text-[0.7rem] text-slate-500 dark:text-slate-400"
                     >
                       {{ title(claim.claim_type) }} ·
+                      {{ claimTimingLabel(claim) }} ·
                       {{ formatDate(claim.completed_at || claim.attempted_at) }}
                     </p>
                   </div>
@@ -948,8 +967,19 @@ function number(value: unknown): number {
                   </p>
                   <p class="mt-1 text-[0.7rem] text-slate-500">
                     {{
-                      text(delivery.provider_status) ||
+                      title(text(delivery.provider_status).toLowerCase()) ||
                       "Provider detail protected"
+                    }}
+                  </p>
+                  <p
+                    v-if="delivery.delivered_at || delivery.last_attempted_at"
+                    class="mt-1 text-[0.7rem] text-slate-500"
+                  >
+                    {{
+                      delivery.delivered_at
+                        ? "Delivered " + formatDate(delivery.delivered_at)
+                        : "Last attempted " +
+                          formatDate(delivery.last_attempted_at)
                     }}
                   </p>
                 </div>
