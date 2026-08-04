@@ -52,6 +52,15 @@ it('records a voucher claim row from a normalized claim result', function () {
             'idempotency_key' => 'claim-record-001',
         ],
         'reference' => 'REF-CLAIM-001',
+        'inputs' => [
+            'name' => 'Juan Dela Cruz',
+            'location' => [
+                'latitude' => 14.5995,
+                'longitude' => 121.0288,
+                'formatted_address' => 'Makati City',
+                'map' => 'data:image/png;base64,map',
+            ],
+        ],
     ]);
 
     expect($claim)->toBeInstanceOf(VoucherClaim::class);
@@ -69,6 +78,18 @@ it('records a voucher claim row from a normalized claim result', function () {
     expect($claim->reference)->toBe('REF-CLAIM-001');
     expect($claim->attempted_at)->not->toBeNull();
     expect($claim->completed_at)->not->toBeNull();
+    expect($voucher->inputs()->where('name', 'name')->value('value'))->toBe('Juan Dela Cruz');
+    expect(json_decode(
+        (string) $voucher->inputs()->where('name', 'location')->value('value'),
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    ))->toMatchArray([
+        'latitude' => 14.5995,
+        'longitude' => 121.0288,
+        'formatted_address' => 'Makati City',
+    ]);
+    expect(data_get($claim->fresh()->meta, 'evidence.persisted'))->toBeTrue()
+        ->and(data_get($claim->fresh()->meta, 'evidence.input_ids'))->toHaveCount(2);
     expect($voucher->fresh()->redeemed_at)->toBeNull();
 });
 

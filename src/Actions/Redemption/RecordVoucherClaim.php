@@ -15,6 +15,7 @@ class RecordVoucherClaim
 
     public function __construct(
         protected QueueVoucherRedemptionFeedback $queueFeedback,
+        protected PersistVoucherClaimEvidence $persistEvidence,
     ) {}
 
     /**
@@ -73,6 +74,12 @@ class RecordVoucherClaim
                 ],
             ],
         ]);
+
+        $this->persistEvidence->handle(
+            $voucher,
+            $claim,
+            (array) data_get($payload, 'inputs', []),
+        );
 
         $this->markVoucherRedeemedWhenFullyClaimed($voucher, $result);
         $claim->setRelation('voucher', $voucher);

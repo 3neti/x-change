@@ -108,6 +108,43 @@ it('reveals binary claim evidence only through a no-store audited endpoint', fun
         ->and(data_get($entry->metadata, 'sensitive_access'))->toBeTrue();
 });
 
+it('presents captured location evidence with an audited map reveal', function (): void {
+    $owner = actingAsTestUser();
+    $voucher = issueVoucher();
+    $png = base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        true,
+    );
+    $voucher->inputs()->create([
+        'name' => 'location',
+        'value' => json_encode([
+            'latitude' => 14.5995,
+            'longitude' => 121.0288,
+            'formatted_address' => 'Makati City',
+            'map' => 'data:image/png;base64,'.base64_encode($png),
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+    ]);
+    $input = $voucher->inputs()->where('name', 'location')->sole();
+
+    $this->actingAs($owner)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', $voucher->code))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.0.key', 'location')
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.0.value', 'Makati City')
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.0.revealable', true);
+
+    $this->get(route('x-change.cockpit.pay-codes.evidence.show', [
+        'code' => $voucher->code,
+        'source' => 'input',
+        'evidence' => $input->getKey(),
+    ]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png')
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
+        ->assertContent($png);
+});
+
 it('does not reveal another Account holder evidence', function (): void {
     actingAsTestUser();
     $voucher = issueVoucher();

@@ -51,7 +51,7 @@ it('defaults country to PH when recipient country is missing', function (): void
     expect($payload['country'])->toBe('PH');
 });
 
-it('preserves selfie signature and location flat fields', function (): void {
+it('preserves selfie and signature while grouping location evidence', function (): void {
     $payload = $this->normalizer->normalize([
         'wallet_info' => [
             'mobile' => '+639173011987',
@@ -76,16 +76,22 @@ it('preserves selfie signature and location flat fields', function (): void {
             'longitude' => 121.0288,
             'accuracy' => 20,
             'formatted_address' => 'Makati City',
+            'map' => 'data:image/png;base64,map',
         ],
     ]);
 
     expect($payload['inputs'])
         ->toHaveKey('selfie', 'data:image/jpeg;base64,selfie')
         ->toHaveKey('signature', 'data:image/png;base64,signature')
-        ->toHaveKey('latitude', 14.5995)
-        ->toHaveKey('longitude', 121.0288)
-        ->toHaveKey('accuracy', 20)
-        ->toHaveKey('formatted_address', 'Makati City');
+        ->not->toHaveKeys(['latitude', 'longitude', 'accuracy', 'formatted_address', 'map'])
+        ->and($payload['inputs']['location'])
+        ->toMatchArray([
+            'latitude' => 14.5995,
+            'longitude' => 121.0288,
+            'accuracy' => 20,
+            'formatted_address' => 'Makati City',
+            'map' => 'data:image/png;base64,map',
+        ]);
 });
 
 it('nests kyc verification into inputs kyc', function (): void {

@@ -62,8 +62,21 @@ class FormFlowClaimPayloadNormalizer
                 'reference_id',
                 'verification_reference',
                 'verification_purpose',
+                'latitude',
+                'longitude',
+                'formatted_address',
+                'address_components',
+                'map',
+                'accuracy',
+                'timestamp',
             ])
             ->toArray();
+
+        $locationData = $this->extractLocationData($collectedData);
+
+        if ($locationData !== []) {
+            $inputs['location'] = $locationData;
+        }
 
         $kycData = $this->extractKycData($flatData, $collectedData);
 
@@ -85,6 +98,36 @@ class FormFlowClaimPayloadNormalizer
         }
 
         return $inputs;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $collectedData
+     * @return array<string, mixed>
+     */
+    protected function extractLocationData(array $collectedData): array
+    {
+        foreach ($collectedData as $stepData) {
+            if (! is_array($stepData)
+                || ! is_numeric($stepData['latitude'] ?? null)
+                || ! is_numeric($stepData['longitude'] ?? null)) {
+                continue;
+            }
+
+            return collect($stepData)
+                ->only([
+                    'latitude',
+                    'longitude',
+                    'formatted_address',
+                    'address_components',
+                    'map',
+                    'accuracy',
+                    'timestamp',
+                ])
+                ->reject(static fn (mixed $value): bool => $value === null || $value === '')
+                ->all();
+        }
+
+        return [];
     }
 
     protected function extractKycData(array $flatData, array $collectedData): array

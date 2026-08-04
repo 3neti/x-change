@@ -483,7 +483,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ->get()
             ->map(function (Model $input) use ($voucher): array {
                 $name = (string) $input->getAttribute('name');
-                $value = $input->getAttribute('value');
+                $value = $this->decodeEvidenceValue($input->getAttribute('value'));
                 $kind = $this->evidenceKind($name, $value);
                 $sensitive = in_array($name, [
                     'otp',
@@ -495,6 +495,9 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                     'kyc_id_back',
                 ], true);
 
+                $revealable = in_array($kind, ['image', 'document'], true)
+                    || ($kind === 'location' && filled(data_get($value, 'map')));
+
                 return [
                     'id' => (int) $input->getKey(),
                     'key' => $name,
@@ -504,8 +507,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                     'value' => $sensitive
                         ? null
                         : $this->safeEvidenceValue($name, $value),
-                    'revealable' => in_array($kind, ['image', 'document'], true),
-                    'reveal_href' => in_array($kind, ['image', 'document'], true)
+                    'revealable' => $revealable,
+                    'reveal_href' => $revealable
                         && Route::has('x-change.cockpit.pay-codes.evidence.show')
                             ? route('x-change.cockpit.pay-codes.evidence.show', [
                                 'code' => $voucher->code,
@@ -602,6 +605,21 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
     protected function safeEvidenceValue(string $name, mixed $value): ?string
     {
+        if ($name === 'location' && is_array($value)) {
+            $address = data_get($value, 'formatted_address');
+
+            if (is_scalar($address) && trim((string) $address) !== '') {
+                return Str::limit(trim((string) $address), 240);
+            }
+
+            $latitude = data_get($value, 'latitude');
+            $longitude = data_get($value, 'longitude');
+
+            return is_numeric($latitude) && is_numeric($longitude)
+                ? sprintf('%.6f, %.6f', (float) $latitude, (float) $longitude)
+                : 'Location captured';
+        }
+
         if (! is_scalar($value)) {
             return null;
         }
@@ -625,6 +643,19 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         }
 
         return Str::limit($normalized, 240);
+    }
+
+    protected function decodeEvidenceValue(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $decoded = json_decode($value, true);
+
+        return json_last_error() === JSON_ERROR_NONE && is_array($decoded)
+            ? $decoded
+            : $value;
     }
 
     protected function toStatusArray(Voucher $voucher): array

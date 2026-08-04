@@ -75,10 +75,20 @@ final class CockpitPayCodeEvidenceController extends Controller
             'signature',
             'kyc_id_front',
             'kyc_id_back',
+            'location',
         ], true), 404);
 
+        $value = (string) $input->getAttribute('value');
+
+        if ($name === 'location') {
+            $location = json_decode($value, true);
+
+            abort_unless(is_array($location) && is_string($location['map'] ?? null), 404);
+            $value = $location['map'];
+        }
+
         [$contents, $declaredMime] = $this->decodeImage(
-            (string) $input->getAttribute('value'),
+            $value,
         );
         $mimeType = (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents) ?: '';
 
