@@ -153,6 +153,9 @@ it('journals settlement reached through scheduled provider reconciliation', func
             $voucher->refresh()->metadata,
             'treasury.pay_code_reservation.status',
         ))->toBe('settled')
+        ->and(data_get($voucher->metadata, 'disbursement.status'))->toBe('completed')
+        ->and(data_get($voucher->metadata, 'disbursement.requires_recovery'))->toBeFalse()
+        ->and(data_get($voucher->metadata, 'disbursement.rejection_reason'))->toBeNull()
         ->and(treasuryBackedPayoutPositionBalance(
             $issuer,
             TreasuryPositionPurpose::PayCodeReserve,
@@ -333,6 +336,14 @@ it('refurbishes the same pay code with an immutable corrected destination and se
         ->toBe($inventoryBefore - 2_000);
 
     $revision = PayoutDestinationRevision::query()->sole();
+    $settledReconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->latest('id')
+        ->firstOrFail();
+    $settledClaim = VoucherClaim::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+
     expect($revision->account_number_ciphertext)->toBe('09173011987')
         ->and($revision->mobile_ciphertext)->toBe('09173011987')
         ->and($revision->account_number_masked)->toBe('*******1987')
@@ -341,8 +352,12 @@ it('refurbishes the same pay code with an immutable corrected destination and se
         ->and((string) DB::table('disbursement_reconciliations')
             ->where('claim_type', 'payout_recovery')
             ->value('raw_request'))->not->toContain('09173011987')
-        ->and(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole()->status)
-        ->toBe('succeeded');
+        ->and($settledClaim->status)->toBe('succeeded')
+        ->and(data_get($settledClaim->meta, 'disbursement.status'))->toBe('succeeded')
+        ->and(data_get($settledClaim->meta, 'disbursement.reconciliation_id'))
+        ->toBe($settledReconciliation->getKey())
+        ->and(data_get($settledClaim->meta, 'disbursement.provider_transaction_id'))
+        ->toBe('NETBANK-REFURBISH-SUCCEEDED-1');
     expect(ExecutionJournalEntry::query()
         ->where('event_type', 'pay_code.payout_destination.revised')
         ->where('subject_id', (string) $voucher->getKey())

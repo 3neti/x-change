@@ -83,6 +83,8 @@ final readonly class HandleConfirmedDisbursement
             data_set($metadata, 'disbursement.gateway', $reconciliation->provider);
             data_set($metadata, 'disbursement.transaction_id', $reconciliation->provider_transaction_id);
             data_set($metadata, 'disbursement.requires_reconciliation', false);
+            data_set($metadata, 'disbursement.requires_recovery', false);
+            data_set($metadata, 'disbursement.rejection_reason', null);
             $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
 
             $journalRecorded = $this->recordSettlementJournal(
@@ -139,17 +141,44 @@ final readonly class HandleConfirmedDisbursement
             return;
         }
 
+        $voucherMetadata = (array) $voucher->refresh()->metadata;
+        data_set($voucherMetadata, 'disbursement.status', 'completed');
+        data_set($voucherMetadata, 'disbursement.gateway', $reconciliation->provider);
+        data_set(
+            $voucherMetadata,
+            'disbursement.transaction_id',
+            $reconciliation->provider_transaction_id,
+        );
+        data_set($voucherMetadata, 'disbursement.requires_reconciliation', false);
+        data_set($voucherMetadata, 'disbursement.requires_recovery', false);
+        data_set($voucherMetadata, 'disbursement.rejection_reason', null);
+        $voucher->forceFill(['metadata' => $voucherMetadata])->saveQuietly();
+
         $claim = VoucherClaim::query()
             ->where('voucher_id', $voucher->getKey())
             ->latest('id')
             ->first();
 
         if ($claim instanceof VoucherClaim) {
+            $claimMetadata = (array) $claim->meta;
+            data_set($claimMetadata, 'disbursement.status', 'succeeded');
+            data_set(
+                $claimMetadata,
+                'disbursement.reconciliation_id',
+                $reconciliation->getKey(),
+            );
+            data_set(
+                $claimMetadata,
+                'disbursement.provider_transaction_id',
+                $reconciliation->provider_transaction_id,
+            );
+
             $claim->forceFill([
                 'status' => 'succeeded',
                 'disbursed_amount_minor' => (int) data_get($reservation, 'amount_minor', 0),
                 'completed_at' => $reconciliation->completed_at ?? now(),
                 'failure_message' => null,
+                'meta' => $claimMetadata,
             ])->save();
         }
 
