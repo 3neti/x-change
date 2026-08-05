@@ -723,6 +723,24 @@ describe('Cockpit Pay Code Explorer hydration', () => {
                             status: 'awaiting_approval',
                             display_status: 'awaiting_approval',
                         },
+                        {
+                            ...payCodesReadModel.records[0],
+                            code: 'PC-STATUS-PAID-EXPIRED',
+                            status: 'paid',
+                            display_status: 'paid',
+                            voucher_status: 'expired',
+                            operational_status: {
+                                key: 'paid',
+                                label: 'Paid',
+                                tone: 'positive',
+                                availability_key: 'closed',
+                                availability_label: 'Closed',
+                                settlement_outcome: 'succeeded',
+                                is_terminal: true,
+                                can_claim: false,
+                                can_retry_payout: false,
+                            },
+                        },
                     ],
                 },
             },
@@ -735,7 +753,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             '[data-testid="cockpit-pay-code-mobile-status-badge"]',
         );
 
-        expect(statusBadges).toHaveLength(3);
+        expect(statusBadges).toHaveLength(4);
         expect(statusBadges[0].text()).toBe('Issued');
         expect(statusBadges[0].classes()).toContain('bg-emerald-50');
         expect(statusBadges[1].text()).toBe('Expired');
@@ -743,9 +761,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(statusBadges[2].text()).toBe('Awaiting Approval');
         expect(statusBadges[2].classes()).toContain('bg-amber-50');
         expect(mobileStatusBadges[2].text()).toBe('Awaiting Approval');
+        expect(statusBadges[3].text()).toBe('Paid');
+        expect(statusBadges[3].classes()).toContain('bg-emerald-50');
     });
 
-    it('keeps redeemed as the lifecycle while surfacing rejected payout attention', () => {
+    it('keeps a rejected payout primary while surfacing destination attention', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
                 pay_codes_read_model: {
@@ -753,8 +773,20 @@ describe('Cockpit Pay Code Explorer hydration', () => {
                     records: [
                         {
                             ...payCodesReadModel.records[0],
-                            status: 'redeemed',
-                            display_status: 'redeemed',
+                            status: 'payout_rejected',
+                            display_status: 'payout_rejected',
+                            voucher_status: 'expired',
+                            operational_status: {
+                                key: 'payout_rejected',
+                                label: 'Payout Rejected',
+                                tone: 'critical',
+                                availability_key: 'closed',
+                                availability_label: 'Closed',
+                                settlement_outcome: 'rejected',
+                                is_terminal: true,
+                                can_claim: false,
+                                can_retry_payout: true,
+                            },
                             attention: {
                                 key: 'payout_rejected',
                                 label: 'Payout rejected',
@@ -769,12 +801,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
 
         expect(
             wrapper.get('[data-testid="cockpit-pay-code-status-badge"]').text(),
-        ).toBe('Redeemed');
+        ).toBe('Payout Rejected');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-mobile-status-badge"]')
                 .text(),
-        ).toBe('Redeemed');
+        ).toBe('Payout Rejected');
 
         const desktopAttention = wrapper.get(
             '[data-testid="cockpit-pay-code-row-attention"]',

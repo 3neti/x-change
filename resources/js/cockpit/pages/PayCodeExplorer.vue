@@ -453,10 +453,9 @@ function sanitizeRecord(
         capability: sanitizeCapability(record.capability),
         instructionBadges: sanitizeInstructionBadges(record.instruction_badges),
         amount: moneyValue(record.amount, stringValue(record.currency)),
-        status:
-            stringValue(record.display_status) ??
-            stringValue(record.status) ??
-            'not_wired',
+        status: sanitizeOperationalStatus(record).key,
+        voucherStatus: stringValue(record.voucher_status),
+        operationalStatus: sanitizeOperationalStatus(record),
         party: sanitizeParty(record.party),
         timing: sanitizeTiming(record),
         owner: stringValue(record.owner) ?? 'Redacted',
@@ -476,6 +475,41 @@ function sanitizeRecord(
                   )
             : [],
     };
+}
+
+function sanitizeOperationalStatus(
+    record: CockpitPayCodeExplorerReadModelRecord,
+): CockpitPayCodeExplorerRecord['operationalStatus'] {
+    const value = objectValue(record.operational_status);
+    const fallbackKey =
+        stringValue(record.display_status) ??
+        stringValue(record.status) ??
+        'not_wired';
+    const key = stringValue(value.key) ?? fallbackKey;
+
+    return {
+        key,
+        label: stringValue(value.label) ?? displayValue(key),
+        tone: stringValue(value.tone) ?? 'neutral',
+        availabilityKey: stringValue(value.availability_key) ?? 'unknown',
+        availabilityLabel: stringValue(value.availability_label) ?? 'Unknown',
+        settlementOutcome:
+            stringValue(value.settlement_outcome) ?? 'not_applicable',
+        isTerminal: value.is_terminal === true,
+        canClaim: value.can_claim === true,
+        canRetryPayout: value.can_retry_payout === true,
+    };
+}
+
+function displayValue(value: string): string {
+    return value
+        .split(/[_\s-]+/)
+        .filter((part) => part.trim() !== '')
+        .map(
+            (part) =>
+                `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`,
+        )
+        .join(' ');
 }
 
 function sanitizeAttention(

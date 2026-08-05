@@ -1349,7 +1349,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 fn (array $row): bool => $this->matchesPayCodeSearch($row, $search)
             ))
             ->when($statusFilter !== null, fn ($rows) => $rows->filter(
-                fn (array $row): bool => $this->legacyIndexStatus($row) === $statusFilter
+                fn (array $row): bool => $this->matchesOperationalStatusFilter($row, $statusFilter)
             ))
             ->values();
         $rows = $filteredRows
@@ -1415,6 +1415,14 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
         $normalized = strtolower(trim($value));
 
+        $normalized = match ($normalized) {
+            'redeemed', 'closed' => 'completed',
+            'pending' => 'processing',
+            'failed' => 'needs_attention',
+            'locked' => 'active',
+            default => $normalized,
+        };
+
         return in_array($normalized, $this->payCodeStatusKeys(), true) && $normalized !== 'all'
             ? $normalized
             : null;
@@ -1468,6 +1476,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'expires_at' => $detail['expires_at'] ?? null,
             'redeemed_at' => $detail['redeemed_at'] ?? null,
             'redemption' => $detail['redemption'] ?? null,
+            'voucher_status' => $detail['voucher_status'] ?? null,
+            'operational_status' => $detail['operational_status'] ?? null,
+            'attention' => $detail['attention'] ?? null,
         ])
             ->filter(fn (mixed $value, string $key): bool => $key === 'redeemed_at' || $value !== null)
             ->all();
@@ -1652,6 +1663,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             data_get($row, 'capability.voucher_type_label'),
             data_get($row, 'party.primary'),
             data_get($row, 'party.secondary'),
+            data_get($row, 'operational_status.label'),
+            data_get($row, 'operational_status.availability_label'),
+            data_get($row, 'operational_status.settlement_outcome'),
         ];
 
         foreach (($row['instruction_badges'] ?? []) as $badge) {
@@ -1696,6 +1710,26 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         return 'active';
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function matchesOperationalStatusFilter(array $row, string $filter): bool
+    {
+        $status = $this->legacyIndexStatus($row);
+
+        return match ($filter) {
+            'active' => in_array($status, ['active', 'issued', 'ready', 'locked', 'scheduled', 'partially_claimed'], true),
+            'awaiting_approval' => $status === 'awaiting_approval',
+            'processing' => in_array($status, ['payout_pending', 'pending', 'processing'], true),
+            'completed' => in_array($status, ['paid', 'redeemed', 'completed'], true),
+            'needs_attention' => $status === 'payout_rejected'
+                || $this->nullableString(data_get($row, 'attention.key')) !== null,
+            'expired' => $status === 'expired',
+            'cancelled' => in_array($status, ['cancelled', 'canceled', 'closed'], true),
+            default => $status === $filter,
+        };
+    }
+
     private function isExpired(mixed $value): bool
     {
         if (! is_scalar($value) || trim((string) $value) === '') {
@@ -1714,12 +1748,12 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     {
         return new CockpitPayCodeExplorerStatsData(
             total: $rows->count(),
-            active: $this->countLegacyStatus($rows, 'active'),
+            active: $this->countOperationalStatus($rows, 'active'),
             awaiting_approval: $this->countLegacyStatus($rows, 'awaiting_approval'),
-            redeemed: $this->countLegacyStatus($rows, 'redeemed'),
+            redeemed: $this->countOperationalStatus($rows, 'completed'),
             expired: $this->countLegacyStatus($rows, 'expired'),
-            pending: $this->countLegacyStatus($rows, 'pending'),
-            failed: $this->countLegacyStatus($rows, 'failed'),
+            pending: $this->countOperationalStatus($rows, 'processing'),
+            failed: $this->countOperationalStatus($rows, 'needs_attention'),
             filtered: $filtered,
         );
     }
@@ -1753,15 +1787,13 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     {
         return [
             ['value' => 'all', 'label' => 'All'],
-            ['value' => 'awaiting_approval', 'label' => 'Awaiting Approval'],
             ['value' => 'active', 'label' => 'Active'],
-            ['value' => 'locked', 'label' => 'Locked'],
-            ['value' => 'redeemed', 'label' => 'Redeemed'],
+            ['value' => 'awaiting_approval', 'label' => 'Awaiting Approval'],
+            ['value' => 'processing', 'label' => 'Processing'],
+            ['value' => 'completed', 'label' => 'Completed'],
+            ['value' => 'needs_attention', 'label' => 'Needs Attention'],
             ['value' => 'expired', 'label' => 'Expired'],
-            ['value' => 'pending', 'label' => 'Pending'],
             ['value' => 'cancelled', 'label' => 'Cancelled'],
-            ['value' => 'closed', 'label' => 'Closed'],
-            ['value' => 'failed', 'label' => 'Failed'],
         ];
     }
 
@@ -1780,6 +1812,16 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     {
         return $rows
             ->filter(fn (array $row): bool => $this->legacyIndexStatus($row) === $status)
+            ->count();
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     */
+    private function countOperationalStatus($rows, string $status): int
+    {
+        return $rows
+            ->filter(fn (array $row): bool => $this->matchesOperationalStatusFilter($row, $status))
             ->count();
     }
 

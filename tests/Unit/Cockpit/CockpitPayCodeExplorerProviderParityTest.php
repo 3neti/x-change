@@ -139,7 +139,7 @@ it('filters cockpit pay code explorer records using legacy index search and stat
             'enabled' => false,
             'read_only' => true,
         ])
-        ->and($readModel->filters)->toHaveCount(11)
+        ->and($readModel->filters)->toHaveCount(9)
         ->and($readModel->filters[0]->toArray())->toMatchArray([
             'key' => 'search',
             'value' => 'ACCOUNT-555',
@@ -151,35 +151,73 @@ it('filters cockpit pay code explorer records using legacy index search and stat
         ->and($readModel->toArray())->not->toHaveKey('mobile');
 });
 
-it('filters every terminal voucher state including locked pay codes', function () {
+it('filters canonical operational outcomes and preserves legacy aliases', function () {
     $provider = new VoucherLifecycleCockpitReadModelProvider(cockpitWave30VoucherLifecycle([
         ['code' => 'pc-active-001', 'display_status' => 'active'],
         ['code' => 'pc-locked-001', 'display_status' => 'locked'],
-        ['code' => 'pc-cancelled-001', 'display_status' => 'cancelled'],
-        ['code' => 'pc-closed-001', 'display_status' => 'closed'],
+        ['code' => 'pc-paid-001', 'display_status' => 'paid'],
+        ['code' => 'pc-redeemed-001', 'display_status' => 'redeemed'],
+        [
+            'code' => 'pc-rejected-001',
+            'display_status' => 'payout_rejected',
+            'attention' => [
+                'key' => 'payout_rejected',
+                'label' => 'Payout Rejected',
+                'message' => 'Destination correction required.',
+            ],
+        ],
     ]));
 
     $readModel = $provider->forPayCodeList(new CockpitReadModelQueryData(
-        payCodeStatus: ' LOCKED ',
+        payCodeStatus: ' REDEEMED ',
     ));
 
-    expect($readModel->status_filter)->toBe('locked')
-        ->and($readModel->records)->toHaveCount(1)
-        ->and($readModel->records[0]->code)->toBe('PC-LOCKED-001')
-        ->and($readModel->records[0]->display_status)->toBe('locked')
-        ->and(collect($readModel->filters)->firstWhere('value', 'locked')->active)->toBeTrue()
-        ->and(collect($readModel->filters)->pluck('value')->all())->toContain(
-            'locked',
+    expect($readModel->status_filter)->toBe('completed')
+        ->and(collect($readModel->records)->pluck('code')->all())->toBe([
+            'PC-PAID-001',
+            'PC-REDEEMED-001',
+        ])
+        ->and(collect($readModel->filters)->firstWhere('value', 'completed')->active)->toBeTrue()
+        ->and(collect($readModel->filters)->pluck('value')->all())->toBe([
+            '',
+            'all',
+            'active',
+            'awaiting_approval',
+            'processing',
+            'completed',
+            'needs_attention',
+            'expired',
             'cancelled',
-            'closed',
-        );
+        ]);
+
+    $attention = $provider->forPayCodeList(new CockpitReadModelQueryData(
+        payCodeStatus: 'failed',
+    ));
+
+    expect($attention->status_filter)->toBe('needs_attention')
+        ->and($attention->records)->toHaveCount(1)
+        ->and($attention->records[0]->code)->toBe('PC-REJECTED-001');
 });
 
 it('keeps only typed operational summaries in cockpit list records', function () {
     $provider = new VoucherLifecycleCockpitReadModelProvider(cockpitWave30VoucherLifecycle([
         [
             'code' => 'pc-summary-001',
-            'status' => 'active',
+            'status' => 'paid',
+            'display_status' => 'paid',
+            'voucher_status' => 'expired',
+            'operational_status' => [
+                'key' => 'paid',
+                'label' => 'Paid',
+                'tone' => 'positive',
+                'availability_key' => 'closed',
+                'availability_label' => 'Closed',
+                'settlement_outcome' => 'succeeded',
+                'is_terminal' => true,
+                'can_claim' => false,
+                'can_retry_payout' => false,
+                'provider_payload' => 'must-not-leak',
+            ],
             'capability' => [
                 'key' => 'settlement',
                 'label' => 'Settlement',

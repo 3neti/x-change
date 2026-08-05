@@ -1235,7 +1235,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
             'status_filter' => null,
             'stats' => [
                 'total' => 2,
-                'active' => 0,
+                'active' => 1,
                 'awaiting_approval' => 0,
                 'redeemed' => 1,
                 'expired' => 0,
@@ -1260,13 +1260,6 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                 ],
                 [
                     'key' => 'status',
-                    'label' => 'Awaiting Approval',
-                    'value' => 'awaiting_approval',
-                    'active' => false,
-                    'read_only' => true,
-                ],
-                [
-                    'key' => 'status',
                     'label' => 'Active',
                     'value' => 'active',
                     'active' => false,
@@ -1274,15 +1267,29 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                 ],
                 [
                     'key' => 'status',
-                    'label' => 'Locked',
-                    'value' => 'locked',
+                    'label' => 'Awaiting Approval',
+                    'value' => 'awaiting_approval',
                     'active' => false,
                     'read_only' => true,
                 ],
                 [
                     'key' => 'status',
-                    'label' => 'Redeemed',
-                    'value' => 'redeemed',
+                    'label' => 'Processing',
+                    'value' => 'processing',
+                    'active' => false,
+                    'read_only' => true,
+                ],
+                [
+                    'key' => 'status',
+                    'label' => 'Completed',
+                    'value' => 'completed',
+                    'active' => false,
+                    'read_only' => true,
+                ],
+                [
+                    'key' => 'status',
+                    'label' => 'Needs Attention',
+                    'value' => 'needs_attention',
                     'active' => false,
                     'read_only' => true,
                 ],
@@ -1295,29 +1302,8 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                 ],
                 [
                     'key' => 'status',
-                    'label' => 'Pending',
-                    'value' => 'pending',
-                    'active' => false,
-                    'read_only' => true,
-                ],
-                [
-                    'key' => 'status',
                     'label' => 'Cancelled',
                     'value' => 'cancelled',
-                    'active' => false,
-                    'read_only' => true,
-                ],
-                [
-                    'key' => 'status',
-                    'label' => 'Closed',
-                    'value' => 'closed',
-                    'active' => false,
-                    'read_only' => true,
-                ],
-                [
-                    'key' => 'status',
-                    'label' => 'Failed',
-                    'value' => 'failed',
                     'active' => false,
                     'read_only' => true,
                 ],
@@ -1351,6 +1337,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                     ],
                     'owner' => 'Operations',
                     'last_activity' => '2026-07-03T10:00:00+08:00',
+                    'attention' => null,
                     'actions' => [
                         [
                             'key' => 'detail',
@@ -1414,6 +1401,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                     ],
                     'owner' => 'Redacted',
                     'last_activity' => '2026-07-02T10:00:00+08:00',
+                    'attention' => null,
                     'actions' => [
                         [
                             'key' => 'detail',

@@ -1645,6 +1645,18 @@ export type CockpitPayCodeExplorerRecord = {
     }>;
     amount: string;
     status: string;
+    voucherStatus: string | null;
+    operationalStatus: {
+        key: string;
+        label: string;
+        tone: string;
+        availabilityKey: string;
+        availabilityLabel: string;
+        settlementOutcome: string;
+        isTerminal: boolean;
+        canClaim: boolean;
+        canRetryPayout: boolean;
+    };
     party: {
         state: string;
         label: string;
@@ -1801,6 +1813,19 @@ export type CockpitPayCodeExplorerReadModelRecord = {
     currency?: string | null;
     status?: string | null;
     display_status?: string | null;
+    voucher_status?: string | null;
+    operational_status?: {
+        key?: string | null;
+        label?: string | null;
+        tone?: string | null;
+        availability_key?: string | null;
+        availability_label?: string | null;
+        settlement_outcome?: string | null;
+        is_terminal?: boolean;
+        can_claim?: boolean;
+        can_retry_payout?: boolean;
+        [key: string]: unknown;
+    };
     capability?: {
         key?: string | null;
         label?: string | null;

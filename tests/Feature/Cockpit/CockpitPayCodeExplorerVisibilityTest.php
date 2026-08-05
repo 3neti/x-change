@@ -53,7 +53,7 @@ it('projects a claimed contact without exposing the full mobile number', functio
         ->and(json_encode($record))->not->toContain('09171234567');
 });
 
-it('projects a rejected payout as separate attention without changing the redeemed lifecycle', function () {
+it('projects a rejected payout as the primary outcome with destination attention', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher();
     $metadata = $voucher->metadata;
@@ -71,7 +71,7 @@ it('projects a rejected payout as separate attention without changing the redeem
         ->get(route('x-change.cockpit.pay-codes.index'))
         ->assertOk()
         ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
-        ->assertJsonPath('props.pay_codes_read_model.records.0.status', 'redeemed')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.status', 'payout_rejected')
         ->assertJsonPath('props.pay_codes_read_model.records.0.attention.key', 'payout_rejected')
         ->assertJsonPath('props.pay_codes_read_model.records.0.attention.label', 'Payout rejected')
         ->assertJsonPath('props.pay_codes_read_model.records.0.attention.message', 'AC01 (Incorrect account number)')

@@ -437,6 +437,54 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(guidance.text()).toContain('does not enforce lifecycle policy');
     });
 
+    it('keeps paid and rejected provider outcomes primary in lifecycle guidance', () => {
+        const paidWrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-PAID-001' },
+                read_model: {
+                    ...readModel,
+                    voucher: {
+                        ...readModel.voucher,
+                        status: 'paid',
+                        summary: {
+                            ...readModel.voucher.summary,
+                            code: 'PC-PAID-001',
+                            status: 'paid',
+                            display_status: 'paid',
+                            voucher_status: 'expired',
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(paidWrapper.get('[data-testid="cockpit-voucher-detail-lifecycle-guidance"]').text()).toContain('provider payout succeeded');
+
+        const rejectedWrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-REJECTED-001' },
+                read_model: {
+                    ...readModel,
+                    voucher: {
+                        ...readModel.voucher,
+                        status: 'payout_rejected',
+                        summary: {
+                            ...readModel.voucher.summary,
+                            code: 'PC-REJECTED-001',
+                            status: 'payout_rejected',
+                            display_status: 'payout_rejected',
+                            voucher_status: 'expired',
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(rejectedWrapper.get('[data-testid="cockpit-voucher-detail-lifecycle-guidance"]').text())
+            .toContain('Payout Rejected')
+            .toContain('provider rejected the payout');
+    });
+
     it('renders the beneficiary Pay Code URL as a read-only distribution link', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

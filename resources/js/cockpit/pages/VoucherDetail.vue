@@ -89,6 +89,30 @@ const primaryNextStep = computed(() => {
 const lifecycleGuidance = computed(() => {
     const normalizedStatus = status.value.toLowerCase();
 
+    if (normalizedStatus.includes('payout_rejected')) {
+        return {
+            tone: 'critical',
+            label: 'Payout Rejected',
+            message: 'The claim is recorded, but the provider rejected the payout. The protected principal requires destination correction.',
+        };
+    }
+
+    if (normalizedStatus.includes('payout_pending')) {
+        return {
+            tone: 'watch',
+            label: 'Payout Pending',
+            message: 'The claim is recorded while provider settlement remains in progress.',
+        };
+    }
+
+    if (normalizedStatus === 'paid') {
+        return {
+            tone: 'complete',
+            label: 'Paid',
+            message: 'The provider payout succeeded. Expiry no longer changes this completed financial outcome.',
+        };
+    }
+
     if (normalizedStatus.includes('expired')) {
         return {
             tone: 'warning',
