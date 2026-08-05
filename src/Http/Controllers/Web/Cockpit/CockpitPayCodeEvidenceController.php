@@ -15,6 +15,7 @@ use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeEvidenceAccessJournal;
 use Symfony\Component\HttpFoundation\HeaderUtils;
+use Throwable;
 
 final class CockpitPayCodeEvidenceController extends Controller
 {
@@ -82,12 +83,15 @@ final class CockpitPayCodeEvidenceController extends Controller
         );
 
         try {
-            $contents = Storage::disk((string) $item->artifact_disk)
-                ->get((string) $item->artifact_path);
-        } catch (FileNotFoundException) {
+            $disk = Storage::disk((string) $item->artifact_disk);
+
+            abort_unless($disk->exists((string) $item->artifact_path), 404);
+            $contents = $disk->get((string) $item->artifact_path);
+        } catch (Throwable) {
             abort(404);
         }
 
+        abort_unless(is_string($contents), 404);
         abort_unless(hash_equals((string) $item->sha256, hash('sha256', $contents)), 404);
 
         return [

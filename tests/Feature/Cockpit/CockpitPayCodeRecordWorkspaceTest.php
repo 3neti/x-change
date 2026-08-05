@@ -160,6 +160,7 @@ it('projects new evidence per claim and reveals its private content-addressed ar
         ->assertJsonPath('props.read_model.voucher.claims.records.0.evidence.complete', true)
         ->assertJsonPath('props.read_model.voucher.claims.evidence.1.claim_id', $claim->getKey())
         ->assertJsonPath('props.read_model.voucher.claims.evidence.1.group', 'media')
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.1.artifact_status', 'available')
         ->assertJsonPath('props.read_model.voucher.claims.evidence.1.revealable', true)
         ->assertJsonPath('props.read_model.voucher.claims.evidence.1.legacy', false);
 
@@ -174,6 +175,58 @@ it('projects new evidence per claim and reveals its private content-addressed ar
         ->assertHeader('Content-Type', 'image/png')
         ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
         ->assertContent($png);
+});
+
+it('retains an evidence record without offering a broken reveal when its private artifact is missing', function (): void {
+    Storage::fake('local');
+    $owner = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(20.00, overrides: [
+        'inputs' => ['fields' => ['selfie']],
+    ]));
+    $png = base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        true,
+    );
+    $claim = app(RecordVoucherClaim::class)->handle(
+        $voucher,
+        new SubmitPayCodeClaimResultData(
+            voucher_code: $voucher->code,
+            claim_type: 'redeem',
+            claimed: true,
+            status: 'succeeded',
+            requested_amount: 20,
+            disbursed_amount: 20,
+            currency: 'PHP',
+            remaining_balance: 0,
+            fully_claimed: true,
+            disbursement: [],
+            messages: ['Claim completed.'],
+        ),
+        [
+            'inputs' => [
+                'selfie' => 'data:image/png;base64,'.base64_encode($png),
+            ],
+        ],
+    );
+    $selfie = $claim->evidence()->where('requirement_key', 'selfie')->sole();
+
+    Storage::disk('local')->delete((string) $selfie->artifact_path);
+
+    $this->actingAs($owner)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', $voucher->code))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.0.key', 'selfie')
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.0.status', 'captured')
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.0.artifact_status', 'missing')
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.0.revealable', false)
+        ->assertJsonPath('props.read_model.voucher.claims.evidence.0.reveal_href', null);
+
+    $this->get(route('x-change.cockpit.pay-codes.evidence.show', [
+        'code' => $voucher->code,
+        'source' => 'claim',
+        'evidence' => $selfie->getKey(),
+    ]))->assertNotFound();
 });
 
 it('presents captured location evidence with an audited map reveal', function (): void {

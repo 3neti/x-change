@@ -168,6 +168,40 @@ describe("Cockpit Pay Code record workspace", () => {
     ).toBe(true);
   });
 
+  it("explains retained evidence whose private artifact is unavailable", async () => {
+    const unavailableVoucher = structuredClone(voucher);
+    unavailableVoucher.claims.evidence[0] = {
+      ...unavailableVoucher.claims.evidence[0],
+      artifact_status: "missing",
+      revealable: false,
+      reveal_href: null,
+    };
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "F6BG",
+        status: "redeemed",
+        voucher: unavailableVoucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Claim & Evidence"))!
+      .trigger("click");
+
+    const claimTab = wrapper.get('[data-testid="pay-code-claim-tab"]');
+    expect(claimTab.text()).toContain(
+      "Private file unavailable. Its captured evidence record and summary remain retained.",
+    );
+    expect(
+      wrapper
+        .findAll("button")
+        .some((button) => button.text().includes("Reveal Signature")),
+    ).toBe(false);
+  });
+
   it("shows settlement readiness separately from monetary backing", async () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {

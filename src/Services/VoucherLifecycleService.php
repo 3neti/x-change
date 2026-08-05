@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Enums\VoucherState;
@@ -24,6 +25,7 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use RuntimeException;
+use Throwable;
 
 class VoucherLifecycleService implements VoucherLifecycleServiceContract
 {
@@ -203,7 +205,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 $voucher->instructions,
                 $voucher->voucher_type,
             );
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return new VoucherOperationalSummaryData(
                 capability_key: 'disbursement',
                 capability_label: 'Disbursement',
@@ -237,7 +239,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             $instructions = $voucher->instructions;
             $vendorAlias = $this->nullableDisplayValue($instructions->cash->validation->payable);
             $targetMobile = $this->maskedMobile($instructions->cash->validation->mobile);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $vendorAlias = null;
             $targetMobile = null;
         }
@@ -488,7 +490,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
         if ($evidence->isNotEmpty()) {
             return $evidence->map(function (VoucherClaimEvidence $item) use ($voucher): array {
-                $revealable = filled($item->artifact_path);
+                $artifactStatus = $this->claimEvidenceArtifactStatus($item);
+                $revealable = $artifactStatus === 'available';
 
                 return [
                     'id' => (int) $item->getKey(),
@@ -502,6 +505,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                     'value' => $item->summary,
                     'captured_at' => $item->captured_at?->toIso8601String(),
                     'verified_at' => $item->verified_at?->toIso8601String(),
+                    'artifact_status' => $artifactStatus,
                     'revealable' => $revealable,
                     'reveal_href' => $revealable
                         && Route::has('x-change.cockpit.pay-codes.evidence.show')
@@ -562,6 +566,26 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             })
             ->values()
             ->all();
+    }
+
+    protected function claimEvidenceArtifactStatus(VoucherClaimEvidence $evidence): string
+    {
+        if (! filled($evidence->artifact_path)) {
+            return 'not_applicable';
+        }
+
+        if (! filled($evidence->artifact_disk)) {
+            return 'missing';
+        }
+
+        try {
+            return Storage::disk((string) $evidence->artifact_disk)
+                ->exists((string) $evidence->artifact_path)
+                    ? 'available'
+                    : 'missing';
+        } catch (Throwable) {
+            return 'unavailable';
+        }
     }
 
     protected function evidenceGroup(string $name): string
@@ -947,7 +971,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             $instructions = $voucher->instructions;
 
             return $instructions ? $instructions->toArray() : null;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }

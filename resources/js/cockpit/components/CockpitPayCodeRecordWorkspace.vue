@@ -1010,6 +1010,17 @@ function number(value: unknown): number {
                       >
                         {{ text(item.value) || title(item.status) }}
                       </p>
+                      <p
+                        v-if="
+                          ['missing', 'unavailable'].includes(
+                            text(item.artifact_status),
+                          )
+                        "
+                        class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-[0.68rem] leading-4 text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+                      >
+                        Private file unavailable. Its captured evidence record
+                        and summary remain retained.
+                      </p>
                     </div>
                   </article>
                 </div>
