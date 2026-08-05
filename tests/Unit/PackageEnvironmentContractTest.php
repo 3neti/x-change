@@ -57,6 +57,7 @@ it('uses the standard section order', function (): void {
         'Activation And Profile',
         'Identity And Authorization',
         'Instruction Services',
+        'Evidence Storage',
         'Treasury And Accounting',
         'Delivery',
         'Queues And Scheduling',

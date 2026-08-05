@@ -254,6 +254,36 @@ it('accepts durable queues and a shared scheduler lock cache', function () {
         ->and($checks->firstWhere('name', 'shared scheduler lock cache')['passed'])->toBeTrue();
 });
 
+it('rejects ephemeral claim evidence storage for a live provider profile', function (): void {
+    config()->set('x-change.deployment.profile', 'netbank');
+    config()->set('x-change.claim.evidence.disk', 'local');
+    config()->set('filesystems.disks.local.driver', 'local');
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'claim evidence storage');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['meta']['disk'])->toBe('local')
+        ->and($check['meta']['missing_variables'])->toBe([
+            'XCHANGE_CLAIM_EVIDENCE_DISK',
+        ]);
+});
+
+it('accepts a durable private claim evidence disk for a live provider profile', function (): void {
+    config()->set('x-change.deployment.profile', 'netbank');
+    config()->set('x-change.claim.evidence.disk', 's3');
+    config()->set('filesystems.disks.s3.driver', 's3');
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'claim evidence storage');
+
+    expect($check['passed'])->toBeTrue()
+        ->and($check['meta']['disk'])->toBe('s3')
+        ->and($check['meta']['driver'])->toBe('s3');
+});
+
 it('rejects an unavailable identity OTP gateway in production', function () {
     config()->set('app.env', 'production');
     config()->set('x-change.onboarding.mobile_verification.enabled', true);

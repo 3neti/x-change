@@ -35,6 +35,7 @@ final readonly class PreInstallReadinessInspector
             $this->productionApplicationSecurityCheck(),
             $this->productionOnboardingOtpCheck(),
             $this->instructionCapabilityCheck(),
+            $this->claimEvidenceStorageCheck($liveProfile),
             $this->queueRuntimeCheck($liveProfile),
             $this->schedulerLockCacheCheck($liveProfile),
             $this->emailDeliveryCheck(),
@@ -61,6 +62,35 @@ final readonly class PreInstallReadinessInspector
             'missing_variables' => $missing,
             'checks' => $checks,
         ];
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    private function claimEvidenceStorageCheck(bool $required): array
+    {
+        $disk = trim((string) config('x-change.claim.evidence.disk', 'local'));
+        $driver = trim((string) config("filesystems.disks.{$disk}.driver"));
+        $durable = $disk !== ''
+            && ! in_array($disk, ['local', 'public'], true)
+            && ! in_array($driver, ['', 'local'], true);
+        $passed = ! $required || $durable;
+
+        return $this->check(
+            'claim evidence storage',
+            $passed,
+            $passed
+                ? ($required
+                    ? "claim evidence uses the durable private [{$disk}] disk"
+                    : "claim evidence uses [{$disk}]; durable object storage is optional for development")
+                : 'live deployment profiles require durable private object storage for claim evidence',
+            [
+                'required' => $required,
+                'disk' => $disk === '' ? null : $disk,
+                'driver' => $driver === '' ? null : $driver,
+                'missing_variables' => $passed ? [] : ['XCHANGE_CLAIM_EVIDENCE_DISK'],
+            ],
+        );
     }
 
     /**
