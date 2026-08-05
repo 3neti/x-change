@@ -76,10 +76,7 @@ final readonly class RefurbishRejectedPayCodePayout
                     $validation,
                     $voucher,
                 ): array {
-                    $version = ((int) PayoutDestinationRevision::query()
-                        ->where('voucher_id', $voucher->getKey())
-                        ->lockForUpdate()
-                        ->max('version')) + 1;
+                    $version = $this->nextRevisionVersion($voucher);
                     $providerReference = (string) $voucher->code.'-R'.$version;
                     $revision = PayoutDestinationRevision::query()->create([
                         'voucher_id' => $voucher->getKey(),
@@ -206,6 +203,18 @@ final readonly class RefurbishRejectedPayCodePayout
         } finally {
             $lock->release();
         }
+    }
+
+    private function nextRevisionVersion(Voucher $voucher): int
+    {
+        Voucher::query()
+            ->whereKey($voucher->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        return ((int) PayoutDestinationRevision::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->max('version')) + 1;
     }
 
     private function assertAuthorized(Voucher $voucher, Model $requestedBy): void
