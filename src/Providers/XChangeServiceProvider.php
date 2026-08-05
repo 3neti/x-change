@@ -69,6 +69,7 @@ use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
 use LBHurtado\XChange\Console\Commands\DeployXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
+use LBHurtado\XChange\Console\Commands\Disbursement\RestoreUnsubmittedPayoutCorrectionCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\ResumeMissingTreasuryPayCodeDisbursementCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\RetryFailedPayCodeDisbursementCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
@@ -1261,6 +1262,7 @@ class XChangeServiceProvider extends ServiceProvider
                 CheckDisbursementStatusCommand::class,
                 RetryFailedPayCodeDisbursementCommand::class,
                 ResumeMissingTreasuryPayCodeDisbursementCommand::class,
+                RestoreUnsubmittedPayoutCorrectionCommand::class,
                 AttestAccountFundingPayCodeJournalIntegrityCommand::class,
                 ApproveFundingRequestCommand::class,
                 BackfillAccountFundingPayCodeJournalCommand::class,

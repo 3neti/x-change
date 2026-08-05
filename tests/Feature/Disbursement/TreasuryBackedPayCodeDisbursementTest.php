@@ -15,6 +15,7 @@ use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\Disbursement\RefurbishRejectedPayCodePayout;
+use LBHurtado\XChange\Actions\Disbursement\RestoreUnsubmittedPayoutCorrection;
 use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
@@ -467,6 +468,102 @@ it('falls back to the claimant mobile and reopens correction when the provider r
     $provider->assertLastRequest(function (PayoutRequestData $request): void {
         expect($request->mobile)->toBe('09173011987');
     });
+});
+
+it('guardedly restores an older correction with no provider transaction for explicit retry', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnPendingResult(
+        transactionId: 'NETBANK-RESTORE-ORIGINAL-1',
+        provider: 'netbank',
+    );
+    app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09707616025',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09707616025',
+        ],
+    ]);
+    $originalReconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+    $originalReconciliation->forceFill([
+        'status' => 'failed',
+        'needs_review' => false,
+        'error_message' => 'AC01 (Incorrect account number)',
+        'completed_at' => now(),
+    ])->save();
+    DisbursementRejected::dispatch($originalReconciliation->fresh());
+    $payableBefore = treasuryBackedPayoutPositionBalance(
+        $issuer,
+        TreasuryPositionPurpose::BeneficiaryPayoutPayable,
+    );
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+    $provider->willThrow(new RuntimeException('Synthetic local persistence failure.'));
+
+    $retry = app(RefurbishRejectedPayCodePayout::class)->handle(
+        voucher: $voucher,
+        requestedBy: $issuer,
+        bankCode: 'GXCHPHM2XXX',
+        accountNumber: '09853353980',
+    );
+    $unknownReconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->latest('id')
+        ->firstOrFail();
+
+    expect($retry['status'])->toBe('unknown')
+        ->and($unknownReconciliation->provider_transaction_id)->toBeNull()
+        ->and($unknownReconciliation->needs_review)->toBeTrue()
+        ->and(VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())->sole()->status)
+        ->toBe('payout_retry_pending');
+
+    $restored = app(RestoreUnsubmittedPayoutCorrection::class)->handle(
+        code: (string) $voucher->code,
+        restoredBy: $issuer,
+        evidenceReference: 'netbank-dashboard:no-operation:F6BG-R1',
+        confirmedProviderDidNotAccept: true,
+        reconciliationId: (int) $unknownReconciliation->getKey(),
+    );
+
+    expect($restored)->toMatchArray([
+        'success' => true,
+        'reconciliation_status' => 'failed',
+        'internal_status' => 'submission_failed',
+        'claim_status' => 'payout_rejected',
+        'reservation_status' => 'recovery_pending',
+        'provider_submission_accepted' => false,
+        'provider_call_performed' => false,
+        'treasury_changed' => false,
+        'replayed' => false,
+    ])->and($unknownReconciliation->refresh()->needs_review)->toBeFalse()
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::BeneficiaryPayoutPayable,
+        ))->toBe($payableBefore)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))
+        ->toBe($inventoryBefore)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.payout_retry.restored')
+            ->where('subject_id', (string) $voucher->getKey())
+            ->count())->toBe(1);
+
+    $replayed = app(RestoreUnsubmittedPayoutCorrection::class)->handle(
+        code: (string) $voucher->code,
+        restoredBy: $issuer,
+        evidenceReference: 'netbank-dashboard:no-operation:F6BG-R1',
+        confirmedProviderDidNotAccept: true,
+        reconciliationId: (int) $unknownReconciliation->getKey(),
+    );
+
+    expect($replayed['replayed'])->toBeTrue()
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.payout_retry.restored')
+            ->where('subject_id', (string) $voucher->getKey())
+            ->count())->toBe(1)
+        ->and($provider->checkStatusCallCount)->toBe(0);
 });
 
 it('blocks an invalid corrected wallet destination before a provider call', function (): void {
