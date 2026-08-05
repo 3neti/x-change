@@ -37,6 +37,7 @@ class ReconcilePendingDisbursementsCommand extends Command
                             });
                     });
             })
+            ->whereNotNull('provider_transaction_id')
             ->orderBy('attempted_at')
             ->orderBy('id')
             ->limit($limit)

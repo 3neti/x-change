@@ -78,4 +78,54 @@ final readonly class PayCodePayoutCorrectionJournal
             ],
         ));
     }
+
+    public function recordSubmissionFailure(
+        Voucher $voucher,
+        PayoutDestinationRevision $revision,
+        DisbursementReconciliation $reconciliation,
+    ): ExecutionJournalEntry {
+        return $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'pay_code.payout_retry.submission_failed',
+            occurredAt: CarbonImmutable::instance($reconciliation->completed_at ?? now()),
+            actor: new ExecutionActorData(
+                id: (string) $revision->requested_by_id,
+                type: (string) $revision->requested_by_type,
+            ),
+            subject: new ExecutionSubjectData(
+                id: (string) $voucher->getKey(),
+                type: 'voucher',
+                display: (string) $voucher->code,
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'pay-code-disbursement:'.(string) $voucher->code,
+                causationId: (string) $revision->reference,
+                executionId: (string) $reconciliation->getKey(),
+                externalReference: (string) $reconciliation->provider_reference,
+                metadata: [
+                    'destination_revision_reference' => $revision->reference,
+                    'destination_version' => $revision->version,
+                ],
+            ),
+            idempotencyKey: 'x-change:pay-code:payout-retry-submission-failed:'
+                .$reconciliation->getKey(),
+            payload: [
+                'status' => 'submission_failed',
+                'provider_submission_accepted' => false,
+                'claim_preserved' => true,
+                'retry_allowed' => true,
+                'bank_code' => $revision->bank_code,
+                'account_number_masked' => $revision->account_number_masked,
+            ],
+            money: new ExecutionMoneyData(
+                currency: (string) $reconciliation->currency,
+                minorAmount: (int) round(((float) $reconciliation->amount) * 100),
+            ),
+            metadata: [
+                'schema' => 'x-change.pay-code-payout-retry-submission-failed-journal.v1',
+                'domain' => 'pay_code',
+                'source' => 'cockpit_payout_recovery',
+                'sensitive_destination_exposed' => false,
+            ],
+        ));
+    }
 }

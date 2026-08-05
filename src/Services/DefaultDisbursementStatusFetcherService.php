@@ -17,10 +17,12 @@ class DefaultDisbursementStatusFetcherService implements DisbursementStatusFetch
 
     public function fetch(DisbursementReconciliationData $reconciliation): array
     {
-        $transactionId = $reconciliation->provider_transaction_id ?: $reconciliation->provider_reference;
+        $transactionId = $reconciliation->provider_transaction_id;
 
         if (! is_string($transactionId) || trim($transactionId) === '') {
-            throw new RuntimeException('No provider transaction identifier available for status fetching.');
+            throw new RuntimeException(
+                'No provider transaction identifier is available; the internal reference cannot be polled as a provider transaction.',
+            );
         }
 
         if (method_exists($this->provider, 'checkStatus')) {

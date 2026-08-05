@@ -39,8 +39,15 @@ final class CockpitPayCodePayoutCorrectionController extends Controller
             mobile: $this->optionalString($request->validated('mobile')),
         );
 
-        return to_route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code])
-            ->with('success', $result['status'] === 'succeeded'
+        $redirect = to_route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]);
+
+        if (($result['provider_submission_accepted'] ?? true) === false) {
+            return $redirect->withErrors([
+                'account_number' => 'The provider did not accept this payout submission. Your funds remain protected; review the destination and retry.',
+            ]);
+        }
+
+        return $redirect->with('success', $result['status'] === 'succeeded'
                 ? 'The corrected payout was completed.'
                 : 'The corrected payout was submitted for provider verification.');
     }

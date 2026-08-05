@@ -6,6 +6,7 @@ use Bavix\Wallet\Models\Wallet;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -354,6 +355,118 @@ it('refurbishes the same pay code with an immutable corrected destination and se
         accountNumber: '09173011987',
     ))->toThrow(RuntimeException::class);
     $provider->assertDisburseCalledTimes(2);
+});
+
+it('falls back to the claimant mobile and reopens correction when the provider rejects submission', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnPendingResult(
+        transactionId: 'NETBANK-REFURBISH-ORIGINAL-1',
+        provider: 'netbank',
+    );
+    app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09707616025',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09707616025',
+        ],
+    ]);
+    $originalReconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+    $originalReconciliation->forceFill([
+        'status' => 'failed',
+        'needs_review' => false,
+        'error_message' => 'AC01 (Incorrect account number)',
+        'completed_at' => now(),
+    ])->save();
+    DisbursementRejected::dispatch($originalReconciliation->fresh());
+    $payableBefore = treasuryBackedPayoutPositionBalance(
+        $issuer,
+        TreasuryPositionPurpose::BeneficiaryPayoutPayable,
+    );
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+    $provider->willReturnFailedResult(
+        provider: 'netbank',
+        metadata: [
+            'provider_submission_accepted' => false,
+            'failure_phase' => 'provider_submission',
+            'failure_code' => 'submission_not_accepted',
+            'failure_message' => 'NetBank did not accept the payout submission.',
+        ],
+    );
+
+    $result = app(RefurbishRejectedPayCodePayout::class)->handle(
+        voucher: $voucher,
+        requestedBy: $issuer,
+        bankCode: 'GXCHPHM2XXX',
+        accountNumber: '09853353980',
+    );
+
+    $failedRetry = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->latest('id')
+        ->firstOrFail();
+    $firstRevision = PayoutDestinationRevision::query()->sole();
+
+    expect($result)->toMatchArray([
+        'success' => false,
+        'status' => 'failed',
+        'provider_submission_accepted' => false,
+        'provider_transaction_id' => null,
+    ])->and($firstRevision->mobile_ciphertext)->toBe('09707616025')
+        ->and($failedRetry->internal_status)->toBe('submission_failed')
+        ->and($failedRetry->provider_transaction_id)->toBeNull()
+        ->and($failedRetry->needs_review)->toBeFalse()
+        ->and(VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())->sole()->status)
+        ->toBe('payout_rejected')
+        ->and(data_get(
+            $voucher->refresh()->metadata,
+            'treasury.pay_code_reservation.status',
+        ))->toBe('recovery_pending')
+        ->and(treasuryBackedPayoutPositionBalance(
+            $issuer,
+            TreasuryPositionPurpose::BeneficiaryPayoutPayable,
+        ))->toBe($payableBefore)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))
+        ->toBe($inventoryBefore)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.payout_retry.submission_failed')
+            ->where('subject_id', (string) $voucher->getKey())
+            ->count())->toBe(1);
+    $provider->assertDisburseCalledTimes(2);
+
+    $this->artisan('xchange:reconcile:pending', ['--json' => true])
+        ->assertSuccessful();
+    expect($provider->checkStatusCallCount)->toBe(0);
+
+    $provider->willReturnSuccessfulResult(
+        transactionId: 'NETBANK-REFURBISH-SUCCEEDED-2',
+        provider: 'netbank',
+    );
+    $secondResult = app(RefurbishRejectedPayCodePayout::class)->handle(
+        voucher: $voucher->fresh(),
+        requestedBy: $issuer,
+        bankCode: 'GXCHPHM2XXX',
+        accountNumber: '09173011987',
+        mobile: '639173011987',
+    );
+
+    expect($secondResult)->toMatchArray([
+        'success' => true,
+        'status' => 'succeeded',
+        'destination_version' => 2,
+        'provider_transaction_id' => 'NETBANK-REFURBISH-SUCCEEDED-2',
+    ])->and(PayoutDestinationRevision::query()->count())->toBe(2)
+        ->and(VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())->sole()->status)
+        ->toBe('succeeded');
+    $provider->assertDisburseCalledTimes(3);
+    $provider->assertLastRequest(function (PayoutRequestData $request): void {
+        expect($request->mobile)->toBe('09173011987');
+    });
 });
 
 it('blocks an invalid corrected wallet destination before a provider call', function (): void {

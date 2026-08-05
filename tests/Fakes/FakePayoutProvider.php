@@ -31,6 +31,8 @@ class FakePayoutProvider implements PayoutProvider
 
     public ?string $nextProvider = 'fake';
 
+    public ?array $nextMetadata = null;
+
     public ?\Throwable $nextException = null;
 
     public ?PayoutStatus $nextCheckStatus = null;
@@ -57,6 +59,7 @@ class FakePayoutProvider implements PayoutProvider
         $this->nextTransactionId = null;
         $this->nextUuid = null;
         $this->nextProvider = 'fake';
+        $this->nextMetadata = null;
         $this->nextException = null;
         $this->shouldFail = false;
 
@@ -86,12 +89,14 @@ class FakePayoutProvider implements PayoutProvider
     public function willReturnFailedResult(
         ?string $transactionId = null,
         ?string $uuid = null,
-        ?string $provider = 'fake'
+        ?string $provider = 'fake',
+        ?array $metadata = null,
     ): self {
         $this->nextStatus = PayoutStatus::FAILED;
         $this->nextTransactionId = $transactionId;
         $this->nextUuid = $uuid;
         $this->nextProvider = $provider;
+        $this->nextMetadata = $metadata;
         $this->nextException = null;
         $this->shouldFail = true;
 
@@ -141,6 +146,7 @@ class FakePayoutProvider implements PayoutProvider
             uuid: $uuid,
             status: $status,
             provider: $provider,
+            metadata: $this->nextMetadata,
         );
     }
 

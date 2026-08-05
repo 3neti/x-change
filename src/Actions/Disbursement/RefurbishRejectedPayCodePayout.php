@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
+use LBHurtado\EmiCore\Data\PayoutResultData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
@@ -55,11 +56,12 @@ final readonly class RefurbishRejectedPayCodePayout
             $this->assertAuthorized($voucher, $requestedBy);
             [$claim, $rejection] = $this->recoveryContext($voucher);
             $rail = (string) $rejection->settlement_rail;
+            $contactMobile = $this->contactMobile($mobile, $claim);
             $validation = $this->destinations->validate(
                 $bankCode,
                 $accountNumber,
                 $rail,
-                $mobile,
+                $contactMobile,
             );
 
             if (! $validation->isValid()) {
@@ -153,21 +155,39 @@ final readonly class RefurbishRejectedPayCodePayout
             try {
                 $result = $this->payouts->disburse($request);
                 $status = $this->statuses->resolveFromGatewayResponse($result);
+                $submissionNotAccepted = $this->submissionNotAccepted($result, $status);
                 $reconciliation->forceFill([
                     'provider' => $result->provider ?? 'unknown',
-                    'provider_transaction_id' => $result->transaction_id,
+                    'provider_transaction_id' => $submissionNotAccepted
+                        ? null
+                        : $result->transaction_id,
                     'transaction_uuid' => $result->uuid,
                     'status' => $status,
-                    'internal_status' => 'recorded',
-                    'completed_at' => $status === 'succeeded' ? now() : null,
-                    'needs_review' => $status === 'failed',
-                    'review_reason' => $status === 'failed'
+                    'internal_status' => $submissionNotAccepted
+                        ? 'submission_failed'
+                        : 'recorded',
+                    'completed_at' => in_array($status, ['succeeded'], true)
+                        || $submissionNotAccepted
+                            ? now()
+                            : null,
+                    'needs_review' => $status === 'failed' && ! $submissionNotAccepted,
+                    'review_reason' => $status === 'failed' && ! $submissionNotAccepted
                         ? 'Immediate provider failure requires authoritative status verification.'
                         : null,
+                    'error_message' => $submissionNotAccepted
+                        ? $this->submissionFailureMessage($result)
+                        : null,
                     'raw_response' => $result->toArray(),
+                    'meta' => array_merge((array) $reconciliation->meta, [
+                        'provider_submission_accepted' => ! $submissionNotAccepted,
+                        'failure_phase' => $submissionNotAccepted
+                            ? 'provider_submission'
+                            : null,
+                    ]),
                 ])->save();
             } catch (Throwable $exception) {
                 $status = 'unknown';
+                $submissionNotAccepted = false;
                 $reconciliation->forceFill([
                     'status' => 'unknown',
                     'internal_status' => 'recorded',
@@ -181,7 +201,16 @@ final readonly class RefurbishRejectedPayCodePayout
                 ])->save();
             }
 
-            $this->markRetrySubmitted($voucher, $claim, $reconciliation, $revision);
+            if ($submissionNotAccepted) {
+                $this->markRetrySubmissionFailed(
+                    $voucher,
+                    $claim,
+                    $reconciliation,
+                    $revision,
+                );
+            } else {
+                $this->markRetrySubmitted($voucher, $claim, $reconciliation, $revision);
+            }
 
             if ($status === 'succeeded') {
                 Event::dispatch(new DisbursementConfirmed($reconciliation->fresh()));
@@ -199,6 +228,7 @@ final readonly class RefurbishRejectedPayCodePayout
                 'provider_reference' => (string) $reconciliation->provider_reference,
                 'provider_transaction_id' => $reconciliation->provider_transaction_id,
                 'status' => (string) $reconciliation->status,
+                'provider_submission_accepted' => ! $submissionNotAccepted,
             ];
         } finally {
             $lock->release();
@@ -277,6 +307,32 @@ final readonly class RefurbishRejectedPayCodePayout
         );
     }
 
+    private function contactMobile(?string $mobile, VoucherClaim $claim): ?string
+    {
+        if (is_string($mobile) && trim($mobile) !== '') {
+            return trim($mobile);
+        }
+
+        return is_string($claim->claimer_mobile) && trim($claim->claimer_mobile) !== ''
+            ? trim($claim->claimer_mobile)
+            : null;
+    }
+
+    private function submissionNotAccepted(PayoutResultData $result, string $status): bool
+    {
+        return $status === 'failed'
+            && data_get($result->metadata, 'provider_submission_accepted') === false;
+    }
+
+    private function submissionFailureMessage(PayoutResultData $result): string
+    {
+        $message = data_get($result->metadata, 'failure_message');
+
+        return is_string($message) && trim($message) !== ''
+            ? trim($message)
+            : 'The payout provider did not accept the corrected submission.';
+    }
+
     private function markRetrySubmitted(
         Voucher $voucher,
         VoucherClaim $claim,
@@ -305,6 +361,43 @@ final readonly class RefurbishRejectedPayCodePayout
                     'meta' => $claimMeta,
                 ])->save();
             }
+        }, attempts: 5);
+    }
+
+    private function markRetrySubmissionFailed(
+        Voucher $voucher,
+        VoucherClaim $claim,
+        DisbursementReconciliation $reconciliation,
+        PayoutDestinationRevision $revision,
+    ): void {
+        DB::transaction(function () use ($claim, $reconciliation, $revision, $voucher): void {
+            $metadata = (array) $voucher->refresh()->metadata;
+            data_set($metadata, 'disbursement.status', 'rejected');
+            data_set($metadata, 'disbursement.gateway', $reconciliation->provider);
+            data_set($metadata, 'disbursement.transaction_id', null);
+            data_set($metadata, 'disbursement.requires_reconciliation', false);
+            data_set($metadata, 'disbursement.requires_recovery', true);
+            data_set($metadata, 'disbursement.destination_revision_reference', $revision->reference);
+            data_set($metadata, 'disbursement.destination_version', $revision->version);
+            data_set($metadata, 'disbursement.rejection_reason', $reconciliation->error_message);
+            $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+
+            $claimMeta = (array) $claim->meta;
+            data_set($claimMeta, 'disbursement.status', 'submission_failed');
+            data_set($claimMeta, 'disbursement.destination_revision_reference', $revision->reference);
+            data_set($claimMeta, 'disbursement.reconciliation_id', $reconciliation->getKey());
+            $claim->forceFill([
+                'status' => 'payout_rejected',
+                'disbursed_amount_minor' => 0,
+                'failure_message' => $reconciliation->error_message,
+                'meta' => $claimMeta,
+            ])->save();
+
+            $this->journal->recordSubmissionFailure(
+                $voucher,
+                $revision,
+                $reconciliation,
+            );
         }, attempts: 5);
     }
 

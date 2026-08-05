@@ -13,7 +13,7 @@ it('reconciles pending records through the console command', function () {
         'claim_type' => 'withdraw',
         'provider' => 'constellation',
         'provider_reference' => 'REF-001',
-        'provider_transaction_id' => null,
+        'provider_transaction_id' => 'TX-001',
         'transaction_uuid' => null,
         'status' => 'pending',
         'internal_status' => 'recorded',
@@ -56,6 +56,35 @@ it('reconciles pending records through the console command', function () {
         ->expectsOutput('Processed: 1')
         ->expectsOutput('Updated: 1')
         ->expectsOutput("TEST-1234 [{$record->id}]: pending -> succeeded (updated)")
+        ->assertSuccessful();
+});
+
+it('does not poll an internal reference that has no provider transaction identifier', function (): void {
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => 11,
+        'voucher_code' => 'TEST-NOT-SUBMITTED',
+        'claim_type' => 'payout_recovery',
+        'provider' => 'netbank',
+        'provider_reference' => 'TEST-NOT-SUBMITTED-R1',
+        'provider_transaction_id' => null,
+        'status' => 'unknown',
+        'internal_status' => 'recorded',
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******3980',
+        'settlement_rail' => 'INSTAPAY',
+        'attempt_count' => 1,
+        'needs_review' => true,
+        'attempted_at' => now(),
+    ]);
+
+    $service = Mockery::mock(DisbursementReconciliationContract::class);
+    $service->shouldNotReceive('reconcile');
+    $this->app->instance(DisbursementReconciliationContract::class, $service);
+
+    $this->artisan('xchange:reconcile:pending', ['--json' => true])
+        ->expectsOutput('{"processed":0,"updated":0,"results":[]}')
         ->assertSuccessful();
 });
 
