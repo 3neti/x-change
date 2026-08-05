@@ -114,7 +114,7 @@ it('omits approval summary for vouchers without pending approval', function () {
         ->and($result[0]['display_status'])->toBe($result[0]['status']);
 });
 
-it('uses awaiting approval display status for redeemed vouchers with pending approval', function () {
+it('keeps a completed non-payout redemption primary when approval metadata remains pending', function () {
     $voucher = issueVoucher();
     $voucher->redeemed_at = now();
     $voucher->save();
@@ -147,7 +147,8 @@ it('uses awaiting approval display status for redeemed vouchers with pending app
     $result = $service->list([]);
 
     expect($result[0]['status'])->toBe('redeemed')
-        ->and($result[0]['display_status'])->toBe('awaiting_approval')
+        ->and($result[0]['display_status'])->toBe('redeemed')
+        ->and($result[0]['operational_status']['settlement_outcome'])->toBe('not_applicable')
         ->and($result[0]['approval'])->toMatchArray([
             'required' => true,
             'type' => 'otp',
@@ -343,6 +344,135 @@ it('separates a completed claim from its rejected provider payout', function () 
         'raw_response',
         'account_number_ciphertext',
     ]);
+});
+
+it('keeps a successful payout primary after the voucher expiry date', function () {
+    $voucher = issueVoucher(validVoucherInstructions(amount: 20));
+    $voucher->forceFill([
+        'redeemed_at' => now()->subDay(),
+        'expires_at' => now()->subMinute(),
+    ])->saveQuietly();
+
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'withdraw',
+        'status' => 'succeeded',
+        'requested_amount_minor' => 2_000,
+        'disbursed_amount_minor' => 2_000,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'completed_at' => now()->subDay(),
+        'meta' => ['fully_claimed' => true],
+    ]);
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_code' => $voucher->code,
+        'claim_type' => 'withdraw',
+        'provider' => 'netbank',
+        'provider_reference' => $voucher->code.'-successful-expired',
+        'provider_transaction_id' => '410733956',
+        'status' => 'succeeded',
+        'internal_status' => 'finalized',
+        'amount' => 20,
+        'currency' => 'PHP',
+        'completed_at' => now()->subDay(),
+    ]);
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('list')->once()->with([])->andReturn([$voucher->fresh()]);
+
+    $result = (new VoucherLifecycleService($access))->list([])[0];
+
+    expect($result['status'])->toBe('paid')
+        ->and($result['display_status'])->toBe('paid')
+        ->and($result['voucher_status'])->toBe('expired')
+        ->and($result['operational_status'])->toMatchArray([
+            'key' => 'paid',
+            'label' => 'Paid',
+            'availability_key' => 'closed',
+            'settlement_outcome' => 'succeeded',
+            'is_terminal' => true,
+            'can_claim' => false,
+            'can_retry_payout' => false,
+        ]);
+});
+
+it('keeps a rejected payout primary after the voucher expiry date', function () {
+    $voucher = issueVoucher(validVoucherInstructions(amount: 1000));
+    $metadata = (array) $voucher->metadata;
+    data_set($metadata, 'treasury.pay_code_reservation.status', 'recovery_pending');
+    data_set($metadata, 'disbursement.requires_recovery', true);
+    $voucher->forceFill([
+        'metadata' => $metadata,
+        'redeemed_at' => now()->subDay(),
+        'expires_at' => now()->subMinute(),
+    ])->saveQuietly();
+
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'withdraw',
+        'status' => 'payout_rejected',
+        'requested_amount_minor' => 100_000,
+        'disbursed_amount_minor' => 0,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'completed_at' => now()->subDay(),
+        'failure_message' => 'AC01 (Incorrect account number)',
+        'meta' => ['fully_claimed' => true],
+    ]);
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_code' => $voucher->code,
+        'claim_type' => 'withdraw',
+        'provider' => 'netbank',
+        'provider_reference' => $voucher->code.'-rejected-expired',
+        'status' => 'failed',
+        'internal_status' => 'recovery_opened',
+        'amount' => 1000,
+        'currency' => 'PHP',
+        'error_message' => 'AC01 (Incorrect account number)',
+        'completed_at' => now()->subDay(),
+    ]);
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('list')->once()->with([])->andReturn([$voucher->fresh()]);
+
+    $result = (new VoucherLifecycleService($access))->list([])[0];
+
+    expect($result['status'])->toBe('payout_rejected')
+        ->and($result['display_status'])->toBe('payout_rejected')
+        ->and($result['voucher_status'])->toBe('expired')
+        ->and($result['attention']['key'])->toBe('payout_rejected')
+        ->and($result['operational_status'])->toMatchArray([
+            'key' => 'payout_rejected',
+            'label' => 'Payout Rejected',
+            'availability_key' => 'closed',
+            'settlement_outcome' => 'rejected',
+            'is_terminal' => true,
+            'can_claim' => false,
+            'can_retry_payout' => true,
+        ]);
+});
+
+it('keeps expiry primary when no claim or payout exists', function () {
+    $voucher = issueVoucher();
+    $voucher->forceFill(['expires_at' => now()->subMinute()])->saveQuietly();
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('list')->once()->with([])->andReturn([$voucher->fresh()]);
+
+    $result = (new VoucherLifecycleService($access))->list([])[0];
+
+    expect($result['status'])->toBe('expired')
+        ->and($result['display_status'])->toBe('expired')
+        ->and($result['operational_status'])->toMatchArray([
+            'key' => 'expired',
+            'availability_key' => 'expired',
+            'settlement_outcome' => 'not_applicable',
+            'can_claim' => false,
+        ]);
 });
 
 it('returns voucher status', function () {

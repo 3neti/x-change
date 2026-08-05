@@ -19,6 +19,8 @@ use LBHurtado\XChange\Actions\Treasury\ReleasePayCodeTerminalReserve;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Contracts\VoucherOperationalStatusResolverContract;
+use LBHurtado\XChange\Data\PayCode\PayCodeOperationalStatusData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -34,6 +36,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         protected ?ClaimApprovalStatusResolver $approvalStatus = null,
         protected ?NamedVoucherSliceService $namedSlices = null,
         protected ?ReleasePayCodeTerminalReserve $terminalReleases = null,
+        protected ?VoucherOperationalStatusResolverContract $operationalStatuses = null,
     ) {}
 
     public function list(array $filters = []): array
@@ -146,8 +149,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
     protected function toSummaryArray(Voucher $voucher): array
     {
-        $status = $this->statusLabel($voucher);
         $approval = $this->approvalSummary($voucher);
+        $status = $this->operationalStatus($voucher, $approval);
         $operational = $this->operationalSummary($voucher);
 
         return [
@@ -156,8 +159,10 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'code' => $voucher->code,
             'amount' => $this->amount($voucher),
             'currency' => $this->currency($voucher),
-            'status' => $status,
-            'display_status' => $this->displayStatus($status, $approval),
+            'status' => $status->key,
+            'display_status' => $status->key,
+            'voucher_status' => $this->voucherStatusLabel($voucher),
+            'operational_status' => $status->toArray(),
             'issuer_id' => $this->issuerId($voucher),
             'capability' => [
                 'key' => $operational->capability_key,
@@ -321,8 +326,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
     protected function toDetailArray(Voucher $voucher): array
     {
-        $status = $this->statusLabel($voucher);
         $approval = $this->approvalSummary($voucher);
+        $status = $this->operationalStatus($voucher, $approval);
         $operational = $this->operationalSummary($voucher);
 
         return [
@@ -331,8 +336,10 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'code' => $voucher->code,
             'amount' => $this->amount($voucher),
             'currency' => $this->currency($voucher),
-            'status' => $status,
-            'display_status' => $this->displayStatus($status, $approval),
+            'status' => $status->key,
+            'display_status' => $status->key,
+            'voucher_status' => $this->voucherStatusLabel($voucher),
+            'operational_status' => $status->toArray(),
             'issuer_id' => $this->issuerId($voucher),
             'claimed' => $this->isClaimed($voucher),
             'fully_claimed' => $this->isFullyClaimed($voucher),
@@ -351,6 +358,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'claims' => $this->claimsArray($voucher),
             'claim_evidence' => $this->claimEvidenceArray($voucher),
             'redemption' => $this->redemptionSummary($voucher),
+            'attention' => $this->payoutAttention($voucher),
             'backing' => $this->backingSummary($voucher),
             'settlement_envelope' => $this->settlementEnvelopeSummary($voucher),
             'approval' => $approval,
@@ -741,11 +749,16 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         $claimed = $this->isClaimed($voucher);
         $fullyClaimed = $this->isFullyClaimed($voucher);
         $amount = $this->amount($voucher);
+        $approval = $this->approvalSummary($voucher);
+        $status = $this->operationalStatus($voucher, $approval, $claimed, $fullyClaimed);
 
         return [
             'voucher_id' => $voucher->id,
             'code' => $voucher->code,
-            'status' => $this->statusLabel($voucher),
+            'status' => $status->key,
+            'display_status' => $status->key,
+            'voucher_status' => $this->voucherStatusLabel($voucher),
+            'operational_status' => $status->toArray(),
             'claimed' => $claimed,
             'fully_claimed' => $fullyClaimed,
             'remaining_balance' => $fullyClaimed ? 0.0 : $amount,
@@ -898,19 +911,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         return '/x/pay-codes/'.$voucher->code.'/approval';
     }
 
-    /**
-     * @param  array<string, mixed>|null  $approval
-     */
-    protected function displayStatus(string $status, ?array $approval): string
-    {
-        if (($approval['required'] ?? false) === true) {
-            return 'awaiting_approval';
-        }
-
-        return $status;
-    }
-
-    protected function statusLabel(Voucher $voucher): string
+    protected function voucherStatusLabel(Voucher $voucher): string
     {
         if ($voucher->isClosed()) {
             return 'cancelled';
@@ -925,6 +926,29 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         }
 
         return strtolower((string) $voucher->state->value);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $approval
+     */
+    protected function operationalStatus(
+        Voucher $voucher,
+        ?array $approval,
+        ?bool $claimed = null,
+        ?bool $fullyClaimed = null,
+    ): PayCodeOperationalStatusData {
+        return $this->operationalStatusResolver()->resolve(
+            voucher: $voucher,
+            claimed: $claimed ?? $this->isClaimed($voucher),
+            fullyClaimed: $fullyClaimed ?? $this->isFullyClaimed($voucher),
+            approvalRequired: ($approval['required'] ?? false) === true,
+        );
+    }
+
+    protected function operationalStatusResolver(): VoucherOperationalStatusResolverContract
+    {
+        return $this->operationalStatuses
+            ?? app(VoucherOperationalStatusResolverContract::class);
     }
 
     protected function isClaimed(Voucher $voucher): bool
