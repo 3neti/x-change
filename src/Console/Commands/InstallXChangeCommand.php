@@ -34,6 +34,7 @@ class InstallXChangeCommand extends Command
         {--no-migrate : Skip database migrations}
         {--fresh-database : Drop all database tables after live preflight and rebuild them}
         {--confirm-database-reset : Explicitly authorize the destructive fresh database operation}
+        {--confirm-staging-database-reset : Additionally authorize a fresh database operation in staging; production is never permitted}
         {--seeder= : Host bootstrap seeder to run after a fresh database migration}
         {--no-treasury : Explicitly defer Treasury preflight, provisioning, and reconciliation}
         {--treasury-opening-policy= : unattributed, system-capital, or configured}
@@ -62,6 +63,9 @@ class InstallXChangeCommand extends Command
 
         $capitalizationConnections = [];
         $freshDatabase = (bool) $this->option('fresh-database');
+        $stagingDatabaseResetConfirmed = (bool) $this->option(
+            'confirm-staging-database-reset',
+        );
         $initializedConnections = [];
         $liveReadyOpeningConnections = [];
         $openingConnections = [];
@@ -91,19 +95,32 @@ class InstallXChangeCommand extends Command
             return self::FAILURE;
         }
 
+        $applicationEnvironment = mb_strtolower((string) app()->environment());
+        $configuredEnvironment = mb_strtolower((string) config('app.env'));
+        $isLocalOrTesting = in_array(
+            $applicationEnvironment,
+            ['local', 'testing'],
+            true,
+        ) && in_array($configuredEnvironment, ['local', 'testing'], true);
+        $isStaging = $applicationEnvironment === 'staging'
+            && $configuredEnvironment === 'staging';
+
+        if ($freshDatabase && $stagingDatabaseResetConfirmed && ! $isStaging) {
+            $this->components->error(
+                '[--confirm-staging-database-reset] is valid only when both application environment checks resolve to staging.',
+            );
+
+            return self::FAILURE;
+        }
+
         if (
             $freshDatabase
-            && (
-                ! app()->environment(['local', 'testing'])
-                || ! in_array(
-                    mb_strtolower((string) config('app.env')),
-                    ['local', 'testing'],
-                    true,
-                )
-            )
+            && ! $isLocalOrTesting
+            && ! ($isStaging && $stagingDatabaseResetConfirmed)
         ) {
             $this->components->error(
-                'Fresh database installation is limited to local and testing environments.',
+                'Fresh database installation is limited to local and testing environments. '
+                .'Staging additionally requires [--confirm-staging-database-reset]; production is never permitted.',
             );
 
             return self::FAILURE;
@@ -142,6 +159,7 @@ class InstallXChangeCommand extends Command
             ! $freshDatabase
             && (
                 (bool) $this->option('confirm-database-reset')
+                || $stagingDatabaseResetConfirmed
                 || $seeder !== ''
             )
         ) {

@@ -154,6 +154,7 @@ it('registers treasury commands and keeps installation safe when no connection i
 
     expect($signature)->toContain('{--fresh-database')
         ->and($signature)->toContain('{--confirm-database-reset')
+        ->and($signature)->toContain('{--confirm-staging-database-reset')
         ->and($signature)->toContain('{--seeder=')
         ->and($signature)->toContain('{--no-treasury')
         ->and($signature)->toContain('{--treasury-opening-policy=')
@@ -209,7 +210,64 @@ it('rejects capitalization controls when treasury installation is skipped', func
         ->assertExitCode(Command::FAILURE);
 });
 
-it('limits destructive fresh database installation to local and testing environments', function (string $environment) {
+it('requires additional explicit consent for a destructive staging database installation', function () {
+    app()->detectEnvironment(static fn (): string => 'staging');
+    config()->set('app.env', 'staging');
+
+    try {
+        $this->artisan('x-change:install', [
+            '--fresh-database' => true,
+            '--confirm-database-reset' => true,
+            '--seeder' => 'LBHurtado\\Instruction\\Database\\Seeders\\InstructionItemSeeder',
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain(
+                'Staging additionally requires [--confirm-staging-database-reset]',
+            )
+            ->assertExitCode(Command::FAILURE);
+    } finally {
+        app()->detectEnvironment(static fn (): string => 'testing');
+    }
+});
+
+it('allows staging reset validation to proceed only after both confirmations', function () {
+    app()->detectEnvironment(static fn (): string => 'staging');
+    config()->set('app.env', 'staging');
+
+    try {
+        $this->artisan('x-change:install', [
+            '--fresh-database' => true,
+            '--confirm-database-reset' => true,
+            '--confirm-staging-database-reset' => true,
+            '--seeder' => 'Missing\\Database\\Seeder',
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain(
+                'Fresh database seeder',
+            )
+            ->assertExitCode(Command::FAILURE);
+    } finally {
+        app()->detectEnvironment(static fn (): string => 'testing');
+    }
+});
+
+it('never permits destructive production database installation', function () {
+    config()->set('app.env', 'production');
+
+    $this->artisan('x-change:install', [
+        '--fresh-database' => true,
+        '--confirm-database-reset' => true,
+        '--confirm-staging-database-reset' => true,
+        '--seeder' => 'LBHurtado\\Instruction\\Database\\Seeders\\InstructionItemSeeder',
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain(
+            '[--confirm-staging-database-reset] is valid only when both application environment checks resolve to staging.',
+        )
+        ->assertExitCode(Command::FAILURE);
+});
+
+it('limits destructive fresh database installation without staging consent', function (string $environment) {
     config()->set('app.env', $environment);
 
     $this->artisan('x-change:install', [
@@ -222,7 +280,7 @@ it('limits destructive fresh database installation to local and testing environm
             'Fresh database installation is limited to local and testing environments.',
         )
         ->assertExitCode(Command::FAILURE);
-})->with(['production', 'staging']);
+})->with(['production']);
 
 it('fails installation before side effects when treasury identity is missing', function () {
     enableNetbankTreasuryForTests();
