@@ -5,14 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands\Treasury;
 
 use Illuminate\Console\Command;
-use Illuminate\Database\Eloquent\Builder;
-use LBHurtado\Voucher\Enums\VoucherState;
-use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Treasury\ReleaseExpiredPayCodeReserve;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
-use LBHurtado\XChange\Models\DisbursementReconciliation;
-use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Treasury\ExpiredPayCodeReleaseCandidateQuery;
 use Throwable;
 
 final class ReleaseExpiredPayCodeReservesCommand extends Command
@@ -24,8 +19,10 @@ final class ReleaseExpiredPayCodeReservesCommand extends Command
 
     protected $description = 'Return eligible unclaimed expired Pay Code principal to Client Funds.';
 
-    public function handle(ReleaseExpiredPayCodeReserve $release): int
-    {
+    public function handle(
+        ReleaseExpiredPayCodeReserve $release,
+        ExpiredPayCodeReleaseCandidateQuery $candidates,
+    ): int {
         $configuredLimit = max(
             1,
             (int) config('x-change.treasury.expiry_release.scheduled_batch_size', 100),
@@ -40,7 +37,7 @@ final class ReleaseExpiredPayCodeReservesCommand extends Command
         $skipped = 0;
         $errors = 0;
 
-        foreach ($this->eligiblePayCodes($limit)->get() as $voucher) {
+        foreach ($candidates->build($limit)->get() as $voucher) {
             try {
                 $result = $release->handle($voucher);
                 $result->replayed ? $replayed++ : $released++;
@@ -95,43 +92,5 @@ final class ReleaseExpiredPayCodeReservesCommand extends Command
         }
 
         return $errors === 0 ? self::SUCCESS : self::FAILURE;
-    }
-
-    /**
-     * @return Builder<Voucher>
-     */
-    private function eligiblePayCodes(int $limit): Builder
-    {
-        return Voucher::query()
-            ->whereNotNull('expires_at')
-            ->where('expires_at', '<=', now())
-            ->whereNull('redeemed_at')
-            ->whereNotIn('state', [
-                VoucherState::CLOSED->value,
-                VoucherState::CANCELLED->value,
-            ])
-            ->where(
-                'metadata->treasury->pay_code_reservation->status',
-                'reserved',
-            )
-            ->where(function (Builder $query): void {
-                $query
-                    ->whereNull('metadata->treasury->pay_code_reservation->source_position_purpose')
-                    ->orWhere(
-                        'metadata->treasury->pay_code_reservation->source_position_purpose',
-                        TreasuryPositionPurpose::ClientFunds->value,
-                    );
-            })
-            ->whereNotIn(
-                'id',
-                VoucherClaim::query()->select('voucher_id'),
-            )
-            ->whereNotIn(
-                'id',
-                DisbursementReconciliation::query()->select('voucher_id'),
-            )
-            ->oldest('expires_at')
-            ->oldest('id')
-            ->limit($limit);
     }
 }
