@@ -10,6 +10,14 @@ export type SuccessFallbackStatePayload = {
     riderState?: string | null;
 };
 
+export type SuccessRiderStagePayload = {
+    content?: string | null;
+    payload?: (Record<string, unknown> & {
+        content?: string | null;
+    }) | null;
+    [key: string]: unknown;
+};
+
 export function numericVoucherAmount(voucher: SuccessVoucherPayload): number {
     return Number(voucher.amount ?? 0);
 }
@@ -59,10 +67,17 @@ export type SuccessRiderMessagePayload = {
     meta?: Record<string, unknown>;
 };
 
+const pendingClaimRiderMessage = 'Your claim is being processed.';
+
 const genericReadyRiderMessages = new Set([
     'Your Pay Code is ready.',
     'Your Pay Code is ready',
 ]);
+
+function isGenericReadyRiderMessage(content: unknown): boolean {
+    return typeof content === 'string'
+        && genericReadyRiderMessages.has(content.trim());
+}
 
 export function resolveSuccessRiderMessage(
     riderContent: SuccessRiderMessagePayload | null | undefined,
@@ -74,16 +89,46 @@ export function resolveSuccessRiderMessage(
 
     if (
         isPendingClaimOutcome(payload)
-        && typeof riderContent.content === 'string'
-        && genericReadyRiderMessages.has(riderContent.content.trim())
+        && isGenericReadyRiderMessage(riderContent.content)
     ) {
         return {
             ...riderContent,
-            content: 'Your claim is being processed.',
+            content: pendingClaimRiderMessage,
         };
     }
 
     return riderContent;
+}
+
+export function resolveSuccessRiderStage(
+    stage: SuccessRiderStagePayload,
+    payload: SuccessFallbackStatePayload,
+): SuccessRiderStagePayload {
+    if (!isPendingClaimOutcome(payload)) {
+        return stage;
+    }
+
+    const hasGenericContent = isGenericReadyRiderMessage(stage.content);
+    const hasGenericPayloadContent = isGenericReadyRiderMessage(
+        stage.payload?.content,
+    );
+
+    if (!hasGenericContent && !hasGenericPayloadContent) {
+        return stage;
+    }
+
+    return {
+        ...stage,
+        ...(hasGenericContent ? { content: pendingClaimRiderMessage } : {}),
+        ...(hasGenericPayloadContent
+            ? {
+                payload: {
+                    ...stage.payload,
+                    content: pendingClaimRiderMessage,
+                },
+            }
+            : {}),
+    };
 }
 
 export function shouldRenderSuccessRiderMessage(

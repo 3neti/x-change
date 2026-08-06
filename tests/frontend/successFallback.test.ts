@@ -5,6 +5,8 @@ import {
     isPendingClaimOutcome,
     numericVoucherAmount,
     resolveSuccessFallbackTitle,
+    resolveSuccessRiderMessage,
+    resolveSuccessRiderStage,
     shouldRenderSuccessVoucherCodeBadge,
     shouldRenderSuccessRiderMessage,
 } from '../../resources/js/components/x-change/successFallback';
@@ -114,5 +116,46 @@ describe('success fallback', () => {
     it('does not render rider message when missing', () => {
         expect(shouldRenderSuccessRiderMessage(null)).toBe(false);
         expect(shouldRenderSuccessRiderMessage(undefined)).toBe(false);
+    });
+
+    it('replaces generic ready rider messages while provider payout is pending', () => {
+        expect(resolveSuccessRiderMessage(
+            {
+                enabled: true,
+                type: 'text',
+                content: 'Your Pay Code is ready.',
+            },
+            { claimOutcome: 'accepted_pending' },
+        )?.content).toBe('Your claim is being processed.');
+    });
+
+    it('replaces generic ready stage payloads while provider payout is pending', () => {
+        const stage = resolveSuccessRiderStage(
+            {
+                type: 'message',
+                phase: 'success',
+                payload: {
+                    content: 'Your Pay Code is ready.',
+                },
+            },
+            { claimOutcome: 'accepted_pending' },
+        );
+
+        expect(stage.payload?.content).toBe('Your claim is being processed.');
+    });
+
+    it('preserves custom success rider stages while provider payout is pending', () => {
+        const stage = resolveSuccessRiderStage(
+            {
+                type: 'message',
+                phase: 'success',
+                payload: {
+                    content: 'Keep this custom issuer message.',
+                },
+            },
+            { claimOutcome: 'accepted_pending' },
+        );
+
+        expect(stage.payload?.content).toBe('Keep this custom issuer message.');
     });
 });

@@ -1,10 +1,11 @@
 import type { RawRiderStage, RiderExperience } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
+import { claimExperiencePhaseStages } from '@/components/x-change/claimExperiencePhases';
+import type { ClaimExperiencePayload } from '@/components/x-change/claimExperiencePhases';
 import {
-    claimExperiencePhaseStages
-
-} from '@/components/x-change/claimExperiencePhases';
-import type {ClaimExperiencePayload} from '@/components/x-change/claimExperiencePhases';
+    resolveSuccessRiderStage,
+    type SuccessFallbackStatePayload,
+} from '@/components/x-change/successFallback';
 
 function isRedirectStage(stage: RawRiderStage): boolean {
     return stage.type === 'redirect'
@@ -74,12 +75,17 @@ export function resolveCompiledSuccessVisualStages(
 export function resolveSuccessVisualStages(
     claimExperience: ClaimExperiencePayload,
     rider: RiderExperience | null | undefined,
+    payload: SuccessFallbackStatePayload = {},
 ): RawRiderStage[] {
     const compiled = resolveCompiledSuccessVisualStages(claimExperience);
 
-    return compiled.length > 0
+    const stages = compiled.length > 0
         ? compiled
         : resolveLegacySuccessVisualStages(rider);
+
+    return stages.map((stage) =>
+        resolveSuccessRiderStage(stage, payload) as RawRiderStage,
+    );
 }
 
 export function resolveRedirectRuntimeStages(

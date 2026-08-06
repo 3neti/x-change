@@ -69,7 +69,10 @@ const displayedRiderContent = computed(() =>
 );
 
 const successVisualStages = computed<RawRiderStage[]>(() =>
-    resolveSuccessVisualStages(props.claim_experience, props.rider),
+    resolveSuccessVisualStages(props.claim_experience, props.rider, {
+        claimOutcome: props.claimOutcome,
+        riderState: props.rider?.state,
+    }),
 );
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() =>

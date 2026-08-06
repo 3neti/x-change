@@ -33,6 +33,33 @@ describe('success rider stage resolution', () => {
         expect(stages.map((stage) => stage.key)).toEqual(['compiled-success']);
     });
 
+    it('replaces generic compiled success rider copy while provider payout is pending', () => {
+        const stages = resolveSuccessVisualStages(
+            {
+                phases: [
+                    {
+                        key: 'success_rider',
+                        status: 'active',
+                        stages: [
+                            {
+                                key: 'compiled-success',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    content: 'Your Pay Code is ready.',
+                                },
+                            },
+                        ],
+                    },
+                ],
+            },
+            null,
+            { claimOutcome: 'accepted_pending' },
+        );
+
+        expect(stages[0].payload?.content).toBe('Your claim is being processed.');
+    });
+
     it('falls back to legacy success rider stages when compiled stages are absent', () => {
         const stages = resolveSuccessVisualStages(
             { phases: [] },
