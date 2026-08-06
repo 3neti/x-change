@@ -71,7 +71,7 @@ function updateQr(): void {
         <div class="mx-auto flex max-w-2xl flex-col items-center">
             <div class="text-center" aria-live="polite">
                 <p
-                    class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300"
+                    class="text-[0.65rem] font-semibold tracking-[0.18em] text-sky-700 uppercase dark:text-sky-300"
                 >
                     Shown in the payer’s app
                 </p>
@@ -177,7 +177,7 @@ function updateQr(): void {
                             type="text"
                             maxlength="25"
                             autocomplete="organization"
-                            class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
+                            class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
                         />
                         <span
                             v-if="merchantProfileForm.errors.name"
@@ -193,7 +193,7 @@ function updateQr(): void {
                             type="text"
                             maxlength="15"
                             autocomplete="address-level2"
-                            class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
+                            class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
                         />
                         <span
                             v-if="merchantProfileForm.errors.city"
@@ -213,7 +213,7 @@ function updateQr(): void {
 
                 <button
                     type="submit"
-                    class="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto sm:flex sm:w-auto"
+                    class="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto sm:flex sm:w-auto"
                     :disabled="
                         merchantProfileForm.processing || !labelPreview.fits
                     "
