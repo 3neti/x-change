@@ -54,8 +54,37 @@ export function shouldRenderSuccessVoucherCodeBadge(
 
 export type SuccessRiderMessagePayload = {
     enabled?: boolean | null;
+    type?: string | null;
     content?: unknown;
+    meta?: Record<string, unknown>;
 };
+
+const genericReadyRiderMessages = new Set([
+    'Your Pay Code is ready.',
+    'Your Pay Code is ready',
+]);
+
+export function resolveSuccessRiderMessage(
+    riderContent: SuccessRiderMessagePayload | null | undefined,
+    payload: SuccessFallbackStatePayload,
+): SuccessRiderMessagePayload | null {
+    if (!riderContent?.enabled || !riderContent.content) {
+        return null;
+    }
+
+    if (
+        isPendingClaimOutcome(payload)
+        && typeof riderContent.content === 'string'
+        && genericReadyRiderMessages.has(riderContent.content.trim())
+    ) {
+        return {
+            ...riderContent,
+            content: 'Your claim is being processed.',
+        };
+    }
+
+    return riderContent;
+}
 
 export function shouldRenderSuccessRiderMessage(
     riderContent: SuccessRiderMessagePayload | null | undefined,

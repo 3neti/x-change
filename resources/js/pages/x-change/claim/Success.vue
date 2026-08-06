@@ -20,6 +20,7 @@ import {
 import {
     formatSuccessVoucherAmount,
     hasNonZeroVoucherAmount,
+    resolveSuccessRiderMessage,
     resolveSuccessFallbackTitle,
     shouldRenderSuccessRiderMessage,
 } from '@/components/x-change/successFallback';
@@ -60,6 +61,13 @@ const props = defineProps<Props>();
 const riderContent = computed(() => props.rider?.success ?? null);
 const riderRedirect = computed(() => props.rider?.redirect ?? null);
 
+const displayedRiderContent = computed(() =>
+    resolveSuccessRiderMessage(riderContent.value, {
+        claimOutcome: props.claimOutcome,
+        riderState: props.rider?.state,
+    }),
+);
+
 const successVisualStages = computed<RawRiderStage[]>(() =>
     resolveSuccessVisualStages(props.claim_experience, props.rider),
 );
@@ -69,7 +77,7 @@ const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
 );
 
 const hasRiderMessage = computed(() =>
-    shouldRenderSuccessRiderMessage(riderContent.value),
+    shouldRenderSuccessRiderMessage(displayedRiderContent.value),
 );
 
 const { countdownRedirect, hasRedirect } = useClaimSuccessRedirect(
@@ -190,7 +198,7 @@ const pageTone = computed(() =>
 
                 <RiderRenderer
                     v-else-if="hasRiderMessage"
-                    :content="riderContent"
+                    :content="displayedRiderContent"
                 />
 
                 <div

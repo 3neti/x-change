@@ -110,6 +110,49 @@ describe('claim Success redirect countdown rendering', () => {
         ).toContain('Claim accepted · payout pending');
     });
 
+    it('replaces the generic ready rider message while provider payout is pending', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claimOutcome: 'accepted_pending',
+                rider: {
+                    ...baseProps.rider,
+                    state: 'accepted_pending',
+                    success: {
+                        enabled: true,
+                        type: 'text',
+                        content: 'Your Pay Code is ready.',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Your claim is being processed.');
+        expect(wrapper.text()).not.toContain('Your Pay Code is ready.');
+    });
+
+    it('preserves custom rider messages while provider payout is pending', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claimOutcome: 'accepted_pending',
+                rider: {
+                    ...baseProps.rider,
+                    state: 'accepted_pending',
+                    success: {
+                        enabled: true,
+                        type: 'text',
+                        content: 'Please keep this custom rider message.',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain(
+            'Please keep this custom rider message.',
+        );
+    });
+
     it('renders RiderCountdown when compiled redirect countdown is enabled', () => {
         const wrapper = mount(Success, {
             props: baseProps,
