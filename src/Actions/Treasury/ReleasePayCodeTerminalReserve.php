@@ -27,7 +27,7 @@ final readonly class ReleasePayCodeTerminalReserve
     ): PayCodeTerminalReleaseData {
         $reason = mb_strtolower(trim($terminalReason));
 
-        if ($reason !== 'cancelled') {
+        if (! in_array($reason, ['cancelled', 'expired'], true)) {
             throw new TreasuryConfigurationException(
                 "Unsupported Pay Code terminal release reason [{$terminalReason}].",
             );
@@ -79,9 +79,11 @@ final readonly class ReleasePayCodeTerminalReserve
         );
 
         if ($sourcePurpose !== TreasuryPositionPurpose::ClientFunds->value) {
+            $reasonLabel = $reason === 'cancelled' ? 'cancellation' : 'expiry';
+
             throw new TreasuryConfigurationException(
                 "Pay Code [{$voucher->code}] was reserved from [{$sourcePurpose}]; "
-                .'cancellation cannot return it to Client Funds.',
+                ."{$reasonLabel} cannot return it to Client Funds.",
             );
         }
 
