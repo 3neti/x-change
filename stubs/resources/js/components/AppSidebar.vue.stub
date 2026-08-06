@@ -10,6 +10,7 @@ import {
     RadioTower,
     UsersRound,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -35,7 +36,6 @@ import diagnostics from '@/routes/x-change/cockpit/diagnostics';
 import funding from '@/routes/x-change/cockpit/funding';
 import payCodes from '@/routes/x-change/cockpit/pay-codes';
 import type { NavItem } from '@/types';
-import { computed } from 'vue';
 
 // X-CHANGE HOST SHELL · package-owned navigation, account controls remain host-owned.
 type XChangeNavigationItem = NavItem & {
