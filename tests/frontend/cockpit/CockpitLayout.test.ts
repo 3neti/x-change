@@ -48,19 +48,41 @@ describe('Cockpit shell layout baseline', () => {
         ).toContain('Operator workspace');
     });
 
-    it('keeps the live navigation concise and excludes placeholder destinations', () => {
+    it('uses concise task language without changing the established endpoints', () => {
         expect(
             cockpitNavigationItems.every((item) => item.enabled !== false),
         ).toBe(true);
         expect(cockpitNavigationItems.map((item) => item.label)).toEqual([
-            'Cockpit',
-            'Create',
+            'Overview',
+            'Issuance',
             'Funding',
             'Pay Codes',
             'Campaigns',
-            'Your Account',
+            'Account',
             'System Readiness',
-            'Documentation',
+            'Guides',
+        ]);
+        expect(cockpitNavigationItems.map((item) => item.href)).toEqual([
+            '/x/cockpit',
+            '/x/cockpit/quick-generate',
+            '/x/cockpit/funding',
+            '/x/cockpit/pay-codes',
+            '/x/cockpit/campaigns',
+            '/x/cockpit/accounts',
+            '/x/cockpit/diagnostics/runtime-profile',
+            '/x/cockpit/documentation',
+        ]);
+        expect(
+            cockpitNavigationItems.map((item) => item.description),
+        ).toEqual([
+            'Funds, capacity, and activity',
+            'Design and issue a Pay Code',
+            'Add and confirm funds',
+            'Find and manage Pay Codes',
+            'Issue to many recipients',
+            'Position and connected services',
+            'Deployment and runtime checks',
+            'Workflows and terminology',
         ]);
     });
 
