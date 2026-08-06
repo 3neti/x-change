@@ -10,22 +10,22 @@ import {
     Search,
     TicketCheck,
 } from 'lucide-vue-next';
-import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
 import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit/funding/liquidity-refreshes';
 import { store as claimPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-claims';
 import { store as inspectPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-inspections';
+import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
 import { store as checkFundingRequestTransfer } from '@/routes/x-change/cockpit/funding/requests/transfer-checks';
-import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
+import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as openStandingFundingAddressRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank';
 import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks';
 import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts';
-import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import CockpitFundingActivity from '../components/CockpitFundingActivity.vue';
-import CockpitFundingQrAddress from '../components/CockpitFundingQrAddress.vue';
 import CockpitFundingMethodPanel from '../components/CockpitFundingMethodPanel.vue';
+import CockpitFundingQrAddress from '../components/CockpitFundingQrAddress.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitFundingActivityItem,
