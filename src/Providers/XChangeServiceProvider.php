@@ -434,6 +434,7 @@ class XChangeServiceProvider extends ServiceProvider
             'x-change'
         );
         $this->configureIdentityOtpGateway();
+        $this->configureFormFlowSplashDefaults();
         $this->app->singleton(OtpChallengeGateway::class, function ($app): OtpChallengeGateway {
             return match (config('x-change.onboarding.identity_otp.driver', 'unavailable')) {
                 'txtcmdr' => $app->make(TxtcmdrOtpChallengeGateway::class),
@@ -1203,6 +1204,19 @@ class XChangeServiceProvider extends ServiceProvider
             ClaimApprovalStatusResolver::class,
             DefaultClaimApprovalStatusResolver::class,
         );
+    }
+
+    private function configureFormFlowSplashDefaults(): void
+    {
+        config([
+            'splash.app_logo' => config(
+                'splash.app_logo',
+                (string) config(
+                    'x-change.branding.logo_light',
+                    '/vendor/x-change/images/logo-orange.png',
+                ),
+            ),
+        ]);
     }
 
     private function configureIdentityOtpGateway(): void
