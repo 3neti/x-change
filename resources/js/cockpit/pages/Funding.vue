@@ -10,7 +10,6 @@ import {
     Search,
     TicketCheck,
 } from 'lucide-vue-next';
-import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit/funding/liquidity-refreshes';
 import { store as claimPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-claims';
@@ -25,6 +24,7 @@ import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpi
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import CockpitFundingActivity from '../components/CockpitFundingActivity.vue';
+import CockpitFundingQrAddress from '../components/CockpitFundingQrAddress.vue';
 import CockpitFundingMethodPanel from '../components/CockpitFundingMethodPanel.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
@@ -162,6 +162,21 @@ const fundingQrMerchantProfile = computed(
             city: 'Manila',
             merchant_category_code: '0000',
             merchant_name_template: '{name} - {city}',
+            rendered_label: 'Account Holder - Manila',
+            maximum_label_length: 25,
+            uppercase: false,
+            application_name: 'X-Change',
+            template_options: [
+                { value: '{name}' as const, label: 'Name' },
+                {
+                    value: '{name} - {city}' as const,
+                    label: 'Name + City',
+                },
+                {
+                    value: '{app_name} - {name}' as const,
+                    label: 'x-change + Name',
+                },
+            ],
             category_options: [],
             presentation_only: true as const,
             controls_routing: false as const,
@@ -289,14 +304,6 @@ const { start: startFundingPoll, stop: stopFundingPoll } = usePoll(
         mode: 'rest',
     },
 );
-const merchantProfileForm = useForm({
-    name: fundingQrMerchantProfile.value.name,
-    city: fundingQrMerchantProfile.value.city,
-    merchant_category_code:
-        fundingQrMerchantProfile.value.merchant_category_code,
-    merchant_name_template:
-        fundingQrMerchantProfile.value.merchant_name_template,
-});
 const reconciliationForm = useForm({
     action: '',
 });
@@ -1211,15 +1218,10 @@ function refreshFundingProjections(): void {
     });
 }
 
-function saveFundingQrMerchantProfile(): void {
-    merchantProfileForm.patch(updateFundingQrMerchantProfile(), {
-        preserveScroll: true,
-        onSuccess: () => {
-            resetStandingFundingAddress();
-            standingActionNotice.value = 'Merchant label saved. Updating QR…';
-            void openStandingFundingAddress();
-        },
-    });
+function handleFundingQrMerchantProfileUpdated(): void {
+    resetStandingFundingAddress();
+    standingActionNotice.value = 'Merchant label saved. Updating QR…';
+    void openStandingFundingAddress();
 }
 
 function resetStandingFundingAddress(): void {
@@ -1836,125 +1838,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </span>
                     </template>
 
-                    <div
+                    <CockpitFundingQrAddress
                         v-if="standingAddress"
-                        class="bg-sky-50/50 p-4 dark:bg-sky-950/10"
-                    >
-                        <div
-                            class="grid gap-4 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start"
-                        >
-                            <div
-                                class="mx-auto rounded-xl border border-sky-200 bg-white p-2 shadow-sm md:mx-0 dark:border-sky-900"
-                            >
-                                <img
-                                    :src="standingAddress.qr_code"
-                                    alt="Account Funding Address QR Ph code"
-                                    class="size-44 object-contain"
-                                    data-testid="standing-funding-address-qr"
-                                />
-                            </div>
-                            <form
-                                class="rounded-xl border border-sky-200 bg-white p-4 shadow-sm dark:border-sky-900 dark:bg-slate-950"
-                                data-testid="funding-qr-merchant-profile"
-                                @submit.prevent="saveFundingQrMerchantProfile"
-                            >
-                                <h3 class="text-sm font-semibold">
-                                    Merchant label
-                                </h3>
-                                <div
-                                    class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)_auto] xl:items-end"
-                                >
-                                    <label
-                                        class="grid gap-1.5 text-xs font-medium"
-                                    >
-                                        <span>Merchant name</span>
-                                        <input
-                                            v-model="merchantProfileForm.name"
-                                            type="text"
-                                            maxlength="25"
-                                            autocomplete="organization"
-                                            class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
-                                        />
-                                        <span
-                                            v-if="
-                                                merchantProfileForm.errors.name
-                                            "
-                                            class="text-rose-700 dark:text-rose-300"
-                                        >
-                                            {{
-                                                merchantProfileForm.errors.name
-                                            }}
-                                        </span>
-                                    </label>
-                                    <label
-                                        class="grid gap-1.5 text-xs font-medium"
-                                    >
-                                        <span>City</span>
-                                        <input
-                                            v-model="merchantProfileForm.city"
-                                            type="text"
-                                            maxlength="15"
-                                            autocomplete="address-level2"
-                                            class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
-                                        />
-                                        <span
-                                            v-if="
-                                                merchantProfileForm.errors.city
-                                            "
-                                            class="text-rose-700 dark:text-rose-300"
-                                        >
-                                            {{
-                                                merchantProfileForm.errors.city
-                                            }}
-                                        </span>
-                                    </label>
-                                    <button
-                                        type="submit"
-                                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-1"
-                                        :disabled="
-                                            merchantProfileForm.processing
-                                        "
-                                        data-testid="funding-qr-update"
-                                    >
-                                        <RefreshCw
-                                            class="size-4 shrink-0"
-                                            :class="{
-                                                'animate-spin':
-                                                    merchantProfileForm.processing,
-                                            }"
-                                            aria-hidden="true"
-                                            data-testid="funding-qr-update-icon"
-                                        />
-                                        {{
-                                            merchantProfileForm.processing
-                                                ? 'Updating…'
-                                                : 'Update QR'
-                                        }}
-                                    </button>
-                                </div>
-                                <p
-                                    v-if="
-                                        merchantProfileForm.errors
-                                            .merchant_name_template
-                                    "
-                                    class="mt-2 text-xs text-rose-700 dark:text-rose-300"
-                                >
-                                    {{
-                                        merchantProfileForm.errors
-                                            .merchant_name_template
-                                    }}
-                                </p>
-                            </form>
-                        </div>
-
-                        <div
-                            v-if="standingActionNotice"
-                            class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
-                            role="status"
-                        >
-                            {{ standingActionNotice }}
-                        </div>
-                    </div>
+                        :address="standingAddress"
+                        :profile="fundingQrMerchantProfile"
+                        :notice="standingActionNotice"
+                        @updated="handleFundingQrMerchantProfileUpdated"
+                    />
 
                     <div
                         v-if="standingAddressError"

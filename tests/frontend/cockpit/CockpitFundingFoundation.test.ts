@@ -878,7 +878,7 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper
                 .get('[data-testid="funding-qr-merchant-profile"]')
-                .findAll('input')
+                .findAll('input[type="text"]')
                 .map((input) => (input.element as HTMLInputElement).value),
         ).toEqual(['Treasury Desk', 'Manila']);
         expect(wrapper.text()).not.toContain('Reveal Account Funding QR');
