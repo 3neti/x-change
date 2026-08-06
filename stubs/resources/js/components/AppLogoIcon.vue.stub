@@ -42,9 +42,29 @@ const logoSrc = computed(() => {
 
 <template>
     <img
+        class="x-change-app-logo-icon"
         :src="logoSrc"
         alt="X-Change"
         :class="className"
         v-bind="$attrs"
     />
 </template>
+
+<style scoped>
+.x-change-app-logo-icon {
+    display: block;
+    height: 3.5rem;
+    max-height: 3.5rem;
+    width: auto;
+    max-width: 8rem;
+    object-fit: contain;
+}
+
+@media (min-width: 640px) {
+    .x-change-app-logo-icon {
+        height: 4rem;
+        max-height: 4rem;
+        max-width: 9rem;
+    }
+}
+</style>
