@@ -12,9 +12,14 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
     expect($layout)->not->toContain('CockpitSidebar')
         ->and($sidebar)->toContain(
             'X-CHANGE HOST SHELL',
-            "title: 'Cockpit'",
-            "title: 'Documentation'",
+            "title: 'Overview'",
+            "title: 'Issuance'",
+            "title: 'Guides'",
             "title: 'System Readiness'",
+            "description: 'Funds, capacity, and activity'",
+            "description: 'Deployment and runtime checks'",
+            "{ label: 'System', items: systemItems.value }",
+            ':tooltip="`${item.title} — ${item.description}`"',
             'system_readiness_visible',
             '<NavUser />',
         )

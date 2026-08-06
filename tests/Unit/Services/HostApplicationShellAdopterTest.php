@@ -30,8 +30,10 @@ it('adopts a pristine Laravel sidebar as the package-owned Cockpit shell', funct
     expect($result['status'])->toBe('adopted')
         ->and($result['changed'])->toBeTrue()
         ->and($adopted)->toContain('X-CHANGE HOST SHELL')
-        ->toContain("title: 'Cockpit'")
-        ->toContain("title: 'Documentation'")
+        ->toContain("title: 'Overview'")
+        ->toContain("description: 'Funds, capacity, and activity'")
+        ->toContain("title: 'Guides'")
+        ->toContain("{ label: 'System', items: systemItems.value }")
         ->not->toContain('Repository');
 
     @unlink($path);

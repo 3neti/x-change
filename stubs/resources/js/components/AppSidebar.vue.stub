@@ -38,12 +38,56 @@ import type { NavItem } from '@/types';
 import { computed } from 'vue';
 
 // X-CHANGE HOST SHELL · package-owned navigation, account controls remain host-owned.
-const workspaceItems: NavItem[] = [
-    { title: 'Cockpit', href: dashboard(), icon: CircleGauge },
-    { title: 'Create', href: quickGenerate(), icon: BadgePlus },
-    { title: 'Funding', href: funding.index(), icon: Landmark },
-    { title: 'Pay Codes', href: payCodes.index(), icon: FileStack },
-    { title: 'Campaigns', href: campaigns.index(), icon: Megaphone },
+type XChangeNavigationItem = NavItem & {
+    description: string;
+};
+
+const workspaceItems: XChangeNavigationItem[] = [
+    {
+        title: 'Overview',
+        description: 'Funds, capacity, and activity',
+        href: dashboard(),
+        icon: CircleGauge,
+    },
+    {
+        title: 'Issuance',
+        description: 'Design and issue a Pay Code',
+        href: quickGenerate(),
+        icon: BadgePlus,
+    },
+    {
+        title: 'Funding',
+        description: 'Add and confirm funds',
+        href: funding.index(),
+        icon: Landmark,
+    },
+    {
+        title: 'Pay Codes',
+        description: 'Find and manage Pay Codes',
+        href: payCodes.index(),
+        icon: FileStack,
+    },
+    {
+        title: 'Campaigns',
+        description: 'Issue to many recipients',
+        href: campaigns.index(),
+        icon: Megaphone,
+    },
+];
+
+const accountHelpItems: XChangeNavigationItem[] = [
+    {
+        title: 'Account',
+        description: 'Position and connected services',
+        href: accounts.index(),
+        icon: UsersRound,
+    },
+    {
+        title: 'Guides',
+        description: 'Workflows and terminology',
+        href: documentation(),
+        icon: BookOpen,
+    },
 ];
 
 type XChangeSharedProps = {
@@ -55,18 +99,25 @@ type XChangeSharedProps = {
 };
 
 const page = usePage<XChangeSharedProps>();
-const controlItems = computed<NavItem[]>(() => [
-    { title: 'Your Account', href: accounts.index(), icon: UsersRound },
-    ...(page.props.xchange?.navigation?.system_readiness_visible
+const systemItems = computed<XChangeNavigationItem[]>(() =>
+    page.props.xchange?.navigation?.system_readiness_visible
         ? [
               {
                   title: 'System Readiness',
+                  description: 'Deployment and runtime checks',
                   href: diagnostics.runtimeProfile(),
                   icon: RadioTower,
               },
           ]
+        : [],
+);
+
+const navigationGroups = computed(() => [
+    { label: 'Workspace', items: workspaceItems },
+    { label: 'Account & Help', items: accountHelpItems },
+    ...(systemItems.value.length > 0
+        ? [{ label: 'System', items: systemItems.value }]
         : []),
-    { title: 'Documentation', href: documentation(), icon: BookOpen },
 ]);
 
 const { isCurrentUrl } = useCurrentUrl();
@@ -82,7 +133,10 @@ const { isCurrentUrl } = useCurrentUrl();
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()" aria-label="Open Cockpit">
+                        <Link
+                            :href="dashboard()"
+                            aria-label="Open Cockpit overview"
+                        >
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
@@ -92,10 +146,7 @@ const { isCurrentUrl } = useCurrentUrl();
 
         <SidebarContent>
             <SidebarGroup
-                v-for="group in [
-                    { label: 'Workspace', items: workspaceItems },
-                    { label: 'Account & Help', items: controlItems },
-                ]"
+                v-for="group in navigationGroups"
                 :key="group.label"
                 class="px-2 py-0"
             >
@@ -107,12 +158,24 @@ const { isCurrentUrl } = useCurrentUrl();
                     >
                         <SidebarMenuButton
                             as-child
+                            size="lg"
                             :is-active="isCurrentUrl(item.href)"
-                            :tooltip="item.title"
+                            :tooltip="`${item.title} — ${item.description}`"
                         >
                             <Link :href="item.href" prefetch>
-                                <component :is="item.icon" />
-                                <span>{{ item.title }}</span>
+                                <component :is="item.icon" class="mt-0.5" />
+                                <span
+                                    class="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"
+                                >
+                                    <span class="block truncate font-medium">
+                                        {{ item.title }}
+                                    </span>
+                                    <span
+                                        class="block truncate text-[0.7rem] leading-4 text-sidebar-foreground/60"
+                                    >
+                                        {{ item.description }}
+                                    </span>
+                                </span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
