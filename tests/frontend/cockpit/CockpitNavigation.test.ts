@@ -8,17 +8,17 @@ import {
 describe('Cockpit navigation baseline', () => {
     it('defines the primary and secondary Cockpit navigation model', () => {
         expect(cockpitPrimaryNavigation.map((item) => item.label)).toEqual([
-            'Cockpit',
-            'Create',
+            'Overview',
+            'Issuance',
             'Funding',
             'Pay Codes',
             'Campaigns',
         ]);
 
         expect(cockpitSecondaryNavigation.map((item) => item.label)).toEqual([
-            'Your Account',
+            'Account',
             'System Readiness',
-            'Documentation',
+            'Guides',
         ]);
 
         expect(cockpitNavigationItems).toHaveLength(8);
