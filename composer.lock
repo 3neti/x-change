@@ -894,16 +894,16 @@
         },
         {
             "name": "3neti/laravel-vouchers",
-            "version": "v1.2.0",
+            "version": "v1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/laravel-vouchers.git",
-                "reference": "f036e8ed4c911b2f7ee98ed38d9d824c4a181476"
+                "reference": "9e8d45c69cc4acd66a80faa04d840ca16cb2e557"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/laravel-vouchers/zipball/f036e8ed4c911b2f7ee98ed38d9d824c4a181476",
-                "reference": "f036e8ed4c911b2f7ee98ed38d9d824c4a181476",
+                "url": "https://api.github.com/repos/3neti/laravel-vouchers/zipball/9e8d45c69cc4acd66a80faa04d840ca16cb2e557",
+                "reference": "9e8d45c69cc4acd66a80faa04d840ca16cb2e557",
                 "shasum": ""
             },
             "require": {
@@ -958,9 +958,9 @@
                 "voucher"
             ],
             "support": {
-                "source": "https://github.com/3neti/laravel-vouchers/tree/v1.2.0"
+                "source": "https://github.com/3neti/laravel-vouchers/tree/v1.3.0"
             },
-            "time": "2026-07-31T04:47:44+00:00"
+            "time": "2026-08-06T02:02:05+00:00"
         },
         {
             "name": "3neti/merchant",
