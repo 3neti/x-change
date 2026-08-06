@@ -404,6 +404,14 @@ export type CockpitFundingQrMerchantProfile = {
     city: string;
     merchant_category_code: string;
     merchant_name_template: string;
+    rendered_label: string;
+    maximum_label_length: number;
+    uppercase: boolean;
+    application_name: string;
+    template_options: Array<{
+        value: '{name}' | '{name} - {city}' | '{app_name} - {name}';
+        label: string;
+    }>;
     category_options: Array<{
         code: string;
         label: string;
