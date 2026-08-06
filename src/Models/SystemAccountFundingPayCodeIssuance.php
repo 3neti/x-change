@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LogicException;
@@ -71,5 +72,14 @@ final class SystemAccountFundingPayCodeIssuance extends Model
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
+    }
+
+    public function accountFundingClaim(): HasOne
+    {
+        return $this->hasOne(
+            VoucherClaim::class,
+            'voucher_id',
+            'voucher_id',
+        )->where('claim_type', 'account_funding');
     }
 }

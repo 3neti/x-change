@@ -45,6 +45,25 @@ const activity: CockpitFundingActivityReadModel = {
             action_keys: ['view_instructions', 'check_provider'],
             request_reference: 'TRANSFER-1001',
         },
+        {
+            key: 'account_funding_pay_code:01K-FUND-672P',
+            source: 'system_account_funding_pay_code',
+            reference: '01K-FUND-672P',
+            display_reference: 'FUND-672P',
+            method: 'pay_code',
+            method_label: 'Pay Code',
+            amount: '₱100.00',
+            status: 'recognized',
+            status_label: 'Recognized',
+            updated_at: '2026-08-06T10:00:00+08:00',
+            timestamps: {
+                requested_at: '2026-08-06T09:55:00+08:00',
+                observed_at: null,
+                recognized_at: '2026-08-06T10:00:00+08:00',
+            },
+            summary: 'Added to Client Funds',
+            action_keys: [],
+        },
     ],
     filters: [
         { key: 'all', label: 'All' },
@@ -67,16 +86,34 @@ describe('Cockpit Funding Activity', () => {
         });
 
         expect(wrapper.text()).toContain('Funding Activity');
-        expect(wrapper.findAll('table tbody tr')).toHaveLength(2);
+        expect(wrapper.findAll('table tbody tr')).toHaveLength(3);
         expect(
             wrapper
                 .get('[data-testid="funding-activity-mobile-list"]')
                 .findAll('li'),
-        ).toHaveLength(2);
+        ).toHaveLength(3);
         expect(wrapper.text()).toContain('QR Ph');
         expect(wrapper.text()).toContain('Bank Transfer');
         expect(wrapper.text()).toContain('Recognized');
         expect(wrapper.text()).toContain('Awaiting payment');
+        expect(wrapper.text()).toContain('FUND-672P');
+    });
+
+    it('shows claimed Account Funding Pay Codes under the Pay Code filter', async () => {
+        const wrapper = mount(CockpitFundingActivity, {
+            props: { activity },
+        });
+
+        await wrapper
+            .get('[data-testid="funding-activity-filter-pay_code"]')
+            .trigger('click');
+
+        expect(wrapper.findAll('table tbody tr')).toHaveLength(1);
+        expect(wrapper.get('table').text()).toContain('FUND-672P');
+        expect(wrapper.get('table').text()).toContain('₱100.00');
+        expect(wrapper.get('table').text()).toContain('Recognized');
+        expect(wrapper.get('table').text()).not.toContain('AF-1001');
+        expect(wrapper.get('table').text()).not.toContain('TRANSFER-1001');
     });
 
     it('filters records and emits method-specific controls', async () => {

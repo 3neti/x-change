@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Number;
@@ -12,6 +13,8 @@ use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\XChange\Actions\Funding\ReadNetbankReusableFundingReceiptHistory;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingObservationData;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Models\VoucherClaim;
 
 final readonly class FundingActivityCockpitReadModel
 {
@@ -33,11 +36,15 @@ final readonly class FundingActivityCockpitReadModel
         $receiptItems = $operator instanceof Model
             ? $this->standingReceiptItems($operator)
             : collect();
+        $payCodeItems = $operator instanceof Model
+            ? $this->accountFundingPayCodeItems($operator)
+            : collect();
 
         return [
             'schema' => 'x-change.cockpit.funding-activity.v1',
             'items' => $requestItems
                 ->concat($receiptItems)
+                ->concat($payCodeItems)
                 ->sortByDesc('updated_at')
                 ->values()
                 ->all(),
@@ -53,6 +60,89 @@ final readonly class FundingActivityCockpitReadModel
                 'provider_transaction_id_exposed' => false,
                 'raw_evidence_exposed' => false,
             ],
+        ];
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function accountFundingPayCodeItems(Model $operator): Collection
+    {
+        return SystemAccountFundingPayCodeIssuance::query()
+            ->with(['voucher', 'accountFundingClaim'])
+            ->where(function (Builder $query) use ($operator): void {
+                $query->where(function (Builder $bound) use ($operator): void {
+                    $bound
+                        ->where('recipient_type', $operator->getMorphClass())
+                        ->where('recipient_id', (string) $operator->getKey());
+                })->orWhere(function (Builder $bearer) use ($operator): void {
+                    $bearer
+                        ->where('bearer', true)
+                        ->whereHas(
+                            'accountFundingClaim',
+                            fn (Builder $claim): Builder => $claim
+                                ->where('claimant_type', $operator::class)
+                                ->where(
+                                    'claimant_id',
+                                    (string) $operator->getKey(),
+                                ),
+                        );
+                });
+            })
+            ->get()
+            ->reject(fn (SystemAccountFundingPayCodeIssuance $issuance): bool => filled(data_get(
+                $issuance->metadata,
+                'custom.reviewed_funding.request_reference',
+            )))
+            ->map(fn (SystemAccountFundingPayCodeIssuance $issuance): array => $this->accountFundingPayCodeItem($issuance));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function accountFundingPayCodeItem(
+        SystemAccountFundingPayCodeIssuance $issuance,
+    ): array {
+        $voucher = $issuance->voucher;
+        $claim = $issuance->accountFundingClaim;
+        $recognized = $claim instanceof VoucherClaim
+            && $claim->status === 'succeeded';
+        $expired = ! $recognized
+            && $voucher !== null
+            && $voucher->isExpired();
+        $status = match (true) {
+            $recognized => 'recognized',
+            $expired => 'expired',
+            default => 'pay_code_ready',
+        };
+        $recognizedAt = $recognized ? $claim->completed_at : null;
+
+        return [
+            'key' => 'account_funding_pay_code:'.$issuance->reference,
+            'source' => 'system_account_funding_pay_code',
+            'reference' => $issuance->reference,
+            'display_reference' => (string) ($voucher?->code ?? $issuance->reference),
+            'method' => 'pay_code',
+            'method_label' => 'Pay Code',
+            'amount' => Number::currency(
+                $issuance->amount_minor / 100,
+                in: $issuance->currency,
+                locale: 'en_PH',
+            ),
+            'status' => $status,
+            'status_label' => $this->statusLabel($status),
+            'updated_at' => $recognizedAt
+                ?? $issuance->issued_at
+                ?? $issuance->updated_at,
+            'timestamps' => [
+                'requested_at' => $issuance->issued_at,
+                'observed_at' => null,
+                'recognized_at' => $recognizedAt,
+            ],
+            'summary' => $recognized
+                ? 'Added to Client Funds'
+                : 'Ready to add to Client Funds',
+            'action_keys' => [],
         ];
     }
 

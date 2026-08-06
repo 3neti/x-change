@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
+use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
+use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
@@ -115,4 +118,54 @@ it('hydrates the unified activity projection on the Funding page', function () {
             'props.funding_activity.redactions.raw_evidence_exposed',
             false,
         );
+});
+
+it('projects a claimed Account Funding Pay Code only for its recipient', function () {
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    $recipient = actingAsTestUser(0);
+    $otherOperator = actingAsTestUser(0);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        10_000,
+        'cockpit-funding-activity-pay-code',
+    );
+    $issuance = app(IssueSystemAccountFundingPayCode::class)->handle(
+        new IssueSystemAccountFundingPayCodeData(
+            amountMinor: 10_000,
+            connectionReference: 'netbank-primary',
+            idempotencyReference: 'cockpit-funding-activity-pay-code',
+            expiresAt: now()->addDay(),
+            recipient: $recipient,
+            evidenceReference: 'test-evidence:cockpit-funding-activity-pay-code',
+            authorizationReference: 'test-authorization:cockpit-funding-activity-pay-code',
+        ),
+    );
+    $claim = app(DispatchVoucherClaimOutcome::class)->handle(
+        voucher: $issuance->voucher,
+        requestedOutcome: 'account_funding',
+        payload: [],
+        claimant: $recipient,
+    );
+
+    $recipientActivity = app(FundingActivityCockpitReadModel::class)
+        ->forOperator($recipient, ['requests' => []]);
+    $otherActivity = app(FundingActivityCockpitReadModel::class)
+        ->forOperator($otherOperator, ['requests' => []]);
+
+    expect($recipientActivity['items'])->toHaveCount(1)
+        ->and(data_get($recipientActivity, 'items.0.source'))
+        ->toBe('system_account_funding_pay_code')
+        ->and(data_get($recipientActivity, 'items.0.method'))->toBe('pay_code')
+        ->and(data_get($recipientActivity, 'items.0.display_reference'))
+        ->toBe($issuance->voucher?->code)
+        ->and(data_get($recipientActivity, 'items.0.amount'))->toBe('₱100.00')
+        ->and(data_get($recipientActivity, 'items.0.status'))->toBe('recognized')
+        ->and(data_get($recipientActivity, 'items.0.status_label'))
+        ->toBe('Recognized')
+        ->and(data_get($recipientActivity, 'items.0.summary'))
+        ->toBe('Added to Client Funds')
+        ->and(data_get($recipientActivity, 'items.0.timestamps.recognized_at'))
+        ->toEqual($claim->completed_at)
+        ->and($otherActivity['items'])->toBeEmpty();
 });

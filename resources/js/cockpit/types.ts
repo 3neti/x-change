@@ -780,7 +780,10 @@ export type CockpitFundingRequestReadModel = {
 
 export type CockpitFundingActivityItem = {
     key: string;
-    source: 'funding_request' | 'standing_funding_receipt';
+    source:
+        | 'funding_request'
+        | 'standing_funding_receipt'
+        | 'system_account_funding_pay_code';
     reference: string;
     display_reference: string;
     method: 'qr_ph' | 'bank_transfer' | 'pay_code' | 'reviewed_value';
