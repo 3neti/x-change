@@ -40,11 +40,11 @@ class DefaultMoneyMovementLifecycleTriggerMatrixService implements MoneyMovement
                 ],
                 [
                     'event' => 'pay_code_expired',
-                    'current_effect' => 'voucher_excluded_from_outstanding_liability',
-                    'future_effect' => 'release_remaining_reserved_funds',
+                    'current_effect' => 'release_unclaimed_client_funds_reserve_and_exclude_liability',
+                    'future_effect' => 'release_remaining_reserved_funds_for_additional_reservation_origins',
                     'owner' => 'x-change terminal lifecycle requests; wallet records',
                     'idempotency_key' => 'voucher-expiry-release-idempotency-key',
-                    'enabled' => false,
+                    'enabled' => true,
                 ],
                 [
                     'event' => 'pay_code_cancelled',
@@ -64,7 +64,6 @@ class DefaultMoneyMovementLifecycleTriggerMatrixService implements MoneyMovement
                 ],
             ],
             open_questions: [
-                'Should expiry releases run synchronously, by scheduled job, or by lifecycle reconciliation?',
                 'Which additional reservation origins require a terminal return operation?',
                 'How should failed provider disbursement after capture be reversed versus reconciled?',
                 'Which package owns the durable reservation ledger table and API?',

@@ -114,6 +114,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ReconcileOpeningTreasuryBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\RedactTreasurySensitiveMetadataCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\RefreshTreasuryLiquidityCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\ReleaseExpiredPayCodeReservesCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\RepairMissingDisbursementPostingsCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
 use LBHurtado\XChange\Console\Commands\ValidateDeploymentManifestCommand;
@@ -1299,6 +1300,7 @@ class XChangeServiceProvider extends ServiceProvider
                 PreflightTreasuryCommand::class,
                 RedactTreasurySensitiveMetadataCommand::class,
                 RefreshTreasuryLiquidityCommand::class,
+                ReleaseExpiredPayCodeReservesCommand::class,
                 ProvisionSystemPrincipalCommand::class,
                 ProvisionTreasuryCommand::class,
                 ReconcileOpeningTreasuryBalanceCommand::class,
@@ -1402,6 +1404,22 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationSchedule(): void
     {
+        if ((bool) config('x-change.treasury.expiry_release.scheduled_enabled', true)) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.treasury.expiry_release.scheduled_batch_size', 100),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:pay-codes:release-expired --limit={$batchSize}")
+                    ->name('xchange:pay-codes:release-expired')
+                    ->everyMinute()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
         if ((bool) config('x-change.funding.liquidity_refresh.scheduled_enabled', true)) {
             $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
                 $schedule

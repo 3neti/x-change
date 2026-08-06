@@ -661,6 +661,16 @@ return [
             'XCHANGE_TREASURY_RECONCILIATION_LOCK_WAIT_SECONDS',
             5,
         ),
+        'expiry_release' => [
+            'scheduled_enabled' => (bool) env(
+                'XCHANGE_TREASURY_EXPIRY_RELEASE_SCHEDULED_ENABLED',
+                true,
+            ),
+            'scheduled_batch_size' => (int) env(
+                'XCHANGE_TREASURY_EXPIRY_RELEASE_SCHEDULED_BATCH_SIZE',
+                100,
+            ),
+        ],
         'opening_capitalization' => [
             'default_policy' => env(
                 'XCHANGE_TREASURY_OPENING_POLICY',
