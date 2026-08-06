@@ -37,7 +37,8 @@ vi.mock('@/composables/useTheme', () => ({
 
 vi.mock('@/components/AppLogoIcon.vue', () => ({
     default: {
-        template: '<div data-testid="app-logo" />',
+        props: ['className'],
+        template: '<div data-testid="app-logo" :class="className" />',
     },
 }));
 
@@ -173,6 +174,23 @@ describe('ClaimWidget compiled rendering', () => {
                 },
             },
         };
+    });
+
+    it('keeps the public claim logo bounded inside the first viewport', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: null,
+            },
+        });
+
+        const logo = wrapper.find('[data-testid="app-logo"]');
+
+        expect(logo.exists()).toBe(true);
+        expect(logo.classes()).toContain('h-14');
+        expect(logo.classes()).toContain('max-h-14');
+        expect(logo.classes()).toContain('max-w-32');
+        expect(logo.classes()).toContain('object-contain');
     });
 
     it('prefers compiled rider intro stages over legacy rider splash stages', () => {

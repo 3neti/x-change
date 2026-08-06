@@ -1,4 +1,5 @@
 export default {
     name: 'AppLogoIcon',
-    template: '<div data-testid="app-logo" />',
+    props: ['className'],
+    template: '<div data-testid="app-logo" :class="className" />',
 };

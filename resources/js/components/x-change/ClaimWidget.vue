@@ -369,7 +369,9 @@ watch(
             v-if="!previewViewModel.isNonActive"
             class="flex flex-col items-center gap-2"
         >
-            <AppLogoIcon class="h-20 w-auto" />
+            <AppLogoIcon
+                class-name="h-14 max-h-14 w-auto max-w-32 object-contain sm:h-16 sm:max-h-16 sm:max-w-36"
+            />
         </div>
 
         <!-- Title -->
