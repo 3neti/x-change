@@ -9,6 +9,7 @@ use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
+use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
@@ -168,4 +169,64 @@ it('projects a claimed Account Funding Pay Code only for its recipient', functio
         ->and(data_get($recipientActivity, 'items.0.timestamps.recognized_at'))
         ->toEqual($claim->completed_at)
         ->and($otherActivity['items'])->toBeEmpty();
+});
+
+it('orders mixed activity sources by time and makes recognized requests read only', function () {
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    $recipient = actingAsTestUser(0);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        10_000,
+        'cockpit-funding-activity-ordering',
+    );
+    $issuance = app(IssueSystemAccountFundingPayCode::class)->handle(
+        new IssueSystemAccountFundingPayCodeData(
+            amountMinor: 10_000,
+            connectionReference: 'netbank-primary',
+            idempotencyReference: 'cockpit-funding-activity-ordering',
+            expiresAt: now()->addDay(),
+            recipient: $recipient,
+            evidenceReference: 'test-evidence:cockpit-funding-activity-ordering',
+            authorizationReference: 'test-authorization:cockpit-funding-activity-ordering',
+        ),
+    );
+    $claim = app(DispatchVoucherClaimOutcome::class)->handle(
+        voucher: $issuance->voucher,
+        requestedOutcome: 'account_funding',
+        payload: [],
+        claimant: $recipient,
+    );
+    $claim->forceFill(['completed_at' => now()->addMinute()])->saveQuietly();
+
+    $fundingRequest = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$recipient->wallet->uuid,
+            requesterType: $recipient::class,
+            requesterId: (string) $recipient->getKey(),
+            fundingType: FundingRequestType::BankTransfer,
+            requestedValueMinor: 50_000,
+            currency: 'PHP',
+            description: 'Recognized bank transfer.',
+            idempotencyKey: 'funding-activity-recognized-transfer',
+        ),
+    );
+    $fundingRequest->forceFill([
+        'status' => FundingRequestStatus::Completed,
+        'approved_value_minor' => 50_000,
+        'completed_at' => now(),
+    ])->saveQuietly();
+
+    $requests = app(FundingRequestCockpitReadModel::class)
+        ->forOperator($recipient);
+    $activity = app(FundingActivityCockpitReadModel::class)
+        ->forOperator($recipient, $requests);
+
+    expect($activity['items'])->toHaveCount(2)
+        ->and(data_get($activity, 'items.0.display_reference'))
+        ->toBe($issuance->voucher?->code)
+        ->and(data_get($activity, 'items.1.display_reference'))
+        ->toBe($fundingRequest->reference)
+        ->and(data_get($activity, 'items.1.status'))->toBe('recognized')
+        ->and(data_get($activity, 'items.1.action_keys'))->toBeEmpty();
 });

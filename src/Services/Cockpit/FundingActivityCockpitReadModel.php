@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Cockpit;
 
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -45,7 +47,11 @@ final readonly class FundingActivityCockpitReadModel
             'items' => $requestItems
                 ->concat($receiptItems)
                 ->concat($payCodeItems)
-                ->sortByDesc('updated_at')
+                ->sortByDesc(
+                    fn (array $item): int => $this->sortTimestamp(
+                        $item['updated_at'] ?? null,
+                    ),
+                )
                 ->values()
                 ->all(),
             'filters' => [
@@ -164,19 +170,13 @@ final readonly class FundingActivityCockpitReadModel
             (string) ($request['receipt_status'] ?? ''),
             $isBankTransfer,
         );
-        $actions = collect([
-            $transfer !== null ? 'view_instructions' : null,
-            ($transfer['can_check'] ?? false) === true ? 'check_provider' : null,
-            ($payCode['can_copy'] ?? false) === true ? 'copy_pay_code' : null,
-        ])->filter()->values()->all();
+        $actions = $this->requestActions($status, $transfer, $payCode);
 
         return [
             'key' => 'request:'.(string) ($request['reference'] ?? ''),
             'source' => 'funding_request',
             'reference' => (string) ($request['reference'] ?? ''),
-            'display_reference' => (string) ($payCode['display_code']
-                ?? $request['reference']
-                ?? ''),
+            'display_reference' => (string) ($request['reference'] ?? ''),
             'method' => $method,
             'method_label' => $isBankTransfer ? 'Bank Transfer' : 'Reviewed Value',
             'amount' => (string) ($transfer['expected_amount']
@@ -298,5 +298,45 @@ final readonly class FundingActivityCockpitReadModel
             'reversed' => 'Reversed',
             default => 'Under review',
         };
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $transfer
+     * @param  array<string, mixed>|null  $payCode
+     * @return list<string>
+     */
+    private function requestActions(
+        string $status,
+        ?array $transfer,
+        ?array $payCode,
+    ): array {
+        if (in_array($status, [
+            'recognized',
+            'declined',
+            'expired',
+            'cancelled',
+            'reversed',
+        ], true)) {
+            return [];
+        }
+
+        return collect([
+            $transfer !== null ? 'view_instructions' : null,
+            ($transfer['can_check'] ?? false) === true ? 'check_provider' : null,
+            ($payCode['can_copy'] ?? false) === true ? 'copy_pay_code' : null,
+        ])->filter()->values()->all();
+    }
+
+    private function sortTimestamp(mixed $value): int
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->getTimestamp();
+        }
+
+        if (! is_string($value) || trim($value) === '') {
+            return 0;
+        }
+
+        return CarbonImmutable::parse($value)->getTimestamp();
     }
 }
