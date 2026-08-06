@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Enums\DeploymentRuntimeTier;
 use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
 use LBHurtado\XChange\Services\Configuration\DeploymentProfileCatalog;
 use LBHurtado\XChange\Services\Configuration\ManagedEnvironmentExampleWriter;
@@ -14,6 +15,7 @@ final class ConfigureXChangeCommand extends Command
 {
     protected $signature = 'x-change:configure
         {--profile= : development, netbank, paynamics, hybrid, or custom}
+        {--runtime-tier= : local, staging, or production}
         {--path= : Environment example path; defaults to the host .env.example}
         {--json : Output JSON}';
 
@@ -26,9 +28,18 @@ final class ConfigureXChangeCommand extends Command
     ): int {
         try {
             $profile = $profiles->resolve($this->option('profile'));
+            $runtimeTier = DeploymentRuntimeTier::resolve(
+                $this->option('runtime-tier')
+                    ?: (string) config('x-change.deployment.runtime_tier', 'production'),
+            );
             $path = trim((string) ($this->option('path') ?: base_path('.env.example')));
-            $writer->write($path, $profile->name, $profile->providerCodes);
-            $result = $inspector->inspect($profile->name);
+            $writer->write(
+                $path,
+                $profile->name,
+                $profile->providerCodes,
+                $runtimeTier->value,
+            );
+            $result = $inspector->inspect($profile->name, $runtimeTier->value);
         } catch (Throwable $exception) {
             if ($this->option('json')) {
                 $this->line(json_encode([
@@ -56,6 +67,7 @@ final class ConfigureXChangeCommand extends Command
 
         $this->components->info("Updated sanitized environment example [{$path}].");
         $this->line("Profile: {$profile->name}");
+        $this->line("Runtime tier: {$runtimeTier->value}");
         $this->line('Active connections: '.($profile->connectionReferences === []
             ? 'none'
             : implode(', ', $profile->connectionReferences)));

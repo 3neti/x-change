@@ -105,6 +105,7 @@ final class SetupXChangeCommand extends Command
             'APP_DEBUG' => 'true',
             'APP_URL' => $url,
             'XCHANGE_DEPLOYMENT_PROFILE' => $profile,
+            'XCHANGE_RUNTIME_TIER' => 'local',
             'XCHANGE_SYSTEM_USER_COLUMN' => 'email',
             'XCHANGE_SYSTEM_USER_ID' => $systemEmail,
             'XCHANGE_MOBILE_VERIFICATION_ENABLED' => 'false',
@@ -135,6 +136,7 @@ final class SetupXChangeCommand extends Command
         try {
             $configureExitCode = $this->call('x-change:configure', [
                 '--profile' => $profile,
+                '--runtime-tier' => 'local',
                 '--path' => $this->option('env-example-path') ?: base_path('.env.example'),
                 '--json' => (bool) $this->option('json'),
             ]);
@@ -157,6 +159,8 @@ final class SetupXChangeCommand extends Command
                 'app.url' => $url,
                 'x-change.deployment.profile' => $profile,
                 'x-change.deployment.profile_explicitly_configured' => true,
+                'x-change.deployment.runtime_tier' => 'local',
+                'x-change.deployment.runtime_tier_explicitly_configured' => true,
                 'x-change.payout.system_user_column' => 'email',
                 'x-change.payout.system_user_id' => $systemEmail,
             ]);

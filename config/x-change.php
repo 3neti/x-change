@@ -165,11 +165,19 @@ $defaultClaimPreviewRiderSplashHtml = <<<'HTML'
 </div>
 HTML;
 
+$defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
+    'local', 'testing' => 'local',
+    'staging' => 'staging',
+    default => 'production',
+};
+
 return [
 
     'deployment' => [
         'profile' => env('XCHANGE_DEPLOYMENT_PROFILE', 'development'),
         'profile_explicitly_configured' => env('XCHANGE_DEPLOYMENT_PROFILE') !== null,
+        'runtime_tier' => env('XCHANGE_RUNTIME_TIER', $defaultDeploymentRuntimeTier),
+        'runtime_tier_explicitly_configured' => env('XCHANGE_RUNTIME_TIER') !== null,
         'custom_connections' => array_values(array_filter(array_map(
             static fn (string $reference): string => trim($reference),
             explode(',', (string) env('XCHANGE_ACTIVE_CONNECTIONS', '')),

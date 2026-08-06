@@ -21,6 +21,7 @@ final class ManagedEnvironmentExampleRenderer
         array $variables,
         string $profile,
         array $providerCodes,
+        string $runtimeTier = 'local',
     ): string {
         $pattern = '/'.preg_quote(self::BeginMarker, '/').'.*?'
             .preg_quote(self::EndMarker, '/').'/s';
@@ -30,7 +31,12 @@ final class ManagedEnvironmentExampleRenderer
             $variables,
             static fn (EnvironmentVariableData $variable): bool => ! isset($hostKeys[$variable->key]),
         ));
-        $managed = $this->managedBlock($managedVariables, $profile, $providerCodes);
+        $managed = $this->managedBlock(
+            $managedVariables,
+            $profile,
+            $providerCodes,
+            $runtimeTier,
+        );
 
         if (preg_match($pattern, $existing) === 1) {
             return rtrim((string) preg_replace($pattern, $managed, $existing)).PHP_EOL;
@@ -61,6 +67,7 @@ final class ManagedEnvironmentExampleRenderer
         array $variables,
         string $profile,
         array $providerCodes,
+        string $runtimeTier,
     ): string {
         $groups = [];
 
@@ -88,6 +95,14 @@ final class ManagedEnvironmentExampleRenderer
 
                 if ($variable->key === 'XCHANGE_DEPLOYMENT_PROFILE') {
                     $value = $profile;
+                }
+
+                if ($variable->key === 'XCHANGE_RUNTIME_TIER') {
+                    $value = $runtimeTier;
+                }
+
+                if ($variable->key === 'XCHANGE_CLAIM_EVIDENCE_DISK') {
+                    $value = $runtimeTier === 'local' ? 'local' : 's3';
                 }
 
                 $lines[] = "{$variable->key}={$value}";

@@ -24,14 +24,31 @@ it('adds and replaces only the managed environment example block', function (): 
             secret: true,
             requiredForProviders: ['bank'],
         ),
+        new EnvironmentVariableData(
+            key: 'XCHANGE_RUNTIME_TIER',
+            description: 'Runtime tier.',
+            category: 'X-Change',
+            configPath: 'x-change.deployment.runtime_tier',
+            safeExample: 'local',
+            required: true,
+        ),
+        new EnvironmentVariableData(
+            key: 'XCHANGE_CLAIM_EVIDENCE_DISK',
+            description: 'Evidence disk.',
+            category: 'Evidence Storage',
+            configPath: 'x-change.claim.evidence.disk',
+            safeExample: 'local',
+        ),
     ];
 
-    $first = $renderer->render("APP_NAME=Host\n", $variables, 'custom', ['bank']);
-    $second = $renderer->render($first, $variables, 'custom', ['bank']);
+    $first = $renderer->render("APP_NAME=Host\n", $variables, 'custom', ['bank'], 'staging');
+    $second = $renderer->render($first, $variables, 'custom', ['bank'], 'staging');
 
     expect($first)->toBe($second)
         ->and($first)->toContain('APP_NAME=Host')
         ->toContain('XCHANGE_DEPLOYMENT_PROFILE=custom')
+        ->toContain('XCHANGE_RUNTIME_TIER=staging')
+        ->toContain('XCHANGE_CLAIM_EVIDENCE_DISK=s3')
         ->toContain('BANK_SECRET=')
         ->toContain('Bank credential. Required for this profile.')
         ->not->toContain('real-looking-secret')

@@ -254,8 +254,26 @@ it('accepts durable queues and a shared scheduler lock cache', function () {
         ->and($checks->firstWhere('name', 'shared scheduler lock cache')['passed'])->toBeTrue();
 });
 
-it('rejects ephemeral claim evidence storage for a live provider profile', function (): void {
+it('accepts private local claim evidence storage for a local netbank runtime', function (): void {
     config()->set('x-change.deployment.profile', 'netbank');
+    config()->set('x-change.deployment.runtime_tier', 'local');
+    config()->set('x-change.claim.evidence.disk', 'local');
+    config()->set('filesystems.disks.local.driver', 'local');
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'claim evidence storage');
+    expect($check['passed'])->toBeTrue()
+        ->and($check['meta']['runtime_tier'])->toBe('local')
+        ->and($check['meta']['disk'])->toBe('local')
+        ->and($check['meta']['private'])->toBeTrue()
+        ->and($check['meta']['durable'])->toBeFalse()
+        ->and($check['meta']['missing_variables'])->toBe([]);
+});
+
+it('rejects local claim evidence storage for staging and production runtimes', function (string $tier): void {
+    config()->set('x-change.deployment.profile', 'netbank');
+    config()->set('x-change.deployment.runtime_tier', $tier);
     config()->set('x-change.claim.evidence.disk', 'local');
     config()->set('filesystems.disks.local.driver', 'local');
 
@@ -264,24 +282,68 @@ it('rejects ephemeral claim evidence storage for a live provider profile', funct
         ->firstWhere('name', 'claim evidence storage');
 
     expect($check['passed'])->toBeFalse()
-        ->and($check['meta']['disk'])->toBe('local')
+        ->and($check['meta']['runtime_tier'])->toBe($tier)
         ->and($check['meta']['missing_variables'])->toBe([
             'XCHANGE_CLAIM_EVIDENCE_DISK',
         ]);
-});
+})->with(['staging', 'production']);
 
-it('accepts a durable private claim evidence disk for a live provider profile', function (): void {
+it('accepts a configured durable private claim evidence disk for staging', function (): void {
     config()->set('x-change.deployment.profile', 'netbank');
+    config()->set('x-change.deployment.runtime_tier', 'staging');
     config()->set('x-change.claim.evidence.disk', 's3');
-    config()->set('filesystems.disks.s3.driver', 's3');
+    config()->set('filesystems.disks.s3', [
+        'driver' => 's3',
+        'key' => 'test-key',
+        'secret' => 'test-secret',
+        'bucket' => 'test-bucket',
+    ]);
 
     Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
     $check = collect(json_decode(Artisan::output(), true)['checks'])
         ->firstWhere('name', 'claim evidence storage');
 
     expect($check['passed'])->toBeTrue()
+        ->and($check['meta']['runtime_tier'])->toBe('staging')
         ->and($check['meta']['disk'])->toBe('s3')
-        ->and($check['meta']['driver'])->toBe('s3');
+        ->and($check['meta']['driver'])->toBe('s3')
+        ->and($check['meta']['durable'])->toBeTrue();
+});
+
+it('reports missing s3 credentials only when a durable runtime selects s3', function (): void {
+    config()->set('x-change.deployment.profile', 'netbank');
+    config()->set('x-change.deployment.runtime_tier', 'production');
+    config()->set('x-change.claim.evidence.disk', 's3');
+    config()->set('filesystems.disks.s3', [
+        'driver' => 's3',
+        'key' => null,
+        'secret' => null,
+        'bucket' => null,
+    ]);
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'claim evidence storage');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['meta']['missing_variables'])->toBe([
+            'AWS_ACCESS_KEY_ID',
+            'AWS_BUCKET',
+            'AWS_SECRET_ACCESS_KEY',
+        ]);
+});
+
+it('fails closed with a useful diagnostic for an unknown runtime tier', function (): void {
+    config()->set('x-change.deployment.runtime_tier', 'preview');
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $payload = json_decode(Artisan::output(), true);
+    $check = collect($payload['checks'])->firstWhere('name', 'claim evidence storage');
+
+    expect($payload['success'])->toBeFalse()
+        ->and($check['passed'])->toBeFalse()
+        ->and($check['message'])->toContain('Unknown X-Change runtime tier [preview]')
+        ->and($check['meta']['missing_variables'])->toBe(['XCHANGE_RUNTIME_TIER']);
 });
 
 it('rejects an unavailable identity OTP gateway in production', function () {

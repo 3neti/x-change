@@ -61,6 +61,7 @@ it('keeps the local setup trial frictionless without changing production default
     );
 
     expect($source)
+        ->toContain("'XCHANGE_RUNTIME_TIER' => 'local'")
         ->toContain("'XCHANGE_MOBILE_VERIFICATION_ENABLED' => 'false'")
         ->toContain("'XCHANGE_ONBOARDING_REQUIRE_OTP' => 'false'")
         ->toContain("'XCHANGE_ONBOARDING_REQUIRE_PIN_SETUP' => 'false'");

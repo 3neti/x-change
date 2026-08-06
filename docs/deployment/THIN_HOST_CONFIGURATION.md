@@ -16,6 +16,16 @@ explicit deployment profile
 deployment environment values
 ```
 
+Provider topology and runtime durability are independent. A developer may exercise the real NetBank adapter locally without pretending the laptop is production:
+
+```env
+XCHANGE_DEPLOYMENT_PROFILE=netbank
+XCHANGE_RUNTIME_TIER=local
+XCHANGE_CLAIM_EVIDENCE_DISK=local
+```
+
+`XCHANGE_RUNTIME_TIER` accepts `local`, `staging`, or `production`. The local tier permits Laravel's private local disk. Staging and production fail closed unless claim evidence uses configured durable private storage. Selecting the `s3` disk makes its access key, secret, and bucket required. Provider selection never relaxes or strengthens this storage policy.
+
 The advanced tags remain available when a deployment genuinely needs to maintain a full override:
 
 ```bash
@@ -43,7 +53,7 @@ Connections are provider-neutral descriptions of capabilities, rails, currencies
 Generate or refresh the package-owned section of the host `.env.example`:
 
 ```bash
-php artisan x-change:configure --profile=netbank
+php artisan x-change:configure --profile=netbank --runtime-tier=local
 ```
 
 The command replaces only the content between the x-change markers. Host-owned content is preserved. Secrets stay blank. `x-change:configure` never writes `.env` and never copies runtime credentials, tokens, account numbers, or application keys. The higher-level `x-change:setup` command may prepare a local `.env` only with explicit consent, an automatic backup, and stable application-key preservation. Production environments remain platform-managed.
@@ -56,6 +66,13 @@ php artisan x-change:doctor
 ```
 
 The inspector reports sanitized variable names, profile, active connections, installed-but-disabled providers, capability readiness, and whether a published `config/x-change.php` is masking package defaults.
+
+For remote environments, generate the corresponding contract explicitly:
+
+```bash
+php artisan x-change:configure --profile=netbank --runtime-tier=staging
+php artisan x-change:configure --profile=netbank --runtime-tier=production
+```
 
 ## Installation order
 

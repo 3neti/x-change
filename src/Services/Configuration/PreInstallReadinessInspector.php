@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Configuration;
 
+use LBHurtado\XChange\Enums\DeploymentRuntimeTier;
 use Throwable;
 
 final readonly class PreInstallReadinessInspector
@@ -11,6 +12,7 @@ final readonly class PreInstallReadinessInspector
     public function __construct(
         private DeploymentConfigurationInspector $deploymentConfiguration,
         private InstructionCapabilityReadinessRegistry $instructionCapabilities,
+        private ClaimEvidenceStorageReadinessInspector $claimEvidenceStorage,
     ) {}
 
     /**
@@ -35,7 +37,7 @@ final readonly class PreInstallReadinessInspector
             $this->productionApplicationSecurityCheck(),
             $this->productionOnboardingOtpCheck(),
             $this->instructionCapabilityCheck(),
-            $this->claimEvidenceStorageCheck($liveProfile),
+            $this->claimEvidenceStorageCheck(),
             $this->queueRuntimeCheck($liveProfile),
             $this->schedulerLockCacheCheck($liveProfile),
             $this->emailDeliveryCheck(),
@@ -67,28 +69,41 @@ final readonly class PreInstallReadinessInspector
     /**
      * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
      */
-    private function claimEvidenceStorageCheck(bool $required): array
+    private function claimEvidenceStorageCheck(): array
     {
-        $disk = trim((string) config('x-change.claim.evidence.disk', 'local'));
-        $driver = trim((string) config("filesystems.disks.{$disk}.driver"));
-        $durable = $disk !== ''
-            && ! in_array($disk, ['local', 'public'], true)
-            && ! in_array($driver, ['', 'local'], true);
-        $passed = ! $required || $durable;
+        try {
+            $readiness = $this->claimEvidenceStorage->inspect(
+                DeploymentRuntimeTier::resolve((string) config(
+                    'x-change.deployment.runtime_tier',
+                    'production',
+                )),
+            );
+        } catch (Throwable $exception) {
+            return $this->check(
+                'claim evidence storage',
+                false,
+                $exception->getMessage(),
+                ['missing_variables' => ['XCHANGE_RUNTIME_TIER']],
+            );
+        }
+
+        $passed = (bool) data_get($readiness, 'ready', false);
 
         return $this->check(
             'claim evidence storage',
             $passed,
-            $passed
-                ? ($required
-                    ? "claim evidence uses the durable private [{$disk}] disk"
-                    : "claim evidence uses [{$disk}]; durable object storage is optional for development")
-                : 'live deployment profiles require durable private object storage for claim evidence',
+            (string) data_get(
+                $readiness,
+                'message',
+                'claim-evidence storage readiness could not be determined',
+            ),
             [
-                'required' => $required,
-                'disk' => $disk === '' ? null : $disk,
-                'driver' => $driver === '' ? null : $driver,
-                'missing_variables' => $passed ? [] : ['XCHANGE_CLAIM_EVIDENCE_DISK'],
+                ...$readiness,
+                'missing_variables' => (array) data_get(
+                    $readiness,
+                    'missing_variables',
+                    ['XCHANGE_CLAIM_EVIDENCE_DISK'],
+                ),
             ],
         );
     }

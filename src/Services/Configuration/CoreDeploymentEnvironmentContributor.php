@@ -21,6 +21,14 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 required: true,
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_RUNTIME_TIER',
+                description: 'Runtime durability tier, independent from the selected provider topology.',
+                category: 'X-Change',
+                configPath: 'x-change.deployment.runtime_tier',
+                safeExample: 'local',
+                required: true,
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_COMMISSIONING_ACCESS_TOKEN',
                 description: 'Secret used to unlock the server commissioning checklist.',
                 category: 'X-Change',
@@ -186,11 +194,10 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
             ),
             new EnvironmentVariableData(
                 key: 'XCHANGE_CLAIM_EVIDENCE_DISK',
-                description: 'Private durable filesystem disk used for claimant evidence artifacts.',
+                description: 'Private filesystem disk used for claimant evidence artifacts; staging and production require a durable non-local driver.',
                 category: 'Evidence Storage',
                 configPath: 'x-change.claim.evidence.disk',
-                safeExample: 's3',
-                requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
+                safeExample: 'local',
             ),
             new EnvironmentVariableData(
                 key: 'XCHANGE_CLAIM_EVIDENCE_DIRECTORY',
@@ -205,7 +212,6 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 category: 'Evidence Storage',
                 configPath: 'filesystems.disks.s3.key',
                 secret: true,
-                requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
             ),
             new EnvironmentVariableData(
                 key: 'AWS_SECRET_ACCESS_KEY',
@@ -213,7 +219,6 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 category: 'Evidence Storage',
                 configPath: 'filesystems.disks.s3.secret',
                 secret: true,
-                requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
             ),
             new EnvironmentVariableData(
                 key: 'AWS_DEFAULT_REGION',
@@ -221,7 +226,6 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 category: 'Evidence Storage',
                 configPath: 'filesystems.disks.s3.region',
                 safeExample: 'auto',
-                requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
             ),
             new EnvironmentVariableData(
                 key: 'AWS_BUCKET',
@@ -229,7 +233,6 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 category: 'Evidence Storage',
                 configPath: 'filesystems.disks.s3.bucket',
                 secret: true,
-                requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
             ),
             new EnvironmentVariableData(
                 key: 'AWS_ENDPOINT',

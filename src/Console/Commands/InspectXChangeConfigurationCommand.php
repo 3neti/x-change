@@ -12,6 +12,7 @@ final class InspectXChangeConfigurationCommand extends Command
 {
     protected $signature = 'x-change:configuration:inspect
         {--profile= : Override the configured profile for this inspection}
+        {--runtime-tier= : Override the configured runtime tier for this inspection}
         {--json : Output JSON}
         {--strict : Fail when required deployment values are missing}';
 
@@ -20,7 +21,10 @@ final class InspectXChangeConfigurationCommand extends Command
     public function handle(DeploymentConfigurationInspector $inspector): int
     {
         try {
-            $result = $inspector->inspect($this->option('profile'));
+            $result = $inspector->inspect(
+                $this->option('profile'),
+                $this->option('runtime-tier'),
+            );
         } catch (Throwable $exception) {
             $result = [
                 'ready' => false,
@@ -32,7 +36,7 @@ final class InspectXChangeConfigurationCommand extends Command
             $this->line(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         } elseif ($result['ready']) {
             $this->components->info(
-                "Deployment profile [{$result['profile']}] is configured.",
+                "Deployment profile [{$result['profile']}] is configured for runtime tier [{$result['runtime_tier']}].",
             );
         } else {
             $this->components->warn($result['message'] ?? (

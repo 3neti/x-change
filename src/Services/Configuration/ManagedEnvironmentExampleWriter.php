@@ -17,8 +17,12 @@ final readonly class ManagedEnvironmentExampleWriter
     /**
      * @param  list<string>  $providerCodes
      */
-    public function write(string $path, string $profile, array $providerCodes): void
-    {
+    public function write(
+        string $path,
+        string $profile,
+        array $providerCodes,
+        string $runtimeTier = 'local',
+    ): void {
         $existing = $this->files->exists($path)
             ? $this->files->get($path)
             : '';
@@ -28,6 +32,7 @@ final readonly class ManagedEnvironmentExampleWriter
             $this->catalog->variables(),
             $profile,
             $providerCodes,
+            $runtimeTier,
         ));
     }
 }
