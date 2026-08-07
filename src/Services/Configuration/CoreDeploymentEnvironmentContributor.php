@@ -74,6 +74,20 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_COMMERCIAL_USE_PUBLISHED_OFFERINGS',
+                description: 'Use maker-checker approved Commercial Offerings instead of package bootstrap pricing.',
+                category: 'Treasury',
+                configPath: 'x-change.commercial.offerings.use_published',
+                safeExample: 'false',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_COMMERCIAL_LEGAL_ENFORCEMENT',
+                description: 'Legal trace enforcement mode for Commercial Offering publication.',
+                category: 'Treasury',
+                configPath: 'x-change.commercial.legal.enforcement',
+                safeExample: 'advisory',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_REDEMPTION_FEEDBACK_QUEUE',
                 description: 'Dedicated queue for settlement feedback delivery.',
                 category: 'Delivery',

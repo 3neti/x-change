@@ -447,11 +447,13 @@ max(0, min(Client Funds, Provider Liquidity - Outstanding Pay Codes))
 
 Client Funds already excludes value moved into Pay Code Reserve. The formula therefore subtracts the reserve from provider liquidity, not from Client Funds a second time. Capacity cannot exceed either spendable attributed funds or provider liquidity remaining after the outstanding obligation.
 
-## Pay Code commercial waterfall
+## Commercial Offering and Pay Code waterfall
 
-`3neti/x-commerce` is the canonical price and waterfall-calculation authority. Its versioned Pay Code catalog prices the selected instruction, input, validation, feedback, and rider items in integer minor units. Both estimate screens and accepted sales call the same quote engine.
+`3neti/x-commerce` is the canonical commercial-computation authority. One immutable **Commercial Offering** binds four versioned contracts: the Price List, Waterfall, Attribution Policy, and Legal Trace. Estimate screens, accepted sales, and lifecycle reports resolve the same offering; x-change never assembles those contracts independently at posting time.
 
-The first implemented policy uses ordered fixed deductions and allocations followed by one exact residual:
+The system principal administers offerings at `/x/cockpit/commercial`. A maker may prepare and submit a new version, but a different checker must publish it with an authorization reference. Published versions are immutable. `XCHANGE_COMMERCIAL_USE_PUBLISHED_OFFERINGS=false` keeps package bootstrap pricing active during adoption; switching it to `true` activates the currently effective approved offering.
+
+The waterfall supports ordered fixed or percentage rules, optional floors and caps, and one exact residual:
 
 ```text
 successful Pay Code issuance
@@ -464,17 +466,21 @@ Account Client Funds → system Commercial Clearing
           │
           ├─→ Provider Cost Payable
           ├─→ Product Revenue
-          ├─→ Partner Commission Payable
+          ├─→ Partner Commission Payable (only for an attributed eligible participant)
           └─→ Commercial Revenue residual
 ```
 
-The accepted snapshot contains the catalog version, policy version, attribution version, quote lines, exact allocation plan, provider, connection, rail, currency, product, recognition policy, expected provider cost, and attributed partner. x-change persists that versioned context before posting the Treasury movements. It does not recompute old sales from current configuration.
+The accepted snapshot contains the complete Commercial Offering, quote lines, exact allocation plan, provider, connection, rail, currency, product, recognition policy, expected provider cost, and actual attributed participants. x-change persists that versioned context before posting the Treasury movements. It does not recompute old sales from current configuration.
 
 One database transaction creates the sale, charges Client Funds, and allocates every waterfall leg. Any failed leg rolls back the entire sale. The acceptance event and Treasury operation references are unique, so a repeated issuance handoff returns the original posting without a second debit. A reversal creates exact compensating Treasury movements; it never edits or deletes the original sale or ledger operations.
 
 Provider cost payable is a commercial classification, not proof that a bank has already deducted cash. It is discharged only when exact provider, connection, currency, and amount evidence proves an external cash movement. Invoices or unmatched observations remain pending or under review and do not reduce Inventory.
 
-Partner commission payable belongs to the attributed partner principal, not a generic system bucket. Its payout requires a maker request, a different checker, and exact settlement evidence. The resulting Position and Inventory reductions are atomic and idempotent.
+Partner commission payable belongs to the actual attributed partner principal, not a generic system bucket. A commission rule is applied only when the sale carries a participant whose role is eligible under the snapshotted Attribution Policy. Without one, the rule is skipped and its value remains for the residual; x-change never invents a house partner to manufacture commission. Commission payout requires a maker request, a different checker, and exact settlement evidence. The resulting Position and Inventory reductions are atomic and idempotent.
+
+The Commercial Controls workspace exposes the active Price List and Waterfall, immutable versions, recent sales, allocations, provider-cost state, earned commission state, and the Legal Trace. Access is capability-based and granted explicitly with `x-change:commercial:authorize-operator`; ordinary Account holders cannot inspect system commercial accounting.
+
+`XCHANGE_COMMERCIAL_LEGAL_ENFORCEMENT=advisory` preserves the package legal trace when `3neti/x-legal` is not installed. `required` fails publication closed unless x-legal evaluates the offering as allowed. Legal decisions are snapshotted references, not mutable prose attached after a sale.
 
 Ordinary Pay Code cancellation or expiry releases unclaimed principal from Pay Code Reserve to Client Funds. It does not refund an already accepted issuance charge. A full commercial reversal is limited to a failed issuance or an explicit administrative void before provider-cost settlement or partner-payout control has begun.
 
@@ -495,7 +501,7 @@ php artisan x-change:treasury:backfill-commercial-accounting-journal \
 
 Appending the safe subset requires `--commit` and a stable `--authorization-reference`. The command never rewrites immutable sale snapshots, invents provider evidence, or fabricates a missing reversal reason.
 
-Percentage rules, caps, taxes, royalties, invoice collection, and additional provider-topology policies remain separately gated extensions. They must add versioned policy contracts and cannot mutate prior history.
+Taxes, royalties, invoice collection, and additional provider-topology policies remain separately gated extensions. They must add versioned policy contracts and cannot mutate prior history.
 
 The posting boundary is controlled by `XCHANGE_COMMERCIAL_WATERFALL_ENABLED`. Keep it disabled while upgrading an existing installation until the migrations have run and `xchange:treasury:provision` has created exactly one active provider connection with all commercial Positions. Enabling it makes a missing or ambiguous connection a hard issuance failure; x-change will not silently fall back to unclassified revenue accounting.
 

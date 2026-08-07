@@ -142,7 +142,15 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
             'commercial_sale.allocation_total_minor',
         ))->toBe(1_500)
         ->and(data_get($result->payload, 'commercial_sale.allocation_count'))
-        ->toBe(4)
+        ->toBe(3)
+        ->and(data_get($result->payload, 'commercial_sale.offering.reference'))
+        ->toBe('commercial-offering:pay_code')
+        ->and(data_get($result->payload, 'commercial_sale.offering.version'))
+        ->toBe(1)
+        ->and(data_get($result->payload, 'commercial_sale.offering.legal_trace.jurisdiction'))
+        ->toBe('PH')
+        ->and(data_get($result->payload, 'commercial_sale.offering.attribution_policy.unattributed_commission_behavior'))
+        ->toBe('skip_to_residual')
         ->and(data_get($result->payload, 'commercial_sale.accounting_context.schema_version'))
         ->toBe(2)
         ->and(data_get($result->payload, 'commercial_sale.accounting_context.expected_provider_cost_minor'))
@@ -152,7 +160,7 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
         ->and(data_get($result->payload, 'commercial_sale.attestation.issue_count'))
         ->toBe(0)
         ->and(data_get($result->payload, 'commercial_sale.journal_events'))
-        ->toHaveCount(6)
+        ->toHaveCount(5)
         ->and(data_get(
             $result->payload,
             'commercial_sale.catalog.reference',

@@ -4,11 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit home operating overview
-Status: Implemented / accepted
-Last updated: 2026-07-31
+Current slice: Commercial Offering administration and accounting visibility
+Status: Implemented / package acceptance pending
+Last updated: 2026-08-07
 
 ## Completed
+
+- Added the capability-gated `/x/cockpit/commercial` workspace:
+  - **Price List** and **Waterfall** expose one versioned Commercial Offering;
+  - a maker prepares/submits changes and a different checker publishes them;
+  - **Activity** exposes sanitized sales, allocations, provider costs, and earned commissions;
+  - **Policy** exposes the snapshotted Attribution Policy and x-legal Legal Trace;
+  - absent partner attribution never creates a commission payable;
+  - ordinary Account holders receive no navigation link and no workspace access; and
+  - package bootstrap pricing remains active until the deployment explicitly enables published offerings.
 
 - Rebuilt `/x/cockpit` as a restrained operating overview:
   - put Create, Funding, Pay Codes, and Campaigns first as working controls;

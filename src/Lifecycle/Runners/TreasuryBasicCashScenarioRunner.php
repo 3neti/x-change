@@ -489,6 +489,10 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                     'reference' => $commercialSale->waterfall_policy_reference,
                     'version' => $commercialSale->waterfall_policy_version,
                 ],
+                'offering' => data_get(
+                    $commercialSale->snapshot,
+                    'quote_snapshot.offering_snapshot',
+                ),
                 'accounting_context' => data_get(
                     $commercialSale->snapshot,
                     'accounting_context',

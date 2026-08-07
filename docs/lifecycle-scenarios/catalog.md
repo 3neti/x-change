@@ -103,6 +103,10 @@ Every lifecycle scenario may define the following metadata:
 
 ---
 
+The rollback-only `treasury_basic_cash` report includes the exact Commercial Offering snapshot used for issuance: Price List, Waterfall, Attribution Policy, and Legal Trace. Its default run has no attributed sales partner, so it proves that the commission rule is skipped and the unallocated value flows to Commercial Revenue rather than a synthetic partner.
+
+---
+
 # Risk Classification
 
 | Risk | Meaning |
