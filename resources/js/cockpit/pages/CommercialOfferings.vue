@@ -2,6 +2,7 @@
 import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     BadgeCheck,
+    BarChart3,
     Banknote,
     Calculator,
     Check,
@@ -9,6 +10,7 @@ import {
     GitBranch,
     Landmark,
     Percent,
+    Scale,
     Send,
     ShieldCheck,
 } from 'lucide-vue-next';
@@ -72,6 +74,69 @@ type PendingOffering = {
     maker: { type: string; id: string | number };
 };
 
+type CommercialControls = {
+    schema: string;
+    sales: {
+        count: number;
+        posted_count: number;
+        reversed_count: number;
+        total_charged_minor: number;
+        currency: string;
+    };
+    allocation_totals: Array<{
+        category: string;
+        currency: string;
+        amount_minor: number;
+        allocation_count: number;
+    }>;
+    provider_costs: {
+        settled_count: number;
+        settled_minor: number;
+        variance_minor: number;
+    };
+    commissions: {
+        earned_minor: number;
+        requested_minor: number;
+        settled_minor: number;
+        open_count: number;
+    };
+    recent_sales: Array<{
+        reference: string;
+        buyer_reference: string;
+        amount_minor: number;
+        currency: string;
+        status: string;
+        accepted_at: string | null;
+        allocations: Array<{
+            category: string;
+            recipient_reference: string;
+            amount_minor: number;
+            status: string;
+        }>;
+    }>;
+    policy: {
+        attribution: {
+            reference: string;
+            version: number;
+            eligible_roles: string[];
+            unattributed_commission_behavior: string;
+        };
+        legal_trace: {
+            jurisdiction: string;
+            legal_entity_reference: string;
+            profile: string;
+            profile_version: string;
+            decision: string;
+            decision_references: string[];
+            invariant_references: string[];
+            trace_references: string[];
+        };
+        commercial_terms_are_not_client_funds: boolean;
+        commission_requires_attributed_participant: boolean;
+        provider_cost_requires_authoritative_evidence: boolean;
+    };
+};
+
 const props = defineProps<{
     cockpitHeaderReadModel?: Record<string, unknown>;
     commercialOffering: {
@@ -81,10 +146,13 @@ const props = defineProps<{
         can_manage: boolean;
         can_approve: boolean;
         pending: PendingOffering[];
+        controls: CommercialControls;
     };
 }>();
 
-const activeTab = ref<'price-list' | 'waterfall'>('price-list');
+const activeTab = ref<'price-list' | 'waterfall' | 'activity' | 'policy'>(
+    'price-list',
+);
 const approvalReference = ref('');
 const approvingId = ref<number | null>(null);
 const active = computed(() => props.commercialOffering.active);
@@ -131,6 +199,22 @@ function priceFor(reference: string) {
 
 function ruleFor(reference: string) {
     return form.rules.find((rule) => rule.reference === reference);
+}
+
+function money(
+    minor: number,
+    currency = active.value.catalog.currency,
+): string {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency,
+    }).format(minor / 100);
+}
+
+function label(value: string): string {
+    return value
+        .replaceAll('_', ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function submit(): void {
@@ -297,6 +381,30 @@ function approve(id: number): void {
                         >
                             <GitBranch class="size-4" /> Waterfall
                         </button>
+                        <button
+                            type="button"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold"
+                            :class="
+                                activeTab === 'activity'
+                                    ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-white'
+                                    : 'text-slate-500'
+                            "
+                            @click="activeTab = 'activity'"
+                        >
+                            <BarChart3 class="size-4" /> Activity
+                        </button>
+                        <button
+                            type="button"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold"
+                            :class="
+                                activeTab === 'policy'
+                                    ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-white'
+                                    : 'text-slate-500'
+                            "
+                            @click="activeTab = 'policy'"
+                        >
+                            <Scale class="size-4" /> Policy
+                        </button>
                     </div>
                 </div>
 
@@ -341,7 +449,10 @@ function approve(id: number): void {
                     </div>
                 </div>
 
-                <div v-else class="space-y-3 p-5">
+                <div
+                    v-else-if="activeTab === 'waterfall'"
+                    class="space-y-3 p-5"
+                >
                     <article
                         v-for="rule in active.waterfall_policy.rules"
                         :key="rule.reference"
@@ -384,7 +495,7 @@ function approve(id: number): void {
                         </div>
                         <div
                             v-if="ruleFor(rule.reference)"
-                            class="mt-4 grid gap-3 md:grid-cols-3"
+                            class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5"
                         >
                             <label class="text-xs font-semibold text-slate-500">
                                 Method
@@ -433,12 +544,322 @@ function approve(id: number): void {
                                     class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                                 />
                             </label>
+                            <label class="text-xs font-semibold text-slate-500">
+                                Minimum PHP
+                                <input
+                                    v-model="
+                                        ruleFor(rule.reference)!.minimum_amount
+                                    "
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    :disabled="
+                                        rule.line_type === 'residual' ||
+                                        !commercialOffering.can_manage
+                                    "
+                                    class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                />
+                            </label>
+                            <label class="text-xs font-semibold text-slate-500">
+                                Maximum PHP
+                                <input
+                                    v-model="
+                                        ruleFor(rule.reference)!.maximum_amount
+                                    "
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    :disabled="
+                                        rule.line_type === 'residual' ||
+                                        !commercialOffering.can_manage
+                                    "
+                                    class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                />
+                            </label>
+                            <label
+                                v-if="rule.category === 'partner_commission'"
+                                class="text-xs font-semibold text-slate-500 xl:col-span-5"
+                            >
+                                Attributed Participant Role
+                                <select
+                                    v-model="
+                                        ruleFor(rule.reference)!
+                                            .participant_role
+                                    "
+                                    :disabled="!commercialOffering.can_manage"
+                                    class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                >
+                                    <option :value="null">
+                                        No participant required
+                                    </option>
+                                    <option
+                                        v-for="role in commercialOffering
+                                            .controls.policy.attribution
+                                            .eligible_roles"
+                                        :key="role"
+                                        :value="role"
+                                    >
+                                        {{ label(role) }}
+                                    </option>
+                                </select>
+                            </label>
                         </div>
                     </article>
                 </div>
 
+                <div v-else-if="activeTab === 'activity'" class="space-y-5 p-5">
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <article
+                            v-for="allocation in commercialOffering.controls
+                                .allocation_totals"
+                            :key="allocation.category"
+                            class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                        >
+                            <p class="text-xs font-semibold text-slate-500">
+                                {{ label(allocation.category) }}
+                            </p>
+                            <p class="mt-1 text-lg font-semibold">
+                                {{
+                                    money(
+                                        allocation.amount_minor,
+                                        allocation.currency,
+                                    )
+                                }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                {{ allocation.allocation_count }} posted
+                                allocations
+                            </p>
+                        </article>
+                    </div>
+
+                    <div class="grid gap-3 lg:grid-cols-3">
+                        <article class="rounded-xl bg-slate-950 p-4 text-white">
+                            <p class="text-xs font-semibold text-slate-400">
+                                Accepted Commercial Sales
+                            </p>
+                            <p class="mt-1 text-xl font-semibold">
+                                {{
+                                    money(
+                                        commercialOffering.controls.sales
+                                            .total_charged_minor,
+                                    )
+                                }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-400">
+                                {{
+                                    commercialOffering.controls.sales
+                                        .posted_count
+                                }}
+                                posted ·
+                                {{
+                                    commercialOffering.controls.sales
+                                        .reversed_count
+                                }}
+                                reversed
+                            </p>
+                        </article>
+                        <article
+                            class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                        >
+                            <p class="text-xs font-semibold text-slate-500">
+                                Provider Costs Settled
+                            </p>
+                            <p class="mt-1 text-xl font-semibold">
+                                {{
+                                    money(
+                                        commercialOffering.controls
+                                            .provider_costs.settled_minor,
+                                    )
+                                }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                Variance
+                                {{
+                                    money(
+                                        commercialOffering.controls
+                                            .provider_costs.variance_minor,
+                                    )
+                                }}
+                            </p>
+                        </article>
+                        <article
+                            class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                        >
+                            <p class="text-xs font-semibold text-slate-500">
+                                Partner Commissions
+                            </p>
+                            <p class="mt-1 text-xl font-semibold">
+                                {{
+                                    money(
+                                        commercialOffering.controls.commissions
+                                            .earned_minor,
+                                    )
+                                }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                {{
+                                    money(
+                                        commercialOffering.controls.commissions
+                                            .settled_minor,
+                                    )
+                                }}
+                                settled ·
+                                {{
+                                    commercialOffering.controls.commissions
+                                        .open_count
+                                }}
+                                open
+                            </p>
+                        </article>
+                    </div>
+
+                    <div
+                        class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
+                    >
+                        <div
+                            class="border-b border-slate-200 px-4 py-3 dark:border-slate-800"
+                        >
+                            <h3 class="text-sm font-semibold">
+                                Recent Commercial Sales
+                            </h3>
+                        </div>
+                        <div
+                            v-if="
+                                commercialOffering.controls.recent_sales.length
+                            "
+                            class="divide-y divide-slate-100 dark:divide-slate-800"
+                        >
+                            <article
+                                v-for="sale in commercialOffering.controls
+                                    .recent_sales"
+                                :key="sale.reference"
+                                class="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                            >
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold">
+                                        {{ sale.reference }}
+                                    </p>
+                                    <div class="mt-1 flex flex-wrap gap-1.5">
+                                        <span
+                                            v-for="allocation in sale.allocations"
+                                            :key="`${sale.reference}-${allocation.category}`"
+                                            class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] font-medium dark:bg-slate-800"
+                                        >
+                                            {{ label(allocation.category) }} ·
+                                            {{
+                                                money(
+                                                    allocation.amount_minor,
+                                                    sale.currency,
+                                                )
+                                            }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-left md:text-right">
+                                    <p class="text-sm font-semibold">
+                                        {{
+                                            money(
+                                                sale.amount_minor,
+                                                sale.currency,
+                                            )
+                                        }}
+                                    </p>
+                                    <p
+                                        class="text-xs capitalize text-slate-500"
+                                    >
+                                        {{ sale.status }}
+                                    </p>
+                                </div>
+                            </article>
+                        </div>
+                        <p
+                            v-else
+                            class="px-4 py-8 text-center text-sm text-slate-500"
+                        >
+                            No accepted Commercial Sales yet.
+                        </p>
+                    </div>
+                </div>
+
+                <div v-else class="grid gap-4 p-5 lg:grid-cols-2">
+                    <article
+                        class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                    >
+                        <div class="flex items-center gap-2">
+                            <Scale class="size-4 text-sky-600" />
+                            <h3 class="text-sm font-semibold">Legal Trace</h3>
+                        </div>
+                        <dl class="mt-4 space-y-3 text-sm">
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-slate-500">Jurisdiction</dt>
+                                <dd class="font-semibold">
+                                    {{
+                                        commercialOffering.controls.policy
+                                            .legal_trace.jurisdiction
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-slate-500">Profile</dt>
+                                <dd class="text-right font-semibold">
+                                    {{
+                                        commercialOffering.controls.policy
+                                            .legal_trace.profile
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-slate-500">Decision</dt>
+                                <dd class="text-right font-semibold">
+                                    {{
+                                        label(
+                                            commercialOffering.controls.policy
+                                                .legal_trace.decision,
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </article>
+                    <article
+                        class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                    >
+                        <div class="flex items-center gap-2">
+                            <ShieldCheck class="size-4 text-emerald-600" />
+                            <h3 class="text-sm font-semibold">
+                                Control Invariants
+                            </h3>
+                        </div>
+                        <ul class="mt-4 space-y-3 text-sm">
+                            <li class="flex gap-2">
+                                <Check
+                                    class="mt-0.5 size-4 shrink-0 text-emerald-600"
+                                />
+                                Commercial allocations are not Client Funds.
+                            </li>
+                            <li class="flex gap-2">
+                                <Check
+                                    class="mt-0.5 size-4 shrink-0 text-emerald-600"
+                                />
+                                Commission requires an attributed participant.
+                            </li>
+                            <li class="flex gap-2">
+                                <Check
+                                    class="mt-0.5 size-4 shrink-0 text-emerald-600"
+                                />
+                                Provider cost settlement requires authoritative
+                                evidence.
+                            </li>
+                        </ul>
+                    </article>
+                </div>
+
                 <footer
-                    v-if="commercialOffering.can_manage"
+                    v-if="
+                        commercialOffering.can_manage &&
+                        ['price-list', 'waterfall'].includes(activeTab)
+                    "
                     class="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-950/50"
                 >
                     <div class="flex items-center gap-2 text-sm text-slate-500">

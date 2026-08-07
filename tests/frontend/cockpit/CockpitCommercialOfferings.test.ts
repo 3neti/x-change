@@ -70,6 +70,62 @@ const active = {
     },
 };
 
+const controls = {
+    schema: 'x-change.cockpit.commercial-controls.v1',
+    sales: {
+        count: 1,
+        posted_count: 1,
+        reversed_count: 0,
+        total_charged_minor: 2500,
+        currency: 'PHP',
+    },
+    allocation_totals: [
+        {
+            category: 'product_revenue',
+            currency: 'PHP',
+            amount_minor: 300,
+            allocation_count: 1,
+        },
+    ],
+    provider_costs: {
+        settled_count: 1,
+        settled_minor: 1000,
+        variance_minor: 0,
+    },
+    commissions: {
+        earned_minor: 100,
+        requested_minor: 0,
+        settled_minor: 0,
+        open_count: 0,
+    },
+    recent_sales: [],
+    policy: {
+        attribution: {
+            reference: 'commercial-attribution:pay-code',
+            version: 1,
+            eligible_roles: [
+                'originating_partner',
+                'sales_partner',
+                'marketing_partner',
+            ],
+            unattributed_commission_behavior: 'skip_to_residual',
+        },
+        legal_trace: {
+            jurisdiction: 'PH',
+            legal_entity_reference: 'legal-entity:test',
+            profile: 'treasury-settlement-ph-v1',
+            profile_version: 'v1',
+            decision: 'advisory_review_required',
+            decision_references: [],
+            invariant_references: [],
+            trace_references: [],
+        },
+        commercial_terms_are_not_client_funds: true,
+        commission_requires_attributed_participant: true,
+        provider_cost_requires_authoritative_evidence: true,
+    },
+};
+
 describe('Cockpit Commercial Offering administration', () => {
     it('keeps the Price List primary and exposes the Waterfall without mixing their meaning', async () => {
         const wrapper = mount(CommercialOfferings, {
@@ -81,6 +137,7 @@ describe('Cockpit Commercial Offering administration', () => {
                     can_manage: true,
                     can_approve: false,
                     pending: [],
+                    controls,
                 },
             },
             global: { stubs: { Head: true } },
@@ -107,6 +164,7 @@ describe('Cockpit Commercial Offering administration', () => {
                     source: 'published',
                     can_manage: false,
                     can_approve: true,
+                    controls,
                     pending: [
                         {
                             id: 7,

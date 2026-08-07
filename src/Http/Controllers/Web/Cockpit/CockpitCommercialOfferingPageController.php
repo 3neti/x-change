@@ -14,12 +14,14 @@ use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
+use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
 
 final class CockpitCommercialOfferingPageController extends Controller
 {
     public function __construct(
         private readonly CommercialOfferingResolverContract $offerings,
         private readonly CommercialOperatorAuthorityContract $authority,
+        private readonly CommercialControlReadModel $controls,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -65,6 +67,7 @@ final class CockpitCommercialOfferingPageController extends Controller
                     ])
                     ->values()
                     ->all(),
+                'controls' => $this->controls->build($offering),
             ],
         ]);
     }
