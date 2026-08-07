@@ -2105,6 +2105,7 @@ return [
 
     'claim_preview' => [
         'recorder' => [
+            'mode' => env('XCHANGE_CLAIM_PREVIEW_RENDER_MODE', 'auto'),
             'node_binary' => env('XCHANGE_CLAIM_PREVIEW_NODE_BINARY'),
         ],
         'rider' => [

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Event;
+use LBHurtado\Voucher\Events\VouchersGenerated;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewOptions;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewService;
@@ -197,6 +199,7 @@ it('preserves the preview-only marker through real issuance and cleanup', functi
 });
 
 it('issues a temporary preview voucher without moving issuer funds', function (): void {
+    Event::fake([VouchersGenerated::class]);
     $issuer = actingAsTestUser(0);
     $wallet = $issuer->wallet;
     $payload = app(ClaimPreviewVoucherPayloadFactory::class)->make(
@@ -214,6 +217,8 @@ it('issues a temporary preview voucher without moving issuer funds', function ()
             $voucher->metadata,
             'instructions.metadata.custom.walkthrough.preview',
         ))->toBeTrue();
+
+    Event::assertNotDispatched(VouchersGenerated::class);
 
     app(ClaimPreviewVoucherDisposer::class)->dispose($voucher->getKey());
 

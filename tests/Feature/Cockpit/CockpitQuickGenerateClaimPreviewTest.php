@@ -113,6 +113,48 @@ it('renders a recorded claim preview for an issuer with no available funds', fun
         ->and(Voucher::query()->count())->toBe($voucherCountBefore);
 });
 
+it('falls back to a useful storyboard when browser capture is unavailable', function (): void {
+    config()->set('x-change.claim_preview.recorder.mode', 'storyboard');
+    Process::fake();
+
+    $issuer = actingAsTestUser(0);
+    $voucherCountBefore = Voucher::query()->count();
+
+    $response = $this->withHeaders([
+        'Accept' => 'application/json',
+    ])->post(route('x-change.cockpit.quick-generate.claim-previews.store'), [
+        'cash' => [
+            'amount' => 25,
+            'currency' => 'PHP',
+        ],
+        'inputs' => [
+            'fields' => ['mobile'],
+        ],
+        'feedback' => [
+            'mobile' => null,
+        ],
+        'rider' => [
+            'message' => null,
+            'url' => null,
+            'splash' => null,
+        ],
+        'refresh_preview' => true,
+    ]);
+
+    $response
+        ->assertSuccessful()
+        ->assertJsonPath('schema', 'x-change.claim-experience-preview.manifest.v1')
+        ->assertJsonPath('status', 'ready')
+        ->assertJsonPath('safety.money_movement', false)
+        ->assertJsonPath('journey.steps.0.render_kind', 'experience_card')
+        ->assertJsonPath('journey.steps.0.status', 'pending_capture');
+
+    expect((int) $issuer->wallet->refresh()->balanceInt)->toBe(0)
+        ->and(Voucher::query()->count())->toBe($voucherCountBefore);
+
+    Process::assertNothingRan();
+});
+
 it('serves claim preview manifests and frames only to their owner', function (): void {
     $owner = actingAsTestUser();
     $root = 'x-change/claim-previews/test-owned-frame';

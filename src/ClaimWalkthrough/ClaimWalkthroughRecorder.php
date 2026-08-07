@@ -10,6 +10,30 @@ use Symfony\Component\Process\ExecutableFinder;
 
 final class ClaimWalkthroughRecorder
 {
+    public function isAvailable(): bool
+    {
+        $mode = mb_strtolower(trim((string) config(
+            'x-change.claim_preview.recorder.mode',
+            'auto',
+        )));
+
+        if ($mode === 'storyboard') {
+            return false;
+        }
+
+        if ($mode === 'browser_capture') {
+            return true;
+        }
+
+        foreach ($this->playwrightPackageCandidates() as $packageManifest) {
+            if (is_file($packageManifest)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @param  array<string, mixed>  $scenario
      * @return array<string, mixed>
@@ -116,5 +140,16 @@ final class ClaimWalkthroughRecorder
         rsort($directories, SORT_NATURAL);
 
         return array_values($directories);
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function playwrightPackageCandidates(): array
+    {
+        return [
+            base_path('node_modules/playwright/package.json'),
+            base_path('node_modules/@playwright/test/node_modules/playwright/package.json'),
+        ];
     }
 }

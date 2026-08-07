@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use InvalidArgumentException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use RuntimeException;
 
 final class ClaimExperiencePreviewService
 {
@@ -33,9 +34,11 @@ final class ClaimExperiencePreviewService
         }
 
         $scenario = $this->scenarios->fromInstructions($instructions);
+        $captureAvailable = ! $options->dryRun && $this->recorder->isAvailable();
         $context = $this->cache->context($scenario, [
             'profile' => $options->profile,
             'dry_run' => $options->dryRun,
+            'render_mode' => $captureAvailable ? 'browser_capture' : 'storyboard',
             'submit_claim' => false,
             'mobile' => $options->mobile,
             'bank_code' => $options->bankCode,
@@ -66,7 +69,7 @@ final class ClaimExperiencePreviewService
         $previewVoucherId = null;
 
         try {
-            if (! $options->dryRun) {
+            if ($captureAvailable) {
                 $issued = $this->previewVouchersIssuer->issue(
                     $options->issuer,
                     $this->payloads->make($instructions, $options->issuer),
@@ -75,31 +78,21 @@ final class ClaimExperiencePreviewService
                 $payCode = (string) $issued['code'];
             }
 
-            $report = $options->dryRun
-                ? $this->storyboards->build($scenario, $run, [[
-                    'sequence' => 1,
-                    'event' => 'dry-run',
-                    'status' => 'passed',
-                    'message' => 'Storyboard scaffold created without launching a browser.',
-                ]], [
-                    'dry_run' => true,
-                    'base_url' => $baseUrl,
-                    'money_movement' => false,
-                    'source' => 'ClaimExperiencePreviewService',
-                ])
-                : $this->recorder->record(
+            $report = $captureAvailable
+                ? $this->recordOrBuildStoryboard(
                     scenario: $scenario,
+                    run: $run,
                     baseUrl: $baseUrl,
-                    artifactDirectory: $run['root'],
-                    headed: $options->headed,
-                    slowMotion: $options->slowMotion,
-                    options: [
-                        'pay_code' => $payCode,
-                        'mobile' => $options->mobile,
-                        'bank_code' => $options->bankCode,
-                        'account_number' => $options->accountNumber,
-                        'submit_claim' => false,
-                    ],
+                    payCode: $payCode,
+                    options: $options,
+                )
+                : $this->buildStoryboard(
+                    scenario: $scenario,
+                    run: $run,
+                    baseUrl: $baseUrl,
+                    reason: $options->dryRun
+                        ? 'dry_run_requested'
+                        : 'browser_capture_unavailable',
                 );
 
             $journey = $this->journeys->fromReport($report, $scenario);
@@ -124,6 +117,73 @@ final class ClaimExperiencePreviewService
         } finally {
             $this->previewVouchers->dispose($previewVoucherId);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array{run_id: string, root: string, screenshots: string, storyboard_frames: string}  $run
+     * @return array<string, mixed>
+     */
+    private function recordOrBuildStoryboard(
+        array $scenario,
+        array $run,
+        string $baseUrl,
+        ?string $payCode,
+        ClaimExperiencePreviewOptions $options,
+    ): array {
+        try {
+            return $this->recorder->record(
+                scenario: $scenario,
+                baseUrl: $baseUrl,
+                artifactDirectory: $run['root'],
+                headed: $options->headed,
+                slowMotion: $options->slowMotion,
+                options: [
+                    'pay_code' => $payCode,
+                    'mobile' => $options->mobile,
+                    'bank_code' => $options->bankCode,
+                    'account_number' => $options->accountNumber,
+                    'submit_claim' => false,
+                ],
+            );
+        } catch (RuntimeException $exception) {
+            logger()->warning('Claim preview browser capture unavailable; using storyboard.', [
+                'exception' => $exception::class,
+            ]);
+
+            return $this->buildStoryboard(
+                scenario: $scenario,
+                run: $run,
+                baseUrl: $baseUrl,
+                reason: 'browser_capture_failed',
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array{run_id: string, root: string, screenshots: string, storyboard_frames: string}  $run
+     * @return array<string, mixed>
+     */
+    private function buildStoryboard(
+        array $scenario,
+        array $run,
+        string $baseUrl,
+        string $reason,
+    ): array {
+        return $this->storyboards->build($scenario, $run, [[
+            'sequence' => 1,
+            'event' => 'storyboard',
+            'status' => 'passed',
+            'message' => 'Claim journey storyboard created without launching a browser.',
+        ]], [
+            'dry_run' => true,
+            'capture_mode' => 'storyboard',
+            'capture_reason' => $reason,
+            'base_url' => $baseUrl,
+            'money_movement' => false,
+            'source' => 'ClaimExperiencePreviewService',
+        ]);
     }
 
     /**
