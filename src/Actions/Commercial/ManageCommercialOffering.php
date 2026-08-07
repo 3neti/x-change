@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Contracts\CommercialLegalTraceResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
+use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
@@ -44,6 +45,7 @@ final class ManageCommercialOffering
                 'version' => $offering->version,
                 'profile' => $profile,
                 'status' => CommercialOfferingStatus::Draft,
+                'origin' => CommercialOfferingOrigin::MakerCheckerRevision,
                 'currency' => $offering->catalog->currency,
                 'snapshot_hash' => $offering->snapshotHash(),
                 'snapshot' => $offering->toArray(),

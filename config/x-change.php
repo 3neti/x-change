@@ -1133,6 +1133,14 @@ return [
         'enabled' => (bool) env('XCHANGE_COMMERCIAL_WATERFALL_ENABLED', true),
         'offerings' => [
             'use_published' => (bool) env('XCHANGE_COMMERCIAL_USE_PUBLISHED_OFFERINGS', false),
+            'governance_mode' => env(
+                'XCHANGE_COMMERCIAL_GOVERNANCE_MODE',
+                'bootstrap_immutable',
+            ),
+            'profiles' => [
+                'pay_code',
+                'account_funding',
+            ],
         ],
         'legal' => [
             'enforcement' => env('XCHANGE_COMMERCIAL_LEGAL_ENFORCEMENT', 'advisory'),
