@@ -21,14 +21,22 @@ it('configures the Cockpit as the successful authentication home', function () {
 });
 
 it('publishes an x-change landing page with canonical Wayfinder destinations', function () {
-    $stub = file_get_contents(
-        dirname(__DIR__, 3).'/stubs/resources/js/pages/Welcome.vue.stub',
-    );
+    $packageRoot = dirname(__DIR__, 3);
+    $stub = file_get_contents($packageRoot.'/stubs/resources/js/pages/Welcome.vue.stub');
 
     expect($stub)
         ->toContain("from '@/routes/x-change/cockpit'")
         ->toContain(':href="dashboard()"')
+        ->toContain('Money should adapt to people.')
+        ->toContain('Funds remain with a regulated banking provider.')
+        ->toContain('/vendor/x-change/images/landing/cockpit-overview.png')
+        ->toContain('/vendor/x-change/images/landing/claim-entry.png')
         ->toContain('Settlement Operating System')
+        ->toContain('Get started')
+        ->toContain('Bank / EMI')
         ->not->toContain('laravel.com/docs')
-        ->not->toContain('/x/dashboard');
+        ->not->toContain('Start with an Account')
+        ->not->toContain('/x/dashboard')
+        ->and(is_file($packageRoot.'/resources/assets/images/landing/cockpit-overview.png'))->toBeTrue()
+        ->and(is_file($packageRoot.'/resources/assets/images/landing/claim-entry.png'))->toBeTrue();
 });
