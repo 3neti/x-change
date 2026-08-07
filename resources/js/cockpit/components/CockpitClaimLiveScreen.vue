@@ -13,7 +13,7 @@ import {
     Smartphone,
     UserRound,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, defineAsyncComponent, type Component } from 'vue';
 
 type ClaimPreviewField = {
     key: string;
@@ -23,11 +23,11 @@ type ClaimPreviewField = {
 
 type ClaimPreviewScreen = {
     kind: string;
-    code: string;
-    amount: string;
-    title: string;
-    description: string;
-    fields: ClaimPreviewField[];
+    code?: string;
+    amount?: string;
+    title?: string;
+    description?: string;
+    fields?: ClaimPreviewField[];
     message?: string | null;
     artwork_url?: string | null;
     handoff?: {
@@ -35,6 +35,8 @@ type ClaimPreviewScreen = {
         description?: string | null;
         public_image_url?: string | null;
     } | null;
+    component?: string | null;
+    props?: Record<string, unknown> | null;
 };
 
 const props = defineProps<{
@@ -54,6 +56,16 @@ const handoffDescription = computed(
     () => props.screen.handoff?.description || props.screen.description,
 );
 const xChangeLogoUrl = '/vendor/x-change/images/logo-orange.png';
+const formFlowPages = import.meta.glob('/resources/js/pages/form-flow/**/*.vue');
+const actualScreenComponent = computed<Component | null>(() => {
+    if (!props.screen.component) return null;
+
+    const loader = formFlowPages[
+        `/resources/js/pages/${props.screen.component}.vue`
+    ];
+
+    return loader ? defineAsyncComponent(loader) : null;
+});
 </script>
 
 <template>
@@ -63,7 +75,17 @@ const xChangeLogoUrl = '/vendor/x-change/images/logo-orange.png';
         :data-screen-kind="screen.kind"
         :aria-label="screen.title"
     >
-        <template v-if="screen.kind === 'claim_entry'">
+        <div
+            v-if="actualScreenComponent"
+            class="h-full min-h-0 w-full overflow-y-auto bg-background"
+            data-testid="cockpit-claim-actual-screen"
+        >
+            <component
+                :is="actualScreenComponent"
+                v-bind="screen.props ?? {}"
+            />
+        </div>
+        <template v-else-if="screen.kind === 'claim_entry'">
             <div
                 class="flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b from-primary/5 via-background to-background px-5 py-6"
             >

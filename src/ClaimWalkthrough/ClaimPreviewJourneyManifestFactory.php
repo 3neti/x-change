@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use Illuminate\Filesystem\Filesystem;
+use LBHurtado\FormFlowManager\Data\FormFlowPreviewStepData;
 
 final class ClaimPreviewJourneyManifestFactory
 {
@@ -17,7 +18,7 @@ final class ClaimPreviewJourneyManifestFactory
      * @param  array<string, mixed>  $scenario
      * @return array<string, mixed>
      */
-    public function fromReport(array $report, array $scenario): array
+    public function fromReport(array $report, array $scenario, array $formFlowScreens = []): array
     {
         $canonical = $this->canonicalSteps($scenario);
         $storyboard = $this->storyboard($report);
@@ -45,11 +46,76 @@ final class ClaimPreviewJourneyManifestFactory
             ->values()
             ->all();
 
+        if ($formFlowScreens !== []) {
+            $steps = $this->withCompiledFormFlowScreens($steps, $formFlowScreens);
+        }
+
         return [
-            'schema' => 'x-change.claim-experience-preview.journey.v1',
+            'schema' => 'x-change.claim-experience-preview.journey.v2',
             'step_count' => count($steps),
             'steps' => $steps,
         ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $steps
+     * @param  array<int, FormFlowPreviewStepData>  $formFlowScreens
+     * @return array<int, array<string, mixed>>
+     */
+    private function withCompiledFormFlowScreens(array $steps, array $formFlowScreens): array
+    {
+        $formFlowKeys = ['generic-payout-form', 'account-funding-details'];
+        $before = [];
+        $after = [];
+        $enteredFormFlow = false;
+
+        foreach ($steps as $step) {
+            $key = (string) ($step['key'] ?? '');
+
+            if (in_array($key, $formFlowKeys, true) || str_starts_with($key, 'validation-')) {
+                $enteredFormFlow = true;
+
+                continue;
+            }
+
+            if ($enteredFormFlow) {
+                $after[] = $step;
+            } else {
+                $before[] = $step;
+            }
+        }
+
+        $compiled = collect($formFlowScreens)
+            ->map(function (FormFlowPreviewStepData $screen): array {
+                $title = (string) ($screen->props['title'] ?? $screen->props['config']['title'] ?? str($screen->handler)->headline());
+                $description = (string) ($screen->props['description'] ?? $screen->props['config']['description'] ?? '');
+
+                return [
+                    'key' => sprintf('form-flow-%02d-%s', $screen->index + 1, str($screen->handler)->slug()),
+                    'phase' => 'form_flow',
+                    'title' => $title,
+                    'description' => $description,
+                    'actor' => 'redeemer',
+                    'render_kind' => 'actual_screen',
+                    'status' => 'rendered',
+                    'frame' => null,
+                    'screen' => [
+                        'kind' => 'form_flow_handler',
+                        'component' => $screen->component,
+                        'props' => $screen->props,
+                    ],
+                ];
+            })
+            ->all();
+
+        return collect([...$before, ...$compiled, ...$after])
+            ->values()
+            ->map(function (array $step, int $index): array {
+                $step['sequence'] = $index + 1;
+
+                return $step;
+            })
+            ->all();
     }
 
     /**

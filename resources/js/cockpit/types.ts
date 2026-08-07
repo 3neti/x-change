@@ -1504,16 +1504,16 @@ export type CockpitClaimExperiencePreviewStep = {
     title: string;
     description: string;
     actor: string;
-    render_kind: 'captured_frame' | 'live_screen';
+    render_kind: 'captured_frame' | 'live_screen' | 'actual_screen';
     status: 'captured' | 'rendered';
     frame: CockpitClaimExperiencePreviewFrame | null;
     screen: {
         kind: string;
-        code: string;
-        amount: string;
-        title: string;
-        description: string;
-        fields: Array<{
+        code?: string;
+        amount?: string;
+        title?: string;
+        description?: string;
+        fields?: Array<{
             key: string;
             label: string;
             value: string;
@@ -1525,6 +1525,8 @@ export type CockpitClaimExperiencePreviewStep = {
             description?: string | null;
             public_image_url?: string | null;
         } | null;
+        component?: string | null;
+        props?: Record<string, unknown> | null;
     } | null;
 };
 

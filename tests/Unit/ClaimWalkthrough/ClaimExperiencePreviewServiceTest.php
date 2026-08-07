@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Event;
+use LBHurtado\FormFlowManager\Handlers\SplashHandler;
+use LBHurtado\FormHandlerKYC\KYCHandler;
+use LBHurtado\FormHandlerLocation\LocationHandler;
+use LBHurtado\FormHandlerOtp\OtpHandler;
+use LBHurtado\FormHandlerSelfie\SelfieHandler;
+use LBHurtado\FormHandlerSignature\SignatureHandler;
 use LBHurtado\Voucher\Events\VouchersGenerated;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewOptions;
@@ -12,6 +18,17 @@ use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherIssuer;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherPayloadFactory;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
+
+beforeEach(function (): void {
+    config()->set('form-flow.handlers', [
+        'splash' => SplashHandler::class,
+        'kyc' => KYCHandler::class,
+        'location' => LocationHandler::class,
+        'otp' => OtpHandler::class,
+        'selfie' => SelfieHandler::class,
+        'signature' => SignatureHandler::class,
+    ]);
+});
 
 it('renders and caches preview artifacts from voucher instructions', function (): void {
     $issuer = actingAsTestUser();
@@ -54,7 +71,7 @@ it('renders and caches preview artifacts from voucher instructions', function ()
     expect($result['schema'])->toBe('x-change.claim-experience-preview.result.v1')
         ->and($result['status'])->toBe('ready')
         ->and($result['cache_hit'])->toBeFalse()
-        ->and(data_get($result, 'journey.schema'))->toBe('x-change.claim-experience-preview.journey.v1')
+        ->and(data_get($result, 'journey.schema'))->toBe('x-change.claim-experience-preview.journey.v2')
         ->and(data_get($result, 'journey.steps.0.key'))->toBe('claim-entry')
         ->and(collect(data_get($result, 'journey.steps'))->pluck('key')->all())
         ->not->toContain('og-social-preview')
@@ -90,7 +107,7 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
     $issuer = actingAsTestUser();
     $instructions = validVoucherInstructions(25.00, overrides: [
         'inputs' => [
-            'fields' => ['mobile'],
+            'fields' => ['mobile', 'kyc', 'otp', 'selfie', 'signature', 'location'],
         ],
         'validation' => [
             'signature' => [
@@ -110,17 +127,6 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
             'message' => 'Thank you.',
             'url' => 'https://example.test/after',
         ],
-        'metadata' => [
-            'custom' => [
-                'claim_experience' => [
-                    'handlers' => [
-                        'kyc' => true,
-                        'otp' => true,
-                        'selfie' => true,
-                    ],
-                ],
-            ],
-        ],
     ]);
 
     $result = app(ClaimExperiencePreviewService::class)->renderFromInstructions(
@@ -139,11 +145,12 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
         ->toContain(
             'claim-entry',
             'pre-claim-rider-splash',
-            'validation-kyc',
-            'validation-otp',
-            'validation-selfie',
-            'validation-signature',
-            'validation-location',
+            'form-flow-01-form',
+            'form-flow-02-kyc',
+            'form-flow-03-otp',
+            'form-flow-04-location',
+            'form-flow-05-selfie',
+            'form-flow-06-signature',
             'confirmation',
             'claim-success-rider-message',
             'rider-redirect-countdown',
@@ -152,6 +159,19 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
         ->not->toContain('og-social-preview', 'xray-preview')
         ->and($steps->pluck('sequence')->all())
         ->toBe(range(1, $steps->count()));
+
+    expect($steps->where('phase', 'form_flow')->pluck('screen.component')->all())
+        ->toBe([
+            'form-flow/core/GenericForm',
+            'form-flow/kyc/KYCInitiatePage',
+            'form-flow/otp/OtpCapturePage',
+            'form-flow/location/LocationCapturePage',
+            'form-flow/selfie/SelfieCapturePage',
+            'form-flow/signature/SignatureCapturePage',
+        ])
+        ->and($steps->where('phase', 'form_flow')->every(
+            fn (array $step): bool => data_get($step, 'screen.props.preview_mode') === true,
+        ))->toBeTrue();
 });
 
 it('deletes only temporary preview vouchers after capture', function (): void {

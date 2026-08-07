@@ -5,10 +5,27 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
+use LBHurtado\FormFlowManager\Handlers\SplashHandler;
+use LBHurtado\FormHandlerKYC\KYCHandler;
+use LBHurtado\FormHandlerLocation\LocationHandler;
+use LBHurtado\FormHandlerOtp\OtpHandler;
+use LBHurtado\FormHandlerSelfie\SelfieHandler;
+use LBHurtado\FormHandlerSignature\SignatureHandler;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
+
+beforeEach(function (): void {
+    config()->set('form-flow.handlers', [
+        'splash' => SplashHandler::class,
+        'kyc' => KYCHandler::class,
+        'location' => LocationHandler::class,
+        'otp' => OtpHandler::class,
+        'selfie' => SelfieHandler::class,
+        'signature' => SignatureHandler::class,
+    ]);
+});
 
 it('exposes the claim preview contract on the quick generate read model', function (): void {
     expect(Route::has('x-change.cockpit.quick-generate.claim-previews.store'))->toBeTrue();
@@ -151,6 +168,15 @@ it('falls back to a useful storyboard when browser capture is unavailable', func
         ->assertJsonPath('journey.steps.0.screen.kind', 'claim_entry')
         ->assertJsonPath('journey.steps.0.screen.title', 'Claim Pay Code')
         ->assertJsonPath('journey.steps.0.screen.code', 'PREVIEW');
+
+    $screens = collect($response->json('journey.steps'))
+        ->where('phase', 'form_flow');
+
+    expect($screens)->not->toBeEmpty()
+        ->and($screens->every(
+            fn (array $step): bool => data_get($step, 'render_kind') === 'actual_screen'
+                && data_get($step, 'screen.props.preview_mode') === true,
+        ))->toBeTrue();
 
     expect((int) $issuer->wallet->refresh()->balanceInt)->toBe(0)
         ->and(Voucher::query()->count())->toBe($voucherCountBefore);

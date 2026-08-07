@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use InvalidArgumentException;
+use LBHurtado\FormFlowManager\Services\FormFlowPreviewCompiler;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use RuntimeException;
 
 final class ClaimExperiencePreviewService
@@ -20,6 +23,8 @@ final class ClaimExperiencePreviewService
         private readonly ClaimPreviewVoucherIssuer $previewVouchersIssuer,
         private readonly ClaimPreviewJourneyManifestFactory $journeys,
         private readonly ClaimPreviewVoucherDisposer $previewVouchers,
+        private readonly VoucherClaimFlowCompiler $claimFlows,
+        private readonly FormFlowPreviewCompiler $formFlowPreviews,
     ) {}
 
     /**
@@ -34,11 +39,11 @@ final class ClaimExperiencePreviewService
         }
 
         $scenario = $this->scenarios->fromInstructions($instructions);
-        $captureAvailable = ! $options->dryRun && $this->recorder->isAvailable();
+        $captureAvailable = false;
         $context = $this->cache->context($scenario, [
             'profile' => $options->profile,
             'dry_run' => $options->dryRun,
-            'render_mode' => $captureAvailable ? 'browser_capture' : 'live_screen_v1',
+            'render_mode' => 'compiled_claim_screen_v2',
             'submit_claim' => false,
             'mobile' => $options->mobile,
             'bank_code' => $options->bankCode,
@@ -69,14 +74,20 @@ final class ClaimExperiencePreviewService
         $previewVoucherId = null;
 
         try {
-            if ($captureAvailable) {
-                $issued = $this->previewVouchersIssuer->issue(
-                    $options->issuer,
-                    $this->payloads->make($instructions, $options->issuer),
-                );
-                $previewVoucherId = $issued['voucher_id'] ?? null;
-                $payCode = (string) $issued['code'];
-            }
+            $issued = $this->previewVouchersIssuer->issue(
+                $options->issuer,
+                $this->payloads->make($instructions, $options->issuer),
+            );
+            $previewVoucherId = $issued['voucher_id'] ?? null;
+            $payCode = (string) $issued['code'];
+            $previewVoucher = Voucher::query()->findOrFail($previewVoucherId);
+            $compiled = $this->claimFlows->compile($previewVoucher);
+            $screens = $this->formFlowPreviews->compile($compiled->instructions, [
+                'mobile' => $options->mobile,
+                'preview_mobile' => $options->mobile,
+                'voucher_code' => $payCode,
+                'claim_experience' => $compiled->experience->toArray(),
+            ]);
 
             $report = $captureAvailable
                 ? $this->recordOrBuildStoryboard(
@@ -92,10 +103,10 @@ final class ClaimExperiencePreviewService
                     baseUrl: $baseUrl,
                     reason: $options->dryRun
                         ? 'dry_run_requested'
-                        : 'browser_capture_unavailable',
+                        : 'compiled_claim_flow',
                 );
 
-            $journey = $this->journeys->fromReport($report, $scenario);
+            $journey = $this->journeys->fromReport($report, $scenario, $screens);
             $artifact = $this->cache->rememberRendered(
                 scenario: $scenario,
                 fingerprint: $context['fingerprint'],

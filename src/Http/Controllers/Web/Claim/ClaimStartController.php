@@ -24,6 +24,7 @@ use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
+use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
@@ -35,6 +36,7 @@ use LBHurtado\XChange\Support\Claim\FormFlowSplashSkipPolicy;
 class ClaimStartController extends Controller
 {
     public function __construct(
+        protected VoucherClaimFlowCompiler $claimFlowCompiler,
         protected DriverService $driverService,
         protected FormFlowService $formFlowService,
         protected BuildProvisioningRequirementViewData $provisioning,
@@ -224,26 +226,12 @@ class ClaimStartController extends Controller
             );
         }
 
-        $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
-
-        $instructions = $this->driverService->transform($voucher);
-
-        $instructionPayload = ClaimExperiencePayload::putIntoInstructions(
-            $instructions->toArray(),
-            $claimExperience,
-        );
+        $compiledFlow = $this->claimFlowCompiler->compile($voucher, $authenticatedMobile);
+        $instructionPayload = $compiledFlow->instructions->toArray();
 
         if ($onboardingReference !== null) {
             data_set($instructionPayload, 'metadata.onboarding_reference', $onboardingReference);
         }
-
-        $instructions = $this->formFlowWorkflows->apply(
-            FormFlowInstructionsData::from($instructionPayload),
-            $workflow,
-            $authenticatedMobile,
-        );
-
-        $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructions->toArray());
 
         $instructions = FormFlowInstructionsData::from($instructionPayload);
 
