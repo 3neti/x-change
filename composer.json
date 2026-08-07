@@ -65,7 +65,7 @@
         "3neti/wallet": "^2.0@beta",
         "3neti/x-action": "^1.0",
         "3neti/x-campaign": "^1.0",
-        "3neti/x-commerce": "^1.0",
+        "3neti/x-commerce": "^1.2",
         "3neti/x-feedback": "^1.0",
         "3neti/x-journal": "^1.0",
         "3neti/x-ray": "^1.0",

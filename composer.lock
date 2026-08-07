@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e0283a33125b21bade5abc5513c2cdb5",
+    "content-hash": "cf171d88ec2d403af3910e75d9570795",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1524,11 +1524,11 @@
         },
         {
             "name": "3neti/x-commerce",
-            "version": "v1.1.0",
+            "version": "v1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-commerce.git",
-                "reference": "85c2402ea74cb3d543ca13db386f9d4a40f15a95"
+                "reference": "dd378d6536bad125948dac212c853cdb47dcb816"
             },
             "require": {
                 "illuminate/support": "^11.0|^12.0|^13.0",
@@ -1580,7 +1580,7 @@
                 "pricing",
                 "x-change"
             ],
-            "time": "2026-08-03T13:55:57+00:00"
+            "time": "2026-08-07T07:06:05+00:00"
         },
         {
             "name": "3neti/x-feedback",
