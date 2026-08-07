@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
@@ -68,6 +70,47 @@ it('renders a dry-run claim preview from quick generate instructions', function 
         ->not->toContain('open_command')
         ->not->toContain('pay_code')
         ->not->toContain('09173011987');
+});
+
+it('renders a recorded claim preview for an issuer with no available funds', function (): void {
+    Process::fake([
+        '*' => Process::result(output: json_encode([
+            'status' => 'recorded',
+        ], JSON_THROW_ON_ERROR)),
+    ]);
+
+    $issuer = actingAsTestUser(0);
+    $voucherCountBefore = Voucher::query()->count();
+
+    $response = $this->withHeaders([
+        'Accept' => 'application/json',
+    ])->post(route('x-change.cockpit.quick-generate.claim-previews.store'), [
+        'cash' => [
+            'amount' => 25,
+            'currency' => 'PHP',
+        ],
+        'inputs' => [
+            'fields' => [],
+        ],
+        'feedback' => [
+            'mobile' => null,
+        ],
+        'rider' => [
+            'message' => null,
+            'url' => null,
+            'splash' => null,
+        ],
+        'refresh_preview' => true,
+    ]);
+
+    $response
+        ->assertSuccessful()
+        ->assertJsonPath('schema', 'x-change.claim-experience-preview.manifest.v1')
+        ->assertJsonPath('status', 'ready')
+        ->assertJsonPath('safety.money_movement', false);
+
+    expect((int) $issuer->wallet->refresh()->balanceInt)->toBe(0)
+        ->and(Voucher::query()->count())->toBe($voucherCountBefore);
 });
 
 it('serves claim preview manifests and frames only to their owner', function (): void {

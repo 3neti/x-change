@@ -6,7 +6,6 @@ namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use InvalidArgumentException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
-use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 
 final class ClaimExperiencePreviewService
 {
@@ -17,7 +16,7 @@ final class ClaimExperiencePreviewService
         private readonly ClaimWalkthroughArtifactStore $artifacts,
         private readonly ClaimWalkthroughStoryboardBuilder $storyboards,
         private readonly ClaimWalkthroughRecorder $recorder,
-        private readonly PayCodeIssuanceContract $issuance,
+        private readonly ClaimPreviewVoucherIssuer $previewVouchersIssuer,
         private readonly ClaimPreviewJourneyManifestFactory $journeys,
         private readonly ClaimPreviewVoucherDisposer $previewVouchers,
     ) {}
@@ -68,7 +67,7 @@ final class ClaimExperiencePreviewService
 
         try {
             if (! $options->dryRun) {
-                $issued = $this->issuance->issue(
+                $issued = $this->previewVouchersIssuer->issue(
                     $options->issuer,
                     $this->payloads->make($instructions, $options->issuer),
                 );

@@ -6,6 +6,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewOptions;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewService;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherDisposer;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherIssuer;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherPayloadFactory;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
@@ -189,6 +190,30 @@ it('preserves the preview-only marker through real issuance and cleanup', functi
         $voucher->metadata,
         'instructions.metadata.custom.walkthrough.preview',
     ))->toBeTrue();
+
+    app(ClaimPreviewVoucherDisposer::class)->dispose($voucher->getKey());
+
+    expect($voucher->fresh())->toBeNull();
+});
+
+it('issues a temporary preview voucher without moving issuer funds', function (): void {
+    $issuer = actingAsTestUser(0);
+    $wallet = $issuer->wallet;
+    $payload = app(ClaimPreviewVoucherPayloadFactory::class)->make(
+        validVoucherInstructions(25.00),
+        $issuer,
+    );
+
+    $issued = app(ClaimPreviewVoucherIssuer::class)->issue($issuer, $payload);
+    $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
+
+    expect((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and($voucher->cash)->toBeNull()
+        ->and(data_get($voucher->metadata, 'instructions.cash.amount'))->toBe(25)
+        ->and(data_get(
+            $voucher->metadata,
+            'instructions.metadata.custom.walkthrough.preview',
+        ))->toBeTrue();
 
     app(ClaimPreviewVoucherDisposer::class)->dispose($voucher->getKey());
 
