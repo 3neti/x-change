@@ -93,31 +93,43 @@ const actualScreenComponent = computed<Component | null>(() => {
         </div>
         <template v-else-if="screen.kind === 'claim_entry'">
             <div
-                class="flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b from-primary/5 via-background to-background px-5 py-6"
+                class="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-background px-5 py-8"
             >
-                <div class="grid justify-items-center gap-2 text-center">
-                    <img
-                        :src="xChangeLogoUrl"
-                        alt="X-Change"
-                        class="h-12 w-auto max-w-28 object-contain"
-                    />
-                    <h3 class="text-xl font-medium">Claim Pay Code</h3>
-                </div>
-                <div class="grid gap-2">
-                    <label class="text-xs font-medium">Pay Code</label>
-                    <div
-                        class="grid min-h-11 place-items-center rounded-md border bg-background px-3 text-center text-lg font-semibold tracking-[0.18em]"
-                    >
-                        {{ screen.code }}
-                    </div>
-                </div>
-                <button
-                    type="button"
-                    tabindex="-1"
-                    class="min-h-11 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
+                <div
+                    class="mx-auto flex min-h-full w-full max-w-md flex-col justify-center"
                 >
-                    Continue
-                </button>
+                    <section
+                        class="grid w-full gap-6 rounded-lg border border-border/60 bg-card/85 p-6 shadow-sm backdrop-blur-sm"
+                    >
+                        <div
+                            class="grid justify-items-center gap-2 text-center"
+                        >
+                            <img
+                                :src="xChangeLogoUrl"
+                                alt="X-Change"
+                                class="h-14 w-auto max-w-32 object-contain"
+                            />
+                            <h3 class="text-xl font-medium">
+                                Claim Pay Code
+                            </h3>
+                        </div>
+                        <div class="grid gap-2">
+                            <label class="text-sm font-medium">Pay Code</label>
+                            <div
+                                class="grid min-h-10 place-items-center rounded-md border bg-background px-3 text-center text-lg font-medium tracking-wider"
+                            >
+                                {{ screen.code }}
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            tabindex="-1"
+                            class="min-h-10 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
+                        >
+                            Continue
+                        </button>
+                    </section>
+                </div>
             </div>
         </template>
 
