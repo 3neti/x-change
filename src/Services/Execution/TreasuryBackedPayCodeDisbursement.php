@@ -6,10 +6,12 @@ namespace LBHurtado\XChange\Services\Execution;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
@@ -71,6 +73,7 @@ final readonly class TreasuryBackedPayCodeDisbursement
             }
 
             $bankAccount = $this->bankAccounts->resolve($voucher, $contact, []);
+            $this->assertRecordedClaimDestination($voucher, $bankAccount);
             $amountMinor = (int) data_get($reservation, 'amount_minor', 0);
 
             if ($amountMinor <= 0) {
@@ -138,6 +141,39 @@ final readonly class TreasuryBackedPayCodeDisbursement
             ->where('voucher_id', $voucher->getKey())
             ->latest('id')
             ->first();
+    }
+
+    private function assertRecordedClaimDestination(Voucher $voucher, BankAccount $bankAccount): void
+    {
+        $claim = VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('id')
+            ->first();
+
+        if (! $claim instanceof VoucherClaim) {
+            return;
+        }
+
+        $expectedBankCode = trim((string) $claim->bank_code);
+        $expectedAccount = trim((string) $claim->account_number_masked);
+
+        if ($expectedBankCode === '' && $expectedAccount === '') {
+            return;
+        }
+
+        $actualBankCode = trim((string) $bankAccount->getBankCode());
+        $actualAccount = $this->maskAccountNumber((string) $bankAccount->getAccountNumber());
+
+        if ($expectedBankCode !== $actualBankCode || $expectedAccount !== $actualAccount) {
+            throw new RuntimeException(
+                'Resolved payout destination does not match the recorded claim destination.'
+            );
+        }
+    }
+
+    private function maskAccountNumber(string $accountNumber): string
+    {
+        return str_repeat('*', max(0, strlen($accountNumber) - 4)).substr($accountNumber, -4);
     }
 
     public function isKnownPreProviderPersistenceFailure(

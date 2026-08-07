@@ -1,7 +1,7 @@
 # Execution Engine: Architecture Invariants
 
 Status: Canonical guardrails  
-Last updated: 2026-06-24
+Last updated: 2026-08-07
 
 1. Voucher owns execution semantics and the future engine, instruction, context/result, driver, and registry types.
 2. x-change consumes voucher behavior through contracts once those contracts exist. It must not own voucher execution drivers.
@@ -23,6 +23,7 @@ Last updated: 2026-06-24
 18. Lifecycle scenarios exercise public APIs, contracts, actions, or documented orchestration seams rather than mutating internals.
 19. Voucher and x-change repositories remain independently green and independently committed after every slice.
 20. No behavior change is silent. Public API, voucher, money movement, validation, and claim UX changes require explicit approval.
+21. An explicitly submitted claim destination is authoritative for the initial payout. Execution must reload that persisted destination after model refreshes and must fail closed before a provider call if it differs from the prepared claim audit record.
 
 ## Slice 0 Interpretation
 

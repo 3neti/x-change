@@ -1,6 +1,6 @@
 # Provider Failure And Pay Code Recovery Runbook
 
-Date: 2026-08-04
+Date: 2026-08-07
 
 This runbook documents the safe recovery path when a redeemer submits a claim,
 the provider accepts the request, and the final provider status later returns as
@@ -30,6 +30,41 @@ Controlled cancellation              Beneficiary Payout Payable → Client Funds
 
 A provider rejection never rolls back or deletes the confirmed claim, and it
 does not automatically return principal to the issuer.
+
+## Authoritative Destination Invariant
+
+The institution and account number explicitly submitted with the claim are the
+authoritative initial payout destination. A claimant mobile, remembered Contact
+destination, or provider default may help populate the form, but it must never
+replace a submitted destination during execution.
+
+The claim path persists two complementary records before payout:
+
+- the voucher redeemer record retains the submitted redemption destination for
+  execution compatibility; and
+- the prepared `voucher_claims` record retains the institution and masked
+  account as an immutable audit comparison.
+
+Treasury-backed execution reloads the persisted redeemer destination after any
+voucher refresh. Immediately before building the provider request, it compares
+the resolved institution and masked account with the prepared claim. A mismatch
+fails closed before the provider adapter is called.
+
+Do not fall back to a Contact's remembered wallet or mobile-derived account when
+a claim contains an explicit bank destination.
+
+### AQFR incident lesson
+
+On 2026-08-07, Pay Code `AQFR` captured PNB account `********7254`, but the
+Treasury post-redemption handler refreshed the voucher and lost its transient
+active-redeemer property. Destination resolution then fell back to the
+claimant's remembered GCash account `*******7752`. NetBank correctly rejected
+that request with `AC01`.
+
+The principal remained protected in `recovery_pending`; no successful provider
+transfer occurred. The correction introduced the persisted-redeemer lookup,
+the pre-provider destination comparison, and a regression in which the claimant
+mobile and PNB account are deliberately different.
 
 ## Diagnostic Entry Point
 

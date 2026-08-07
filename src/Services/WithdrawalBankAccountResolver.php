@@ -55,8 +55,9 @@ class WithdrawalBankAccountResolver
             }
         }
 
-        if ($bankAccount === null && property_exists($voucher, 'redeemer') && $voucher->redeemer) {
-            $fallbackRawBank = Arr::get($voucher->redeemer->metadata ?? [], 'redemption.bank_account');
+        if ($bankAccount === null) {
+            $redeemer = $this->persistedRedeemer($voucher);
+            $fallbackRawBank = Arr::get($redeemer?->metadata ?? [], 'redemption.bank_account');
 
             if (is_string($fallbackRawBank) && trim($fallbackRawBank) !== '') {
                 $fallbackBankAccount = is_string($contact->bank_account) && trim($contact->bank_account) !== ''
@@ -84,5 +85,20 @@ class WithdrawalBankAccountResolver
         }
 
         return $bankAccount;
+    }
+
+    private function persistedRedeemer(Voucher $voucher): ?object
+    {
+        if (isset($voucher->redeemer)) {
+            return $voucher->redeemer;
+        }
+
+        if (! $voucher->exists) {
+            return null;
+        }
+
+        return $voucher->redeemers()
+            ->latest('id')
+            ->first();
     }
 }

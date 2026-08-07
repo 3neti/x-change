@@ -26,6 +26,7 @@ use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Execution\TreasuryBackedPayCodeDisbursement;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
@@ -104,6 +105,81 @@ it('pays a treasury-backed pay code without a legacy cash entity', function (): 
         ->and($provider->lastRequest?->account_number)->toBe('09173011987')
         ->and($provider->lastRequest?->external_id)->toBe((string) $voucher->getKey())
         ->and($provider->lastRequest?->external_code)->toBe($voucher->code);
+});
+
+it('uses the persisted claim destination instead of the claimant mobile fallback', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(
+        transactionId: 'NETBANK-PNB-PAYOUT-1',
+        provider: 'netbank',
+    );
+
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09455517752',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'PNBMPHMMTOD',
+            'account_number' => '143810077254',
+        ],
+    ]);
+
+    $claim = VoucherClaim::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+    $reconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+
+    expect($result->status)->toBe('succeeded')
+        ->and($claim->bank_code)->toBe('PNBMPHMMTOD')
+        ->and($claim->account_number_masked)->toBe('********7254')
+        ->and($reconciliation->bank_code)->toBe('PNBMPHMMTOD')
+        ->and($reconciliation->account_number_masked)->toBe('********7254')
+        ->and($provider->lastRequest?->bank_code)->toBe('PNBMPHMMTOD')
+        ->and($provider->lastRequest?->account_number)->toBe('143810077254')
+        ->and($provider->lastRequest?->account_number)->not->toBe('09455517752');
+    $provider->assertDisburseCalledTimes(1);
+});
+
+it('fails closed before the provider when the resolved destination differs from the claim', function (): void {
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(
+        transactionId: 'MUST-NOT-BE-SUBMITTED',
+        provider: 'netbank',
+    );
+    $contact = fakePayoutContact(mobile: '09455517752');
+    $contact->bank_account = 'GXCHPHM2XXX:09455517752';
+    $contact->save();
+    $voucher->redeemers()->forceCreate([
+        'redeemer_id' => $contact->getKey(),
+        'redeemer_type' => $contact::class,
+        'metadata' => [
+            'redemption' => [
+                'bank_account' => 'PNBMPHMMTOD:143810077254',
+            ],
+        ],
+    ]);
+    $voucher->forceFill(['redeemed_at' => now()])->save();
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'status' => 'prepared',
+        'claimer_mobile' => '09455517752',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******7752',
+    ]);
+
+    expect(fn () => app(TreasuryBackedPayCodeDisbursement::class)->handle(
+        $voucher->fresh(),
+    ))->toThrow(
+        RuntimeException::class,
+        'Resolved payout destination does not match the recorded claim destination.',
+    );
+    $provider->assertNoDisbursementAttempted();
+    expect(DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->count())->toBe(0);
 });
 
 it('journals settlement reached through scheduled provider reconciliation', function (): void {
