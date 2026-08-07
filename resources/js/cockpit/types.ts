@@ -1842,6 +1842,19 @@ export type CockpitVoucherDetailPageProps = CockpitHeaderPageProps & {
     };
     campaign_navigation_context?: CockpitCampaignNavigationContext;
     read_model?: CockpitReadModelBundle;
+    payout_institutions?: CockpitMoneyIssuerOption[];
+};
+
+export type CockpitMoneyIssuerOption = {
+    key: string;
+    value: string;
+    name: string;
+    short_name: string;
+    category: string;
+    account_label: string;
+    identifier_scheme: string;
+    aliases: string[];
+    commonly_used: boolean;
 };
 
 export type CockpitPayCodeExplorerReadModelRecord = {

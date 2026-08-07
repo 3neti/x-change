@@ -55,6 +55,14 @@ export default defineConfig({
                 import.meta.dirname,
                 'tests/frontend/stubs/ui-spinner.ts',
             ),
+            '@/components/ui/select': path.resolve(
+                import.meta.dirname,
+                'tests/frontend/stubs/ui-select.ts',
+            ),
+            '@/components/financial/BankEMISelect.vue': path.resolve(
+                import.meta.dirname,
+                'resources/js/components/x-change-shared-financial/BankEMISelect.vue',
+            ),
 
             '@/components/x-rider/RiderCountdown.vue': path.resolve(
                 import.meta.dirname,

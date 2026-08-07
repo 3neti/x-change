@@ -881,6 +881,7 @@ function policyLabel(value: string): string {
                 :journal="props.read_model?.journal"
                 :feedback="props.read_model?.feedback"
                 :redemption="redemption"
+                :payout-institutions="props.payout_institutions ?? []"
                 :claim-url="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
                 :distribution-url="distributionWorkspaceHref"
                 :explorer-url="explorerHref"
