@@ -81,7 +81,9 @@ describe('Cockpit Quick Generate foundation', () => {
             props: baseProps,
         });
 
-        expect(blank.get('input[value="location"]').attributes('disabled')).toBeDefined();
+        expect(
+            blank.get('input[value="location"]').attributes('disabled'),
+        ).toBeDefined();
 
         const saved = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
@@ -104,9 +106,11 @@ describe('Cockpit Quick Generate foundation', () => {
             disabled: false,
         });
         expect(
-            saved.get(
-                '[data-testid="cockpit-quick-generate-capability-warning"]',
-            ).text(),
+            saved
+                .get(
+                    '[data-testid="cockpit-quick-generate-capability-warning"]',
+                )
+                .text(),
         ).toContain('Location services are not configured.');
         expect(
             saved
@@ -3883,7 +3887,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(true);
         expect(wrapper.text()).not.toContain('Engineering diagnostics');
         expect(wrapper.text()).not.toContain('Full architecture history');
-        expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(
+            true,
+        );
         expect(wrapper.text()).not.toContain('Review your Pay Code');
         expect(wrapper.text()).not.toContain('Design status');
         expect(wrapper.text()).toContain('Engineering Preview');
@@ -3966,6 +3972,11 @@ describe('Cockpit Quick Generate foundation', () => {
                         claim_submission: false,
                     },
                     journey: {
+                        viewport: {
+                            profile: 'mobile_claim_v1',
+                            width: 390,
+                            height: 844,
+                        },
                         step_count: 2,
                         steps: [
                             {
@@ -3977,6 +3988,8 @@ describe('Cockpit Quick Generate foundation', () => {
                                 actor: 'redeemer',
                                 render_kind: 'captured_frame',
                                 status: 'captured',
+                                preview_url:
+                                    '/x/cockpit/quick-generate/claim-previews/preview-01/steps/claim-entry',
                                 frame: {
                                     url: '/x/cockpit/quick-generate/claim-previews/preview-01/frames/claim-entry',
                                     mime_type: 'image/png',
@@ -3994,6 +4007,8 @@ describe('Cockpit Quick Generate foundation', () => {
                                 actor: 'redeemer',
                                 render_kind: 'captured_frame',
                                 status: 'captured',
+                                preview_url:
+                                    '/x/cockpit/quick-generate/claim-previews/preview-01/steps/xray-preview',
                                 frame: {
                                     url: '/x/cockpit/quick-generate/claim-previews/preview-01/frames/xray-preview',
                                     mime_type: 'image/png',
@@ -4083,10 +4098,10 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(false);
         expect(
             wrapper
-                .find('[data-testid="cockpit-claim-experience-frame"]')
+                .find('[data-testid="cockpit-claim-preview-iframe"]')
                 .attributes('src'),
         ).toBe(
-            '/x/cockpit/quick-generate/claim-previews/preview-01/frames/claim-entry',
+            '/x/cockpit/quick-generate/claim-previews/preview-01/steps/claim-entry',
         );
 
         expect(

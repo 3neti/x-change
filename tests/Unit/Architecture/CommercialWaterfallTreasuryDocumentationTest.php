@@ -14,11 +14,11 @@ it('documents the Pay Code commercial waterfall and its remaining accounting gat
     );
 
     expect($document)->toBeString()
-        ->toContain('## Pay Code commercial waterfall')
+        ->toContain('## Commercial Offering and Pay Code waterfall')
         ->toContain('Account Client Funds → system Commercial Clearing')
         ->toContain('Partner Commission Payable')
         ->toContain('A reversal creates exact compensating Treasury movements')
-        ->toContain('Percentage rules, caps, taxes, royalties')
+        ->toContain('Taxes, royalties, invoice collection')
         ->toContain('Pay Code principal reservation, terminal release, and provider-confirmed claim settlement are Treasury-position based and idempotent')
         ->and($cockpitCompass)
         ->toContain('Quick Generate Treasury Movement Preview / Result Explanation')

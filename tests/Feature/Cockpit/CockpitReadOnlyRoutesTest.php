@@ -1305,6 +1305,8 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         );
 
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
+        'x-change.cockpit.commercial.offerings.store',
+        'x-change.cockpit.commercial.offerings.approvals.store',
         'x-change.cockpit.campaigns.store',
         'x-change.cockpit.campaigns.intakes.store',
         'x-change.cockpit.campaigns.intakes.update',
