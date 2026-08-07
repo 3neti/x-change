@@ -33,6 +33,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFulfi
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetImportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetIntakeController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetResultsExportController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDocumentationPageController;
@@ -128,6 +131,16 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::get('/', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
         Route::get('documentation', CockpitDocumentationPageController::class)
             ->name('x-change.cockpit.documentation');
+        Route::get('commercial', CockpitCommercialOfferingPageController::class)
+            ->name('x-change.cockpit.commercial.index');
+        Route::post('commercial/offerings', [CockpitCommercialOfferingController::class, 'store'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.offerings.store');
+        Route::post(
+            'commercial/offerings/{offering}/approvals',
+            [CockpitCommercialOfferingApprovalController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.offerings.approvals.store');
         Route::get('campaigns', [CockpitCampaignWorksheetController::class, 'index'])
             ->name('x-change.cockpit.campaigns.index');
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])

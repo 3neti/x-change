@@ -107,6 +107,15 @@ export default defineConfig({
                     import.meta.dirname,
                     'tests/frontend/stubs/funding-instruction-route.ts',
                 ),
+            '@/routes/x-change/cockpit/commercial/offerings/approvals':
+                path.resolve(
+                    import.meta.dirname,
+                    'tests/frontend/stubs/commercial-offering-approval-route.ts',
+                ),
+            '@/routes/x-change/cockpit/commercial/offerings': path.resolve(
+                import.meta.dirname,
+                'tests/frontend/stubs/commercial-offering-route.ts',
+            ),
             '@/routes/x-change/cockpit/funding/intents/verification-checks':
                 path.resolve(
                     import.meta.dirname,
