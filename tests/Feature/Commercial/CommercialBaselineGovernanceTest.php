@@ -12,6 +12,7 @@ use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -143,4 +144,22 @@ it('requires distinct non-system maker and checker authorities for changes', fun
         '--strict' => true,
         '--json' => true,
     ])->assertSuccessful();
+});
+
+it('provisions existing commissioned installations through an idempotent upgrade command', function (): void {
+    provisionTestSystemPrincipalForCommissioning();
+    app(CommissioningManifestRecorder::class)->record();
+
+    $this->artisan('x-change:commercial:provision-baselines', ['--json' => true])
+        ->expectsOutputToContain('"success": true')
+        ->assertSuccessful();
+    $this->artisan('x-change:commercial:provision-baselines', ['--json' => true])
+        ->expectsOutputToContain('"success": true')
+        ->assertSuccessful();
+
+    expect(CommercialOffering::query()->count())->toBe(2)
+        ->and(CommercialOfferingActivation::query()->count())->toBe(2)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'commercial.offering.baseline_provisioned')
+            ->count())->toBe(2);
 });

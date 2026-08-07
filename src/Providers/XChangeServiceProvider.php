@@ -66,6 +66,7 @@ use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityComm
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
 use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
@@ -1328,6 +1329,7 @@ class XChangeServiceProvider extends ServiceProvider
                 AttestCommercialAccountingCommand::class,
                 AuthorizeCommercialOperatorCommand::class,
                 CommercialGovernanceStatusCommand::class,
+                ProvisionCommercialBaselinesCommand::class,
                 BackfillCommercialAccountingJournalCommand::class,
                 BackfillStandingFundingPositionsCommand::class,
                 CapitalizeTreasuryOpeningBalanceCommand::class,

@@ -66,6 +66,7 @@ it('ships a canonical secret-free Laravel Cloud recipe', function (): void {
     expect($recipe)->toContain('3neti.x-change.cloud-recipe.v1')
         ->toContain('x-change-funding')
         ->toContain('php artisan migrate --force')
+        ->toContain('php artisan x-change:commercial:provision-baselines --no-interaction')
         ->toContain('php artisan x-change:doctor --assets --strict --no-interaction')
         ->not->toContain('vendor:publish --tag=')
         ->not->toContain('CLIENT_SECRET=')

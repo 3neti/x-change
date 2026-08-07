@@ -29,6 +29,7 @@ build:
 deploy:
   commands:
     - php artisan migrate --force
+    - php artisan x-change:commercial:provision-baselines --no-interaction
 commission:
   preview: php artisan x-change:commission --dry-run --json --no-interaction
   execute: php artisan x-change:commission --no-interaction

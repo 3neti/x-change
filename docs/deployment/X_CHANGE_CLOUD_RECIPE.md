@@ -234,7 +234,14 @@ The deploy command performs runtime database changes only:
 
 ```bash
 php artisan migrate --force
+php artisan x-change:commercial:provision-baselines --no-interaction
 ```
+
+The second command is an idempotent upgrade bridge. Fresh installations
+already provision the same immutable baselines during `x-change:install`;
+existing commissioned installations use this command after the additive
+migration so they never enter a state with governed profiles but no active
+offering.
 
 Configuration and route optimization belong in the build phase once their
 compatibility is proven. The ship command initiates the deployment and monitors
