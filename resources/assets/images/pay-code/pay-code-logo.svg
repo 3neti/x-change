@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-labelledby="title desc">
+  <title id="title">Pay Code logo</title>
+  <desc id="desc">The Pay Code mark with Pay Code wordmark.</desc>
+  <defs>
+    <linearGradient id="pay-code-blue" x1="26" x2="165" y1="28" y2="176" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#063982"/>
+      <stop offset="1" stop-color="#001f5f"/>
+    </linearGradient>
+    <linearGradient id="pay-code-red" x1="126" x2="208" y1="28" y2="176" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f10d18"/>
+      <stop offset="1" stop-color="#d90012"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(18 14) scale(.78)">
+    <path d="M117 32H72c-22 0-40 18-40 40v112c0 22 18 40 40 40h45v-18H72c-12 0-22-10-22-22V72c0-12 10-22 22-22h45z" fill="none" stroke="url(#pay-code-blue)" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M139 32h45c22 0 40 18 40 40v112c0 22-18 40-40 40h-45v-18h45c12 0 22-10 22-22V72c0-12-10-22-22-22h-45z" fill="none" stroke="url(#pay-code-red)" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M95 79h54v25h-41v28h36c24 0 42 18 42 41s-18 41-42 41h-49c-16 0-29-13-29-29v-41H54a8 8 0 0 1 0-16h12v-14H54a8 8 0 0 1 0-16h12V108c0-16 13-29 29-29zm13 65v41c0 3 2 5 5 5h31c10 0 18-7 18-17s-8-17-18-17h-36z" fill="url(#pay-code-blue)"/>
+    <path d="M145 79h13c36 0 65 29 65 65s-29 65-65 65h-13v-25h13c22 0 40-18 40-40s-18-40-40-40h-13z" fill="url(#pay-code-red)"/>
+  </g>
+  <text x="238" y="128" fill="#002b74" font-family="Inter, Arial, sans-serif" font-size="78" font-weight="800" letter-spacing="0">Pay</text>
+  <text x="382" y="128" fill="#e50914" font-family="Inter, Arial, sans-serif" font-size="78" font-weight="800" letter-spacing="0">Code</text>
+</svg>

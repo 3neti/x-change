@@ -152,6 +152,21 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('ClaimWidget compiled form flow rendering', () => {
+    it('brands the claim entry with the Pay Code logo', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="claim-pay-code-logo"]')
+                .attributes('src'),
+        ).toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg');
+        expect(wrapper.find('[data-testid="app-logo"]').exists()).toBe(false);
+    });
+
     it('ignores inactive compiled form_flow phase', () => {
         const wrapper = mount(ClaimWidget, {
             props: {

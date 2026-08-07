@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue';
 import { Copy, ExternalLink, Check } from 'lucide-vue-next';
 
 interface Props {
@@ -38,7 +39,12 @@ function openClaim(): void {
 
 <template>
     <Card>
-        <CardHeader>
+        <CardHeader class="gap-3">
+            <PayCodeLogo
+                variant="logo"
+                class-name="max-w-44"
+                data-testid="pay-code-share-panel-logo"
+            />
             <CardTitle class="text-base">Claim Link</CardTitle>
         </CardHeader>
 
