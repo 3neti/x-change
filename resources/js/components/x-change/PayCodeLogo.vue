@@ -20,14 +20,14 @@ const props = withDefaults(
 
 const logoSrc = computed(() => {
     if (props.variant === 'mark') {
-        return '/vendor/x-change/images/pay-code/pay-code-mark.svg';
+        return '/vendor/x-change/images/pay-code/pay-code-mark.png';
     }
 
     if (props.variant === 'lockup') {
-        return '/vendor/x-change/images/pay-code/pay-code-lockup.svg';
+        return '/vendor/x-change/images/pay-code/pay-code-lockup.png';
     }
 
-    return '/vendor/x-change/images/pay-code/pay-code-logo.svg';
+    return '/vendor/x-change/images/pay-code/pay-code-logo.png';
 });
 
 const altText = computed(() => {

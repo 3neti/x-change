@@ -76,7 +76,7 @@ const hasDesignView = computed<boolean>(() => {
 const hasClaimView = computed<boolean>(() => {
     return props.presentation === 'live' && slots.claim !== undefined;
 });
-const payCodeMarkUrl = '/vendor/x-change/images/pay-code/pay-code-mark.svg';
+const payCodeMarkUrl = '/vendor/x-change/images/pay-code/pay-code-mark.png';
 
 watchEffect(() => {
     if (visibleView.value === 'design' && !hasDesignView.value) {
