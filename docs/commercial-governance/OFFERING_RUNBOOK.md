@@ -38,6 +38,25 @@ Publication records independent approval but leaves the currently active version
 
 Activation retires the prior active version for future resolution. It does not rewrite prior Vouchers, Commercial Sales, allocations, Treasury postings, or journal entries.
 
+## Verify accounting
+
+Run the Commercial accounting attestation after a controlled non-live issuance:
+
+```bash
+php artisan x-change:treasury:attest-commercial-accounting --json --no-interaction
+```
+
+In **Commercial Controls → Activity**, distinguish:
+
+- **Commercial Positions** — current Treasury balances still held;
+- **Lifetime Allocated** — append-only posted allocation history, excluding reversed sales;
+- **Settled Or Paid** — authoritative provider-cost settlements or commission payouts;
+- **Remaining** — the current position after settlement or payout.
+
+Every Position must reconcile to lifetime posted allocations less settled or paid amounts. Inventory must equal all Treasury Positions. A difference requires review before further activation or settlement.
+
+Record each controlled environment acceptance without credentials, personal identifiers, claim links, or live-transfer instructions. The 2026-08-08 staging example is in `STAGING_ACCEPTANCE_2026_08_08.md`.
+
 ## Recover
 
 - Hash mismatch: stop. Compare package/release provenance and stored snapshot evidence. Never edit the hash to make the check pass.
