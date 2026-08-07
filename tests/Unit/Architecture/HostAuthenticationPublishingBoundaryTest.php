@@ -42,7 +42,7 @@ it('publishes an auth logo component backed by package-owned assets', function (
         ->toContain('/vendor/x-change/images/logo-orange.png')
         ->toContain('/vendor/x-change/images/logo-silver.png')
         ->toContain('x-change-app-logo-icon')
-        ->toContain('max-width: 8rem;')
+        ->toContain('max-width: 100%;')
         ->toContain('object-fit: contain;')
         ->not->toContain("'/images/logo-orange.png'")
         ->not->toContain("'/images/logo-silver.png'");

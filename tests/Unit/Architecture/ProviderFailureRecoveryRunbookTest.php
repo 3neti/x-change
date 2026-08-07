@@ -12,6 +12,6 @@ it('documents provider failure recovery without automatic payout retry', functio
         ->toContain('operator_guidance.action')
         ->toContain('Provider dashboard/API says `REJECTED`')
         ->toContain('/x/claim/{PAY_CODE}')
-        ->toContain('replacement Pay Code recovery, not')
-        ->toContain('same-voucher payout retry');
+        ->toContain('Same-Pay-Code Refurbishment')
+        ->toContain('the same Pay Code may receive another versioned correction');
 });

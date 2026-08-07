@@ -9,6 +9,8 @@ failed or rejected.
 ## Current Policy
 
 Do not automatically retry the same payout from the public claim experience.
+The canonical claimant entry remains `/x/claim/{PAY_CODE}`; recovery controls
+belong to the authenticated Cockpit and never to that public route.
 
 Provider status can lag, be incomplete, or disagree with dashboard evidence. A
 blind retry can create duplicate money movement when provider truth arrives
