@@ -91,9 +91,15 @@ class PayCodeCommercialSaleService
             $positionPurpose = TreasuryPositionPurpose::from((string) $purpose);
 
             if ($positionPurpose === TreasuryPositionPurpose::PartnerCommissionPayable) {
-                $partnerReference = $attribution->participants['partner']
-                    ?? $attribution->participants['originator']
-                    ?? 'partner:direct';
+                $commission = collect($quote->allocationPlan->lines)
+                    ->first(fn ($line): bool => $line->policyRuleReference === (string) $rule
+                        && $line->category === 'partner_commission');
+
+                if ($commission === null) {
+                    continue;
+                }
+
+                $partnerReference = $commission->recipientReference;
                 $partner = $this->partners->resolve($partnerReference);
 
                 if (! $partner instanceof Model) {
@@ -171,6 +177,12 @@ class PayCodeCommercialSaleService
                 $role = trim((string) $role);
                 $reference = trim((string) $reference);
 
+                $role = match ($role) {
+                    'partner' => 'sales_partner',
+                    'originator' => 'originating_partner',
+                    default => $role,
+                };
+
                 return $role !== '' && $reference !== ''
                     ? [$role => $reference]
                     : [];
@@ -199,9 +211,9 @@ class PayCodeCommercialSaleService
         $productReference = collect($quote->allocationPlan->lines)
             ->firstWhere('category', 'product_revenue')
             ?->recipientReference;
-        $partnerReference = $attribution->participants['partner']
-            ?? $attribution->participants['originator']
-            ?? 'partner:direct';
+        $partnerReference = collect($quote->allocationPlan->lines)
+            ->firstWhere('category', 'partner_commission')
+            ?->recipientReference;
 
         return new CommercialAccountingContextData(
             schemaVersion: (int) config(
@@ -222,7 +234,7 @@ class PayCodeCommercialSaleService
                 'recognition:pay-code-issuance:v1',
             ),
             expectedProviderCostMinor: (int) $providerCostMinor,
-            partnerReference: $partnerReference,
+            partnerReference: (string) ($partnerReference ?? 'partner:none'),
         );
     }
 

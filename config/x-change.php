@@ -1201,6 +1201,7 @@ return [
                         'category' => 'partner_commission',
                         'recipient_reference' => 'partner:direct',
                         'fixed_amount_minor' => 100,
+                        'participant_role' => 'sales_partner',
                     ],
                     [
                         'reference' => 'commercial-residual',
@@ -1232,6 +1233,7 @@ return [
                         'category' => 'partner_commission',
                         'recipient_reference' => 'partner:direct',
                         'fixed_amount_minor' => 100,
+                        'participant_role' => 'sales_partner',
                     ],
                     [
                         'reference' => 'commercial-residual',

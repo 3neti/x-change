@@ -373,7 +373,7 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
         ])
         ->and($allocationTotalMinor)->toBe($commercialChargeMinor)
         ->and(CommercialAllocation::query()->where('commercial_sale_id', $sale->getKey())->count())
-        ->toBe(4)
+        ->toBe(3)
         ->and(treasuryPositionBalanceForPurpose(
             TreasuryPositionPurpose::ClientFunds,
             $user,
@@ -653,7 +653,7 @@ it('accrues an attributed partner commission to the partner principal', function
         ->whereMorphedTo('principal', $partner)
         ->sole();
 
-    expect($allocation->recipient_reference)->toBe('partner:direct')
+    expect($allocation->recipient_reference)->toBe('partner:marketing-42')
         ->and(data_get($sale->snapshot, 'accounting_context.partner_reference'))
         ->toBe('partner:marketing-42')
         ->and((int) Wallet::query()
