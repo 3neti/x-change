@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
+use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\SystemPrincipalAccountReadinessInspector;
@@ -22,6 +23,7 @@ class DoctorXChangeCommand extends Command
         {--strict : Return a non-zero exit status when any check fails}
         {--assets : Inspect published x-change frontend asset drift only}
         {--pre-install : Inspect only checks that are safe before migrations and publishing}
+        {--commercial-governance : Inspect Commercial Offering activation and require maker-checker readiness}
         {--operator-activity-runtime : Inspect Cockpit operator activity runtime configuration only}';
 
     protected $description = 'Inspect X-Change turnkey installation readiness.';
@@ -34,9 +36,12 @@ class DoctorXChangeCommand extends Command
         PreInstallReadinessInspector $preInstallReadiness,
         CommissioningStateResolver $commissioning,
         SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
+        CommercialGovernanceInspector $commercialGovernance,
     ): int {
         $checks = $this->option('pre-install')
             ? $preInstallReadiness->inspect()['checks']
+            : ($this->option('commercial-governance')
+            ? [$this->commercialGovernanceCheck($commercialGovernance, true)]
             : ($this->option('operator-activity-runtime')
             ? [$this->operatorActivityRuntimeProfileCheck($operatorActivityRuntimeProfile)]
             : ($this->option('assets')
@@ -46,6 +51,7 @@ class DoctorXChangeCommand extends Command
                 ...$preInstallReadiness->inspect()['checks'],
                 $systemPrincipalAccount->inspect(),
                 $this->commissioningCheck($commissioning),
+                $this->commercialGovernanceCheck($commercialGovernance),
                 $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
                 $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
                 $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
@@ -55,7 +61,7 @@ class DoctorXChangeCommand extends Command
                 $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
                 $this->providerTopologyCheck($topologies),
                 $this->providerRuntimeSettingsCheck($settings),
-            ]));
+            ])));
 
         $passed = collect($checks)->every(
             static fn (array $check): bool => $check['passed'] === true,
@@ -170,6 +176,28 @@ class DoctorXChangeCommand extends Command
                 ? 'installation manifest matches the active deployment configuration'
                 : 'installation is not commissioned ['.$state->state->value.']',
             ['state' => $state->state->value, 'reason' => $state->reason],
+        );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function commercialGovernanceCheck(
+        CommercialGovernanceInspector $governance,
+        bool $requireChangeAuthority = false,
+    ): array {
+        $status = $governance->inspect();
+        $passed = $requireChangeAuthority
+            ? $status['governance_ready'] === true
+            : $status['operational'] === true;
+
+        return $this->check(
+            'commercial governance',
+            $passed,
+            $requireChangeAuthority && ! $passed
+                ? 'independent maker and checker authorities are required before price changes'
+                : (string) $status['message'],
+            $status,
         );
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
@@ -66,6 +67,12 @@ final class CommercialOffering extends Model
     public function approvedBy(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function currentActivation(): HasOne
+    {
+        return $this->hasOne(CommercialOfferingActivation::class, 'commercial_offering_id')
+            ->whereNull('deactivated_at');
     }
 
     public function offering(): CommercialOfferingData

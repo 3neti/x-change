@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
+use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\CommissioningRecoveryGuide;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
@@ -26,6 +27,7 @@ final readonly class CommissioningChecklistController
         private SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
         private CommissioningRecoveryGuide $recoveryGuide,
         private CommissioningManifestReadinessInspector $manifest,
+        private CommercialGovernanceInspector $commercialGovernance,
     ) {}
 
     public function show(Request $request): Response
@@ -48,6 +50,7 @@ final readonly class CommissioningChecklistController
             'commissioningRecovery' => $this->recoveryGuide
                 ->forCommissioningState($commissioning, $systemPrincipalAccount['passed']),
             'checkedAt' => now(),
+            'commercialGovernance' => $this->commercialGovernance->inspect(),
         ], Response::HTTP_OK, EnsureXChangeIsCommissioned::headers());
     }
 

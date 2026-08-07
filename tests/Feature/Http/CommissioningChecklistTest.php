@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 
 afterEach(function (): void {
@@ -112,8 +113,10 @@ it('hides the recovery directive after the system Account is commissioned', func
     config()->set('x-change.commissioning.enabled', true);
     config()->set('x-change.commissioning.access_token', 'commissioning-secret');
     provisionTestSystemPrincipalForCommissioning();
-    app(CommissioningManifestRecorder::class)
-        ->record();
+    $manifest = app(CommissioningManifestRecorder::class)->record();
+    app(ProvisionCommercialBaselines::class)->provision(
+        'installation-manifest:'.$manifest->configuration_fingerprint,
+    );
 
     $this->post('/x/commissioning/checklist', [
         'access_token' => 'commissioning-secret',
@@ -123,6 +126,12 @@ it('hides the recovery directive after the system Account is commissioned', func
         ->assertSuccessful()
         ->assertSee('Open Cockpit')
         ->assertSee('Installation Manifest')
+        ->assertSee('Commercial Governance')
+        ->assertSee('Bootstrap Immutable')
+        ->assertSee('Baseline Active Changes Locked')
+        ->assertSee('Changes locked')
+        ->assertSee('Pay Code')
+        ->assertSee('Account Funding')
         ->assertSee('recorded installation matches the active deployment configuration')
         ->assertDontSee('Complete the System Account')
         ->assertDontSee('Confirm the Updated Configuration')

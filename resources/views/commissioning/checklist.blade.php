@@ -47,6 +47,38 @@
             <h2>Missing variables</h2>
             <ul>@foreach ($readiness['missing_variables'] as $variable)<li><code>{{ $variable }}</code></li>@endforeach</ul>
         @endif
+        <section class="governance" aria-labelledby="commercial-governance-heading">
+            <p class="eyebrow">Commercial control</p>
+            <h2 id="commercial-governance-heading">Commercial Governance</h2>
+            <p>{{ $commercialGovernance['message'] }}</p>
+            <dl>
+                <div><dt>Mode</dt><dd>{{ str($commercialGovernance['mode'] ?? 'invalid')->replace('_', ' ')->title() }}</dd></div>
+                <div><dt>State</dt><dd>{{ str($commercialGovernance['state'])->replace('_', ' ')->title() }}</dd></div>
+                <div><dt>Issuance</dt><dd>{{ $commercialGovernance['issuance_available'] ? 'Available' : 'Blocked' }}</dd></div>
+                <div><dt>Price changes</dt><dd>{{ $commercialGovernance['changes_locked'] ? 'Changes locked' : 'Maker-checker governed' }}</dd></div>
+                <div><dt>Maker authorities</dt><dd>{{ $commercialGovernance['roles']['maker_count'] }}</dd></div>
+                <div><dt>Checker authorities</dt><dd>{{ $commercialGovernance['roles']['checker_count'] }}</dd></div>
+            </dl>
+            <h3>Active Offering profiles</h3>
+            <ul class="profiles">
+                @forelse ($commercialGovernance['profiles'] as $profile)
+                    <li>
+                        <strong>{{ str($profile['profile'])->replace('_', ' ')->title() }}</strong>
+                        — {{ $profile['active'] ? 'Active' : 'Action needed' }}
+                        @if ($profile['active'])
+                            · {{ str($profile['origin'])->replace('_', ' ')->title() }}
+                            · v{{ $profile['version'] }}
+                            @if ($profile['source_package_version'])
+                                · package {{ $profile['source_package_version'] }}
+                            @endif
+                        @endif
+                    </li>
+                @empty
+                    <li>No governed Commercial Offering profile is active.</li>
+                @endforelse
+            </ul>
+            <p class="checked">Operator identities remain private. This checklist exposes readiness counts only.</p>
+        </section>
         <h2>Runtime processes</h2>
         <p>Configuration checks cannot prove that workers are running. Keep these responsibilities active after deployment.</p>
         <h3>Required queues</h3>

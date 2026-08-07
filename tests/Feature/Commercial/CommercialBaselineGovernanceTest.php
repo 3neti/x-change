@@ -6,9 +6,13 @@ use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Enums\CommercialActivationAuthority;
 use LBHurtado\XChange\Enums\CommercialGovernanceMode;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
+use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
+use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 it('commissions immutable baseline offerings without fabricating human approval', function (): void {
     config()->set(
@@ -70,4 +74,66 @@ it('refuses to overwrite a conflicting persisted baseline', function (): void {
     expect(fn () => app(ProvisionCommercialBaselines::class)
         ->provision('commissioning-manifest:second'))
         ->toThrow(DomainException::class, 'conflicts with its persisted snapshot');
+});
+
+it('reports active baseline issuance while locking price changes', function (): void {
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:status');
+
+    $status = app(CommercialGovernanceInspector::class)->inspect();
+
+    expect($status['operational'])->toBeTrue()
+        ->and($status['issuance_available'])->toBeTrue()
+        ->and($status['changes_locked'])->toBeTrue()
+        ->and($status['governance_ready'])->toBeFalse()
+        ->and($status['state'])->toBe('baseline_active_changes_locked')
+        ->and($status['profiles'])->toHaveCount(2);
+
+    $this->artisan('x-change:commercial:governance-status', ['--json' => true])
+        ->expectsOutputToContain('"state": "baseline_active_changes_locked"')
+        ->assertSuccessful();
+});
+
+it('requires distinct non-system maker and checker authorities for changes', function (): void {
+    $systemPrincipal = provisionTestSystemPrincipalForCommissioning();
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:roles');
+    $maker = User::query()->create([
+        'name' => 'Commercial Maker',
+        'email' => 'commercial-maker@example.test',
+        'password' => 'password',
+    ]);
+    $checker = User::query()->create([
+        'name' => 'Commercial Checker',
+        'email' => 'commercial-checker@example.test',
+        'password' => 'password',
+    ]);
+
+    foreach ([
+        [$systemPrincipal, CommercialOperatorCapability::ManageOfferings],
+        [$maker, CommercialOperatorCapability::ManageOfferings],
+        [$checker, CommercialOperatorCapability::ApproveOfferings],
+    ] as [$operator, $capability]) {
+        CommercialOperatorAuthorization::query()->create([
+            'operator_type' => $operator->getMorphClass(),
+            'operator_id' => $operator->getKey(),
+            'capability' => $capability->value,
+            'authorization_reference' => 'board-resolution:commercial-governance',
+            'valid_from' => now(),
+        ]);
+    }
+
+    $status = app(CommercialGovernanceInspector::class)->inspect();
+
+    expect($status['roles'])->toMatchArray([
+        'maker_count' => 1,
+        'checker_count' => 1,
+        'separation_ready' => true,
+    ])->and($status['changes_locked'])->toBeFalse()
+        ->and($status['governance_ready'])->toBeTrue()
+        ->and($status['state'])->toBe('roles_ready');
+
+    $this->artisan('x-change:doctor', [
+        '--commercial-governance' => true,
+        '--strict' => true,
+        '--json' => true,
+    ])->assertSuccessful();
 });
