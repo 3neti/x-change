@@ -48,6 +48,20 @@ it('uses package bootstrap configuration until published offerings are activated
         ->and($resolved->legalTrace->jurisdiction)->toBe('PH');
 });
 
+it('fails closed when x-legal enforcement is required but the package is unavailable', function (): void {
+    $maker = actingAsTestUser();
+    grantCommercialCapability($maker, CommercialOperatorCapability::ManageOfferings);
+    config()->set('x-change.commercial.legal.enforcement', 'required');
+
+    expect(fn () => app(ManageCommercialOffering::class)->createDraft(
+        $maker,
+        'pay_code',
+        commercialOfferingVersion(1, now()->toIso8601String()),
+    ))->toThrow(DomainException::class, 'x-legal is required');
+
+    expect(CommercialOffering::query()->count())->toBe(0);
+});
+
 it('publishes an immutable offering through distinct maker and checker authority', function (): void {
     $maker = actingAsTestUser();
     $checker = actingAsTestUser();

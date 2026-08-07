@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Commercial;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\XChange\Contracts\CommercialLegalTraceResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
@@ -17,6 +18,7 @@ final class ManageCommercialOffering
 {
     public function __construct(
         private readonly CommercialOperatorAuthorityContract $authority,
+        private readonly CommercialLegalTraceResolverContract $legalTrace,
     ) {}
 
     public function createDraft(
@@ -25,6 +27,7 @@ final class ManageCommercialOffering
         CommercialOfferingData $offering,
     ): CommercialOffering {
         $this->authorize($maker, CommercialOperatorCapability::ManageOfferings);
+        $offering = $this->legalTrace->forPublication($offering);
 
         return DB::transaction(function () use ($maker, $profile, $offering): CommercialOffering {
             $latestVersion = (int) CommercialOffering::query()

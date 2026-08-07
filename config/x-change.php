@@ -1134,6 +1134,9 @@ return [
         'offerings' => [
             'use_published' => (bool) env('XCHANGE_COMMERCIAL_USE_PUBLISHED_OFFERINGS', false),
         ],
+        'legal' => [
+            'enforcement' => env('XCHANGE_COMMERCIAL_LEGAL_ENFORCEMENT', 'advisory'),
+        ],
         'attribution_policy' => [
             'reference' => 'commercial-attribution:pay-code',
             'version' => 1,
