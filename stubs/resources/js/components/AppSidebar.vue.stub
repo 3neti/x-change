@@ -12,7 +12,7 @@ import {
     UsersRound,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
-import AppLogo from '@/components/AppLogo.vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
     Sidebar,
@@ -150,7 +150,14 @@ const { isCurrentUrl } = useCurrentUrl();
                             :href="dashboard()"
                             aria-label="Open Cockpit overview"
                         >
-                            <AppLogo />
+                            <AppLogoIcon class-name="h-8 w-auto shrink-0" />
+                            <span
+                                class="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"
+                            >
+                                <span class="block truncate font-semibold">
+                                    X-Change
+                                </span>
+                            </span>
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>

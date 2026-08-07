@@ -53,18 +53,9 @@ const logoSrc = computed(() => {
 <style scoped>
 .x-change-app-logo-icon {
     display: block;
-    height: 3.5rem;
-    max-height: 3.5rem;
     width: auto;
-    max-width: 8rem;
+    max-height: 100%;
+    max-width: 100%;
     object-fit: contain;
-}
-
-@media (min-width: 640px) {
-    .x-change-app-logo-icon {
-        height: 4rem;
-        max-height: 4rem;
-        max-width: 9rem;
-    }
 }
 </style>
