@@ -423,6 +423,9 @@ it('refurbishes the same pay code with an immutable corrected destination and se
     expect($revision->account_number_ciphertext)->toBe('09173011987')
         ->and($revision->mobile_ciphertext)->toBe('09173011987')
         ->and($revision->account_number_masked)->toBe('*******1987')
+        ->and(data_get($revision->validation_metadata, 'institution_key'))->toBe('gcash')
+        ->and(data_get($revision->validation_metadata, 'institution_name'))->toBe('GCash')
+        ->and(data_get($revision->validation_metadata, 'settlement_rail'))->toBe('INSTAPAY')
         ->and(DB::table('x_change_payout_destination_revisions')
             ->value('account_number_ciphertext'))->not->toContain('09173011987')
         ->and((string) DB::table('disbursement_reconciliations')
@@ -691,6 +694,19 @@ it('blocks an invalid corrected wallet destination before a provider call', func
     ))->toThrow(
         ValidationException::class,
         'This wallet requires an 11-digit Philippine mobile account beginning with 09.',
+    );
+
+    $provider->assertDisburseCalledTimes(1);
+    expect(PayoutDestinationRevision::query()->count())->toBe(0);
+
+    expect(fn () => app(RefurbishRejectedPayCodePayout::class)->handle(
+        voucher: $voucher,
+        requestedBy: $issuer,
+        bankCode: 'NOT-A-SUPPORTED-INSTITUTION',
+        accountNumber: '143810077254',
+    ))->toThrow(
+        ValidationException::class,
+        'Choose a supported bank or wallet from the institution list.',
     );
 
     $provider->assertDisburseCalledTimes(1);

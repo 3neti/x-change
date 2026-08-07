@@ -73,9 +73,9 @@ steps:
   # ALWAYS SHOWN (no condition) - Collects payment details
   # This is the primary step where users provide their disbursement info
   #
-  # Auto-sync feature:
-  #   When settlement_rail = INSTAPAY, mobile number auto-copies to account_number
-  #   Debounce: 1500ms (waits 1.5s after typing stops before syncing)
+  # Destination safety:
+  #   Contact mobile and payout account are independent fields.
+  #   InstaPay does not imply that an account number is a mobile number.
   #
   # Field variants:
   #   - amount: readonly-badge (display as summary badge)
@@ -87,14 +87,14 @@ steps:
     title: "Disbursement Details"                         # Page title
     description: "Redeeming voucher {{ code }} from {{ owner_name }}"  # Subtitle
     config:
-      auto_sync:                                         # Auto-copy mobile → account_number
-        enabled: true
-        source_field: "mobile"                           # Source: mobile number
-        target_field: "account_number"                   # Target: account number
-        condition_field: "settlement_rail"               # Only if INSTAPAY
+      auto_sync:                                         # Explicitly disabled payout-field copying
+        enabled: false
+        source_field: "mobile"
+        target_field: "account_number"
+        condition_field: "settlement_rail"
         condition_values:
-          - "INSTAPAY"                                   # INSTAPAY uses mobile as account
-        debounce_ms: 1500                                # Wait 1.5s after typing stops
+          - "INSTAPAY"
+        debounce_ms: 1500
     fields:
       # Summary Fields (readonly, display context)
       # -------------------------------------------
@@ -116,7 +116,7 @@ steps:
       # ------------------------------
       # TODO/KNOWN ISSUE: Currently hardcoded to INSTAPAY
       # Future: Add {{ settlement_rail }} variable to driver context from voucher.instructions.cash.settlement_rail
-      # Workaround: Hidden field with default value (ensures auto-sync condition works)
+      # Workaround: Hidden field with default value until the rail is instruction-driven.
       # See: docs/guides/features/form-flow/INTEGRATION.md#known-limitations
       - name: "settlement_rail"
         type: "hidden"

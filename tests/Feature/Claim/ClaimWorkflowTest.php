@@ -58,7 +58,7 @@ it('removes destination collection from a campaign officer authorization workflo
     ]);
 
     $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
-    $instructions = (new FormFlowClaimWorkflowMutator)->apply(
+    $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
         FormFlowInstructionsData::from([
             'reference_id' => 'claim-workflow-01',
             'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-01'],
@@ -126,7 +126,7 @@ it('compiles onboarding account provisioning without payout fields or route gues
     ]);
 
     $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
-    $instructions = (new FormFlowClaimWorkflowMutator)->apply(
+    $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
         FormFlowInstructionsData::from([
             'reference_id' => 'claim-workflow-onboarding-01',
             'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-onboarding-01'],
@@ -194,7 +194,7 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
     $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn(['instructions' => []]);
 
     $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
-    $instructions = (new FormFlowClaimWorkflowMutator)->apply(
+    $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
         FormFlowInstructionsData::from([
             'reference_id' => 'claim-workflow-02',
             'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-02'],
@@ -217,6 +217,8 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
 
     $walletStep = $instructions->toArray()['steps'][0]['config'];
     $fieldNames = array_column($walletStep['fields'], 'name');
+    $bankField = collect($walletStep['fields'])->firstWhere('name', 'bank_code');
+    $pnb = collect($bankField['institution_options'])->firstWhere('key', 'pnb');
 
     expect($workflow->key)->toBe('disbursement.v1')
         ->and($workflow->requires_destination)->toBeTrue()
@@ -227,5 +229,10 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         ->and($walletStep['ui_layout']['density'])->toBe('compact')
         ->and($walletStep['ui_layout']['capture_surface'])->toBe('edge_to_edge')
         ->and($walletStep['ui_layout']['minimize_scroll'])->toBeTrue()
-        ->and($fieldNames)->toBe(['amount', 'settlement_rail', 'mobile', 'bank_code', 'account_number']);
+        ->and($walletStep['auto_sync']['enabled'])->toBeFalse()
+        ->and($fieldNames)->toBe(['amount', 'settlement_rail', 'mobile', 'bank_code', 'account_number'])
+        ->and($bankField['help_text'])->toBe('Choose the receiving bank or wallet by name.')
+        ->and($pnb['name'])->toBe('Philippine National Bank')
+        ->and($pnb['value'])->toBe('PNBMPHMMTOD')
+        ->and($pnb)->not->toHaveKey('code');
 });

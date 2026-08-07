@@ -308,16 +308,16 @@
         },
         {
             "name": "3neti/form-flow",
-            "version": "v1.9.0",
+            "version": "v1.9.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-flow.git",
-                "reference": "4d0b2de37ddd60e3566b1d8964bbbbda983b741e"
+                "reference": "eecb9ff184ac94b172888bdc22590a44dedeb171"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-flow/zipball/4d0b2de37ddd60e3566b1d8964bbbbda983b741e",
-                "reference": "4d0b2de37ddd60e3566b1d8964bbbbda983b741e",
+                "url": "https://api.github.com/repos/3neti/form-flow/zipball/eecb9ff184ac94b172888bdc22590a44dedeb171",
+                "reference": "eecb9ff184ac94b172888bdc22590a44dedeb171",
                 "shasum": ""
             },
             "require": {
@@ -375,9 +375,9 @@
             ],
             "support": {
                 "issues": "https://github.com/3neti/form-flow/issues",
-                "source": "https://github.com/3neti/form-flow/tree/v1.9.0"
+                "source": "https://github.com/3neti/form-flow/tree/v1.9.1"
             },
-            "time": "2026-08-07T02:42:24+00:00"
+            "time": "2026-08-07T11:09:03+00:00"
         },
         {
             "name": "3neti/form-handler-kyc",
@@ -1022,16 +1022,16 @@
         },
         {
             "name": "3neti/money-issuer",
-            "version": "v1.1.0",
+            "version": "v1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/money-issuer.git",
-                "reference": "b60079522eda290635daa04f4fee990ce589f8c7"
+                "reference": "6da03625a2cfe1822ec8ec02711429f13d737f9a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/money-issuer/zipball/b60079522eda290635daa04f4fee990ce589f8c7",
-                "reference": "b60079522eda290635daa04f4fee990ce589f8c7",
+                "url": "https://api.github.com/repos/3neti/money-issuer/zipball/6da03625a2cfe1822ec8ec02711429f13d737f9a",
+                "reference": "6da03625a2cfe1822ec8ec02711429f13d737f9a",
                 "shasum": ""
             },
             "require": {
@@ -1074,9 +1074,9 @@
             "description": "Electronic Money Issuer",
             "support": {
                 "issues": "https://github.com/3neti/money-issuer/issues",
-                "source": "https://github.com/3neti/money-issuer/tree/v1.1.0"
+                "source": "https://github.com/3neti/money-issuer/tree/v1.2.0"
             },
-            "time": "2026-07-31T02:46:18+00:00"
+            "time": "2026-08-07T10:57:25+00:00"
         },
         {
             "name": "3neti/onboarding",

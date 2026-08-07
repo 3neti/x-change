@@ -6,9 +6,14 @@ namespace LBHurtado\XChange\Services\Claim;
 
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
+use LBHurtado\XChange\Services\MoneyIssuer\MoneyIssuerOptionPresenter;
 
 final class FormFlowClaimWorkflowMutator
 {
+    public function __construct(
+        private readonly MoneyIssuerOptionPresenter $moneyIssuers,
+    ) {}
+
     public function apply(
         FormFlowInstructionsData $instructions,
         ClaimWorkflowDescriptorData $workflow,
@@ -82,8 +87,14 @@ final class FormFlowClaimWorkflowMutator
         );
         $step['config']['ui_layout'] = config('x-change.claim.experience_ui.layout', []);
         $step['config']['auto_sync'] = ['enabled' => false];
+        $rail = $this->settlementRail((array) ($step['config']['fields'] ?? []));
         $step['config']['fields'] = array_values(array_map(
-            fn (array $field): array => $this->applyToField($field, $workflow, $authenticatedMobile),
+            fn (array $field): array => $this->applyToField(
+                $field,
+                $workflow,
+                $authenticatedMobile,
+                $rail,
+            ),
             array_filter(
                 (array) ($step['config']['fields'] ?? []),
                 fn (array $field): bool => $this->shouldKeepField($field, $workflow),
@@ -134,6 +145,7 @@ final class FormFlowClaimWorkflowMutator
         array $field,
         ClaimWorkflowDescriptorData $workflow,
         ?string $authenticatedMobile,
+        string $rail,
     ): array {
         if (in_array($field['name'] ?? null, $workflow->required_claim_fields, true)) {
             $field['required'] = true;
@@ -149,7 +161,27 @@ final class FormFlowClaimWorkflowMutator
             $field['persist'] = false;
         }
 
+        if (($field['name'] ?? null) === 'bank_code') {
+            $field['institution_options'] = $this->moneyIssuers->forRail($rail);
+            $field['help_text'] = 'Choose the receiving bank or wallet by name.';
+            $field['persist'] = false;
+        }
+
         return $field;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $fields
+     */
+    private function settlementRail(array $fields): string
+    {
+        foreach ($fields as $field) {
+            if (($field['name'] ?? null) === 'settlement_rail') {
+                return (string) ($field['default'] ?? 'INSTAPAY');
+            }
+        }
+
+        return 'INSTAPAY';
     }
 
     /**

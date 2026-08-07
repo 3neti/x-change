@@ -13,6 +13,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
 use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessInspector;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingAttestation;
+use LBHurtado\XChange\Services\MoneyIssuer\MoneyIssuerOptionPresenter;
 use Throwable;
 
 class CockpitReadOnlyPageProps
@@ -22,6 +23,7 @@ class CockpitReadOnlyPageProps
         private readonly CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
         private readonly CockpitSystemReadinessInspector $systemReadiness,
         private readonly CommercialAccountingAttestation $commercialAccounting,
+        private readonly MoneyIssuerOptionPresenter $moneyIssuers,
     ) {}
 
     /**
@@ -86,8 +88,14 @@ class CockpitReadOnlyPageProps
         ?string $campaignRecipientId = null,
         ?string $campaignSource = null,
     ): array {
+        $props = $this->toArray($code);
+        $redemption = data_get($props, 'read_model.voucher.summary.redemption');
+
         return [
-            ...$this->toArray($code),
+            ...$props,
+            'payout_institutions' => data_get($redemption, 'can_correct_destination') === true
+                ? $this->moneyIssuers->forRail((string) data_get($redemption, 'settlement_rail', 'INSTAPAY'))
+                : [],
             'campaign_navigation_context' => $this->campaignNavigationContext(
                 campaignPlanningKey: $campaignPlanningKey,
                 campaignExecutionId: $campaignExecutionId,

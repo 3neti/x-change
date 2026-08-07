@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Data\PayoutResultData;
+use LBHurtado\EmiCore\Enums\SettlementRail;
+use LBHurtado\MoneyIssuer\Contracts\MoneyIssuerDirectoryContract;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
@@ -30,6 +32,7 @@ final readonly class RefurbishRejectedPayCodePayout
         private PayoutProvider $payouts,
         private DisbursementStatusResolverContract $statuses,
         private PayCodePayoutCorrectionJournal $journal,
+        private MoneyIssuerDirectoryContract $institutions,
     ) {}
 
     /**
@@ -56,6 +59,17 @@ final readonly class RefurbishRejectedPayCodePayout
             $this->assertAuthorized($voucher, $requestedBy);
             [$claim, $rejection] = $this->recoveryContext($voucher);
             $rail = (string) $rejection->settlement_rail;
+            $settlementRail = SettlementRail::tryFrom(strtoupper($rail));
+            $institution = $settlementRail !== null
+                ? $this->institutions->findInstitutionByBankCode($bankCode, $settlementRail)
+                : null;
+
+            if ($institution === null) {
+                throw ValidationException::withMessages([
+                    'bank_code' => 'Choose a supported bank or wallet from the institution list.',
+                ]);
+            }
+
             $contactMobile = $this->contactMobile($mobile, $claim);
             $validation = $this->destinations->validate(
                 $bankCode,
@@ -75,6 +89,7 @@ final readonly class RefurbishRejectedPayCodePayout
                     $claim,
                     $rejection,
                     $requestedBy,
+                    $institution,
                     $validation,
                     $voucher,
                 ): array {
@@ -95,6 +110,9 @@ final readonly class RefurbishRejectedPayCodePayout
                             : null,
                         'validation_status' => $validation->status,
                         'validation_metadata' => [
+                            'institution_key' => $institution->key,
+                            'institution_name' => $institution->name,
+                            'settlement_rail' => $rejection->settlement_rail,
                             'provider_verified' => $validation->providerVerified,
                             'message' => $validation->message,
                             'checks' => $validation->checks,
