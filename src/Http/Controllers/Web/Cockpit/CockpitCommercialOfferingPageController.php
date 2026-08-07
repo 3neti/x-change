@@ -51,6 +51,22 @@ final class CockpitCommercialOfferingPageController extends Controller
                     $operator,
                     CommercialOperatorCapability::ApproveOfferings,
                 ),
+                'can_reconcile_provider_costs' => $this->authority->allows(
+                    $operator,
+                    CommercialOperatorCapability::ReconcileProviderCosts,
+                ),
+                'can_request_commission_payouts' => $this->authority->allows(
+                    $operator,
+                    CommercialOperatorCapability::RequestCommissionPayouts,
+                ),
+                'can_approve_commission_payouts' => $this->authority->allows(
+                    $operator,
+                    CommercialOperatorCapability::ApproveCommissionPayouts,
+                ),
+                'can_execute_commission_payouts' => $this->authority->allows(
+                    $operator,
+                    CommercialOperatorCapability::ExecuteCommissionPayouts,
+                ),
                 'pending' => CommercialOffering::query()
                     ->where('profile', $profile)
                     ->where('status', CommercialOfferingStatus::PendingApproval->value)

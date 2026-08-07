@@ -88,6 +88,13 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 safeExample: 'advisory',
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_COMMERCIAL_LIVE_PROVIDER_CALLS_ENABLED',
+                description: 'Permit independently approved Commercial Operations to submit real provider payouts.',
+                category: 'Treasury',
+                configPath: 'x-change.commercial.operations.live_provider_calls_enabled',
+                safeExample: 'false',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_REDEMPTION_FEEDBACK_QUEUE',
                 description: 'Dedicated queue for settlement feedback delivery.',
                 category: 'Delivery',

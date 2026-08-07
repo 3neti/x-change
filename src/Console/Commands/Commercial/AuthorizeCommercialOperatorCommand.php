@@ -69,28 +69,44 @@ final class AuthorizeCommercialOperatorCommand extends Command
             return self::FAILURE;
         }
 
-        $separatedCapabilities = [
-            CommercialOperatorCapability::ManageOfferings->value,
-            CommercialOperatorCapability::ApproveOfferings->value,
+        $separatedCapabilityPairs = [
+            [
+                CommercialOperatorCapability::ManageOfferings->value,
+                CommercialOperatorCapability::ApproveOfferings->value,
+            ],
+            [
+                CommercialOperatorCapability::RequestCommissionPayouts->value,
+                CommercialOperatorCapability::ApproveCommissionPayouts->value,
+            ],
         ];
 
-        if (count(array_intersect($capabilities, $separatedCapabilities)) === 2) {
-            $this->error('Commercial maker and checker authority must belong to different operators.');
+        foreach ($separatedCapabilityPairs as $pair) {
+            if (count(array_intersect($capabilities, $pair)) === 2) {
+                $this->error('Commercial maker and checker authority must belong to different operators.');
 
-            return self::FAILURE;
+                return self::FAILURE;
+            }
         }
 
-        $oppositeCapability = in_array(CommercialOperatorCapability::ManageOfferings->value, $capabilities, true)
-            ? CommercialOperatorCapability::ApproveOfferings->value
-            : (in_array(CommercialOperatorCapability::ApproveOfferings->value, $capabilities, true)
-                ? CommercialOperatorCapability::ManageOfferings->value
-                : null);
+        $oppositeCapabilities = collect($separatedCapabilityPairs)
+            ->flatMap(function (array $pair) use ($capabilities): array {
+                if (in_array($pair[0], $capabilities, true)) {
+                    return [$pair[1]];
+                }
 
-        if ($oppositeCapability !== null
+                if (in_array($pair[1], $capabilities, true)) {
+                    return [$pair[0]];
+                }
+
+                return [];
+            })
+            ->all();
+
+        if ($oppositeCapabilities !== []
             && CommercialOperatorAuthorization::query()
                 ->where('operator_type', $operator->getMorphClass())
                 ->where('operator_id', $operator->getKey())
-                ->where('capability', $oppositeCapability)
+                ->whereIn('capability', $oppositeCapabilities)
                 ->currentlyValid()
                 ->exists()) {
             $this->error('Commercial maker and checker authority must belong to different operators.');

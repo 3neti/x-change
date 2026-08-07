@@ -82,5 +82,14 @@ it('rejects the system principal and combined maker checker authority', function
             ],
             '--authorization-reference' => 'invalid-combined-role',
         ]))->toBe(1)
+        ->and(Artisan::call('x-change:commercial:authorize-operator', [
+            'operator' => $operator->email,
+            '--column' => 'email',
+            '--capability' => [
+                CommercialOperatorCapability::RequestCommissionPayouts->value,
+                CommercialOperatorCapability::ApproveCommissionPayouts->value,
+            ],
+            '--authorization-reference' => 'invalid-combined-payout-role',
+        ]))->toBe(1)
         ->and(CommercialOperatorAuthorization::query()->count())->toBe(0);
 });

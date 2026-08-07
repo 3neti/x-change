@@ -8,6 +8,7 @@ import {
   Check,
   Coins,
   GitBranch,
+  HandCoins,
   Landmark,
   Percent,
   Scale,
@@ -114,12 +115,37 @@ type CommercialControls = {
     settled_count: number;
     settled_minor: number;
     variance_minor: number;
+    outstanding_minor: number;
+    recent_batches: Array<{
+      reference: string;
+      provider: string;
+      connection_reference: string;
+      currency: string;
+      expected_amount_minor: number;
+      observed_amount_minor: number;
+      variance_amount_minor: number;
+      status: string;
+      observed_at: string | null;
+    }>;
   };
   commissions: {
     earned_minor: number;
     requested_minor: number;
     settled_minor: number;
     open_count: number;
+    available_minor: number;
+    recent_batches: Array<{
+      reference: string;
+      partner_reference: string;
+      provider: string;
+      connection_reference: string;
+      destination_summary: string;
+      amount_minor: number;
+      currency: string;
+      status: string;
+      requested_at: string | null;
+      settled_at: string | null;
+    }>;
   };
   recent_sales: Array<{
     reference: string;
@@ -166,6 +192,10 @@ const props = defineProps<{
     source: "installation_baseline" | "maker_checker_revision" | "unavailable";
     can_manage: boolean;
     can_approve: boolean;
+    can_reconcile_provider_costs?: boolean;
+    can_request_commission_payouts?: boolean;
+    can_approve_commission_payouts?: boolean;
+    can_execute_commission_payouts?: boolean;
     pending: PendingOffering[];
     published: PublishedOffering[];
     governance: {
@@ -182,9 +212,9 @@ const props = defineProps<{
   };
 }>();
 
-const activeTab = ref<"price-list" | "waterfall" | "activity" | "policy">(
-  "price-list",
-);
+const activeTab = ref<
+  "price-list" | "waterfall" | "activity" | "operations" | "policy"
+>("price-list");
 const approvalReference = ref("");
 const approvingId = ref<number | null>(null);
 const activationReference = ref("");
@@ -460,6 +490,18 @@ function activate(id: number): void {
               @click="activeTab = 'activity'"
             >
               <BarChart3 class="size-4" /> Activity
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold"
+              :class="
+                activeTab === 'operations'
+                  ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-white'
+                  : 'text-slate-500'
+              "
+              @click="activeTab = 'operations'"
+            >
+              <HandCoins class="size-4" /> Operations
             </button>
             <button
               type="button"
@@ -851,6 +893,99 @@ function activate(id: number): void {
               No accepted Commercial Sales yet.
             </p>
           </div>
+        </div>
+
+        <div v-else-if="activeTab === 'operations'" class="space-y-5 p-5">
+          <div class="grid gap-3 md:grid-cols-2">
+            <article
+              class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+            >
+              <p class="text-xs font-semibold text-slate-500">
+                Provider Cost Payable
+              </p>
+              <p class="mt-1 text-xl font-semibold">
+                {{ money(commercialOffering.controls.provider_costs.outstanding_minor) }}
+              </p>
+              <p class="mt-1 text-xs text-slate-500">
+                Settles only against exact provider statement or invoice evidence.
+              </p>
+            </article>
+            <article
+              class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+            >
+              <p class="text-xs font-semibold text-slate-500">
+                Commission Available
+              </p>
+              <p class="mt-1 text-xl font-semibold">
+                {{ money(commercialOffering.controls.commissions.available_minor) }}
+              </p>
+              <p class="mt-1 text-xs text-slate-500">
+                Earned allocations not yet included in a controlled payout.
+              </p>
+            </article>
+          </div>
+
+          <section class="space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold">Provider Cost Evidence</h3>
+                <p class="mt-0.5 text-xs text-slate-500">
+                  Exact batches settle; differences remain under review.
+                </p>
+              </div>
+              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">
+                {{ commercialOffering.can_reconcile_provider_costs ? "Operator Enabled" : "Read Only" }}
+              </span>
+            </div>
+            <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+              <div
+                v-for="batch in commercialOffering.controls.provider_costs.recent_batches"
+                :key="batch.reference"
+                class="grid gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center dark:border-slate-800"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold">{{ batch.reference }}</p>
+                  <p class="text-xs text-slate-500">{{ label(batch.provider) }} · {{ batch.connection_reference }}</p>
+                </div>
+                <p class="text-sm font-semibold">{{ money(batch.observed_amount_minor, batch.currency) }}</p>
+                <span class="w-fit rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800">{{ label(batch.status) }}</span>
+              </div>
+              <p v-if="!commercialOffering.controls.provider_costs.recent_batches.length" class="px-4 py-8 text-center text-sm text-slate-500">
+                No provider cost evidence recorded.
+              </p>
+            </div>
+          </section>
+
+          <section class="space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold">Commission Payouts</h3>
+                <p class="mt-0.5 text-xs text-slate-500">
+                  Aggregated by partner and period with independent approval.
+                </p>
+              </div>
+              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">
+                {{ commercialOffering.can_execute_commission_payouts ? "Execution Enabled" : "Controlled" }}
+              </span>
+            </div>
+            <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+              <div
+                v-for="batch in commercialOffering.controls.commissions.recent_batches"
+                :key="batch.reference"
+                class="grid gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center dark:border-slate-800"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold">{{ batch.partner_reference }}</p>
+                  <p class="text-xs text-slate-500">{{ batch.destination_summary }} · {{ batch.reference }}</p>
+                </div>
+                <p class="text-sm font-semibold">{{ money(batch.amount_minor, batch.currency) }}</p>
+                <span class="w-fit rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800">{{ label(batch.status) }}</span>
+              </div>
+              <p v-if="!commercialOffering.controls.commissions.recent_batches.length" class="px-4 py-8 text-center text-sm text-slate-500">
+                No commission payout requested.
+              </p>
+            </div>
+          </section>
         </div>
 
         <div v-else class="grid gap-4 p-5 lg:grid-cols-2">

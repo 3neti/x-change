@@ -64,9 +64,14 @@ use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\CloudRecipeCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ApprovePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\RequestPartnerCommissionPayoutBatchCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\SubmitPartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
 use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
@@ -1328,8 +1333,13 @@ class XChangeServiceProvider extends ServiceProvider
                 BackfillDisbursementSettlementJournalCommand::class,
                 AttestCommercialAccountingCommand::class,
                 AuthorizeCommercialOperatorCommand::class,
+                ApprovePartnerCommissionPayoutBatchCommand::class,
                 CommercialGovernanceStatusCommand::class,
                 ProvisionCommercialBaselinesCommand::class,
+                ReconcilePartnerCommissionPayoutBatchCommand::class,
+                RecordProviderCostBatchCommand::class,
+                RequestPartnerCommissionPayoutBatchCommand::class,
+                SubmitPartnerCommissionPayoutBatchCommand::class,
                 BackfillCommercialAccountingJournalCommand::class,
                 BackfillStandingFundingPositionsCommand::class,
                 CapitalizeTreasuryOpeningBalanceCommand::class,

@@ -104,12 +104,28 @@ const controls = {
     settled_count: 1,
     settled_minor: 1000,
     variance_minor: 0,
+    outstanding_minor: 200,
+    recent_batches: [
+      {
+        reference: "provider-cost:2026-08",
+        provider: "netbank",
+        connection_reference: "netbank-primary",
+        currency: "PHP",
+        expected_amount_minor: 1000,
+        observed_amount_minor: 900,
+        variance_amount_minor: -100,
+        status: "review_required",
+        observed_at: "2026-08-08T00:00:00+00:00",
+      },
+    ],
   },
   commissions: {
     earned_minor: 100,
     requested_minor: 0,
     settled_minor: 0,
     open_count: 0,
+    available_minor: 100,
+    recent_batches: [],
   },
   recent_sales: [],
   policy: {
@@ -149,6 +165,10 @@ describe("Cockpit Commercial Offering administration", () => {
           source: "installation_baseline",
           can_manage: true,
           can_approve: false,
+          can_reconcile_provider_costs: true,
+          can_request_commission_payouts: true,
+          can_approve_commission_payouts: false,
+          can_execute_commission_payouts: false,
           pending: [],
           published: [],
           governance: {
@@ -194,6 +214,18 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("Reconciled");
     expect(wrapper.text()).toContain("Allocation History");
     expect(wrapper.text()).toContain("Reversed sales are excluded");
+
+    const operationsButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("Operations"));
+
+    expect(operationsButton).toBeDefined();
+    await operationsButton!.trigger("click");
+
+    expect(wrapper.text()).toContain("Provider Cost Payable");
+    expect(wrapper.text()).toContain("Commission Available");
+    expect(wrapper.text()).toContain("Provider Cost Evidence");
+    expect(wrapper.text()).toContain("Review Required");
   });
 
   it("shows pending publication as a checker action without exposing edits", () => {
