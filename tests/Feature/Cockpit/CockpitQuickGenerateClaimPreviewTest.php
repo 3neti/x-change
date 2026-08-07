@@ -277,7 +277,11 @@ it('serves claim preview manifests and frames only to their owner', function ():
         ->assertJsonPath('props.viewport.profile', 'mobile_claim_v1')
         ->assertJsonPath('props.viewport.width', 360)
         ->assertJsonPath('props.viewport.height', 720)
-        ->assertJsonPath('props.step.key', 'claim-entry');
+        ->assertJsonPath('props.step.key', 'claim-entry')
+        ->assertJsonPath(
+            'props.step.frame.url',
+            "/x/cockpit/quick-generate/claim-previews/{$artifact->reference}/frames/claim-entry",
+        );
 
     expect($stepResponse->headers->get('cache-control'))
         ->toContain('no-store')

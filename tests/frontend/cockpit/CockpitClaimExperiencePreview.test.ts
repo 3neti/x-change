@@ -3,8 +3,13 @@ import { describe, expect, it } from 'vitest';
 import CockpitClaimExperiencePreview from '../../../resources/js/cockpit/components/CockpitClaimExperiencePreview.vue';
 
 describe('Cockpit claim experience preview', () => {
-    it('renders and navigates the real claim screens when browser capture is unavailable', async () => {
+    it('renders the claim journey inside its canonical isolated mobile viewport', async () => {
         const wrapper = mount(CockpitClaimExperiencePreview, {
+            global: {
+                stubs: {
+                    Teleport: true,
+                },
+            },
             props: {
                 status: 'ready',
                 processing: false,
@@ -26,6 +31,11 @@ describe('Cockpit claim experience preview', () => {
                         claim_submission: false,
                     },
                     journey: {
+                        viewport: {
+                            profile: 'mobile_claim_v1',
+                            width: 360,
+                            height: 720,
+                        },
                         step_count: 2,
                         steps: [
                             {
@@ -37,6 +47,8 @@ describe('Cockpit claim experience preview', () => {
                                 actor: 'redeemer',
                                 render_kind: 'live_screen',
                                 status: 'rendered',
+                                preview_url:
+                                    '/x/cockpit/quick-generate/claim-previews/preview-storyboard/steps/claim-entry',
                                 frame: null,
                                 screen: {
                                     kind: 'claim_entry',
@@ -64,6 +76,8 @@ describe('Cockpit claim experience preview', () => {
                                 actor: 'redeemer',
                                 render_kind: 'live_screen',
                                 status: 'rendered',
+                                preview_url:
+                                    '/x/cockpit/quick-generate/claim-previews/preview-storyboard/steps/confirmation',
                                 frame: null,
                                 screen: {
                                     kind: 'confirmation',
@@ -82,17 +96,23 @@ describe('Cockpit claim experience preview', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Claim Pay Code');
-        expect(wrapper.text()).toContain('PREVIEW');
-        expect(wrapper.text()).toContain('Continue');
-        expect(
-            wrapper.find('[data-testid="cockpit-claim-live-screen"]').exists(),
-        ).toBe(true);
+        const iframe = wrapper.get(
+            '[data-testid="cockpit-claim-preview-iframe"]',
+        );
+
+        expect(iframe.attributes('src')).toContain(
+            '/steps/claim-entry',
+        );
+        expect(iframe.attributes('width')).toBe('360');
+        expect(iframe.attributes('height')).toBe('720');
+        expect(iframe.attributes('sandbox')).toBe(
+            'allow-scripts allow-same-origin',
+        );
         expect(
             wrapper
-                .find('[data-testid="cockpit-claim-live-screen"]')
-                .attributes('data-screen-kind'),
-        ).toBe('claim_entry');
+                .get('[data-testid="cockpit-claim-preview-viewport"]')
+                .attributes('data-viewport-profile'),
+        ).toBe('mobile_claim_v1');
         expect(wrapper.text()).not.toContain('Preview unavailable');
 
         await wrapper
@@ -101,9 +121,124 @@ describe('Cockpit claim experience preview', () => {
 
         expect(
             wrapper
-                .get('[data-testid="cockpit-claim-live-screen"]')
-                .attributes('data-screen-kind'),
-        ).toBe('confirmation');
-        expect(wrapper.text()).toContain('Confirm & Claim');
+                .get('[data-testid="cockpit-claim-preview-iframe"]')
+                .attributes('src'),
+        ).toContain('/steps/confirmation');
+    });
+
+    it('opens a large synchronized walkthrough without changing the active step', async () => {
+        const wrapper = mount(CockpitClaimExperiencePreview, {
+            attachTo: document.body,
+            global: {
+                stubs: {
+                    Teleport: true,
+                },
+            },
+            props: {
+                status: 'ready',
+                processing: false,
+                message: 'Ready.',
+                canGenerate: true,
+                manifest: {
+                    schema: 'x-change.claim-experience-preview.manifest.v1',
+                    status: 'ready',
+                    reference: 'preview-modal',
+                    fingerprint: 'modal-fingerprint',
+                    generated_at: '2026-08-07T00:00:00Z',
+                    cache_hit: false,
+                    safety: {
+                        preview_only: true,
+                        interactive: false,
+                        money_movement: false,
+                        provider_calls: false,
+                        claim_submission: false,
+                    },
+                    journey: {
+                        viewport: {
+                            profile: 'mobile_claim_v1',
+                            width: 360,
+                            height: 720,
+                        },
+                        step_count: 2,
+                        steps: [
+                            {
+                                sequence: 1,
+                                key: 'claim-entry',
+                                phase: 'entry',
+                                title: 'Claim entry',
+                                description: 'Open the code.',
+                                actor: 'redeemer',
+                                render_kind: 'live_screen',
+                                status: 'rendered',
+                                preview_url: '/preview/steps/claim-entry',
+                                frame: null,
+                                screen: { kind: 'claim_entry' },
+                            },
+                            {
+                                sequence: 2,
+                                key: 'confirmation',
+                                phase: 'review',
+                                title: 'Confirm claim',
+                                description: 'Confirm it.',
+                                actor: 'redeemer',
+                                render_kind: 'live_screen',
+                                status: 'rendered',
+                                preview_url: '/preview/steps/confirmation',
+                                frame: null,
+                                screen: { kind: 'confirmation' },
+                            },
+                        ],
+                    },
+                    exports: {},
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-experience-next"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-claim-experience-expand"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-experience-dialog"]')
+                .attributes('aria-modal'),
+        ).toBe('true');
+        expect(wrapper.text()).toContain('Confirm claim');
+
+        const expandedViewport = wrapper.findAll(
+            '[data-testid="cockpit-claim-preview-viewport"]',
+        )[1];
+        expect(expandedViewport.attributes('data-presentation')).toBe(
+            'expanded',
+        );
+        expect(
+            expandedViewport
+                .get('[data-testid="cockpit-claim-preview-iframe"]')
+                .attributes('src'),
+        ).toBe('/preview/steps/confirmation');
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-experience-dialog-step-1"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .findAll('[data-testid="cockpit-claim-preview-iframe"]')[0]
+                .attributes('src'),
+        ).toBe('/preview/steps/claim-entry');
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-experience-dialog-close"]')
+            .trigger('click');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-experience-dialog"]')
+                .exists(),
+        ).toBe(false);
+
+        wrapper.unmount();
     });
 });
