@@ -24,6 +24,8 @@ Last updated: 2026-08-07
 19. Voucher and x-change repositories remain independently green and independently committed after every slice.
 20. No behavior change is silent. Public API, voucher, money movement, validation, and claim UX changes require explicit approval.
 21. An explicitly submitted claim destination is authoritative for the initial payout. Execution must reload that persisted destination after model refreshes and must fail closed before a provider call if it differs from the prepared claim audit record.
+22. `3neti/money-issuer` is the canonical institution directory for both initial claims and payout corrections. User interfaces select institutions by familiar name; rail-specific routing codes are internal execution data.
+23. Contact mobile and payout account are independent values. A settlement rail, including InstaPay, must never cause the contact mobile to replace or populate an account number implicitly.
 
 ## Slice 0 Interpretation
 

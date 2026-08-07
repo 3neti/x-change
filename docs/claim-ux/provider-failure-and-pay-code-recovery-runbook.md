@@ -53,6 +53,19 @@ fails closed before the provider adapter is called.
 Do not fall back to a Contact's remembered wallet or mobile-derived account when
 a claim contains an explicit bank destination.
 
+### Institution directory
+
+`3neti/money-issuer` owns the canonical bank and wallet directory, aliases,
+supported settlement rails, account labels, and provider routing codes.
+x-change projects that directory into both the initial claim form and the
+same-Pay-Code correction form. People choose a familiar institution name;
+provider codes remain an internal execution detail.
+
+The contact mobile and payout account are deliberately independent inputs.
+Selecting InstaPay must never copy the contact mobile into the account field.
+Wallet institutions may label their account identifier as a mobile number, but
+the claimant must still enter or confirm that destination explicitly.
+
 ### AQFR incident lesson
 
 On 2026-08-07, Pay Code `AQFR` captured PNB account `********7254`, but the
@@ -106,8 +119,10 @@ When the provider has final failed evidence:
 1. Record the failed provider transaction id and rejection reason.
 2. In Pay Code Detail, open **Claim & Evidence**. The page must say **Claim
    recorded · Payout rejected** and show the sanitized provider reason.
-3. Enter the corrected institution and destination. The original destination
-   is never prefilled or exposed.
+3. Choose the corrected institution by name and enter its destination. The
+   original destination is never prefilled or exposed. The selector and its
+   account label come from the same `money-issuer` directory used by the public
+   claim flow.
 4. x-change validates the institution, supported rail, and account format
    before a provider call. GCash and Maya wallet destinations must be 11-digit
    Philippine mobile accounts beginning with `09`.

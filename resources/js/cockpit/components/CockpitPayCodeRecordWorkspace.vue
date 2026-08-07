@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CockpitPayCodePayoutCorrectionController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodePayoutCorrectionController";
+import BankEMISelect from "@/components/financial/BankEMISelect.vue";
 import { Form } from "@inertiajs/vue3";
 import {
   Activity,
@@ -32,6 +33,7 @@ import {
 import { computed, ref } from "vue";
 import type {
   CockpitDependentReadModel,
+  CockpitMoneyIssuerOption,
   CockpitVoucherReadModel,
 } from "../types";
 
@@ -50,6 +52,7 @@ const props = defineProps<{
   journal?: CockpitDependentReadModel;
   feedback?: CockpitDependentReadModel;
   redemption?: Record<string, unknown> | null;
+  payoutInstitutions?: CockpitMoneyIssuerOption[];
   claimUrl?: string | null;
   distributionUrl: string;
   explorerUrl: string;
@@ -57,6 +60,8 @@ const props = defineProps<{
 
 const activeTab = ref<WorkspaceTab>("overview");
 const revealedEvidence = ref<Set<number>>(new Set());
+const correctedBankCode = ref("");
+const correctedAccountNumber = ref("");
 
 const overview = computed(() => record(props.voucher?.overview));
 const instructions = computed(() => record(props.voucher?.instructions));
@@ -130,6 +135,25 @@ const payoutRejected = computed(
 const canCorrectDestination = computed(
   () => redemption.value.can_correct_destination === true,
 );
+const selectedInstitution = computed(() =>
+  (props.payoutInstitutions ?? []).find(
+    (institution) => institution.value === correctedBankCode.value,
+  ),
+);
+const correctedAccountLabel = computed(
+  () => selectedInstitution.value?.account_label || "Account Number",
+);
+const correctionReview = computed(() => {
+  const ending = correctedAccountNumber.value.replace(/\s+/g, "").slice(-4);
+
+  if (!selectedInstitution.value) {
+    return "Choose the receiving institution.";
+  }
+
+  return ending === ""
+    ? `${selectedInstitution.value.name} · enter ${correctedAccountLabel.value.toLocaleLowerCase()}`
+    : `${selectedInstitution.value.name} · ••••${ending}`;
+});
 const rejectionReason = computed(
   () =>
     text(redemption.value.rejection_reason) ||
@@ -708,7 +732,7 @@ function number(value: unknown): number {
                 v-bind="CockpitPayCodePayoutCorrectionController.form({ code })"
                 reset-on-success
                 #default="{ errors, processing }"
-                class="mt-4 grid gap-3 border-t border-rose-200 pt-4 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,0.7fr)_minmax(12rem,1fr)_minmax(11rem,0.8fr)_auto] dark:border-rose-900/70"
+                class="mt-4 grid gap-3 border-t border-rose-200 pt-4 sm:grid-cols-2 xl:grid-cols-[minmax(13rem,0.9fr)_minmax(12rem,1fr)_minmax(11rem,0.8fr)_auto] dark:border-rose-900/70"
                 data-testid="pay-code-payout-correction-form"
               >
                 <label
@@ -716,10 +740,17 @@ function number(value: unknown): number {
                 >
                   Bank or Wallet
                   <input
+                    type="hidden"
                     name="bank_code"
-                    :value="text(redemption.bank_code)"
-                    autocomplete="off"
-                    class="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-rose-900"
+                    :value="correctedBankCode"
+                  />
+                  <BankEMISelect
+                    v-model="correctedBankCode"
+                    :settlement-rail="
+                      text(redemption.settlement_rail) || 'INSTAPAY'
+                    "
+                    :institutions="payoutInstitutions ?? []"
+                    :disabled="processing"
                   />
                   <span
                     v-if="errors.bank_code"
@@ -730,8 +761,9 @@ function number(value: unknown): number {
                 <label
                   class="grid gap-1 text-xs font-semibold text-slate-700 dark:text-slate-200"
                 >
-                  Correct Account Number
+                  Correct {{ correctedAccountLabel }}
                   <input
+                    v-model="correctedAccountNumber"
                     name="account_number"
                     inputmode="numeric"
                     autocomplete="off"
@@ -774,14 +806,23 @@ function number(value: unknown): number {
                       : "Correct & retry payout"
                   }}
                 </button>
-                <p
-                  class="text-[0.7rem] leading-5 text-rose-800 sm:col-span-2 xl:col-span-4 dark:text-rose-200"
-                >
-                  x-change checks the institution and account format before
-                  submission. When the provider has no account-inquiry service,
-                  the receiving institution still makes the final decision. The
-                  original claim and rejected attempt remain unchanged.
-                </p>
+                <div class="sm:col-span-2 xl:col-span-4">
+                  <p
+                    class="text-[0.7rem] font-semibold text-rose-900 dark:text-rose-100"
+                    data-testid="pay-code-payout-correction-review"
+                  >
+                    Review destination: {{ correctionReview }}
+                  </p>
+                  <p
+                    class="mt-1 text-[0.7rem] leading-5 text-rose-800 dark:text-rose-200"
+                  >
+                    x-change checks the institution and account format before
+                    submission. When the provider has no account-inquiry
+                    service, the receiving institution still makes the final
+                    decision. The original claim and rejected attempt remain
+                    unchanged.
+                  </p>
+                </div>
               </Form>
             </div>
           </div>

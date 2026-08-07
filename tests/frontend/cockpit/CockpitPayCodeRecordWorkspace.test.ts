@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
+import BankEMISelect from "../../../resources/js/components/x-change-shared-financial/BankEMISelect.vue";
 import CockpitPayCodeRecordWorkspace from "../../../resources/js/cockpit/components/CockpitPayCodeRecordWorkspace.vue";
 
 const voucher = {
@@ -275,6 +276,30 @@ describe("Cockpit Pay Code record workspace", () => {
           requires_recovery: true,
           can_correct_destination: true,
         },
+        payoutInstitutions: [
+          {
+            key: "gcash",
+            value: "GXCHPHM2XXX",
+            name: "GCash",
+            short_name: "GCash",
+            category: "wallet",
+            account_label: "GCash Mobile Number",
+            identifier_scheme: "ph_mobile",
+            aliases: ["G-Xchange"],
+            commonly_used: true,
+          },
+          {
+            key: "pnb",
+            value: "PNBMPHMMTOD",
+            name: "Philippine National Bank",
+            short_name: "PNB",
+            category: "bank",
+            account_label: "Account Number",
+            identifier_scheme: "account_number",
+            aliases: ["PNB"],
+            commonly_used: true,
+          },
+        ],
         distributionUrl: "/distribution",
         explorerUrl: "/pay-codes",
       },
@@ -305,6 +330,18 @@ describe("Cockpit Pay Code record workspace", () => {
         .get('[data-testid="pay-code-payout-correction-form"]')
         .attributes("action"),
     ).toBe("/x/cockpit/pay-codes/LM52/payout-corrections");
+    const selector = wrapper.getComponent(BankEMISelect);
+    expect(selector.props("institutions")).toHaveLength(2);
+    expect(selector.props("institutions")[1].name).toBe(
+      "Philippine National Bank",
+    );
+    expect(
+      wrapper
+        .get('[data-testid="pay-code-payout-correction-form"]')
+        .find('input[name="bank_code"]')
+        .attributes("type"),
+    ).toBe("hidden");
+    expect(rejection.text()).not.toContain("PNBMPHMMTOD");
   });
 
   it("shows exact journal and delivery evidence with its delivery time", async () => {
