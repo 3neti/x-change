@@ -18,6 +18,7 @@ final readonly class ProvisionCommercialBaselines
     public function __construct(
         private BootstrapCommercialOfferingFactory $factory,
         private ActivateCommercialOffering $activate,
+        private CommercialGovernanceJournal $journal,
     ) {}
 
     /** @return list<CommercialOfferingActivation> */
@@ -31,6 +32,12 @@ final readonly class ProvisionCommercialBaselines
 
         foreach ((array) config('x-change.commercial.offerings.profiles', ['pay_code', 'account_funding']) as $profile) {
             $offering = $this->baseline((string) $profile, $commissioningManifestReference);
+            $this->journal->recordOffering(
+                $offering,
+                'commercial.offering.baseline_provisioned',
+                'commissioning-manifest',
+                (string) $offering->commissioning_manifest_reference,
+            );
 
             if ($mode !== CommercialGovernanceMode::BootstrapImmutable) {
                 continue;

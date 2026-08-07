@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('idempotently grants named Commercial Control authority from the system principal', function (): void {
     enableNetbankTreasuryForTests();
@@ -40,7 +41,10 @@ it('idempotently grants named Commercial Control authority from the system princ
             ->all())->toBe([
                 CommercialOperatorCapability::ViewCommercialControls->value,
                 CommercialOperatorCapability::ManageOfferings->value,
-            ]);
+            ])
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'commercial.operator.authorized')
+            ->count())->toBe(2);
 });
 
 it('rejects unknown Commercial Control capabilities', function (): void {

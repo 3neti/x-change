@@ -144,6 +144,11 @@ revenue, attributed partner payables, and commercial revenue. Provider costs
 and partner commissions leave Inventory only from exact settlement evidence;
 partner payouts additionally require independent maker-checker approval.
 
+Fresh commissioning activates immutable package baseline pricing without
+fabricating human approval. Price changes remain locked until different named
+maker and checker operators are authorized; approval and activation are
+separate controls. See [Commercial Governance](./docs/commercial-governance/README.md).
+
 Operators can verify the complete boundary without moving money:
 
 ```bash

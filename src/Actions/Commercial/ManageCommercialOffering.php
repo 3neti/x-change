@@ -13,6 +13,7 @@ use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
+use LBHurtado\XChange\Services\Commercial\CommercialGovernanceJournal;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 
 final class ManageCommercialOffering
@@ -20,6 +21,7 @@ final class ManageCommercialOffering
     public function __construct(
         private readonly CommercialOperatorAuthorityContract $authority,
         private readonly CommercialLegalTraceResolverContract $legalTrace,
+        private readonly CommercialGovernanceJournal $journal,
     ) {}
 
     public function createDraft(
@@ -30,7 +32,7 @@ final class ManageCommercialOffering
         $this->authorize($maker, CommercialOperatorCapability::ManageOfferings);
         $offering = $this->legalTrace->forPublication($offering);
 
-        return DB::transaction(function () use ($maker, $profile, $offering): CommercialOffering {
+        $draft = DB::transaction(function () use ($maker, $profile, $offering): CommercialOffering {
             $latestVersion = (int) CommercialOffering::query()
                 ->where('reference', $offering->reference)
                 ->lockForUpdate()
@@ -54,6 +56,10 @@ final class ManageCommercialOffering
                 'effective_at' => $offering->effectiveAt,
             ]);
         });
+
+        $this->journal->recordOffering($draft, 'commercial.offering.drafted', $maker, 'maker-draft');
+
+        return $draft;
     }
 
     public function submit(Model $maker, CommercialOffering $offering): CommercialOffering
@@ -73,6 +79,8 @@ final class ManageCommercialOffering
             'submitted_at' => now(),
         ])->save();
 
+        $this->journal->recordOffering($offering, 'commercial.offering.submitted', $maker, 'maker-submission');
+
         return $offering->refresh();
     }
 
@@ -83,7 +91,7 @@ final class ManageCommercialOffering
     ): CommercialOffering {
         $this->authorize($checker, CommercialOperatorCapability::ApproveOfferings);
 
-        return DB::transaction(function () use ($checker, $offering, $authorizationReference): CommercialOffering {
+        $published = DB::transaction(function () use ($checker, $offering, $authorizationReference): CommercialOffering {
             $locked = CommercialOffering::query()->lockForUpdate()->findOrFail($offering->getKey());
 
             if ($locked->status !== CommercialOfferingStatus::PendingApproval) {
@@ -109,6 +117,15 @@ final class ManageCommercialOffering
 
             return $locked->refresh();
         });
+
+        $this->journal->recordOffering(
+            $published,
+            'commercial.offering.published',
+            $checker,
+            $authorizationReference,
+        );
+
+        return $published;
     }
 
     private function authorize(Model $operator, CommercialOperatorCapability $capability): void

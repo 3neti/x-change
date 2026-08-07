@@ -13,6 +13,7 @@ use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('commissions immutable baseline offerings without fabricating human approval', function (): void {
     config()->set(
@@ -36,7 +37,13 @@ it('commissions immutable baseline offerings without fabricating human approval'
         ->and($payCode->source_package)->toBe('3neti/x-change')
         ->and($activation->authority)->toBe(CommercialActivationAuthority::CommissioningManifest)
         ->and(app(CommercialOfferingResolverContract::class)->resolve('pay_code')->snapshotHash())
-        ->toBe($payCode->snapshot_hash);
+        ->toBe($payCode->snapshot_hash)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'commercial.offering.baseline_provisioned')
+            ->count())->toBe(2)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'commercial.offering.activated')
+            ->count())->toBe(2);
 });
 
 it('reuses identical baseline and activation evidence idempotently', function (): void {

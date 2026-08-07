@@ -10,8 +10,10 @@ use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 
-final class ActivateCommercialOffering
+final readonly class ActivateCommercialOffering
 {
+    public function __construct(private CommercialGovernanceJournal $journal) {}
+
     public function execute(
         CommercialOffering $offering,
         CommercialActivationAuthority $authority,
@@ -23,7 +25,7 @@ final class ActivateCommercialOffering
             throw new \DomainException('Commercial Offering activation requires a stable reference.');
         }
 
-        return DB::transaction(function () use ($offering, $authority, $activationReference): CommercialOfferingActivation {
+        $activation = DB::transaction(function () use ($offering, $authority, $activationReference): CommercialOfferingActivation {
             $locked = CommercialOffering::query()->lockForUpdate()->findOrFail($offering->getKey());
 
             if ($authority === CommercialActivationAuthority::IndependentApproval
@@ -84,5 +86,9 @@ final class ActivateCommercialOffering
                 'activated_at' => now(),
             ]);
         }, attempts: 5);
+
+        $this->journal->recordActivation($activation);
+
+        return $activation;
     }
 }

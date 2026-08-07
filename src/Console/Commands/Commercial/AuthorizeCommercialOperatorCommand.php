@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Services\Commercial\CommercialGovernanceJournal;
 
 final class AuthorizeCommercialOperatorCommand extends Command
 {
@@ -22,8 +23,10 @@ final class AuthorizeCommercialOperatorCommand extends Command
 
     protected $description = 'Grant a named operator explicit Commercial Control authority.';
 
-    public function handle(SystemUserResolverContract $systemPrincipal): int
-    {
+    public function handle(
+        SystemUserResolverContract $systemPrincipal,
+        CommercialGovernanceJournal $journal,
+    ): int {
         $modelClass = (string) config('auth.providers.users.model');
         $column = trim((string) $this->option('column'));
         $identity = trim((string) ($this->argument('operator') ?: $this->ask('Operator identity')));
@@ -117,6 +120,7 @@ final class AuthorizeCommercialOperatorCommand extends Command
                 'capability' => $capability,
                 'created' => $authorization->wasRecentlyCreated,
             ];
+            $journal->recordAuthorization($authorization);
         }
 
         $payload = [

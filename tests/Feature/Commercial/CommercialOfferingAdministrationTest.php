@@ -15,6 +15,7 @@ use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 function grantCommercialCapability(User $operator, CommercialOperatorCapability $capability): void
 {
@@ -95,7 +96,14 @@ it('publishes an immutable offering through distinct maker and checker authority
     );
 
     expect(app(CommercialOfferingResolverContract::class)->resolve('pay_code')->snapshotHash())
-        ->toBe($published->snapshot_hash);
+        ->toBe($published->snapshot_hash)
+        ->and(ExecutionJournalEntry::query()
+            ->whereIn('event_type', [
+                'commercial.offering.drafted',
+                'commercial.offering.submitted',
+                'commercial.offering.published',
+                'commercial.offering.activated',
+            ])->count())->toBe(4);
 });
 
 it('retires the prior active offering only when a later published version is activated', function (): void {
