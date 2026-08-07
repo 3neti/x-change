@@ -698,6 +698,7 @@ const issuedPayCodeDialogOpen = ref(false);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
 const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
+const amountInputElement = ref<HTMLInputElement | null>(null);
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
 const riderDesignTeleportReady = ref(false);
 const riderDesignTeleportTarget = ref<HTMLElement | null>(null);
@@ -722,6 +723,10 @@ hydrateLastInstructions();
 
 onMounted((): void => {
     riderDesignTeleportReady.value = true;
+
+    void nextTick((): void => {
+        amountInputElement.value?.focus();
+    });
 });
 
 watch(
@@ -4916,11 +4921,12 @@ function instructionRecord(
         </div>
 
         <div
-            class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.82fr)]"
+            class="grid gap-5 xl:grid-cols-[minmax(19rem,0.74fr)_minmax(28rem,1.26fr)]"
             data-testid="cockpit-quick-generate-essentials-canvas"
         >
             <div
                 class="rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
+                data-testid="cockpit-quick-generate-order-card"
             >
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -4943,14 +4949,18 @@ function instructionRecord(
                         {{ voucherKindLabel }}
                     </span>
                 </div>
-                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div
+                    class="mt-4 grid items-start gap-3 sm:grid-cols-2"
+                    data-testid="cockpit-quick-generate-order-fields"
+                >
                     <div
-                        class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        data-testid="cockpit-quick-generate-amount-field"
                     >
                         <label for="cockpit-quick-generate-primary-amount">
                             Amount
                         </label>
-                        <div class="flex rounded-xl shadow-sm">
+                        <div class="flex h-12 rounded-xl shadow-sm">
                             <span
                                 class="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                             >
@@ -4958,11 +4968,12 @@ function instructionRecord(
                             </span>
                             <input
                                 id="cockpit-quick-generate-primary-amount"
+                                ref="amountInputElement"
                                 v-model="amount"
                                 type="number"
                                 min="0.01"
                                 step="0.01"
-                                class="w-full min-w-0 rounded-r-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                class="h-12 w-full min-w-0 rounded-r-xl border border-slate-200 bg-white px-3 text-base font-semibold text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-primary-amount"
                                 :disabled="processing"
                             />
@@ -5020,17 +5031,23 @@ function instructionRecord(
                         </div>
                     </div>
                     <label
-                        class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        data-testid="cockpit-quick-generate-recipient-field"
                     >
                         Pay To
                         <input
                             v-model="recipientReference"
                             type="text"
                             placeholder="Anyone, mobile, or vendor"
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                            class="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                             data-testid="cockpit-quick-generate-primary-recipient"
                             :disabled="processing"
                         />
+                        <span
+                            class="min-h-5 px-0.5 text-[0.7rem] leading-5 font-normal text-slate-500 dark:text-slate-400"
+                        >
+                            Recipient, mobile, or payout route.
+                        </span>
                     </label>
                     <label
                         class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"

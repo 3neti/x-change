@@ -56,6 +56,50 @@ function quickGenerateEngineeringPreview(
 }
 
 describe('Cockpit Quick Generate foundation', () => {
+    it('keeps the Order inputs aligned and focuses Amount first', async () => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: host,
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+            },
+        });
+
+        await flushPromises();
+
+        const amountInput = wrapper.get<HTMLInputElement>(
+            '[data-testid="cockpit-quick-generate-primary-amount"]',
+        );
+        const recipientInput = wrapper.get<HTMLInputElement>(
+            '[data-testid="cockpit-quick-generate-primary-recipient"]',
+        );
+        const essentialsCanvas = wrapper.get(
+            '[data-testid="cockpit-quick-generate-essentials-canvas"]',
+        );
+
+        expect(amountInput.element).toBe(document.activeElement);
+        expect(amountInput.classes()).toContain('h-12');
+        expect(recipientInput.classes()).toContain('h-12');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-amount-field"]')
+                .classes(),
+        ).toContain('gap-1.5');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-recipient-field"]')
+                .classes(),
+        ).toContain('gap-1.5');
+        expect(essentialsCanvas.classes()).toContain(
+            'xl:grid-cols-[minmax(19rem,0.74fr)_minmax(28rem,1.26fr)]',
+        );
+
+        wrapper.unmount();
+        host.remove();
+    });
+
     it('disables unavailable evidence while allowing an incompatible saved design to remove it', async () => {
         const capability = {
             key: 'location',
@@ -135,22 +179,22 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-logo"]')
                 .attributes('src'),
-        ).toBe('/vendor/x-change/images/logo-orange.png');
+        ).toBe('/vendor/x-change/images/pay-code/pay-code-mark.png');
         expect(
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-logo"]')
                 .attributes('alt'),
-        ).toBe('x-change logo');
+        ).toBe('Pay Code mark');
         expect(
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-tagline"]')
                 .text(),
-        ).toContain('Money should adapt to people. Not the other way around.');
+        ).toContain('The instruction that moves money.');
         expect(wrapper.text()).toContain('PAY CODE PREVIEW');
         expect(wrapper.find('canvas').exists()).toBe(false);
     });
 
-    it('keeps the x-change preview brand while the Pay Code is being designed', () => {
+    it('keeps the Pay Code preview brand while the Pay Code is being designed', () => {
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {
                 amount: '50',
@@ -171,7 +215,7 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-tagline"]')
                 .text(),
-        ).toContain('Money should adapt to people. Not the other way around.');
+        ).toContain('The instruction that moves money.');
         expect(wrapper.text()).toContain('₱50.00');
         expect(wrapper.text()).not.toContain('Digital Pay Code');
         expect(wrapper.text()).not.toContain('Editable Pay Code Preview');
