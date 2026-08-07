@@ -33,10 +33,11 @@ final class ManageCommercialOffering
         $offering = $this->legalTrace->forPublication($offering);
 
         $draft = DB::transaction(function () use ($maker, $profile, $offering): CommercialOffering {
-            $latestVersion = (int) CommercialOffering::query()
+            $latestVersion = (int) (CommercialOffering::query()
                 ->where('reference', $offering->reference)
+                ->orderByDesc('version')
                 ->lockForUpdate()
-                ->max('version');
+                ->value('version') ?? 0);
 
             if ($offering->version !== $latestVersion + 1) {
                 throw new \DomainException('Commercial Offering version must follow the latest persisted version.');

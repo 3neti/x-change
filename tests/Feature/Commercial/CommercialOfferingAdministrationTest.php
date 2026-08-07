@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Actions\Commercial\ManageCommercialOffering;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Enums\CommercialActivationAuthority;
@@ -104,6 +105,27 @@ it('publishes an immutable offering through distinct maker and checker authority
                 'commercial.offering.published',
                 'commercial.offering.activated',
             ])->count())->toBe(4);
+});
+
+it('locks the latest offering row without combining a lock with an aggregate query', function (): void {
+    $maker = actingAsTestUser();
+    grantCommercialCapability($maker, CommercialOperatorCapability::ManageOfferings);
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:test');
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    app(ManageCommercialOffering::class)->createDraft(
+        $maker,
+        'pay_code',
+        commercialOfferingVersion(2, now()->subMinute()->toIso8601String()),
+    );
+
+    $queries = collect(DB::getQueryLog())->pluck('query')->implode("\n");
+
+    expect($queries)
+        ->toContain('order by "version" desc')
+        ->not->toContain('max("version")');
 });
 
 it('retires the prior active offering only when a later published version is activated', function (): void {
