@@ -6,9 +6,11 @@ namespace LBHurtado\XChange\Services\Commercial;
 
 use Carbon\CarbonImmutable;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialProviderCostBatch;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionMoneyData;
@@ -94,6 +96,87 @@ final readonly class CommercialAccountingJournal
             ],
             money: $this->money($settlement->currency, $settlement->observed_amount_minor),
             metadata: $this->metadata('provider_cost_settlement'),
+        ));
+    }
+
+    public function recordProviderCostBatch(CommercialProviderCostBatch $batch): ExecutionJournalEntry
+    {
+        return $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'commercial.provider_cost_batch.'.$batch->status->value,
+            occurredAt: CarbonImmutable::parse($batch->observed_at),
+            actor: new ExecutionActorData(
+                id: $batch->recorded_by_type.':'.$batch->recorded_by_id,
+                type: 'commercial_provider_cost_operator',
+            ),
+            subject: new ExecutionSubjectData(
+                id: $batch->reference,
+                type: 'commercial_provider_cost_batch',
+                display: 'Provider Cost Evidence Batch',
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'commercial-provider-cost-batch:'.$batch->reference,
+                causationId: $batch->evidence_reference,
+                executionId: (string) $batch->getKey(),
+                externalReference: $batch->evidence_reference,
+            ),
+            idempotencyKey: 'x-change:commercial:provider-cost-batch:'.$batch->idempotency_key,
+            payload: [
+                'status' => $batch->status->value,
+                'provider' => $batch->provider,
+                'connection_reference' => $batch->connection_reference,
+                'expected_amount_minor' => $batch->expected_amount_minor,
+                'observed_amount_minor' => $batch->observed_amount_minor,
+                'variance_amount_minor' => $batch->variance_amount_minor,
+            ],
+            money: $this->money($batch->currency, $batch->observed_amount_minor),
+            metadata: $this->metadata('provider_cost_batch'),
+        ));
+    }
+
+    public function recordPartnerPayoutBatch(
+        PartnerCommissionPayoutBatch $batch,
+        string $actorId,
+        string $actorType,
+    ): ExecutionJournalEntry {
+        $status = $batch->status->value;
+
+        return $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'commercial.partner_commission_batch.'.$status,
+            occurredAt: CarbonImmutable::parse(
+                $batch->settled_at
+                    ?? $batch->rejected_at
+                    ?? $batch->submitted_at
+                    ?? $batch->approved_at
+                    ?? $batch->requested_at,
+            ),
+            actor: new ExecutionActorData(id: $actorId, type: $actorType),
+            subject: new ExecutionSubjectData(
+                id: $batch->reference,
+                type: 'partner_commission_payout_batch',
+                display: 'Partner Commission Payout',
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'commercial-partner-commission-batch:'.$batch->reference,
+                causationId: $batch->approval_reference ?? $batch->request_idempotency_key,
+                executionId: (string) $batch->getKey(),
+                providerReference: $batch->provider_transaction_id,
+                externalReference: $batch->evidence_reference,
+                metadata: [
+                    'partner_reference' => $batch->partner_reference,
+                    'position_operation_reference' => $batch->position_operation_reference,
+                    'inventory_operation_reference' => $batch->inventory_operation_reference,
+                ],
+            ),
+            idempotencyKey: 'x-change:commercial:partner-commission-batch:'
+                .$batch->getKey().':'.$status,
+            payload: [
+                'status' => $status,
+                'provider' => $batch->provider,
+                'connection_reference' => $batch->connection_reference,
+                'destination_summary' => $batch->destination_summary,
+            ],
+            money: $this->money($batch->currency, $batch->amount_minor),
+            metadata: $this->metadata('partner_commission_payout_batch'),
         ));
     }
 

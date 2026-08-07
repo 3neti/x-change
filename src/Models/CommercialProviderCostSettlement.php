@@ -11,7 +11,14 @@ final class CommercialProviderCostSettlement extends Model
 {
     protected $table = 'x_change_commercial_provider_cost_settlements';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'commercial_sale_id', 'commercial_allocation_id', 'idempotency_key',
+        'request_hash', 'provider', 'connection_reference', 'evidence_type',
+        'evidence_reference', 'cash_movement_observed', 'expected_amount_minor',
+        'observed_amount_minor', 'variance_amount_minor', 'currency', 'status',
+        'position_operation_reference', 'inventory_operation_reference', 'metadata',
+        'observed_at', 'settled_at',
+    ];
 
     protected static function booted(): void
     {

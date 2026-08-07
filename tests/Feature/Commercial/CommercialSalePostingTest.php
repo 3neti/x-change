@@ -3,10 +3,14 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionProvisioningContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionDefinitionData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionRecognitionData;
@@ -14,12 +18,27 @@ use LBHurtado\Wallet\Treasury\Enums\TreasuryCustodyMode;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
+use LBHurtado\XChange\Actions\Commercial\ApprovePartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Actions\Commercial\PostCommercialSale;
+use LBHurtado\XChange\Actions\Commercial\ReconcilePartnerCommissionPayoutBatch;
+use LBHurtado\XChange\Actions\Commercial\RecordProviderCostBatch;
+use LBHurtado\XChange\Actions\Commercial\RequestPartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Actions\Commercial\ReverseCommercialSale;
+use LBHurtado\XChange\Actions\Commercial\SubmitPartnerCommissionPayoutBatch;
+use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
+use LBHurtado\XChange\Data\Commercial\PartnerCommissionPayoutBatchRequestData;
+use LBHurtado\XChange\Data\Commercial\ProviderCostBatchEvidenceData;
+use LBHurtado\XChange\Data\Disbursement\PayoutDestinationValidationData;
+use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Enums\CommercialProviderCostBatchStatus;
+use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Models\CommercialProviderCostBatchLine;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutBatchLine;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -143,6 +162,190 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
                 'commercial.allocation.posted',
                 'commercial.sale.reversed',
             ]);
+});
+
+it('records aggregate provider cost evidence without settling a variance', function (): void {
+    $systemPrincipal = actingAsTestUser();
+    config()->set('account.system_user.candidates', [
+        'x-change' => [
+            'model' => User::class,
+            'identifier' => $systemPrincipal->email,
+            'identifier_column' => 'email',
+        ],
+    ]);
+    $operator = actingAsTestUser();
+    CommercialOperatorAuthorization::query()->create([
+        'operator_type' => $operator->getMorphClass(),
+        'operator_id' => $operator->getKey(),
+        'capability' => CommercialOperatorCapability::ReconcileProviderCosts->value,
+        'authorization_reference' => 'test:provider-cost-operator',
+        'valid_from' => now()->subMinute(),
+    ]);
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 25_00, 'provider-cost-batch');
+    $sale = app(PostCommercialSale::class)->execute(
+        commercialSaleSnapshot('acceptance:provider-cost-batch'),
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+    );
+    $snapshot = $sale->snapshot;
+    data_set($snapshot, 'accounting_context', [
+        'schema_version' => 2,
+        'provider' => 'netbank',
+        'connection_reference' => 'netbank-primary',
+        'currency' => 'PHP',
+    ]);
+    DB::table('x_change_commercial_sales')
+        ->where('id', $sale->getKey())
+        ->update(['snapshot' => json_encode($snapshot, JSON_THROW_ON_ERROR)]);
+    $evidence = new ProviderCostBatchEvidenceData(
+        reference: 'provider-cost-batch:2026-07-25',
+        provider: 'netbank',
+        connectionReference: 'netbank-primary',
+        currency: 'PHP',
+        evidenceType: 'provider_statement',
+        evidenceReference: 'netbank:statement:2026-07-25',
+        observedAmountMinor: 9_00,
+        periodStartedAt: '2026-07-25T00:00:00+08:00',
+        periodEndedAt: '2026-07-25T23:59:59+08:00',
+        observedAt: '2026-07-26T08:00:00+08:00',
+        idempotencyKey: 'provider-cost-batch:2026-07-25',
+    );
+
+    $batch = app(RecordProviderCostBatch::class)->execute($operator, $evidence);
+    $replay = app(RecordProviderCostBatch::class)->execute($operator, $evidence);
+
+    expect($batch->status)->toBe(CommercialProviderCostBatchStatus::ReviewRequired)
+        ->and($batch->expected_amount_minor)->toBe(10_00)
+        ->and($batch->variance_amount_minor)->toBe(-1_00)
+        ->and($batch->metadata['candidate_allocation_ids'])->toBe([
+            $sale->allocations()->where('category', 'provider_cost')->sole()->getKey(),
+        ])
+        ->and($replay->getKey())->toBe($batch->getKey())
+        ->and(CommercialProviderCostBatchLine::query()->count())->toBe(0);
+});
+
+it('aggregates approves submits and authoritatively settles partner commissions', function (): void {
+    enableNetbankTreasuryForTests();
+    $maker = actingAsTestUser();
+    $checker = actingAsTestUser();
+    $executor = actingAsTestUser();
+
+    foreach ([
+        [$maker, CommercialOperatorCapability::RequestCommissionPayouts],
+        [$checker, CommercialOperatorCapability::ApproveCommissionPayouts],
+        [$executor, CommercialOperatorCapability::ExecuteCommissionPayouts],
+    ] as [$operator, $capability]) {
+        CommercialOperatorAuthorization::query()->create([
+            'operator_type' => $operator->getMorphClass(),
+            'operator_id' => $operator->getKey(),
+            'capability' => $capability->value,
+            'authorization_reference' => 'test:'.$capability->value,
+            'valid_from' => now()->subMinute(),
+        ]);
+    }
+
+    app()->instance(PayoutDestinationValidatorContract::class, new class implements PayoutDestinationValidatorContract
+    {
+        public function validate(
+            string $bankCode,
+            string $accountNumber,
+            string $settlementRail,
+            ?string $mobile = null,
+        ): PayoutDestinationValidationData {
+            return new PayoutDestinationValidationData(
+                status: 'format_valid_provider_unverified',
+                bankCode: $bankCode,
+                accountNumber: $accountNumber,
+                mobile: $mobile,
+                message: 'Format valid.',
+                providerVerified: false,
+                checks: ['account_format' => 'valid'],
+            );
+        }
+    });
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 50_00, 'commission-batch');
+
+    foreach ([1, 2] as $index) {
+        $sale = app(PostCommercialSale::class)->execute(
+            commercialSaleSnapshot('acceptance:commission-batch:'.$index),
+            $positions['client_funds']->position_reference,
+            $positions['commercial_clearing']->position_reference,
+            commercialSaleDestinations($positions),
+        );
+        $snapshot = $sale->snapshot;
+        data_set($snapshot, 'accounting_context', [
+            'schema_version' => 2,
+            'partner_reference' => 'partner:test',
+            'provider' => 'netbank',
+            'connection_reference' => 'netbank-primary',
+            'currency' => 'PHP',
+        ]);
+        DB::table('x_change_commercial_sales')
+            ->where('id', $sale->getKey())
+            ->update(['snapshot' => json_encode($snapshot, JSON_THROW_ON_ERROR)]);
+    }
+
+    $request = new PartnerCommissionPayoutBatchRequestData(
+        reference: 'commission-payout:partner-test:2026-07',
+        partnerReference: 'partner:test',
+        provider: 'netbank',
+        connectionReference: 'netbank-primary',
+        currency: 'PHP',
+        periodStartedAt: '2026-07-25T00:00:00+08:00',
+        periodEndedAt: '2026-07-25T23:59:59+08:00',
+        bankCode: 'GXCHPHM2XXX',
+        accountNumber: '09171234567',
+        recipientName: 'Test Partner',
+        mobile: '09171234567',
+        idempotencyKey: 'commission-payout:partner-test:2026-07',
+    );
+    $batch = app(RequestPartnerCommissionPayoutBatch::class)->execute($maker, $request);
+
+    expect($batch->amount_minor)->toBe(4_00)
+        ->and($batch->status)->toBe(PartnerCommissionPayoutBatchStatus::AwaitingApproval)
+        ->and($batch->lines)->toHaveCount(2)
+        ->and(PartnerCommissionPayoutBatchLine::query()->sum('amount_minor'))->toBe(4_00)
+        ->and(fn () => app(ApprovePartnerCommissionPayoutBatch::class)->execute(
+            $maker,
+            $batch,
+            'approval:invalid-maker',
+        ))->toThrow(AuthorizationException::class);
+
+    $approved = app(ApprovePartnerCommissionPayoutBatch::class)->execute(
+        $checker,
+        $batch,
+        'approval:commission-payout:partner-test:2026-07',
+    );
+
+    expect($approved->status)->toBe(PartnerCommissionPayoutBatchStatus::Approved)
+        ->and(fn () => app(SubmitPartnerCommissionPayoutBatch::class)->execute(
+            $executor,
+            $approved,
+            'submission:commission-payout:partner-test:2026-07',
+        ))->toThrow(CommercialSaleConflict::class, 'provider calls are disabled');
+
+    recognizeCommercialInventoryForTest(50_00, 'commission-batch');
+    config()->set('x-change.commercial.operations.live_provider_calls_enabled', true);
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult('NETBANK-COMMISSION-001');
+    $pending = app(SubmitPartnerCommissionPayoutBatch::class)->execute(
+        $executor,
+        $approved,
+        'submission:commission-payout:partner-test:2026-07',
+    );
+    $inventoryBefore = DB::table('treasury_inventories')->sum('balance_minor');
+    $settled = app(ReconcilePartnerCommissionPayoutBatch::class)->execute($executor, $pending);
+
+    expect($pending->status)->toBe(PartnerCommissionPayoutBatchStatus::Pending)
+        ->and($settled->status)->toBe(PartnerCommissionPayoutBatchStatus::Settled)
+        ->and($settled->position_operation_reference)->not->toBeNull()
+        ->and($settled->inventory_operation_reference)->not->toBeNull()
+        ->and(commercialSalePositionBalance($positions['partner_commission']))->toBe(0)
+        ->and((int) DB::table('treasury_inventories')->sum('balance_minor'))->toBe($inventoryBefore - 4_00)
+        ->and($provider->disburseCallCount)->toBe(1)
+        ->and($provider->checkStatusCallCount)->toBe(1);
 });
 
 it('rejects unsupported commercial reversal reasons', function () {
@@ -521,4 +724,29 @@ function commercialSalePositionBalance(TreasuryPosition $position): int
     return Wallet::query()
         ->findOrFail($position->internal_ledger_id)
         ->getBalanceIntAttribute();
+}
+
+function recognizeCommercialInventoryForTest(int $amountMinor, string $scope): void
+{
+    $inventory = app(TreasuryInventoryOperationContract::class);
+    $inventory->registerInventory(new TreasuryInventoryData(
+        inventoryReference: 'inventory:netbank:vca-cash',
+        resourceType: 'cash_at_bank',
+        currency: 'PHP',
+        capacityMinor: 0,
+        status: 'requested',
+        idempotencyKey: 'commercial-inventory-registration:'.$scope,
+        externalReference: 'resource:netbank:corporate-vca',
+    ));
+    $inventory->recognize(new TreasuryInventoryRecognitionData(
+        operationReference: 'commercial-inventory-recognition:'.$scope,
+        inventoryReference: 'inventory:netbank:vca-cash',
+        settlementResourceReference: 'resource:netbank:corporate-vca',
+        amountMinor: $amountMinor,
+        currency: 'PHP',
+        status: 'requested',
+        idempotencyKey: 'commercial-inventory-recognition-key:'.$scope,
+        effectiveAt: now()->toRfc3339String(),
+        externalReference: 'provider-observation:'.$scope,
+    ));
 }

@@ -1131,6 +1131,13 @@ return [
 
     'commercial' => [
         'enabled' => (bool) env('XCHANGE_COMMERCIAL_WATERFALL_ENABLED', true),
+        'operations' => [
+            'live_provider_calls_enabled' => (bool) env(
+                'XCHANGE_COMMERCIAL_LIVE_PROVIDER_CALLS_ENABLED',
+                false,
+            ),
+            'queue' => env('XCHANGE_COMMERCIAL_OPERATIONS_QUEUE', 'x-change-funding'),
+        ],
         'offerings' => [
             'use_published' => (bool) env('XCHANGE_COMMERCIAL_USE_PUBLISHED_OFFERINGS', false),
             'governance_mode' => env(
