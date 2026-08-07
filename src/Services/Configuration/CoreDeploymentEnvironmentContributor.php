@@ -95,6 +95,20 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 safeExample: 'false',
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_COMMERCIAL_SCHEDULED_RECONCILIATION_ENABLED',
+                description: 'Queue provider status checks for previously submitted commission payouts.',
+                category: 'Treasury',
+                configPath: 'x-change.commercial.operations.scheduled_reconciliation_enabled',
+                safeExample: 'true',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_COMMERCIAL_OPERATIONS_QUEUE',
+                description: 'Dedicated queue used by Commercial Operations provider reconciliation.',
+                category: 'Treasury',
+                configPath: 'x-change.commercial.operations.queue',
+                safeExample: 'x-change-funding',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_REDEMPTION_FEEDBACK_QUEUE',
                 description: 'Dedicated queue for settlement feedback delivery.',
                 category: 'Delivery',

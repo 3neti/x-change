@@ -38,6 +38,28 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
     public function execute(Model $operator, PartnerCommissionPayoutBatch $batch): PartnerCommissionPayoutBatch
     {
         $this->authorize($operator);
+
+        return $this->reconcile(
+            $batch,
+            $operator->getMorphClass().':'.$operator->getKey(),
+            'commercial_payout_executor',
+        );
+    }
+
+    public function executeAutomatically(PartnerCommissionPayoutBatch $batch): PartnerCommissionPayoutBatch
+    {
+        return $this->reconcile(
+            $batch,
+            'x-change',
+            'commercial_payout_reconciliation',
+        );
+    }
+
+    private function reconcile(
+        PartnerCommissionPayoutBatch $batch,
+        string $actorId,
+        string $actorType,
+    ): PartnerCommissionPayoutBatch {
         $batch = $batch->fresh();
 
         if ($batch->status === PartnerCommissionPayoutBatchStatus::Settled
@@ -66,8 +88,8 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
             $batch = $batch->refresh();
             $this->journal->recordPartnerPayoutBatch(
                 $batch,
-                $operator->getMorphClass().':'.$operator->getKey(),
-                'commercial_payout_executor',
+                $actorId,
+                $actorType,
             );
 
             return $batch;
@@ -90,8 +112,8 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
             $batch = $batch->refresh();
             $this->journal->recordPartnerPayoutBatch(
                 $batch,
-                $operator->getMorphClass().':'.$operator->getKey(),
-                'commercial_payout_executor',
+                $actorId,
+                $actorType,
             );
 
             return $batch;
@@ -101,7 +123,7 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
             return $batch;
         }
 
-        return DB::transaction(function () use ($batch, $operator, $result): PartnerCommissionPayoutBatch {
+        return DB::transaction(function () use ($actorId, $actorType, $batch, $result): PartnerCommissionPayoutBatch {
             $locked = PartnerCommissionPayoutBatch::query()->lockForUpdate()->findOrFail($batch->getKey());
 
             if ($locked->status === PartnerCommissionPayoutBatchStatus::Settled) {
@@ -159,8 +181,8 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
             $settled = $locked->refresh();
             $this->journal->recordPartnerPayoutBatch(
                 $settled,
-                $operator->getMorphClass().':'.$operator->getKey(),
-                'commercial_payout_executor',
+                $actorId,
+                $actorType,
             );
 
             return $settled;

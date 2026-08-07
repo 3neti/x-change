@@ -1137,6 +1137,18 @@ return [
                 false,
             ),
             'queue' => env('XCHANGE_COMMERCIAL_OPERATIONS_QUEUE', 'x-change-funding'),
+            'scheduled_reconciliation_enabled' => (bool) env(
+                'XCHANGE_COMMERCIAL_SCHEDULED_RECONCILIATION_ENABLED',
+                true,
+            ),
+            'scheduled_batch_size' => (int) env(
+                'XCHANGE_COMMERCIAL_SCHEDULED_BATCH_SIZE',
+                50,
+            ),
+            'provider_rate_limit_per_minute' => (int) env(
+                'XCHANGE_COMMERCIAL_PROVIDER_RATE_LIMIT_PER_MINUTE',
+                20,
+            ),
         ],
         'offerings' => [
             'use_published' => (bool) env('XCHANGE_COMMERCIAL_USE_PUBLISHED_OFFERINGS', false),

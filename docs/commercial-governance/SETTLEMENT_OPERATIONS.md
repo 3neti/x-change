@@ -23,6 +23,8 @@ Commission is earned only when the immutable Commercial Sale snapshot attributes
 3. An execution operator with `commercial.commissions.execute` runs `x-change:commercial:commission:submit --confirm-live`. Submission remains disabled unless `XCHANGE_COMMERCIAL_LIVE_PROVIDER_CALLS_ENABLED=true`.
 4. `x-change:commercial:commission:reconcile` queries the provider. Pending does nothing. Rejected leaves the payable and Inventory intact. Only an authoritative completed status settles the Partner Commission Payable Position and reduces Provider Inventory.
 
+The package scheduler runs `x-change:commercial:commission:reconcile-pending` every minute. It queues unique, non-overlapping, provider-rate-limited status checks on `x-change-funding`. This automation has no authority to request, approve, or submit a payout.
+
 The non-interactive system principal cannot be maker, checker, or execution operator. The request and approval capabilities cannot be granted to the same person. Provider transaction identifiers, Treasury operation references, and every lifecycle state are journaled.
 
 ## Operational Invariants

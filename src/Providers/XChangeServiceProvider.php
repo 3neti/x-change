@@ -69,6 +69,7 @@ use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCom
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommissionPayoutsCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RequestPartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\SubmitPartnerCommissionPayoutBatchCommand;
@@ -1286,6 +1287,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->loadViewsFrom($this->packagePath('resources/views'), 'x-change');
         $this->bootFundingVerificationRateLimiter();
         $this->bootPaymentVerificationRateLimiter();
+        $this->bootCommercialSettlementRateLimiter();
         $this->bootFundingVerificationSchedule();
         $this->bootFundingBroadcastChannel();
         $this->bootRoutes();
@@ -1337,6 +1339,7 @@ class XChangeServiceProvider extends ServiceProvider
                 CommercialGovernanceStatusCommand::class,
                 ProvisionCommercialBaselinesCommand::class,
                 ReconcilePartnerCommissionPayoutBatchCommand::class,
+                ReconcilePendingPartnerCommissionPayoutsCommand::class,
                 RecordProviderCostBatchCommand::class,
                 RequestPartnerCommissionPayoutBatchCommand::class,
                 SubmitPartnerCommissionPayoutBatchCommand::class,
@@ -1440,6 +1443,19 @@ class XChangeServiceProvider extends ServiceProvider
         });
     }
 
+    protected function bootCommercialSettlementRateLimiter(): void
+    {
+        RateLimiter::for('x-change-commercial-settlement', function (): Limit {
+            return Limit::perMinute(max(
+                1,
+                (int) config(
+                    'x-change.commercial.operations.provider_rate_limit_per_minute',
+                    20,
+                ),
+            ));
+        });
+    }
+
     protected function bootFundingBroadcastChannel(): void
     {
         Broadcast::channel(
@@ -1452,6 +1468,25 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationSchedule(): void
     {
+        if ((bool) config(
+            'x-change.commercial.operations.scheduled_reconciliation_enabled',
+            true,
+        )) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.commercial.operations.scheduled_batch_size', 50),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("x-change:commercial:commission:reconcile-pending --limit={$batchSize}")
+                    ->name('x-change:commercial:commission:reconcile-pending')
+                    ->everyMinute()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
         if ((bool) config('x-change.treasury.expiry_release.scheduled_enabled', true)) {
             $batchSize = max(
                 1,

@@ -13,6 +13,7 @@ it('registers explicit commercial settlement operation commands', function (): v
         'x-change:commercial:commission:approve',
         'x-change:commercial:commission:submit',
         'x-change:commercial:commission:reconcile',
+        'x-change:commercial:commission:reconcile-pending',
     ]);
 });
 
