@@ -41,6 +41,7 @@ final class ClaimPreviewWebManifestPresenter
                 'claim_submission' => false,
             ],
             'journey' => [
+                'viewport' => $this->viewport($artifact),
                 'step_count' => count($steps),
                 'steps' => $steps,
             ],
@@ -76,6 +77,14 @@ final class ClaimPreviewWebManifestPresenter
             'actor' => 'redeemer',
             'render_kind' => (string) ($step['render_kind'] ?? 'live_screen'),
             'status' => (string) ($step['status'] ?? 'rendered'),
+            'preview_url' => $this->urls->route(
+                'x-change.cockpit.quick-generate.claim-previews.steps.show',
+                [
+                    'claimPreviewArtifact' => $artifact->reference,
+                    'step' => $key,
+                ],
+                false,
+            ),
             'screen' => $screen,
             'frame' => $frame === null ? null : [
                 'url' => $this->urls->route(
@@ -97,6 +106,20 @@ final class ClaimPreviewWebManifestPresenter
                     ? (int) $frame['height']
                     : null,
             ],
+        ];
+    }
+
+    /**
+     * @return array{profile: string, width: int, height: int}
+     */
+    private function viewport(ClaimPreviewArtifact $artifact): array
+    {
+        $viewport = data_get($artifact->metadata, 'journey.viewport', []);
+
+        return [
+            'profile' => (string) data_get($viewport, 'profile', 'mobile_claim_v1'),
+            'width' => (int) data_get($viewport, 'width', 360),
+            'height' => (int) data_get($viewport, 'height', 720),
         ];
     }
 

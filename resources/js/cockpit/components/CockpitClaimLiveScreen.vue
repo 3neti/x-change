@@ -41,6 +41,7 @@ type ClaimPreviewScreen = {
 
 const props = defineProps<{
     screen: ClaimPreviewScreen;
+    presentation?: 'framed' | 'viewport';
 }>();
 
 const isValidation = computed(() =>
@@ -70,7 +71,12 @@ const actualScreenComponent = computed<Component | null>(() => {
 
 <template>
     <div
-        class="flex aspect-[9/16] h-full max-h-full min-h-0 w-auto max-w-full flex-col overflow-hidden rounded-[1.15rem] border-[5px] border-slate-700 bg-background text-foreground shadow-2xl"
+        class="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
+        :class="
+            presentation === 'viewport'
+                ? 'w-full'
+                : 'aspect-[1/2] max-h-full w-auto max-w-full rounded-[1.15rem] border-[5px] border-slate-700 shadow-2xl'
+        "
         data-testid="cockpit-claim-live-screen"
         :data-screen-kind="screen.kind"
         :aria-label="screen.title"

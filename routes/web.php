@@ -63,6 +63,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPrev
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewExportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewFrameController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewShowController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewStepController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
@@ -334,6 +335,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             CockpitQuickGenerateClaimPreviewFrameController::class,
         )->where('step', '[a-z0-9][a-z0-9-]*')
             ->name('x-change.cockpit.quick-generate.claim-previews.frames.show');
+        Route::get(
+            'quick-generate/claim-previews/{claimPreviewArtifact:reference}/steps/{step}',
+            CockpitQuickGenerateClaimPreviewStepController::class,
+        )->where('step', '[a-z0-9][a-z0-9-]*')
+            ->name('x-change.cockpit.quick-generate.claim-previews.steps.show');
         Route::get(
             'quick-generate/claim-previews/{claimPreviewArtifact:reference}/exports/{format}',
             CockpitQuickGenerateClaimPreviewExportController::class,

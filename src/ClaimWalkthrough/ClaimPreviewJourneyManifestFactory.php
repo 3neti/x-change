@@ -52,6 +52,11 @@ final class ClaimPreviewJourneyManifestFactory
 
         return [
             'schema' => 'x-change.claim-experience-preview.journey.v2',
+            'viewport' => [
+                'profile' => 'mobile_claim_v1',
+                'width' => 360,
+                'height' => 720,
+            ],
             'step_count' => count($steps),
             'steps' => $steps,
         ];

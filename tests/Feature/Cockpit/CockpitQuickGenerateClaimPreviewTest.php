@@ -76,6 +76,9 @@ it('renders a dry-run claim preview from quick generate instructions', function 
         ->assertJsonPath('safety.provider_calls', false)
         ->assertJsonPath('safety.claim_submission', false)
         ->assertJsonPath('cache_hit', false)
+        ->assertJsonPath('journey.viewport.profile', 'mobile_claim_v1')
+        ->assertJsonPath('journey.viewport.width', 360)
+        ->assertJsonPath('journey.viewport.height', 720)
         ->assertJsonPath('journey.steps.0.key', 'claim-entry');
 
     $body = $response->getContent();
@@ -238,6 +241,12 @@ it('serves claim preview manifests and frames only to their owner', function ():
         $artifact,
     ))
         ->assertSuccessful()
+        ->assertJsonPath('journey.viewport.width', 360)
+        ->assertJsonPath('journey.viewport.height', 720)
+        ->assertJsonPath(
+            'journey.steps.0.preview_url',
+            "/x/cockpit/quick-generate/claim-previews/{$artifact->reference}/steps/claim-entry",
+        )
         ->assertJsonPath('journey.steps.0.frame.mime_type', 'image/png')
         ->assertJsonPath(
             'journey.steps.0.frame.url',
@@ -257,6 +266,23 @@ it('serves claim preview manifests and frames only to their owner', function ():
         $frame->baseResponse->getFile()->getPathname()
     ))->toBe($bytes);
 
+    $stepResponse = $this->withHeader('X-Inertia', 'true')->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.steps.show',
+        [$artifact, 'step' => 'claim-entry'],
+    ));
+
+    $stepResponse
+        ->assertSuccessful()
+        ->assertJsonPath('component', 'x-change/claim/Preview')
+        ->assertJsonPath('props.viewport.profile', 'mobile_claim_v1')
+        ->assertJsonPath('props.viewport.width', 360)
+        ->assertJsonPath('props.viewport.height', 720)
+        ->assertJsonPath('props.step.key', 'claim-entry');
+
+    expect($stepResponse->headers->get('cache-control'))
+        ->toContain('no-store')
+        ->toContain('private');
+
     $other = actingAsTestUser();
     expect($other->is($owner))->toBeFalse();
 
@@ -266,6 +292,10 @@ it('serves claim preview manifests and frames only to their owner', function ():
     ))->assertNotFound();
     $this->get(route(
         'x-change.cockpit.quick-generate.claim-previews.frames.show',
+        [$artifact, 'step' => 'claim-entry'],
+    ))->assertNotFound();
+    $this->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.steps.show',
         [$artifact, 'step' => 'claim-entry'],
     ))->assertNotFound();
 });
@@ -288,6 +318,10 @@ it('rejects unknown claim preview frames and exports', function (): void {
 
     $this->get(route(
         'x-change.cockpit.quick-generate.claim-previews.frames.show',
+        [$artifact, 'step' => 'unknown'],
+    ))->assertNotFound();
+    $this->get(route(
+        'x-change.cockpit.quick-generate.claim-previews.steps.show',
         [$artifact, 'step' => 'unknown'],
     ))->assertNotFound();
     $this->get(route(

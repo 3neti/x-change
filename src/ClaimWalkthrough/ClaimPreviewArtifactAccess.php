@@ -47,6 +47,24 @@ final class ClaimPreviewArtifactAccess
         return $this->resolve($artifact, $relativePath);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function step(
+        ClaimPreviewArtifact $artifact,
+        string $step,
+    ): array {
+        $candidate = collect(data_get($artifact->metadata, 'journey.steps', []))
+            ->first(fn (mixed $candidate): bool => is_array($candidate)
+                && ($candidate['key'] ?? null) === $step);
+
+        if (! is_array($candidate)) {
+            throw new NotFoundHttpException;
+        }
+
+        return $candidate;
+    }
+
     public function exportPath(
         ClaimPreviewArtifact $artifact,
         string $format,
