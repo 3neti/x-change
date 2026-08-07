@@ -314,6 +314,11 @@ it('aggregates approves submits and authoritatively settles partner commissions'
             'approval:invalid-maker',
         ))->toThrow(AuthorizationException::class);
 
+    expect(fn () => app(ReverseCommercialSale::class)->execute(
+        CommercialSale::query()->oldest('id')->value('reference'),
+        'administrative-void:commission-batch-started',
+    ))->toThrow(CommercialSaleConflict::class, 'partner payout control begins');
+
     $approved = app(ApprovePartnerCommissionPayoutBatch::class)->execute(
         $checker,
         $batch,
@@ -346,6 +351,12 @@ it('aggregates approves submits and authoritatively settles partner commissions'
         ->and((int) DB::table('treasury_inventories')->sum('balance_minor'))->toBe($inventoryBefore - 4_00)
         ->and($provider->disburseCallCount)->toBe(1)
         ->and($provider->checkStatusCallCount)->toBe(1);
+
+    expect(Artisan::call('x-change:treasury:attest-commercial-accounting', [
+        '--connection' => ['netbank-primary'],
+        '--json' => true,
+    ]))->toBe(0)
+        ->and(json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR)['ready'])->toBeTrue();
 });
 
 it('rejects unsupported commercial reversal reasons', function () {

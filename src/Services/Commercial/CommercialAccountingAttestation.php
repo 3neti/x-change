@@ -12,6 +12,8 @@ use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutBatchLine;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -83,7 +85,8 @@ final readonly class CommercialAccountingAttestation
             'connections' => $connectionRows,
             'commercial_sales' => CommercialSale::query()->count(),
             'provider_cost_settlements' => CommercialProviderCostSettlement::query()->count(),
-            'partner_commission_payouts' => PartnerCommissionPayout::query()->count(),
+            'partner_commission_payouts' => PartnerCommissionPayout::query()->count()
+                + PartnerCommissionPayoutBatch::query()->count(),
             'issue_count' => count($issues),
             'issues' => $issues,
             'inspected_at' => now()->toIso8601String(),
@@ -159,6 +162,13 @@ final readonly class CommercialAccountingAttestation
                     $expected -= (int) PartnerCommissionPayout::query()
                         ->where('commercial_allocation_id', $allocation->getKey())
                         ->where('status', 'settled')
+                        ->sum('amount_minor');
+                    $expected -= (int) PartnerCommissionPayoutBatchLine::query()
+                        ->where('commercial_allocation_id', $allocation->getKey())
+                        ->whereHas(
+                            'batch',
+                            fn ($query) => $query->where('status', 'settled'),
+                        )
                         ->sum('amount_minor');
                 }
 

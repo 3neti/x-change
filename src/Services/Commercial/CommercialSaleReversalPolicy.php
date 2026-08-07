@@ -8,6 +8,7 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutBatchLine;
 
 final readonly class CommercialSaleReversalPolicy
 {
@@ -37,6 +38,17 @@ final readonly class CommercialSaleReversalPolicy
 
         if (PartnerCommissionPayout::query()
             ->where('commercial_sale_id', $sale->getKey())
+            ->exists()) {
+            throw new CommercialSaleConflict(
+                'Commercial sale cannot be reversed after partner payout control begins.',
+            );
+        }
+
+        if (PartnerCommissionPayoutBatchLine::query()
+            ->whereHas(
+                'allocation',
+                fn ($query) => $query->where('commercial_sale_id', $sale->getKey()),
+            )
             ->exists()) {
             throw new CommercialSaleConflict(
                 'Commercial sale cannot be reversed after partner payout control begins.',
