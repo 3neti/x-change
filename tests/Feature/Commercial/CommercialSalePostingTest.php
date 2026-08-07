@@ -20,6 +20,9 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
+use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
+use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialCatalogData;
@@ -55,6 +58,12 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         $positions['commercial_clearing']->position_reference,
         $destinations,
     );
+    config()->set('x-change.treasury.connections.netbank-primary.mode', 'required');
+    app()->forgetInstance(TreasuryProviderConnectionCatalog::class);
+    $controls = app(CommercialControlReadModel::class)->build(
+        app(BootstrapCommercialOfferingFactory::class)->make('pay_code'),
+    );
+    $positionBalances = collect($controls['position_balances'])->keyBy('purpose');
 
     expect($first->status)->toBe('posted')
         ->and($replay->getKey())->toBe($first->getKey())
@@ -68,6 +77,34 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         ->and(commercialSalePositionBalance($positions['product_revenue']))->toBe(8_00)
         ->and(commercialSalePositionBalance($positions['partner_commission']))->toBe(2_00)
         ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(5_00)
+        ->and($positionBalances->get('provider_cost_payable'))->toMatchArray([
+            'current_minor' => 10_00,
+            'lifetime_allocated_minor' => 10_00,
+            'settled_minor' => 0,
+            'remaining_minor' => 10_00,
+            'reconciled' => true,
+        ])
+        ->and($positionBalances->get('product_revenue'))->toMatchArray([
+            'current_minor' => 8_00,
+            'lifetime_allocated_minor' => 8_00,
+            'settled_minor' => 0,
+            'remaining_minor' => 8_00,
+            'reconciled' => true,
+        ])
+        ->and($positionBalances->get('partner_commission_payable'))->toMatchArray([
+            'current_minor' => 2_00,
+            'lifetime_allocated_minor' => 2_00,
+            'settled_minor' => 0,
+            'remaining_minor' => 2_00,
+            'reconciled' => true,
+        ])
+        ->and($positionBalances->get('commercial_revenue'))->toMatchArray([
+            'current_minor' => 5_00,
+            'lifetime_allocated_minor' => 5_00,
+            'settled_minor' => 0,
+            'remaining_minor' => 5_00,
+            'reconciled' => true,
+        ])
         ->and(ExecutionJournalEntry::query()
             ->where('correlation_id', 'commercial-sale:'.$snapshot->reference)
             ->count())->toBe(6);
@@ -76,6 +113,9 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
     $reversed = $reversal->execute($snapshot->reference, 'administrative-void:posting');
     $reversalOperationCount = TreasuryPositionOperation::query()->count();
     $replayedReversal = $reversal->execute($snapshot->reference, 'administrative-void:posting');
+    $reversedControls = app(CommercialControlReadModel::class)->build(
+        app(BootstrapCommercialOfferingFactory::class)->make('pay_code'),
+    );
 
     expect($reversed->status)->toBe('reversed')
         ->and($replayedReversal->getKey())->toBe($reversed->getKey())
@@ -86,6 +126,11 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         ->and(commercialSalePositionBalance($positions['product_revenue']))->toBe(0)
         ->and(commercialSalePositionBalance($positions['partner_commission']))->toBe(0)
         ->and(commercialSalePositionBalance($positions['commercial_revenue']))->toBe(0)
+        ->and(collect($reversedControls['position_balances'])->every(
+            fn (array $balance): bool => $balance['current_minor'] === 0
+                && $balance['lifetime_allocated_minor'] === 0
+                && $balance['reconciled'] === true,
+        ))->toBeTrue()
         ->and(ExecutionJournalEntry::query()
             ->where('correlation_id', 'commercial-sale:'.$snapshot->reference)
             ->pluck('event_type')
@@ -366,7 +411,7 @@ function commercialSalePositionDefinition(
         settlementResourceReference: 'resource:netbank:primary:php',
         settlementResourceType: 'provider_deposit_account',
         provider: 'netbank',
-        connectionReference: 'primary',
+        connectionReference: 'netbank-primary',
         currency: 'PHP',
         decimalPlaces: 2,
         purpose: $purpose,
@@ -374,7 +419,7 @@ function commercialSalePositionDefinition(
         legalProfile: 'treasury-settlement-ph-v1',
         legalProfileVersion: '2026-07-25.1',
         idempotencyKey: 'position-registration:x-change-commercial:'.substr($scope, 0, 32),
-        reconciliationReference: 'reconciliation:netbank:primary',
+        reconciliationReference: 'reconciliation:netbank:netbank-primary',
     );
 }
 

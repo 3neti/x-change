@@ -99,6 +99,17 @@ type CommercialControls = {
     amount_minor: number;
     allocation_count: number;
   }>;
+  position_balances: Array<{
+    purpose: string;
+    category: string;
+    currency: string;
+    current_minor: number;
+    lifetime_allocated_minor: number;
+    settled_minor: number;
+    remaining_minor: number;
+    difference_minor: number;
+    reconciled: boolean;
+  }>;
   provider_costs: {
     settled_count: number;
     settled_minor: number;
@@ -639,24 +650,99 @@ function activate(id: number): void {
         </div>
 
         <div v-else-if="activeTab === 'activity'" class="space-y-5 p-5">
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <article
-              v-for="allocation in commercialOffering.controls
-                .allocation_totals"
-              :key="allocation.category"
-              class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
-            >
-              <p class="text-xs font-semibold text-slate-500">
-                {{ label(allocation.category) }}
+          <section class="space-y-3" data-testid="commercial-position-balances">
+            <div>
+              <h3 class="text-sm font-semibold">Commercial Positions</h3>
+              <p class="mt-0.5 text-xs text-slate-500">
+                Current system balances, separated from lifetime allocation
+                activity.
               </p>
-              <p class="mt-1 text-lg font-semibold">
-                {{ money(allocation.amount_minor, allocation.currency) }}
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <article
+                v-for="position in commercialOffering.controls
+                  .position_balances"
+                :key="`${position.purpose}-${position.currency}`"
+                class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-xs font-semibold text-slate-500">
+                      {{ label(position.purpose) }}
+                    </p>
+                    <p class="mt-1 text-lg font-semibold">
+                      {{ money(position.current_minor, position.currency) }}
+                    </p>
+                  </div>
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.68rem] font-semibold"
+                    :class="
+                      position.reconciled
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                    "
+                  >
+                    <Check v-if="position.reconciled" class="size-3" />
+                    {{ position.reconciled ? "Reconciled" : "Review" }}
+                  </span>
+                </div>
+                <dl class="mt-3 space-y-1.5 text-xs">
+                  <div class="flex items-center justify-between gap-3">
+                    <dt class="text-slate-500">Lifetime Allocated</dt>
+                    <dd class="font-medium">
+                      {{
+                        money(
+                          position.lifetime_allocated_minor,
+                          position.currency,
+                        )
+                      }}
+                    </dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-3">
+                    <dt class="text-slate-500">Settled Or Paid</dt>
+                    <dd class="font-medium">
+                      {{ money(position.settled_minor, position.currency) }}
+                    </dd>
+                  </div>
+                  <div
+                    class="flex items-center justify-between gap-3 border-t border-slate-100 pt-1.5 dark:border-slate-800"
+                  >
+                    <dt class="font-medium">Remaining</dt>
+                    <dd class="font-semibold">
+                      {{ money(position.remaining_minor, position.currency) }}
+                    </dd>
+                  </div>
+                </dl>
+              </article>
+            </div>
+          </section>
+
+          <section class="space-y-3">
+            <div>
+              <h3 class="text-sm font-semibold">Allocation History</h3>
+              <p class="mt-0.5 text-xs text-slate-500">
+                Lifetime posted allocations. Reversed sales are excluded.
               </p>
-              <p class="mt-1 text-xs text-slate-500">
-                {{ allocation.allocation_count }} posted allocations
-              </p>
-            </article>
-          </div>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <article
+                v-for="allocation in commercialOffering.controls
+                  .allocation_totals"
+                :key="allocation.category"
+                class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+              >
+                <p class="text-xs font-semibold text-slate-500">
+                  {{ label(allocation.category) }}
+                </p>
+                <p class="mt-1 text-lg font-semibold">
+                  {{ money(allocation.amount_minor, allocation.currency) }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  {{ allocation.allocation_count }} posted allocations
+                </p>
+              </article>
+            </div>
+          </section>
 
           <div class="grid gap-3 lg:grid-cols-3">
             <article class="rounded-xl bg-slate-950 p-4 text-white">

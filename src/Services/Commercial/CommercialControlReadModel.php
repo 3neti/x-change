@@ -4,14 +4,22 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Commercial;
 
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 
-final class CommercialControlReadModel
+final readonly class CommercialControlReadModel
 {
+    public function __construct(
+        private TreasuryProviderConnectionCatalog $connections,
+        private TreasuryPositionReadModelContract $positions,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -19,6 +27,7 @@ final class CommercialControlReadModel
     {
         $allocationTotals = CommercialAllocation::query()
             ->selectRaw('category, currency, SUM(amount_minor) as amount_minor, COUNT(*) as allocation_count')
+            ->where('status', 'posted')
             ->groupBy('category', 'currency')
             ->orderBy('category')
             ->get()
@@ -43,6 +52,7 @@ final class CommercialControlReadModel
                 'currency' => $offering->catalog->currency,
             ],
             'allocation_totals' => $allocationTotals,
+            'position_balances' => $this->positionBalances($allocationTotals),
             'provider_costs' => [
                 'settled_count' => CommercialProviderCostSettlement::query()
                     ->where('status', 'settled')
@@ -100,5 +110,89 @@ final class CommercialControlReadModel
                 'provider_cost_requires_authoritative_evidence' => true,
             ],
         ];
+    }
+
+    /**
+     * @param  list<array{category: string, currency: string, amount_minor: int, allocation_count: int}>  $allocationTotals
+     * @return list<array<string, int|string|bool>>
+     */
+    private function positionBalances(array $allocationTotals): array
+    {
+        $purposes = [
+            TreasuryPositionPurpose::ProviderCostPayable->value => 'provider_cost',
+            TreasuryPositionPurpose::ProductRevenue->value => 'product_revenue',
+            TreasuryPositionPurpose::PartnerCommissionPayable->value => 'partner_commission',
+            TreasuryPositionPurpose::CommercialRevenue->value => 'commercial_revenue',
+        ];
+        $current = [];
+
+        foreach ($this->connections->active() as $connection) {
+            foreach ($this->positions->forConnection(
+                $connection->provider,
+                $connection->reference,
+                $connection->currency,
+            ) as $position) {
+                $purpose = $position->purpose->value;
+
+                if ($position->status !== 'active' || ! isset($purposes[$purpose])) {
+                    continue;
+                }
+
+                $key = $purpose.'|'.$position->currency;
+                $current[$key] = ($current[$key] ?? 0) + $position->balanceMinor;
+            }
+        }
+
+        $settled = CommercialProviderCostSettlement::query()
+            ->selectRaw('currency, SUM(observed_amount_minor) as amount_minor')
+            ->where('status', 'settled')
+            ->groupBy('currency')
+            ->pluck('amount_minor', 'currency')
+            ->mapWithKeys(fn (mixed $amount, string $currency): array => [
+                'provider_cost|'.$currency => (int) $amount,
+            ])
+            ->merge(PartnerCommissionPayout::query()
+                ->selectRaw('currency, SUM(amount_minor) as amount_minor')
+                ->where('status', 'settled')
+                ->groupBy('currency')
+                ->pluck('amount_minor', 'currency')
+                ->mapWithKeys(fn (mixed $amount, string $currency): array => [
+                    'partner_commission|'.$currency => (int) $amount,
+                ]));
+        $rows = [];
+
+        foreach ($purposes as $purpose => $category) {
+            $totals = collect($allocationTotals)
+                ->where('category', $category)
+                ->keyBy('currency');
+            $currencies = collect(array_keys($current))
+                ->filter(fn (string $key): bool => str_starts_with($key, $purpose.'|'))
+                ->map(fn (string $key): string => str($key)->after('|')->toString())
+                ->merge($totals->keys())
+                ->unique()
+                ->sort()
+                ->values();
+
+            foreach ($currencies as $currency) {
+                $lifetimeAllocatedMinor = (int) ($totals->get($currency)['amount_minor'] ?? 0);
+                $settledMinor = (int) $settled->get($category.'|'.$currency, 0);
+                $currentMinor = (int) ($current[$purpose.'|'.$currency] ?? 0);
+                $expectedRemainingMinor = $lifetimeAllocatedMinor - $settledMinor;
+
+                $rows[] = [
+                    'purpose' => $purpose,
+                    'category' => $category,
+                    'currency' => $currency,
+                    'current_minor' => $currentMinor,
+                    'lifetime_allocated_minor' => $lifetimeAllocatedMinor,
+                    'settled_minor' => $settledMinor,
+                    'remaining_minor' => $currentMinor,
+                    'difference_minor' => $currentMinor - $expectedRemainingMinor,
+                    'reconciled' => $currentMinor === $expectedRemainingMinor,
+                ];
+            }
+        }
+
+        return $rows;
     }
 }

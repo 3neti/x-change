@@ -87,6 +87,19 @@ const controls = {
       allocation_count: 1,
     },
   ],
+  position_balances: [
+    {
+      purpose: "product_revenue",
+      category: "product_revenue",
+      currency: "PHP",
+      current_minor: 300,
+      lifetime_allocated_minor: 500,
+      settled_minor: 200,
+      remaining_minor: 300,
+      difference_minor: 0,
+      reconciled: true,
+    },
+  ],
   provider_costs: {
     settled_count: 1,
     settled_minor: 1000,
@@ -165,6 +178,22 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("provider cost");
     expect(wrapper.text()).toContain("commercial revenue");
     expect(wrapper.text()).toContain("Independent Maker–Checker");
+
+    const activityButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("Activity"));
+
+    expect(activityButton).toBeDefined();
+    await activityButton!.trigger("click");
+
+    expect(wrapper.text()).toContain("Commercial Positions");
+    expect(wrapper.text()).toContain("Current system balances");
+    expect(wrapper.text()).toContain("Lifetime Allocated");
+    expect(wrapper.text()).toContain("Settled Or Paid");
+    expect(wrapper.text()).toContain("Remaining");
+    expect(wrapper.text()).toContain("Reconciled");
+    expect(wrapper.text()).toContain("Allocation History");
+    expect(wrapper.text()).toContain("Reversed sales are excluded");
   });
 
   it("shows pending publication as a checker action without exposing edits", () => {
