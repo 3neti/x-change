@@ -99,18 +99,6 @@ final class ManageCommercialOffering
                 throw new \DomainException('A publication authorization reference is required.');
             }
 
-            CommercialOffering::query()
-                ->where('profile', $locked->profile)
-                ->where('status', CommercialOfferingStatus::Published->value)
-                ->lockForUpdate()
-                ->get()
-                ->each(function (CommercialOffering $published): void {
-                    $published->forceFill([
-                        'status' => CommercialOfferingStatus::Retired,
-                        'retired_at' => now(),
-                    ])->save();
-                });
-
             $locked->forceFill([
                 'status' => CommercialOfferingStatus::Published,
                 'approved_by_type' => $checker->getMorphClass(),

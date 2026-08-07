@@ -4,14 +4,23 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Requests\Cockpit;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
+use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 
 final class StoreCommercialOfferingRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $operator = $this->user();
+
+        return $operator instanceof Model
+            && app(CommercialOperatorAuthorityContract::class)->allows(
+                $operator,
+                CommercialOperatorCapability::ManageOfferings,
+            );
     }
 
     /**

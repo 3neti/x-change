@@ -7,6 +7,7 @@ use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 function authorizeCommercialOperator(User $operator, CommercialOperatorCapability $capability): void
@@ -20,6 +21,10 @@ function authorizeCommercialOperator(User $operator, CommercialOperatorCapabilit
     ]);
 }
 
+beforeEach(function (): void {
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:cockpit-test');
+});
+
 /**
  * @return array<string, mixed>
  */
@@ -29,7 +34,7 @@ function commercialOfferingFormPayload(): array
 
     return [
         'profile' => 'pay_code',
-        'effective_at' => now()->addMinute()->toIso8601String(),
+        'effective_at' => now()->subMinute()->toIso8601String(),
         'items' => array_map(
             static fn (array $item): array => [
                 'reference' => $item['reference'],
@@ -71,7 +76,7 @@ it('shows the active governed offering to an authorized named operator', functio
         ->get(route('x-change.cockpit.commercial.index'))
         ->assertOk()
         ->assertJsonPath('component', 'x-change/cockpit/CommercialOfferings')
-        ->assertJsonPath('props.commercial_offering.source', 'package_default')
+        ->assertJsonPath('props.commercial_offering.source', 'installation_baseline')
         ->assertJsonPath('props.commercial_offering.active.reference', 'commercial-offering:pay_code')
         ->assertJsonPath('props.commercial_offering.active.legal_trace.jurisdiction', 'PH')
         ->assertJsonPath('props.commercial_offering.controls.schema', 'x-change.cockpit.commercial-controls.v1')
@@ -91,7 +96,9 @@ it('submits and independently publishes a new offering from the Cockpit', functi
         commercialOfferingFormPayload(),
     )->assertRedirect();
 
-    $pending = CommercialOffering::query()->sole();
+    $pending = CommercialOffering::query()
+        ->where('status', CommercialOfferingStatus::PendingApproval->value)
+        ->sole();
 
     expect($pending->status)->toBe(CommercialOfferingStatus::PendingApproval)
         ->and($pending->created_by_id)->toBe($maker->getKey());
@@ -106,4 +113,31 @@ it('submits and independently publishes a new offering from the Cockpit', functi
     expect($pending->refresh()->status)->toBe(CommercialOfferingStatus::Published)
         ->and($pending->approved_by_id)->toBe($checker->getKey())
         ->and($pending->authorization_reference)->toBe('delegated-pricing-control:2026-08-07:001');
+
+    $this->post(route('x-change.cockpit.commercial.offerings.activations.store', $pending), [
+        'activation_reference' => 'deployment:commercial-offering:2026-08-07:001',
+    ])->assertRedirect();
+
+    expect($pending->currentActivation()->exists())->toBeTrue();
+});
+
+it('rejects Commercial Offering mutations without the matching authority', function (): void {
+    $ordinaryUser = actingAsTestUser();
+
+    $this->post(
+        route('x-change.cockpit.commercial.offerings.store'),
+        commercialOfferingFormPayload(),
+    )->assertForbidden();
+
+    $baseline = CommercialOffering::query()->where('profile', 'pay_code')->sole();
+
+    $this->post(route('x-change.cockpit.commercial.offerings.approvals.store', $baseline), [
+        'authorization_reference' => 'unauthorized',
+    ])->assertForbidden();
+
+    $this->post(route('x-change.cockpit.commercial.offerings.activations.store', $baseline), [
+        'activation_reference' => 'unauthorized',
+    ])->assertForbidden();
+
+    expect($ordinaryUser)->not->toBeNull();
 });

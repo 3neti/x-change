@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Enums\CommercialActivationAuthority;
+use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 
@@ -24,6 +25,15 @@ final class ActivateCommercialOffering
 
         return DB::transaction(function () use ($offering, $authority, $activationReference): CommercialOfferingActivation {
             $locked = CommercialOffering::query()->lockForUpdate()->findOrFail($offering->getKey());
+
+            if ($authority === CommercialActivationAuthority::IndependentApproval
+                && $locked->status !== CommercialOfferingStatus::Published) {
+                throw new \DomainException('Only an independently published Commercial Offering may be activated.');
+            }
+
+            if ($locked->effective_at?->isFuture()) {
+                throw new \DomainException('Commercial Offering activation cannot precede its effective time.');
+            }
 
             if ($locked->snapshot_hash !== $locked->offering()->snapshotHash()) {
                 throw new \DomainException('Commercial Offering activation refused a snapshot hash mismatch.');
@@ -48,7 +58,17 @@ final class ActivateCommercialOffering
                 ->where('profile', $locked->profile)
                 ->whereNull('deactivated_at')
                 ->lockForUpdate()
-                ->update(['deactivated_at' => now()]);
+                ->get()
+                ->each(function (CommercialOfferingActivation $activation) use ($locked): void {
+                    $activation->forceFill(['deactivated_at' => now()])->save();
+
+                    if ($activation->commercial_offering_id !== $locked->getKey()) {
+                        $activation->offering?->forceFill([
+                            'status' => CommercialOfferingStatus::Retired,
+                            'retired_at' => now(),
+                        ])->save();
+                    }
+                });
 
             return CommercialOfferingActivation::query()->create([
                 'profile' => $locked->profile,

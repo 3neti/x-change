@@ -59,6 +59,42 @@ final class AuthorizeCommercialOperatorCommand extends Command
         }
 
         $granter = $systemPrincipal->resolve();
+
+        if ($operator->is($granter)) {
+            $this->error('The non-interactive system principal cannot act as a Commercial maker or checker.');
+
+            return self::FAILURE;
+        }
+
+        $separatedCapabilities = [
+            CommercialOperatorCapability::ManageOfferings->value,
+            CommercialOperatorCapability::ApproveOfferings->value,
+        ];
+
+        if (count(array_intersect($capabilities, $separatedCapabilities)) === 2) {
+            $this->error('Commercial maker and checker authority must belong to different operators.');
+
+            return self::FAILURE;
+        }
+
+        $oppositeCapability = in_array(CommercialOperatorCapability::ManageOfferings->value, $capabilities, true)
+            ? CommercialOperatorCapability::ApproveOfferings->value
+            : (in_array(CommercialOperatorCapability::ApproveOfferings->value, $capabilities, true)
+                ? CommercialOperatorCapability::ManageOfferings->value
+                : null);
+
+        if ($oppositeCapability !== null
+            && CommercialOperatorAuthorization::query()
+                ->where('operator_type', $operator->getMorphClass())
+                ->where('operator_id', $operator->getKey())
+                ->where('capability', $oppositeCapability)
+                ->currentlyValid()
+                ->exists()) {
+            $this->error('Commercial maker and checker authority must belong to different operators.');
+
+            return self::FAILURE;
+        }
+
         $authorizations = [];
 
         foreach ($capabilities as $capability) {

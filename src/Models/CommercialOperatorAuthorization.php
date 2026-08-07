@@ -12,7 +12,17 @@ final class CommercialOperatorAuthorization extends Model
 {
     protected $table = 'x_change_commercial_operator_authorizations';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'operator_type',
+        'operator_id',
+        'capability',
+        'authorization_reference',
+        'granted_by_type',
+        'granted_by_id',
+        'valid_from',
+        'valid_until',
+        'revoked_at',
+    ];
 
     protected function casts(): array
     {

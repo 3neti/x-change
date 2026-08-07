@@ -14,7 +14,9 @@ use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
+use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
+use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
 
 final class CockpitCommercialOfferingPageController extends Controller
 {
@@ -22,6 +24,7 @@ final class CockpitCommercialOfferingPageController extends Controller
         private readonly CommercialOfferingResolverContract $offerings,
         private readonly CommercialOperatorAuthorityContract $authority,
         private readonly CommercialControlReadModel $controls,
+        private readonly CommercialGovernanceInspector $governance,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -67,6 +70,23 @@ final class CockpitCommercialOfferingPageController extends Controller
                     ])
                     ->values()
                     ->all(),
+                'published' => CommercialOffering::query()
+                    ->where('profile', $profile)
+                    ->where('status', CommercialOfferingStatus::Published->value)
+                    ->whereDoesntHave('currentActivation')
+                    ->latest('approved_at')
+                    ->get()
+                    ->map(fn (CommercialOffering $published): array => [
+                        'id' => $published->getKey(),
+                        'reference' => $published->reference,
+                        'version' => $published->version,
+                        'snapshot_hash' => $published->snapshot_hash,
+                        'effective_at' => $published->effective_at?->toIso8601String(),
+                        'approved_at' => $published->approved_at?->toIso8601String(),
+                    ])
+                    ->values()
+                    ->all(),
+                'governance' => $this->governance->inspect(),
                 'controls' => $this->controls->build($offering),
             ],
         ]);
@@ -85,13 +105,11 @@ final class CockpitCommercialOfferingPageController extends Controller
 
     private function source(string $profile): string
     {
-        $published = (bool) config('x-change.commercial.offerings.use_published', false)
-            && CommercialOffering::query()
-                ->where('profile', $profile)
-                ->where('status', CommercialOfferingStatus::Published->value)
-                ->where('effective_at', '<=', now())
-                ->exists();
+        $activation = CommercialOfferingActivation::query()
+            ->where('profile', $profile)
+            ->whereNull('deactivated_at')
+            ->first();
 
-        return $published ? 'published' : 'package_default';
+        return $activation?->origin?->value ?? 'unavailable';
     }
 }

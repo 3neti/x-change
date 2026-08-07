@@ -6,9 +6,9 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\Commercial\ManageCommercialOffering;
+use LBHurtado\XChange\Http\Requests\Cockpit\ApproveCommercialOfferingRequest;
 use LBHurtado\XChange\Models\CommercialOffering;
 
 final class CockpitCommercialOfferingApprovalController extends Controller
@@ -17,14 +17,12 @@ final class CockpitCommercialOfferingApprovalController extends Controller
         private readonly ManageCommercialOffering $manage,
     ) {}
 
-    public function store(Request $request, CommercialOffering $offering): RedirectResponse
+    public function store(ApproveCommercialOfferingRequest $request, CommercialOffering $offering): RedirectResponse
     {
         $operator = $request->user();
         abort_unless($operator instanceof Model, 403);
 
-        $validated = $request->validate([
-            'authorization_reference' => ['required', 'string', 'max:190'],
-        ]);
+        $validated = $request->validated();
 
         $this->manage->publish(
             $operator,
@@ -32,6 +30,6 @@ final class CockpitCommercialOfferingApprovalController extends Controller
             (string) $validated['authorization_reference'],
         );
 
-        return back()->with('success', 'Commercial Offering published.');
+        return back()->with('success', 'Commercial Offering approved and published. Activate it separately when ready.');
     }
 }

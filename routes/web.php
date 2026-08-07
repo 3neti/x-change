@@ -33,6 +33,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetFulfi
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetImportController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetIntakeController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetResultsExportController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingActivationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingPageController;
@@ -141,6 +142,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             [CockpitCommercialOfferingApprovalController::class, 'store'],
         )->middleware('throttle:12,1')
             ->name('x-change.cockpit.commercial.offerings.approvals.store');
+        Route::post(
+            'commercial/offerings/{offering}/activations',
+            [CockpitCommercialOfferingActivationController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.offerings.activations.store');
         Route::get('campaigns', [CockpitCampaignWorksheetController::class, 'index'])
             ->name('x-change.cockpit.campaigns.index');
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])

@@ -5,11 +5,14 @@ declare(strict_types=1);
 use Illuminate\Auth\Access\AuthorizationException;
 use LBHurtado\XChange\Actions\Commercial\ManageCommercialOffering;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
+use LBHurtado\XChange\Enums\CommercialActivationAuthority;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Services\Commercial\ActivateCommercialOffering;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 
@@ -40,6 +43,8 @@ function commercialOfferingVersion(int $version, string $effectiveAt): Commercia
 }
 
 it('uses package bootstrap configuration until published offerings are activated', function (): void {
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:test');
+
     $resolved = app(CommercialOfferingResolverContract::class)->resolve('pay_code');
 
     expect($resolved->reference)->toBe('commercial-offering:pay_code')
@@ -83,13 +88,17 @@ it('publishes an immutable offering through distinct maker and checker authority
         ->and($published->approved_by_id)->toBe($checker->getKey())
         ->and($published->authorization_reference)->toBe('board-resolution:2026-08-07:pricing-v1');
 
-    config()->set('x-change.commercial.offerings.use_published', true);
+    app(ActivateCommercialOffering::class)->execute(
+        $published,
+        CommercialActivationAuthority::IndependentApproval,
+        'commercial-activation:pricing-v1',
+    );
 
     expect(app(CommercialOfferingResolverContract::class)->resolve('pay_code')->snapshotHash())
         ->toBe($published->snapshot_hash);
 });
 
-it('retires the prior offering when a later approved version becomes effective', function (): void {
+it('retires the prior active offering only when a later published version is activated', function (): void {
     $firstMaker = actingAsTestUser();
     $secondMaker = actingAsTestUser();
     $checker = actingAsTestUser();
@@ -119,10 +128,30 @@ it('retires the prior offering when a later approved version becomes effective',
         'pricing-approval:v2',
     );
 
-    expect($first->refresh()->status)->toBe(CommercialOfferingStatus::Retired)
+    expect($first->refresh()->status)->toBe(CommercialOfferingStatus::Published)
         ->and($second->status)->toBe(CommercialOfferingStatus::Published)
         ->and(CommercialOffering::query()->where('status', CommercialOfferingStatus::Published->value)->count())
-        ->toBe(1);
+        ->toBe(2);
+
+    $activation = app(ActivateCommercialOffering::class);
+    $activation->execute(
+        $first,
+        CommercialActivationAuthority::IndependentApproval,
+        'commercial-activation:v1',
+    );
+    $activation->execute(
+        $second,
+        CommercialActivationAuthority::IndependentApproval,
+        'commercial-activation:v2',
+    );
+
+    expect($first->refresh()->status)->toBe(CommercialOfferingStatus::Retired)
+        ->and($second->refresh()->status)->toBe(CommercialOfferingStatus::Published);
+});
+
+it('fails closed when a governed profile has no active offering', function (): void {
+    expect(fn () => app(CommercialOfferingResolverContract::class)->resolve('pay_code'))
+        ->toThrow(DomainException::class, 'has no active governed version');
 });
 
 it('fails closed for unauthorized operators and same-person approval', function (): void {

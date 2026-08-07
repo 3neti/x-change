@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 
@@ -53,5 +54,29 @@ it('rejects unknown Commercial Control capabilities', function (): void {
         '--capability' => ['commercial.superuser'],
         '--authorization-reference' => 'invalid-capability-test',
     ]))->toBe(1)
+        ->and(CommercialOperatorAuthorization::query()->count())->toBe(0);
+});
+
+it('rejects the system principal and combined maker checker authority', function (): void {
+    enableNetbankTreasuryForTests();
+    $operator = actingAsTestUser();
+    config()->set('auth.providers.users.model', $operator::class);
+    $systemPrincipal = app(SystemUserResolverContract::class)->resolve();
+
+    expect(Artisan::call('x-change:commercial:authorize-operator', [
+        'operator' => $systemPrincipal->email,
+        '--column' => 'email',
+        '--capability' => [CommercialOperatorCapability::ManageOfferings->value],
+        '--authorization-reference' => 'invalid-system-principal',
+    ]))->toBe(1)
+        ->and(Artisan::call('x-change:commercial:authorize-operator', [
+            'operator' => $operator->email,
+            '--column' => 'email',
+            '--capability' => [
+                CommercialOperatorCapability::ManageOfferings->value,
+                CommercialOperatorCapability::ApproveOfferings->value,
+            ],
+            '--authorization-reference' => 'invalid-combined-role',
+        ]))->toBe(1)
         ->and(CommercialOperatorAuthorization::query()->count())->toBe(0);
 });
