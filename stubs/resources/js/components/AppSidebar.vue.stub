@@ -8,6 +8,7 @@ import {
     Landmark,
     Megaphone,
     RadioTower,
+    Scale,
     UsersRound,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -32,6 +33,7 @@ import {
 } from '@/routes/x-change/cockpit';
 import accounts from '@/routes/x-change/cockpit/accounts';
 import campaigns from '@/routes/x-change/cockpit/campaigns';
+import commercial from '@/routes/x-change/cockpit/commercial';
 import diagnostics from '@/routes/x-change/cockpit/diagnostics';
 import funding from '@/routes/x-change/cockpit/funding';
 import payCodes from '@/routes/x-change/cockpit/pay-codes';
@@ -94,13 +96,24 @@ type XChangeSharedProps = {
     xchange?: {
         navigation?: {
             system_readiness_visible?: boolean;
+            commercial_controls_visible?: boolean;
         };
     };
 };
 
 const page = usePage<XChangeSharedProps>();
-const systemItems = computed<XChangeNavigationItem[]>(() =>
-    page.props.xchange?.navigation?.system_readiness_visible
+const systemItems = computed<XChangeNavigationItem[]>(() => [
+    ...(page.props.xchange?.navigation?.commercial_controls_visible
+        ? [
+              {
+                  title: 'Commercial Controls',
+                  description: 'Price List, Waterfall, and earnings',
+                  href: commercial.index(),
+                  icon: Scale,
+              },
+          ]
+        : []),
+    ...(page.props.xchange?.navigation?.system_readiness_visible
         ? [
               {
                   title: 'System Readiness',
@@ -109,8 +122,8 @@ const systemItems = computed<XChangeNavigationItem[]>(() =>
                   icon: RadioTower,
               },
           ]
-        : [],
-);
+        : []),
+]);
 
 const navigationGroups = computed(() => [
     { label: 'Workspace', items: workspaceItems },

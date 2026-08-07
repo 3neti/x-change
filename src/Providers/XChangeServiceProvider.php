@@ -64,6 +64,7 @@ use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\CloudRecipeCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
 use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
@@ -1318,6 +1319,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RunLifecycleScenarioGroupCommand::class,
                 BackfillDisbursementSettlementJournalCommand::class,
                 AttestCommercialAccountingCommand::class,
+                AuthorizeCommercialOperatorCommand::class,
                 BackfillCommercialAccountingJournalCommand::class,
                 BackfillStandingFundingPositionsCommand::class,
                 CapitalizeTreasuryOpeningBalanceCommand::class,

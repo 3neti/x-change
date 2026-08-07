@@ -77,6 +77,7 @@ it('shows the active governed offering to an authorized named operator', functio
         ->assertJsonPath('props.commercial_offering.controls.schema', 'x-change.cockpit.commercial-controls.v1')
         ->assertJsonPath('props.commercial_offering.controls.commissions.earned_minor', 0)
         ->assertJsonPath('props.commercial_offering.controls.policy.commission_requires_attributed_participant', true)
+        ->assertJsonPath('props.xchange.navigation.commercial_controls_visible', true)
         ->assertJsonPath('props.commercial_offering.can_manage', false)
         ->assertJsonPath('props.commercial_offering.can_approve', false);
 });
