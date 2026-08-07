@@ -9,6 +9,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import type { CockpitClaimExperiencePreviewManifest } from '../types';
+import CockpitClaimLiveScreen from './CockpitClaimLiveScreen.vue';
 
 const props = defineProps<{
     status: 'idle' | 'ready' | 'failed';
@@ -147,56 +148,10 @@ function selectNextStep(): void {
                         data-testid="cockpit-claim-experience-frame"
                     />
                 </div>
-                <div
-                    v-else
-                    class="flex aspect-[9/16] h-full max-h-full min-h-0 w-auto max-w-full flex-col overflow-hidden rounded-[1.15rem] border-[5px] border-slate-700 bg-slate-50 text-slate-950 shadow-2xl"
-                    data-testid="cockpit-claim-experience-concept"
-                    :aria-label="currentStep.title"
-                >
-                    <div
-                        class="flex items-center justify-between border-b border-slate-200 px-4 py-3"
-                    >
-                        <span class="text-[10px] font-black tracking-[0.18em] text-slate-500 uppercase">
-                            x-change
-                        </span>
-                        <span
-                            class="rounded-full bg-cyan-100 px-2 py-1 text-[9px] font-bold tracking-wide text-cyan-900 uppercase"
-                        >
-                            {{ currentStep.phase }}
-                        </span>
-                    </div>
-                    <div
-                        class="flex min-h-0 flex-1 flex-col justify-center gap-4 px-5 py-6"
-                    >
-                        <div
-                            class="grid size-10 place-items-center rounded-2xl bg-slate-950 text-cyan-300"
-                        >
-                            <Route class="size-5" aria-hidden="true" />
-                        </div>
-                        <div class="grid gap-2">
-                            <p class="text-lg font-bold tracking-tight">
-                                {{ currentStep.title }}
-                            </p>
-                            <p class="text-xs leading-5 text-slate-600">
-                                {{ currentStep.description }}
-                            </p>
-                        </div>
-                        <div class="grid gap-2" aria-hidden="true">
-                            <div
-                                class="h-9 rounded-xl border border-slate-200 bg-white"
-                            />
-                            <div
-                                class="h-9 rounded-xl border border-slate-200 bg-white"
-                            />
-                        </div>
-                        <div
-                            class="grid min-h-10 place-items-center rounded-xl bg-slate-950 text-xs font-bold text-white"
-                            aria-hidden="true"
-                        >
-                            Continue
-                        </div>
-                    </div>
-                </div>
+                <CockpitClaimLiveScreen
+                    v-else-if="currentStep.screen"
+                    :screen="currentStep.screen"
+                />
             </article>
 
             <div

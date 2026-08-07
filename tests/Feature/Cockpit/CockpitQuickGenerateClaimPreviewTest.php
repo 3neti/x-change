@@ -146,8 +146,11 @@ it('falls back to a useful storyboard when browser capture is unavailable', func
         ->assertJsonPath('schema', 'x-change.claim-experience-preview.manifest.v1')
         ->assertJsonPath('status', 'ready')
         ->assertJsonPath('safety.money_movement', false)
-        ->assertJsonPath('journey.steps.0.render_kind', 'experience_card')
-        ->assertJsonPath('journey.steps.0.status', 'pending_capture');
+        ->assertJsonPath('journey.steps.0.render_kind', 'live_screen')
+        ->assertJsonPath('journey.steps.0.status', 'rendered')
+        ->assertJsonPath('journey.steps.0.screen.kind', 'claim_entry')
+        ->assertJsonPath('journey.steps.0.screen.title', 'Claim Pay Code')
+        ->assertJsonPath('journey.steps.0.screen.code', 'PREVIEW');
 
     expect((int) $issuer->wallet->refresh()->balanceInt)->toBe(0)
         ->and(Voucher::query()->count())->toBe($voucherCountBefore);

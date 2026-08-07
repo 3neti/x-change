@@ -38,7 +38,7 @@ final class ClaimExperiencePreviewService
         $context = $this->cache->context($scenario, [
             'profile' => $options->profile,
             'dry_run' => $options->dryRun,
-            'render_mode' => $captureAvailable ? 'browser_capture' : 'storyboard',
+            'render_mode' => $captureAvailable ? 'browser_capture' : 'live_screen_v1',
             'submit_claim' => false,
             'mobile' => $options->mobile,
             'bank_code' => $options->bankCode,
@@ -178,7 +178,7 @@ final class ClaimExperiencePreviewService
             'message' => 'Claim journey storyboard created without launching a browser.',
         ]], [
             'dry_run' => true,
-            'capture_mode' => 'storyboard',
+            'capture_mode' => 'live_screen',
             'capture_reason' => $reason,
             'base_url' => $baseUrl,
             'money_movement' => false,

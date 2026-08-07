@@ -63,6 +63,9 @@ final class ClaimPreviewWebManifestPresenter
         $frame = is_array($step['frame'] ?? null)
             ? $step['frame']
             : null;
+        $screen = is_array($step['screen'] ?? null)
+            ? $step['screen']
+            : null;
 
         return [
             'sequence' => (int) ($step['sequence'] ?? 0),
@@ -71,8 +74,9 @@ final class ClaimPreviewWebManifestPresenter
             'title' => (string) ($step['title'] ?? 'Claim step'),
             'description' => (string) ($step['description'] ?? ''),
             'actor' => 'redeemer',
-            'render_kind' => (string) ($step['render_kind'] ?? 'experience_card'),
-            'status' => (string) ($step['status'] ?? 'pending_capture'),
+            'render_kind' => (string) ($step['render_kind'] ?? 'live_screen'),
+            'status' => (string) ($step['status'] ?? 'rendered'),
+            'screen' => $screen,
             'frame' => $frame === null ? null : [
                 'url' => $this->urls->route(
                     'x-change.cockpit.quick-generate.claim-previews.frames.show',

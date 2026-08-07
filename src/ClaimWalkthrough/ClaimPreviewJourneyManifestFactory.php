@@ -31,7 +31,7 @@ final class ClaimPreviewJourneyManifestFactory
         $root = $this->artifactRoot($report);
 
         $steps = collect($canonical)
-            ->map(function (array $step, int $index) use ($captured, $root): array {
+            ->map(function (array $step, int $index) use ($captured, $root, $scenario): array {
                 $checkpoint = $captured->get($step['key']);
 
                 return $this->step(
@@ -39,6 +39,7 @@ final class ClaimPreviewJourneyManifestFactory
                     sequence: $index + 1,
                     checkpoint: is_array($checkpoint) ? $checkpoint : null,
                     root: $root,
+                    scenario: $scenario,
                 );
             })
             ->values()
@@ -103,6 +104,7 @@ final class ClaimPreviewJourneyManifestFactory
         int $sequence,
         ?array $checkpoint,
         ?string $root,
+        array $scenario,
     ): array {
         $frame = $checkpoint === null
             ? null
@@ -111,10 +113,207 @@ final class ClaimPreviewJourneyManifestFactory
         return [
             ...$step,
             'sequence' => $sequence,
-            'render_kind' => $frame === null ? 'experience_card' : 'captured_frame',
-            'status' => $frame === null ? 'pending_capture' : 'captured',
+            'render_kind' => $frame === null ? 'live_screen' : 'captured_frame',
+            'status' => $frame === null ? 'rendered' : 'captured',
             'frame' => $frame,
+            'screen' => $frame === null ? $this->screen($step, $scenario) : null,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $step
+     * @param  array<string, mixed>  $scenario
+     * @return array<string, mixed>
+     */
+    private function screen(array $step, array $scenario): array
+    {
+        $key = (string) ($step['key'] ?? '');
+        $fixture = (array) data_get($scenario, 'fixture', []);
+        $instructions = (array) data_get($fixture, 'instructions', []);
+        $rider = (array) data_get($fixture, 'rider', []);
+        $amount = (float) data_get($fixture, 'amount', 0);
+        $formattedAmount = '₱'.number_format($amount, 2);
+        $validation = str_starts_with($key, 'validation-')
+            ? substr($key, strlen('validation-'))
+            : null;
+
+        return [
+            'kind' => $this->screenKind($key, $validation),
+            'code' => 'PREVIEW',
+            'amount' => $formattedAmount,
+            'title' => $this->screenTitle($key, $validation),
+            'description' => $this->screenDescription($key, $validation),
+            'fields' => $this->screenFields($key, $instructions, $validation),
+            'message' => $this->plainText((string) data_get($rider, 'message', '')),
+            'artwork_url' => $this->artworkUrl($key, $fixture),
+            'handoff' => $key === 'rider-url'
+                ? (array) data_get($fixture, 'rider_handoff_preview', [])
+                : null,
+        ];
+    }
+
+    private function screenKind(string $key, ?string $validation): string
+    {
+        if ($validation !== null) {
+            return 'validation_'.$validation;
+        }
+
+        return match ($key) {
+            'claim-entry' => 'claim_entry',
+            'pre-claim-rider-splash' => 'rider_splash',
+            'named-slice-selection' => 'slice_selection',
+            'generic-payout-form', 'account-funding-details' => 'claim_details',
+            'confirmation' => 'confirmation',
+            'claim-success-rider-message' => 'success',
+            'rider-redirect-countdown' => 'redirect_countdown',
+            'rider-url' => 'rider_handoff',
+            default => 'claim_step',
+        };
+    }
+
+    private function screenTitle(string $key, ?string $validation): string
+    {
+        if ($validation !== null) {
+            return match ($validation) {
+                'kyc' => 'Identity Check',
+                'otp' => 'OTP Verification',
+                'selfie' => 'Selfie Required',
+                'signature' => 'Signature Required',
+                'location' => 'Location Required',
+                'secret' => 'Claim Secret',
+                default => 'Verification Required',
+            };
+        }
+
+        return match ($key) {
+            'claim-entry' => 'Claim Pay Code',
+            'pre-claim-rider-splash' => 'A message for you',
+            'named-slice-selection' => 'Choose claim portions',
+            'generic-payout-form' => 'Claim details',
+            'account-funding-details' => 'Add to your Account',
+            'confirmation' => 'Confirm Claim',
+            'claim-success-rider-message' => 'Claim accepted',
+            'rider-redirect-countdown' => 'Continue to the issuer’s link',
+            'rider-url' => 'Issuer link',
+            default => 'Pay Code claim',
+        };
+    }
+
+    private function screenDescription(string $key, ?string $validation): string
+    {
+        if ($validation !== null) {
+            return match ($validation) {
+                'kyc' => 'Your Pay Code remains protected while identity verification is resolved.',
+                'otp' => 'Enter the 6-digit code sent to your mobile.',
+                'selfie' => 'Please take a clear photo of yourself.',
+                'signature' => 'Please sign in the box below using your finger or mouse.',
+                'location' => 'Please share your current location to continue.',
+                'secret' => 'Enter the secret supplied by the issuer.',
+                default => 'Complete this safeguard to continue.',
+            };
+        }
+
+        return match ($key) {
+            'claim-entry' => 'Enter the Pay Code shared with you.',
+            'pre-claim-rider-splash' => 'The issuer’s introduction appears before claim details.',
+            'named-slice-selection' => 'Select the available portions you want to claim.',
+            'generic-payout-form' => 'Tell us where the funds should be sent.',
+            'account-funding-details' => 'Review the Account that will receive the claimed value.',
+            'confirmation' => 'Review and confirm your Pay Code claim.',
+            'claim-success-rider-message' => 'The claim is recorded. Payout follows provider confirmation.',
+            'rider-redirect-countdown' => 'You will leave x-change after the claim is complete.',
+            'rider-url' => 'The issuer’s configured destination opens next.',
+            default => 'Continue through the configured claim experience.',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array<int, array{key: string, label: string, value: string}>
+     */
+    private function screenFields(string $key, array $instructions, ?string $validation): array
+    {
+        if ($validation !== null) {
+            return [];
+        }
+
+        if ($key === 'claim-entry') {
+            return [['key' => 'code', 'label' => 'Pay Code', 'value' => 'PREVIEW']];
+        }
+
+        if ($key === 'confirmation') {
+            return [
+                ['key' => 'mobile', 'label' => 'Mobile Number', 'value' => '09••• ••• •••'],
+                ['key' => 'destination', 'label' => 'Destination', 'value' => 'Selected bank or wallet'],
+            ];
+        }
+
+        if (! in_array($key, ['generic-payout-form', 'account-funding-details'], true)) {
+            return [];
+        }
+
+        $labels = [
+            'name' => ['Full Name', 'Recipient name'],
+            'email' => ['Email Address', 'name@example.com'],
+            'mobile' => ['Mobile Number', '09••• ••• •••'],
+            'address' => ['Full Address', 'Recipient address'],
+            'birth_date' => ['Birth Date', 'MM / DD / YYYY'],
+            'reference_code' => ['Reference Code', 'Reference'],
+        ];
+        $fields = collect((array) data_get($instructions, 'inputs.fields', []))
+            ->filter(fn (mixed $field): bool => is_string($field) && isset($labels[$field]))
+            ->map(function (string $field) use ($labels): array {
+                [$label, $value] = $labels[$field];
+
+                return ['key' => $field, 'label' => $label, 'value' => $value];
+            });
+
+        if ($key === 'generic-payout-form') {
+            $fields->prepend(['key' => 'account', 'label' => 'Account Number', 'value' => 'Enter account number']);
+            $fields->prepend(['key' => 'bank', 'label' => 'Bank or Wallet', 'value' => 'Choose institution']);
+        }
+
+        return $fields->unique('key')->values()->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $fixture
+     */
+    private function artworkUrl(string $key, array $fixture): ?string
+    {
+        if ($key === 'rider-url') {
+            $url = data_get($fixture, 'rider_handoff_preview.public_image_url');
+
+            return $this->safeHttpUrl($url);
+        }
+
+        if ($key !== 'pre-claim-rider-splash') {
+            return null;
+        }
+
+        $splash = (string) data_get($fixture, 'rider.splash', '');
+
+        if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $splash, $matches) !== 1) {
+            return null;
+        }
+
+        return $this->safeHttpUrl($matches[1] ?? null);
+    }
+
+    private function safeHttpUrl(mixed $value): ?string
+    {
+        if (! is_string($value) || filter_var($value, FILTER_VALIDATE_URL) === false) {
+            return null;
+        }
+
+        return in_array(parse_url($value, PHP_URL_SCHEME), ['http', 'https'], true)
+            ? $value
+            : null;
+    }
+
+    private function plainText(string $value): string
+    {
+        return trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5)) ?? '');
     }
 
     /**

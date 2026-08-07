@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import CockpitClaimExperiencePreview from '../../../resources/js/cockpit/components/CockpitClaimExperiencePreview.vue';
 
 describe('Cockpit claim experience preview', () => {
-    it('renders storyboard steps when browser-captured frames are unavailable', () => {
+    it('renders and navigates the real claim screens when browser capture is unavailable', async () => {
         const wrapper = mount(CockpitClaimExperiencePreview, {
             props: {
                 status: 'ready',
@@ -35,20 +35,45 @@ describe('Cockpit claim experience preview', () => {
                                 title: 'Claim entry',
                                 description: 'Open the Pay Code securely.',
                                 actor: 'redeemer',
-                                render_kind: 'experience_card',
-                                status: 'pending_capture',
+                                render_kind: 'live_screen',
+                                status: 'rendered',
                                 frame: null,
+                                screen: {
+                                    kind: 'claim_entry',
+                                    code: 'PREVIEW',
+                                    amount: '₱25.00',
+                                    title: 'Claim Pay Code',
+                                    description:
+                                        'Enter the Pay Code shared with you.',
+                                    fields: [
+                                        {
+                                            key: 'code',
+                                            label: 'Pay Code',
+                                            value: 'PREVIEW',
+                                        },
+                                    ],
+                                },
                             },
                             {
                                 sequence: 2,
                                 key: 'confirmation',
                                 phase: 'review',
                                 title: 'Claim confirmation',
-                                description: 'Review the claim before continuing.',
+                                description:
+                                    'Review the claim before continuing.',
                                 actor: 'redeemer',
-                                render_kind: 'experience_card',
-                                status: 'pending_capture',
+                                render_kind: 'live_screen',
+                                status: 'rendered',
                                 frame: null,
+                                screen: {
+                                    kind: 'confirmation',
+                                    code: 'PREVIEW',
+                                    amount: '₱25.00',
+                                    title: 'Confirm Claim',
+                                    description:
+                                        'Review and confirm your Pay Code claim.',
+                                    fields: [],
+                                },
                             },
                         ],
                     },
@@ -57,13 +82,28 @@ describe('Cockpit claim experience preview', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Claim entry');
-        expect(wrapper.text()).toContain('Open the Pay Code securely.');
+        expect(wrapper.text()).toContain('Claim Pay Code');
+        expect(wrapper.text()).toContain('PREVIEW');
+        expect(wrapper.text()).toContain('Continue');
+        expect(
+            wrapper.find('[data-testid="cockpit-claim-live-screen"]').exists(),
+        ).toBe(true);
         expect(
             wrapper
-                .find('[data-testid="cockpit-claim-experience-concept"]')
-                .exists(),
-        ).toBe(true);
+                .find('[data-testid="cockpit-claim-live-screen"]')
+                .attributes('data-screen-kind'),
+        ).toBe('claim_entry');
         expect(wrapper.text()).not.toContain('Preview unavailable');
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-experience-next"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-live-screen"]')
+                .attributes('data-screen-kind'),
+        ).toBe('confirmation');
+        expect(wrapper.text()).toContain('Confirm & Claim');
     });
 });
