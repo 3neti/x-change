@@ -1,8 +1,12 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import CockpitClaimExperiencePreview from '../../../resources/js/cockpit/components/CockpitClaimExperiencePreview.vue';
 
 describe('Cockpit claim experience preview', () => {
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it('renders the claim journey inside its canonical isolated mobile viewport', async () => {
         const wrapper = mount(CockpitClaimExperiencePreview, {
             global: {
@@ -100,9 +104,7 @@ describe('Cockpit claim experience preview', () => {
             '[data-testid="cockpit-claim-preview-iframe"]',
         );
 
-        expect(iframe.attributes('src')).toContain(
-            '/steps/claim-entry',
-        );
+        expect(iframe.attributes('src')).toContain('/steps/claim-entry');
         expect(iframe.attributes('width')).toBe('360');
         expect(iframe.attributes('height')).toBe('720');
         expect(iframe.attributes('sandbox')).toBe(
@@ -248,5 +250,119 @@ describe('Cockpit claim experience preview', () => {
         ).toBe(false);
 
         wrapper.unmount();
+    });
+
+    it('runs a request-free autoplay walkthrough from local claim screens', async () => {
+        vi.useFakeTimers();
+
+        const wrapper = mount(CockpitClaimExperiencePreview, {
+            props: {
+                status: 'ready',
+                processing: false,
+                message: 'Safe landing-page demonstration.',
+                canGenerate: false,
+                safePresentation: true,
+                autoplay: true,
+                autoplayIntervalMs: 1000,
+                manifest: {
+                    schema: 'x-change.claim-experience-preview.manifest.v1',
+                    status: 'ready',
+                    reference: 'public-demo',
+                    fingerprint: 'public-demo-fingerprint',
+                    generated_at: '2026-08-08T00:00:00Z',
+                    cache_hit: true,
+                    safety: {
+                        preview_only: true,
+                        interactive: false,
+                        money_movement: false,
+                        provider_calls: false,
+                        claim_submission: false,
+                    },
+                    journey: {
+                        viewport: {
+                            profile: 'mobile_claim_v1',
+                            width: 360,
+                            height: 720,
+                        },
+                        step_count: 2,
+                        steps: [
+                            {
+                                sequence: 1,
+                                key: 'claim-entry',
+                                phase: 'entry',
+                                title: 'Open Pay Code',
+                                description: 'Open the code.',
+                                actor: 'redeemer',
+                                render_kind: 'live_screen',
+                                status: 'rendered',
+                                preview_url: '',
+                                frame: null,
+                                screen: {
+                                    kind: 'claim_entry',
+                                    code: 'DEMO-500',
+                                    amount: '₱500.00',
+                                    title: 'Claim Pay Code',
+                                },
+                            },
+                            {
+                                sequence: 2,
+                                key: 'confirmation',
+                                phase: 'review',
+                                title: 'Confirm details',
+                                description: 'Review the claim.',
+                                actor: 'redeemer',
+                                render_kind: 'live_screen',
+                                status: 'rendered',
+                                preview_url: '',
+                                frame: null,
+                                screen: {
+                                    kind: 'confirmation',
+                                    code: 'DEMO-500',
+                                    amount: '₱500.00',
+                                    title: 'Confirm Claim',
+                                },
+                            },
+                        ],
+                    },
+                    exports: {},
+                },
+            },
+        });
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-preview-iframe"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-live-screen"]')
+                .attributes('data-screen-kind'),
+        ).toBe('claim_entry');
+        expect(wrapper.get('img[alt="Pay Code"]').attributes('src')).toContain(
+            '/pay-code/pay-code-logo.png',
+        );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-experience-refresh"]')
+                .exists(),
+        ).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(1000);
+
+        expect(wrapper.text()).toContain('Confirm details');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-live-screen"]')
+                .attributes('data-screen-kind'),
+        ).toBe('confirmation');
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-experience-previous"]')
+            .trigger('click');
+
+        expect(wrapper.text()).toContain('Open Pay Code');
+        expect(wrapper.emitted('generate')).toBeUndefined();
+        expect(wrapper.emitted('refresh')).toBeUndefined();
     });
 });

@@ -9,18 +9,35 @@ import {
     Sparkles,
     X,
 } from 'lucide-vue-next';
-import { computed, nextTick, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import type { CockpitClaimExperiencePreviewManifest } from '../types';
 import CockpitClaimPreviewViewport from './CockpitClaimPreviewViewport.vue';
 
-const props = defineProps<{
-    status: 'idle' | 'ready' | 'failed';
-    processing: boolean;
-    message: string;
-    manifest: CockpitClaimExperiencePreviewManifest | null;
-    stale?: boolean;
-    canGenerate: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        status: 'idle' | 'ready' | 'failed';
+        processing: boolean;
+        message: string;
+        manifest: CockpitClaimExperiencePreviewManifest | null;
+        stale?: boolean;
+        canGenerate: boolean;
+        safePresentation?: boolean;
+        autoplay?: boolean;
+        autoplayIntervalMs?: number;
+    }>(),
+    {
+        safePresentation: false,
+        autoplay: false,
+        autoplayIntervalMs: 3800,
+    },
+);
 
 const emit = defineEmits<{
     generate: [];
@@ -30,6 +47,8 @@ const emit = defineEmits<{
 const currentStepIndex = ref(0);
 const expanded = ref(false);
 const expandedDialog = ref<HTMLElement | null>(null);
+const autoplayPaused = ref(false);
+let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 
 const steps = computed(() =>
     (props.manifest?.journey.steps ?? []).filter(
@@ -42,6 +61,7 @@ watch(
     () => props.manifest?.fingerprint,
     () => {
         currentStepIndex.value = 0;
+        scheduleAutoplay();
     },
 );
 
@@ -57,6 +77,7 @@ watch(
 
 function selectPreviousStep(): void {
     currentStepIndex.value = Math.max(currentStepIndex.value - 1, 0);
+    scheduleAutoplay();
 }
 
 function selectNextStep(): void {
@@ -64,6 +85,56 @@ function selectNextStep(): void {
         currentStepIndex.value + 1,
         Math.max(steps.value.length - 1, 0),
     );
+    scheduleAutoplay();
+}
+
+function selectStep(index: number): void {
+    currentStepIndex.value = index;
+    scheduleAutoplay();
+}
+
+function clearAutoplay(): void {
+    if (autoplayTimer !== null) {
+        clearInterval(autoplayTimer);
+        autoplayTimer = null;
+    }
+}
+
+function scheduleAutoplay(): void {
+    clearAutoplay();
+
+    const reducedMotion =
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (
+        !props.autoplay ||
+        autoplayPaused.value ||
+        reducedMotion ||
+        props.status !== 'ready' ||
+        steps.value.length < 2
+    ) {
+        return;
+    }
+
+    autoplayTimer = setInterval(
+        () => {
+            currentStepIndex.value =
+                (currentStepIndex.value + 1) % steps.value.length;
+        },
+        Math.max(props.autoplayIntervalMs, 1000),
+    );
+}
+
+function pauseAutoplay(): void {
+    autoplayPaused.value = true;
+    clearAutoplay();
+}
+
+function resumeAutoplay(): void {
+    autoplayPaused.value = false;
+    scheduleAutoplay();
 }
 
 async function openExpandedPreview(): Promise<void> {
@@ -75,6 +146,19 @@ async function openExpandedPreview(): Promise<void> {
 function closeExpandedPreview(): void {
     expanded.value = false;
 }
+
+onMounted(scheduleAutoplay);
+onBeforeUnmount(clearAutoplay);
+
+watch(
+    () => [
+        props.autoplay,
+        props.autoplayIntervalMs,
+        props.status,
+        steps.value.length,
+    ],
+    scheduleAutoplay,
+);
 </script>
 
 <template>
@@ -82,6 +166,10 @@ function closeExpandedPreview(): void {
         class="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[1.15rem] bg-slate-950 text-white"
         data-testid="cockpit-claim-experience-preview"
         aria-label="Claim experience visual walkthrough"
+        @mouseenter="pauseAutoplay"
+        @mouseleave="resumeAutoplay"
+        @focusin="pauseAutoplay"
+        @focusout="resumeAutoplay"
     >
         <div
             v-if="status !== 'ready' || manifest === null"
@@ -128,7 +216,10 @@ function closeExpandedPreview(): void {
             </div>
         </div>
 
-        <div v-else class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div
+            v-else
+            class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+        >
             <header
                 class="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-3 py-2"
             >
@@ -140,7 +231,13 @@ function closeExpandedPreview(): void {
                         Step {{ currentStepIndex + 1 }} of {{ steps.length }}
                     </p>
                 </div>
-                <div class="flex items-center gap-1.5">
+                <span
+                    v-if="safePresentation"
+                    class="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-200"
+                >
+                    Safe demo
+                </span>
+                <div v-else class="flex items-center gap-1.5">
                     <button
                         type="button"
                         class="grid size-8 place-items-center rounded-full border border-white/15 text-slate-200 transition hover:border-cyan-300/50 hover:text-white"
@@ -167,24 +264,32 @@ function closeExpandedPreview(): void {
                             class="size-3.5 animate-spin"
                             aria-hidden="true"
                         />
-                        <RefreshCw
-                            v-else
-                            class="size-3.5"
-                            aria-hidden="true"
-                        />
+                        <RefreshCw v-else class="size-3.5" aria-hidden="true" />
                     </button>
                 </div>
             </header>
 
-            <article
-                v-if="currentStep"
-                class="min-h-0 min-w-0 flex-1 overflow-hidden bg-slate-100 dark:bg-slate-900"
+            <Transition
+                mode="out-in"
+                enter-active-class="transition duration-300 ease-out motion-reduce:transition-none"
+                enter-from-class="translate-x-2 opacity-0 motion-reduce:transform-none"
+                enter-to-class="translate-x-0 opacity-100"
+                leave-active-class="transition duration-200 ease-in motion-reduce:transition-none"
+                leave-from-class="translate-x-0 opacity-100"
+                leave-to-class="-translate-x-2 opacity-0 motion-reduce:transform-none"
             >
-                <CockpitClaimPreviewViewport
-                    :step="currentStep"
-                    :viewport="manifest.journey.viewport"
-                />
-            </article>
+                <article
+                    v-if="currentStep"
+                    :key="currentStep.key"
+                    class="min-h-0 min-w-0 flex-1 overflow-hidden bg-slate-100 dark:bg-slate-900"
+                >
+                    <CockpitClaimPreviewViewport
+                        :step="currentStep"
+                        :viewport="manifest.journey.viewport"
+                        :safe-presentation="safePresentation"
+                    />
+                </article>
+            </Transition>
 
             <div
                 class="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 bg-slate-950 px-3 py-2"
@@ -212,7 +317,7 @@ function closeExpandedPreview(): void {
                         "
                         :aria-label="`Claim step ${index + 1}: ${step.title}`"
                         :data-testid="`cockpit-claim-experience-step-${index + 1}`"
-                        @click="currentStepIndex = index"
+                        @click="selectStep(index)"
                     />
                 </div>
                 <button
@@ -241,7 +346,7 @@ function closeExpandedPreview(): void {
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="claim-preview-dialog-title"
-                    class="flex h-dvh w-screen min-h-0 flex-col overflow-hidden bg-slate-950 text-white outline-none sm:h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-7xl sm:rounded-3xl sm:border sm:border-white/10 sm:shadow-2xl"
+                    class="flex h-dvh min-h-0 w-screen flex-col overflow-hidden bg-slate-950 text-white outline-none sm:h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-7xl sm:rounded-3xl sm:border sm:border-white/10 sm:shadow-2xl"
                     data-testid="cockpit-claim-experience-dialog"
                 >
                     <header
@@ -249,7 +354,7 @@ function closeExpandedPreview(): void {
                     >
                         <div class="min-w-0">
                             <p
-                                class="text-[10px] font-bold tracking-[0.16em] text-cyan-300 uppercase"
+                                class="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300"
                             >
                                 Claim Experience
                             </p>
@@ -279,11 +384,12 @@ function closeExpandedPreview(): void {
                                 :step="currentStep"
                                 :viewport="manifest.journey.viewport"
                                 presentation="expanded"
+                                :safe-presentation="safePresentation"
                             />
                         </div>
 
                         <aside
-                            class="max-h-36 overflow-x-auto border-t border-white/10 bg-slate-950 p-3 lg:max-h-none lg:overflow-y-auto lg:border-t-0 lg:border-l lg:p-4"
+                            class="max-h-36 overflow-x-auto border-t border-white/10 bg-slate-950 p-3 lg:max-h-none lg:overflow-y-auto lg:border-l lg:border-t-0 lg:p-4"
                             aria-label="Claim preview steps"
                         >
                             <div
@@ -300,7 +406,7 @@ function closeExpandedPreview(): void {
                                             : 'border-white/10 text-slate-400 hover:border-white/25 hover:text-white'
                                     "
                                     :data-testid="`cockpit-claim-experience-dialog-step-${index + 1}`"
-                                    @click="currentStepIndex = index"
+                                    @click="selectStep(index)"
                                 >
                                     <span
                                         class="grid size-6 shrink-0 place-items-center rounded-full bg-white/10 text-[10px] font-bold"
@@ -314,7 +420,9 @@ function closeExpandedPreview(): void {
                                             {{ step.title }}
                                         </span>
                                         <span class="mt-0.5 block text-[10px]">
-                                            {{ step.phase.replaceAll('_', ' ') }}
+                                            {{
+                                                step.phase.replaceAll('_', ' ')
+                                            }}
                                         </span>
                                     </span>
                                 </button>

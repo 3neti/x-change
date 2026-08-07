@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import type { CockpitClaimExperiencePreviewStep } from '../types';
+import CockpitClaimLiveScreen from './CockpitClaimLiveScreen.vue';
 
 const props = withDefaults(
     defineProps<{
@@ -11,9 +19,11 @@ const props = withDefaults(
             height: number;
         };
         presentation?: 'inline' | 'expanded';
+        safePresentation?: boolean;
     }>(),
     {
         presentation: 'inline',
+        safePresentation: false,
     },
 );
 
@@ -129,13 +139,26 @@ watch(
             :style="scaledFrameStyle"
             data-testid="cockpit-claim-preview-device"
         >
+            <div
+                v-if="safePresentation && step.screen"
+                :key="`${step.key}-safe-presentation`"
+                class="absolute left-0 top-0 bg-white"
+                :style="frameStyle"
+                data-testid="cockpit-claim-preview-safe-screen"
+            >
+                <CockpitClaimLiveScreen
+                    :screen="step.screen"
+                    presentation="viewport"
+                />
+            </div>
             <iframe
+                v-else
                 :key="step.preview_url"
                 :src="step.preview_url"
                 :title="`${step.title} claim preview`"
                 :width="viewportWidth"
                 :height="viewportHeight"
-                class="absolute top-0 left-0 border-0 bg-slate-950"
+                class="absolute left-0 top-0 border-0 bg-slate-950"
                 :style="frameStyle"
                 sandbox="allow-scripts allow-same-origin"
                 loading="eager"

@@ -2,6 +2,10 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { login, register } from '@/routes';
 import { dashboard } from '@/routes/x-change/cockpit';
+import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue';
+import CockpitClaimExperiencePreview from '@/cockpit/components/CockpitClaimExperiencePreview.vue';
+import CockpitQuickGenerateOrderPresentation from '@/cockpit/components/CockpitQuickGenerateOrderPresentation.vue';
+import type { CockpitClaimExperiencePreviewManifest } from '@/cockpit/types';
 
 withDefaults(
     defineProps<{
@@ -11,38 +15,166 @@ withDefaults(
         canRegister: true,
     },
 );
+
+const demoClaimManifest: CockpitClaimExperiencePreviewManifest = {
+    schema: 'x-change.claim-experience-preview.manifest.v1',
+    status: 'ready',
+    reference: 'landing-page-demo',
+    fingerprint: 'landing-page-demo-v1',
+    generated_at: '2026-08-08T00:00:00Z',
+    cache_hit: true,
+    safety: {
+        preview_only: true,
+        interactive: false,
+        money_movement: false,
+        provider_calls: false,
+        claim_submission: false,
+    },
+    journey: {
+        viewport: {
+            profile: 'mobile_claim_v1',
+            width: 360,
+            height: 720,
+        },
+        step_count: 4,
+        steps: [
+            {
+                sequence: 1,
+                key: 'claim-entry',
+                phase: 'entry',
+                title: 'Open Pay Code',
+                description: 'Enter the Pay Code shared by the issuer.',
+                actor: 'redeemer',
+                render_kind: 'live_screen',
+                status: 'rendered',
+                preview_url: '',
+                frame: null,
+                screen: {
+                    kind: 'claim_entry',
+                    code: 'DEMO-500',
+                    amount: '₱500.00',
+                    title: 'Claim Pay Code',
+                    description: 'Enter the Pay Code shared with you.',
+                    fields: [],
+                },
+            },
+            {
+                sequence: 2,
+                key: 'claim-details',
+                phase: 'form',
+                title: 'Add payout details',
+                description: 'Provide only the information the order requires.',
+                actor: 'redeemer',
+                render_kind: 'live_screen',
+                status: 'rendered',
+                preview_url: '',
+                frame: null,
+                screen: {
+                    kind: 'claim_details',
+                    code: 'DEMO-500',
+                    amount: '₱500.00',
+                    title: 'Your payout details',
+                    description: 'Tell us where to send this payout.',
+                    fields: [
+                        {
+                            key: 'name',
+                            label: 'Full Name',
+                            value: 'Lester Hurtado',
+                        },
+                        {
+                            key: 'mobile',
+                            label: 'Mobile Number',
+                            value: '0917 ••• •987',
+                        },
+                        {
+                            key: 'destination',
+                            label: 'Bank or Wallet',
+                            value: 'GCash',
+                        },
+                    ],
+                },
+            },
+            {
+                sequence: 3,
+                key: 'confirmation',
+                phase: 'review',
+                title: 'Review and confirm',
+                description: 'Check the destination before continuing.',
+                actor: 'redeemer',
+                render_kind: 'live_screen',
+                status: 'rendered',
+                preview_url: '',
+                frame: null,
+                screen: {
+                    kind: 'confirmation',
+                    code: 'DEMO-500',
+                    amount: '₱500.00',
+                    title: 'Confirm Claim',
+                    description: 'Review and confirm your Pay Code claim.',
+                    fields: [
+                        {
+                            key: 'recipient',
+                            label: 'Recipient',
+                            value: 'Lester Hurtado',
+                        },
+                        {
+                            key: 'destination',
+                            label: 'Destination',
+                            value: 'GCash · •1987',
+                        },
+                    ],
+                },
+            },
+            {
+                sequence: 4,
+                key: 'claim-success',
+                phase: 'result',
+                title: 'Claim accepted',
+                description: 'The recipient can follow the payout status.',
+                actor: 'redeemer',
+                render_kind: 'live_screen',
+                status: 'rendered',
+                preview_url: '',
+                frame: null,
+                screen: {
+                    kind: 'success',
+                    code: 'DEMO-500',
+                    amount: '₱500.00',
+                    title: 'Claim accepted',
+                    description:
+                        'The payout is pending confirmation from the payment provider.',
+                    fields: [],
+                    message: 'Your field allowance is on its way.',
+                },
+            },
+        ],
+    },
+    exports: {},
+};
 </script>
 
 <template>
     <Head title="x-change">
         <meta
             name="description"
-            content="Create controlled payouts, move funds through regulated providers, and keep the evidence connected with x-change."
+            content="Create controlled payouts, issue Pay Codes, and give recipients a simple claim experience with x-change."
         />
     </Head>
 
-    <main class="min-h-screen overflow-hidden bg-[#f7f5f2] text-slate-950">
+    <main class="min-h-screen overflow-x-hidden bg-[#f7f5f2] text-slate-950">
         <header
-            class="mx-auto flex max-w-[90rem] items-center justify-between gap-4 px-5 py-5 sm:px-8 lg:px-12"
+            class="mx-auto flex h-16 max-w-[88rem] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10"
         >
             <div class="flex items-center gap-3">
+                <PayCodeLogo
+                    variant="logo"
+                    class-name="!h-9 !max-h-9 !max-w-36"
+                />
                 <span
-                    class="flex h-10 w-8 shrink-0 items-center justify-center"
+                    class="hidden border-l border-slate-300 pl-3 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:block"
                 >
-                    <img
-                        src="/vendor/x-change/images/logo-orange.png"
-                        alt=""
-                        class="h-9 w-auto max-w-full object-contain"
-                    />
+                    by x-change
                 </span>
-                <div class="leading-tight">
-                    <p class="text-sm font-semibold tracking-tight">x-change</p>
-                    <p
-                        class="mt-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-slate-500"
-                    >
-                        Settlement Operating System
-                    </p>
-                </div>
             </div>
 
             <nav aria-label="Account" class="flex items-center gap-1 sm:gap-2">
@@ -72,16 +204,16 @@ withDefaults(
         </header>
 
         <section
-            class="mx-auto grid max-w-[90rem] items-center gap-12 px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[minmax(19rem,0.82fr)_minmax(34rem,1.18fr)] lg:gap-16 lg:px-12 lg:pb-28 lg:pt-24"
+            class="mx-auto grid max-w-[88rem] gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[minmax(22rem,0.76fr)_minmax(38rem,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-5"
         >
-            <div class="max-w-2xl">
+            <div class="max-w-xl">
                 <p
-                    class="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-[#d85f15]"
+                    class="text-xs font-semibold uppercase tracking-[0.2em] text-[#d85f15]"
                 >
                     Money that follows the moment
                 </p>
                 <h1
-                    class="text-balance text-[clamp(3rem,6.2vw,6.4rem)] font-semibold leading-[0.93] tracking-[-0.065em]"
+                    class="mt-5 text-balance text-[clamp(3rem,5.2vw,5.4rem)] font-semibold leading-[0.94] tracking-[-0.065em]"
                 >
                     Money should adapt to people.
                     <span class="text-slate-400"
@@ -89,14 +221,13 @@ withDefaults(
                     >
                 </h1>
                 <p
-                    class="mt-8 max-w-xl text-lg leading-8 text-slate-600 sm:text-xl"
+                    class="mt-6 max-w-lg text-base leading-7 text-slate-600 sm:text-lg"
                 >
-                    x-change helps businesses create controlled payouts, send
-                    them through regulated banking rails, and keep the evidence
-                    connected.
+                    Create a controlled payout, issue a Pay Code, and let the
+                    recipient claim it through one connected experience.
                 </p>
 
-                <div class="mt-9 flex flex-wrap items-center gap-3">
+                <div class="mt-7 flex flex-wrap items-center gap-3">
                     <Link
                         v-if="$page.props.auth.user"
                         :href="dashboard()"
@@ -122,85 +253,81 @@ withDefaults(
                 </div>
 
                 <div
-                    class="mt-6 flex items-center gap-3 text-sm text-slate-500"
+                    class="mt-5 flex items-center gap-3 text-sm text-slate-500"
                 >
                     <span
                         aria-hidden="true"
-                        class="h-2 w-2 shrink-0 rounded-full bg-emerald-500"
+                        class="size-2 shrink-0 rounded-full bg-emerald-500"
                     />
-                    <p>Funds remain with a regulated banking provider.</p>
+                    <p>Funds remain with a regulated bank or EMI provider.</p>
                 </div>
             </div>
 
-            <figure class="relative mx-auto w-full max-w-4xl pb-20 sm:pb-28">
-                <div
-                    class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_30px_80px_-35px_rgba(15,23,42,0.45)] sm:rounded-3xl"
-                >
-                    <div
-                        aria-hidden="true"
-                        class="flex h-9 items-center gap-1.5 border-b border-slate-200 bg-slate-50 px-4"
-                    >
-                        <span class="h-2.5 w-2.5 rounded-full bg-[#ef6a1a]" />
-                        <span class="h-2.5 w-2.5 rounded-full bg-slate-300" />
-                        <span class="h-2.5 w-2.5 rounded-full bg-slate-300" />
-                    </div>
-                    <img
-                        src="/vendor/x-change/images/landing/cockpit-overview.png"
-                        alt="The x-change Cockpit showing payout controls and operational status"
-                        class="block h-auto w-full"
-                    />
-                </div>
-
-                <div
-                    class="absolute bottom-0 right-3 w-[29%] min-w-28 max-w-52 overflow-hidden rounded-[1.7rem] border-[5px] border-slate-950 bg-white shadow-[0_24px_55px_-20px_rgba(15,23,42,0.7)] sm:right-8 sm:border-[7px] lg:right-10"
-                >
-                    <div
-                        aria-hidden="true"
-                        class="absolute left-1/2 top-1.5 z-10 h-1.5 w-10 -translate-x-1/2 rounded-full bg-slate-950/80 sm:w-14"
-                    />
-                    <img
-                        src="/vendor/x-change/images/landing/claim-entry.png"
-                        alt="A Pay Code claim screen generated by x-change"
-                        class="block h-auto w-full"
-                    />
-                </div>
-
-                <figcaption
-                    class="absolute bottom-4 left-0 max-w-52 text-xs leading-5 text-slate-500 sm:bottom-10 sm:text-sm"
-                >
-                    One instruction in the Cockpit. A simple claim for the
-                    recipient.
-                </figcaption>
-            </figure>
-        </section>
-
-        <section class="border-y border-slate-200 bg-white/70">
-            <div
-                class="mx-auto grid max-w-[90rem] gap-7 px-5 py-8 sm:px-8 md:grid-cols-[minmax(15rem,1fr)_auto] md:items-center lg:px-12"
-            >
-                <div>
-                    <p class="text-sm font-semibold text-slate-950">
-                        The business decides. Regulated providers move the
-                        money.
-                    </p>
-                    <p class="mt-1 text-sm text-slate-500">
-                        x-change keeps the instruction, execution, and evidence
-                        connected.
-                    </p>
-                </div>
-
+            <div class="min-w-0">
                 <ol
-                    aria-label="How x-change fits into a payout"
-                    class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600 sm:gap-3"
+                    aria-label="Pay Code journey"
+                    class="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white/65 p-2 shadow-sm"
                 >
-                    <li>Business</li>
-                    <li aria-hidden="true" class="text-[#ef6a1a]">→</li>
-                    <li>x-change</li>
-                    <li aria-hidden="true" class="text-[#ef6a1a]">→</li>
-                    <li>Bank / EMI</li>
-                    <li aria-hidden="true" class="text-[#ef6a1a]">→</li>
-                    <li>Recipient</li>
+                    <li
+                        class="flex items-center gap-2 rounded-xl bg-white px-3 py-2"
+                    >
+                        <span
+                            class="grid size-6 shrink-0 place-items-center rounded-full bg-slate-950 text-[0.65rem] font-bold text-white"
+                        >
+                            1
+                        </span>
+                        <span class="text-[0.68rem] font-semibold sm:text-xs">
+                            Create the order
+                        </span>
+                    </li>
+                    <li class="flex items-center gap-2 rounded-xl px-3 py-2">
+                        <span
+                            class="grid size-6 shrink-0 place-items-center rounded-full bg-[#ef6a1a] text-[0.65rem] font-bold text-white"
+                        >
+                            2
+                        </span>
+                        <span class="text-[0.68rem] font-semibold sm:text-xs">
+                            Issue the Pay Code
+                        </span>
+                    </li>
+                    <li class="flex items-center gap-2 rounded-xl px-3 py-2">
+                        <span
+                            class="grid size-6 shrink-0 place-items-center rounded-full bg-emerald-600 text-[0.65rem] font-bold text-white"
+                        >
+                            3
+                        </span>
+                        <span class="text-[0.68rem] font-semibold sm:text-xs">
+                            Recipient claims
+                        </span>
+                    </li>
                 </ol>
+
+                <div
+                    class="grid items-center gap-4 xl:grid-cols-[minmax(20rem,1fr)_17rem]"
+                >
+                    <CockpitQuickGenerateOrderPresentation
+                        amount="₱500.00"
+                        recipient="Lester Hurtado · 0917 301 1987"
+                        pay-code-type="Redeemable"
+                        estimated-cost="₱506.90"
+                        purpose="Field allowance"
+                    />
+
+                    <div
+                        class="mx-auto h-[32rem] w-full max-w-[19rem] overflow-hidden rounded-[1.2rem] shadow-[0_28px_65px_-28px_rgba(15,23,42,0.75)] xl:-ml-5"
+                    >
+                        <CockpitClaimExperiencePreview
+                            status="ready"
+                            :processing="false"
+                            message="Safe presentation mode"
+                            :manifest="demoClaimManifest"
+                            :can-generate="false"
+                            safe-presentation
+                            autoplay
+                            :autoplay-interval-ms="3800"
+                        />
+                    </div>
+                </div>
             </div>
         </section>
     </main>
