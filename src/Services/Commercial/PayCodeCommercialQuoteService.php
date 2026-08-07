@@ -7,13 +7,13 @@ namespace LBHurtado\XChange\Services\Commercial;
 use BackedEnum;
 use JsonException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialCatalogData;
 use LBHurtado\XCommerce\Data\CommercialQuoteData;
 use LBHurtado\XCommerce\Data\CommercialQuoteLineInputData;
-use LBHurtado\XCommerce\Data\CommercialWaterfallPolicyData;
 use LBHurtado\XCommerce\Services\DeterministicCommercialQuoteBuilder;
 use LBHurtado\XCommerce\Services\DeterministicCommercialWaterfallCalculator;
 
@@ -21,6 +21,7 @@ final class PayCodeCommercialQuoteService
 {
     public function __construct(
         private readonly VoucherClaimPolicyResolver $claimPolicies,
+        private readonly CommercialOfferingResolverContract $offerings,
     ) {}
 
     /**
@@ -31,17 +32,11 @@ final class PayCodeCommercialQuoteService
         string $sourceCommercialEventReference,
         ?CommercialAttributionSnapshotData $attribution = null,
     ): CommercialQuoteData {
-        $catalog = CommercialCatalogData::fromArray(
-            (array) config('x-commerce.catalogs.pay_code', []),
+        $offering = $this->offerings->resolve(
+            $this->usesAccountFundingProfile($instructions) ? 'account_funding' : 'pay_code',
         );
-        $policy = CommercialWaterfallPolicyData::fromArray(
-            (array) config(
-                $this->usesAccountFundingProfile($instructions)
-                    ? 'x-change.commercial.pay_code.account_funding_waterfall'
-                    : 'x-change.commercial.pay_code.waterfall',
-                [],
-            ),
-        );
+        $catalog = $offering->catalog;
+        $policy = $offering->waterfallPolicy;
 
         return (new DeterministicCommercialQuoteBuilder(
             new DeterministicCommercialWaterfallCalculator,
@@ -54,6 +49,7 @@ final class PayCodeCommercialQuoteService
                 version: 1,
             ),
             lineInputs: $this->lineInputs($instructions, $catalog),
+            offering: $offering,
         );
     }
 

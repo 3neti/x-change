@@ -1131,6 +1131,39 @@ return [
 
     'commercial' => [
         'enabled' => (bool) env('XCHANGE_COMMERCIAL_WATERFALL_ENABLED', true),
+        'offerings' => [
+            'use_published' => (bool) env('XCHANGE_COMMERCIAL_USE_PUBLISHED_OFFERINGS', false),
+        ],
+        'attribution_policy' => [
+            'reference' => 'commercial-attribution:pay-code',
+            'version' => 1,
+            'eligible_roles' => [
+                'originating_partner',
+                'sales_partner',
+                'marketing_partner',
+            ],
+            'unattributed_commission_behavior' => 'skip_to_residual',
+        ],
+        'legal_trace' => [
+            'jurisdiction' => 'PH',
+            'legal_entity_reference' => env(
+                'XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE',
+                'legal-entity:unconfigured',
+            ),
+            'profile' => env('XCHANGE_TREASURY_LEGAL_PROFILE', 'treasury-settlement-ph-v1'),
+            'profile_version' => env('XCHANGE_TREASURY_LEGAL_PROFILE_VERSION', 'unversioned'),
+            'decision' => 'advisory_review_required',
+            'decision_references' => [
+                'x-legal:decision:0002:commercial-offering-publication',
+                'x-legal:decision:0003:commission-settlement',
+            ],
+            'invariant_references' => [
+                'x-legal:invariant:commercial-nomenclature',
+                'x-legal:invariant:maker-checker-publication',
+                'x-legal:invariant:earned-commission-only',
+            ],
+            'trace_references' => [],
+        ],
         'accounting' => [
             'schema_version' => 2,
             'recognition_policy_reference' => 'recognition:pay-code-issuance:v1',
