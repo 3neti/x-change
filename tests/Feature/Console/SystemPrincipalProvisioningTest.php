@@ -7,6 +7,8 @@ use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
+use LBHurtado\XChange\Models\CommercialOffering;
+use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Tests\Fakes\UncastUser;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -211,6 +213,8 @@ it('allows the installer to provision the sole fresh-database Account without a 
 
     expect($principal->email)->toBe('system-alpha@example.test')
         ->and($principal->wallet()->where('slug', 'platform')->count())->toBe(1)
+        ->and(CommercialOffering::query()->count())->toBe(2)
+        ->and(CommercialOfferingActivation::query()->count())->toBe(2)
         ->and(data_get(
             $principal->onboarding_meta,
             'system_principal.interactive_login',

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Host\HostApplicationShellAdopter;
@@ -57,6 +58,7 @@ class InstallXChangeCommand extends Command
         PreInstallReadinessInspector $preInstallReadiness,
         SystemPrincipalProvisioningService $systemPrincipalProvisioning,
         CommissioningManifestRecorder $commissioningManifests,
+        ProvisionCommercialBaselines $commercialBaselines,
         HostApplicationShellAdopter $hostApplicationShell,
     ): int {
         $this->components->info('Installing X-Change...');
@@ -626,7 +628,19 @@ class InstallXChangeCommand extends Command
         }
 
         if (! $this->option('no-treasury')) {
-            $commissioningManifests->record();
+            try {
+                $manifest = $commissioningManifests->record();
+                $commercialBaselines->provision(
+                    'installation-manifest:'.$manifest->configuration_fingerprint,
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+                $this->components->error(
+                    'Commercial baseline commissioning failed: '.$exception->getMessage(),
+                );
+
+                return self::FAILURE;
+            }
         } else {
             $this->components->warn(
                 'Commissioning remains incomplete because Treasury was explicitly deferred.',

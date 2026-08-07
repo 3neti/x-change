@@ -43,6 +43,10 @@ final readonly class CommissioningConfigurationFingerprint
             'schema' => 1,
             'profile' => $deployment['profile'],
             'connections' => Arr::sort($deployment['active_connections']),
+            'commercial_governance_mode' => config(
+                'x-change.commercial.offerings.governance_mode',
+                'bootstrap_immutable',
+            ),
             'configuration' => $configuration,
         ], JSON_THROW_ON_ERROR);
 
