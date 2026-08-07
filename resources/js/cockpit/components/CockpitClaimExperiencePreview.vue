@@ -178,7 +178,7 @@ function closeExpandedPreview(): void {
 
             <article
                 v-if="currentStep"
-                class="min-h-0 min-w-0 flex-1 overflow-hidden bg-slate-900"
+                class="min-h-0 min-w-0 flex-1 overflow-hidden bg-slate-100 dark:bg-slate-900"
             >
                 <CockpitClaimPreviewViewport
                     :step="currentStep"

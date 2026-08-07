@@ -108,6 +108,14 @@ describe('Cockpit claim experience preview', () => {
         expect(iframe.attributes('sandbox')).toBe(
             'allow-scripts allow-same-origin',
         );
+        expect(iframe.attributes('style')).toContain(
+            'transform-origin: top left',
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-preview-device"]')
+                .classes(),
+        ).toContain('box-content');
         expect(
             wrapper
                 .get('[data-testid="cockpit-claim-preview-viewport"]')

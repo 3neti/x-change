@@ -20,17 +20,24 @@ const props = withDefaults(
 const container = ref<HTMLElement | null>(null);
 const scale = ref(1);
 let resizeObserver: ResizeObserver | null = null;
+let intersectionObserver: IntersectionObserver | null = null;
+let measurementFrame: number | null = null;
 
 const viewportWidth = computed(() => Math.max(props.viewport.width, 1));
 const viewportHeight = computed(() => Math.max(props.viewport.height, 1));
+const deviceBorderWidth = computed(() =>
+    props.presentation === 'expanded' ? 6 : 3,
+);
 const scaledFrameStyle = computed(() => ({
     width: `${viewportWidth.value * scale.value}px`,
     height: `${viewportHeight.value * scale.value}px`,
+    borderWidth: `${deviceBorderWidth.value}px`,
 }));
 const frameStyle = computed(() => ({
     width: `${viewportWidth.value}px`,
     height: `${viewportHeight.value}px`,
     transform: `scale(${scale.value})`,
+    transformOrigin: 'top left',
 }));
 
 function measure(): void {
@@ -39,11 +46,15 @@ function measure(): void {
     const horizontalPadding = props.presentation === 'expanded' ? 32 : 16;
     const verticalPadding = props.presentation === 'expanded' ? 32 : 16;
     const availableWidth = Math.max(
-        container.value.clientWidth - horizontalPadding,
+        container.value.clientWidth -
+            horizontalPadding -
+            deviceBorderWidth.value * 2,
         1,
     );
     const availableHeight = Math.max(
-        container.value.clientHeight - verticalPadding,
+        container.value.clientHeight -
+            verticalPadding -
+            deviceBorderWidth.value * 2,
         1,
     );
 
@@ -54,22 +65,52 @@ function measure(): void {
     );
 }
 
+function scheduleMeasurement(): void {
+    if (measurementFrame !== null) {
+        cancelAnimationFrame(measurementFrame);
+    }
+
+    measurementFrame = requestAnimationFrame(() => {
+        measurementFrame = null;
+        measure();
+    });
+}
+
 onMounted(() => {
-    measure();
+    scheduleMeasurement();
 
     if (typeof ResizeObserver !== 'undefined' && container.value) {
-        resizeObserver = new ResizeObserver(measure);
+        resizeObserver = new ResizeObserver(scheduleMeasurement);
         resizeObserver.observe(container.value);
     }
+
+    if (typeof IntersectionObserver !== 'undefined' && container.value) {
+        intersectionObserver = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                scheduleMeasurement();
+            }
+        });
+        intersectionObserver.observe(container.value);
+    }
+
+    window.addEventListener('resize', scheduleMeasurement);
 });
 
-onBeforeUnmount(() => resizeObserver?.disconnect());
+onBeforeUnmount(() => {
+    resizeObserver?.disconnect();
+    intersectionObserver?.disconnect();
+    window.removeEventListener('resize', scheduleMeasurement);
+
+    if (measurementFrame !== null) {
+        cancelAnimationFrame(measurementFrame);
+    }
+});
 
 watch(
     () => [props.viewport.width, props.viewport.height, props.presentation],
     async () => {
         await nextTick();
-        measure();
+        scheduleMeasurement();
     },
 );
 </script>
@@ -84,7 +125,7 @@ watch(
         :data-viewport-profile="viewport.profile"
     >
         <div
-            class="relative shrink-0 overflow-hidden rounded-[1.6rem] border-[6px] border-slate-700 bg-slate-950 shadow-2xl"
+            class="relative box-content shrink-0 overflow-hidden rounded-[1.6rem] border-slate-700 bg-white shadow-2xl dark:bg-slate-950"
             :style="scaledFrameStyle"
             data-testid="cockpit-claim-preview-device"
         >
@@ -99,6 +140,7 @@ watch(
                 sandbox="allow-scripts allow-same-origin"
                 loading="eager"
                 data-testid="cockpit-claim-preview-iframe"
+                @load="scheduleMeasurement"
             />
         </div>
     </div>
