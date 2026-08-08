@@ -31,7 +31,7 @@ withDefaults(
         <div
             aria-hidden="true"
             class="bg-top-left pointer-events-none absolute inset-y-0 left-0 h-screen w-full bg-contain bg-no-repeat opacity-[0.1] lg:bg-[length:auto_100%] lg:bg-left"
-            style="background-image: url('/favicon.png')"
+            style="background-image: url('/vendor/x-change/favicon.png')"
         />
 
         <header

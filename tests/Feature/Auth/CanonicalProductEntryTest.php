@@ -36,6 +36,7 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->toContain('{{ $page.props.name }}')
         ->toContain('Powered by x-change')
         ->toContain('!h-18')
+        ->toContain("background-image: url('/vendor/x-change/favicon.png')")
         ->toContain('bg-[length:auto_100%]')
         ->toContain('amount="₱537.00"')
         ->toContain('estimated-cost="₱543.90"')
