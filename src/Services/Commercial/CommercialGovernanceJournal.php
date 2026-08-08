@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Models\CommercialPartnerDestinationRevision;
+use LBHurtado\XChange\Models\CommercialPartnerRevision;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionReferenceData;
@@ -114,6 +116,76 @@ final readonly class CommercialGovernanceJournal
                 'capability' => $authorization->capability,
                 'valid_from' => $authorization->valid_from?->toIso8601String(),
                 'valid_until' => $authorization->valid_until?->toIso8601String(),
+            ],
+            metadata: $this->metadata(),
+        ));
+    }
+
+    public function recordPartner(
+        CommercialPartnerRevision $revision,
+        string $eventType,
+        Model $actor,
+    ): void {
+        $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: $eventType,
+            occurredAt: CarbonImmutable::parse(
+                $revision->approved_at ?? $revision->submitted_at ?? $revision->created_at,
+            ),
+            actor: $this->actor($actor),
+            subject: new ExecutionSubjectData(
+                id: $revision->partner->reference,
+                type: 'commercial_partner',
+                display: $revision->display_name,
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'commercial-partner:'.$revision->partner->reference,
+                causationId: $revision->authorization_reference,
+                executionId: (string) $revision->getKey(),
+                externalReference: $revision->authorization_reference,
+                metadata: ['snapshot_hash' => $revision->snapshot_hash],
+            ),
+            idempotencyKey: 'x-change:commercial-governance:'.$eventType.':'.$revision->getKey(),
+            payload: [
+                'status' => $revision->status->value,
+                'version' => $revision->version,
+                'attribution_basis' => $revision->attribution_basis,
+                'snapshot_hash' => $revision->snapshot_hash,
+            ],
+            metadata: $this->metadata(),
+        ));
+    }
+
+    public function recordPartnerDestination(
+        CommercialPartnerDestinationRevision $revision,
+        string $eventType,
+        Model $actor,
+    ): void {
+        $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: $eventType,
+            occurredAt: CarbonImmutable::parse(
+                $revision->approved_at ?? $revision->submitted_at ?? $revision->created_at,
+            ),
+            actor: $this->actor($actor),
+            subject: new ExecutionSubjectData(
+                id: $revision->partner->reference,
+                type: 'commercial_partner_destination',
+                display: $revision->destination_summary,
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'commercial-partner-destination:'.$revision->partner->reference,
+                causationId: $revision->authorization_reference,
+                executionId: (string) $revision->getKey(),
+                externalReference: $revision->authorization_reference,
+                metadata: ['destination_hash' => $revision->destination_hash],
+            ),
+            idempotencyKey: 'x-change:commercial-governance:'.$eventType.':'.$revision->getKey(),
+            payload: [
+                'status' => $revision->status->value,
+                'version' => $revision->version,
+                'provider' => $revision->provider,
+                'connection_reference' => $revision->connection_reference,
+                'currency' => $revision->currency,
+                'destination_summary' => $revision->destination_summary,
             ],
             metadata: $this->metadata(),
         ));

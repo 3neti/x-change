@@ -78,6 +78,10 @@ final class AuthorizeCommercialOperatorCommand extends Command
                 CommercialOperatorCapability::RequestCommissionPayouts->value,
                 CommercialOperatorCapability::ApproveCommissionPayouts->value,
             ],
+            [
+                CommercialOperatorCapability::ManagePartners->value,
+                CommercialOperatorCapability::ApprovePartners->value,
+            ],
         ];
 
         foreach ($separatedCapabilityPairs as $pair) {
