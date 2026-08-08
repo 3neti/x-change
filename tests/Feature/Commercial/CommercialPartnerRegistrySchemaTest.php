@@ -10,6 +10,36 @@ use LBHurtado\XChange\Models\CommercialPartner;
 use LBHurtado\XChange\Models\CommercialPartnerDestinationRevision;
 use LBHurtado\XChange\Models\CommercialPartnerRevision;
 
+it('uses PostgreSQL-safe names for commercial partner constraints', function (): void {
+    $migrationPaths = [
+        __DIR__.'/../../../database/migrations/2026_08_08_050600_create_x_change_commercial_partner_registry_tables.php',
+        __DIR__.'/../../../database/migrations/2026_08_08_130000_add_commercial_partner_links_to_allocations_and_payout_batches.php',
+        __DIR__.'/../../../database/migrations/2026_08_08_140000_create_x_change_partner_commission_payout_attempts_table.php',
+    ];
+    $constraintNames = [
+        'commercial_partner_revision_partner_fk',
+        'commercial_partner_destination_partner_fk',
+        'commercial_partner_destination_revision_fk',
+        'commercial_partner_legacy_partner_fk',
+        'commercial_partner_legacy_revision_fk',
+        'commercial_allocation_partner_fk',
+        'commercial_allocation_partner_revision_fk',
+        'commission_batch_partner_fk',
+        'commission_batch_partner_revision_fk',
+        'commission_batch_partner_destination_fk',
+        'commission_attempt_batch_fk',
+        'commission_attempt_destination_fk',
+    ];
+    $migrationSource = collect($migrationPaths)
+        ->map(fn (string $path): string => file_get_contents($path))
+        ->implode("\n");
+
+    foreach ($constraintNames as $constraintName) {
+        expect($migrationSource)->toContain("'{$constraintName}'")
+            ->and(mb_strlen($constraintName))->toBeLessThanOrEqual(63);
+    }
+});
+
 it('installs the additive commercial partner registry schema', function (): void {
     expect(Schema::hasColumns('x_change_commercial_partners', [
         'reference', 'display_name', 'status', 'created_by_type', 'created_by_id',

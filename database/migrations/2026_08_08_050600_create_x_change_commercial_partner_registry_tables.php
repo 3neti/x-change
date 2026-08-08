@@ -27,8 +27,10 @@ return new class extends Migration
 
         Schema::create('x_change_commercial_partner_revisions', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('commercial_partner_id')
-                ->constrained('x_change_commercial_partners')
+            $table->foreignId('commercial_partner_id');
+            $table->foreign('commercial_partner_id', 'commercial_partner_revision_partner_fk')
+                ->references('id')
+                ->on('x_change_commercial_partners')
                 ->restrictOnDelete();
             $table->unsignedInteger('version');
             $table->string('status')->index();
@@ -54,11 +56,15 @@ return new class extends Migration
 
         Schema::create('x_change_commercial_partner_destination_revisions', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('commercial_partner_id')
-                ->constrained('x_change_commercial_partners')
+            $table->foreignId('commercial_partner_id');
+            $table->foreign('commercial_partner_id', 'commercial_partner_destination_partner_fk')
+                ->references('id')
+                ->on('x_change_commercial_partners')
                 ->restrictOnDelete();
-            $table->foreignId('commercial_partner_revision_id')
-                ->constrained('x_change_commercial_partner_revisions')
+            $table->foreignId('commercial_partner_revision_id');
+            $table->foreign('commercial_partner_revision_id', 'commercial_partner_destination_revision_fk')
+                ->references('id')
+                ->on('x_change_commercial_partner_revisions')
                 ->restrictOnDelete();
             $table->unsignedInteger('version');
             $table->string('status')->index();
@@ -88,11 +94,15 @@ return new class extends Migration
         Schema::create('x_change_commercial_partner_legacy_mappings', function (Blueprint $table): void {
             $table->id();
             $table->string('legacy_partner_reference')->unique();
-            $table->foreignId('commercial_partner_id')
-                ->constrained('x_change_commercial_partners')
+            $table->foreignId('commercial_partner_id');
+            $table->foreign('commercial_partner_id', 'commercial_partner_legacy_partner_fk')
+                ->references('id')
+                ->on('x_change_commercial_partners')
                 ->restrictOnDelete();
-            $table->foreignId('commercial_partner_revision_id')
-                ->constrained('x_change_commercial_partner_revisions')
+            $table->foreignId('commercial_partner_revision_id');
+            $table->foreign('commercial_partner_revision_id', 'commercial_partner_legacy_revision_fk')
+                ->references('id')
+                ->on('x_change_commercial_partner_revisions')
                 ->restrictOnDelete();
             $table->nullableMorphs('mapped_by', 'commercial_partner_legacy_mapping_operator');
             $table->string('authorization_reference');

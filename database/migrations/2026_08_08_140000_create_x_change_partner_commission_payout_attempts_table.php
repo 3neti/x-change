@@ -12,12 +12,15 @@ return new class extends Migration
     {
         Schema::create('x_change_partner_commission_payout_attempts', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('batch_id')
-                ->constrained('x_change_partner_commission_payout_batches')
+            $table->foreignId('batch_id');
+            $table->foreign('batch_id', 'commission_attempt_batch_fk')
+                ->references('id')
+                ->on('x_change_partner_commission_payout_batches')
                 ->restrictOnDelete();
-            $table->foreignId('commercial_partner_destination_revision_id')
-                ->nullable()
-                ->constrained('x_change_commercial_partner_destination_revisions')
+            $table->foreignId('commercial_partner_destination_revision_id')->nullable();
+            $table->foreign('commercial_partner_destination_revision_id', 'commission_attempt_destination_fk')
+                ->references('id')
+                ->on('x_change_commercial_partner_destination_revisions')
                 ->restrictOnDelete();
             $table->unsignedInteger('attempt_number');
             $table->string('status')->index();
