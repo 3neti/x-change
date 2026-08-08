@@ -27,7 +27,7 @@ const logoSrc = computed(() => {
         return '/vendor/x-change/images/pay-code/pay-code-lockup.png';
     }
 
-    return '/vendor/x-change/images/pay-code/pay-code-logo.svg';
+    return '/vendor/x-change/images/pay-code/pay-code-logo.png';
 });
 
 const altText = computed(() => {

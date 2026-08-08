@@ -340,7 +340,7 @@ describe('Cockpit claim experience preview', () => {
                 .attributes('data-screen-kind'),
         ).toBe('claim_entry');
         expect(wrapper.get('img[alt="Pay Code"]').attributes('src')).toContain(
-            '/pay-code/pay-code-logo.svg',
+            '/pay-code/pay-code-logo.png',
         );
         expect(
             wrapper
