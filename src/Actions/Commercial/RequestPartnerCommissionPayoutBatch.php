@@ -11,12 +11,14 @@ use Illuminate\Support\Facades\DB;
 use JsonException;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
-use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
 use LBHurtado\XChange\Data\Commercial\PartnerCommissionPayoutBatchRequestData;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialPartner;
+use LBHurtado\XChange\Models\CommercialPartnerDestinationRevision;
+use LBHurtado\XChange\Models\CommercialPartnerRevision;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatchLine;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
@@ -26,7 +28,6 @@ final readonly class RequestPartnerCommissionPayoutBatch
     public function __construct(
         private CommercialOperatorAuthorityContract $authority,
         private SystemUserResolverContract $systemPrincipal,
-        private PayoutDestinationValidatorContract $destinations,
         private CommercialAccountingJournal $journal,
     ) {}
 
@@ -34,35 +35,41 @@ final readonly class RequestPartnerCommissionPayoutBatch
     public function execute(Model $maker, PartnerCommissionPayoutBatchRequestData $request): PartnerCommissionPayoutBatch
     {
         $this->authorize($maker);
-        $normalizedAccount = preg_replace('/\D+/', '', $request->accountNumber) ?? '';
-        $destination = $this->destinations->validate(
-            $request->bankCode,
-            $normalizedAccount,
-            $this->rail(0),
-            $request->mobile,
-        );
+        $partner = CommercialPartner::query()
+            ->active()
+            ->where('reference', $request->partnerReference)
+            ->first();
 
-        if ($destination->status === 'invalid') {
-            throw new CommercialSaleConflict($destination->message);
+        if (! $partner instanceof CommercialPartner) {
+            throw new CommercialSaleConflict('Commission payout requires an active governed Commercial Partner.');
         }
+
+        $destinationRevision = $partner->destinationRevisions()
+            ->approved()
+            ->where('provider', mb_strtolower($request->provider))
+            ->where('connection_reference', $request->connectionReference)
+            ->where('currency', mb_strtoupper($request->currency))
+            ->first();
+
+        if (! $destinationRevision instanceof CommercialPartnerDestinationRevision) {
+            throw new CommercialSaleConflict('Commission payout requires an approved Partner destination.');
+        }
+
+        $destination = $destinationRevision->destination;
 
         $payload = [
             ...$request->toArray(),
-            'bankCode' => $destination->bankCode,
-            'accountNumber' => $destination->accountNumber,
-            'mobile' => $destination->mobile,
+            'commercial_partner_id' => $partner->getKey(),
+            'destination_revision_id' => $destinationRevision->getKey(),
+            'destination_hash' => $destinationRevision->destination_hash,
         ];
         $requestHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
-        $destinationHash = hash('sha256', json_encode([
-            $destination->bankCode,
-            $destination->accountNumber,
-            $destination->mobile,
-        ], JSON_THROW_ON_ERROR));
 
         return DB::transaction(function () use (
             $destination,
-            $destinationHash,
+            $destinationRevision,
             $maker,
+            $partner,
             $request,
             $requestHash,
         ): PartnerCommissionPayoutBatch {
@@ -86,6 +93,7 @@ final readonly class RequestPartnerCommissionPayoutBatch
                 ->where('category', 'partner_commission')
                 ->where('status', 'posted')
                 ->where('currency', mb_strtoupper($request->currency))
+                ->where('commercial_partner_id', $partner->getKey())
                 ->whereHas('sale', fn ($query) => $query
                     ->where('status', 'posted')
                     ->whereBetween('accepted_at', [$periodStart, $periodEnd]))
@@ -96,8 +104,7 @@ final readonly class RequestPartnerCommissionPayoutBatch
                 ->filter(function (CommercialAllocation $allocation) use ($request): bool {
                     $context = (array) data_get($allocation->sale->snapshot, 'accounting_context', []);
 
-                    return data_get($context, 'partner_reference') === $request->partnerReference
-                        && data_get($context, 'provider') === mb_strtolower($request->provider)
+                    return data_get($context, 'provider') === mb_strtolower($request->provider)
                         && data_get($context, 'connection_reference') === $request->connectionReference;
                 })
                 ->values();
@@ -112,10 +119,21 @@ final readonly class RequestPartnerCommissionPayoutBatch
                 throw new CommercialSaleConflict('Commission allocations do not share one partner payable Position.');
             }
 
+            $partnerRevisionIds = $allocations->pluck('commercial_partner_revision_id')->unique();
+
+            if ($partnerRevisionIds->count() !== 1) {
+                throw new CommercialSaleConflict('Commission allocations span multiple Partner revisions and must be paid separately.');
+            }
+
+            $partnerRevision = CommercialPartnerRevision::query()->findOrFail($partnerRevisionIds->sole());
+
             $amountMinor = (int) $allocations->sum('amount_minor');
             $batch = PartnerCommissionPayoutBatch::query()->create([
                 'reference' => $request->reference,
                 'partner_reference' => $request->partnerReference,
+                'commercial_partner_id' => $partner->getKey(),
+                'commercial_partner_revision_id' => $partnerRevision->getKey(),
+                'commercial_partner_destination_revision_id' => $destinationRevision->getKey(),
                 'provider' => mb_strtolower($request->provider),
                 'connection_reference' => $request->connectionReference,
                 'position_reference' => $positionReferences->sole(),
@@ -123,14 +141,11 @@ final readonly class RequestPartnerCommissionPayoutBatch
                 'currency' => mb_strtoupper($request->currency),
                 'status' => PartnerCommissionPayoutBatchStatus::AwaitingApproval,
                 'destination' => [
-                    'bank_code' => $destination->bankCode,
-                    'account_number' => $destination->accountNumber,
-                    'recipient_name' => $request->recipientName,
-                    'mobile' => $destination->mobile,
+                    ...$destination,
                     'settlement_rail' => $this->rail($amountMinor),
                 ],
-                'destination_hash' => $destinationHash,
-                'destination_summary' => $destination->bankCode.' · ••••'.substr($destination->accountNumber, -4),
+                'destination_hash' => $destinationRevision->destination_hash,
+                'destination_summary' => $destinationRevision->destination_summary,
                 'request_idempotency_key' => $request->idempotencyKey,
                 'request_hash' => $requestHash,
                 'maker_type' => $maker->getMorphClass(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Commercial;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialProviderCostBatch;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
@@ -177,6 +178,42 @@ final readonly class CommercialAccountingJournal
             ],
             money: $this->money($batch->currency, $batch->amount_minor),
             metadata: $this->metadata('partner_commission_payout_batch'),
+        ));
+    }
+
+    public function recordPartnerPayoutRetryPrepared(
+        PartnerCommissionPayoutBatch $batch,
+        Model $operator,
+    ): ExecutionJournalEntry {
+        $nextAttempt = $batch->attempts()->count() + 1;
+
+        return $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'commercial.partner_commission_batch.retry_prepared',
+            occurredAt: CarbonImmutable::now(),
+            actor: new ExecutionActorData(
+                id: (string) $operator->getKey(),
+                type: $operator->getMorphClass(),
+            ),
+            subject: new ExecutionSubjectData(
+                id: $batch->reference,
+                type: 'partner_commission_payout_batch',
+                display: 'Partner Commission Payout',
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'commercial-partner-commission-batch:'.$batch->reference,
+                causationId: 'destination-revision:'.$batch->commercial_partner_destination_revision_id,
+                executionId: (string) $batch->getKey(),
+                metadata: ['next_attempt_number' => $nextAttempt],
+            ),
+            idempotencyKey: 'x-change:commercial:partner-commission-batch:'
+                .$batch->getKey().':retry-prepared:'.$nextAttempt,
+            payload: [
+                'status' => $batch->status->value,
+                'destination_summary' => $batch->destination_summary,
+                'destination_revision_id' => $batch->commercial_partner_destination_revision_id,
+                'next_attempt_number' => $nextAttempt,
+            ],
+            metadata: $this->metadata('partner_commission_payout_retry'),
         ));
     }
 

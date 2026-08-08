@@ -18,10 +18,6 @@ final class PartnerCommissionPayoutBatchRequestData extends Data
         public readonly string $currency,
         public readonly string $periodStartedAt,
         public readonly string $periodEndedAt,
-        public readonly string $bankCode,
-        public readonly string $accountNumber,
-        public readonly string $recipientName,
-        public readonly string $mobile,
         public readonly string $idempotencyKey,
         public readonly array $metadata = [],
     ) {
@@ -33,10 +29,6 @@ final class PartnerCommissionPayoutBatchRequestData extends Data
             'currency' => $this->currency,
             'period start' => $this->periodStartedAt,
             'period end' => $this->periodEndedAt,
-            'bank code' => $this->bankCode,
-            'account number' => $this->accountNumber,
-            'recipient name' => $this->recipientName,
-            'mobile' => $this->mobile,
             'idempotency key' => $this->idempotencyKey,
         ] as $field => $value) {
             if (trim($value) === '') {

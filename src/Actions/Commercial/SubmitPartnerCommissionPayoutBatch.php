@@ -13,8 +13,10 @@ use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Enums\PartnerCommissionPayoutAttemptStatus;
 use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutAttempt;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use Throwable;
@@ -66,6 +68,16 @@ final readonly class SubmitPartnerCommissionPayoutBatch
                 'submitted_at' => now(),
             ])->save();
 
+            PartnerCommissionPayoutAttempt::query()->create([
+                'batch_id' => $locked->getKey(),
+                'commercial_partner_destination_revision_id' => $locked->commercial_partner_destination_revision_id,
+                'attempt_number' => ((int) $locked->attempts()->max('attempt_number')) + 1,
+                'status' => PartnerCommissionPayoutAttemptStatus::Submitting,
+                'submission_idempotency_key' => $idempotencyKey,
+                'metadata' => [],
+                'submitted_at' => now(),
+            ]);
+
             return $locked->refresh();
         }, attempts: 5);
 
@@ -74,6 +86,10 @@ final readonly class SubmitPartnerCommissionPayoutBatch
             || $prepared->submitted_at?->lt(now()->subMinute())) {
             return $prepared;
         }
+
+        $attempt = $prepared->attempts()
+            ->where('submission_idempotency_key', $idempotencyKey)
+            ->sole();
 
         try {
             $destination = $prepared->destination;
@@ -94,6 +110,14 @@ final readonly class SubmitPartnerCommissionPayoutBatch
                 ],
             ));
         } catch (Throwable $exception) {
+            $attempt->forceFill([
+                'status' => PartnerCommissionPayoutAttemptStatus::Suspense,
+                'metadata' => [
+                    'exception' => $exception::class,
+                    'recorded_at' => now()->toIso8601String(),
+                ],
+                'reconciled_at' => now(),
+            ])->save();
             $prepared->forceFill([
                 'status' => PartnerCommissionPayoutBatchStatus::Suspense,
                 'metadata' => [
@@ -130,6 +154,25 @@ final readonly class SubmitPartnerCommissionPayoutBatch
                     'recorded_at' => now()->toIso8601String(),
                 ],
             ],
+        ])->save();
+
+        $attempt->forceFill([
+            'status' => $result->status === PayoutStatus::FAILED
+                ? PartnerCommissionPayoutAttemptStatus::Rejected
+                : PartnerCommissionPayoutAttemptStatus::Pending,
+            'provider_transaction_id' => $result->transaction_id,
+            'provider_transaction_uuid' => $result->uuid,
+            'rejection_code' => $result->status === PayoutStatus::FAILED
+                ? (string) data_get($result->metadata, 'rejection_code')
+                : null,
+            'rejection_message' => $result->status === PayoutStatus::FAILED
+                ? (string) data_get($result->metadata, 'rejection_reason')
+                : null,
+            'metadata' => [
+                'provider' => $result->provider,
+                'provider_status' => $result->status->value,
+            ],
+            'reconciled_at' => $result->status === PayoutStatus::FAILED ? now() : null,
         ])->save();
 
         $prepared = $prepared->refresh();

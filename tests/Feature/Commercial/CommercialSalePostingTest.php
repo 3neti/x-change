@@ -38,6 +38,7 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Models\CommercialPartner;
+use LBHurtado\XChange\Models\CommercialPartnerDestinationRevision;
 use LBHurtado\XChange\Models\CommercialPartnerRevision;
 use LBHurtado\XChange\Models\CommercialProviderCostBatchLine;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
@@ -312,6 +313,50 @@ it('aggregates approves submits and authoritatively settles partner commissions'
             );
         }
     });
+    $partner = CommercialPartner::query()->create([
+        'reference' => 'recipient:partner',
+        'display_name' => 'Test Partner',
+        'status' => CommercialPartnerStatus::Active,
+        'created_by_type' => $maker->getMorphClass(),
+        'created_by_id' => $maker->getKey(),
+        'activated_at' => now(),
+    ]);
+    $partnerRevision = CommercialPartnerRevision::query()->create([
+        'commercial_partner_id' => $partner->getKey(),
+        'version' => 1,
+        'status' => CommercialPartnerRevisionStatus::Approved,
+        'display_name' => 'Test Partner',
+        'attribution_basis' => 'contractual_referral',
+        'authorization_reference' => 'contract:test-partner',
+        'terms' => ['commission_basis' => 'fixed'],
+        'snapshot_hash' => str_repeat('d', 64),
+        'maker_type' => $maker->getMorphClass(),
+        'maker_id' => $maker->getKey(),
+        'approved_at' => now(),
+        'effective_at' => now(),
+    ]);
+    CommercialPartnerDestinationRevision::query()->create([
+        'commercial_partner_id' => $partner->getKey(),
+        'commercial_partner_revision_id' => $partnerRevision->getKey(),
+        'version' => 1,
+        'status' => CommercialPartnerRevisionStatus::Approved,
+        'provider' => 'netbank',
+        'connection_reference' => 'netbank-primary',
+        'currency' => 'PHP',
+        'destination' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09171234567',
+            'recipient_name' => 'Test Partner',
+            'mobile' => '09171234567',
+        ],
+        'destination_hash' => str_repeat('e', 64),
+        'destination_summary' => 'GCash · ••••4567',
+        'maker_type' => $maker->getMorphClass(),
+        'maker_id' => $maker->getKey(),
+        'authorization_reference' => 'board:test-partner-destination',
+        'approved_at' => now(),
+        'effective_at' => now(),
+    ]);
     $positions = commercialSalePositions();
     fundCommercialClientPosition($positions, 50_00, 'commission-batch');
 
@@ -337,16 +382,12 @@ it('aggregates approves submits and authoritatively settles partner commissions'
 
     $request = new PartnerCommissionPayoutBatchRequestData(
         reference: 'commission-payout:partner-test:2026-07',
-        partnerReference: 'partner:test',
+        partnerReference: 'recipient:partner',
         provider: 'netbank',
         connectionReference: 'netbank-primary',
         currency: 'PHP',
         periodStartedAt: '2026-07-25T00:00:00+08:00',
         periodEndedAt: '2026-07-25T23:59:59+08:00',
-        bankCode: 'GXCHPHM2XXX',
-        accountNumber: '09171234567',
-        recipientName: 'Test Partner',
-        mobile: '09171234567',
         idempotencyKey: 'commission-payout:partner-test:2026-07',
     );
     $batch = app(RequestPartnerCommissionPayoutBatch::class)->execute($maker, $request);
@@ -397,7 +438,10 @@ it('aggregates approves submits and authoritatively settles partner commissions'
         ->and(commercialSalePositionBalance($positions['partner_commission']))->toBe(0)
         ->and((int) DB::table('treasury_inventories')->sum('balance_minor'))->toBe($inventoryBefore - 4_00)
         ->and($provider->disburseCallCount)->toBe(1)
-        ->and($provider->checkStatusCallCount)->toBe(1);
+        ->and($provider->checkStatusCallCount)->toBe(1)
+        ->and($settled->attempts()->count())->toBe(1)
+        ->and($settled->attempts()->sole()->status->value)->toBe('settled')
+        ->and($settled->attempts()->sole()->commercial_partner_destination_revision_id)->not->toBeNull();
 
     expect(Artisan::call('x-change:treasury:attest-commercial-accounting', [
         '--connection' => ['netbank-primary'],

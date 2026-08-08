@@ -26,7 +26,18 @@ it('installs additive commercial settlement operation tables and capabilities', 
             'provider_transaction_id',
             'status',
         ]))->toBeTrue()
+        ->and(Schema::hasColumns('x_change_partner_commission_payout_attempts', [
+            'batch_id',
+            'commercial_partner_destination_revision_id',
+            'attempt_number',
+            'submission_idempotency_key',
+            'provider_transaction_id',
+            'rejection_code',
+            'status',
+        ]))->toBeTrue()
         ->and(array_column(CommercialOperatorCapability::cases(), 'value'))->toContain(
+            'commercial.partners.manage',
+            'commercial.partners.approve',
             'commercial.provider_costs.reconcile',
             'commercial.commissions.request',
             'commercial.commissions.approve',

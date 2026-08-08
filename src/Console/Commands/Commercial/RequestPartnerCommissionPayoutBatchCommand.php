@@ -21,10 +21,6 @@ final class RequestPartnerCommissionPayoutBatchCommand extends Command
         {--currency=PHP}
         {--period-start=}
         {--period-end=}
-        {--bank= : Bank or wallet code}
-        {--account= : Receiving account number}
-        {--name= : Recipient name}
-        {--mobile= : Contact mobile}
         {--idempotency-key=}
         {--json}';
 
@@ -47,10 +43,6 @@ final class RequestPartnerCommissionPayoutBatchCommand extends Command
             currency: (string) $this->option('currency'),
             periodStartedAt: (string) ($this->option('period-start') ?: now()->startOfMonth()->toIso8601String()),
             periodEndedAt: (string) ($this->option('period-end') ?: now()->endOfMonth()->toIso8601String()),
-            bankCode: (string) ($this->option('bank') ?: $this->ask('Receiving bank or wallet code')),
-            accountNumber: (string) ($this->option('account') ?: $this->secret('Receiving account number')),
-            recipientName: (string) ($this->option('name') ?: $this->ask('Recipient name')),
-            mobile: (string) ($this->option('mobile') ?: $this->ask('Contact mobile')),
             idempotencyKey: (string) ($this->option('idempotency-key') ?: $reference),
         ));
         $payload = [

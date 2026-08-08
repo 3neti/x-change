@@ -55,6 +55,11 @@ final class PartnerCommissionPayoutBatch extends Model
         return $this->hasMany(PartnerCommissionPayoutBatchLine::class, 'batch_id');
     }
 
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(PartnerCommissionPayoutAttempt::class, 'batch_id')->orderBy('attempt_number');
+    }
+
     public function maker(): MorphTo
     {
         return $this->morphTo();

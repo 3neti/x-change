@@ -16,8 +16,10 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryAdjustmentData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionPayableSettlementData;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Enums\PartnerCommissionPayoutAttemptStatus;
 use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutAttempt;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -72,6 +74,11 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
             throw new CommercialSaleConflict('Commission payout has no provider transaction to reconcile.');
         }
 
+        $attempt = $batch->attempts()
+            ->where('provider_transaction_id', $batch->provider_transaction_id)
+            ->latest('attempt_number')
+            ->first();
+
         try {
             $result = $this->payouts->checkStatus($batch->provider_transaction_id);
         } catch (Throwable $exception) {
@@ -96,6 +103,18 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
         }
 
         if ($result->status === PayoutStatus::FAILED) {
+            if ($attempt instanceof PartnerCommissionPayoutAttempt) {
+                $attempt->forceFill([
+                    'status' => PartnerCommissionPayoutAttemptStatus::Rejected,
+                    'rejection_code' => (string) data_get($result->metadata, 'rejection_code'),
+                    'rejection_message' => (string) data_get($result->metadata, 'rejection_reason'),
+                    'metadata' => [
+                        ...$attempt->metadata,
+                        'provider_status' => $result->status->value,
+                    ],
+                    'reconciled_at' => now(),
+                ])->save();
+            }
             $batch->forceFill([
                 'status' => PartnerCommissionPayoutBatchStatus::Rejected,
                 'rejected_at' => now(),
@@ -123,7 +142,7 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
             return $batch;
         }
 
-        return DB::transaction(function () use ($actorId, $actorType, $batch, $result): PartnerCommissionPayoutBatch {
+        return DB::transaction(function () use ($actorId, $actorType, $attempt, $batch, $result): PartnerCommissionPayoutBatch {
             $locked = PartnerCommissionPayoutBatch::query()->lockForUpdate()->findOrFail($batch->getKey());
 
             if ($locked->status === PartnerCommissionPayoutBatchStatus::Settled) {
@@ -177,6 +196,18 @@ final readonly class ReconcilePartnerCommissionPayoutBatch
                 'inventory_operation_reference' => $inventoryOperation->operationReference,
                 'settled_at' => now(),
             ])->save();
+
+            if ($attempt instanceof PartnerCommissionPayoutAttempt) {
+                $attempt->forceFill([
+                    'status' => PartnerCommissionPayoutAttemptStatus::Settled,
+                    'evidence_reference' => $result->transaction_id,
+                    'metadata' => [
+                        ...$attempt->metadata,
+                        'provider_status' => $result->status->value,
+                    ],
+                    'reconciled_at' => now(),
+                ])->save();
+            }
 
             $settled = $locked->refresh();
             $this->journal->recordPartnerPayoutBatch(
