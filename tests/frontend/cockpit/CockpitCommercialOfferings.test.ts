@@ -7,23 +7,107 @@ vi.mock("@inertiajs/vue3", async (importOriginal) => ({
   Head: { template: "<div><slot /></div>" },
 }));
 vi.mock("@/routes/x-change/cockpit/commercial/partners", () => ({
-  store: () => "/x/cockpit/commercial/partners",
+  store: Object.assign(() => "/x/cockpit/commercial/partners", {
+    url: () => "/x/cockpit/commercial/partners",
+  }),
 }));
 vi.mock(
   "@/routes/x-change/cockpit/commercial/partner_revisions/approvals",
   () => ({
-    store: (id: number) =>
-      `/x/cockpit/commercial/partner-revisions/${id}/approvals`,
+    store: Object.assign(
+      (id: number) => `/x/cockpit/commercial/partner-revisions/${id}/approvals`,
+      {
+        url: (id: number) =>
+          `/x/cockpit/commercial/partner-revisions/${id}/approvals`,
+      },
+    ),
   }),
 );
 vi.mock("@/routes/x-change/cockpit/commercial/partners/destinations", () => ({
-  store: (id: number) => `/x/cockpit/commercial/partners/${id}/destinations`,
+  store: Object.assign(
+    (id: number) => `/x/cockpit/commercial/partners/${id}/destinations`,
+    {
+      url: (id: number) => `/x/cockpit/commercial/partners/${id}/destinations`,
+    },
+  ),
 }));
 vi.mock(
   "@/routes/x-change/cockpit/commercial/partner_destination_revisions/approvals",
   () => ({
-    store: (id: number) =>
-      `/x/cockpit/commercial/partner-destination-revisions/${id}/approvals`,
+    store: Object.assign(
+      (id: number) =>
+        `/x/cockpit/commercial/partner-destination-revisions/${id}/approvals`,
+      {
+        url: (id: number) =>
+          `/x/cockpit/commercial/partner-destination-revisions/${id}/approvals`,
+      },
+    ),
+  }),
+);
+vi.mock("@/routes/x-change/cockpit/commercial/provider_cost_batches", () => ({
+  store: Object.assign(() => "/x/cockpit/commercial/provider-cost-batches", {
+    url: () => "/x/cockpit/commercial/provider-cost-batches",
+  }),
+}));
+vi.mock(
+  "@/routes/x-change/cockpit/commercial/commission_payout_batches",
+  () => ({
+    store: Object.assign(
+      () => "/x/cockpit/commercial/commission-payout-batches",
+      { url: () => "/x/cockpit/commercial/commission-payout-batches" },
+    ),
+  }),
+);
+vi.mock(
+  "@/routes/x-change/cockpit/commercial/commission_payout_batches/approvals",
+  () => ({
+    store: Object.assign(
+      (id: number) =>
+        `/x/cockpit/commercial/commission-payout-batches/${id}/approvals`,
+      {
+        url: (id: number) =>
+          `/x/cockpit/commercial/commission-payout-batches/${id}/approvals`,
+      },
+    ),
+  }),
+);
+vi.mock(
+  "@/routes/x-change/cockpit/commercial/commission_payout_batches/submissions",
+  () => ({
+    store: Object.assign(
+      (id: number) =>
+        `/x/cockpit/commercial/commission-payout-batches/${id}/submissions`,
+      {
+        url: (id: number) =>
+          `/x/cockpit/commercial/commission-payout-batches/${id}/submissions`,
+      },
+    ),
+  }),
+);
+vi.mock(
+  "@/routes/x-change/cockpit/commercial/commission_payout_batches/reconciliations",
+  () => ({
+    store: Object.assign(
+      (id: number) =>
+        `/x/cockpit/commercial/commission-payout-batches/${id}/reconciliations`,
+      {
+        url: (id: number) =>
+          `/x/cockpit/commercial/commission-payout-batches/${id}/reconciliations`,
+      },
+    ),
+  }),
+);
+vi.mock(
+  "@/routes/x-change/cockpit/commercial/commission_payout_batches/retries",
+  () => ({
+    store: Object.assign(
+      (id: number) =>
+        `/x/cockpit/commercial/commission-payout-batches/${id}/retries`,
+      {
+        url: (id: number) =>
+          `/x/cockpit/commercial/commission-payout-batches/${id}/retries`,
+      },
+    ),
   }),
 );
 
@@ -145,7 +229,35 @@ const controls = {
     settled_minor: 0,
     open_count: 0,
     available_minor: 100,
-    recent_batches: [],
+    recent_batches: [
+      {
+        id: 9,
+        reference: "commission:partner:acceptance:2026-08",
+        commercial_partner_id: 1,
+        destination_revision_id: 1,
+        partner_reference: "partner:acceptance",
+        provider: "netbank",
+        connection_reference: "netbank-primary",
+        destination_summary: "GCash · ••••4567",
+        amount_minor: 100,
+        currency: "PHP",
+        status: "awaiting_approval",
+        requested_at: "2026-08-08T00:00:00+00:00",
+        settled_at: null,
+        attempt_count: 0,
+        last_attempt: null,
+      },
+    ],
+  },
+  operations: {
+    live_provider_calls_enabled: false,
+    connections: [
+      {
+        reference: "netbank-primary",
+        provider: "netbank",
+        currency: "PHP",
+      },
+    ],
   },
   recent_sales: [],
   policy: {
@@ -320,6 +432,11 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("Provider Cost Payable");
     expect(wrapper.text()).toContain("Commission Available");
     expect(wrapper.text()).toContain("Provider Cost Evidence");
+    expect(wrapper.text()).toContain("Record Authoritative Evidence");
+    expect(wrapper.text()).toContain("Commission Payouts");
+    expect(wrapper.text()).toContain("Request Commission Payout");
+    expect(wrapper.text()).toContain("Acceptance Partner");
+    expect(wrapper.text()).toContain("Awaiting Approval");
     expect(wrapper.text()).toContain("Review Required");
   });
 

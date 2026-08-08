@@ -130,10 +130,7 @@ type CommercialControls = {
     variance_minor: number;
     outstanding_minor: number;
     recent_batches: Array<{
-      id: number;
       reference: string;
-      commercial_partner_id: number;
-      destination_revision_id: number;
       provider: string;
       connection_reference: string;
       currency: string;
@@ -151,7 +148,10 @@ type CommercialControls = {
     open_count: number;
     available_minor: number;
     recent_batches: Array<{
+      id: number;
       reference: string;
+      commercial_partner_id: number;
+      destination_revision_id: number;
       partner_reference: string;
       provider: string;
       connection_reference: string;
@@ -429,7 +429,7 @@ function label(value: string): string {
 }
 
 function submit(): void {
-  form.post(storeOffering(), { preserveScroll: true });
+  form.post(storeOffering.url(), { preserveScroll: true });
 }
 
 function approve(id: number): void {
@@ -439,7 +439,7 @@ function approve(id: number): void {
 
   approvingId.value = id;
   router.post(
-    approveOffering(id),
+    approveOffering.url(id),
     { authorization_reference: approvalReference.value },
     {
       preserveScroll: true,
@@ -460,7 +460,7 @@ function activate(id: number): void {
 
   activatingId.value = id;
   router.post(
-    activateOffering(id),
+    activateOffering.url(id),
     { activation_reference: activationReference.value },
     {
       preserveScroll: true,
@@ -475,7 +475,7 @@ function activate(id: number): void {
 }
 
 function submitPartner(): void {
-  partnerForm.post(storePartner(), {
+  partnerForm.post(storePartner.url(), {
     preserveScroll: true,
     onSuccess: () => partnerForm.reset(),
   });
@@ -484,7 +484,7 @@ function submitPartner(): void {
 function approvePartner(id: number): void {
   approvingPartnerId.value = id;
   router.post(
-    approvePartnerRevision(id),
+    approvePartnerRevision.url(id),
     {},
     {
       preserveScroll: true,
@@ -502,19 +502,22 @@ function openDestination(
 
 function submitDestination(): void {
   if (destinationPartnerId.value === null) return;
-  destinationForm.post(storePartnerDestination(destinationPartnerId.value), {
-    preserveScroll: true,
-    onSuccess: () => {
-      destinationForm.reset();
-      destinationPartnerId.value = null;
+  destinationForm.post(
+    storePartnerDestination.url(destinationPartnerId.value),
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        destinationForm.reset();
+        destinationPartnerId.value = null;
+      },
     },
-  });
+  );
 }
 
 function approveDestination(id: number): void {
   approvingDestinationId.value = id;
   router.post(
-    approvePartnerDestination(id),
+    approvePartnerDestination.url(id),
     {},
     {
       preserveScroll: true,
@@ -533,7 +536,7 @@ function submitProviderCost(): void {
     providerCostForm.provider = connection.provider;
     providerCostForm.currency = connection.currency;
   }
-  providerCostForm.post(storeProviderCostBatch(), {
+  providerCostForm.post(storeProviderCostBatch.url(), {
     preserveScroll: true,
     onSuccess: () => {
       providerCostForm.evidence_reference = "";
@@ -553,7 +556,7 @@ function submitCommissionRequest(): void {
     commissionForm.provider = connection.provider;
     commissionForm.currency = connection.currency;
   }
-  commissionForm.post(storeCommissionPayoutBatch(), {
+  commissionForm.post(storeCommissionPayoutBatch.url(), {
     preserveScroll: true,
     onSuccess: () => {
       commissionForm.reference = `commission:${Date.now()}`;
@@ -567,7 +570,7 @@ function approveCommission(id: number): void {
   if (!reference) return;
   operatingBatchId.value = id;
   router.post(
-    approveCommissionPayoutBatch(id),
+    approveCommissionPayoutBatch.url(id),
     { authorization_reference: reference },
     { preserveScroll: true, onFinish: () => (operatingBatchId.value = null) },
   );
@@ -576,7 +579,7 @@ function approveCommission(id: number): void {
 function submitCommission(id: number): void {
   operatingBatchId.value = id;
   router.post(
-    submitCommissionPayoutBatch(id),
+    submitCommissionPayoutBatch.url(id),
     { idempotency_key: `commission-submission:${id}:${Date.now()}` },
     { preserveScroll: true, onFinish: () => (operatingBatchId.value = null) },
   );
@@ -585,7 +588,7 @@ function submitCommission(id: number): void {
 function reconcileCommission(id: number): void {
   operatingBatchId.value = id;
   router.post(
-    reconcileCommissionPayoutBatch(id),
+    reconcileCommissionPayoutBatch.url(id),
     {},
     { preserveScroll: true, onFinish: () => (operatingBatchId.value = null) },
   );
@@ -596,7 +599,7 @@ function retryCommission(id: number): void {
   if (!destinationId) return;
   operatingBatchId.value = id;
   router.post(
-    retryCommissionPayoutBatch(id),
+    retryCommissionPayoutBatch.url(id),
     { destination_revision_id: destinationId },
     { preserveScroll: true, onFinish: () => (operatingBatchId.value = null) },
   );
@@ -1509,101 +1512,6 @@ function retryCommission(id: number): void {
             >
               <h3 class="text-sm font-semibold">Recent Commercial Sales</h3>
             </div>
-            <form
-              v-if="commercialOffering.can_reconcile_provider_costs"
-              class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4 dark:border-slate-800 dark:bg-slate-950/40"
-              @submit.prevent="submitProviderCost"
-            >
-              <label
-                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
-              >
-                Treasury Connection
-                <select
-                  v-model="providerCostForm.connection_reference"
-                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-                >
-                  <option
-                    v-for="connection in commercialOffering.controls.operations
-                      .connections"
-                    :key="connection.reference"
-                    :value="connection.reference"
-                  >
-                    {{ connection.reference }} ·
-                    {{ label(connection.provider) }}
-                  </option>
-                </select>
-              </label>
-              <label
-                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
-              >
-                Evidence Reference
-                <input
-                  v-model="providerCostForm.evidence_reference"
-                  required
-                  placeholder="Statement or invoice reference"
-                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-                />
-              </label>
-              <label
-                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
-              >
-                Observed Amount
-                <input
-                  v-model="providerCostForm.observed_amount"
-                  required
-                  inputmode="decimal"
-                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-                />
-              </label>
-              <label
-                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
-              >
-                Observed Date
-                <input
-                  v-model="providerCostForm.observed_at"
-                  required
-                  type="date"
-                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-                />
-              </label>
-              <label
-                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
-              >
-                Period Start
-                <input
-                  v-model="providerCostForm.period_started_at"
-                  required
-                  type="date"
-                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-                />
-              </label>
-              <label
-                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
-              >
-                Period End
-                <input
-                  v-model="providerCostForm.period_ended_at"
-                  required
-                  type="date"
-                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-                />
-              </label>
-              <div class="flex items-end sm:col-span-2">
-                <button
-                  type="submit"
-                  :disabled="providerCostForm.processing"
-                  class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950"
-                >
-                  <ShieldCheck class="size-4" /> Record Authoritative Evidence
-                </button>
-              </div>
-              <p
-                v-if="Object.keys(providerCostForm.errors).length"
-                class="text-xs text-rose-600 sm:col-span-2 lg:col-span-4"
-              >
-                {{ Object.values(providerCostForm.errors)[0] }}
-              </p>
-            </form>
             <div
               v-if="commercialOffering.controls.recent_sales.length"
               class="divide-y divide-slate-100 dark:divide-slate-800"
@@ -1701,6 +1609,157 @@ function retryCommission(id: number): void {
               </span>
             </div>
             <form
+              v-if="commercialOffering.can_reconcile_provider_costs"
+              class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4 dark:border-slate-800 dark:bg-slate-950/40"
+              @submit.prevent="submitProviderCost"
+            >
+              <label
+                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                Treasury Connection
+                <select
+                  v-model="providerCostForm.connection_reference"
+                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <option
+                    v-for="connection in commercialOffering.controls.operations
+                      .connections"
+                    :key="connection.reference"
+                    :value="connection.reference"
+                  >
+                    {{ connection.reference }} ·
+                    {{ label(connection.provider) }}
+                  </option>
+                </select>
+              </label>
+              <label
+                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                Evidence Reference
+                <input
+                  v-model="providerCostForm.evidence_reference"
+                  required
+                  placeholder="Statement or invoice reference"
+                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+              </label>
+              <label
+                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                Observed Amount
+                <input
+                  v-model="providerCostForm.observed_amount"
+                  required
+                  inputmode="decimal"
+                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+              </label>
+              <label
+                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                Observed Date
+                <input
+                  v-model="providerCostForm.observed_at"
+                  required
+                  type="date"
+                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+              </label>
+              <label
+                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                Period Start
+                <input
+                  v-model="providerCostForm.period_started_at"
+                  required
+                  type="date"
+                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+              </label>
+              <label
+                class="text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                Period End
+                <input
+                  v-model="providerCostForm.period_ended_at"
+                  required
+                  type="date"
+                  class="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+              </label>
+              <div class="flex items-end sm:col-span-2">
+                <button
+                  type="submit"
+                  :disabled="providerCostForm.processing"
+                  class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950"
+                >
+                  <ShieldCheck class="size-4" /> Record Authoritative Evidence
+                </button>
+              </div>
+              <p
+                v-if="Object.keys(providerCostForm.errors).length"
+                class="text-xs text-rose-600 sm:col-span-2 lg:col-span-4"
+              >
+                {{ Object.values(providerCostForm.errors)[0] }}
+              </p>
+            </form>
+            <div
+              class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
+            >
+              <div
+                v-for="batch in commercialOffering.controls.provider_costs
+                  .recent_batches"
+                :key="batch.reference"
+                class="grid gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center dark:border-slate-800"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold">
+                    {{ batch.reference }}
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    {{ label(batch.provider) }} ·
+                    {{ batch.connection_reference }}
+                  </p>
+                </div>
+                <p class="text-sm font-semibold">
+                  {{ money(batch.observed_amount_minor, batch.currency) }}
+                </p>
+                <span
+                  class="w-fit rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800"
+                  >{{ label(batch.status) }}</span
+                >
+              </div>
+              <p
+                v-if="
+                  !commercialOffering.controls.provider_costs.recent_batches
+                    .length
+                "
+                class="px-4 py-8 text-center text-sm text-slate-500"
+              >
+                No provider cost evidence recorded.
+              </p>
+            </div>
+          </section>
+
+          <section class="space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold">Commission Payouts</h3>
+                <p class="mt-0.5 text-xs text-slate-500">
+                  Aggregated by partner and period with independent approval.
+                </p>
+              </div>
+              <span
+                class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800"
+              >
+                {{
+                  commercialOffering.can_execute_commission_payouts
+                    ? "Execution Enabled"
+                    : "Controlled"
+                }}
+              </span>
+            </div>
+            <form
               v-if="commercialOffering.can_request_commission_payouts"
               class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4 dark:border-slate-800 dark:bg-slate-950/40"
               @submit.prevent="submitCommissionRequest"
@@ -1784,22 +1843,21 @@ function retryCommission(id: number): void {
               class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
             >
               <div
-                v-for="batch in commercialOffering.controls.provider_costs
+                v-for="batch in commercialOffering.controls.commissions
                   .recent_batches"
                 :key="batch.reference"
                 class="grid gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_auto_auto_minmax(12rem,auto)] lg:items-center dark:border-slate-800"
               >
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold">
-                    {{ batch.reference }}
+                    {{ batch.partner_reference }}
                   </p>
                   <p class="text-xs text-slate-500">
-                    {{ label(batch.provider) }} ·
-                    {{ batch.connection_reference }}
+                    {{ batch.destination_summary }} · {{ batch.reference }}
                   </p>
                 </div>
                 <p class="text-sm font-semibold">
-                  {{ money(batch.observed_amount_minor, batch.currency) }}
+                  {{ money(batch.amount_minor, batch.currency) }}
                 </p>
                 <span
                   class="w-fit rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800"
@@ -1845,9 +1903,8 @@ function retryCommission(id: number): void {
                   <span
                     v-else-if="batch.status === 'approved'"
                     class="text-xs text-amber-700 dark:text-amber-300"
+                    >Live provider calls disabled</span
                   >
-                    Live provider calls disabled
-                  </span>
                   <button
                     v-else-if="
                       batch.status === 'pending' &&
@@ -1895,67 +1952,12 @@ function retryCommission(id: number): void {
                       Prepare Retry
                     </button>
                   </template>
-                  <span v-else class="text-xs text-slate-500">
-                    {{ batch.attempt_count }} attempt{{
+                  <span v-else class="text-xs text-slate-500"
+                    >{{ batch.attempt_count }} attempt{{
                       batch.attempt_count === 1 ? "" : "s"
-                    }}
-                  </span>
+                    }}</span
+                  >
                 </div>
-              </div>
-              <p
-                v-if="
-                  !commercialOffering.controls.provider_costs.recent_batches
-                    .length
-                "
-                class="px-4 py-8 text-center text-sm text-slate-500"
-              >
-                No provider cost evidence recorded.
-              </p>
-            </div>
-          </section>
-
-          <section class="space-y-3">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <h3 class="text-sm font-semibold">Commission Payouts</h3>
-                <p class="mt-0.5 text-xs text-slate-500">
-                  Aggregated by partner and period with independent approval.
-                </p>
-              </div>
-              <span
-                class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800"
-              >
-                {{
-                  commercialOffering.can_execute_commission_payouts
-                    ? "Execution Enabled"
-                    : "Controlled"
-                }}
-              </span>
-            </div>
-            <div
-              class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
-            >
-              <div
-                v-for="batch in commercialOffering.controls.commissions
-                  .recent_batches"
-                :key="batch.reference"
-                class="grid gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center dark:border-slate-800"
-              >
-                <div class="min-w-0">
-                  <p class="truncate text-sm font-semibold">
-                    {{ batch.partner_reference }}
-                  </p>
-                  <p class="text-xs text-slate-500">
-                    {{ batch.destination_summary }} · {{ batch.reference }}
-                  </p>
-                </div>
-                <p class="text-sm font-semibold">
-                  {{ money(batch.amount_minor, batch.currency) }}
-                </p>
-                <span
-                  class="w-fit rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800"
-                  >{{ label(batch.status) }}</span
-                >
               </div>
               <p
                 v-if="

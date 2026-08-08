@@ -127,6 +127,55 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/commercial-offering-route.ts",
       ),
+      "@/routes/x-change/cockpit/commercial/partner_revisions/approvals":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
+      "@/routes/x-change/cockpit/commercial/partner_destination_revisions/approvals":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
+      "@/routes/x-change/cockpit/commercial/partners/destinations":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
+      "@/routes/x-change/cockpit/commercial/partners": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/commercial-operation-route.ts",
+      ),
+      "@/routes/x-change/cockpit/commercial/provider_cost_batches":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
+      "@/routes/x-change/cockpit/commercial/commission_payout_batches/approvals":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
+      "@/routes/x-change/cockpit/commercial/commission_payout_batches/submissions":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
+      "@/routes/x-change/cockpit/commercial/commission_payout_batches/reconciliations":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
+      "@/routes/x-change/cockpit/commercial/commission_payout_batches/retries":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
+      "@/routes/x-change/cockpit/commercial/commission_payout_batches":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/commercial-operation-route.ts",
+        ),
       "@/routes/x-change/cockpit/funding/intents/verification-checks":
         path.resolve(
           import.meta.dirname,
