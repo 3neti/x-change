@@ -27,8 +27,12 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
     expect($stub)
         ->toContain("from '@/routes/x-change/cockpit'")
         ->toContain(':href="dashboard()"')
+        ->toContain('Pay Code disbursements')
         ->toContain('Money should adapt to people.')
-        ->toContain('Funds remain with a regulated bank or EMI provider.')
+        ->toContain('Create a controlled payout, issue a Pay Code, and let the')
+        ->toContain('Funds stay with your regulated bank or EMI provider.')
+        ->toContain('Go to Cockpit')
+        ->toContain('Open Cockpit')
         ->toContain('PayCodeLogo')
         ->toContain('CockpitQuickGenerateOrderPresentation')
         ->toContain('CockpitLandingClaimExperiencePresentation')
@@ -38,8 +42,12 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->not->toContain('/vendor/x-change/images/logo-orange.png')
         ->not->toContain('/vendor/x-change/images/landing/cockpit-overview.png')
         ->not->toContain('/vendor/x-change/images/landing/claim-entry.png')
+        ->not->toContain('Money that follows the moment')
+        ->not->toContain('Funds remain with a regulated bank or EMI provider.')
         ->not->toContain('Start with an Account')
         ->not->toContain('/x/dashboard')
         ->and(is_file($packageRoot.'/resources/js/cockpit/components/CockpitQuickGenerateOrderPresentation.vue'))->toBeTrue()
         ->and(is_file($packageRoot.'/resources/js/cockpit/components/CockpitLandingClaimExperiencePresentation.vue'))->toBeTrue();
+
+    expect(substr_count($stub, 'Open Cockpit'))->toBe(1);
 });
