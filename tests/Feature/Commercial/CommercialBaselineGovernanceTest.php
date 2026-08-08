@@ -89,6 +89,19 @@ it('reports active baseline issuance while locking price changes', function (): 
 
     $status = app(CommercialGovernanceInspector::class)->inspect();
 
+    expect($status['partners'])->toMatchArray([
+        'storage_ready' => true,
+        'active_count' => 0,
+        'pending_partner_count' => 0,
+        'pending_destination_count' => 0,
+    ])->and($status['operations'])->toMatchArray([
+        'storage_ready' => true,
+        'live_provider_calls_enabled' => false,
+        'queue' => 'x-change-funding',
+        'provider_cost_review_count' => 0,
+        'open_commission_payout_count' => 0,
+    ]);
+
     expect($status['operational'])->toBeTrue()
         ->and($status['issuance_available'])->toBeTrue()
         ->and($status['changes_locked'])->toBeTrue()

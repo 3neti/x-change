@@ -77,6 +77,17 @@
                     <li>No governed Commercial Offering profile is active.</li>
                 @endforelse
             </ul>
+            <h3>Partners and settlement operations</h3>
+            <dl>
+                <div><dt>Partner registry</dt><dd>{{ $commercialGovernance['partners']['storage_ready'] ? 'Ready' : 'Action needed' }}</dd></div>
+                <div><dt>Active Partners</dt><dd>{{ $commercialGovernance['partners']['active_count'] }}</dd></div>
+                <div><dt>Partner approvals</dt><dd>{{ $commercialGovernance['partners']['pending_partner_count'] + $commercialGovernance['partners']['pending_destination_count'] }} pending</dd></div>
+                <div><dt>Provider payout calls</dt><dd>{{ $commercialGovernance['operations']['live_provider_calls_enabled'] ? 'Explicitly enabled' : 'Disabled' }}</dd></div>
+                <div><dt>Scheduled reconciliation</dt><dd>{{ $commercialGovernance['operations']['scheduled_reconciliation_enabled'] ? 'Enabled' : 'Disabled' }}</dd></div>
+                <div><dt>Reconciliation queue</dt><dd>{{ $commercialGovernance['operations']['queue'] }}</dd></div>
+                <div><dt>Provider-cost review</dt><dd>{{ $commercialGovernance['operations']['provider_cost_review_count'] }} open</dd></div>
+                <div><dt>Commission payouts</dt><dd>{{ $commercialGovernance['operations']['open_commission_payout_count'] }} open</dd></div>
+            </dl>
             <p class="checked">Operator identities remain private. This checklist exposes readiness counts only.</p>
         </section>
         <h2>Runtime processes</h2>

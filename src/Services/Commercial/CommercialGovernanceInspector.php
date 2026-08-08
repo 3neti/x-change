@@ -14,6 +14,11 @@ use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Models\CommercialPartner;
+use LBHurtado\XChange\Models\CommercialPartnerDestinationRevision;
+use LBHurtado\XChange\Models\CommercialPartnerRevision;
+use LBHurtado\XChange\Models\CommercialProviderCostBatch;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
 use Throwable;
 
 final readonly class CommercialGovernanceInspector
@@ -102,6 +107,8 @@ final readonly class CommercialGovernanceInspector
             'pending_approval_count' => $pendingApproval,
             'published_awaiting_activation_count' => $publishedAwaitingActivation,
             'profiles' => $profileRows,
+            'partners' => $this->partnerReadiness(),
+            'operations' => $this->operationsReadiness(),
             'message' => $this->message($state),
         ];
     }
@@ -115,6 +122,60 @@ final readonly class CommercialGovernanceInspector
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /** @return array<string, int|bool> */
+    private function partnerReadiness(): array
+    {
+        $ready = Schema::hasTable('x_change_commercial_partners')
+            && Schema::hasTable('x_change_commercial_partner_revisions')
+            && Schema::hasTable('x_change_commercial_partner_destination_revisions');
+
+        if (! $ready) {
+            return [
+                'storage_ready' => false,
+                'active_count' => 0,
+                'pending_partner_count' => 0,
+                'pending_destination_count' => 0,
+            ];
+        }
+
+        return [
+            'storage_ready' => true,
+            'active_count' => CommercialPartner::query()->active()->count(),
+            'pending_partner_count' => CommercialPartnerRevision::query()
+                ->where('status', 'awaiting_approval')->count(),
+            'pending_destination_count' => CommercialPartnerDestinationRevision::query()
+                ->where('status', 'awaiting_approval')->count(),
+        ];
+    }
+
+    /** @return array<string, int|string|bool> */
+    private function operationsReadiness(): array
+    {
+        $storageReady = Schema::hasTable('x_change_commercial_provider_cost_batches')
+            && Schema::hasTable('x_change_partner_commission_payout_batches');
+
+        return [
+            'storage_ready' => $storageReady,
+            'live_provider_calls_enabled' => (bool) config(
+                'x-change.commercial.operations.live_provider_calls_enabled',
+                false,
+            ),
+            'scheduled_reconciliation_enabled' => (bool) config(
+                'x-change.commercial.operations.scheduled_reconciliation_enabled',
+                true,
+            ),
+            'queue' => (string) config('x-change.commercial.operations.queue', 'x-change-funding'),
+            'provider_cost_review_count' => $storageReady
+                ? CommercialProviderCostBatch::query()->where('status', 'review_required')->count()
+                : 0,
+            'open_commission_payout_count' => $storageReady
+                ? PartnerCommissionPayoutBatch::query()->whereIn('status', [
+                    'awaiting_approval', 'approved', 'submitted', 'pending', 'suspense', 'rejected',
+                ])->count()
+                : 0,
+        ];
     }
 
     /**
@@ -199,6 +260,20 @@ final readonly class CommercialGovernanceInspector
             'pending_approval_count' => 0,
             'published_awaiting_activation_count' => 0,
             'profiles' => [],
+            'partners' => [
+                'storage_ready' => false,
+                'active_count' => 0,
+                'pending_partner_count' => 0,
+                'pending_destination_count' => 0,
+            ],
+            'operations' => [
+                'storage_ready' => false,
+                'live_provider_calls_enabled' => false,
+                'scheduled_reconciliation_enabled' => false,
+                'queue' => 'x-change-funding',
+                'provider_cost_review_count' => 0,
+                'open_commission_payout_count' => 0,
+            ],
             'message' => $message,
         ];
     }

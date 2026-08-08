@@ -11,6 +11,8 @@ The default mode is `bootstrap_immutable`:
 5. every later version is drafted, submitted, approved, published, and explicitly activated;
 6. existing Pay Codes and Commercial Sales retain their original snapshot and hash.
 
+Commercial Partner administration and settlement operations use the same governance boundary. A Partner is an institutional payee record, not necessarily an x-change user. Its legal terms and payout destination are versioned separately, independently approved, and never exposed to ordinary Account holders. New Commercial Sales bind earned commission to the approved Partner revision that was active when the sale was accepted.
+
 Set `XCHANGE_COMMERCIAL_GOVERNANCE_MODE=maker_checker_from_start` only when institutional policy forbids baseline activation. In that mode commissioning persists the baseline evidence but does not activate it, so governed issuance remains unavailable until the institution completes its own approval and activation.
 
 ## State model
@@ -43,5 +45,9 @@ Publication and activation are deliberately different. Publication says an indep
 - Commissioning exposes role counts and readiness, not operator identities.
 - Governance events are written to x-journal with stable idempotency keys.
 - Commercial allocations are system-side positions, never Client Funds.
+- Partner destination revisions are encrypted, masked in Cockpit, and maker-checker approved.
+- Provider-cost evidence must match provider, connection, currency, period, and exact expected amount before accounting changes.
+- A commission payout requires maker request, different-checker approval, explicit live-gated submission, and authoritative provider reconciliation.
+- Rejected commission attempts retain both the payable and Provider Inventory; retry uses a newly approved destination without erasing prior evidence.
 
 See [Commissioning](./COMMISSIONING.md), [Operating Model](./BANK_OPERATING_MODEL.md), [Offering Runbook](./OFFERING_RUNBOOK.md), and [Architecture](./ARCHITECTURE.md).
