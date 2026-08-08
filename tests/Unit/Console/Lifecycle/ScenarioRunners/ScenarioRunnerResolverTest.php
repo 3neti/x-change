@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Lifecycle\Runners\AccountManagementScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\CommercialOperationsSimulationScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\DefaultClaimScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ExecutionEngineContractScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
@@ -79,6 +80,16 @@ it('resolves Treasury basic cash mode', function () {
     expect($resolution->mode)->toBe('treasury_basic_cash')
         ->and($resolution->runner)
         ->toBeInstanceOf(TreasuryBasicCashScenarioRunner::class);
+});
+
+it('resolves commercial operations simulation mode', function () {
+    $resolution = app(ScenarioRunnerResolver::class)->resolve([
+        'mode' => 'commercial_operations_simulation',
+    ]);
+
+    expect($resolution->mode)->toBe('commercial_operations_simulation')
+        ->and($resolution->runner)
+        ->toBeInstanceOf(CommercialOperationsSimulationScenarioRunner::class);
 });
 
 it('throws when no runner is registered for mode', function () {

@@ -208,6 +208,7 @@ final class LifecycleScenarioEngine
             'treasury_live_basic_cash',
             'treasury_onboarding_grant',
             'feedback_delivery',
+            'commercial_operations_simulation',
         ], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,

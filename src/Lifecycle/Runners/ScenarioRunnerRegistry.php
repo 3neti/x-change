@@ -27,6 +27,7 @@ final class ScenarioRunnerRegistry
             'treasury_onboarding_grant',
             'feedback_delivery',
             'onboarding_voucher',
+            'commercial_operations_simulation',
         ], true);
     }
 
@@ -48,6 +49,7 @@ final class ScenarioRunnerRegistry
             'treasury_onboarding_grant' => app(TreasuryOnboardingGrantScenarioRunner::class),
             'feedback_delivery' => app(FeedbackDeliveryScenarioRunner::class),
             'onboarding_voucher' => app(OnboardingVoucherScenarioRunner::class),
+            'commercial_operations_simulation' => app(CommercialOperationsSimulationScenarioRunner::class),
             default => throw new RuntimeException("No lifecycle scenario runner registered for mode [{$mode}]."),
         };
     }

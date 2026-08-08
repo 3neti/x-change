@@ -64,6 +64,34 @@ return [
         ],
     ],
 
+    'commercial_operations_simulation' => [
+        'enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_COMMERCIAL_OPERATIONS_SIMULATION_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+        'allowed_environments' => ['local', 'testing'],
+        'required_tables' => [
+            'x_change_commercial_offerings',
+            'x_change_commercial_offering_activations',
+            'x_change_commercial_operator_authorizations',
+            'x_change_commercial_partners',
+            'x_change_commercial_partner_revisions',
+            'x_change_commercial_partner_destination_revisions',
+            'x_change_commercial_sales',
+            'x_change_commercial_allocations',
+            'x_change_commercial_provider_cost_batches',
+            'x_change_commercial_provider_cost_batch_lines',
+            'x_change_partner_commission_payout_batches',
+            'x_change_partner_commission_payout_batch_lines',
+            'x_change_partner_commission_payout_attempts',
+            'treasury_inventories',
+            'treasury_inventory_operations',
+            'treasury_positions',
+            'treasury_position_operations',
+            'execution_journal_entries',
+        ],
+    ],
+
     'treasury_live_basic_cash' => [
         'enabled' => (bool) env(
             'XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_ENABLED',
@@ -99,6 +127,18 @@ return [
     ],
 
     'scenarios' => [
+
+        'commercial_operations_simulation' => [
+            'label' => 'Commercial Operations Simulation',
+            'description' => 'Runs Offering, Partner, waterfall, provider-cost, commission, Treasury, and journal operations through a rollback-only simulation provider.',
+            'category' => 'commercial-governance',
+            'tags' => ['commercials', 'waterfall', 'partner', 'commission', 'treasury', 'journal', 'rollback'],
+            'mode' => 'commercial_operations_simulation',
+            'api_executable' => false,
+            'commercial' => [
+                'connection' => 'netbank-primary',
+            ],
+        ],
 
         /*
         |--------------------------------------------------------------------------
