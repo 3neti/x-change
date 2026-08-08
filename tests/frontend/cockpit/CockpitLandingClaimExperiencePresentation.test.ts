@@ -23,7 +23,7 @@ describe('Cockpit landing claim experience presentation', () => {
             component: 'form-flow/core/Splash',
             props: {
                 preview_mode: true,
-                app_logo: '/vendor/x-change/images/pay-code/pay-code-logo.svg',
+                app_logo: '/vendor/x-change/images/pay-code/pay-code-logo.png',
             },
         });
         expect(manifest.journey.steps[2].screen).toMatchObject({

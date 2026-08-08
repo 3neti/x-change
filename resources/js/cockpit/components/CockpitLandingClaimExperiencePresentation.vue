@@ -92,7 +92,7 @@ const manifest: CockpitClaimExperiencePreviewManifest = {
                         voucher_code: 'DEMO-500',
                         app_name: 'Pay Code',
                         app_logo:
-                            '/vendor/x-change/images/pay-code/pay-code-logo.svg',
+                            '/vendor/x-change/images/pay-code/pay-code-logo.png',
                         app_author: 'x-change',
                         copyright_text: 'A safe claim demonstration',
                     },
