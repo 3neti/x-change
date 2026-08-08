@@ -98,12 +98,15 @@ Every lifecycle scenario may define the following metadata:
 | settlement_envelope_evaluation | Settlement readiness evaluation |
 | settlement_three_party_flow | Multi-party settlement orchestration |
 | treasury_basic_cash | Rollback-only Treasury funding and Pay Code issuance accounting |
+| commercial_operations_simulation | Rollback-only Commercial Offering, Partner, waterfall, provider-cost, commission, Treasury, and journal simulation |
 | treasury_live_basic_cash | Replay-safe provider balance synchronization, ₱150 open-slice issuance, three live claims, and per-slice Treasury accounting |
 | treasury_onboarding_grant | Persistent system-sponsored onboarding grant from Account Funding Reserve, with optional browser claim handoff |
 
 ---
 
 The rollback-only `treasury_basic_cash` report includes the exact Commercial Offering snapshot used for issuance: Price List, Waterfall, Attribution Policy, and Legal Trace. Its default run has no attributed sales partner, so it proves that the commission rule is skipped and the unallocated value flows to Commercial Revenue rather than a synthetic partner.
+
+The rollback-only `commercial_operations_simulation` scenario requires distinct maker and checker actor IDs. It exercises the governed Commercial actions through a simulation-only provider boundary, reports stage-by-stage accounting and journal evidence, makes no external provider call, and rolls the complete database transaction back before returning. See the [Commercials Guide](../commercial-governance/COMMERCIALS_GUIDE.md#rollback-only-lifecycle-simulation).
 
 ---
 

@@ -50,4 +50,4 @@ Publication and activation are deliberately different. Publication says an indep
 - A commission payout requires maker request, different-checker approval, explicit live-gated submission, and authoritative provider reconciliation.
 - Rejected commission attempts retain both the payable and Provider Inventory; retry uses a newly approved destination without erasing prior evidence.
 
-See [Commissioning](./COMMISSIONING.md), [Operating Model](./BANK_OPERATING_MODEL.md), [Offering Runbook](./OFFERING_RUNBOOK.md), and [Architecture](./ARCHITECTURE.md).
+Start with the comprehensive [Commercials Guide](./COMMERCIALS_GUIDE.md). The focused references are [Commissioning](./COMMISSIONING.md), [Operating Model](./BANK_OPERATING_MODEL.md), [Offering Runbook](./OFFERING_RUNBOOK.md), [Settlement Operations](./SETTLEMENT_OPERATIONS.md), and [Architecture](./ARCHITECTURE.md).
