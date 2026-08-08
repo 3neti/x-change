@@ -37,6 +37,10 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingActi
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialOfferingPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDestinationApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDocumentationPageController;
@@ -147,6 +151,24 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             [CockpitCommercialOfferingActivationController::class, 'store'],
         )->middleware('throttle:12,1')
             ->name('x-change.cockpit.commercial.offerings.activations.store');
+        Route::post('commercial/partners', [CockpitCommercialPartnerController::class, 'store'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.partners.store');
+        Route::post(
+            'commercial/partner-revisions/{partnerRevision}/approvals',
+            [CockpitCommercialPartnerApprovalController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.partner_revisions.approvals.store');
+        Route::post(
+            'commercial/partners/{partner}/destinations',
+            [CockpitCommercialPartnerDestinationController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.partners.destinations.store');
+        Route::post(
+            'commercial/partner-destination-revisions/{destinationRevision}/approvals',
+            [CockpitCommercialPartnerDestinationApprovalController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.partner_destination_revisions.approvals.store');
         Route::get('campaigns', [CockpitCampaignWorksheetController::class, 'index'])
             ->name('x-change.cockpit.campaigns.index');
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])

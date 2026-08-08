@@ -17,6 +17,7 @@ use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
+use LBHurtado\XChange\Services\Commercial\CommercialPartnerReadModel;
 
 final class CockpitCommercialOfferingPageController extends Controller
 {
@@ -25,6 +26,7 @@ final class CockpitCommercialOfferingPageController extends Controller
         private readonly CommercialOperatorAuthorityContract $authority,
         private readonly CommercialControlReadModel $controls,
         private readonly CommercialGovernanceInspector $governance,
+        private readonly CommercialPartnerReadModel $partners,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -46,6 +48,14 @@ final class CockpitCommercialOfferingPageController extends Controller
                 'can_manage' => $this->authority->allows(
                     $operator,
                     CommercialOperatorCapability::ManageOfferings,
+                ),
+                'can_manage_partners' => $this->authority->allows(
+                    $operator,
+                    CommercialOperatorCapability::ManagePartners,
+                ),
+                'can_approve_partners' => $this->authority->allows(
+                    $operator,
+                    CommercialOperatorCapability::ApprovePartners,
                 ),
                 'can_approve' => $this->authority->allows(
                     $operator,
@@ -104,6 +114,7 @@ final class CockpitCommercialOfferingPageController extends Controller
                     ->all(),
                 'governance' => $this->governance->inspect(),
                 'controls' => $this->controls->build($offering),
+                'partners' => $this->partners->build(),
             ],
         ]);
     }

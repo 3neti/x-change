@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Enums\CommercialPartnerRevisionStatus;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Models\CommercialPartnerRevision;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -19,6 +21,20 @@ function authorizeCommercialOperator(User $operator, CommercialOperatorCapabilit
         'authorization_reference' => 'cockpit-test:'.$capability->value.':'.$operator->getKey(),
         'valid_from' => now()->subMinute(),
     ]);
+}
+
+function configureCockpitCommercialSystemPrincipal(): User
+{
+    $system = actingAsTestUser();
+    config()->set('account.system_user.candidates', [
+        'x-change' => [
+            'model' => User::class,
+            'identifier' => $system->email,
+            'identifier_column' => 'email',
+        ],
+    ]);
+
+    return $system;
 }
 
 beforeEach(function (): void {
@@ -80,11 +96,55 @@ it('shows the active governed offering to an authorized named operator', functio
         ->assertJsonPath('props.commercial_offering.active.reference', 'commercial-offering:pay_code')
         ->assertJsonPath('props.commercial_offering.active.legal_trace.jurisdiction', 'PH')
         ->assertJsonPath('props.commercial_offering.controls.schema', 'x-change.cockpit.commercial-controls.v1')
+        ->assertJsonPath('props.commercial_offering.partners.schema', 'x-change.cockpit.commercial-partners.v1')
         ->assertJsonPath('props.commercial_offering.controls.commissions.earned_minor', 0)
         ->assertJsonPath('props.commercial_offering.controls.policy.commission_requires_attributed_participant', true)
         ->assertJsonPath('props.xchange.navigation.commercial_controls_visible', true)
         ->assertJsonPath('props.commercial_offering.can_manage', false)
         ->assertJsonPath('props.commercial_offering.can_approve', false);
+});
+
+it('submits and independently approves a Commercial Partner from the Cockpit', function (): void {
+    configureCockpitCommercialSystemPrincipal();
+    $maker = actingAsTestUser();
+    authorizeCommercialOperator($maker, CommercialOperatorCapability::ManagePartners);
+
+    $this->post(route('x-change.cockpit.commercial.partners.store'), [
+        'reference' => 'partner:cockpit-test',
+        'display_name' => 'Cockpit Partner',
+        'legal_name' => 'Cockpit Partner Incorporated',
+        'external_reference' => 'crm:cockpit-partner',
+        'attribution_basis' => 'contractual_referral',
+        'authorization_reference' => 'contract:cockpit-partner',
+        'terms' => [
+            'commission_basis' => 'fixed',
+            'settlement_cycle' => 'monthly',
+        ],
+    ])->assertRedirect();
+
+    $revision = CommercialPartnerRevision::query()->where('display_name', 'Cockpit Partner')->sole();
+    expect($revision->status)->toBe(CommercialPartnerRevisionStatus::AwaitingApproval);
+
+    $checker = actingAsTestUser();
+    authorizeCommercialOperator($checker, CommercialOperatorCapability::ApprovePartners);
+    $this->post(route(
+        'x-change.cockpit.commercial.partner_revisions.approvals.store',
+        $revision,
+    ))->assertRedirect();
+
+    expect($revision->refresh()->status)->toBe(CommercialPartnerRevisionStatus::Approved)
+        ->and($revision->partner->status->value)->toBe('active');
+});
+
+it('rejects Commercial Partner mutations without matching authority', function (): void {
+    actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.commercial.partners.store'), [
+        'reference' => 'partner:unauthorized',
+        'display_name' => 'Unauthorized Partner',
+        'attribution_basis' => 'contractual_referral',
+        'authorization_reference' => 'contract:unauthorized',
+    ])->assertForbidden();
 });
 
 it('submits and independently publishes a new offering from the Cockpit', function (): void {
