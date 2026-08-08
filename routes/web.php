@@ -41,6 +41,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerAppro
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDestinationApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDestinationController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialProviderCostBatchController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDocumentationPageController;
@@ -59,6 +60,11 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestReviewCo
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransferCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutBatchController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutReconciliationController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutRetryController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutSubmissionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeEvidenceController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingClaimController;
@@ -169,6 +175,36 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             [CockpitCommercialPartnerDestinationApprovalController::class, 'store'],
         )->middleware('throttle:12,1')
             ->name('x-change.cockpit.commercial.partner_destination_revisions.approvals.store');
+        Route::post(
+            'commercial/provider-cost-batches',
+            [CockpitCommercialProviderCostBatchController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.provider_cost_batches.store');
+        Route::post(
+            'commercial/commission-payout-batches',
+            [CockpitPartnerCommissionPayoutBatchController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.commission_payout_batches.store');
+        Route::post(
+            'commercial/commission-payout-batches/{commissionPayoutBatch}/approvals',
+            [CockpitPartnerCommissionPayoutApprovalController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.commission_payout_batches.approvals.store');
+        Route::post(
+            'commercial/commission-payout-batches/{commissionPayoutBatch}/submissions',
+            [CockpitPartnerCommissionPayoutSubmissionController::class, 'store'],
+        )->middleware('throttle:x-change-commercial-settlement')
+            ->name('x-change.cockpit.commercial.commission_payout_batches.submissions.store');
+        Route::post(
+            'commercial/commission-payout-batches/{commissionPayoutBatch}/reconciliations',
+            [CockpitPartnerCommissionPayoutReconciliationController::class, 'store'],
+        )->middleware('throttle:x-change-commercial-settlement')
+            ->name('x-change.cockpit.commercial.commission_payout_batches.reconciliations.store');
+        Route::post(
+            'commercial/commission-payout-batches/{commissionPayoutBatch}/retries',
+            [CockpitPartnerCommissionPayoutRetryController::class, 'store'],
+        )->middleware('throttle:12,1')
+            ->name('x-change.cockpit.commercial.commission_payout_batches.retries.store');
         Route::get('campaigns', [CockpitCampaignWorksheetController::class, 'index'])
             ->name('x-change.cockpit.campaigns.index');
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])

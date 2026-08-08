@@ -114,11 +114,15 @@ final readonly class CommercialControlReadModel
                     ->whereIn('status', ['awaiting_approval', 'approved', 'submitted', 'pending', 'settled', 'suspense'])
                     ->sum('amount_minor') - (int) PartnerCommissionPayout::query()->sum('amount_minor')),
                 'recent_batches' => PartnerCommissionPayoutBatch::query()
+                    ->with('attempts')
                     ->latest('requested_at')
                     ->limit(10)
                     ->get()
                     ->map(fn (PartnerCommissionPayoutBatch $batch): array => [
+                        'id' => $batch->getKey(),
                         'reference' => $batch->reference,
+                        'commercial_partner_id' => $batch->commercial_partner_id,
+                        'destination_revision_id' => $batch->commercial_partner_destination_revision_id,
                         'partner_reference' => $batch->partner_reference,
                         'provider' => $batch->provider,
                         'connection_reference' => $batch->connection_reference,
@@ -128,8 +132,27 @@ final readonly class CommercialControlReadModel
                         'status' => $batch->status->value,
                         'requested_at' => $batch->requested_at?->toIso8601String(),
                         'settled_at' => $batch->settled_at?->toIso8601String(),
+                        'attempt_count' => $batch->attempts->count(),
+                        'last_attempt' => $batch->attempts->last() ? [
+                            'number' => $batch->attempts->last()->attempt_number,
+                            'status' => $batch->attempts->last()->status->value,
+                            'rejection_code' => $batch->attempts->last()->rejection_code,
+                            'rejection_message' => $batch->attempts->last()->rejection_message,
+                        ] : null,
                     ])
                     ->all(),
+            ],
+            'operations' => [
+                'live_provider_calls_enabled' => (bool) config(
+                    'x-change.commercial.operations.live_provider_calls_enabled',
+                    false,
+                ),
+                'connections' => collect($this->connections->active())
+                    ->map(fn ($connection): array => [
+                        'reference' => $connection->reference,
+                        'provider' => $connection->provider,
+                        'currency' => $connection->currency,
+                    ])->values()->all(),
             ],
             'recent_sales' => CommercialSale::query()
                 ->with('allocations')

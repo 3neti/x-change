@@ -8,6 +8,8 @@ use LBHurtado\XChange\Enums\CommercialPartnerRevisionStatus;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Models\CommercialPartnerRevision;
+use LBHurtado\XChange\Models\CommercialProviderCostBatch;
+use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -120,7 +122,7 @@ it('submits and independently approves a Commercial Partner from the Cockpit', f
             'commission_basis' => 'fixed',
             'settlement_cycle' => 'monthly',
         ],
-    ])->assertRedirect();
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
     $revision = CommercialPartnerRevision::query()->where('display_name', 'Cockpit Partner')->sole();
     expect($revision->status)->toBe(CommercialPartnerRevisionStatus::AwaitingApproval);
@@ -145,6 +147,72 @@ it('rejects Commercial Partner mutations without matching authority', function (
         'attribution_basis' => 'contractual_referral',
         'authorization_reference' => 'contract:unauthorized',
     ])->assertForbidden();
+});
+
+it('records provider cost evidence through an authorized fail-closed Cockpit control', function (): void {
+    configureCockpitCommercialSystemPrincipal();
+    $operator = actingAsTestUser();
+    authorizeCommercialOperator($operator, CommercialOperatorCapability::ReconcileProviderCosts);
+
+    $this->post(route('x-change.cockpit.commercial.provider_cost_batches.store'), [
+        'reference' => 'provider-cost:cockpit:001',
+        'provider' => 'netbank',
+        'connection_reference' => 'netbank-primary',
+        'currency' => 'PHP',
+        'evidence_type' => 'provider_statement',
+        'evidence_reference' => 'statement:cockpit:001',
+        'observed_amount' => '1.00',
+        'period_started_at' => now()->startOfMonth()->toDateString(),
+        'period_ended_at' => now()->toDateString(),
+        'observed_at' => now()->toDateString(),
+        'idempotency_key' => 'provider-cost:cockpit:001',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $batch = CommercialProviderCostBatch::query()->sole();
+
+    expect($batch->status->value)->toBe('review_required')
+        ->and($batch->observed_amount_minor)->toBe(100)
+        ->and($batch->lines()->count())->toBe(0);
+});
+
+it('keeps live commission submission inaccessible when the runtime gate is disabled', function (): void {
+    configureCockpitCommercialSystemPrincipal();
+    $operator = actingAsTestUser();
+    authorizeCommercialOperator($operator, CommercialOperatorCapability::ExecuteCommissionPayouts);
+    config()->set('x-change.commercial.operations.live_provider_calls_enabled', false);
+    $batch = PartnerCommissionPayoutBatch::query()->create([
+        'reference' => 'commission:cockpit:001',
+        'partner_reference' => 'partner:cockpit',
+        'provider' => 'netbank',
+        'connection_reference' => 'netbank-primary',
+        'position_reference' => 'position:commission:cockpit',
+        'amount_minor' => 100,
+        'currency' => 'PHP',
+        'status' => 'approved',
+        'destination' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09170000000'],
+        'destination_hash' => hash('sha256', 'cockpit'),
+        'destination_summary' => 'GCash · ••••0000',
+        'request_idempotency_key' => 'commission:cockpit:001',
+        'request_hash' => hash('sha256', 'request'),
+        'maker_type' => User::class,
+        'maker_id' => 100,
+        'checker_type' => User::class,
+        'checker_id' => 101,
+        'approval_reference' => 'approval:cockpit:001',
+        'metadata' => [],
+        'period_started_at' => now()->startOfMonth(),
+        'period_ended_at' => now(),
+        'requested_at' => now(),
+        'approved_at' => now(),
+    ]);
+
+    $this->post(route(
+        'x-change.cockpit.commercial.commission_payout_batches.submissions.store',
+        $batch,
+    ), ['idempotency_key' => 'submission:cockpit:001'])->assertForbidden();
+
+    expect($batch->refresh()->status->value)->toBe('approved')
+        ->and($batch->attempts()->count())->toBe(0);
 });
 
 it('submits and independently publishes a new offering from the Cockpit', function (): void {
