@@ -6,6 +6,26 @@ vi.mock("@inertiajs/vue3", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@inertiajs/vue3")>()),
   Head: { template: "<div><slot /></div>" },
 }));
+vi.mock("@/routes/x-change/cockpit/commercial/partners", () => ({
+  store: () => "/x/cockpit/commercial/partners",
+}));
+vi.mock(
+  "@/routes/x-change/cockpit/commercial/partner_revisions/approvals",
+  () => ({
+    store: (id: number) =>
+      `/x/cockpit/commercial/partner-revisions/${id}/approvals`,
+  }),
+);
+vi.mock("@/routes/x-change/cockpit/commercial/partners/destinations", () => ({
+  store: (id: number) => `/x/cockpit/commercial/partners/${id}/destinations`,
+}));
+vi.mock(
+  "@/routes/x-change/cockpit/commercial/partner_destination_revisions/approvals",
+  () => ({
+    store: (id: number) =>
+      `/x/cockpit/commercial/partner-destination-revisions/${id}/approvals`,
+  }),
+);
 
 const active = {
   reference: "commercial-offering:pay_code",
@@ -155,6 +175,64 @@ const controls = {
   },
 };
 
+const partners = {
+  schema: "x-change.cockpit.commercial-partners.v1",
+  summary: {
+    active_count: 1,
+    awaiting_approval_count: 1,
+    legacy_unresolved_count: 0,
+    legacy_unresolved_minor: 0,
+  },
+  partners: [
+    {
+      id: 1,
+      reference: "partner:acceptance",
+      display_name: "Acceptance Partner",
+      status: "active",
+      revision: {
+        id: 1,
+        version: 1,
+        legal_name: "Acceptance Partner Incorporated",
+        attribution_basis: "contractual_referral",
+        authorization_reference: "contract:acceptance",
+        effective_at: "2026-08-08T00:00:00+00:00",
+      },
+      destinations: [
+        {
+          id: 1,
+          version: 1,
+          provider: "netbank",
+          connection_reference: "netbank-primary",
+          currency: "PHP",
+          summary: "GCash · ••••4567",
+          effective_at: "2026-08-08T00:00:00+00:00",
+        },
+      ],
+      balances: [
+        {
+          currency: "PHP",
+          earned_minor: 400,
+          reserved_minor: 0,
+          settled_minor: 0,
+          available_minor: 400,
+        },
+      ],
+    },
+  ],
+  pending_revisions: [
+    {
+      id: 2,
+      partner_reference: "partner:pending",
+      display_name: "Pending Partner",
+      version: 1,
+      attribution_basis: "marketing_agreement",
+      authorization_reference: "contract:pending",
+      submitted_at: "2026-08-08T00:00:00+00:00",
+    },
+  ],
+  pending_destinations: [],
+};
+
 describe("Cockpit Commercial Offering administration", () => {
   it("keeps the Price List primary and exposes the Waterfall without mixing their meaning", async () => {
     const wrapper = mount(CommercialOfferings, {
@@ -169,6 +247,8 @@ describe("Cockpit Commercial Offering administration", () => {
           can_request_commission_payouts: true,
           can_approve_commission_payouts: false,
           can_execute_commission_payouts: false,
+          can_manage_partners: true,
+          can_approve_partners: true,
           pending: [],
           published: [],
           governance: {
@@ -183,6 +263,7 @@ describe("Cockpit Commercial Offering administration", () => {
             },
           },
           controls,
+          partners,
         },
       },
       global: { stubs: { Head: true } },
@@ -198,6 +279,20 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("provider cost");
     expect(wrapper.text()).toContain("commercial revenue");
     expect(wrapper.text()).toContain("Independent Maker–Checker");
+
+    const partnersButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("Partners"));
+
+    expect(partnersButton).toBeDefined();
+    await partnersButton!.trigger("click");
+
+    expect(wrapper.text()).toContain("Commercial Partners");
+    expect(wrapper.text()).toContain("Acceptance Partner");
+    expect(wrapper.text()).toContain("GCash · ••••4567");
+    expect(wrapper.text()).toContain("₱4.00 available");
+    expect(wrapper.text()).toContain("Approval Inbox");
+    expect(wrapper.text()).toContain("Pending Partner");
 
     const activityButton = wrapper
       .findAll("button")
@@ -238,6 +333,7 @@ describe("Cockpit Commercial Offering administration", () => {
           can_manage: false,
           can_approve: true,
           controls,
+          partners,
           published: [],
           governance: {
             state: "revision_awaiting_approval",
@@ -280,6 +376,7 @@ describe("Cockpit Commercial Offering administration", () => {
           can_manage: false,
           can_approve: true,
           controls,
+          partners,
           pending: [],
           published: [
             {
