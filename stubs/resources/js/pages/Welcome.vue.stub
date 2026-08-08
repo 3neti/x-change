@@ -20,7 +20,7 @@ withDefaults(
     <Head title="x-change">
         <meta
             name="description"
-            content="Create controlled payouts, issue Pay Codes, and give recipients a simple claim experience with x-change."
+            content="Create a controlled payout, issue a Pay Code, and let the recipient claim it through one connected experience."
         />
     </Head>
 
@@ -44,25 +44,17 @@ withDefaults(
                 <Link
                     v-if="$page.props.auth.user"
                     :href="dashboard()"
-                    class="rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                    class="rounded-full px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 sm:px-4"
                 >
-                    Open Cockpit
+                    Go to Cockpit
                 </Link>
-                <template v-else>
-                    <Link
-                        :href="login()"
-                        class="rounded-full px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 sm:px-4"
-                    >
-                        Sign in
-                    </Link>
-                    <Link
-                        v-if="canRegister"
-                        :href="register()"
-                        class="rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
-                    >
-                        Get started
-                    </Link>
-                </template>
+                <Link
+                    v-else
+                    :href="login()"
+                    class="rounded-full px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 sm:px-4"
+                >
+                    Sign in
+                </Link>
             </nav>
         </header>
 
@@ -73,7 +65,7 @@ withDefaults(
                 <p
                     class="text-xs font-semibold uppercase tracking-[0.2em] text-[#d85f15]"
                 >
-                    Money that follows the moment
+                    Pay Code disbursements
                 </p>
                 <h1
                     class="mt-5 text-balance text-[clamp(3rem,5.2vw,5.4rem)] font-semibold leading-[0.94] tracking-[-0.065em]"
@@ -84,13 +76,16 @@ withDefaults(
                     >
                 </h1>
                 <p
-                    class="mt-6 max-w-lg text-base leading-7 text-slate-600 sm:text-lg"
+                    class="mt-5 max-w-lg text-base leading-7 text-slate-600 sm:text-lg"
                 >
                     Create a controlled payout, issue a Pay Code, and let the
                     recipient claim it through one connected experience.
                 </p>
 
-                <div class="mt-7 flex flex-wrap items-center gap-3">
+                <div
+                    v-if="$page.props.auth.user || canRegister"
+                    class="mt-7 flex flex-wrap items-center gap-3"
+                >
                     <Link
                         v-if="$page.props.auth.user"
                         :href="dashboard()"
@@ -98,21 +93,13 @@ withDefaults(
                     >
                         Open Cockpit
                     </Link>
-                    <template v-else>
-                        <Link
-                            v-if="canRegister"
-                            :href="register()"
-                            class="rounded-full bg-[#ef6a1a] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#d85f15] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ef6a1a]"
-                        >
-                            Get started
-                        </Link>
-                        <Link
-                            :href="login()"
-                            class="rounded-full border border-slate-300 bg-white/60 px-6 py-3.5 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-white"
-                        >
-                            Sign in
-                        </Link>
-                    </template>
+                    <Link
+                        v-else
+                        :href="register()"
+                        class="rounded-full bg-[#ef6a1a] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#d85f15] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ef6a1a]"
+                    >
+                        Get started
+                    </Link>
                 </div>
 
                 <div
@@ -122,7 +109,7 @@ withDefaults(
                         aria-hidden="true"
                         class="size-2 shrink-0 rounded-full bg-emerald-500"
                     />
-                    <p>Funds remain with a regulated bank or EMI provider.</p>
+                    <p>Funds stay with your regulated bank or EMI provider.</p>
                 </div>
             </div>
 
