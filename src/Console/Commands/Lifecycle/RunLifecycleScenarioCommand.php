@@ -19,6 +19,8 @@ class RunLifecycleScenarioCommand extends Command
         {--list : List available scenarios}
         {--provider= : Provider label from emi.payout_providers config}
         {--issuer= : Issuer user id}
+        {--maker= : Commercial maker user id}
+        {--checker= : Commercial checker user id}
         {--wallet= : Wallet owner/user id}
         {--amount= : Override scenario amount}
         {--claim-mobile= : Override the claimant Mobile for this run}

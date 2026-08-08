@@ -281,6 +281,8 @@ final class LifecycleScenarioEngine
         $scenario['_runtime'] = [
             ...(array) data_get($scenario, '_runtime', []),
             'selected_attempt' => $options->onlyAttempt,
+            'maker' => $options->maker,
+            'checker' => $options->checker,
             'timeout' => $bootstrap->timeout,
             'poll' => $bootstrap->poll,
             'max_polls' => $bootstrap->maxPolls,
@@ -395,6 +397,8 @@ final class LifecycleScenarioEngine
         $scenario['_runtime'] = [
             ...(array) data_get($scenario, '_runtime', []),
             'selected_attempt' => $options->onlyAttempt,
+            'maker' => $options->maker,
+            'checker' => $options->checker,
             'approval_pipeline' => $options->approvalPipeline,
             'live_feedback' => $options->liveFeedback,
             'feedback_email' => $options->feedbackEmail,

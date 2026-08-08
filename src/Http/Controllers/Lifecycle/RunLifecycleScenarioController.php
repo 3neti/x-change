@@ -24,6 +24,8 @@ final class RunLifecycleScenarioController
             'scenario' => ['required', 'string'],
             'only_attempt' => ['nullable', 'string'],
             'issuer' => ['nullable', 'string'],
+            'maker' => ['nullable', 'string'],
+            'checker' => ['nullable', 'string'],
             'wallet' => ['nullable', 'string'],
             'amount' => ['nullable', 'numeric'],
             'timeout' => ['nullable', 'integer'],

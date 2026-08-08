@@ -8,6 +8,8 @@ final readonly class LifecycleScenarioRunOptions
 {
     public function __construct(
         public ?string $issuer = null,
+        public ?string $maker = null,
+        public ?string $checker = null,
         public ?string $wallet = null,
         public ?float $amount = null,
         public ?string $claimMobile = null,
@@ -34,6 +36,8 @@ final readonly class LifecycleScenarioRunOptions
     {
         return new self(
             issuer: self::stringOrNull($options['issuer'] ?? null),
+            maker: self::stringOrNull($options['maker'] ?? null),
+            checker: self::stringOrNull($options['checker'] ?? null),
             wallet: self::stringOrNull($options['wallet'] ?? null),
             amount: self::floatOrNull($options['amount'] ?? null),
             claimMobile: self::stringOrNull($options['claim-mobile'] ?? null),
@@ -110,6 +114,8 @@ final readonly class LifecycleScenarioRunOptions
     {
         return new self(
             issuer: self::stringOrNull($payload['issuer'] ?? null),
+            maker: self::stringOrNull($payload['maker'] ?? null),
+            checker: self::stringOrNull($payload['checker'] ?? null),
             wallet: self::stringOrNull($payload['wallet'] ?? null),
             amount: self::intOrNull($payload['amount'] ?? null),
             claimMobile: self::stringOrNull($payload['claim_mobile'] ?? null),
