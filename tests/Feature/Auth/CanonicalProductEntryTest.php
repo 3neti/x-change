@@ -35,13 +35,19 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->toContain('Claim when you’re ready—with a participating bank or')
         ->toContain('{{ $page.props.name }}')
         ->toContain('Powered by x-change')
-        ->toContain('!h-18')
+        ->toContain('/vendor/x-change/images/logo-orange.png')
+        ->toContain('sm:h-14')
         ->toContain("background-image: url('/vendor/x-change/favicon.png')")
         ->toContain('bg-[length:auto_100%]')
         ->toContain('amount="₱537.00"')
         ->toContain('estimated-cost="₱543.90"')
         ->toContain('Open Cockpit')
-        ->toContain('PayCodeLogo')
+        ->toContain('DRAFT')
+        ->toContain('the instruction')
+        ->toContain('ISSUE')
+        ->toContain('the Pay Code')
+        ->toContain('CLAIM')
+        ->toContain('the payout')
         ->toContain('CockpitQuickGenerateOrderPresentation')
         ->toContain('CockpitLandingClaimExperiencePresentation')
         ->toContain('Claim Pay Code')
@@ -49,7 +55,10 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->not->toContain('Create a controlled payout')
         ->not->toContain('Funds stay with your regulated bank or EMI provider.')
         ->not->toContain('laravel.com/docs')
-        ->not->toContain('/vendor/x-change/images/logo-orange.png')
+        ->not->toContain("import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue'")
+        ->not->toContain('Create the order')
+        ->not->toContain('Issue the Pay Code')
+        ->not->toContain('Recipient claims')
         ->not->toContain('/vendor/x-change/images/landing/cockpit-overview.png')
         ->not->toContain('/vendor/x-change/images/landing/claim-entry.png')
         ->not->toContain('Money that follows the moment')
@@ -60,4 +69,5 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->and(is_file($packageRoot.'/resources/js/cockpit/components/CockpitLandingClaimExperiencePresentation.vue'))->toBeTrue();
 
     expect(substr_count($stub, 'Open Cockpit'))->toBe(1);
+    expect(substr_count($stub, '/vendor/x-change/images/logo-orange.png'))->toBe(1);
 });

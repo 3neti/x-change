@@ -3,7 +3,6 @@ import { Head, Link } from '@inertiajs/vue3';
 import { login } from '@/routes';
 import { start as startClaim } from '@/routes/x-change/claim';
 import { dashboard } from '@/routes/x-change/cockpit';
-import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue';
 import CockpitLandingClaimExperiencePresentation from '@/cockpit/components/CockpitLandingClaimExperiencePresentation.vue';
 import CockpitQuickGenerateOrderPresentation from '@/cockpit/components/CockpitQuickGenerateOrderPresentation.vue';
 
@@ -38,9 +37,10 @@ withDefaults(
             class="relative z-10 mx-auto flex h-24 max-w-[88rem] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10"
         >
             <div class="flex items-center gap-3">
-                <PayCodeLogo
-                    variant="logo"
-                    class-name="!h-18 !max-h-18 !max-w-72"
+                <img
+                    src="/vendor/x-change/images/logo-orange.png"
+                    alt="x-change"
+                    class="h-12 w-auto shrink-0 object-contain sm:h-14"
                 />
                 <span class="shrink-0 border-l border-slate-300 pl-3">
                     <span
@@ -126,8 +126,17 @@ withDefaults(
                         >
                             1
                         </span>
-                        <span class="text-[0.68rem] font-semibold sm:text-xs">
-                            Create the order
+                        <span class="leading-tight">
+                            <strong
+                                class="block text-[0.58rem] font-extrabold tracking-[0.14em] text-slate-950 sm:text-[0.66rem]"
+                            >
+                                DRAFT
+                            </strong>
+                            <span
+                                class="mt-0.5 block text-[0.62rem] font-semibold text-slate-600 sm:text-xs"
+                            >
+                                the instruction
+                            </span>
                         </span>
                     </li>
                     <li class="flex items-center gap-2 rounded-xl px-3 py-2">
@@ -136,8 +145,17 @@ withDefaults(
                         >
                             2
                         </span>
-                        <span class="text-[0.68rem] font-semibold sm:text-xs">
-                            Issue the Pay Code
+                        <span class="leading-tight">
+                            <strong
+                                class="block text-[0.58rem] font-extrabold tracking-[0.14em] text-[#d85f15] sm:text-[0.66rem]"
+                            >
+                                ISSUE
+                            </strong>
+                            <span
+                                class="mt-0.5 block text-[0.62rem] font-semibold text-slate-600 sm:text-xs"
+                            >
+                                the Pay Code
+                            </span>
                         </span>
                     </li>
                     <li class="flex items-center gap-2 rounded-xl px-3 py-2">
@@ -146,8 +164,17 @@ withDefaults(
                         >
                             3
                         </span>
-                        <span class="text-[0.68rem] font-semibold sm:text-xs">
-                            Recipient claims
+                        <span class="leading-tight">
+                            <strong
+                                class="block text-[0.58rem] font-extrabold tracking-[0.14em] text-emerald-700 sm:text-[0.66rem]"
+                            >
+                                CLAIM
+                            </strong>
+                            <span
+                                class="mt-0.5 block text-[0.62rem] font-semibold text-slate-600 sm:text-xs"
+                            >
+                                the payout
+                            </span>
                         </span>
                     </li>
                 </ol>
