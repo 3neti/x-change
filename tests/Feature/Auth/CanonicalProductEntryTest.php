@@ -31,9 +31,7 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->toContain('Funds remain with a regulated bank or EMI provider.')
         ->toContain('PayCodeLogo')
         ->toContain('CockpitQuickGenerateOrderPresentation')
-        ->toContain('CockpitClaimExperiencePreview')
-        ->toContain('safe-presentation')
-        ->toContain('autoplay')
+        ->toContain('CockpitLandingClaimExperiencePresentation')
         ->toContain('Get started')
         ->toContain('bank or EMI')
         ->not->toContain('laravel.com/docs')
@@ -42,5 +40,6 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->not->toContain('/vendor/x-change/images/landing/claim-entry.png')
         ->not->toContain('Start with an Account')
         ->not->toContain('/x/dashboard')
-        ->and(is_file($packageRoot.'/resources/js/cockpit/components/CockpitQuickGenerateOrderPresentation.vue'))->toBeTrue();
+        ->and(is_file($packageRoot.'/resources/js/cockpit/components/CockpitQuickGenerateOrderPresentation.vue'))->toBeTrue()
+        ->and(is_file($packageRoot.'/resources/js/cockpit/components/CockpitLandingClaimExperiencePresentation.vue'))->toBeTrue();
 });

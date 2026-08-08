@@ -3,9 +3,8 @@ import { Head, Link } from '@inertiajs/vue3';
 import { login, register } from '@/routes';
 import { dashboard } from '@/routes/x-change/cockpit';
 import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue';
-import CockpitClaimExperiencePreview from '@/cockpit/components/CockpitClaimExperiencePreview.vue';
+import CockpitLandingClaimExperiencePresentation from '@/cockpit/components/CockpitLandingClaimExperiencePresentation.vue';
 import CockpitQuickGenerateOrderPresentation from '@/cockpit/components/CockpitQuickGenerateOrderPresentation.vue';
-import type { CockpitClaimExperiencePreviewManifest } from '@/cockpit/types';
 
 withDefaults(
     defineProps<{
@@ -15,142 +14,6 @@ withDefaults(
         canRegister: true,
     },
 );
-
-const demoClaimManifest: CockpitClaimExperiencePreviewManifest = {
-    schema: 'x-change.claim-experience-preview.manifest.v1',
-    status: 'ready',
-    reference: 'landing-page-demo',
-    fingerprint: 'landing-page-demo-v1',
-    generated_at: '2026-08-08T00:00:00Z',
-    cache_hit: true,
-    safety: {
-        preview_only: true,
-        interactive: false,
-        money_movement: false,
-        provider_calls: false,
-        claim_submission: false,
-    },
-    journey: {
-        viewport: {
-            profile: 'mobile_claim_v1',
-            width: 360,
-            height: 720,
-        },
-        step_count: 4,
-        steps: [
-            {
-                sequence: 1,
-                key: 'claim-entry',
-                phase: 'entry',
-                title: 'Open Pay Code',
-                description: 'Enter the Pay Code shared by the issuer.',
-                actor: 'redeemer',
-                render_kind: 'live_screen',
-                status: 'rendered',
-                preview_url: '',
-                frame: null,
-                screen: {
-                    kind: 'claim_entry',
-                    code: 'DEMO-500',
-                    amount: '₱500.00',
-                    title: 'Claim Pay Code',
-                    description: 'Enter the Pay Code shared with you.',
-                    fields: [],
-                },
-            },
-            {
-                sequence: 2,
-                key: 'claim-details',
-                phase: 'form',
-                title: 'Add payout details',
-                description: 'Provide only the information the order requires.',
-                actor: 'redeemer',
-                render_kind: 'live_screen',
-                status: 'rendered',
-                preview_url: '',
-                frame: null,
-                screen: {
-                    kind: 'claim_details',
-                    code: 'DEMO-500',
-                    amount: '₱500.00',
-                    title: 'Your payout details',
-                    description: 'Tell us where to send this payout.',
-                    fields: [
-                        {
-                            key: 'name',
-                            label: 'Full Name',
-                            value: 'Lester Hurtado',
-                        },
-                        {
-                            key: 'mobile',
-                            label: 'Mobile Number',
-                            value: '0917 ••• •987',
-                        },
-                        {
-                            key: 'destination',
-                            label: 'Bank or Wallet',
-                            value: 'GCash',
-                        },
-                    ],
-                },
-            },
-            {
-                sequence: 3,
-                key: 'confirmation',
-                phase: 'review',
-                title: 'Review and confirm',
-                description: 'Check the destination before continuing.',
-                actor: 'redeemer',
-                render_kind: 'live_screen',
-                status: 'rendered',
-                preview_url: '',
-                frame: null,
-                screen: {
-                    kind: 'confirmation',
-                    code: 'DEMO-500',
-                    amount: '₱500.00',
-                    title: 'Confirm Claim',
-                    description: 'Review and confirm your Pay Code claim.',
-                    fields: [
-                        {
-                            key: 'recipient',
-                            label: 'Recipient',
-                            value: 'Lester Hurtado',
-                        },
-                        {
-                            key: 'destination',
-                            label: 'Destination',
-                            value: 'GCash · •1987',
-                        },
-                    ],
-                },
-            },
-            {
-                sequence: 4,
-                key: 'claim-success',
-                phase: 'result',
-                title: 'Claim accepted',
-                description: 'The recipient can follow the payout status.',
-                actor: 'redeemer',
-                render_kind: 'live_screen',
-                status: 'rendered',
-                preview_url: '',
-                frame: null,
-                screen: {
-                    kind: 'success',
-                    code: 'DEMO-500',
-                    amount: '₱500.00',
-                    title: 'Claim accepted',
-                    description:
-                        'The payout is pending confirmation from the payment provider.',
-                    fields: [],
-                    message: 'Your field allowance is on its way.',
-                },
-            },
-        ],
-    },
-    exports: {},
-};
 </script>
 
 <template>
@@ -316,16 +179,7 @@ const demoClaimManifest: CockpitClaimExperiencePreviewManifest = {
                     <div
                         class="mx-auto h-[32rem] w-full max-w-[19rem] overflow-hidden rounded-[1.2rem] shadow-[0_28px_65px_-28px_rgba(15,23,42,0.75)] xl:-ml-5"
                     >
-                        <CockpitClaimExperiencePreview
-                            status="ready"
-                            :processing="false"
-                            message="Safe presentation mode"
-                            :manifest="demoClaimManifest"
-                            :can-generate="false"
-                            safe-presentation
-                            autoplay
-                            :autoplay-interval-ms="3800"
-                        />
+                        <CockpitLandingClaimExperiencePresentation />
                     </div>
                 </div>
             </div>
