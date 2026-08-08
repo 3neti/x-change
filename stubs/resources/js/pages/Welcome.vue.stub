@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { login, register } from '@/routes';
+import { login } from '@/routes';
+import { start as startClaim } from '@/routes/x-change/claim';
 import { dashboard } from '@/routes/x-change/cockpit';
 import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue';
 import CockpitLandingClaimExperiencePresentation from '@/cockpit/components/CockpitLandingClaimExperiencePresentation.vue';
@@ -20,23 +21,38 @@ withDefaults(
     <Head title="x-change">
         <meta
             name="description"
-            content="Create a controlled payout, issue a Pay Code, and let the recipient claim it through one connected experience."
+            content="Receive a Pay Code. Send to the account you choose. Claim when you’re ready with a participating bank or supported wallet."
         />
     </Head>
 
-    <main class="min-h-screen overflow-x-hidden bg-[#f7f5f2] text-slate-950">
+    <main
+        class="relative isolate min-h-screen overflow-x-hidden bg-[#f7f5f2] text-slate-950"
+    >
+        <div
+            aria-hidden="true"
+            class="bg-top-left pointer-events-none absolute inset-y-0 left-0 h-screen w-full bg-contain bg-no-repeat opacity-[0.1] lg:bg-[length:auto_100%] lg:bg-left"
+            style="background-image: url('/favicon.png')"
+        />
+
         <header
-            class="mx-auto flex h-16 max-w-[88rem] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10"
+            class="relative z-10 mx-auto flex h-24 max-w-[88rem] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10"
         >
             <div class="flex items-center gap-3">
                 <PayCodeLogo
                     variant="logo"
-                    class-name="!h-9 !max-h-9 !max-w-36"
+                    class-name="!h-18 !max-h-18 !max-w-72"
                 />
-                <span
-                    class="hidden border-l border-slate-300 pl-3 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:block"
-                >
-                    by x-change
+                <span class="shrink-0 border-l border-slate-300 pl-3">
+                    <span
+                        class="block max-w-28 truncate text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-slate-700 sm:max-w-44 sm:text-xs"
+                    >
+                        {{ $page.props.name }}
+                    </span>
+                    <span
+                        class="mt-1 block whitespace-nowrap text-[0.5rem] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:text-[0.58rem]"
+                    >
+                        Powered by x-change
+                    </span>
                 </span>
             </div>
 
@@ -44,14 +60,14 @@ withDefaults(
                 <Link
                     v-if="$page.props.auth.user"
                     :href="dashboard()"
-                    class="rounded-full px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 sm:px-4"
+                    class="whitespace-nowrap rounded-full px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 sm:px-4"
                 >
-                    Go to Cockpit
+                    Open Cockpit
                 </Link>
                 <Link
                     v-else
                     :href="login()"
-                    class="rounded-full px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 sm:px-4"
+                    class="whitespace-nowrap rounded-full px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 sm:px-4"
                 >
                     Sign in
                 </Link>
@@ -59,13 +75,13 @@ withDefaults(
         </header>
 
         <section
-            class="mx-auto grid max-w-[88rem] gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[minmax(22rem,0.76fr)_minmax(38rem,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-5"
+            class="relative z-10 mx-auto grid max-w-[88rem] gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-[calc(100vh-6rem)] lg:grid-cols-[minmax(22rem,0.76fr)_minmax(38rem,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-5"
         >
             <div class="max-w-xl">
                 <p
                     class="text-xs font-semibold uppercase tracking-[0.2em] text-[#d85f15]"
                 >
-                    Pay Code disbursements
+                    Cashless disbursements
                 </p>
                 <h1
                     class="mt-5 text-balance text-[clamp(3rem,5.2vw,5.4rem)] font-semibold leading-[0.94] tracking-[-0.065em]"
@@ -78,38 +94,22 @@ withDefaults(
                 <p
                     class="mt-5 max-w-lg text-base leading-7 text-slate-600 sm:text-lg"
                 >
-                    Create a controlled payout, issue a Pay Code, and let the
-                    recipient claim it through one connected experience.
+                    <span class="block font-semibold text-slate-800">
+                        Receive a Pay Code. Send to the account you choose.
+                    </span>
+                    <span class="mt-2 block">
+                        Claim when you’re ready—with a participating bank or
+                        supported wallet.
+                    </span>
                 </p>
 
-                <div
-                    v-if="$page.props.auth.user || canRegister"
-                    class="mt-7 flex flex-wrap items-center gap-3"
-                >
+                <div class="mt-7 flex flex-wrap items-center gap-3">
                     <Link
-                        v-if="$page.props.auth.user"
-                        :href="dashboard()"
+                        :href="startClaim()"
                         class="rounded-full bg-[#ef6a1a] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#d85f15] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ef6a1a]"
                     >
-                        Open Cockpit
+                        Claim Pay Code
                     </Link>
-                    <Link
-                        v-else
-                        :href="register()"
-                        class="rounded-full bg-[#ef6a1a] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#d85f15] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ef6a1a]"
-                    >
-                        Get started
-                    </Link>
-                </div>
-
-                <div
-                    class="mt-5 flex items-center gap-3 text-sm text-slate-500"
-                >
-                    <span
-                        aria-hidden="true"
-                        class="size-2 shrink-0 rounded-full bg-emerald-500"
-                    />
-                    <p>Funds stay with your regulated bank or EMI provider.</p>
                 </div>
             </div>
 
@@ -156,10 +156,10 @@ withDefaults(
                     class="grid items-center gap-4 xl:grid-cols-[minmax(20rem,1fr)_17rem]"
                 >
                     <CockpitQuickGenerateOrderPresentation
-                        amount="₱500.00"
+                        amount="₱537.00"
                         recipient="Lester Hurtado · 0917 301 1987"
                         pay-code-type="Redeemable"
-                        estimated-cost="₱506.90"
+                        estimated-cost="₱543.90"
                         purpose="Field allowance"
                     />
 

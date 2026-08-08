@@ -52,15 +52,15 @@ const manifest: CockpitClaimExperiencePreviewManifest = {
                 frame: null,
                 screen: {
                     kind: 'claim_entry',
-                    code: 'DEMO-500',
-                    amount: '₱500.00',
+                    code: 'AA-317',
+                    amount: '₱537.00',
                     title: 'Claim Pay Code',
                     description: 'Enter the Pay Code shared with you.',
                     fields: [
                         {
                             key: 'code',
                             label: 'Pay Code',
-                            value: 'DEMO-500',
+                            value: 'AA-317',
                         },
                     ],
                     message: 'Your field allowance is ready.',
@@ -89,7 +89,7 @@ const manifest: CockpitClaimExperiencePreviewManifest = {
                         preview_mode: true,
                         is_default_splash: true,
                         content: '',
-                        voucher_code: 'DEMO-500',
+                        voucher_code: 'AA-317',
                         app_name: 'Pay Code',
                         app_logo:
                             '/vendor/x-change/images/pay-code/pay-code-logo.png',
@@ -124,11 +124,11 @@ const manifest: CockpitClaimExperiencePreviewManifest = {
                                 name: 'amount',
                                 type: 'number',
                                 label: 'Amount',
-                                default: '500',
+                                default: '537',
                                 readonly: true,
                                 required: true,
                                 variant: 'readonly-badge',
-                                available_balance: '500',
+                                available_balance: '537',
                             },
                             {
                                 name: 'settlement_rail',
@@ -187,8 +187,8 @@ const manifest: CockpitClaimExperiencePreviewManifest = {
                 frame: null,
                 screen: {
                     kind: 'confirmation',
-                    code: 'DEMO-500',
-                    amount: '₱500.00',
+                    code: 'AA-317',
+                    amount: '₱537.00',
                     title: 'Confirm Claim',
                     description: 'Review and confirm your Pay Code claim.',
                     fields: [
@@ -220,8 +220,8 @@ const manifest: CockpitClaimExperiencePreviewManifest = {
                 frame: null,
                 screen: {
                     kind: 'success',
-                    code: 'DEMO-500',
-                    amount: '₱500.00',
+                    code: 'AA-317',
+                    amount: '₱537.00',
                     title: 'Claim accepted',
                     description:
                         'The claim is recorded. Payout follows provider confirmation.',
