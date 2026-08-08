@@ -28,6 +28,8 @@ it('simulates governed commercial operations and rolls every record back', funct
     Http::preventStrayRequests();
     enableNetbankTreasuryForTests();
     config()->set('x-change.lifecycle.defaults.user_model', User::class);
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:lifecycle-simulation');
+    config()->set('x-change.commercial.legal_trace.profile_version', '2026-08-08.1');
     config()->set('x-change.lifecycle.commercial_operations_simulation.enabled', true);
     config()->set('x-change.lifecycle.commercial_operations_simulation.allowed_environments', ['testing']);
     $issuer = commercialSimulationActor('Commercial Simulation Issuer', '09170000001');
@@ -77,6 +79,8 @@ it('simulates governed commercial operations and rolls every record back', funct
 it('requires distinct maker and checker actors', function (): void {
     enableNetbankTreasuryForTests();
     config()->set('x-change.lifecycle.defaults.user_model', User::class);
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:lifecycle-simulation');
+    config()->set('x-change.commercial.legal_trace.profile_version', '2026-08-08.1');
     config()->set('x-change.lifecycle.commercial_operations_simulation.enabled', true);
     config()->set('x-change.lifecycle.commercial_operations_simulation.allowed_environments', ['testing']);
     $issuer = commercialSimulationActor('Commercial Simulation Issuer Two', '09170000004');
