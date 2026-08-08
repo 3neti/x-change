@@ -30,11 +30,15 @@ use LBHurtado\XChange\Data\Commercial\PartnerCommissionPayoutBatchRequestData;
 use LBHurtado\XChange\Data\Commercial\ProviderCostBatchEvidenceData;
 use LBHurtado\XChange\Data\Disbursement\PayoutDestinationValidationData;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Enums\CommercialPartnerRevisionStatus;
+use LBHurtado\XChange\Enums\CommercialPartnerStatus;
 use LBHurtado\XChange\Enums\CommercialProviderCostBatchStatus;
 use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Models\CommercialPartner;
+use LBHurtado\XChange\Models\CommercialPartnerRevision;
 use LBHurtado\XChange\Models\CommercialProviderCostBatchLine;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
@@ -56,6 +60,49 @@ use LBHurtado\XCommerce\Services\DeterministicCommercialSaleFactory;
 use LBHurtado\XCommerce\Services\DeterministicCommercialWaterfallCalculator;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
+
+it('snapshots governed partner provenance on commission allocations', function (): void {
+    $operator = actingAsTestUser();
+    $partner = CommercialPartner::query()->create([
+        'reference' => 'recipient:partner',
+        'display_name' => 'Posting Partner',
+        'status' => CommercialPartnerStatus::Active,
+        'created_by_type' => $operator->getMorphClass(),
+        'created_by_id' => $operator->getKey(),
+        'activated_at' => now(),
+    ]);
+    $revision = CommercialPartnerRevision::query()->create([
+        'commercial_partner_id' => $partner->getKey(),
+        'version' => 1,
+        'status' => CommercialPartnerRevisionStatus::Approved,
+        'display_name' => 'Posting Partner',
+        'attribution_basis' => 'contractual_referral',
+        'authorization_reference' => 'contract:posting-partner',
+        'terms' => ['commission_basis' => 'fixed'],
+        'snapshot_hash' => str_repeat('c', 64),
+        'maker_type' => $operator->getMorphClass(),
+        'maker_id' => $operator->getKey(),
+        'approved_at' => now(),
+        'effective_at' => now(),
+    ]);
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 25_00, 'governed-partner-posting');
+
+    $sale = app(PostCommercialSale::class)->execute(
+        commercialSaleSnapshot('acceptance:governed-partner-posting'),
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+    );
+    $allocation = $sale->allocations->firstWhere('category', 'partner_commission');
+
+    expect($allocation->commercial_partner_id)->toBe($partner->getKey())
+        ->and($allocation->commercial_partner_revision_id)->toBe($revision->getKey())
+        ->and($allocation->legacy_partner_reference)->toBeNull()
+        ->and(data_get($sale->snapshot, 'partner_governance.rule:partner.status'))->toBe('governed')
+        ->and(data_get($sale->snapshot, 'partner_governance.rule:partner.authorization_reference'))
+        ->toBe('contract:posting-partner');
+});
 
 it('posts and reverses an immutable commercial sale exactly once', function () {
     $positions = commercialSalePositions();

@@ -13,6 +13,7 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
+use LBHurtado\XChange\Services\Commercial\CommercialPartnerAttributionResolver;
 use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
 use LBHurtado\XCommerce\Data\CommercialSaleSnapshotData;
 
@@ -21,6 +22,7 @@ final readonly class PostCommercialSale
     public function __construct(
         private TreasuryPositionOperationContract $positionOperations,
         private CommercialAccountingJournal $journal,
+        private CommercialPartnerAttributionResolver $partners,
     ) {}
 
     /**
@@ -35,6 +37,8 @@ final readonly class PostCommercialSale
         array $destinationPositionReferences,
     ): CommercialSale {
         $snapshotArray = $snapshot->toArray();
+        $partnerAttributions = $this->partners->forSnapshot($snapshot);
+        $snapshotArray['partner_governance'] = $partnerAttributions;
         $snapshotHash = hash(
             'sha256',
             json_encode($snapshotArray, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
@@ -46,6 +50,7 @@ final readonly class PostCommercialSale
             $snapshot,
             $snapshotArray,
             $snapshotHash,
+            $partnerAttributions,
             $sourceClientFundsPositionReference,
         ): CommercialSale {
             $sale = CommercialSale::query()
@@ -88,7 +93,12 @@ final readonly class PostCommercialSale
                     'accepted_at' => $snapshot->acceptedAt,
                 ]);
 
-                $this->createAllocations($sale, $snapshot, $destinationPositionReferences);
+                $this->createAllocations(
+                    $sale,
+                    $snapshot,
+                    $destinationPositionReferences,
+                    $partnerAttributions,
+                );
             }
 
             $scope = hash('sha256', $snapshot->reference);
@@ -135,6 +145,8 @@ final readonly class PostCommercialSale
                                 'policy_rule_reference' => $allocation->policy_rule_reference,
                                 'category' => $allocation->category,
                                 'recipient_reference' => $allocation->recipient_reference,
+                                'commercial_partner_id' => $allocation->commercial_partner_id,
+                                'commercial_partner_revision_id' => $allocation->commercial_partner_revision_id,
                             ],
                         ),
                     );
@@ -168,11 +180,13 @@ final readonly class PostCommercialSale
 
     /**
      * @param  array<string, string>  $destinationPositionReferences
+     * @param  array<string, array<string, mixed>>  $partnerAttributions
      */
     private function createAllocations(
         CommercialSale $sale,
         CommercialSaleSnapshotData $snapshot,
         array $destinationPositionReferences,
+        array $partnerAttributions,
     ): void {
         $plan = $snapshot->quoteSnapshot->allocationPlan;
 
@@ -190,7 +204,12 @@ final readonly class PostCommercialSale
                 );
             }
 
-            $this->createAllocation($sale, $line, $destination);
+            $this->createAllocation(
+                $sale,
+                $line,
+                $destination,
+                $partnerAttributions[$line->policyRuleReference] ?? null,
+            );
         }
     }
 
@@ -198,9 +217,15 @@ final readonly class PostCommercialSale
         CommercialSale $sale,
         CommercialAllocationLineData $line,
         string $destinationPositionReference,
+        ?array $partnerAttribution,
     ): void {
         CommercialAllocation::query()->create([
             'commercial_sale_id' => $sale->getKey(),
+            'commercial_partner_id' => $partnerAttribution['commercial_partner_id'] ?? null,
+            'commercial_partner_revision_id' => $partnerAttribution['commercial_partner_revision_id'] ?? null,
+            'legacy_partner_reference' => ($partnerAttribution['status'] ?? null) === 'legacy_unresolved'
+                ? $line->recipientReference
+                : null,
             'sequence' => $line->sequence,
             'policy_rule_reference' => $line->policyRuleReference,
             'line_type' => $line->lineType->value,
@@ -212,6 +237,7 @@ final readonly class PostCommercialSale
             'status' => 'planned',
             'metadata' => [
                 'commercial_sale_reference' => $sale->reference,
+                'partner_governance' => $partnerAttribution,
             ],
         ]);
     }
