@@ -37,4 +37,14 @@ final class CommercialAllocation extends Model
     {
         return $this->belongsTo(CommercialSale::class, 'commercial_sale_id');
     }
+
+    public function partner(): BelongsTo
+    {
+        return $this->belongsTo(CommercialPartner::class, 'commercial_partner_id');
+    }
+
+    public function partnerRevision(): BelongsTo
+    {
+        return $this->belongsTo(CommercialPartnerRevision::class, 'commercial_partner_revision_id');
+    }
 }

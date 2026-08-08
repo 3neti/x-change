@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
@@ -15,7 +16,8 @@ final class PartnerCommissionPayoutBatch extends Model
     protected $table = 'x_change_partner_commission_payout_batches';
 
     protected $fillable = [
-        'reference', 'partner_reference', 'provider', 'connection_reference',
+        'reference', 'partner_reference', 'commercial_partner_id', 'commercial_partner_revision_id',
+        'commercial_partner_destination_revision_id', 'provider', 'connection_reference',
         'position_reference', 'amount_minor', 'currency', 'status', 'destination',
         'destination_hash', 'destination_summary', 'request_idempotency_key',
         'request_hash', 'maker_type', 'maker_id', 'checker_type', 'checker_id',
@@ -61,5 +63,23 @@ final class PartnerCommissionPayoutBatch extends Model
     public function checker(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function partner(): BelongsTo
+    {
+        return $this->belongsTo(CommercialPartner::class, 'commercial_partner_id');
+    }
+
+    public function partnerRevision(): BelongsTo
+    {
+        return $this->belongsTo(CommercialPartnerRevision::class, 'commercial_partner_revision_id');
+    }
+
+    public function destinationRevision(): BelongsTo
+    {
+        return $this->belongsTo(
+            CommercialPartnerDestinationRevision::class,
+            'commercial_partner_destination_revision_id',
+        );
     }
 }
