@@ -8,15 +8,23 @@ const props = withDefaults(
     modelValue: string;
     disabled?: boolean;
     quickAmounts?: number[];
+    estimatedCost?: string | null;
+    estimatePending?: boolean;
+    estimateAffordability?:
+      "unknown" | "affordable" | "insufficient-client-funds";
   }>(),
   {
     disabled: false,
     quickAmounts: () => [100, 500, 1000, 2000, 5000, 10000],
+    estimatedCost: null,
+    estimatePending: false,
+    estimateAffordability: "unknown",
   },
 );
 
 const emit = defineEmits<{
   "update:modelValue": [value: string];
+  preview: [value: number | null];
 }>();
 
 const inputElement = ref<HTMLInputElement | null>(null);
@@ -75,6 +83,10 @@ function confirmAmount(value: number): void {
   emit("update:modelValue", value.toFixed(2));
 }
 
+function previewAmount(value: number): void {
+  emit("preview", value);
+}
+
 function synchronizeProgrammaticInput(event: Event): void {
   emit("update:modelValue", (event.target as HTMLInputElement).value);
 }
@@ -87,6 +99,7 @@ function focus(): void {
 watch(keypadOpen, (isOpen) => {
   if (!isOpen) {
     keypadInitialEntry.value = null;
+    emit("preview", null);
   }
 });
 
@@ -136,6 +149,52 @@ defineExpose({ focus });
       allow-decimal
       title="Pay Code Amount"
       @confirm="confirmAmount"
-    />
+      @preview="previewAmount"
+    >
+      <template #summary>
+        <div
+          class="flex min-h-5 items-baseline justify-between gap-3 text-xs leading-5"
+          data-testid="cockpit-amount-picker-estimated-cost"
+          :data-affordability="estimateAffordability"
+          aria-live="polite"
+        >
+          <span
+            :class="
+              estimateAffordability === 'insufficient-client-funds'
+                ? 'font-semibold text-rose-600 dark:text-rose-300'
+                : 'font-medium text-slate-500 dark:text-slate-400'
+            "
+          >
+            Estimated Cost
+          </span>
+          <span
+            v-if="estimatedCost !== null && !estimatePending"
+            class="shrink-0 font-semibold tabular-nums"
+            :class="
+              estimateAffordability === 'insufficient-client-funds'
+                ? 'text-rose-600 dark:text-rose-300'
+                : 'text-slate-700 dark:text-slate-200'
+            "
+            data-testid="cockpit-amount-picker-estimated-cost-value"
+          >
+            {{ estimatedCost }}
+          </span>
+          <span
+            v-else-if="estimatePending"
+            class="shrink-0 text-slate-400 dark:text-slate-500"
+            data-testid="cockpit-amount-picker-estimated-cost-loading"
+          >
+            Calculating…
+          </span>
+          <span
+            v-else
+            class="shrink-0 text-slate-400 dark:text-slate-500"
+            data-testid="cockpit-amount-picker-estimated-cost-unavailable"
+          >
+            —
+          </span>
+        </div>
+      </template>
+    </NumericKeypad>
   </div>
 </template>

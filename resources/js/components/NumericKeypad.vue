@@ -40,6 +40,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   "update:open": [value: boolean];
   confirm: [value: number];
+  preview: [value: number];
 }>();
 
 const digits = ref<string>("");
@@ -82,6 +83,16 @@ const currentValue = computed(() => {
     : parseInt(digits.value);
   return isNaN(num) ? 0 : num;
 });
+
+watch(
+  [() => props.open, currentValue],
+  ([isOpen, value]) => {
+    if (isOpen) {
+      emit("preview", value);
+    }
+  },
+  { immediate: true },
+);
 
 // Formatted display
 const displayValue = computed(() => {
@@ -314,6 +325,14 @@ onBeforeUnmount(() => {
         >
           {{ displayValue }}
         </div>
+      </div>
+
+      <div
+        v-if="$slots.summary"
+        class="px-1"
+        data-testid="numeric-keypad-summary"
+      >
+        <slot name="summary" :value="currentValue" />
       </div>
 
       <div

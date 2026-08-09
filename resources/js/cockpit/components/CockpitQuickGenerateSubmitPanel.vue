@@ -703,6 +703,8 @@ const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
 const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
     null,
 );
+const amountCalculatorPreview = ref<number | null>(null);
+const amountCalculatorEstimatePending = ref(false);
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
 const riderDesignTeleportReady = ref(false);
 const riderDesignTeleportTarget = ref<HTMLElement | null>(null);
@@ -3421,10 +3423,11 @@ const executionSummary = computed<Record<string, unknown> | null>(() => {
 });
 
 const livePricingPayload = computed<Record<string, unknown>>(() => {
-    return buildPayloadShape(false);
+    return buildPayloadShape(false, amountCalculatorPreview.value);
 });
 const canEstimateLivePricing = computed<boolean>(() => {
-    const normalizedAmount = Number(amount.value);
+    const normalizedAmount =
+        amountCalculatorPreview.value ?? Number(amount.value);
     const normalizedCount = Number(count.value);
 
     return (
@@ -3442,6 +3445,21 @@ const {
 const liveAccountDebit = computed<number | null>(() =>
     optionalMoney(livePricingEstimate.value?.account_debit),
 );
+const liveAccountDebitFormatted = computed<string | null>(() =>
+    liveAccountDebit.value === null
+        ? null
+        : formatAccountMoney(liveAccountDebit.value),
+);
+const amountCalculatorEstimatedCost = computed<string | null>(() => {
+    if (
+        amountCalculatorEstimatePending.value ||
+        livePricingEstimateError.value !== null
+    ) {
+        return null;
+    }
+
+    return liveAccountDebitFormatted.value;
+});
 const livePricingCurrency = computed<string>(
     () => livePricingEstimate.value?.currency?.trim() || currency.value,
 );
@@ -3471,6 +3489,25 @@ const liveAccountDebitAffordability = computed<
 const liveAccountDebitExceedsClientFunds = computed<boolean>(
     () => liveAccountDebitAffordability.value === 'insufficient-client-funds',
 );
+
+function previewAmountInCalculator(value: number | null): void {
+    amountCalculatorPreview.value = value;
+
+    if (value === null) {
+        amountCalculatorEstimatePending.value = false;
+
+        return;
+    }
+
+    amountCalculatorEstimatePending.value =
+        value !== Number(amount.value) || liveAccountDebit.value === null;
+}
+
+watch([livePricingEstimate, livePricingEstimateError], () => {
+    if (amountCalculatorPreview.value !== null) {
+        amountCalculatorEstimatePending.value = false;
+    }
+});
 
 async function submit(): Promise<void> {
     if (!canSubmit.value || processing.value || routeUrl.value === null) {
@@ -3697,8 +3734,12 @@ function buildPayload(): Record<string, unknown> {
     return buildPayloadShape(false);
 }
 
-function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
-    const normalizedAmount = Number(amount.value);
+function buildPayloadShape(
+    redactSensitive: boolean,
+    amountOverride: number | null = null,
+): Record<string, unknown> {
+    const normalizedAmount =
+        amountOverride === null ? Number(amount.value) : amountOverride;
     const normalizedCount = Number(count.value);
     const campaign = campaignMetadata();
     const normalizedSlices = Number(sliceSummary.value.slices);
@@ -4996,6 +5037,12 @@ function instructionRecord(
                             ref="amountInputElement"
                             v-model="amount"
                             :disabled="processing"
+                            :estimated-cost="amountCalculatorEstimatedCost"
+                            :estimate-pending="amountCalculatorEstimatePending"
+                            :estimate-affordability="
+                                liveAccountDebitAffordability
+                            "
+                            @preview="previewAmountInCalculator"
                         />
                         <div
                             class="mt-1 flex min-h-5 items-baseline justify-between gap-3 px-0.5 text-[0.7rem] leading-5"

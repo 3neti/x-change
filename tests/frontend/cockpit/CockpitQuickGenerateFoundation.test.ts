@@ -735,34 +735,41 @@ describe('Cockpit Quick Generate foundation', () => {
 
     it('shows the authoritative estimated cost beneath the Pay Code amount', async () => {
         vi.useFakeTimers();
-        const fetchMock = vi.fn().mockResolvedValue({
-            ok: true,
-            json: vi.fn().mockResolvedValue({
-                success: true,
-                data: {
-                    currency: 'PHP',
-                    base_fee: 12,
-                    components: {
-                        selfie: 5,
-                    },
-                    charges: [
-                        {
-                            label: 'Pay Code Generation',
-                            price: 12,
+        const fetchMock = vi
+            .fn()
+            .mockImplementation((_url: string, options: RequestInit) => {
+                const request = JSON.parse(String(options.body));
+                const payCodeValue = Number(request.cash.amount);
+
+                return Promise.resolve({
+                    ok: true,
+                    json: vi.fn().mockResolvedValue({
+                        success: true,
+                        data: {
                             currency: 'PHP',
+                            base_fee: 12,
+                            components: {
+                                selfie: 5,
+                            },
+                            charges: [
+                                {
+                                    label: 'Pay Code Generation',
+                                    price: 12,
+                                    currency: 'PHP',
+                                },
+                                {
+                                    label: 'Selfie Verification',
+                                    price: 5,
+                                    currency: 'PHP',
+                                },
+                            ],
+                            total: 17,
+                            pay_code_value: payCodeValue,
+                            account_debit: payCodeValue + 17,
                         },
-                        {
-                            label: 'Selfie Verification',
-                            price: 5,
-                            currency: 'PHP',
-                        },
-                    ],
-                    total: 17,
-                    pay_code_value: 50,
-                    account_debit: 67,
-                },
-            }),
-        });
+                    }),
+                });
+            });
         vi.stubGlobal('fetch', fetchMock);
 
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
@@ -844,6 +851,56 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .classes(),
         ).not.toContain('text-rose-600');
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="numeric-keypad-quick-100"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-amount-picker-estimated-cost-loading"]',
+                )
+                .text(),
+        ).toBe('Calculating…');
+
+        await vi.advanceTimersByTimeAsync(501);
+        await flushPromises();
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-amount-picker-estimated-cost-value"]',
+                )
+                .text(),
+        ).toBe('₱117.00');
+        expect(
+            JSON.parse(String(fetchMock.mock.calls.at(-1)?.[1]?.body)).cash
+                .amount,
+        ).toBe(100);
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element.value,
+        ).toBe('50.00');
+
+        await wrapper
+            .get('[data-testid="numeric-keypad-cancel"]')
+            .trigger('click');
+
+        await vi.advanceTimersByTimeAsync(501);
+        await flushPromises();
+
+        expect(
+            debit
+                .get(
+                    '[data-testid="cockpit-quick-generate-account-debit-amount"]',
+                )
+                .text(),
+        ).toBe('₱67.00');
         expect(
             debit
                 .find(

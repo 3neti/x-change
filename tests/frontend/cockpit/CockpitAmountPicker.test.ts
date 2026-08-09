@@ -81,9 +81,9 @@ describe("CockpitAmountPicker", () => {
       );
     await nextTick();
 
-    expect(
-      wrapper.get('[data-testid="numeric-keypad-display"]').text(),
-    ).toBe("₱2");
+    expect(wrapper.get('[data-testid="numeric-keypad-display"]').text()).toBe(
+      "₱2",
+    );
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "5" }));
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "." }));
@@ -112,9 +112,7 @@ describe("CockpitAmountPicker", () => {
     const cockpitConfirm = cockpit.get(
       '[data-testid="numeric-keypad-confirm"]',
     );
-    const cockpitCancel = cockpit.get(
-      '[data-testid="numeric-keypad-cancel"]',
-    );
+    const cockpitCancel = cockpit.get('[data-testid="numeric-keypad-cancel"]');
 
     expect(cockpitDialog.attributes("data-appearance")).toBe("cockpit");
     expect(cockpitDialog.classes()).toContain("border-emerald-200");
@@ -140,5 +138,52 @@ describe("CockpitAmountPicker", () => {
 
     cockpit.unmount();
     generic.unmount();
+  });
+
+  it("shows the live issue cost beneath the calculator amount", async () => {
+    const wrapper = mount(CockpitAmountPicker, {
+      props: {
+        modelValue: "100.00",
+        estimatedCost: "₱117.00",
+        estimateAffordability: "insufficient-client-funds",
+      },
+    });
+
+    await wrapper
+      .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+      .trigger("click");
+
+    const estimate = wrapper.get(
+      '[data-testid="cockpit-amount-picker-estimated-cost"]',
+    );
+
+    expect(estimate.text()).toContain("Estimated Cost");
+    expect(
+      estimate
+        .get('[data-testid="cockpit-amount-picker-estimated-cost-value"]')
+        .text(),
+    ).toBe("₱117.00");
+    expect(estimate.attributes("data-affordability")).toBe(
+      "insufficient-client-funds",
+    );
+    expect(estimate.get("span").classes()).toContain("text-rose-600");
+
+    await wrapper.setProps({ estimatePending: true });
+
+    expect(
+      estimate
+        .get('[data-testid="cockpit-amount-picker-estimated-cost-loading"]')
+        .text(),
+    ).toBe("Calculating…");
+
+    await wrapper
+      .get('[data-testid="numeric-keypad-quick-1000"]')
+      .trigger("click");
+
+    expect(wrapper.emitted("preview")?.at(-1)).toEqual([1000]);
+
+    await wrapper.get('[data-testid="numeric-keypad-cancel"]').trigger("click");
+
+    expect(wrapper.emitted("preview")?.at(-1)).toEqual([null]);
   });
 });
