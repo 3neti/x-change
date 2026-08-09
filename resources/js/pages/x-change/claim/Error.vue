@@ -17,7 +17,7 @@ defineProps<{
 
     <ClaimStepShell tone="danger" width="sm">
         <div class="space-y-4 text-center">
-            <AlertCircle class="mx-auto h-12 w-12 text-destructive" />
+            <AlertCircle class="mx-auto h-10 w-10 text-destructive" />
 
             <h1 class="text-xl font-semibold tracking-tight">
                 Unable to Claim

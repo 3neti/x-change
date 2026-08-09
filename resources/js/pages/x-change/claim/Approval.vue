@@ -123,7 +123,7 @@ function submitOtp(): void {
 
     <ClaimStepShell tone="warning">
         <div class="space-y-6 text-center">
-            <Clock3 class="mx-auto h-16 w-16 text-amber-500" />
+            <Clock3 class="mx-auto h-12 w-12 text-amber-500" />
 
             <div class="space-y-2">
                 <p

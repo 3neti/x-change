@@ -24,7 +24,6 @@ import { resolveClaimWidgetSubmitViewModel } from '@/components/x-change/claimWi
 import { isReturningRedeemerFromStorage } from '@/components/x-change/claimWidgetVoucherState';
 import { useCompiledClaimForm } from '@/components/x-change/useCompiledClaimForm';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
-import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue';
 import { resolveClaimWidgetFormFlowSectionViewModel } from '@/components/x-change/claimWidgetFormFlowSectionViewModel';
 import { resolveClaimWidgetPreviewMode } from '@/components/x-change/claimWidgetPreviewMode';
 import { store as startClaimFlow } from '@/routes/x-change/claim/flows';
@@ -364,18 +363,6 @@ watch(
 
 <template>
     <div class="flex flex-col gap-6">
-        <!-- Logo and App Name -->
-        <div
-            v-if="!previewViewModel.isNonActive"
-            class="flex flex-col items-center gap-2"
-        >
-            <PayCodeLogo
-                variant="logo"
-                class-name="max-w-52 sm:max-w-60"
-                data-testid="claim-pay-code-logo"
-            />
-        </div>
-
         <!-- Title -->
         <div v-if="!previewViewModel.isNonActive" class="space-y-2 text-center">
             <h1 class="text-xl font-medium">Claim Pay Code</h1>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import { CheckCircle2 } from 'lucide-vue-next';
+import { CheckCircle2, Clock3 } from 'lucide-vue-next';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
@@ -161,11 +161,12 @@ const pageTone = computed(() =>
 <template>
     <Head title="Claim Successful" />
 
-    <ClaimStepShell tone="success">
+    <ClaimStepShell :tone="pageTone.isPending ? 'warning' : 'success'">
         <div class="space-y-8">
             <div class="space-y-4 pt-4 text-center">
-                <CheckCircle2
-                    class="mx-auto h-16 w-16"
+                <component
+                    :is="pageTone.isPending ? Clock3 : CheckCircle2"
+                    class="mx-auto h-12 w-12"
                     :class="pageTone.iconClass"
                 />
 

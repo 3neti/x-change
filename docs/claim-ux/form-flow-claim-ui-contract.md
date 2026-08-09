@@ -89,3 +89,24 @@ The backend contract is guarded by `ClaimWorkflowTest`.
 The frontend metadata helper is guarded by `formFlowClaimWorkflow.test.ts`.
 
 If future work moves this into form-flow manager or a generic preview/storyboard package, keep the same opt-in rule: claim-specific UI must be activated by explicit metadata, not by guessing from the route or field list.
+
+
+## Brand And State Icon Contract
+
+Public claim pages use the Pay Code brand, not the x-change product logo. The Pay Code logo orients the redeemer around the thing being claimed; x-change branding remains appropriate for cockpit, admin, and operator surfaces.
+
+Logo placement is intentionally restrained:
+
+- Entry and default splash screens may center the Pay Code mark as a brand cue.
+- Subsequent claim pages use the same mark as a compact top-left Pay Code header inside the claim shell.
+- Form-flow driver pages consume the same idea through `app_logo`, bounded to a small header or splash size.
+- The logo should never become the primary content. Keep it object-contained with fixed max height.
+
+State icons communicate workflow state, not brand:
+
+- Review or confirmation before a final action uses a neutral receipt/review icon.
+- Pending provider payout or approval uses a clock/warning treatment.
+- Final disbursed or completed success uses a green check.
+- Failed or blocked states use a destructive alert icon.
+
+This separation keeps the UI honest: Pay Code tells the user where they are; the icon tells the user what is happening now.

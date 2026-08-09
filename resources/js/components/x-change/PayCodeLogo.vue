@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { HTMLAttributes } from 'vue';
+import type { CSSProperties, HTMLAttributes } from 'vue';
 import { computed } from 'vue';
 
 defineOptions({
@@ -7,14 +7,17 @@ defineOptions({
 });
 
 type PayCodeLogoVariant = 'mark' | 'logo' | 'lockup';
+type PayCodeLogoSize = 'micro' | 'header' | 'brand' | 'display';
 
 const props = withDefaults(
     defineProps<{
         variant?: PayCodeLogoVariant;
+        size?: PayCodeLogoSize;
         className?: HTMLAttributes['class'];
     }>(),
     {
         variant: 'logo',
+        size: 'brand',
     },
 );
 
@@ -30,16 +33,28 @@ const logoSrc = computed(() => {
     return '/vendor/x-change/images/pay-code/pay-code-logo.svg';
 });
 
-const sizeClass = computed(() => {
-    if (props.variant === 'mark') {
-        return 'h-12 max-h-12 max-w-12';
+const sizeStyle = computed<CSSProperties>(() => {
+    if (props.size === 'micro') {
+        return props.variant === 'lockup'
+            ? { height: '1.25rem', maxHeight: '1.25rem', maxWidth: '4rem' }
+            : { height: '1.25rem', maxHeight: '1.25rem', maxWidth: '1.25rem' };
     }
 
-    if (props.variant === 'lockup') {
-        return 'h-32 max-h-32 max-w-32';
+    if (props.size === 'header') {
+        return props.variant === 'lockup'
+            ? { height: '2rem', maxHeight: '2rem', maxWidth: '7rem' }
+            : { height: '2rem', maxHeight: '2rem', maxWidth: '2rem' };
     }
 
-    return 'h-24 max-h-24 max-w-24';
+    if (props.size === 'display') {
+        return props.variant === 'lockup'
+            ? { height: '6rem', maxHeight: '6rem', maxWidth: '10rem' }
+            : { height: '5rem', maxHeight: '5rem', maxWidth: '5rem' };
+    }
+
+    return props.variant === 'lockup'
+        ? { height: '4rem', maxHeight: '4rem', maxWidth: '8rem' }
+        : { height: '4rem', maxHeight: '4rem', maxWidth: '4rem' };
 });
 
 const altText = computed(() => {
@@ -54,7 +69,8 @@ const altText = computed(() => {
 <template>
     <img
         class="block w-auto object-contain"
-        :class="[sizeClass, className]"
+        :class="className"
+        :style="sizeStyle"
         :src="logoSrc"
         :alt="altText"
         v-bind="$attrs"

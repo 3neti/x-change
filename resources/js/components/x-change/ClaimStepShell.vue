@@ -1,19 +1,31 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue';
 
 type ClaimStepTone = 'neutral' | 'success' | 'warning' | 'danger';
 type ClaimStepWidth = 'sm' | 'md' | 'lg';
+type ClaimBrandPlacement = 'top_left' | 'center';
+type ClaimBrandSize = 'micro' | 'header' | 'brand' | 'display';
+type ClaimBrandVariant = 'mark' | 'logo' | 'lockup';
 
 const props = withDefaults(
     defineProps<{
         tone?: ClaimStepTone;
         width?: ClaimStepWidth;
         centered?: boolean;
+        showBrand?: boolean;
+        brandPlacement?: ClaimBrandPlacement;
+        brandSize?: ClaimBrandSize;
+        brandVariant?: ClaimBrandVariant;
     }>(),
     {
         tone: 'neutral',
         width: 'md',
         centered: true,
+        showBrand: true,
+        brandPlacement: 'top_left',
+        brandSize: 'header',
+        brandVariant: 'mark',
     },
 );
 
@@ -32,6 +44,12 @@ const toneClass = computed(() => {
 
     return 'from-primary/5 via-background to-background';
 });
+
+const brandPlacementClass = computed(() =>
+    props.brandPlacement === 'center'
+        ? 'mb-5 justify-center text-center'
+        : 'mb-5 justify-start text-left',
+);
 
 const widthClass = computed(() => {
     if (props.width === 'sm') {
@@ -60,6 +78,19 @@ const widthClass = computed(() => {
                 data-testid="claim-step-panel"
                 class="w-full rounded-lg border border-border/60 bg-card/85 p-6 shadow-sm"
             >
+                <div
+                    v-if="showBrand"
+                    data-testid="claim-brand-header"
+                    class="flex"
+                    :class="brandPlacementClass"
+                >
+                    <PayCodeLogo
+                        :variant="brandVariant"
+                        :size="brandSize"
+                        data-testid="claim-brand-logo"
+                    />
+                </div>
+
                 <slot />
             </section>
         </div>

@@ -72,7 +72,11 @@ function resetCompiledFormSubmitState(): void {
 
 <template>
     <Head title="Claim Pay Code" />
-    <ClaimStepShell>
+    <ClaimStepShell
+        brand-placement="center"
+        brand-size="display"
+        brand-variant="mark"
+    >
         <div class="space-y-4">
             <ProvisioningSetup
                 :requirement="provisioningRequirement"

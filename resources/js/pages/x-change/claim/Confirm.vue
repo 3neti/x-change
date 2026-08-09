@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle2 } from 'lucide-vue-next';
+import { Loader2, ReceiptText } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
+
+defineOptions({ layout: null });
 
 const routes = useXChangeRoutes();
 
@@ -35,11 +38,11 @@ const handleSubmit = () => {
 <template>
     <Head title="Confirm Claim" />
 
-    <div class="flex min-h-svh flex-col items-center justify-center gap-6 bg-gradient-to-b from-primary/5 via-background to-background p-6">
-        <div class="w-full max-w-md space-y-6">
-            <Card>
+    <ClaimStepShell>
+        <div class="space-y-6">
+            <Card class="border-primary/10 shadow-none">
                 <CardHeader class="text-center">
-                    <CheckCircle2 class="mx-auto h-12 w-12 text-primary" />
+                    <ReceiptText class="mx-auto h-10 w-10 text-primary" />
                     <CardTitle class="mt-4">Confirm Claim</CardTitle>
                     <CardDescription>
                         Review and confirm your Pay Code claim
@@ -90,5 +93,5 @@ const handleSubmit = () => {
                 </CardFooter>
             </Card>
         </div>
-    </div>
+    </ClaimStepShell>
 </template>
