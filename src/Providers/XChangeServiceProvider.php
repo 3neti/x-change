@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Providers;
 
+use Composer\InstalledVersions;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -1277,6 +1278,11 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Inertia::share(
+            'xchange.version',
+            InstalledVersions::getPrettyVersion('3neti/x-change') ?? 'dev',
+        );
+
         $this->app->make(HttpKernel::class)->prependMiddleware(
             EnsureXChangeIsCommissioned::class,
         );

@@ -2,7 +2,22 @@
 
 declare(strict_types=1);
 
+use Composer\InstalledVersions;
+use Inertia\Inertia;
 use LBHurtado\XChange\Tests\Fakes\User;
+
+it('shares the installed x-change version without host middleware', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+    $brandingMiddleware = file_get_contents(
+        $packageRoot.'/src/Http/Middleware/ShareXChangeBranding.php',
+    );
+
+    expect(Inertia::getShared('xchange.version'))
+        ->toBe(InstalledVersions::getPrettyVersion('3neti/x-change'))
+        ->and($brandingMiddleware)
+        ->not->toBeFalse()
+        ->toContain("...(array) Inertia::getShared('xchange', [])");
+});
 
 it('treats the legacy x-change dashboard as a Cockpit compatibility route', function () {
     $user = User::query()->create([
@@ -35,8 +50,8 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->toContain('Claim when you’re ready—with a participating bank or')
         ->toContain('{{ $page.props.name }}')
         ->toContain('Powered by x-change')
-        ->toContain('App {{ $page.props.version }}')
-        ->toContain('3neti/x-change {{ $page.props.xChangeVersion }}')
+        ->toContain('3neti/x-change {{ page.props.xchange.version }}')
+        ->not->toContain('$page.props.version')
         ->toContain('© 2026 3neti R&amp;D OPC')
         ->toContain('mx-auto flex h-24 w-full max-w-[88rem]')
         ->toContain('mx-auto grid w-full max-w-[88rem]')

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { login } from '@/routes';
 import { start as startClaim } from '@/routes/x-change/claim';
 import { dashboard } from '@/routes/x-change/cockpit';
@@ -7,6 +7,12 @@ import CockpitLandingClaimExperiencePresentation from '@/cockpit/components/Cock
 import CockpitQuickGenerateOrderPresentation from '@/cockpit/components/CockpitQuickGenerateOrderPresentation.vue';
 import XChangeLogo from '@/components/x-change/XChangeLogo.vue';
 import { gClefPulleyBrandAssets } from '@/components/x-change/brandAssets';
+
+const page = usePage<{
+    xchange: {
+        version: string;
+    };
+}>();
 
 withDefaults(
     defineProps<{
@@ -202,10 +208,10 @@ withDefaults(
         <footer
             class="relative z-10 mx-auto flex w-full max-w-[88rem] flex-col items-end gap-1 px-5 pb-5 text-right text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:flex-row sm:items-center sm:justify-end sm:gap-2 sm:px-8 lg:px-10 lg:pb-4"
         >
-            <span>App {{ $page.props.version }}</span>
-            <span aria-hidden="true" class="hidden text-slate-300 sm:inline">·</span>
-            <span>3neti/x-change {{ $page.props.xChangeVersion }}</span>
-            <span aria-hidden="true" class="hidden text-slate-300 sm:inline">·</span>
+            <span>3neti/x-change {{ page.props.xchange.version }}</span>
+            <span aria-hidden="true" class="hidden text-slate-300 sm:inline"
+                >·</span
+            >
             <span>© 2026 3neti R&amp;D OPC</span>
         </footer>
     </main>

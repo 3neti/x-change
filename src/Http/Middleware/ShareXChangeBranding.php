@@ -23,6 +23,7 @@ class ShareXChangeBranding
     public function handle(Request $request, Closure $next): Response
     {
         Inertia::share('xchange', [
+            ...(array) Inertia::getShared('xchange', []),
             'branding' => [
                 'name' => (string) config('x-change.branding.name', config('x-change.product.name', 'X-Change')),
                 'logo_light' => (string) config('x-change.branding.logo_light', '/vendor/x-change/images/brand-library/x-change/svg/x-change-logo.svg'),
