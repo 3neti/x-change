@@ -85,7 +85,7 @@ final class CockpitPayeePolicy
                 '@'.$alias,
                 false,
                 true,
-                'The claimant must use this registered vendor alias.',
+                'The claimant must use this vendor alias.',
             );
         }
 

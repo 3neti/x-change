@@ -60,6 +60,7 @@ describe('Cockpit Quick Generate payee policy', () => {
         );
         expect(payload.inputs.requirements).toContain('otp');
         expect(payload.validation.otp.required).toBe(true);
+        expect(payload.feedback.mobile).toBeNull();
         expect(
             wrapper
                 .get(

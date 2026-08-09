@@ -2127,7 +2127,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(payload.count).toBe(1);
         expect(payload.feedback).toEqual({
             email: null,
-            mobile: '+639173011987',
+            mobile: null,
             webhook: null,
         });
         expect(payload.rider).toMatchObject({
@@ -3219,7 +3219,7 @@ describe('Cockpit Quick Generate foundation', () => {
         });
         expect(payload.feedback).toEqual({
             email: null,
-            mobile: '+639173011987',
+            mobile: null,
             webhook: null,
         });
         expect(payload.rider).toMatchObject({

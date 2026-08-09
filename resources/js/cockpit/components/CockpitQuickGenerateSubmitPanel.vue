@@ -2766,11 +2766,15 @@ const verificationSummary = computed<string[]>(() => {
 });
 
 const feedbackSummary = computed<Record<string, unknown>>(() => {
-    const mobile =
-        normalizedFeedbackMobile.value ||
-        normalizePhilippineMobile(recipientReference.value);
-    const email = feedbackEmail.value.trim().toLowerCase();
-    const webhook = feedbackWebhook.value.trim();
+    const mobile = feedbackMobileEnabled.value
+        ? normalizedFeedbackMobile.value
+        : '';
+    const email = feedbackEmailEnabled.value
+        ? feedbackEmail.value.trim().toLowerCase()
+        : '';
+    const webhook = feedbackWebhookEnabled.value
+        ? feedbackWebhook.value.trim()
+        : '';
 
     return {
         mobile: mobile === '' ? null : mobile,
