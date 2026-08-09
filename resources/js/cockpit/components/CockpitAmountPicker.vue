@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import NumericKeypad from "@/components/NumericKeypad.vue";
 import { Calculator } from "lucide-vue-next";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 const props = withDefaults(
   defineProps<{
@@ -21,6 +21,7 @@ const emit = defineEmits<{
 
 const inputElement = ref<HTMLInputElement | null>(null);
 const keypadOpen = ref(false);
+const keypadInitialEntry = ref<string | null>(null);
 
 const numericValue = computed<number | null>(() => {
   const value = Number.parseFloat(props.modelValue);
@@ -41,8 +42,32 @@ const displayValue = computed(() => {
 
 function openKeypad(): void {
   if (!props.disabled) {
+    keypadInitialEntry.value = null;
     keypadOpen.value = true;
   }
+}
+
+function openKeypadFromNumericKey(event: KeyboardEvent): void {
+  if (
+    props.disabled ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey
+  ) {
+    return;
+  }
+
+  const isDigit = event.key >= "0" && event.key <= "9";
+  const isDecimal = event.key === "." || event.key === ",";
+
+  if (!isDigit && !isDecimal) {
+    return;
+  }
+
+  event.preventDefault();
+  keypadInitialEntry.value = isDecimal ? "0." : event.key;
+  keypadOpen.value = true;
 }
 
 function confirmAmount(value: number): void {
@@ -57,6 +82,12 @@ function focus(): void {
   inputElement.value?.focus();
   inputElement.value?.select();
 }
+
+watch(keypadOpen, (isOpen) => {
+  if (!isOpen) {
+    keypadInitialEntry.value = null;
+  }
+});
 
 defineExpose({ focus });
 </script>
@@ -81,8 +112,10 @@ defineExpose({ focus });
       class="h-12 w-full cursor-pointer rounded-xl border border-slate-200 bg-white pr-11 pl-8 text-base font-semibold tabular-nums text-slate-950 shadow-sm transition hover:border-emerald-300 focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-emerald-700"
       data-testid="cockpit-quick-generate-primary-amount"
       aria-haspopup="dialog"
+      aria-label="Pay Code amount. Type a number or open the calculator."
       @input="synchronizeProgrammaticInput"
       @click="openKeypad"
+      @keydown="openKeypadFromNumericKey"
       @keydown.enter.prevent="openKeypad"
       @keydown.space.prevent="openKeypad"
     />
@@ -97,6 +130,8 @@ defineExpose({ focus });
       mode="amount"
       :min="0.01"
       :quick-amounts="quickAmounts"
+      :initial-entry="keypadInitialEntry"
+      appearance="cockpit"
       allow-decimal
       title="Pay Code Amount"
       @confirm="confirmAmount"

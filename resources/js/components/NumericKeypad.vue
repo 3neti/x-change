@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Delete, Check } from "lucide-vue-next";
 
 type KeypadMode = "amount" | "count";
+type KeypadAppearance = "default" | "cockpit";
 
 interface Props {
   modelValue?: number | null;
@@ -23,6 +24,8 @@ interface Props {
   title?: string;
   hideCurrency?: boolean;
   quickAmounts?: number[];
+  initialEntry?: string | null;
+  appearance?: KeypadAppearance;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -30,6 +33,8 @@ const props = withDefaults(defineProps<Props>(), {
   min: 1,
   allowDecimal: false,
   quickAmounts: () => [],
+  initialEntry: null,
+  appearance: "default",
 });
 
 const emit = defineEmits<{
@@ -37,14 +42,31 @@ const emit = defineEmits<{
   confirm: [value: number];
 }>();
 
-// Internal digit accumulator
 const digits = ref<string>("");
+const isCockpit = computed(() => props.appearance === "cockpit");
 
-// Initialize digits from modelValue when dialog opens
+function normalizedInitialEntry(): string | null {
+  if (props.initialEntry === null) {
+    return null;
+  }
+
+  const candidate = props.initialEntry.replace(",", ".");
+
+  if (!/^\d*(?:\.\d{0,2})?$/.test(candidate)) {
+    return null;
+  }
+
+  return candidate;
+}
+
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen && props.modelValue) {
+    const initialEntry = normalizedInitialEntry();
+
+    if (isOpen && initialEntry !== null) {
+      digits.value = initialEntry;
+    } else if (isOpen && props.modelValue) {
       digits.value = props.modelValue.toString();
     } else if (isOpen) {
       digits.value = "";
@@ -243,18 +265,52 @@ onBeforeUnmount(() => {
 <template>
   <Dialog :open="open" @update:open="(val) => emit('update:open', val)">
     <DialogContent
-      class="bottom-0 top-auto max-h-[92dvh] translate-y-0 rounded-b-none sm:bottom-auto sm:top-1/2 sm:max-w-md sm:-translate-y-1/2 sm:rounded-lg"
+      :data-appearance="appearance"
+      data-testid="numeric-keypad-dialog"
+      :class="[
+        'bottom-0 top-auto max-h-[92dvh] translate-y-0 rounded-b-none sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2',
+        isCockpit
+          ? 'gap-4 rounded-t-3xl border-emerald-200 bg-white p-4 shadow-2xl shadow-slate-950/20 sm:max-w-sm sm:rounded-2xl sm:p-5 dark:border-emerald-900/70 dark:bg-slate-950'
+          : 'sm:max-w-md sm:rounded-lg',
+      ]"
     >
-      <DialogHeader>
-        <DialogTitle>{{ displayTitle }}</DialogTitle>
-        <DialogDescription>{{ description }}</DialogDescription>
+      <DialogHeader :class="isCockpit ? 'gap-1 pr-8 text-left' : ''">
+        <DialogTitle
+          :class="
+            isCockpit
+              ? 'text-base font-semibold text-slate-950 dark:text-slate-50'
+              : ''
+          "
+        >
+          {{ displayTitle }}
+        </DialogTitle>
+        <DialogDescription
+          :class="isCockpit ? 'text-xs text-slate-500 dark:text-slate-400' : ''"
+        >
+          {{ description }}
+        </DialogDescription>
       </DialogHeader>
 
-      <!-- Display -->
-      <div class="flex items-center justify-center py-6">
+      <div
+        :class="[
+          'flex items-center justify-center',
+          isCockpit
+            ? 'min-h-24 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-5 dark:border-emerald-900/60 dark:bg-emerald-950/25'
+            : 'py-6',
+        ]"
+        data-testid="numeric-keypad-display"
+      >
         <div
-          class="text-4xl font-bold tracking-tight"
-          :class="canConfirm ? 'text-foreground' : 'text-muted-foreground'"
+          :class="[
+            'text-4xl font-bold tracking-tight tabular-nums',
+            isCockpit && canConfirm
+              ? 'text-slate-950 dark:text-slate-50'
+              : isCockpit
+                ? 'text-slate-400 dark:text-slate-600'
+                : canConfirm
+                  ? 'text-foreground'
+                  : 'text-muted-foreground',
+          ]"
         >
           {{ displayValue }}
         </div>
@@ -270,7 +326,14 @@ onBeforeUnmount(() => {
           :key="quickAmount"
           type="button"
           variant="outline"
-          class="h-10 rounded-xl text-sm font-semibold tabular-nums"
+          :class="[
+            'h-10 rounded-xl text-sm font-semibold tabular-nums transition',
+            isCockpit && currentValue === quickAmount
+              ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100 dark:ring-emerald-900'
+              : isCockpit
+                ? 'border-slate-200 bg-white text-slate-700 shadow-none hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-slate-950 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/30 dark:hover:text-slate-50'
+                : '',
+          ]"
           :data-testid="`numeric-keypad-quick-${quickAmount}`"
           @click="selectQuickAmount(quickAmount)"
         >
@@ -282,52 +345,36 @@ onBeforeUnmount(() => {
         </Button>
       </div>
 
-      <!-- Keypad Grid -->
       <div class="space-y-2">
         <div class="grid grid-cols-3 gap-2">
-          <!-- Row 1: 1, 2, 3 -->
           <Button
-            v-for="digit in [1, 2, 3]"
+            v-for="digit in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
             :key="`digit-${digit}`"
             @click="pressDigit(digit)"
             variant="outline"
             size="lg"
-            class="h-14 text-xl font-semibold"
+            :class="[
+              'h-14 rounded-xl text-xl font-semibold tabular-nums',
+              isCockpit
+                ? 'border-slate-200 bg-white text-slate-950 shadow-none hover:border-emerald-300 hover:bg-emerald-50 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/35'
+                : '',
+            ]"
           >
             {{ digit }}
           </Button>
 
-          <!-- Row 2: 4, 5, 6 -->
-          <Button
-            v-for="digit in [4, 5, 6]"
-            :key="`digit-${digit}`"
-            @click="pressDigit(digit)"
-            variant="outline"
-            size="lg"
-            class="h-14 text-xl font-semibold"
-          >
-            {{ digit }}
-          </Button>
-
-          <!-- Row 3: 7, 8, 9 -->
-          <Button
-            v-for="digit in [7, 8, 9]"
-            :key="`digit-${digit}`"
-            @click="pressDigit(digit)"
-            variant="outline"
-            size="lg"
-            class="h-14 text-xl font-semibold"
-          >
-            {{ digit }}
-          </Button>
-
-          <!-- Row 4: Backspace, 0, Decimal/Confirm -->
           <Button
             @click="pressBackspace"
             variant="outline"
             size="lg"
-            class="h-14"
+            :class="[
+              'h-14 rounded-xl',
+              isCockpit
+                ? 'border-slate-200 bg-slate-50 text-slate-600 shadow-none hover:border-slate-300 hover:bg-slate-100 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                : '',
+            ]"
             :disabled="!digits"
+            aria-label="Delete last digit"
           >
             <Delete class="h-5 w-5" />
           </Button>
@@ -336,52 +383,82 @@ onBeforeUnmount(() => {
             @click="pressDigit(0)"
             variant="outline"
             size="lg"
-            class="h-14 text-xl font-semibold"
+            :class="[
+              'h-14 rounded-xl text-xl font-semibold tabular-nums',
+              isCockpit
+                ? 'border-slate-200 bg-white text-slate-950 shadow-none hover:border-emerald-300 hover:bg-emerald-50 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/35'
+                : '',
+            ]"
           >
             0
           </Button>
 
-          <!-- Decimal point button (only if allowDecimal) -->
           <Button
             v-if="allowDecimal"
             @click="pressDecimal"
             variant="outline"
             size="lg"
-            class="h-14 text-xl font-semibold"
+            :class="[
+              'h-14 rounded-xl text-xl font-semibold',
+              isCockpit
+                ? 'border-slate-200 bg-white text-slate-950 shadow-none hover:border-emerald-300 hover:bg-emerald-50 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/35'
+                : '',
+            ]"
             :disabled="digits.includes('.')"
           >
             .
           </Button>
 
-          <!-- Confirm button (when no decimal) -->
           <Button
             v-else
             @click="confirm"
             variant="default"
             size="lg"
-            class="h-14"
+            :class="[
+              'h-14 rounded-xl',
+              isCockpit
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:border-emerald-700 focus-visible:ring-emerald-500/30 dark:bg-emerald-600 dark:hover:bg-emerald-500'
+                : '',
+            ]"
             :disabled="!canConfirm"
+            aria-label="Use value"
           >
             <Check class="h-5 w-5" />
           </Button>
         </div>
 
-        <!-- Full-width confirm button (when decimal enabled) -->
         <Button
           v-if="allowDecimal"
           @click="confirm"
           variant="default"
           size="lg"
-          class="h-14 w-full"
+          :class="[
+            'h-14 w-full rounded-xl font-semibold',
+            isCockpit
+              ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 focus-visible:border-emerald-700 focus-visible:ring-emerald-500/30 dark:bg-emerald-600 dark:hover:bg-emerald-500'
+              : '',
+          ]"
           :disabled="!canConfirm"
+          data-testid="numeric-keypad-confirm"
         >
-          <Check class="h-5 w-5 mr-2" />
+          <Check class="mr-2 h-5 w-5" />
           Use Amount
         </Button>
       </div>
 
       <DialogFooter class="sm:justify-center">
-        <Button variant="ghost" @click="cancel" class="w-full"> Cancel </Button>
+        <Button
+          variant="ghost"
+          @click="cancel"
+          :class="[
+            'w-full rounded-xl',
+            isCockpit
+              ? 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus-visible:ring-emerald-500/20 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
+              : '',
+          ]"
+        >
+          Cancel
+        </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

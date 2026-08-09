@@ -100,6 +100,102 @@ describe('Cockpit Quick Generate foundation', () => {
         host.remove();
     });
 
+    it('restores immediate keyboard amount entry after every template path', async () => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: host,
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-10T00:00:00Z',
+                    instructions: {
+                        cash: { amount: 75, currency: 'PHP' },
+                        inputs: { fields: [] },
+                    },
+                },
+                savedTemplates: [
+                    {
+                        reference: 'template:test:payroll',
+                        name: 'Payroll Test',
+                        base_template_key: 'money-changer',
+                        instructions: {
+                            cash: { amount: 125, currency: 'PHP' },
+                            inputs: { fields: ['mobile'] },
+                        },
+                        include_amount: true,
+                        include_purpose: false,
+                    },
+                ],
+            },
+        });
+
+        await flushPromises();
+
+        const assertFocusedKeyboardEntry = async (
+            trigger: () => Promise<unknown>,
+            key: string,
+        ): Promise<void> => {
+            await trigger();
+            await flushPromises();
+
+            const amountInput = wrapper.get(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            );
+
+            expect(document.activeElement).toBe(amountInput.element);
+            await amountInput.trigger('keydown', { key });
+            await flushPromises();
+            expect(
+                wrapper.get('[data-testid="numeric-keypad-display"]').text(),
+            ).toContain(`₱${key}`);
+
+            window.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape' }),
+            );
+            await flushPromises();
+        };
+
+        await assertFocusedKeyboardEntry(
+            () =>
+                wrapper
+                    .get('[data-testid="cockpit-quick-generate-start-blank"]')
+                    .trigger('click'),
+            '2',
+        );
+        await assertFocusedKeyboardEntry(
+            () =>
+                wrapper
+                    .get('[data-testid="cockpit-quick-generate-repeat-last"]')
+                    .trigger('click'),
+            '3',
+        );
+        await assertFocusedKeyboardEntry(async () => {
+            await wrapper
+                .get('[data-testid="cockpit-quick-generate-choose-template"]')
+                .trigger('click');
+            await wrapper
+                .findAll(
+                    '[data-testid="cockpit-quick-generate-template-option"]',
+                )[1]
+                .trigger('click');
+        }, '4');
+        await assertFocusedKeyboardEntry(async () => {
+            await wrapper
+                .get('[data-testid="cockpit-quick-generate-choose-template"]')
+                .trigger('click');
+            await wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-saved-template-option"]',
+                )
+                .trigger('click');
+        }, '5');
+
+        wrapper.unmount();
+        host.remove();
+    });
+
     it('disables unavailable evidence while allowing an incompatible saved design to remove it', async () => {
         const capability = {
             key: 'location',

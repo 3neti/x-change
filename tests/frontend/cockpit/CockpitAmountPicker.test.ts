@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import { nextTick } from "vue";
+import NumericKeypad from "../../../resources/js/components/NumericKeypad.vue";
 import CockpitAmountPicker from "../../../resources/js/cockpit/components/CockpitAmountPicker.vue";
 
 describe("CockpitAmountPicker", () => {
@@ -56,5 +57,73 @@ describe("CockpitAmountPicker", () => {
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
 
     wrapper.unmount();
+  });
+
+  it("carries the first focused numeric key into the calculator", async () => {
+    const wrapper = mount(CockpitAmountPicker, {
+      props: {
+        modelValue: "500.00",
+      },
+      attachTo: document.body,
+    });
+
+    (wrapper.vm as unknown as { focus: () => void }).focus();
+    await nextTick();
+
+    await wrapper
+      .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+      .trigger("keydown", { key: "2" });
+    await nextTick();
+
+    expect(wrapper.get('[role="dialog"]').text()).toContain("₱2");
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "5" }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "." }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "7" }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "5" }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    await nextTick();
+
+    expect(wrapper.emitted("update:modelValue")).toEqual([["25.75"]]);
+
+    wrapper.unmount();
+  });
+
+  it("uses the Cockpit visual hierarchy without changing the generic default", async () => {
+    const cockpit = mount(CockpitAmountPicker, {
+      props: {
+        modelValue: "1000.00",
+      },
+    });
+
+    await cockpit
+      .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+      .trigger("click");
+
+    const cockpitDialog = cockpit.get('[data-testid="numeric-keypad-dialog"]');
+    const cockpitConfirm = cockpit.get(
+      '[data-testid="numeric-keypad-confirm"]',
+    );
+
+    expect(cockpitDialog.attributes("data-appearance")).toBe("cockpit");
+    expect(cockpitDialog.classes()).toContain("border-emerald-200");
+    expect(cockpitDialog.classes()).toContain("dark:bg-slate-950");
+    expect(cockpitConfirm.classes()).toContain("bg-emerald-600");
+
+    const generic = mount(NumericKeypad, {
+      props: {
+        open: true,
+        mode: "amount",
+        modelValue: 1000,
+        allowDecimal: true,
+      },
+    });
+    const genericDialog = generic.get('[data-testid="numeric-keypad-dialog"]');
+
+    expect(genericDialog.attributes("data-appearance")).toBe("default");
+    expect(genericDialog.classes()).not.toContain("border-emerald-200");
+
+    cockpit.unmount();
+    generic.unmount();
   });
 });
