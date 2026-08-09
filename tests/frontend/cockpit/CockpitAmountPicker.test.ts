@@ -70,12 +70,20 @@ describe("CockpitAmountPicker", () => {
     (wrapper.vm as unknown as { focus: () => void }).focus();
     await nextTick();
 
-    await wrapper
+    wrapper
       .get('[data-testid="cockpit-quick-generate-primary-amount"]')
-      .trigger("keydown", { key: "2" });
+      .element.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "2",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
     await nextTick();
 
-    expect(wrapper.get('[role="dialog"]').text()).toContain("₱2");
+    expect(
+      wrapper.get('[data-testid="numeric-keypad-display"]').text(),
+    ).toBe("₱2");
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "5" }));
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "." }));
@@ -104,11 +112,18 @@ describe("CockpitAmountPicker", () => {
     const cockpitConfirm = cockpit.get(
       '[data-testid="numeric-keypad-confirm"]',
     );
+    const cockpitCancel = cockpit.get(
+      '[data-testid="numeric-keypad-cancel"]',
+    );
 
     expect(cockpitDialog.attributes("data-appearance")).toBe("cockpit");
     expect(cockpitDialog.classes()).toContain("border-emerald-200");
     expect(cockpitDialog.classes()).toContain("dark:bg-slate-950");
     expect(cockpitConfirm.classes()).toContain("bg-emerald-600");
+    expect(cockpitConfirm.classes()).toContain("min-h-14");
+    expect(cockpitConfirm.classes()).toContain("py-4");
+    expect(cockpitCancel.classes()).toContain("min-h-14");
+    expect(cockpitCancel.classes()).toContain("py-4");
 
     const generic = mount(NumericKeypad, {
       props: {

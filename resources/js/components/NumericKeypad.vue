@@ -433,7 +433,7 @@ onBeforeUnmount(() => {
           variant="default"
           size="lg"
           :class="[
-            'h-14 w-full rounded-xl font-semibold',
+            'min-h-14 w-full rounded-xl py-4 font-semibold',
             isCockpit
               ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 focus-visible:border-emerald-700 focus-visible:ring-emerald-500/30 dark:bg-emerald-600 dark:hover:bg-emerald-500'
               : '',
@@ -451,11 +451,12 @@ onBeforeUnmount(() => {
           variant="ghost"
           @click="cancel"
           :class="[
-            'w-full rounded-xl',
+            'min-h-14 w-full rounded-xl py-4',
             isCockpit
               ? 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus-visible:ring-emerald-500/20 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
               : '',
           ]"
+          data-testid="numeric-keypad-cancel"
         >
           Cancel
         </Button>
