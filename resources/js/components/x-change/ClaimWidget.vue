@@ -404,7 +404,8 @@ watch(
             <Button
                 ref="submitButton"
                 type="submit"
-                class="fixed inset-x-0 bottom-[max(0.2in,calc(env(safe-area-inset-bottom)+1rem))] z-30 mx-auto h-11 w-[calc(100%-2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10"
+                class="fixed inset-x-0 z-30 mx-auto h-11 w-[calc(100%-2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10"
+                style="bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem))"
                 data-testid="claim-widget-submit-button"
                 :disabled="submitViewModel.disabled"
             >

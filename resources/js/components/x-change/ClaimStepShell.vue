@@ -58,7 +58,7 @@ const widthClass = computed(() => {
         >
             <section
                 data-testid="claim-step-panel"
-                class="w-full rounded-lg border border-border/60 bg-card/85 p-6 shadow-sm backdrop-blur-sm"
+                class="w-full rounded-lg border border-border/60 bg-card/85 p-6 shadow-sm"
             >
                 <slot />
             </section>
