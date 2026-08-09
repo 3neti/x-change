@@ -61,6 +61,7 @@ final class FormFlowClaimWorkflowMutator
     ): array {
         $step['config'] = (array) ($step['config'] ?? []);
         $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
+        $step['config'] = $this->applyClaimUiContract($step['config']);
 
         if (($step['handler'] ?? null) === 'otp'
             && ($workflow->review['onboarding'] ?? false) === true) {
@@ -81,11 +82,6 @@ final class FormFlowClaimWorkflowMutator
 
         $step['config']['title'] = $workflow->title;
         $step['config']['description'] = $workflow->description;
-        $step['config']['ui_variant'] = config(
-            'x-change.claim.experience_ui.variant',
-            config('form-flow.ui.variant', 'default'),
-        );
-        $step['config']['ui_layout'] = config('x-change.claim.experience_ui.layout', []);
         $step['config']['auto_sync'] = ['enabled' => false];
         $rail = $this->settlementRail((array) ($step['config']['fields'] ?? []));
         $step['config']['fields'] = array_values(array_map(
@@ -102,6 +98,34 @@ final class FormFlowClaimWorkflowMutator
         ));
 
         return $step;
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function applyClaimUiContract(array $config): array
+    {
+        $variant = (string) config(
+            'x-change.claim.experience_ui.variant',
+            config('form-flow.ui.variant', 'default'),
+        );
+        $actionPlacement = config('x-change.claim.experience_ui.action_placement')
+            ?: ($variant === 'immersive' ? 'bottom_sticky' : 'inline');
+
+        $config['ui_variant'] ??= $variant;
+        $config['action_placement'] ??= $actionPlacement;
+        $config['ui_layout'] = array_replace_recursive(
+            (array) config('x-change.claim.experience_ui.layout', []),
+            (array) ($config['ui_layout'] ?? []),
+        );
+        $config['app_name'] ??= config('x-change.claim.experience_ui.brand.app_name', 'Pay Code');
+        $config['app_logo'] ??= config(
+            'x-change.claim.experience_ui.brand.app_logo',
+            '/vendor/x-change/images/pay-code/pay-code-logo.svg',
+        );
+
+        return $config;
     }
 
     /**

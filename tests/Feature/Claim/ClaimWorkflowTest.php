@@ -210,12 +210,20 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
                         ['name' => 'account_number'],
                     ],
                 ],
+            ], [
+                'handler' => 'otp',
+                'config' => [
+                    'step_name' => 'otp_verification',
+                    'fields' => [],
+                ],
             ]],
         ]),
         $workflow,
     );
 
-    $walletStep = $instructions->toArray()['steps'][0]['config'];
+    $payload = $instructions->toArray();
+    $walletStep = $payload['steps'][0]['config'];
+    $otpStep = $payload['steps'][1]['config'];
     $fieldNames = array_column($walletStep['fields'], 'name');
     $bankField = collect($walletStep['fields'])->firstWhere('name', 'bank_code');
     $pnb = collect($bankField['institution_options'])->firstWhere('key', 'pnb');
@@ -226,9 +234,16 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         ->and($walletStep['claim_workflow']['key'])->toBe('disbursement.v1')
         ->and($walletStep['claim_workflow']['confirmation_label'])->toBe('Confirm Redemption')
         ->and($walletStep['ui_variant'])->toBe('immersive')
+        ->and($walletStep['action_placement'])->toBe('bottom_sticky')
         ->and($walletStep['ui_layout']['density'])->toBe('compact')
         ->and($walletStep['ui_layout']['capture_surface'])->toBe('edge_to_edge')
         ->and($walletStep['ui_layout']['minimize_scroll'])->toBeTrue()
+        ->and($walletStep['app_name'])->toBe('Pay Code')
+        ->and($walletStep['app_logo'])->toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg')
+        ->and($otpStep['ui_variant'])->toBe('immersive')
+        ->and($otpStep['action_placement'])->toBe('bottom_sticky')
+        ->and($otpStep['app_name'])->toBe('Pay Code')
+        ->and($otpStep['app_logo'])->toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg')
         ->and($walletStep['auto_sync']['enabled'])->toBeFalse()
         ->and($fieldNames)->toBe(['amount', 'settlement_rail', 'mobile', 'bank_code', 'account_number'])
         ->and($bankField['help_text'])->toBe('Choose the receiving bank or wallet by name.')

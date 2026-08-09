@@ -35,10 +35,17 @@ vi.mock('@/composables/useTheme', () => ({
     initializeTheme: vi.fn(),
 }));
 
-vi.mock('@/components/AppLogoIcon.vue', () => ({
+vi.mock('@/components/x-change/PayCodeLogo.vue', () => ({
     default: {
-        props: ['className'],
-        template: '<div data-testid="app-logo" :class="className" />',
+        props: ['variant', 'className'],
+        template: `
+            <img
+                data-testid="claim-pay-code-logo"
+                :class="['block w-auto object-contain h-24 max-h-24 max-w-24', className]"
+                src="/vendor/x-change/images/pay-code/pay-code-logo.svg"
+                alt="Pay Code"
+            />
+        `,
     },
 }));
 
@@ -184,12 +191,17 @@ describe('ClaimWidget compiled rendering', () => {
             },
         });
 
-        const logo = wrapper.find('[data-testid="app-logo"]');
+        const logo = wrapper.find('[data-testid="claim-pay-code-logo"]');
 
         expect(logo.exists()).toBe(true);
-        expect(logo.classes()).toContain('h-14');
-        expect(logo.classes()).toContain('max-h-14');
-        expect(logo.classes()).toContain('max-w-32');
+        expect(logo.attributes('src')).toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg');
+        expect(logo.attributes('alt')).toBe('Pay Code');
+        expect(logo.classes()).toContain('w-auto');
+        expect(logo.classes()).toContain('h-24');
+        expect(logo.classes()).toContain('max-h-24');
+        expect(logo.classes()).toContain('max-w-24');
+        expect(logo.classes()).toContain('max-w-52');
+        expect(logo.classes()).toContain('sm:max-w-60');
         expect(logo.classes()).toContain('object-contain');
     });
 

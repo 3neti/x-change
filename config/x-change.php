@@ -2024,6 +2024,11 @@ return [
                 'XCHANGE_CLAIM_UI_VARIANT',
                 env('FORM_FLOW_UI_VARIANT', 'default'),
             ),
+            'action_placement' => env('XCHANGE_CLAIM_UI_ACTION_PLACEMENT'),
+            'brand' => [
+                'app_name' => env('XCHANGE_CLAIM_UI_APP_NAME', 'Pay Code'),
+                'app_logo' => env('XCHANGE_CLAIM_UI_APP_LOGO', '/vendor/x-change/images/pay-code/pay-code-logo.svg'),
+            ],
             'show_progress' => (bool) env('XCHANGE_CLAIM_UI_SHOW_PROGRESS', true),
             'support_label' => env('XCHANGE_CLAIM_UI_SUPPORT_LABEL'),
             'layout' => [
