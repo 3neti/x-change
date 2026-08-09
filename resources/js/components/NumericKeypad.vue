@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Delete, Check } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Delete, Check } from "lucide-vue-next";
 
-type KeypadMode = 'amount' | 'count';
+type KeypadMode = "amount" | "count";
 
 interface Props {
   modelValue?: number | null;
@@ -15,61 +22,70 @@ interface Props {
   allowDecimal?: boolean;
   title?: string;
   hideCurrency?: boolean;
+  quickAmounts?: number[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   min: 1,
   allowDecimal: false,
+  quickAmounts: () => [],
 });
 
 const emit = defineEmits<{
-  'update:open': [value: boolean];
-  'confirm': [value: number];
+  "update:open": [value: boolean];
+  confirm: [value: number];
 }>();
 
 // Internal digit accumulator
-const digits = ref<string>('');
+const digits = ref<string>("");
 
 // Initialize digits from modelValue when dialog opens
-watch(() => props.open, (isOpen) => {
-  if (isOpen && props.modelValue) {
-    digits.value = props.modelValue.toString();
-  } else if (isOpen) {
-    digits.value = '';
-  }
-});
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen && props.modelValue) {
+      digits.value = props.modelValue.toString();
+    } else if (isOpen) {
+      digits.value = "";
+    }
+  },
+);
 
 // Computed current value
 const currentValue = computed(() => {
   if (!digits.value) return 0;
-  const num = props.allowDecimal ? parseFloat(digits.value) : parseInt(digits.value);
+  const num = props.allowDecimal
+    ? parseFloat(digits.value)
+    : parseInt(digits.value);
   return isNaN(num) ? 0 : num;
 });
 
 // Formatted display
 const displayValue = computed(() => {
   if (!digits.value) {
-    if (props.hideCurrency) return '0';
-    return props.mode === 'amount' ? '₱0' : '0';
+    if (props.hideCurrency) return "0";
+    return props.mode === "amount" ? "₱0" : "0";
   }
-  
+
   // Show raw input while typing (preserves decimal point)
   const displayNum = digits.value;
-  
-  if (props.mode === 'amount') {
+
+  if (props.mode === "amount") {
     // For amounts, format with proper decimal places
     const num = currentValue.value;
-    if (props.allowDecimal && digits.value.includes('.')) {
+    if (props.allowDecimal && digits.value.includes(".")) {
       return props.hideCurrency ? displayNum : `₱${displayNum}`;
     }
-    return props.hideCurrency ? num.toLocaleString() : `₱${num.toLocaleString()}`;
+    return props.hideCurrency
+      ? num.toLocaleString()
+      : `₱${num.toLocaleString()}`;
   }
-  
+
   // Count mode - show raw number only (title provides context)
   const num = currentValue.value;
   // Preserve decimal point during typing
-  if (props.allowDecimal && digits.value.includes('.')) {
+  if (props.allowDecimal && digits.value.includes(".")) {
     return displayNum;
   }
   return `${num}`;
@@ -79,14 +95,14 @@ const displayValue = computed(() => {
 const displayTitle = computed(() => {
   // Use custom title if provided
   if (props.title) return props.title;
-  
+
   // Fall back to mode-based title
-  return props.mode === 'amount' ? 'Enter Amount' : 'Enter Quantity';
+  return props.mode === "amount" ? "Enter Amount" : "Enter Quantity";
 });
 
 // Description based on mode
 const description = computed(() => {
-  if (props.mode === 'amount') {
+  if (props.mode === "amount") {
     if (props.hideCurrency) {
       return `Minimum: ${props.min}`;
     }
@@ -97,41 +113,57 @@ const description = computed(() => {
 
 // Can confirm (value meets minimum)
 const canConfirm = computed(() => {
-  return currentValue.value >= props.min && 
-         (!props.max || currentValue.value <= props.max);
+  return (
+    currentValue.value >= props.min &&
+    (!props.max || currentValue.value <= props.max)
+  );
 });
 
 // Handle digit press
 const pressDigit = (digit: number) => {
   // Prevent leading zeros (unless decimal point exists)
-  if (digits.value === '' && digit === 0) return;
-  
+  if (digits.value === "" && digit === 0) return;
+
+  if (
+    props.allowDecimal &&
+    digits.value.includes(".") &&
+    digits.value.split(".")[1].length >= 2
+  )
+    return;
+
   // Append digit
   digits.value += digit.toString();
-  
+
   // Haptic feedback if supported
-  if ('vibrate' in navigator) {
+  if ("vibrate" in navigator) {
     navigator.vibrate(10);
   }
+};
+
+const selectQuickAmount = (amount: number) => {
+  if (amount < props.min || (props.max !== undefined && amount > props.max))
+    return;
+
+  digits.value = amount.toString();
 };
 
 // Handle decimal point press
 const pressDecimal = () => {
   // Only allow if decimals are enabled
   if (!props.allowDecimal) return;
-  
+
   // Prevent multiple decimal points
-  if (digits.value.includes('.')) return;
-  
+  if (digits.value.includes(".")) return;
+
   // If empty, prepend zero
-  if (digits.value === '') {
-    digits.value = '0.';
+  if (digits.value === "") {
+    digits.value = "0.";
   } else {
-    digits.value += '.';
+    digits.value += ".";
   }
-  
+
   // Haptic feedback if supported
-  if ('vibrate' in navigator) {
+  if ("vibrate" in navigator) {
     navigator.vibrate(10);
   }
 };
@@ -139,8 +171,8 @@ const pressDecimal = () => {
 // Handle backspace
 const pressBackspace = () => {
   digits.value = digits.value.slice(0, -1);
-  
-  if ('vibrate' in navigator) {
+
+  if ("vibrate" in navigator) {
     navigator.vibrate(10);
   }
 };
@@ -148,77 +180,108 @@ const pressBackspace = () => {
 // Handle confirm
 const confirm = () => {
   if (!canConfirm.value) return;
-  
-  emit('confirm', currentValue.value);
-  emit('update:open', false);
+
+  emit("confirm", currentValue.value);
+  emit("update:open", false);
 };
 
 // Handle cancel
 const cancel = () => {
-  emit('update:open', false);
+  emit("update:open", false);
 };
 
 // Keyboard support
 const handleKeyDown = (event: KeyboardEvent) => {
   if (!props.open) return;
-  
+
   // Numeric keys
-  if (event.key >= '0' && event.key <= '9') {
+  if (event.key >= "0" && event.key <= "9") {
     event.preventDefault();
     pressDigit(parseInt(event.key));
   }
   // Decimal point
-  else if ((event.key === '.' || event.key === ',') && props.allowDecimal) {
+  else if ((event.key === "." || event.key === ",") && props.allowDecimal) {
     event.preventDefault();
     pressDecimal();
   }
   // Backspace
-  else if (event.key === 'Backspace') {
+  else if (event.key === "Backspace") {
     event.preventDefault();
     pressBackspace();
   }
   // Enter
-  else if (event.key === 'Enter') {
+  else if (event.key === "Enter") {
     event.preventDefault();
     if (canConfirm.value) {
       confirm();
     }
   }
   // Escape
-  else if (event.key === 'Escape') {
+  else if (event.key === "Escape") {
     event.preventDefault();
     cancel();
   }
 };
 
 // Attach keyboard listener when open
-watch(() => props.open, (isOpen) => {
-  if (isOpen) {
-    window.addEventListener('keydown', handleKeyDown);
-  } else {
-    window.removeEventListener('keydown', handleKeyDown);
-  }
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      window.removeEventListener("keydown", handleKeyDown);
+    }
+  },
+);
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleKeyDown);
 });
 </script>
 
 <template>
   <Dialog :open="open" @update:open="(val) => emit('update:open', val)">
-    <DialogContent class="sm:max-w-md">
+    <DialogContent
+      class="bottom-0 top-auto max-h-[92dvh] translate-y-0 rounded-b-none sm:bottom-auto sm:top-1/2 sm:max-w-md sm:-translate-y-1/2 sm:rounded-lg"
+    >
       <DialogHeader>
         <DialogTitle>{{ displayTitle }}</DialogTitle>
         <DialogDescription>{{ description }}</DialogDescription>
       </DialogHeader>
-      
+
       <!-- Display -->
       <div class="flex items-center justify-center py-6">
-        <div 
+        <div
           class="text-4xl font-bold tracking-tight"
           :class="canConfirm ? 'text-foreground' : 'text-muted-foreground'"
         >
           {{ displayValue }}
         </div>
       </div>
-      
+
+      <div
+        v-if="quickAmounts.length > 0"
+        class="grid grid-cols-3 gap-2"
+        data-testid="numeric-keypad-quick-amounts"
+      >
+        <Button
+          v-for="quickAmount in quickAmounts"
+          :key="quickAmount"
+          type="button"
+          variant="outline"
+          class="h-10 rounded-xl text-sm font-semibold tabular-nums"
+          :data-testid="`numeric-keypad-quick-${quickAmount}`"
+          @click="selectQuickAmount(quickAmount)"
+        >
+          {{
+            hideCurrency
+              ? quickAmount.toLocaleString()
+              : `₱${quickAmount.toLocaleString()}`
+          }}
+        </Button>
+      </div>
+
       <!-- Keypad Grid -->
       <div class="space-y-2">
         <div class="grid grid-cols-3 gap-2">
@@ -233,7 +296,7 @@ watch(() => props.open, (isOpen) => {
           >
             {{ digit }}
           </Button>
-          
+
           <!-- Row 2: 4, 5, 6 -->
           <Button
             v-for="digit in [4, 5, 6]"
@@ -245,7 +308,7 @@ watch(() => props.open, (isOpen) => {
           >
             {{ digit }}
           </Button>
-          
+
           <!-- Row 3: 7, 8, 9 -->
           <Button
             v-for="digit in [7, 8, 9]"
@@ -257,7 +320,7 @@ watch(() => props.open, (isOpen) => {
           >
             {{ digit }}
           </Button>
-          
+
           <!-- Row 4: Backspace, 0, Decimal/Confirm -->
           <Button
             @click="pressBackspace"
@@ -268,7 +331,7 @@ watch(() => props.open, (isOpen) => {
           >
             <Delete class="h-5 w-5" />
           </Button>
-          
+
           <Button
             @click="pressDigit(0)"
             variant="outline"
@@ -277,7 +340,7 @@ watch(() => props.open, (isOpen) => {
           >
             0
           </Button>
-          
+
           <!-- Decimal point button (only if allowDecimal) -->
           <Button
             v-if="allowDecimal"
@@ -289,7 +352,7 @@ watch(() => props.open, (isOpen) => {
           >
             .
           </Button>
-          
+
           <!-- Confirm button (when no decimal) -->
           <Button
             v-else
@@ -302,7 +365,7 @@ watch(() => props.open, (isOpen) => {
             <Check class="h-5 w-5" />
           </Button>
         </div>
-        
+
         <!-- Full-width confirm button (when decimal enabled) -->
         <Button
           v-if="allowDecimal"
@@ -313,14 +376,12 @@ watch(() => props.open, (isOpen) => {
           :disabled="!canConfirm"
         >
           <Check class="h-5 w-5 mr-2" />
-          Confirm
+          Use Amount
         </Button>
       </div>
-      
+
       <DialogFooter class="sm:justify-center">
-        <Button variant="ghost" @click="cancel" class="w-full">
-          Cancel
-        </Button>
+        <Button variant="ghost" @click="cancel" class="w-full"> Cancel </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
