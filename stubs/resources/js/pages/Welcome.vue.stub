@@ -38,7 +38,7 @@ withDefaults(
         />
 
         <header
-            class="relative z-10 mx-auto flex h-24 max-w-[88rem] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10"
+            class="relative z-10 mx-auto flex h-24 w-full max-w-[88rem] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10"
         >
             <div class="flex items-center gap-3">
                 <XChangeLogo class-name="h-12 shrink-0 sm:h-14" />
@@ -75,7 +75,7 @@ withDefaults(
         </header>
 
         <section
-            class="relative z-10 mx-auto grid max-w-[88rem] gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-0 lg:grid-cols-[minmax(22rem,0.76fr)_minmax(38rem,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-5"
+            class="relative z-10 mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-0 lg:grid-cols-[minmax(22rem,0.76fr)_minmax(38rem,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-5"
         >
             <div class="max-w-xl">
                 <p

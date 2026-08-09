@@ -37,6 +37,8 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->toContain('Powered by x-change')
         ->toContain('Release {{ $page.props.version }}')
         ->toContain('© 2026 3neti R&amp;D OPC')
+        ->toContain('mx-auto flex h-24 w-full max-w-[88rem]')
+        ->toContain('mx-auto grid w-full max-w-[88rem]')
         ->toContain("import XChangeLogo from '@/components/x-change/XChangeLogo.vue'")
         ->toContain('sm:h-14')
         ->toContain('gClefPulleyBrandAssets.logo')
