@@ -20,14 +20,26 @@ const props = withDefaults(
 
 const logoSrc = computed(() => {
     if (props.variant === 'mark') {
-        return '/vendor/x-change/images/pay-code/pay-code-mark.png';
+        return '/vendor/x-change/images/pay-code/pay-code-mark.svg';
     }
 
     if (props.variant === 'lockup') {
-        return '/vendor/x-change/images/pay-code/pay-code-lockup.png';
+        return '/vendor/x-change/images/pay-code/pay-code-lockup.svg';
     }
 
-    return '/vendor/x-change/images/pay-code/pay-code-logo.png';
+    return '/vendor/x-change/images/pay-code/pay-code-logo.svg';
+});
+
+const sizeClass = computed(() => {
+    if (props.variant === 'mark') {
+        return 'h-12 max-h-12 max-w-12';
+    }
+
+    if (props.variant === 'lockup') {
+        return 'h-32 max-h-32 max-w-32';
+    }
+
+    return 'h-24 max-h-24 max-w-24';
 });
 
 const altText = computed(() => {
@@ -41,36 +53,10 @@ const altText = computed(() => {
 
 <template>
     <img
-        class="pay-code-logo"
-        :class="[variant, className]"
+        class="block w-auto object-contain"
+        :class="[sizeClass, className]"
         :src="logoSrc"
         :alt="altText"
         v-bind="$attrs"
     />
 </template>
-
-<style scoped>
-.pay-code-logo {
-    display: block;
-    width: auto;
-    object-fit: contain;
-}
-
-.pay-code-logo.mark {
-    height: 3rem;
-    max-height: 3rem;
-    max-width: 3rem;
-}
-
-.pay-code-logo.logo {
-    height: 3.25rem;
-    max-height: 3.25rem;
-    max-width: 13rem;
-}
-
-.pay-code-logo.lockup {
-    height: 7rem;
-    max-height: 7rem;
-    max-width: 16rem;
-}
-</style>

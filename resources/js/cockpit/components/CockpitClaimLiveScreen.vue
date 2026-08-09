@@ -107,7 +107,7 @@ const actualScreenComponent = computed<Component | null>(() => {
                         >
                             <PayCodeLogo
                                 variant="logo"
-                                class-name="!h-12 !max-h-12 !max-w-40"
+                                class-name="!h-24 !max-h-24 !max-w-24"
                             />
                             <h3 class="text-xl font-medium">Claim Pay Code</h3>
                         </div>

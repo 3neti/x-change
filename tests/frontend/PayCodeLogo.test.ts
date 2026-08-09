@@ -7,9 +7,10 @@ describe('PayCodeLogo', () => {
         const wrapper = mount(PayCodeLogo);
 
         expect(wrapper.get('img').attributes('src')).toBe(
-            '/vendor/x-change/images/pay-code/pay-code-logo.png',
+            '/vendor/x-change/images/pay-code/pay-code-logo.svg',
         );
         expect(wrapper.get('img').attributes('alt')).toBe('Pay Code');
+        expect(wrapper.get('img').classes()).toContain('h-24');
     });
 
     it('renders the mark variant', () => {
@@ -20,9 +21,10 @@ describe('PayCodeLogo', () => {
         });
 
         expect(wrapper.get('img').attributes('src')).toBe(
-            '/vendor/x-change/images/pay-code/pay-code-mark.png',
+            '/vendor/x-change/images/pay-code/pay-code-mark.svg',
         );
         expect(wrapper.get('img').attributes('alt')).toBe('Pay Code mark');
+        expect(wrapper.get('img').classes()).toContain('h-12');
     });
 
     it('renders the lockup variant', () => {
@@ -33,8 +35,9 @@ describe('PayCodeLogo', () => {
         });
 
         expect(wrapper.get('img').attributes('src')).toBe(
-            '/vendor/x-change/images/pay-code/pay-code-lockup.png',
+            '/vendor/x-change/images/pay-code/pay-code-lockup.svg',
         );
         expect(wrapper.get('img').attributes('alt')).toBe('Pay Code');
+        expect(wrapper.get('img').classes()).toContain('h-32');
     });
 });

@@ -28,7 +28,7 @@ describe('Cockpit landing claim experience presentation', () => {
             props: {
                 preview_mode: true,
                 voucher_code: 'AA-317',
-                app_logo: '/vendor/x-change/images/pay-code/pay-code-logo.png',
+                app_logo: '/vendor/x-change/images/pay-code/pay-code-logo.svg',
             },
         });
         expect(manifest.journey.steps[2].screen).toMatchObject({

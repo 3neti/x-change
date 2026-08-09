@@ -28,7 +28,10 @@ defineProps<{
                     Set the value, payee, and purpose.
                 </p>
             </div>
-            <PayCodeLogo variant="logo" class-name="!h-8 !max-h-8 !max-w-28" />
+            <PayCodeLogo
+                variant="mark"
+                class-name="!h-10 !max-h-10 !max-w-10"
+            />
         </header>
 
         <div class="mt-4 grid gap-3 sm:grid-cols-2">

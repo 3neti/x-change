@@ -20,9 +20,9 @@ describe('Cockpit quick generate order presentation', () => {
         expect(wrapper.text()).toContain('Redeemable');
         expect(wrapper.text()).toContain('₱506.90');
         expect(wrapper.text()).toContain('Field allowance');
-        expect(wrapper.get('img[alt="Pay Code"]').attributes('src')).toContain(
-            '/pay-code/pay-code-logo.png',
-        );
+        expect(
+            wrapper.get('img[alt="Pay Code mark"]').attributes('src'),
+        ).toContain('/pay-code/pay-code-mark.svg');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('button').exists()).toBe(false);
         expect(wrapper.find('input').exists()).toBe(false);

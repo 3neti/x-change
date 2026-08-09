@@ -163,7 +163,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
             wrapper
                 .get('[data-testid="claim-pay-code-logo"]')
                 .attributes('src'),
-        ).toBe('/vendor/x-change/images/pay-code/pay-code-logo.png');
+        ).toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg');
         expect(wrapper.find('[data-testid="app-logo"]').exists()).toBe(false);
     });
 

@@ -71,3 +71,22 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
     expect(substr_count($stub, 'Open Cockpit'))->toBe(1);
     expect(substr_count($stub, '/vendor/x-change/images/logo-orange.png'))->toBe(1);
 });
+
+it('ships the canonical Pay Code vector alongside x-change branding', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+    $payCodeLogo = file_get_contents(
+        $packageRoot.'/resources/assets/images/pay-code/pay-code-logo.svg',
+    );
+    $payCodeMark = file_get_contents(
+        $packageRoot.'/resources/assets/images/pay-code/pay-code-mark.svg',
+    );
+
+    expect($payCodeLogo)->not->toBeFalse()
+        ->toContain('viewBox="0 0 1254 1254"')
+        ->toContain('#022A6E')
+        ->toContain('#D8151B')
+        ->toContain('The instruction that moves money.')
+        ->and($payCodeMark)->not->toBeFalse()
+        ->toContain('viewBox="245 70 765 765"')
+        ->and(is_file($packageRoot.'/resources/assets/images/logo-orange.png'))->toBeTrue();
+});

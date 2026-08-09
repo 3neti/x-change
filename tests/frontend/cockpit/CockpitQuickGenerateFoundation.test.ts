@@ -179,7 +179,7 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-logo"]')
                 .attributes('src'),
-        ).toBe('/vendor/x-change/images/pay-code/pay-code-mark.png');
+        ).toBe('/vendor/x-change/images/pay-code/pay-code-mark.svg');
         expect(
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-logo"]')
