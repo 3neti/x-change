@@ -484,6 +484,17 @@ The Commercial Controls workspace exposes the active Price List and Waterfall, i
 
 Ordinary Pay Code cancellation or expiry releases unclaimed principal from Pay Code Reserve to Client Funds. It does not refund an already accepted issuance charge. A full commercial reversal is limited to a failed issuance or an explicit administrative void before provider-cost settlement or partner-payout control has begun.
 
+The owner-facing Pay Code Detail workspace makes that invariant explicit before a terminal action is accepted:
+
+```text
+Pay Code Reserve → Client Funds
+Provider Inventory unchanged
+Provider call: none
+Issuance charges retained
+```
+
+`Expire now` and `Cancel` are owner-authorized, throttled, confirmed actions. The server locks the Voucher, rejects any claim, payout, recovery, non-Client-Funds origin, or already-conflicting terminal action, and then reuses the same idempotent terminal-release accounting service as scheduled expiry. The issued Voucher Instructions remain immutable. The effective Voucher state and timestamp change, while the sanitized reason and terminal action are appended to lifecycle metadata and the reserve release remains independently recorded in x-journal. `Cancel` materializes `cancelled`; `Expire now` materializes `expired` and closes the availability window immediately.
+
 Every accepted sale, charge, allocation, evidence outcome, partner control, settlement, and reversal writes an idempotent x-journal event in the same database transaction as its accounting state. Inspect the invariant without calling a provider:
 
 ```bash

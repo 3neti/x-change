@@ -4892,3 +4892,19 @@ Current boundary:
 - Focused Campaign coverage passed with 31 backend tests / 241 assertions and
   5 frontend tests. Production build and published-asset diagnostics passed.
 - Full contract: `CAMPAIGN_WORKSHEET_IMPORT_UI_UX.md`.
+
+# 2026-08-09 — Treasury-Safe Pay Code Terminal Controls
+
+- Added owner-only `Expire now` and `Cancel` controls to Pay Code Detail.
+- The workspace previews the exact principal returned from Pay Code Reserve to
+  Client Funds before confirmation.
+- Both actions require a reason and an explicit acknowledgement, use a
+  throttled Wayfinder route, and lock the Voucher during the transition.
+- Claimed, payout-active, recovery-protected, non-regular, and already
+  conflicting Pay Codes fail closed.
+- Successful terminal actions do not call a provider, do not change Provider
+  Inventory, and do not refund accepted issuance charges.
+- Terminal release is idempotent, broadcasts the refreshed funding projection,
+  and preserves append-only x-journal evidence.
+- Focused acceptance passed with 67 backend tests / 1,060 assertions, 8 Vue
+  tests, published-asset diagnostics, and the production Vite build.
