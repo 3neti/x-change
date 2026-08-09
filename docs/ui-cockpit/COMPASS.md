@@ -4,11 +4,24 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Commercial Offering administration and accounting visibility
-Status: Implemented / package acceptance pending
-Last updated: 2026-08-07
+Current slice: Quick Generate Pay To policy
+Status: Implemented / browser acceptance pending
+Last updated: 2026-08-10
 
 ## Completed
+
+- Rationalized **Pay To** in `/x/cockpit/quick-generate`:
+  - one canonical TypeScript/PHP classifier now distinguishes open, mobile,
+    email, vendor, release-secret, and invalid entries;
+  - valid Philippine mobiles automatically select and lock mobile input,
+    exact-mobile validation, and OTP;
+  - malformed mobile-like values fail closed instead of becoming secrets;
+  - double quotes are the explicit escape for mobile-, email-, or alias-shaped
+    release secrets;
+  - email recipients are recognized but issuance remains blocked until a
+    dedicated email OTP capability is implemented;
+  - vendor matching now composes with other Voucher claim specifications; and
+  - sanitized previews and pricing estimates never contain the release secret.
 
 - Added the capability-gated `/x/cockpit/commercial` workspace:
   - **Price List** and **Waterfall** expose one versioned Commercial Offering;

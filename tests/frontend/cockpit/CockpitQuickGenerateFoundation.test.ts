@@ -2116,12 +2116,13 @@ describe('Cockpit Quick Generate foundation', () => {
             currency: 'PHP',
             fee_strategy: 'absorb',
             validation: {
-                mobile: '09173011987',
+                mobile: '+639173011987',
+                mobile_verification: 'otp',
             },
         });
         expect(payload.inputs).toEqual({
-            fields: ['mobile'],
-            requirements: [],
+            fields: ['mobile', 'otp'],
+            requirements: ['otp'],
         });
         expect(payload.count).toBe(1);
         expect(payload.feedback).toEqual({
@@ -3208,12 +3209,13 @@ describe('Cockpit Quick Generate foundation', () => {
             currency: 'PHP',
             fee_strategy: 'absorb',
             validation: {
-                mobile: '09173011987',
+                mobile: '+639173011987',
+                mobile_verification: 'otp',
             },
         });
         expect(payload.inputs).toEqual({
-            fields: ['mobile'],
-            requirements: [],
+            fields: ['mobile', 'otp'],
+            requirements: ['otp'],
         });
         expect(payload.feedback).toEqual({
             email: null,

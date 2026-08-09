@@ -62,6 +62,10 @@ import type {
     RiderStampTheme,
 } from '../riderStampPreview';
 import type { RiderContentFormat } from '../riderContent';
+import {
+    classifyCockpitPayee,
+    type CockpitPayeeKind,
+} from '../payeePolicy';
 import CockpitAmountPicker from './CockpitAmountPicker.vue';
 import CockpitClaimExperiencePreview from './CockpitClaimExperiencePreview.vue';
 import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
@@ -572,6 +576,35 @@ const recipientReference = ref(
         stringValue(props.draftContract?.recipient_reference) ??
         '',
 );
+const payeeInputFocused = ref(false);
+const payeePolicy = computed(() =>
+    classifyCockpitPayee(recipientReference.value),
+);
+const normalizedPayee = computed<string>(
+    () => payeePolicy.value.normalizedValue ?? '',
+);
+const payeeType = computed<'anyone' | Exclude<CockpitPayeeKind, 'open'>>(() =>
+    payeePolicy.value.kind === 'open' ? 'anyone' : payeePolicy.value.kind,
+);
+const payeeRequiresMobile = computed<boolean>(
+    () => payeePolicy.value.kind === 'mobile',
+);
+const payeeRequiresEmail = computed<boolean>(
+    () => payeePolicy.value.kind === 'email',
+);
+const payeeRequiresVendor = computed<boolean>(
+    () => payeePolicy.value.kind === 'vendor',
+);
+const payeeRequiresSecret = computed<boolean>(
+    () => payeePolicy.value.kind === 'secret',
+);
+const payeeDisplayReference = computed<string>(() => {
+    if (payeeRequiresSecret.value) {
+        return 'Release Code Required';
+    }
+
+    return payeePolicy.value.displayValue;
+});
 const purpose = ref(
     stringValue(props.campaignContext?.draft?.purpose) ??
         stringValue(props.draftContract?.purpose) ??
@@ -1198,7 +1231,9 @@ function applyInstructionBlueprint(
         instructions,
         ['metadata', 'custom', 'cockpit', 'recipient_reference'],
         mobileRecipient ||
-            (payableRecipient !== 'required' ? payableRecipient : '') ||
+            (payableRecipient !== 'required' && payableRecipient !== ''
+                ? `@${payableRecipient.replace(/^@/, '')}`
+                : '') ||
             recipientReference.value,
     );
     purpose.value = instructionString(
@@ -1741,7 +1776,7 @@ const selectedUnavailableCapabilities = computed<
 >(() => {
     const selected = new Set<string>();
 
-    selectedInputFieldValues.value.forEach((field) => {
+    selectedInputFields.value.forEach((field) => {
         const capability = inputFieldCapability(field);
 
         if (capability !== null) {
@@ -1757,7 +1792,7 @@ const selectedUnavailableCapabilities = computed<
         selected.add('kyc');
     }
 
-    if (verificationOtp.value || onboardingOtpEnforced.value) {
+    if (effectiveVerificationOtp.value) {
         selected.add('otp');
     }
 
@@ -1795,6 +1830,7 @@ const canSubmit = computed<boolean>(() => {
         routeUrl.value !== null &&
         allowedMethods.value.includes('POST') &&
         selectedUnavailableCapabilities.value.length === 0 &&
+        payeePolicy.value.issuable &&
         feedbackValid.value &&
         namedClaimSliceValidationMessage.value === null &&
         claimRecipientError.value === null &&
@@ -1810,6 +1846,7 @@ const canGenerateClaimPreview = computed<boolean>(() => {
         !previewProcessing.value &&
         Number.isFinite(normalizedAmount) &&
         normalizedAmount > 0 &&
+        payeePolicy.value.issuable &&
         feedbackValid.value &&
         namedClaimSliceValidationMessage.value === null &&
         claimRecipientError.value === null
@@ -1821,7 +1858,10 @@ const isAccountFundingClaim = computed<boolean>(
 );
 
 const claimRecipientError = computed<string | null>(() => {
-    if (!isAccountFundingClaim.value || payeeType.value !== 'vendor') {
+    if (
+        !isAccountFundingClaim.value ||
+        ['anyone', 'mobile'].includes(payeeType.value)
+    ) {
         return null;
     }
 
@@ -2160,11 +2200,11 @@ const currentTemplateName = computed<string>(
 const canvasInstructionKeys = computed<string[]>(() => {
     const keys = selectedInputFields.value.map((field) => `input.${field}`);
 
-    if (requireMobileValidation.value) {
+    if (effectiveMobileValidation.value && payeeRequiresMobile.value) {
         keys.push('validation.mobile');
     }
 
-    if (verificationOtp.value) {
+    if (effectiveVerificationOtp.value) {
         keys.push('validation.otp');
     }
 
@@ -2237,32 +2277,47 @@ const voucherKindTone = computed<string>(() => {
     return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200';
 });
 
-const normalizedPayee = computed<string>(() => {
-    const normalized = recipientReference.value.trim();
-
-    return normalized.toUpperCase() === 'CASH' ? '' : normalized;
-});
-
-const payeeType = computed<'anyone' | 'mobile' | 'vendor'>(() => {
-    const normalized = recipientReference.value.trim();
-
-    if (normalized === '' || normalized.toUpperCase() === 'CASH') {
-        return 'anyone';
-    }
-
-    if (/^(\+|09|639|63)/.test(normalized)) {
-        return 'mobile';
-    }
-
-    return 'vendor';
-});
-
 const onboardingOtpEnforced = computed<boolean>(() => {
     return (
         onboardingEnabled.value &&
         (props.onboardingOtpRequired !== false || payeeType.value === 'mobile')
     );
 });
+
+const effectiveVerificationOtp = computed<boolean>(
+    () =>
+        verificationOtp.value ||
+        onboardingOtpEnforced.value ||
+        payeeRequiresMobile.value,
+);
+
+const effectiveMobileValidation = computed<boolean>(
+    () => requireMobileValidation.value || payeeRequiresMobile.value,
+);
+
+const mobileValidationSelection = computed<boolean>({
+    get: () => effectiveMobileValidation.value,
+    set: (selected): void => {
+        if (!payeeRequiresMobile.value) {
+            requireMobileValidation.value = selected;
+        }
+    },
+});
+
+const otpSelection = computed<boolean>({
+    get: () => effectiveVerificationOtp.value,
+    set: (selected): void => {
+        if (!payeeRequiresMobile.value && !onboardingOtpEnforced.value) {
+            verificationOtp.value = selected;
+        }
+    },
+});
+
+const effectiveValidationSecret = computed<string>(() =>
+    payeeRequiresSecret.value
+        ? (payeePolicy.value.normalizedValue ?? '')
+        : validationSecret.value.trim(),
+);
 
 function applyOnboardingDependencies(): void {
     if (!onboardingEnabled.value) {
@@ -2284,11 +2339,45 @@ function applyOnboardingDependencies(): void {
     );
 }
 
-function isOnboardingFieldLocked(field: string): boolean {
+function isAutomaticInputField(field: string): boolean {
+    if (field === 'mobile' && payeeRequiresMobile.value) {
+        return true;
+    }
+
+    if (field === 'email' && payeeRequiresEmail.value) {
+        return true;
+    }
+
+    if (field === 'otp' && payeeRequiresMobile.value) {
+        return true;
+    }
+
     return (
         onboardingEnabled.value &&
         (['name', 'email', 'mobile'].includes(field) ||
             (field === 'otp' && onboardingOtpEnforced.value))
+    );
+}
+
+function isInputFieldSelected(field: string): boolean {
+    return selectedInputFields.value.includes(field);
+}
+
+function toggleInputField(field: string, selected: boolean): void {
+    if (isAutomaticInputField(field)) {
+        return;
+    }
+
+    const fields = new Set(selectedInputFieldValues.value);
+
+    if (selected) {
+        fields.add(field);
+    } else {
+        fields.delete(field);
+    }
+
+    selectedInputFieldValues.value = voucherInputFieldPayloadOrder.filter(
+        (candidate) => fields.has(candidate),
     );
 }
 
@@ -2305,7 +2394,10 @@ const payeeHelpText = computed<string>(() => {
         return `Restricted to the verified Account for ${normalizedPayee.value}.`;
     }
 
-    if (isAccountFundingClaim.value && payeeType.value === 'vendor') {
+    if (
+        isAccountFundingClaim.value &&
+        !['anyone', 'mobile'].includes(payeeType.value)
+    ) {
         return (
             claimRecipientError.value ??
             'Account Funding requires an Account recipient.'
@@ -2317,11 +2409,23 @@ const payeeHelpText = computed<string>(() => {
     }
 
     if (payeeType.value === 'mobile') {
-        return `Restricted to mobile number: ${normalizedPayee.value}`;
+        return `${payeePolicy.value.message} Mobile and OTP requirements are locked.`;
     }
 
     if (payeeType.value === 'vendor') {
-        return `Restricted to vendor alias: ${normalizedPayee.value}`;
+        return `${payeePolicy.value.message} Vendor matching is locked.`;
+    }
+
+    if (payeeType.value === 'email') {
+        return 'Email recipient recognized. Issuance stays unavailable until the email OTP capability is implemented.';
+    }
+
+    if (payeeType.value === 'secret') {
+        return 'Explicit release secret. Quotes are removed before issuance and the value is kept out of previews.';
+    }
+
+    if (payeeType.value === 'invalid') {
+        return payeePolicy.value.message;
     }
 
     return 'Blank or CASH allows anyone who meets the other claim requirements.';
@@ -2498,12 +2602,16 @@ const selectedInputFields = computed<string[]>(() => {
         fields.add('mobile');
     }
 
-    if (onboardingOtpEnforced.value) {
+    if (onboardingOtpEnforced.value || payeeRequiresMobile.value) {
         fields.add('otp');
     }
 
-    if (payeeType.value === 'mobile') {
+    if (payeeRequiresMobile.value) {
         fields.add('mobile');
+    }
+
+    if (payeeRequiresEmail.value) {
+        fields.add('email');
     }
 
     if (feedbackEmail.value.trim() !== '') {
@@ -2514,14 +2622,14 @@ const selectedInputFields = computed<string[]>(() => {
 });
 
 const validationSummary = computed<Record<string, unknown>>(() => {
-    const secret = validationSecret.value.trim();
+    const secret = effectiveValidationSecret.value;
 
     return {
         ...(secret === '' ? {} : { secret }),
-        ...(requireMobileValidation.value && payeeType.value === 'mobile'
+        ...(effectiveMobileValidation.value && payeeRequiresMobile.value
             ? { mobile: normalizedPayee.value }
             : {}),
-        ...(payeeType.value === 'vendor'
+        ...(payeeRequiresVendor.value
             ? { payable: normalizedPayee.value }
             : {}),
         ...(requirePayableValidation.value && payeeType.value === 'anyone'
@@ -2531,7 +2639,9 @@ const validationSummary = computed<Record<string, unknown>>(() => {
         ...(requireLocationValidation.value
             ? { location: 'required', radius: '100' }
             : {}),
-        ...(verificationOtp.value ? { mobile_verification: 'otp' } : {}),
+        ...(effectiveVerificationOtp.value
+            ? { mobile_verification: 'otp' }
+            : {}),
     };
 });
 
@@ -2567,7 +2677,7 @@ const structuredValidationSummary = computed<Record<string, unknown>>(() => {
                   },
               }
             : {}),
-        ...(verificationOtp.value
+        ...(effectiveVerificationOtp.value
             ? {
                   otp: {
                       required: true,
@@ -2650,7 +2760,7 @@ const structuredValidationPreviewDisplay = computed<string>(() => {
 const verificationSummary = computed<string[]>(() => {
     return [
         verificationKyc.value ? 'kyc' : null,
-        verificationOtp.value || onboardingOtpEnforced.value ? 'otp' : null,
+        effectiveVerificationOtp.value ? 'otp' : null,
         verificationSelfie.value ? 'selfie' : null,
     ].filter((item): item is string => item !== null);
 });
@@ -3277,7 +3387,7 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
                 value:
                     payeeType.value === 'anyone'
                         ? 'anyone'
-                        : `${payeeType.value}: ${normalizedPayee.value}`,
+                        : `${payeeType.value}: ${payeeDisplayReference.value}`,
             },
             {
                 label: 'Expiration',
@@ -3423,7 +3533,7 @@ const executionSummary = computed<Record<string, unknown> | null>(() => {
 });
 
 const livePricingPayload = computed<Record<string, unknown>>(() => {
-    return buildPayloadShape(false, amountCalculatorPreview.value);
+    return buildPayloadShape(true, amountCalculatorPreview.value);
 });
 const canEstimateLivePricing = computed<boolean>(() => {
     const normalizedAmount =
@@ -3870,12 +3980,19 @@ function buildPayloadShape(
                           }),
                     source: 'cockpit.quick-generate',
                     builder: 'guided-voucher-instruction-builder',
+                    payee: {
+                        kind: payeePolicy.value.kind,
+                        explicit_secret: payeePolicy.value.explicitSecret,
+                    },
                     contract_summary: contractSummaryItems.value,
                     slice_plan: canonicalSlicePlan.value,
                     ...(isAccountFundingClaim.value
                         ? {
                               recipient_reference:
-                                  recipientReference.value.trim(),
+                                  payeePolicy.value.kind === 'open'
+                                      ? recipientReference.value.trim()
+                                      : (payeePolicy.value.normalizedValue ??
+                                        ''),
                           }
                         : {}),
                     ...(campaign === null
@@ -5103,16 +5220,35 @@ function instructionRecord(
                         Pay To
                         <input
                             v-model="recipientReference"
-                            type="text"
-                            placeholder="Anyone, mobile, or vendor"
-                            class="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                            :type="
+                                payeeRequiresSecret && !payeeInputFocused
+                                    ? 'password'
+                                    : 'text'
+                            "
+                            placeholder="Anyone, mobile, email, @vendor, or &quot;secret&quot;"
+                            class="h-12 w-full rounded-xl border bg-white px-3 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                            :class="
+                                payeePolicy.kind === 'invalid' ||
+                                payeePolicy.kind === 'email'
+                                    ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-950'
+                                    : 'border-slate-200 dark:border-slate-800'
+                            "
                             data-testid="cockpit-quick-generate-primary-recipient"
                             :disabled="processing"
+                            @focus="payeeInputFocused = true"
+                            @blur="payeeInputFocused = false"
                         />
                         <span
-                            class="min-h-5 px-0.5 text-[0.7rem] leading-5 font-normal text-slate-500 dark:text-slate-400"
+                            class="min-h-5 px-0.5 text-[0.7rem] leading-5 font-normal"
+                            :class="
+                                payeePolicy.kind === 'invalid' ||
+                                payeePolicy.kind === 'email'
+                                    ? 'text-rose-600 dark:text-rose-300'
+                                    : 'text-slate-500 dark:text-slate-400'
+                            "
+                            data-testid="cockpit-quick-generate-primary-recipient-help"
                         >
-                            Recipient, mobile, or payout route.
+                            {{ payeeHelpText }}
                         </span>
                     </label>
                     <label
@@ -5245,7 +5381,7 @@ function instructionRecord(
                     v-model:view="canvasView"
                     :amount="amount"
                     :currency="currency"
-                    :recipient="recipientReference"
+                    :recipient="payeeDisplayReference"
                     :purpose="purpose"
                     :claim-outcome="claimOutcome"
                     :voucher-type="voucherType"
@@ -5290,7 +5426,7 @@ function instructionRecord(
             :code="resultCode"
             :amount="amount"
             :currency="currency"
-            :recipient="recipientReference"
+            :recipient="payeeDisplayReference"
             :purpose="purpose"
             :claim-outcome="
                 isAccountFundingResult
@@ -5496,7 +5632,11 @@ function instructionRecord(
                             Recipient
                             <input
                                 v-model="recipientReference"
-                                type="text"
+                                :type="
+                                    payeeRequiresSecret && !payeeInputFocused
+                                        ? 'password'
+                                        : 'text'
+                                "
                                 :placeholder="
                                     isAccountFundingClaim
                                         ? 'CASH or verified 0917...'
@@ -5505,6 +5645,8 @@ function instructionRecord(
                                 class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-submit-recipient"
                                 :disabled="processing"
+                                @focus="payeeInputFocused = true"
+                                @blur="payeeInputFocused = false"
                             />
                             <span
                                 class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
@@ -6092,25 +6234,30 @@ function instructionRecord(
                                 }"
                             >
                                 <input
-                                    v-model="selectedInputFieldValues"
                                     type="checkbox"
                                     :value="field.value"
+                                    :checked="isInputFieldSelected(field.value)"
                                     class="rounded border-slate-300"
                                     :disabled="
-                                        isOnboardingFieldLocked(field.value) ||
+                                        isAutomaticInputField(field.value) ||
                                         (inputFieldCapability(field.value) !==
                                             null &&
                                             capabilitySelectionDisabled(
                                                 field.value,
-                                                selectedInputFieldValues.includes(
-                                                    field.value,
-                                                ),
+                                                isInputFieldSelected(field.value),
                                             ))
                                     "
                                     :data-onboarding-locked="
-                                        isOnboardingFieldLocked(field.value)
+                                        isAutomaticInputField(field.value)
                                             ? 'true'
                                             : undefined
+                                    "
+                                    @change="
+                                        toggleInputField(
+                                            field.value,
+                                            ($event.target as HTMLInputElement)
+                                                .checked,
+                                        )
                                     "
                                 />
                                 <span>
@@ -6198,10 +6345,13 @@ function instructionRecord(
                                     class="flex items-start gap-2 rounded-xl border border-violet-200 bg-white/70 p-3 text-xs font-medium text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
                                 >
                                     <input
-                                        v-model="requireMobileValidation"
+                                        v-model="mobileValidationSelection"
                                         type="checkbox"
                                         class="mt-0.5 rounded border-violet-300"
-                                        :disabled="processing"
+                                        :disabled="
+                                            processing || payeeRequiresMobile
+                                        "
+                                        data-testid="cockpit-quick-generate-mobile-validation"
                                     />
                                     <span class="grid gap-0.5">
                                         <span>Match Mobile Number</span>
@@ -6352,16 +6502,18 @@ function instructionRecord(
                                     class="flex items-start gap-2 rounded-xl border border-sky-200 bg-white/70 p-3 text-xs font-medium text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100"
                                 >
                                     <input
-                                        v-model="verificationOtp"
+                                        v-model="otpSelection"
                                         type="checkbox"
                                         class="mt-0.5 rounded border-sky-300"
                                         :disabled="
                                             onboardingOtpEnforced ||
+                                            payeeRequiresMobile ||
                                             capabilitySelectionDisabled(
                                                 'otp',
-                                                verificationOtp,
+                                                effectiveVerificationOtp,
                                             )
                                         "
+                                        data-testid="cockpit-quick-generate-otp-verification"
                                     />
                                     <span class="grid gap-0.5">
                                         <span>OTP</span>
@@ -6467,7 +6619,8 @@ function instructionRecord(
                                         v-model="otpFailure"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         :disabled="
-                                            processing || !verificationOtp
+                                            processing ||
+                                            !effectiveVerificationOtp
                                         "
                                     >
                                         <option value="block">

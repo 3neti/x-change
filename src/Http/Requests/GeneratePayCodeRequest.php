@@ -17,17 +17,33 @@ use LBHurtado\Voucher\Enums\RiderStampFit;
 use LBHurtado\Voucher\Enums\RiderStampPosition;
 use LBHurtado\Voucher\Enums\RiderStampSource;
 use LBHurtado\Voucher\Enums\RiderStampTheme;
+use LBHurtado\XChange\Enums\CockpitPayeeKind;
 use LBHurtado\XChange\Http\Requests\Concerns\SanitizesRiderSplashHtml;
+use LBHurtado\XChange\Http\Requests\Concerns\ValidatesCockpitPayeePolicy;
 use LBHurtado\XChange\Http\Requests\Concerns\ValidatesMinimumWithdrawalPolicy;
 
 class GeneratePayCodeRequest extends FormRequest
 {
     use SanitizesRiderSplashHtml;
-    use ValidatesMinimumWithdrawalPolicy;
+    use ValidatesCockpitPayeePolicy;
+    use ValidatesMinimumWithdrawalPolicy {
+        after as minimumWithdrawalPolicyValidators;
+    }
 
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [
+            ...$this->minimumWithdrawalPolicyValidators(),
+            ...$this->cockpitPayeePolicyValidators(),
+        ];
     }
 
     /**
@@ -50,8 +66,9 @@ class GeneratePayCodeRequest extends FormRequest
             'cash.mandates.*' => ['string', 'max:120'],
 
             'cash.validation' => ['nullable', 'array'],
-            'cash.validation.secret' => ['nullable'],
+            'cash.validation.secret' => ['nullable', 'string', 'min:4', 'max:255'],
             'cash.validation.mobile' => ['nullable', 'string'],
+            'cash.validation.mobile_verification' => ['nullable', 'string', 'in:otp'],
             'cash.validation.payable' => ['nullable', 'string'],
             'cash.validation.country' => ['nullable', 'string', 'max:10'],
             'cash.validation.location' => ['nullable', 'string'],
@@ -59,6 +76,7 @@ class GeneratePayCodeRequest extends FormRequest
 
             'inputs' => ['required', 'array'],
             'inputs.fields' => ['present', 'array'],
+            'inputs.fields.*' => ['string', 'max:120', 'distinct:strict'],
             'inputs.requirements' => ['nullable', 'array'],
             'inputs.requirements.*' => ['string', 'max:120'],
 
@@ -179,6 +197,9 @@ class GeneratePayCodeRequest extends FormRequest
             'metadata.custom.cockpit' => ['nullable', 'array'],
             'metadata.custom.cockpit.template_key' => ['nullable', 'string', 'max:80'],
             'metadata.custom.cockpit.source' => ['nullable', 'string', 'max:80'],
+            'metadata.custom.cockpit.payee' => ['nullable', 'array'],
+            'metadata.custom.cockpit.payee.kind' => ['nullable', Rule::enum(CockpitPayeeKind::class)],
+            'metadata.custom.cockpit.payee.explicit_secret' => ['nullable', 'boolean'],
             'metadata.custom.cockpit.purpose' => ['nullable', 'string', 'max:255'],
             'metadata.custom.cockpit.recipient_reference' => ['nullable', 'string', 'max:80'],
             'metadata.custom.settlement' => ['nullable', 'array'],

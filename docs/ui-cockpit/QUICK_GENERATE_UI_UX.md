@@ -51,6 +51,30 @@ An Order remains a draft until **Issue Pay Code** succeeds. Changing this card
 does not move money, contact a provider, deliver a message, or create a Pay
 Code.
 
+#### Pay To Interpretation
+
+**Pay To** uses one canonical, fail-closed interpretation shared by Vue and the
+issuance request boundary:
+
+| Entry | Interpretation | Automatic claim controls |
+| --- | --- | --- |
+| Blank or `CASH` | Open recipient | No identity control is added. |
+| Valid Philippine mobile | Mobile-bound | Mobile input, exact mobile match, and OTP are selected and locked. |
+| Email address | Email-bound, deferred | Email input is selected, but issuance remains unavailable until email OTP is implemented. |
+| `@alias` | Vendor-bound | Vendor matching is selected and composes with every other claim safeguard. |
+| Any other 4–255 character value | Release secret | The value becomes a private release code. |
+| Double-quoted value | Explicit release secret | Quotes are removed; even a mobile, email, or alias-shaped value is treated as a secret. |
+
+A malformed mobile-like value is never silently downgraded to a secret. The
+operator must correct it or quote it deliberately. Release secrets are masked
+outside the focused field, redacted from previews and estimates, and sent only
+to the issuance request. OTP identity verification does not enable SMS feedback
+delivery.
+
+Email OTP remains a deliberate follow-up capability. It must introduce its own
+verification contract, price-list item, readiness check, and Claim workflow;
+generic mobile OTP and email feedback must not be reused as substitutes.
+
 ### Pay Code
 
 **Pay Code** is the live representation of the object being created. Its tabs
@@ -107,6 +131,10 @@ and accounting semantics remain unchanged.
 - The page header explains: **Create a Pay Code for someone to claim.**
 - The left authoring card is **Order** and visibly includes **Amount**, **Pay
   To**, and **Purpose**.
+- Valid mobile Pay To values automatically lock mobile and OTP claim controls.
+- Mobile-like mistakes block issuance; quoting explicitly selects a release
+  secret.
+- Email Pay To values are recognized but fail closed until email OTP exists.
 - The right preview card remains **Pay Code** with the tab order **Stamp**,
   **Design**, **Claim**, **Cost**.
 - **Claim Experience** is collapsed by default and has a concise explanation
