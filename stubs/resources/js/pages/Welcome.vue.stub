@@ -27,7 +27,7 @@ withDefaults(
     </Head>
 
     <main
-        class="relative isolate min-h-screen overflow-x-hidden bg-[#f7f5f2] text-slate-950"
+        class="relative isolate min-h-screen overflow-x-hidden bg-[#f7f5f2] text-slate-950 lg:grid lg:grid-rows-[6rem_minmax(0,1fr)_auto]"
     >
         <div
             aria-hidden="true"
@@ -75,7 +75,7 @@ withDefaults(
         </header>
 
         <section
-            class="relative z-10 mx-auto grid max-w-[88rem] gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-[calc(100vh-6rem)] lg:grid-cols-[minmax(22rem,0.76fr)_minmax(38rem,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-5"
+            class="relative z-10 mx-auto grid max-w-[88rem] gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:min-h-0 lg:grid-cols-[minmax(22rem,0.76fr)_minmax(38rem,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-5"
         >
             <div class="max-w-xl">
                 <p
@@ -198,5 +198,13 @@ withDefaults(
                 </div>
             </div>
         </section>
+
+        <footer
+            class="relative z-10 mx-auto flex w-full max-w-[88rem] flex-col items-end gap-1 px-5 pb-5 text-right text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:flex-row sm:items-center sm:justify-end sm:gap-2 sm:px-8 lg:px-10 lg:pb-4"
+        >
+            <span>Release {{ $page.props.version }}</span>
+            <span aria-hidden="true" class="hidden text-slate-300 sm:inline">·</span>
+            <span>© 2026 3neti R&amp;D OPC</span>
+        </footer>
     </main>
 </template>
