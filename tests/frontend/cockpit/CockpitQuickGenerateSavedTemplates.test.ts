@@ -28,6 +28,7 @@ describe('Quick Generate saved templates', () => {
 
     it('applies an owner template without restoring recipient details', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: document.body,
             props: {
                 templates: cockpitQuickGenerateTemplates,
                 savedTemplates: [
@@ -76,6 +77,7 @@ describe('Quick Generate saved templates', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-saved-template-option"]')
             .trigger('click');
+        await wrapper.vm.$nextTick();
 
         expect(
             wrapper
@@ -86,7 +88,7 @@ describe('Quick Generate saved templates', () => {
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
             ).element.value,
-        ).toBe('75');
+        ).toBe('75.00');
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-purpose"]',
@@ -97,6 +99,11 @@ describe('Quick Generate saved templates', () => {
                 '[data-testid="cockpit-quick-generate-primary-recipient"]',
             ).element.value,
         ).toBe('');
+        expect(document.activeElement).toBe(
+            wrapper.get(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element,
+        );
 
         const preview = JSON.parse(
             wrapper
@@ -110,6 +117,7 @@ describe('Quick Generate saved templates', () => {
             reference: '01TEMPLATE',
             name: 'Weekly Allowance',
         });
+        wrapper.unmount();
     });
 
     it('submits a sanitized reusable blueprint through Wayfinder', async () => {

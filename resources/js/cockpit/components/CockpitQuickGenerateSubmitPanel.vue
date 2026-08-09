@@ -61,6 +61,7 @@ import type {
     RiderStampTheme,
 } from '../riderStampPreview';
 import type { RiderContentFormat } from '../riderContent';
+import CockpitAmountPicker from './CockpitAmountPicker.vue';
 import CockpitClaimExperiencePreview from './CockpitClaimExperiencePreview.vue';
 import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
@@ -698,7 +699,9 @@ const issuedPayCodeDialogOpen = ref(false);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
 const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
-const amountInputElement = ref<HTMLInputElement | null>(null);
+const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
+    null,
+);
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
 const riderDesignTeleportReady = ref(false);
 const riderDesignTeleportTarget = ref<HTMLElement | null>(null);
@@ -723,11 +726,13 @@ hydrateLastInstructions();
 
 onMounted((): void => {
     riderDesignTeleportReady.value = true;
-
-    void nextTick((): void => {
-        amountInputElement.value?.focus();
-    });
+    void focusAmountEditor();
 });
+
+async function focusAmountEditor(): Promise<void> {
+    await nextTick();
+    amountInputElement.value?.focus();
+}
 
 watch(
     selectedTemplate,
@@ -903,6 +908,7 @@ function startBlank(): void {
     applyTemplateDefaults('blank-pay-code');
     applyingStartingPoint.value = false;
     lastMessage.value = 'Blank Pay Code ready. Add only what this claim needs.';
+    void focusAmountEditor();
 }
 
 function markRiderStampArtworkSourceSelection(): void {
@@ -952,6 +958,7 @@ function repeatLastDesign(): void {
     lastStatus.value = 'ready';
     lastMessage.value =
         'Last Pay Code settings restored. Add the new recipient before issuing.';
+    void focusAmountEditor();
 }
 
 function savedTemplateRecordedBy(
@@ -993,6 +1000,7 @@ function applySystemTemplate(templateKey: string): void {
         templateKey === 'blank-pay-code' ? 'blank' : 'template';
     activeSavedTemplate.value = null;
     templatePickerOpen.value = false;
+    void focusAmountEditor();
 }
 
 function applySavedTemplate(template: CockpitSavedPayCodeTemplate): void {
@@ -1007,6 +1015,7 @@ function applySavedTemplate(template: CockpitSavedPayCodeTemplate): void {
     templatePickerOpen.value = false;
     lastStatus.value = 'ready';
     lastMessage.value = `${template.name} is ready. Add the recipient and review before issuing.`;
+    void focusAmountEditor();
 }
 
 function reusableTemplateInstructions(): Record<string, unknown> {
@@ -4941,13 +4950,35 @@ function instructionRecord(
                             Set the value, payee, and purpose.
                         </p>
                     </div>
-                    <span
-                        class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
-                        :class="voucherKindTone"
-                        data-testid="cockpit-quick-generate-voucher-kind"
-                    >
-                        {{ voucherKindLabel }}
-                    </span>
+                    <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                        <span
+                            class="inline-flex items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
+                            :class="voucherKindTone"
+                            data-testid="cockpit-quick-generate-voucher-kind"
+                        >
+                            {{ voucherKindLabel }}
+                        </span>
+                        <button
+                            type="submit"
+                            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                            data-testid="cockpit-quick-generate-submit-button"
+                            :disabled="!canSubmit || processing"
+                        >
+                            <LoaderCircle
+                                v-if="processing"
+                                class="size-4 animate-spin"
+                                aria-hidden="true"
+                                data-testid="cockpit-quick-generate-issue-spinner"
+                            />
+                            <TicketCheck
+                                v-else
+                                class="size-4"
+                                aria-hidden="true"
+                                data-testid="cockpit-quick-generate-issue-icon"
+                            />
+                            {{ processing ? 'Issuing…' : 'Issue Pay Code' }}
+                        </button>
+                    </div>
                 </div>
                 <div
                     class="mt-4 grid items-start gap-3 sm:grid-cols-2"
@@ -4960,24 +4991,11 @@ function instructionRecord(
                         <label for="cockpit-quick-generate-primary-amount">
                             Amount
                         </label>
-                        <div class="flex h-12 rounded-xl shadow-sm">
-                            <span
-                                class="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
-                            >
-                                ₱
-                            </span>
-                            <input
-                                id="cockpit-quick-generate-primary-amount"
-                                ref="amountInputElement"
-                                v-model="amount"
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                class="h-12 w-full min-w-0 rounded-r-xl border border-slate-200 bg-white px-3 text-base font-semibold text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-primary-amount"
-                                :disabled="processing"
-                            />
-                        </div>
+                        <CockpitAmountPicker
+                            ref="amountInputElement"
+                            v-model="amount"
+                            :disabled="processing"
+                        />
                         <div
                             class="mt-1 flex min-h-5 items-baseline justify-between gap-3 px-0.5 text-[0.7rem] leading-5"
                             data-testid="cockpit-quick-generate-account-debit"
@@ -5192,32 +5210,6 @@ function instructionRecord(
                             @generate="generateClaimPreview(false)"
                             @refresh="generateClaimPreview(true)"
                         />
-                    </template>
-                    <template #action>
-                        <button
-                            type="submit"
-                            class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-                            data-testid="cockpit-quick-generate-canvas-submit-button"
-                            :disabled="!canSubmit || processing"
-                        >
-                            <LoaderCircle
-                                v-if="processing"
-                                class="size-4 animate-spin"
-                                aria-hidden="true"
-                                data-testid="cockpit-quick-generate-issue-spinner"
-                            />
-                            <TicketCheck
-                                v-else
-                                class="size-4"
-                                aria-hidden="true"
-                                data-testid="cockpit-quick-generate-issue-icon"
-                            />
-                            {{
-                                processing
-                                    ? 'Issuing Pay Code…'
-                                    : 'Issue Pay Code'
-                            }}
-                        </button>
                     </template>
                 </CockpitPayCodeCanvas>
             </div>
@@ -8871,15 +8863,6 @@ function instructionRecord(
                 >{{ sanitizedInstructionPayloadJson }}</pre
             >
         </details>
-
-        <button
-            type="submit"
-            class="mt-4 w-full rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-            data-testid="cockpit-quick-generate-submit-button"
-            :disabled="!canSubmit || processing"
-        >
-            {{ processing ? 'Issuing Pay Code…' : 'Issue Pay Code' }}
-        </button>
 
         <p class="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-300">
             {{ lastMessage }}

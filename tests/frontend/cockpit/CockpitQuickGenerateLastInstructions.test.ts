@@ -16,6 +16,7 @@ vi.mock('@inertiajs/vue3', () => ({
 describe('Quick Generate last instructions', () => {
     it('preloads the last successful design without restoring its secret', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: document.body,
             props: {
                 templates: cockpitQuickGenerateTemplates,
                 savedTemplates: [
@@ -105,7 +106,7 @@ describe('Quick Generate last instructions', () => {
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
             ).element.value,
-        ).toBe('88.5');
+        ).toBe('88.50');
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-recipient"]',
@@ -190,6 +191,7 @@ describe('Quick Generate last instructions', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
+        await wrapper.vm.$nextTick();
 
         expect(
             wrapper
@@ -203,6 +205,11 @@ describe('Quick Generate last instructions', () => {
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
             ).element.value,
         ).toBe('');
+        expect(document.activeElement).toBe(
+            wrapper.get(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element,
+        );
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-recipient"]',
@@ -212,22 +219,29 @@ describe('Quick Generate last instructions', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-repeat-last"]')
             .trigger('click');
+        await wrapper.vm.$nextTick();
 
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
             ).element.value,
-        ).toBe('88.5');
+        ).toBe('88.50');
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-recipient"]',
             ).element.value,
         ).toBe('');
+        expect(document.activeElement).toBe(
+            wrapper.get(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element,
+        );
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-feedback-mobile"]',
             ).element.value,
         ).toBe('');
+        wrapper.unmount();
     });
 
     it('gives explicit campaign context precedence over remembered instructions', () => {
@@ -264,7 +278,7 @@ describe('Quick Generate last instructions', () => {
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
             ).element.value,
-        ).toBe('500');
+        ).toBe('500.00');
         expect(
             wrapper
                 .find(

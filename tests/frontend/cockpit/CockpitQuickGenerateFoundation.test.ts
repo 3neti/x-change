@@ -3865,9 +3865,6 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).not.toContain(
             'Changes appear here before issuance.',
         );
-        const canvasControls = essentialsCanvas.find(
-            '[data-testid="cockpit-pay-code-canvas-controls"]',
-        );
         const quickGenerateHeader = wrapper.get(
             '[data-testid="cockpit-quick-generate-header"]',
         );
@@ -3875,20 +3872,6 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-funding-link"]',
         );
 
-        expect(canvasControls.text()).toContain('Issue Pay Code');
-        expect(canvasControls.text()).not.toContain('Edit Stamp');
-        expect(canvasControls.text()).not.toContain('Cost');
-        expect(canvasControls.text()).not.toContain('Funding');
-        expect(
-            canvasControls
-                .find('[data-testid="cockpit-pay-code-canvas-front-button"]')
-                .exists(),
-        ).toBe(false);
-        expect(
-            canvasControls
-                .find('[data-testid="cockpit-pay-code-canvas-back-button"]')
-                .exists(),
-        ).toBe(false);
         const canvasHeader = essentialsCanvas.get(
             '[data-testid="cockpit-pay-code-canvas-header"]',
         );
@@ -3905,27 +3888,21 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(quickGenerateHeader.classes()).toContain('justify-between');
         expect(quickGenerateHeader.text()).toContain('Pay Code Issuance');
         expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');
-        const actionRail = canvasControls.get(
-            '[data-testid="cockpit-pay-code-canvas-action-rail"]',
-        );
-        const canvasSubmitButton = actionRail.get(
-            '[data-testid="cockpit-quick-generate-canvas-submit-button"]',
+        const orderSubmitButton = essentialsCanvas.get(
+            '[data-testid="cockpit-quick-generate-submit-button"]',
         );
 
-        expect(actionRail.classes()).toContain('flex-nowrap');
         expect(
-            actionRail
+            essentialsCanvas
                 .find(
-                    '[data-testid="cockpit-quick-generate-edit-front-button"]',
+                    '[data-testid="cockpit-pay-code-canvas-action-rail"]',
                 )
                 .exists(),
         ).toBe(false);
-        expect(actionRail.classes()).toContain('flex-1');
-        expect(canvasSubmitButton.classes()).toContain('w-full');
-        expect(canvasSubmitButton.classes()).toContain('min-h-12');
-        expect(canvasSubmitButton.classes()).toContain('rounded-xl');
+        expect(orderSubmitButton.classes()).toContain('min-h-10');
+        expect(orderSubmitButton.classes()).toContain('rounded-xl');
         expect(
-            canvasSubmitButton
+            orderSubmitButton
                 .find('[data-testid="cockpit-quick-generate-issue-icon"]')
                 .exists(),
         ).toBe(true);
@@ -3939,12 +3916,10 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Engineering Preview');
         expect(wrapper.text()).toContain('Issue Pay Code');
         expect(
-            wrapper
-                .find(
-                    '[data-testid="cockpit-quick-generate-canvas-submit-button"]',
-                )
-                .exists(),
-        ).toBe(true);
+            wrapper.findAll(
+                '[data-testid="cockpit-quick-generate-submit-button"]',
+            ),
+        ).toHaveLength(1);
         const instructionBuilder = wrapper.find(
             '[data-testid="cockpit-voucher-instruction-builder"]',
         );
