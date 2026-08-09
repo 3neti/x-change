@@ -2024,7 +2024,7 @@ return [
                 'XCHANGE_CLAIM_UI_VARIANT',
                 env('FORM_FLOW_UI_VARIANT', 'default'),
             ),
-            'action_placement' => env('XCHANGE_CLAIM_UI_ACTION_PLACEMENT', 'bottom'),
+            'action_placement' => env('XCHANGE_CLAIM_UI_ACTION_PLACEMENT', 'viewport_bottom'),
             'show_package_versions' => (bool) env(
                 'XCHANGE_CLAIM_UI_SHOW_PACKAGE_VERSIONS',
                 env('APP_ENV', 'production') !== 'production',

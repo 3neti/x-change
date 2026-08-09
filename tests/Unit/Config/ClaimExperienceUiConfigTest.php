@@ -17,7 +17,7 @@ it('defines the public claim experience ui profile without cockpit coupling', fu
             'permissions',
         ])
         ->and($profile['variant'])->toBeIn(['default', 'compact', 'immersive'])
-        ->and($profile['action_placement'])->toBeIn(['inline', 'bottom', 'bottom_sticky'])
+        ->and($profile['action_placement'])->toBeIn(['inline', 'bottom', 'bottom_sticky', 'viewport_bottom'])
         ->and($profile['show_package_versions'])->toBeBool()
         ->and($profile['copy'])->toHaveKeys([
             'entry_title',

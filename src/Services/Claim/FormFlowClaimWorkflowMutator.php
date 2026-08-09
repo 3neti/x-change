@@ -112,7 +112,7 @@ final class FormFlowClaimWorkflowMutator
             config('form-flow.ui.variant', 'default'),
         );
         $actionPlacement = config('x-change.claim.experience_ui.action_placement')
-            ?: 'bottom';
+            ?: 'viewport_bottom';
 
         $config['ui_variant'] ??= $variant;
         $config['action_placement'] ??= $actionPlacement;

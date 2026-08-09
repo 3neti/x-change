@@ -404,12 +404,14 @@ watch(
             <Button
                 ref="submitButton"
                 type="submit"
-                class="w-full rounded-full"
+                class="fixed inset-x-0 bottom-[max(0.2in,calc(env(safe-area-inset-bottom)+1rem))] z-30 mx-auto h-11 w-[calc(100%-2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10"
                 data-testid="claim-widget-submit-button"
                 :disabled="submitViewModel.disabled"
             >
                 {{ submitViewModel.label }}
             </Button>
+
+            <div class="h-24 shrink-0" aria-hidden="true" />
 
             <p
                 v-if="claimExperienceLoading"

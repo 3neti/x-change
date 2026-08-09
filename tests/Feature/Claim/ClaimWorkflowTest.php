@@ -235,7 +235,7 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         ->and($walletStep['claim_workflow']['key'])->toBe('disbursement.v1')
         ->and($walletStep['claim_workflow']['confirmation_label'])->toBe('Confirm Redemption')
         ->and($walletStep['ui_variant'])->toBe('immersive')
-        ->and($walletStep['action_placement'])->toBe('bottom')
+        ->and($walletStep['action_placement'])->toBe('viewport_bottom')
         ->and($walletStep['ui_layout']['density'])->toBe('compact')
         ->and($walletStep['ui_layout']['capture_surface'])->toBe('edge_to_edge')
         ->and($walletStep['ui_layout']['minimize_scroll'])->toBeTrue()
@@ -247,7 +247,7 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         ])
         ->and($walletStep['show_package_versions'])->toBeBool()
         ->and($otpStep['ui_variant'])->toBe('immersive')
-        ->and($otpStep['action_placement'])->toBe('bottom')
+        ->and($otpStep['action_placement'])->toBe('viewport_bottom')
         ->and($otpStep['app_name'])->toBe('Pay Code')
         ->and($otpStep['app_logo'])->toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg')
         ->and($otpStep['package_versions'])->toContain([
