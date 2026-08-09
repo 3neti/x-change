@@ -35,9 +35,9 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->toContain('Claim when you’re ready—with a participating bank or')
         ->toContain('{{ $page.props.name }}')
         ->toContain('Powered by x-change')
-        ->toContain('/vendor/x-change/images/logo-orange.png')
+        ->toContain("import XChangeLogo from '@/components/x-change/XChangeLogo.vue'")
         ->toContain('sm:h-14')
-        ->toContain("background-image: url('/vendor/x-change/favicon.png')")
+        ->toContain('gClefPulleyBrandAssets.logo')
         ->toContain('bg-[length:auto_100%]')
         ->toContain('amount="₱537.00"')
         ->toContain('estimated-cost="₱543.90"')
@@ -69,7 +69,7 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
         ->and(is_file($packageRoot.'/resources/js/cockpit/components/CockpitLandingClaimExperiencePresentation.vue'))->toBeTrue();
 
     expect(substr_count($stub, 'Open Cockpit'))->toBe(1);
-    expect(substr_count($stub, '/vendor/x-change/images/logo-orange.png'))->toBe(1);
+    expect(substr_count($stub, '<XChangeLogo'))->toBe(1);
 });
 
 it('ships the canonical Pay Code vector alongside x-change branding', function (): void {
@@ -88,5 +88,5 @@ it('ships the canonical Pay Code vector alongside x-change branding', function (
         ->toContain('The instruction that moves money.')
         ->and($payCodeMark)->not->toBeFalse()
         ->toContain('viewBox="245 70 765 765"')
-        ->and(is_file($packageRoot.'/resources/assets/images/logo-orange.png'))->toBeTrue();
+        ->and(is_file($packageRoot.'/resources/assets/images/brand-library/x-change/svg/x-change-logo.svg'))->toBeTrue();
 });

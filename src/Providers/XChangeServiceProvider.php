@@ -1240,7 +1240,7 @@ class XChangeServiceProvider extends ServiceProvider
                 'splash.app_logo',
                 (string) config(
                     'x-change.branding.logo_light',
-                    '/vendor/x-change/images/logo-orange.png',
+                    '/vendor/x-change/images/brand-library/x-change/svg/x-change-logo.svg',
                 ),
             ),
         ]);
@@ -1946,7 +1946,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/assets/images') => public_path('vendor/x-change/images'),
             $this->packagePath('resources/assets/favicon.ico') => public_path('vendor/x-change/favicon.ico'),
             $this->packagePath('resources/assets/favicon.png') => public_path('vendor/x-change/favicon.png'),
-            $this->packagePath('resources/assets/favicon.svg') => public_path('vendor/x-change/favicon.svg'),
+            $this->packagePath('resources/assets/images/brand-library/g-clef-pulley/svg/g-clef-pulley-favicon.svg') => public_path('vendor/x-change/favicon.svg'),
             $this->packagePath('resources/assets/apple-touch-icon.png') => public_path('vendor/x-change/apple-touch-icon.png'),
         ], 'x-change-assets');
 

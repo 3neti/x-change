@@ -5,6 +5,8 @@ import { start as startClaim } from '@/routes/x-change/claim';
 import { dashboard } from '@/routes/x-change/cockpit';
 import CockpitLandingClaimExperiencePresentation from '@/cockpit/components/CockpitLandingClaimExperiencePresentation.vue';
 import CockpitQuickGenerateOrderPresentation from '@/cockpit/components/CockpitQuickGenerateOrderPresentation.vue';
+import XChangeLogo from '@/components/x-change/XChangeLogo.vue';
+import { gClefPulleyBrandAssets } from '@/components/x-change/brandAssets';
 
 withDefaults(
     defineProps<{
@@ -30,18 +32,16 @@ withDefaults(
         <div
             aria-hidden="true"
             class="bg-top-left pointer-events-none absolute inset-y-0 left-0 h-screen w-full bg-contain bg-no-repeat opacity-[0.1] lg:bg-[length:auto_100%] lg:bg-left"
-            style="background-image: url('/vendor/x-change/favicon.png')"
+            :style="{
+                backgroundImage: `url('${gClefPulleyBrandAssets.logo}')`,
+            }"
         />
 
         <header
             class="relative z-10 mx-auto flex h-24 max-w-[88rem] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10"
         >
             <div class="flex items-center gap-3">
-                <img
-                    src="/vendor/x-change/images/logo-orange.png"
-                    alt="x-change"
-                    class="h-12 w-auto shrink-0 object-contain sm:h-14"
-                />
+                <XChangeLogo class-name="h-12 shrink-0 sm:h-14" />
                 <span class="shrink-0 border-l border-slate-300 pl-3">
                     <span
                         class="block max-w-28 truncate text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-slate-700 sm:max-w-44 sm:text-xs"

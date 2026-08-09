@@ -1,0 +1,769 @@
+{
+  "name": "x-change canonical vector brand library",
+  "generated": "2026-08-09",
+  "generator": "potrace 1.16 tracing + rsvg-convert 2.62.3 rasterisation",
+  "families": {
+    "x-change": {
+      "description": "Pulley wheel with five filled spokes on a shaft with a lifting hook, enclosed in a rounded capsule frame.",
+      "id_prefix": "xc",
+      "base_viewBox": "0 0 600 1490",
+      "groups": [
+        "frame",
+        "wheel"
+      ]
+    },
+    "g-clef-pulley": {
+      "description": "Treble clef drawn as rigging: shackle, two multi-sheave pulley blocks, rope hatching, and a lifting hook.",
+      "id_prefix": "gcp",
+      "base_viewBox": "0 0 420 1192",
+      "groups": [
+        "linework",
+        "rivets",
+        "rope",
+        "hook"
+      ]
+    }
+  },
+  "palette": {
+    "orange": "#F97316",
+    "silver": "#C0C0C0",
+    "slate": "#475569",
+    "mono_ink": "#111111"
+  },
+  "fonts": {
+    "used": [],
+    "note": "No asset contains text. The brief's wordmark/lockup expectations were satisfied with mark-only compositions at differing clear space, because none of the source artwork contains lettering and inventing a wordmark would have meant designing new brand geometry."
+  },
+  "audit_findings": [
+    "logo.png is a different artwork from logo-orange/silver/slate.png, not a fourth colourway: it is the clef, while the others are the capsule pulley mark.",
+    "logo-orange.png, logo-silver.png, and logo-slate.png share pixel-identical alpha geometry.",
+    "favicon.svg contains no vector geometry; it embeds a raster <image> pointing at /images/logo-orange.png.",
+    "favicon.svg (capsule) and favicon.png (clef) depict different artwork, so the existing favicon set is internally inconsistent.",
+    "favicon.png is clipped at top and bottom (alpha bbox 132x192+30+0 in a 192x192 canvas).",
+    "No original vector source exists for either family, so all geometry here is reconstructed by tracing."
+  ],
+  "asset_count": 30,
+  "assets": [
+    {
+      "path": "x-change/svg/x-change-dark.svg",
+      "format": "svg",
+      "family": "x-change",
+      "variant": "dark",
+      "usage": "Dark (slate) treatment for light backgrounds and print on white.",
+      "viewBox": "0 0 672 1562",
+      "primary_colors": [
+        "#475569"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "source_notes": "Traced from logo-orange.png. The orange, silver, and slate PNGs were verified to have pixel-identical alpha geometry (0 differing pixels), so a single trace serves all three colourways and recolouring is exact.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "2138a11b914fad11d0b9a8024e667085ad9800d0f071e425b2998d900f874502"
+    },
+    {
+      "path": "x-change/svg/x-change-favicon.svg",
+      "format": "svg",
+      "family": "x-change",
+      "variant": "favicon",
+      "usage": "Browser tab icon and other 16-48 px placements.",
+      "viewBox": "0 0 700 700",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "source_notes": "Traced from logo-orange.png. The orange, silver, and slate PNGs were verified to have pixel-identical alpha geometry (0 differing pixels), so a single trace serves all three colourways and recolouring is exact.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Deliberate deviation: cropped to the pulley wheel and its housing; the shaft and hook are excluded because the full 1:2.5 portrait artwork collapses to about 6 px wide at 16 px. Legible down to 16 px.",
+      "sha256": "c3190b2ec4cee4e8a09e609d0372e6fd9e0a6e0731498cf709d26c23633640ab"
+    },
+    {
+      "path": "x-change/svg/x-change-light.svg",
+      "format": "svg",
+      "family": "x-change",
+      "variant": "light",
+      "usage": "Light (silver) treatment for dark or photographic backgrounds.",
+      "viewBox": "0 0 672 1562",
+      "primary_colors": [
+        "#C0C0C0"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "source_notes": "Traced from logo-orange.png. The orange, silver, and slate PNGs were verified to have pixel-identical alpha geometry (0 differing pixels), so a single trace serves all three colourways and recolouring is exact.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "a162b5f3eb6420e44cbd26fbf15b8eea527a25b78bf5e2566cca4a65d7b21efa"
+    },
+    {
+      "path": "x-change/svg/x-change-lockup.svg",
+      "format": "svg",
+      "family": "x-change",
+      "variant": "lockup",
+      "usage": "Full brand composition with generous clear space for slides, social cards, and co-branding.",
+      "viewBox": "0 0 1966 1966",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "source_notes": "Traced from logo-orange.png. The orange, silver, and slate PNGs were verified to have pixel-identical alpha geometry (0 differing pixels), so a single trace serves all three colourways and recolouring is exact.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes. Square canvas adds lateral clear space because the source artwork is portrait (about 1:2.5); aspect ratio is preserved and the artwork is not distorted.",
+      "sha256": "d93d9e6871e52a85f55a8585bf028b7665188b6dd54f2277a0d7ea54575a4a28"
+    },
+    {
+      "path": "x-change/svg/x-change-logo.svg",
+      "format": "svg",
+      "family": "x-change",
+      "variant": "logo",
+      "usage": "Primary logo for site headers, documents, and general brand placement.",
+      "viewBox": "0 0 672 1562",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "source_notes": "Traced from logo-orange.png. The orange, silver, and slate PNGs were verified to have pixel-identical alpha geometry (0 differing pixels), so a single trace serves all three colourways and recolouring is exact.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "a8fe7d7d689ee63a4ea4de3b617b118509e0d92a3eff03eb2590bb6dcf9a299d"
+    },
+    {
+      "path": "x-change/svg/x-change-mark.svg",
+      "format": "svg",
+      "family": "x-change",
+      "variant": "mark",
+      "usage": "Standalone symbol for app icons, avatars, and square placements.",
+      "viewBox": "0 0 1610 1610",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "source_notes": "Traced from logo-orange.png. The orange, silver, and slate PNGs were verified to have pixel-identical alpha geometry (0 differing pixels), so a single trace serves all three colourways and recolouring is exact.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes. Square canvas adds lateral clear space because the source artwork is portrait (about 1:2.5); aspect ratio is preserved and the artwork is not distorted.",
+      "sha256": "bdf830e50e791b06f0a8fff76597a6a558de4feff114d97fe095d3ee5d2be2cf"
+    },
+    {
+      "path": "x-change/svg/x-change-monochrome.svg",
+      "format": "svg",
+      "family": "x-change",
+      "variant": "monochrome",
+      "usage": "Single-ink reproduction: print, engraving, stamps, faxes, watermarks.",
+      "viewBox": "0 0 672 1562",
+      "primary_colors": [
+        "#111111"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "source_notes": "Traced from logo-orange.png. The orange, silver, and slate PNGs were verified to have pixel-identical alpha geometry (0 differing pixels), so a single trace serves all three colourways and recolouring is exact.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "e8e28cf0747ccf23859ad77ad86d490ea19010f47e4948625db2f6a5a719cf85"
+    },
+    {
+      "path": "x-change/source/x-change-editable.svg",
+      "format": "svg",
+      "family": "x-change",
+      "variant": "editable",
+      "usage": "Editable master source; recolour via the --brand-ink custom property.",
+      "viewBox": "0 0 672 1562",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "source_notes": "Traced from logo-orange.png. The orange, silver, and slate PNGs were verified to have pixel-identical alpha geometry (0 differing pixels), so a single trace serves all three colourways and recolouring is exact.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "9cff9c25ae29b56311310d848863c97d7a8df3c8b0aba04013074b4dad8b3731"
+    },
+    {
+      "path": "x-change/png/x-change-dark.png",
+      "format": "png",
+      "family": "x-change",
+      "variant": "dark",
+      "usage": "Dark (slate) treatment for light backgrounds and print on white. Raster fallback.",
+      "dimensions": "688x1600",
+      "primary_colors": [
+        "#475569"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "x-change/svg/x-change-dark.svg",
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "874b131eb821568f283fc8e3ab9aa2fa4c2bc1d332565323156147fd611d5bc1"
+    },
+    {
+      "path": "x-change/png/x-change-favicon.png",
+      "format": "png",
+      "family": "x-change",
+      "variant": "favicon",
+      "usage": "Browser tab icon and other 16-48 px placements. Raster fallback.",
+      "dimensions": "512x512",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "x-change/svg/x-change-favicon.svg",
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Deliberate deviation: cropped to the pulley wheel and its housing; the shaft and hook are excluded because the full 1:2.5 portrait artwork collapses to about 6 px wide at 16 px. Legible down to 16 px.",
+      "sha256": "4367b3ee1f4526556800f0d121f8bb1ad3ee9fb663772246e6fa39fc5556f930"
+    },
+    {
+      "path": "x-change/png/x-change-light.png",
+      "format": "png",
+      "family": "x-change",
+      "variant": "light",
+      "usage": "Light (silver) treatment for dark or photographic backgrounds. Raster fallback.",
+      "dimensions": "688x1600",
+      "primary_colors": [
+        "#C0C0C0"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "x-change/svg/x-change-light.svg",
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "b2de6470eddfbbea46dcf75fede2d044d4cfecc6dddb5d31741a338e54f13019"
+    },
+    {
+      "path": "x-change/png/x-change-lockup.png",
+      "format": "png",
+      "family": "x-change",
+      "variant": "lockup",
+      "usage": "Full brand composition with generous clear space for slides, social cards, and co-branding. Raster fallback.",
+      "dimensions": "1600x1600",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "x-change/svg/x-change-lockup.svg",
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes. Square canvas adds lateral clear space because the source artwork is portrait (about 1:2.5); aspect ratio is preserved and the artwork is not distorted.",
+      "sha256": "329609604cffdcf8eaf2bb9fa12a801740303fccc049ea8f644f1ab91765404e"
+    },
+    {
+      "path": "x-change/png/x-change-logo.png",
+      "format": "png",
+      "family": "x-change",
+      "variant": "logo",
+      "usage": "Primary logo for site headers, documents, and general brand placement. Raster fallback.",
+      "dimensions": "688x1600",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "x-change/svg/x-change-logo.svg",
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "97bed8098d08f08f1dba19ecaf1cc3e3d9aa29af7c682fb9491dad807c6c0353"
+    },
+    {
+      "path": "x-change/png/x-change-mark.png",
+      "format": "png",
+      "family": "x-change",
+      "variant": "mark",
+      "usage": "Standalone symbol for app icons, avatars, and square placements. Raster fallback.",
+      "dimensions": "1024x1024",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "x-change/svg/x-change-mark.svg",
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes. Square canvas adds lateral clear space because the source artwork is portrait (about 1:2.5); aspect ratio is preserved and the artwork is not distorted.",
+      "sha256": "b7717fc45836f4d975b582f27845aac6bb8c1662595493e6a56a0bc3b1174415"
+    },
+    {
+      "path": "x-change/png/x-change-monochrome.png",
+      "format": "png",
+      "family": "x-change",
+      "variant": "monochrome",
+      "usage": "Single-ink reproduction: print, engraving, stamps, faxes, watermarks. Raster fallback.",
+      "dimensions": "688x1600",
+      "primary_colors": [
+        "#111111"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "x-change/svg/x-change-monochrome.svg",
+      "source_inputs": [
+        "resources/assets/images/logo-orange.png",
+        "resources/assets/images/logo-silver.png",
+        "resources/assets/images/logo-slate.png"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Stroke weights are heavy (about 11% of artwork width), so the trace is stable at all sizes.",
+      "sha256": "62b032ee3bbe6018b587866c0c7e3c98dd29a444db0ba30f8b815fb2bdae5b21"
+    },
+    {
+      "path": "g-clef-pulley/svg/g-clef-pulley-dark.svg",
+      "format": "svg",
+      "family": "g-clef-pulley",
+      "variant": "dark",
+      "usage": "Dark (slate) treatment for light backgrounds and print on white.",
+      "viewBox": "0 0 470 1242",
+      "primary_colors": [
+        "#475569"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "source_notes": "Traced from logo.png, the only full-resolution rendition of this artwork. favicon.png is a clipped 192 px derivative (alpha bbox 132x192+30+0, touching top and bottom edges) and was used only to check small-size appearance. favicon.svg contains no vector geometry: it is a wrapper embedding a raster <image> reference to logo-orange.png, so it supplied no structural reference despite being nominated as the primary one.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "dca4ff0a5abe6df6ae21833857d589cfc4b55c54944e6bdaa7eced670532f379"
+    },
+    {
+      "path": "g-clef-pulley/svg/g-clef-pulley-favicon.svg",
+      "format": "svg",
+      "family": "g-clef-pulley",
+      "variant": "favicon",
+      "usage": "Browser tab icon and other 16-48 px placements.",
+      "viewBox": "0 0 296 296",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "source_notes": "Traced from logo.png, the only full-resolution rendition of this artwork. favicon.png is a clipped 192 px derivative (alpha bbox 132x192+30+0, touching top and bottom edges) and was used only to check small-size appearance. favicon.svg contains no vector geometry: it is a wrapper embedding a raster <image> reference to logo-orange.png, so it supplied no structural reference despite being nominated as the primary one.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Deliberate deviation: cropped to the lower pulley block and stroke-dilated by 1.5 px at 420 px scale, because source line weight is about 3% of width (0.48 px at 16 px, sub-pixel). Five clipped-rope fragments were removed by connected-component area filtering. Legible from about 24 px; at 16 px it reads as a dense pulley silhouette rather than distinct sheaves.",
+      "sha256": "9014444e3caead95ff7be0f3d5e499694c46dd0ebd9e63d7bd3856a38623a803"
+    },
+    {
+      "path": "g-clef-pulley/svg/g-clef-pulley-light.svg",
+      "format": "svg",
+      "family": "g-clef-pulley",
+      "variant": "light",
+      "usage": "Light (silver) treatment for dark or photographic backgrounds.",
+      "viewBox": "0 0 470 1242",
+      "primary_colors": [
+        "#C0C0C0"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "source_notes": "Traced from logo.png, the only full-resolution rendition of this artwork. favicon.png is a clipped 192 px derivative (alpha bbox 132x192+30+0, touching top and bottom edges) and was used only to check small-size appearance. favicon.svg contains no vector geometry: it is a wrapper embedding a raster <image> reference to logo-orange.png, so it supplied no structural reference despite being nominated as the primary one.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "dda013a2a99a205953e73adff33621b058fb68726de5717308879d461141a5c3"
+    },
+    {
+      "path": "g-clef-pulley/svg/g-clef-pulley-lockup.svg",
+      "format": "svg",
+      "family": "g-clef-pulley",
+      "variant": "lockup",
+      "usage": "Full brand composition with generous clear space for slides, social cards, and co-branding.",
+      "viewBox": "0 0 1574 1574",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "source_notes": "Traced from logo.png, the only full-resolution rendition of this artwork. favicon.png is a clipped 192 px derivative (alpha bbox 132x192+30+0, touching top and bottom edges) and was used only to check small-size appearance. favicon.svg contains no vector geometry: it is a wrapper embedding a raster <image> reference to logo-orange.png, so it supplied no structural reference despite being nominated as the primary one.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution. Square canvas adds lateral clear space because the source artwork is portrait (about 1:2.5); aspect ratio is preserved and the artwork is not distorted.",
+      "sha256": "dfb89015f271eafdcf4ed4be18b5a23715d86f97356ef72a2722bdc58330dd53"
+    },
+    {
+      "path": "g-clef-pulley/svg/g-clef-pulley-logo.svg",
+      "format": "svg",
+      "family": "g-clef-pulley",
+      "variant": "logo",
+      "usage": "Primary logo for site headers, documents, and general brand placement.",
+      "viewBox": "0 0 470 1242",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "source_notes": "Traced from logo.png, the only full-resolution rendition of this artwork. favicon.png is a clipped 192 px derivative (alpha bbox 132x192+30+0, touching top and bottom edges) and was used only to check small-size appearance. favicon.svg contains no vector geometry: it is a wrapper embedding a raster <image> reference to logo-orange.png, so it supplied no structural reference despite being nominated as the primary one.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "fecca60a67aa0c8a1ec105cb734d839e235af2fabdf169812398efa475ea371e"
+    },
+    {
+      "path": "g-clef-pulley/svg/g-clef-pulley-mark.svg",
+      "format": "svg",
+      "family": "g-clef-pulley",
+      "variant": "mark",
+      "usage": "Standalone symbol for app icons, avatars, and square placements.",
+      "viewBox": "0 0 1288 1288",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "source_notes": "Traced from logo.png, the only full-resolution rendition of this artwork. favicon.png is a clipped 192 px derivative (alpha bbox 132x192+30+0, touching top and bottom edges) and was used only to check small-size appearance. favicon.svg contains no vector geometry: it is a wrapper embedding a raster <image> reference to logo-orange.png, so it supplied no structural reference despite being nominated as the primary one.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution. Square canvas adds lateral clear space because the source artwork is portrait (about 1:2.5); aspect ratio is preserved and the artwork is not distorted.",
+      "sha256": "7098652b23d2b47ddfa8b1f825c2ef8fdbcbf7ab271ee676dae69ef217ef24af"
+    },
+    {
+      "path": "g-clef-pulley/svg/g-clef-pulley-monochrome.svg",
+      "format": "svg",
+      "family": "g-clef-pulley",
+      "variant": "monochrome",
+      "usage": "Single-ink reproduction: print, engraving, stamps, faxes, watermarks.",
+      "viewBox": "0 0 470 1242",
+      "primary_colors": [
+        "#111111"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "source_notes": "Traced from logo.png, the only full-resolution rendition of this artwork. favicon.png is a clipped 192 px derivative (alpha bbox 132x192+30+0, touching top and bottom edges) and was used only to check small-size appearance. favicon.svg contains no vector geometry: it is a wrapper embedding a raster <image> reference to logo-orange.png, so it supplied no structural reference despite being nominated as the primary one.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "bb5e50199f715ec7e36b173b6efd32d414af4b5459678eee431786a659a95e2b"
+    },
+    {
+      "path": "g-clef-pulley/source/g-clef-pulley-editable.svg",
+      "format": "svg",
+      "family": "g-clef-pulley",
+      "variant": "editable",
+      "usage": "Editable master source; recolour via the --brand-ink custom property.",
+      "viewBox": "0 0 470 1242",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text, so there is nothing to outline",
+      "font_family": null,
+      "embedded_raster": false,
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "source_notes": "Traced from logo.png, the only full-resolution rendition of this artwork. favicon.png is a clipped 192 px derivative (alpha bbox 132x192+30+0, touching top and bottom edges) and was used only to check small-size appearance. favicon.svg contains no vector geometry: it is a wrapper embedding a raster <image> reference to logo-orange.png, so it supplied no structural reference despite being nominated as the primary one.",
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "d008590b65993693880d42181a91df70f0e9b6d46f907b03b5acbcd538a1b89f"
+    },
+    {
+      "path": "g-clef-pulley/png/g-clef-pulley-dark.png",
+      "format": "png",
+      "family": "g-clef-pulley",
+      "variant": "dark",
+      "usage": "Dark (slate) treatment for light backgrounds and print on white. Raster fallback.",
+      "dimensions": "605x1600",
+      "primary_colors": [
+        "#475569"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "g-clef-pulley/svg/g-clef-pulley-dark.svg",
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "dc62cfae9d1ab21ed0fd7b1cca991e6c75b6f623357bd54062c8d03608530da8"
+    },
+    {
+      "path": "g-clef-pulley/png/g-clef-pulley-favicon.png",
+      "format": "png",
+      "family": "g-clef-pulley",
+      "variant": "favicon",
+      "usage": "Browser tab icon and other 16-48 px placements. Raster fallback.",
+      "dimensions": "512x512",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "g-clef-pulley/svg/g-clef-pulley-favicon.svg",
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Deliberate deviation: cropped to the lower pulley block and stroke-dilated by 1.5 px at 420 px scale, because source line weight is about 3% of width (0.48 px at 16 px, sub-pixel). Five clipped-rope fragments were removed by connected-component area filtering. Legible from about 24 px; at 16 px it reads as a dense pulley silhouette rather than distinct sheaves.",
+      "sha256": "e700385f2f119d5b4eeca334bf96eb71cf953fed78e937ad6bfeb629d67ea1a1"
+    },
+    {
+      "path": "g-clef-pulley/png/g-clef-pulley-light.png",
+      "format": "png",
+      "family": "g-clef-pulley",
+      "variant": "light",
+      "usage": "Light (silver) treatment for dark or photographic backgrounds. Raster fallback.",
+      "dimensions": "605x1600",
+      "primary_colors": [
+        "#C0C0C0"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "g-clef-pulley/svg/g-clef-pulley-light.svg",
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "074be06f6654cc89553401deb529b5b1754983dff56ddeae8981de9a20ebe19d"
+    },
+    {
+      "path": "g-clef-pulley/png/g-clef-pulley-lockup.png",
+      "format": "png",
+      "family": "g-clef-pulley",
+      "variant": "lockup",
+      "usage": "Full brand composition with generous clear space for slides, social cards, and co-branding. Raster fallback.",
+      "dimensions": "1600x1600",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "g-clef-pulley/svg/g-clef-pulley-lockup.svg",
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution. Square canvas adds lateral clear space because the source artwork is portrait (about 1:2.5); aspect ratio is preserved and the artwork is not distorted.",
+      "sha256": "d650f174bc048331cc1ab22f4fea61eca2c242146e88f18dfd74cda273131af3"
+    },
+    {
+      "path": "g-clef-pulley/png/g-clef-pulley-logo.png",
+      "format": "png",
+      "family": "g-clef-pulley",
+      "variant": "logo",
+      "usage": "Primary logo for site headers, documents, and general brand placement. Raster fallback.",
+      "dimensions": "605x1600",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "g-clef-pulley/svg/g-clef-pulley-logo.svg",
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "083dd817dfb69e4cb29661c1a1510a6b0b05bf5832ab98be5b36d5fe833d3b57"
+    },
+    {
+      "path": "g-clef-pulley/png/g-clef-pulley-mark.png",
+      "format": "png",
+      "family": "g-clef-pulley",
+      "variant": "mark",
+      "usage": "Standalone symbol for app icons, avatars, and square placements. Raster fallback.",
+      "dimensions": "1024x1024",
+      "primary_colors": [
+        "#F97316"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "g-clef-pulley/svg/g-clef-pulley-mark.svg",
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution. Square canvas adds lateral clear space because the source artwork is portrait (about 1:2.5); aspect ratio is preserved and the artwork is not distorted.",
+      "sha256": "120972e86646a985ecab74b762ede82125b2270cabf84fefe10d5e5102fdbfcf"
+    },
+    {
+      "path": "g-clef-pulley/png/g-clef-pulley-monochrome.png",
+      "format": "png",
+      "family": "g-clef-pulley",
+      "variant": "monochrome",
+      "usage": "Single-ink reproduction: print, engraving, stamps, faxes, watermarks. Raster fallback.",
+      "dimensions": "605x1600",
+      "primary_colors": [
+        "#111111"
+      ],
+      "background": "transparent",
+      "text": "none",
+      "text_treatment": "not applicable - artwork contains no text",
+      "font_family": null,
+      "exported_from": "g-clef-pulley/svg/g-clef-pulley-monochrome.svg",
+      "source_inputs": [
+        "resources/assets/images/logo.png",
+        "resources/assets/favicon.png",
+        "resources/assets/favicon.ico",
+        "resources/assets/favicon.svg"
+      ],
+      "limitations": "Geometry reconstructed by raster tracing (potrace 1.16) from an anti-aliased PNG at a 50% alpha threshold. Curves are approximations of the rasterised artwork, not the original design paths. Highest-uncertainty regions: the dense multi-sheave arcs inside both pulley blocks, the rope hatching between them, and the overlapping hook linework, where adjacent strokes nearly merge at source resolution.",
+      "sha256": "53148456b7b721cf0f9473991691cd0c955c378ec690df4707ec32bbba9e2606"
+    }
+  ]
+}

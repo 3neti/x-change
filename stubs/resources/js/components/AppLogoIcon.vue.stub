@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { xChangeBrandAssets } from '@/components/x-change/brandAssets';
 
 defineOptions({
     inheritAttrs: false,
@@ -34,9 +35,7 @@ onUnmounted(() => {
 });
 
 const logoSrc = computed(() => {
-    return isDark.value
-        ? '/vendor/x-change/images/logo-silver.png'
-        : '/vendor/x-change/images/logo-orange.png';
+    return isDark.value ? xChangeBrandAssets.light : xChangeBrandAssets.logo;
 });
 </script>
 

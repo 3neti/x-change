@@ -29,6 +29,9 @@ final class CorePublicationContributor implements XChangePublicationContributor
         ]);
         yield $this->build('x-change.assets', '3neti/x-change', 'x-change-assets', 'X-Change public branding assets.', [
             public_path('vendor/x-change/favicon.svg'),
+            public_path('vendor/x-change/images/brand-library/inventory.json'),
+            public_path('vendor/x-change/images/brand-library/x-change/svg/x-change-logo.svg'),
+            public_path('vendor/x-change/images/brand-library/g-clef-pulley/svg/g-clef-pulley-logo.svg'),
         ]);
         yield $this->build('x-change.form-flow-driver', '3neti/x-change', 'x-change-form-flow-drivers', 'Voucher redemption Form Flow driver.', [
             config_path('form-flow-drivers/voucher-redemption.yaml'),

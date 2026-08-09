@@ -374,7 +374,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         int $mutedColor,
     ): void {
         if ($rider->stamp?->show_logo !== false) {
-            $logoPath = dirname(__DIR__, 3).'/resources/assets/images/logo-orange.png';
+            $logoPath = dirname(__DIR__, 3).'/resources/assets/images/brand-library/x-change/png/x-change-logo.png';
             $logo = is_file($logoPath) ? @imagecreatefrompng($logoPath) : false;
 
             if ($logo instanceof GdImage) {

@@ -25,8 +25,8 @@ class ShareXChangeBranding
         Inertia::share('xchange', [
             'branding' => [
                 'name' => (string) config('x-change.branding.name', config('x-change.product.name', 'X-Change')),
-                'logo_light' => (string) config('x-change.branding.logo_light', '/vendor/x-change/images/logo-orange.png'),
-                'logo_dark' => (string) config('x-change.branding.logo_dark', '/vendor/x-change/images/logo-silver.png'),
+                'logo_light' => (string) config('x-change.branding.logo_light', '/vendor/x-change/images/brand-library/x-change/svg/x-change-logo.svg'),
+                'logo_dark' => (string) config('x-change.branding.logo_dark', '/vendor/x-change/images/brand-library/x-change/svg/x-change-light.svg'),
             ],
             'navigation' => [
                 'system_readiness_visible' => $this->systemReadinessAccess->isVisible(),

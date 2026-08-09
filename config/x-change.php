@@ -220,8 +220,8 @@ return [
 
     'branding' => [
         'name' => env('XCHANGE_BRAND_NAME', env('XCHANGE_PRODUCT_NAME', 'X-Change')),
-        'logo_light' => env('XCHANGE_LOGO_LIGHT', '/vendor/x-change/images/logo-orange.png'),
-        'logo_dark' => env('XCHANGE_LOGO_DARK', '/vendor/x-change/images/logo-silver.png'),
+        'logo_light' => env('XCHANGE_LOGO_LIGHT', '/vendor/x-change/images/brand-library/x-change/svg/x-change-logo.svg'),
+        'logo_dark' => env('XCHANGE_LOGO_DARK', '/vendor/x-change/images/brand-library/x-change/svg/x-change-light.svg'),
     ],
 
     'cockpit' => [
@@ -2163,7 +2163,7 @@ return [
             ],
             'default_image' => env(
                 'XCHANGE_CLAIM_SHARE_DEFAULT_IMAGE',
-                '/vendor/x-change/images/logo-orange.png',
+                '/vendor/x-change/images/brand-library/x-change/png/x-change-logo.png',
             ),
         ],
     ],
