@@ -127,6 +127,24 @@ describe('Quick Generate last instructions', () => {
                 .get('[data-testid="cockpit-quick-generate-current-template"]')
                 .text(),
         ).toContain('School Allowance');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-current-template"]')
+                .text(),
+        ).toContain('Current ·');
+        const repeatLastButton = wrapper.get(
+            '[data-testid="cockpit-quick-generate-repeat-last"]',
+        );
+        expect(repeatLastButton.attributes('aria-pressed')).toBe('true');
+        expect(repeatLastButton.classes()).toContain('bg-emerald-50');
+        expect(repeatLastButton.classes()).not.toContain('bg-emerald-600');
+        expect(
+            repeatLastButton
+                .find(
+                    '[data-testid="cockpit-quick-generate-repeat-last-check"]',
+                )
+                .exists(),
+        ).toBe(true);
 
         const preview = JSON.parse(
             wrapper
@@ -211,6 +229,16 @@ describe('Quick Generate last instructions', () => {
             ).element,
         );
         expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-start-blank"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-repeat-last"]')
+                .attributes('aria-pressed'),
+        ).toBe('false');
+        expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-recipient"]',
             ).element.value,
@@ -236,6 +264,11 @@ describe('Quick Generate last instructions', () => {
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
             ).element,
         );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-repeat-last"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-feedback-mobile"]',

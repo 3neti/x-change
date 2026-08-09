@@ -3859,7 +3859,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(reuseDesign.text()).toContain('Money Changer');
         expect(reuseDesign.classes()).toContain('border-t');
         expect(reuseDesign.classes()).not.toContain('rounded-2xl');
-        expect(wrapper.text()).toContain('Repeat Last Pay Code');
+        expect(wrapper.text()).toContain('Repeat Last');
         expect(wrapper.text()).toContain('Save Template');
         expect(wrapper.text()).not.toContain('Editable Pay Code Preview');
         expect(wrapper.text()).not.toContain(
@@ -3891,6 +3891,9 @@ describe('Cockpit Quick Generate foundation', () => {
         const orderSubmitButton = essentialsCanvas.get(
             '[data-testid="cockpit-quick-generate-submit-button"]',
         );
+        const templateControls = essentialsCanvas.get(
+            '[data-testid="cockpit-quick-generate-starting-point"]',
+        );
 
         expect(
             essentialsCanvas
@@ -3901,6 +3904,12 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(false);
         expect(orderSubmitButton.classes()).toContain('min-h-10');
         expect(orderSubmitButton.classes()).toContain('rounded-xl');
+        expect(orderSubmitButton.classes()).toContain('bg-emerald-600');
+        expect(
+            templateControls.findAll('button').some((button) =>
+                button.classes().includes('bg-emerald-600'),
+            ),
+        ).toBe(false);
         expect(
             orderSubmitButton
                 .find('[data-testid="cockpit-quick-generate-issue-icon"]')

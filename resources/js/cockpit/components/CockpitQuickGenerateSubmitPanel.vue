@@ -4,6 +4,7 @@ import CockpitPayCodeTemplateUpdateController from '@/actions/LBHurtado/XChange/
 import type { RequestPayload } from '@inertiajs/core';
 import { Link, router } from '@inertiajs/vue3';
 import {
+    Check,
     Clock3,
     FilePlus2,
     LayoutTemplate,
@@ -5108,46 +5109,68 @@ function instructionRecord(
                             </p>
                         </div>
                         <span
-                            class="rounded-full bg-emerald-100 px-2.5 py-1 text-[0.68rem] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                            class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                             data-testid="cockpit-quick-generate-current-template"
                         >
-                            {{ currentTemplateName }}
+                            Current · {{ currentTemplateName }}
                         </span>
                     </div>
 
                     <div class="mt-3 grid gap-2 sm:grid-cols-2">
                         <button
                             type="button"
+                            :aria-pressed="startingPoint === 'blank'"
                             :class="[
-                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition',
+                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600',
                                 startingPoint === 'blank'
-                                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                                    : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
+                                    ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
                             ]"
                             data-testid="cockpit-quick-generate-start-blank"
                             @click="startBlank"
                         >
-                            <FilePlus2 class="size-4" aria-hidden="true" />
-                            Blank Pay Code
+                            <Check
+                                v-if="startingPoint === 'blank'"
+                                class="size-4"
+                                aria-hidden="true"
+                                data-testid="cockpit-quick-generate-start-blank-check"
+                            />
+                            <FilePlus2
+                                v-else
+                                class="size-4"
+                                aria-hidden="true"
+                            />
+                            Blank
                         </button>
                         <button
                             type="button"
                             :disabled="!lastInstructions"
+                            :aria-pressed="startingPoint === 'last'"
                             :class="[
-                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-45',
+                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-45',
                                 startingPoint === 'last'
-                                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                                    : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
+                                    ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
                             ]"
                             data-testid="cockpit-quick-generate-repeat-last"
                             @click="repeatLastDesign"
                         >
-                            <RotateCcw class="size-4" aria-hidden="true" />
-                            Repeat Last Pay Code
+                            <Check
+                                v-if="startingPoint === 'last'"
+                                class="size-4"
+                                aria-hidden="true"
+                                data-testid="cockpit-quick-generate-repeat-last-check"
+                            />
+                            <RotateCcw
+                                v-else
+                                class="size-4"
+                                aria-hidden="true"
+                            />
+                            Repeat Last
                         </button>
                         <button
                             type="button"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                             data-testid="cockpit-quick-generate-choose-template"
                             @click="templatePickerOpen = true"
                         >
@@ -5156,7 +5179,7 @@ function instructionRecord(
                         </button>
                         <button
                             type="button"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                             data-testid="cockpit-quick-generate-save-template"
                             @click="openSaveTemplateDialog"
                         >

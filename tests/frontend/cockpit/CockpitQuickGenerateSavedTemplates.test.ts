@@ -83,7 +83,7 @@ describe('Quick Generate saved templates', () => {
             wrapper
                 .get('[data-testid="cockpit-quick-generate-current-template"]')
                 .text(),
-        ).toBe('Weekly Allowance');
+        ).toBe('Current · Weekly Allowance');
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-amount"]',
@@ -283,7 +283,7 @@ describe('Quick Generate saved templates', () => {
             wrapper
                 .get('[data-testid="cockpit-quick-generate-current-template"]')
                 .text(),
-        ).toBe('Monthly Allowance');
+        ).toBe('Current · Monthly Allowance');
         expect(
             wrapper.find(
                 '[data-testid="cockpit-quick-generate-save-template-dialog"]',
