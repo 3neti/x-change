@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Composer\InstalledVersions;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
@@ -234,16 +235,25 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         ->and($walletStep['claim_workflow']['key'])->toBe('disbursement.v1')
         ->and($walletStep['claim_workflow']['confirmation_label'])->toBe('Confirm Redemption')
         ->and($walletStep['ui_variant'])->toBe('immersive')
-        ->and($walletStep['action_placement'])->toBe('bottom_sticky')
+        ->and($walletStep['action_placement'])->toBe('bottom')
         ->and($walletStep['ui_layout']['density'])->toBe('compact')
         ->and($walletStep['ui_layout']['capture_surface'])->toBe('edge_to_edge')
         ->and($walletStep['ui_layout']['minimize_scroll'])->toBeTrue()
         ->and($walletStep['app_name'])->toBe('Pay Code')
         ->and($walletStep['app_logo'])->toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg')
+        ->and($walletStep['package_versions'])->toContain([
+            'name' => '3neti/x-change',
+            'version' => InstalledVersions::getPrettyVersion('3neti/x-change'),
+        ])
+        ->and($walletStep['show_package_versions'])->toBeBool()
         ->and($otpStep['ui_variant'])->toBe('immersive')
-        ->and($otpStep['action_placement'])->toBe('bottom_sticky')
+        ->and($otpStep['action_placement'])->toBe('bottom')
         ->and($otpStep['app_name'])->toBe('Pay Code')
         ->and($otpStep['app_logo'])->toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg')
+        ->and($otpStep['package_versions'])->toContain([
+            'name' => '3neti/form-flow',
+            'version' => InstalledVersions::getPrettyVersion('3neti/form-flow'),
+        ])
         ->and($walletStep['auto_sync']['enabled'])->toBeFalse()
         ->and($fieldNames)->toBe(['amount', 'settlement_rail', 'mobile', 'bank_code', 'account_number'])
         ->and($bankField['help_text'])->toBe('Choose the receiving bank or wallet by name.')

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "cf171d88ec2d403af3910e75d9570795",
+    "content-hash": "c38d1a72821fd788da973789ee2faa5d",
     "packages": [
         {
             "name": "3neti/cash",
@@ -308,16 +308,16 @@
         },
         {
             "name": "3neti/form-flow",
-            "version": "v1.9.1",
+            "version": "v1.9.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-flow.git",
-                "reference": "eecb9ff184ac94b172888bdc22590a44dedeb171"
+                "reference": "d3c65c3b8e789170b81dedef0ef190d4aad40ade"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-flow/zipball/eecb9ff184ac94b172888bdc22590a44dedeb171",
-                "reference": "eecb9ff184ac94b172888bdc22590a44dedeb171",
+                "url": "https://api.github.com/repos/3neti/form-flow/zipball/d3c65c3b8e789170b81dedef0ef190d4aad40ade",
+                "reference": "d3c65c3b8e789170b81dedef0ef190d4aad40ade",
                 "shasum": ""
             },
             "require": {
@@ -375,22 +375,22 @@
             ],
             "support": {
                 "issues": "https://github.com/3neti/form-flow/issues",
-                "source": "https://github.com/3neti/form-flow/tree/v1.9.1"
+                "source": "https://github.com/3neti/form-flow/tree/v1.9.3"
             },
-            "time": "2026-08-07T11:09:03+00:00"
+            "time": "2026-08-09T13:47:06+00:00"
         },
         {
             "name": "3neti/form-handler-kyc",
-            "version": "v1.1.3",
+            "version": "v1.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-kyc.git",
-                "reference": "1871ce455eaaeaf47cecabfaebad50f8dbc71dc3"
+                "reference": "5fb218571473762548119843a1d2a7adecc257f7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-kyc/zipball/1871ce455eaaeaf47cecabfaebad50f8dbc71dc3",
-                "reference": "1871ce455eaaeaf47cecabfaebad50f8dbc71dc3",
+                "url": "https://api.github.com/repos/3neti/form-handler-kyc/zipball/5fb218571473762548119843a1d2a7adecc257f7",
+                "reference": "5fb218571473762548119843a1d2a7adecc257f7",
                 "shasum": ""
             },
             "require": {
@@ -434,22 +434,22 @@
             "description": "KYC/identity verification handler for form flow system using HyperVerge",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-kyc/issues",
-                "source": "https://github.com/3neti/form-handler-kyc/tree/v1.1.3"
+                "source": "https://github.com/3neti/form-handler-kyc/tree/v1.1.4"
             },
-            "time": "2026-08-07T02:56:02+00:00"
+            "time": "2026-08-09T13:49:09+00:00"
         },
         {
             "name": "3neti/form-handler-location",
-            "version": "v1.2.3",
+            "version": "v1.2.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-location.git",
-                "reference": "ac716824197827438124df5df04e7f78b841144b"
+                "reference": "0f6f24f209e9c616c384de74fe659659ed3dee5c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-location/zipball/ac716824197827438124df5df04e7f78b841144b",
-                "reference": "ac716824197827438124df5df04e7f78b841144b",
+                "url": "https://api.github.com/repos/3neti/form-handler-location/zipball/0f6f24f209e9c616c384de74fe659659ed3dee5c",
+                "reference": "0f6f24f209e9c616c384de74fe659659ed3dee5c",
                 "shasum": ""
             },
             "require": {
@@ -491,22 +491,22 @@
             "description": "Location capture handler for form flow system",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-location/issues",
-                "source": "https://github.com/3neti/form-handler-location/tree/v1.2.3"
+                "source": "https://github.com/3neti/form-handler-location/tree/v1.2.4"
             },
-            "time": "2026-08-07T02:56:54+00:00"
+            "time": "2026-08-09T13:49:09+00:00"
         },
         {
             "name": "3neti/form-handler-otp",
-            "version": "v1.2.1",
+            "version": "v1.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-otp.git",
-                "reference": "171e39fd333dfbbb97b39e6b0960ab36f040efe9"
+                "reference": "b370f491f704a4bc33172efca616780e0132101d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-otp/zipball/171e39fd333dfbbb97b39e6b0960ab36f040efe9",
-                "reference": "171e39fd333dfbbb97b39e6b0960ab36f040efe9",
+                "url": "https://api.github.com/repos/3neti/form-handler-otp/zipball/b370f491f704a4bc33172efca616780e0132101d",
+                "reference": "b370f491f704a4bc33172efca616780e0132101d",
                 "shasum": ""
             },
             "require": {
@@ -548,22 +548,22 @@
             "description": "OTP verification handler for form flow system",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-otp/issues",
-                "source": "https://github.com/3neti/form-handler-otp/tree/v1.2.1"
+                "source": "https://github.com/3neti/form-handler-otp/tree/v1.2.2"
             },
-            "time": "2026-08-07T02:55:38+00:00"
+            "time": "2026-08-09T13:49:09+00:00"
         },
         {
             "name": "3neti/form-handler-selfie",
-            "version": "v1.1.2",
+            "version": "v1.1.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-selfie.git",
-                "reference": "d623a388d4fe5133420b2e95bfc346156ecb41b2"
+                "reference": "d08aff2c8c940cf90f64c540f5dc3402384a5693"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-selfie/zipball/d623a388d4fe5133420b2e95bfc346156ecb41b2",
-                "reference": "d623a388d4fe5133420b2e95bfc346156ecb41b2",
+                "url": "https://api.github.com/repos/3neti/form-handler-selfie/zipball/d08aff2c8c940cf90f64c540f5dc3402384a5693",
+                "reference": "d08aff2c8c940cf90f64c540f5dc3402384a5693",
                 "shasum": ""
             },
             "require": {
@@ -605,22 +605,22 @@
             "description": "Selfie capture handler for form flow system",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-selfie/issues",
-                "source": "https://github.com/3neti/form-handler-selfie/tree/v1.1.2"
+                "source": "https://github.com/3neti/form-handler-selfie/tree/v1.1.3"
             },
-            "time": "2026-08-07T02:46:01+00:00"
+            "time": "2026-08-09T13:49:09+00:00"
         },
         {
             "name": "3neti/form-handler-signature",
-            "version": "v1.2.1",
+            "version": "v1.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-signature.git",
-                "reference": "83b11d0ceb622d32ae9e573a19a11f2c83c73bd8"
+                "reference": "028e68f1409fd85b6e19cb870caf33a72c21075c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-signature/zipball/83b11d0ceb622d32ae9e573a19a11f2c83c73bd8",
-                "reference": "83b11d0ceb622d32ae9e573a19a11f2c83c73bd8",
+                "url": "https://api.github.com/repos/3neti/form-handler-signature/zipball/028e68f1409fd85b6e19cb870caf33a72c21075c",
+                "reference": "028e68f1409fd85b6e19cb870caf33a72c21075c",
                 "shasum": ""
             },
             "require": {
@@ -662,9 +662,9 @@
             "description": "Signature capture handler for form flow system",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-signature/issues",
-                "source": "https://github.com/3neti/form-handler-signature/tree/v1.2.1"
+                "source": "https://github.com/3neti/form-handler-signature/tree/v1.2.2"
             },
-            "time": "2026-08-07T02:46:01+00:00"
+            "time": "2026-08-09T13:49:09+00:00"
         },
         {
             "name": "3neti/hyperverge",

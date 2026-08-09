@@ -8,6 +8,8 @@ it('defines the public claim experience ui profile without cockpit coupling', fu
     expect($profile)
         ->toHaveKeys([
             'variant',
+            'action_placement',
+            'show_package_versions',
             'show_progress',
             'support_label',
             'layout',
@@ -15,6 +17,8 @@ it('defines the public claim experience ui profile without cockpit coupling', fu
             'permissions',
         ])
         ->and($profile['variant'])->toBeIn(['default', 'compact', 'immersive'])
+        ->and($profile['action_placement'])->toBeIn(['inline', 'bottom', 'bottom_sticky'])
+        ->and($profile['show_package_versions'])->toBeBool()
         ->and($profile['copy'])->toHaveKeys([
             'entry_title',
             'wallet_title',

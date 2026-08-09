@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Claim;
 
+use Composer\InstalledVersions;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
 use LBHurtado\XChange\Services\MoneyIssuer\MoneyIssuerOptionPresenter;
@@ -111,7 +112,7 @@ final class FormFlowClaimWorkflowMutator
             config('form-flow.ui.variant', 'default'),
         );
         $actionPlacement = config('x-change.claim.experience_ui.action_placement')
-            ?: ($variant === 'immersive' ? 'bottom_sticky' : 'inline');
+            ?: 'bottom';
 
         $config['ui_variant'] ??= $variant;
         $config['action_placement'] ??= $actionPlacement;
@@ -124,8 +125,53 @@ final class FormFlowClaimWorkflowMutator
             'x-change.claim.experience_ui.brand.app_logo',
             '/vendor/x-change/images/pay-code/pay-code-logo.svg',
         );
+        $config['package_versions'] ??= $this->claimUiPackageVersions();
+        $config['show_package_versions'] ??= (bool) config(
+            'x-change.claim.experience_ui.show_package_versions',
+            false,
+        );
 
         return $config;
+    }
+
+    /**
+     * @return list<array{name: string, version: string}>
+     */
+    private function claimUiPackageVersions(): array
+    {
+        return array_values(array_filter(array_map(
+            fn (string $package): ?array => $this->installedPackageVersion($package),
+            [
+                '3neti/x-change',
+                '3neti/form-flow',
+                '3neti/form-handler-kyc',
+                '3neti/form-handler-location',
+                '3neti/form-handler-otp',
+                '3neti/form-handler-selfie',
+                '3neti/form-handler-signature',
+            ],
+        )));
+    }
+
+    /**
+     * @return array{name: string, version: string}|null
+     */
+    private function installedPackageVersion(string $package): ?array
+    {
+        if (! InstalledVersions::isInstalled($package)) {
+            return null;
+        }
+
+        $version = InstalledVersions::getPrettyVersion($package);
+
+        if (! is_string($version) || $version === '') {
+            return null;
+        }
+
+        return [
+            'name' => $package,
+            'version' => $version,
+        ];
     }
 
     /**
