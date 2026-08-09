@@ -90,6 +90,11 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/pay-code-payout-correction-route.ts",
         ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTerminalStateController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/pay-code-terminal-state-route.ts",
+        ),
       "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateStoreController":
         path.resolve(
           import.meta.dirname,

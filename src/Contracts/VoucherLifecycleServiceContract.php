@@ -32,4 +32,10 @@ interface VoucherLifecycleServiceContract
      * @return array<string,mixed>|object
      */
     public function cancel(string $voucher, array $payload = []): mixed;
+
+    /**
+     * @param  array<string,mixed>  $payload
+     * @return array<string,mixed>|object
+     */
+    public function expire(string $voucher, array $payload = []): mixed;
 }

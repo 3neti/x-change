@@ -72,36 +72,20 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
     public function cancel(string $voucher, array $payload = []): mixed
     {
-        $model = $this->vouchers->findOrFail($voucher);
+        return $this->terminate(
+            voucher: $voucher,
+            terminalReason: 'cancelled',
+            payload: $payload,
+        );
+    }
 
-        return DB::transaction(function () use ($model, $payload): array {
-            $locked = Voucher::query()
-                ->with('owner')
-                ->lockForUpdate()
-                ->findOrFail($model->getKey());
-
-            $this->authorizeCancellation($locked);
-            $this->assertUnclaimed($locked);
-
-            $release = $this->terminalReleaseAction()->handle(
-                $locked,
-                'cancelled',
-            );
-
-            $locked->state = VoucherState::CLOSED;
-            $locked->closed_at ??= now();
-            $locked->save();
-
-            return [
-                'voucher_id' => $locked->id,
-                'code' => $locked->code,
-                'status' => 'cancelled',
-                'cancelled' => true,
-                'reason' => $payload['reason'] ?? null,
-                'treasury_release' => $release->toArray(),
-                'messages' => ['Voucher cancelled successfully.'],
-            ];
-        }, attempts: 5);
+    public function expire(string $voucher, array $payload = []): mixed
+    {
+        return $this->terminate(
+            voucher: $voucher,
+            terminalReason: 'expired',
+            payload: $payload,
+        );
     }
 
     /**
@@ -120,6 +104,127 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         if (! $owner instanceof Model || ! $owner->is($actor)) {
             throw new AuthorizationException(
                 'Only the Pay Code owner may cancel it.',
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function terminate(
+        string $voucher,
+        string $terminalReason,
+        array $payload,
+    ): array {
+        $model = $this->vouchers->findOrFail($voucher);
+
+        return DB::transaction(function () use ($model, $payload, $terminalReason): array {
+            $locked = Voucher::query()
+                ->with('owner')
+                ->lockForUpdate()
+                ->findOrFail($model->getKey());
+
+            $this->authorizeCancellation($locked);
+            $this->assertUnclaimed($locked);
+            $this->assertTerminalStateEligible($locked, $terminalReason);
+
+            $release = $this->terminalReleaseAction()->handle(
+                $locked,
+                $terminalReason,
+            );
+
+            $beforeState = $locked->state?->value;
+            $actor = Auth::user();
+            $reason = $this->normalizedReason($payload['reason'] ?? null);
+            $locked->state = $terminalReason === 'cancelled'
+                ? VoucherState::CANCELLED
+                : VoucherState::EXPIRED;
+            $locked->closed_at ??= now();
+
+            if ($terminalReason === 'expired') {
+                $locked->expires_at = now();
+            }
+
+            $metadata = is_array($locked->metadata) ? $locked->metadata : [];
+            $history = data_get($metadata, 'lifecycle.terminal_actions', []);
+            $history = is_array($history) ? $history : [];
+
+            if (! $release->replayed) {
+                $history[] = [
+                    'schema' => 'x-change.pay-code-terminal-action.v1',
+                    'action' => $terminalReason,
+                    'before_state' => $beforeState,
+                    'after_state' => $locked->state->value,
+                    'reason' => $reason,
+                    'actor_type' => $actor instanceof Model ? $actor::class : null,
+                    'actor_id' => Auth::id() === null ? null : (string) Auth::id(),
+                    'occurred_at' => now()->toIso8601String(),
+                    'treasury_release_reference' => $release->operationReference,
+                ];
+            }
+
+            data_set($metadata, 'lifecycle.terminal_actions', $history);
+            $locked->metadata = $metadata;
+            $locked->save();
+
+            $label = $terminalReason === 'cancelled' ? 'cancelled' : 'expired';
+
+            return [
+                'voucher_id' => $locked->id,
+                'code' => $locked->code,
+                'status' => $label,
+                $label => true,
+                'reason' => $reason,
+                'treasury_release' => $release->toArray(),
+                'messages' => ["Pay Code {$label}. Reserved principal returned to Client Funds."],
+            ];
+        }, attempts: 5);
+    }
+
+    protected function normalizedReason(mixed $reason): ?string
+    {
+        if (! is_scalar($reason)) {
+            return null;
+        }
+
+        $normalized = trim((string) $reason);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    protected function assertTerminalStateEligible(
+        Voucher $voucher,
+        string $terminalReason,
+    ): void {
+        $existingRelease = data_get($voucher->metadata, 'treasury.terminal_release');
+
+        if (is_array($existingRelease)) {
+            if (data_get($existingRelease, 'terminal_reason') !== $terminalReason) {
+                throw new RuntimeException(
+                    "Pay Code [{$voucher->code}] already has a different terminal action.",
+                );
+            }
+
+            return;
+        }
+
+        if (! in_array($voucher->state, [VoucherState::ACTIVE, VoucherState::LOCKED], true)) {
+            throw new RuntimeException(
+                "Pay Code [{$voucher->code}] is not open for a terminal action.",
+            );
+        }
+
+        if (
+            data_get($voucher->metadata, 'disbursement.requires_recovery') === true
+            || in_array(
+                data_get($voucher->metadata, 'disbursement.status'),
+                ['pending', 'processing', 'queued', 'accepted', 'submitted'],
+                true,
+            )
+        ) {
+            throw new RuntimeException(
+                "Pay Code [{$voucher->code}] has protected payout or recovery activity.",
             );
         }
     }

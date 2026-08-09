@@ -103,6 +103,51 @@ const voucher = {
 };
 
 describe("Cockpit Pay Code record workspace", () => {
+  it("shows the Treasury-safe terminal impact before an owner acts", () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "OPEN-200",
+        status: "active",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+        terminalControl: {
+          schema: "x-change.cockpit.pay-code-terminal-control.v1",
+          authorized: true,
+          status: "available",
+          can_expire: true,
+          can_cancel: true,
+          blocked_reason: null,
+          release: {
+            amount_minor: 20_000,
+            currency: "PHP",
+            from: "Pay Code Reserve",
+            to: "Client Funds",
+            provider_inventory_changed: false,
+            provider_calls: false,
+            issuance_charges_refunded: false,
+          },
+          history: [],
+        },
+      },
+    });
+
+    const controls = wrapper.get('[data-testid="pay-code-terminal-controls"]');
+
+    expect(controls.text()).toContain("Treasury-safe terminal actions");
+    expect(controls.text()).toContain("Pay Code Reserve");
+    expect(controls.text()).toContain("Client Funds · ₱200.00");
+    expect(controls.text()).toContain("Provider Inventory unchanged");
+    expect(controls.text()).toContain("No provider call");
+    expect(controls.text()).toContain("Issuance charges retained");
+    expect(
+      wrapper.get('[data-testid="pay-code-expire-form"]').attributes("action"),
+    ).toBe("/x/cockpit/pay-codes/OPEN-200/terminal-actions");
+    expect(
+      wrapper.get('[data-testid="pay-code-cancel-form"]').attributes("action"),
+    ).toBe("/x/cockpit/pay-codes/OPEN-200/terminal-actions");
+  });
+
   it("keeps authoritative value and accounting backing visually primary", () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {

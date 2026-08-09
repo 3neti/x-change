@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
+use LBHurtado\XChange\Services\Cockpit\PayCodeTerminalControlReadModel;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 class CockpitVoucherDetailPageController extends Controller
@@ -18,6 +19,7 @@ class CockpitVoucherDetailPageController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly VoucherAccessContract $vouchers,
         private readonly CockpitPayCodeDetailAccess $access,
+        private readonly PayCodeTerminalControlReadModel $terminalControls,
     ) {}
 
     public function __invoke(Request $request, string $code): Response
@@ -32,7 +34,7 @@ class CockpitVoucherDetailPageController extends Controller
             );
         }
 
-        return Inertia::render('x-change/cockpit/VoucherDetail', $this->props->toVoucherDetailArray(
+        $props = $this->props->toVoucherDetailArray(
             code: $code,
             campaignPlanningKey: $this->optionalString($request->query('campaign_planning_key')),
             campaignExecutionId: $this->optionalString($request->query('campaign_execution_id')),
@@ -40,7 +42,16 @@ class CockpitVoucherDetailPageController extends Controller
             campaignAudienceId: $this->optionalString($request->query('campaign_audience_id')),
             campaignRecipientId: $this->optionalString($request->query('campaign_recipient_id')),
             campaignSource: $this->optionalString($request->query('campaign_source')),
-        ));
+        );
+
+        if ($voucher !== null) {
+            $props['terminal_control'] = $this->terminalControls->forVoucher(
+                $voucher,
+                $request->user(),
+            );
+        }
+
+        return Inertia::render('x-change/cockpit/VoucherDetail', $props);
     }
 
     private function optionalString(mixed $value): ?string

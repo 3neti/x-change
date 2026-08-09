@@ -1843,6 +1843,30 @@ export type CockpitVoucherDetailPageProps = CockpitHeaderPageProps & {
     campaign_navigation_context?: CockpitCampaignNavigationContext;
     read_model?: CockpitReadModelBundle;
     payout_institutions?: CockpitMoneyIssuerOption[];
+    terminal_control?: CockpitPayCodeTerminalControl;
+};
+
+export type CockpitPayCodeTerminalControl = {
+    schema: string;
+    authorized: boolean;
+    status: 'available' | 'blocked';
+    can_expire: boolean;
+    can_cancel: boolean;
+    blocked_reason?: string | null;
+    release: {
+        amount_minor: number;
+        currency: string;
+        from: string;
+        to: string;
+        provider_inventory_changed: boolean;
+        provider_calls: boolean;
+        issuance_charges_refunded: boolean;
+    };
+    history: Array<{
+        action: string;
+        reason?: string | null;
+        occurred_at?: string | null;
+    }>;
 };
 
 export type CockpitMoneyIssuerOption = {

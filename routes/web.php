@@ -72,6 +72,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingInspecti
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodePayoutCorrectionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateStoreController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateUpdateController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTerminalStateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewExportController;
@@ -453,6 +454,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
                 CockpitPayCodePayoutCorrectionController::class,
             )->middleware('throttle:5,1')
                 ->name('x-change.cockpit.pay-codes.payout-corrections.store');
+            Route::post(
+                '{code}/terminal-actions',
+                CockpitPayCodeTerminalStateController::class,
+            )->middleware('throttle:6,1')
+                ->name('x-change.cockpit.pay-codes.terminal-actions.store');
             Route::get('{code}', CockpitVoucherDetailPageController::class)->name('x-change.cockpit.pay-codes.show');
         });
     });

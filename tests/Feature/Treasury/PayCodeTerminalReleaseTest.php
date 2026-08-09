@@ -96,7 +96,7 @@ it('returns an unclaimed Pay Code reserve to Client Funds exactly once', functio
         ))->toBe($reserveBefore - 20_000)
         ->and(TreasuryInventory::query()->sum('balance_minor'))
         ->toBe($inventoryBefore)
-        ->and($voucher->refresh()->state)->toBe(VoucherState::CLOSED)
+        ->and($voucher->refresh()->state)->toBe(VoucherState::CANCELLED)
         ->and(data_get(
             $voucher->metadata,
             'treasury.pay_code_reservation.status',
@@ -142,6 +142,7 @@ it('returns an unclaimed Pay Code reserve to Client Funds exactly once', functio
         ->toBe($inventoryBefore)
         ->and($voucher->refresh()->closed_at?->toIso8601String())
         ->toBe($closedAt)
+        ->and($voucher->state)->toBe(VoucherState::CANCELLED)
         ->and(TreasuryPositionOperation::query()
             ->where('operation_type', TreasuryPositionOperationType::Release)
             ->count())->toBe(1)

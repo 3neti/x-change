@@ -24,6 +24,7 @@ it('registers read-only cockpit routes under the x cockpit namespace', function 
         ->and(route('x-change.cockpit.pay-codes.index'))->toBe('http://localhost/x/cockpit/pay-codes')
         ->and(route('x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001')
         ->and(route('x-change.cockpit.pay-codes.payout-corrections.store', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001/payout-corrections')
+        ->and(route('x-change.cockpit.pay-codes.terminal-actions.store', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001/terminal-actions')
         ->and(route('x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001/distribution');
 });
 
@@ -1307,6 +1308,17 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
         'x-change.cockpit.commercial.offerings.store',
         'x-change.cockpit.commercial.offerings.approvals.store',
+        'x-change.cockpit.commercial.offerings.activations.store',
+        'x-change.cockpit.commercial.partners.store',
+        'x-change.cockpit.commercial.partner_revisions.approvals.store',
+        'x-change.cockpit.commercial.partners.destinations.store',
+        'x-change.cockpit.commercial.partner_destination_revisions.approvals.store',
+        'x-change.cockpit.commercial.provider_cost_batches.store',
+        'x-change.cockpit.commercial.commission_payout_batches.store',
+        'x-change.cockpit.commercial.commission_payout_batches.approvals.store',
+        'x-change.cockpit.commercial.commission_payout_batches.submissions.store',
+        'x-change.cockpit.commercial.commission_payout_batches.reconciliations.store',
+        'x-change.cockpit.commercial.commission_payout_batches.retries.store',
         'x-change.cockpit.campaigns.store',
         'x-change.cockpit.campaigns.intakes.store',
         'x-change.cockpit.campaigns.intakes.update',
@@ -1353,6 +1365,7 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         'x-change.cockpit.pay-code-templates.store',
         'x-change.cockpit.pay-code-templates.update',
         'x-change.cockpit.pay-codes.payout-corrections.store',
+        'x-change.cockpit.pay-codes.terminal-actions.store',
     ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())
         ->toBe(CockpitFundingIntentController::class)
         ->and(Route::getRoutes()->getByName('x-change.cockpit.funding.scenarios.qrph.store')?->getActionName())
