@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\Voucher\Data\RiderStampData;
 use LBHurtado\Voucher\Enums\RiderContentFormat;
 use LBHurtado\Voucher\Enums\RiderStampArtworkSource;
@@ -56,7 +57,7 @@ class EstimatePayCodeRequest extends FormRequest
             'cash' => ['required', 'array'],
             'cash.amount' => ['required', 'numeric', 'min:0.01'],
             'cash.currency' => ['required', 'string', 'max:10'],
-            'cash.settlement_rail' => ['nullable', 'string', 'max:50'],
+            'cash.settlement_rail' => ['nullable', Rule::enum(SettlementRail::class)],
             'cash.slice_mode' => ['nullable', 'string', 'in:fixed,open'],
             'cash.slices' => ['nullable', 'integer', 'min:1'],
             'cash.max_slices' => ['nullable', 'integer', 'min:1'],
@@ -193,7 +194,21 @@ class EstimatePayCodeRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $this->normalizeSettlementRailForValidation();
         $this->sanitizeRiderSplashHtmlForValidation();
+    }
+
+    private function normalizeSettlementRailForValidation(): void
+    {
+        $cash = $this->input('cash', []);
+
+        if (! is_array($cash) || ! is_string($cash['settlement_rail'] ?? null)) {
+            return;
+        }
+
+        $cash['settlement_rail'] = strtoupper(trim($cash['settlement_rail']));
+
+        $this->merge(['cash' => $cash]);
     }
 
     protected function allowsRedactedPayeeSecret(): bool

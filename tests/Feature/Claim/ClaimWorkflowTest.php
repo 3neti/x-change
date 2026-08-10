@@ -11,6 +11,7 @@ use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecution
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
+use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 
 it('binds the shared claim workflow resolver', function () {
     expect(app(ClaimWorkflowResolverContract::class))->toBeInstanceOf(DefaultClaimWorkflowResolver::class);
@@ -260,4 +261,71 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         ->and($pnb['name'])->toBe('Philippine National Bank')
         ->and($pnb['value'])->toBe('PNBMPHMMTOD')
         ->and($pnb)->not->toHaveKey('code');
+});
+
+it('uses the issuer-authoritative rail to filter claim destinations', function (string $rail, string $supportedBank, ?string $excludedBank): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn(['instructions' => []]);
+
+    $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
+    $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
+        FormFlowInstructionsData::from([
+            'reference_id' => 'claim-workflow-rail-01',
+            'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-rail-01'],
+            'steps' => [[
+                'handler' => 'form',
+                'config' => [
+                    'step_name' => 'wallet_info',
+                    'fields' => [
+                        ['name' => 'amount'],
+                        ['name' => 'settlement_rail', 'default' => 'INSTAPAY'],
+                        ['name' => 'mobile'],
+                        ['name' => 'bank_code'],
+                        ['name' => 'account_number'],
+                    ],
+                ],
+            ]],
+        ]),
+        $workflow,
+        settlementRail: $rail,
+    );
+
+    $fields = $instructions->toArray()['steps'][0]['config']['fields'];
+    $railField = collect($fields)->firstWhere('name', 'settlement_rail');
+    $bankField = collect($fields)->firstWhere('name', 'bank_code');
+    $optionValues = collect($bankField['institution_options'])->pluck('value');
+
+    expect($railField['default'])->toBe($rail)
+        ->and($railField['readonly'])->toBeTrue()
+        ->and($railField['persist'])->toBeFalse()
+        ->and($optionValues)->toContain($supportedBank);
+
+    if ($excludedBank !== null) {
+        expect($optionValues)->not->toContain($excludedBank);
+    }
+})->with([
+    'InstaPay' => ['INSTAPAY', 'GXCHPHM2XXX', null],
+    'PESONet' => ['PESONET', 'BNORPHMMXXX', 'GXCHPHM2XXX'],
+]);
+
+it('resolves an automatic claim rail from the actual payout amount', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 750,
+        settlementRail: null,
+    ));
+    $compiler = app(VoucherClaimFlowCompiler::class);
+
+    $smallFields = collect(data_get(
+        $compiler->compile($voucher, payoutAmount: 49_999.99)->instructions->toArray(),
+        'steps.1.config.fields',
+        [],
+    ));
+    $largeFields = collect(data_get(
+        $compiler->compile($voucher, payoutAmount: 50_000)->instructions->toArray(),
+        'steps.1.config.fields',
+        [],
+    ));
+
+    expect($smallFields->firstWhere('name', 'settlement_rail')['default'])->toBe('INSTAPAY')
+        ->and($largeFields->firstWhere('name', 'settlement_rail')['default'])->toBe('PESONET');
 });

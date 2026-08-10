@@ -19,11 +19,13 @@ final class FormFlowClaimWorkflowMutator
         FormFlowInstructionsData $instructions,
         ClaimWorkflowDescriptorData $workflow,
         ?string $authenticatedMobile = null,
+        ?string $settlementRail = null,
     ): FormFlowInstructionsData {
         return FormFlowInstructionsData::from($this->mutate(
             $instructions->toArray(),
             $workflow,
             $authenticatedMobile,
+            $settlementRail,
         ));
     }
 
@@ -35,6 +37,7 @@ final class FormFlowClaimWorkflowMutator
         array $payload,
         ClaimWorkflowDescriptorData $workflow,
         ?string $authenticatedMobile = null,
+        ?string $settlementRail = null,
     ): array {
 
         $payload['title'] = $workflow->title;
@@ -44,7 +47,7 @@ final class FormFlowClaimWorkflowMutator
         ]);
 
         $payload['steps'] = array_map(
-            fn (array $step): array => $this->applyToStep($step, $workflow, $authenticatedMobile),
+            fn (array $step): array => $this->applyToStep($step, $workflow, $authenticatedMobile, $settlementRail),
             (array) ($payload['steps'] ?? []),
         );
 
@@ -59,6 +62,7 @@ final class FormFlowClaimWorkflowMutator
         array $step,
         ClaimWorkflowDescriptorData $workflow,
         ?string $authenticatedMobile,
+        ?string $settlementRail,
     ): array {
         $step['config'] = (array) ($step['config'] ?? []);
         $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
@@ -84,7 +88,7 @@ final class FormFlowClaimWorkflowMutator
         $step['config']['title'] = $workflow->title;
         $step['config']['description'] = $workflow->description;
         $step['config']['auto_sync'] = ['enabled' => false];
-        $rail = $this->settlementRail((array) ($step['config']['fields'] ?? []));
+        $rail = $settlementRail ?? $this->settlementRail((array) ($step['config']['fields'] ?? []));
         $step['config']['fields'] = array_values(array_map(
             fn (array $field): array => $this->applyToField(
                 $field,
@@ -234,6 +238,12 @@ final class FormFlowClaimWorkflowMutator
         if (($field['name'] ?? null) === 'bank_code') {
             $field['institution_options'] = $this->moneyIssuers->forRail($rail);
             $field['help_text'] = 'Choose the receiving bank or wallet by name.';
+            $field['persist'] = false;
+        }
+
+        if (($field['name'] ?? null) === 'settlement_rail') {
+            $field['default'] = $rail;
+            $field['readonly'] = true;
             $field['persist'] = false;
         }
 

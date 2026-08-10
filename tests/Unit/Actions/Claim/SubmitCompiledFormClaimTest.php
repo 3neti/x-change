@@ -8,6 +8,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
+use LBHurtado\XChange\Support\Claim\PayoutDestinationRegistry;
 
 it('syncs compiled form claim evidence before submitting the claim', function () {
     $voucher = issueVoucher();
@@ -21,26 +22,31 @@ it('syncs compiled form claim evidence before submitting the claim', function ()
     );
 
     $order = [];
+    $destination = app(PayoutDestinationRegistry::class)
+        ->snapshot(null, null, 'INSTAPAY');
+    $payload = [
+        'source' => 'compiled_form',
+        'code' => $voucher->code,
+        'voucher_id' => $voucher->getKey(),
+        'secret' => null,
+        'mobile' => '09173011987',
+        'country' => 'PH',
+        'bank_code' => null,
+        'account_number' => null,
+        'amount' => null,
+        'slice_ids' => [],
+        'settlement_rail' => 'INSTAPAY',
+        'destination' => $destination,
+        'inputs' => [
+            'mobile' => '09173011987',
+        ],
+    ];
 
     $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
     $evidence
         ->shouldReceive('sync')
         ->once()
-        ->with([
-            'source' => 'compiled_form',
-            'code' => $voucher->code,
-            'voucher_id' => $voucher->getKey(),
-            'mobile' => '09173011987',
-            'country' => 'PH',
-            'bank_code' => null,
-            'account_number' => null,
-            'amount' => null,
-            'slice_ids' => [],
-            'settlement_rail' => null,
-            'inputs' => [
-                'mobile' => '09173011987',
-            ],
-        ])
+        ->with($payload)
         ->andReturnUsing(function () use (&$order): void {
             $order[] = 'sync';
         });
@@ -49,21 +55,7 @@ it('syncs compiled form claim evidence before submitting the claim', function ()
     $submitPayCodeClaim
         ->shouldReceive('handle')
         ->once()
-        ->with($voucher, [
-            'source' => 'compiled_form',
-            'code' => $voucher->code,
-            'voucher_id' => $voucher->getKey(),
-            'mobile' => '09173011987',
-            'country' => 'PH',
-            'bank_code' => null,
-            'account_number' => null,
-            'amount' => null,
-            'slice_ids' => [],
-            'settlement_rail' => null,
-            'inputs' => [
-                'mobile' => '09173011987',
-            ],
-        ])
+        ->with($voucher, $payload)
         ->andReturnUsing(function () use (&$order, $voucher) {
             $order[] = 'submit';
 
@@ -83,7 +75,7 @@ it('syncs compiled form claim evidence before submitting the claim', function ()
         });
 
     $action = new SubmitCompiledFormClaim(
-        new BuildCompiledFormClaimPayload,
+        app(BuildCompiledFormClaimPayload::class),
         $evidence,
         $submitPayCodeClaim,
     );
@@ -118,7 +110,7 @@ it('bubbles up evidence sync failures before submitting the claim', function () 
         ->shouldNotReceive('handle');
 
     $action = new SubmitCompiledFormClaim(
-        new BuildCompiledFormClaimPayload,
+        app(BuildCompiledFormClaimPayload::class),
         $evidence,
         $submitPayCodeClaim,
     );
@@ -150,7 +142,7 @@ it('bubbles up redemption submission failures', function () {
         ->andThrow(new RuntimeException('Compiled claim failed.'));
 
     $action = new SubmitCompiledFormClaim(
-        new BuildCompiledFormClaimPayload,
+        app(BuildCompiledFormClaimPayload::class),
         $evidence,
         $submitPayCodeClaim,
     );

@@ -7,7 +7,6 @@ namespace LBHurtado\XChange\Services;
 use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
-use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\Voucher\Models\Voucher;
 use Propaganistas\LaravelPhone\PhoneNumber;
 
@@ -16,6 +15,10 @@ use Propaganistas\LaravelPhone\PhoneNumber;
 // because it builds LBHurtado\EmiCore\Data\PayoutRequestData.
 class WithdrawalPayoutRequestFactory
 {
+    public function __construct(
+        private readonly SettlementRailResolver $settlementRails,
+    ) {}
+
     public function make(
         Voucher $voucher,
         Contact $contact,
@@ -23,11 +26,7 @@ class WithdrawalPayoutRequestFactory
         string $providerReference,
         float $amount,
     ): PayoutRequestData {
-        $settlementRailEnum = data_get($voucher->instructions, 'cash.settlement_rail');
-
-        $via = $settlementRailEnum instanceof SettlementRail
-            ? $settlementRailEnum->value
-            : ((float) $amount < 50000 ? 'INSTAPAY' : 'PESONET');
+        $via = $this->settlementRails->forVoucher($voucher, $amount)->value;
 
         return PayoutRequestData::from([
             'reference' => $providerReference,

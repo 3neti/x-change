@@ -9,7 +9,7 @@ use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
 // or recipient normalization is extracted into a dedicated service.
 function payoutRequestFactory(): WithdrawalPayoutRequestFactory
 {
-    return new WithdrawalPayoutRequestFactory;
+    return app(WithdrawalPayoutRequestFactory::class);
 }
 
 it('builds a payout request from withdrawal context', function () {
@@ -66,6 +66,31 @@ it('falls back to pesonet for large amounts', function () {
     );
 
     expect($request->settlement_rail)->toBe('PESONET');
+});
+
+it('resolves automatic rail from each actual payout amount', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 750.00,
+        settlementRail: null,
+    ));
+
+    $smallRequest = payoutRequestFactory()->make(
+        $voucher,
+        fakePayoutContact(),
+        BankAccount::fromBankAccount('GXCHPHM2XXX:09173011987'),
+        $voucher->code.'-small',
+        25000.00,
+    );
+    $largeRequest = payoutRequestFactory()->make(
+        $voucher,
+        fakePayoutContact(),
+        BankAccount::fromBankAccount('PNBMPHMMTOD:143810077254'),
+        $voucher->code.'-large',
+        50000.00,
+    );
+
+    expect($smallRequest->settlement_rail)->toBe('INSTAPAY')
+        ->and($largeRequest->settlement_rail)->toBe('PESONET');
 });
 
 it('allows contact name to be missing when mobile is present', function () {

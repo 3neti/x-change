@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Response;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
-use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaim;
@@ -23,7 +22,6 @@ use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
-use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
@@ -38,13 +36,11 @@ class ClaimStartController extends Controller
 {
     public function __construct(
         protected VoucherClaimFlowCompiler $claimFlowCompiler,
-        protected DriverService $driverService,
         protected FormFlowService $formFlowService,
         protected BuildProvisioningRequirementViewData $provisioning,
         protected NamedVoucherSliceService $namedSlices,
         protected VoucherFlowCapabilityResolverContract $capabilities,
         protected ClaimWorkflowResolverContract $claimWorkflows,
-        protected FormFlowClaimWorkflowMutator $formFlowWorkflows,
         protected ClaimAuthenticationIntent $claimAuthenticationIntent,
         protected PayoutDestinationRegistry $destinations,
     ) {}
@@ -284,7 +280,10 @@ class ClaimStartController extends Controller
             $sliceIds = data_get($payload, 'slice_ids', []);
         }
 
-        $instructions = $this->driverService->transform($voucher);
+        $instructions = $this->claimFlowCompiler->compile(
+            voucher: $voucher,
+            payoutAmount: $amount,
+        )->instructions;
         $instructionPayload = ClaimExperiencePayload::putIntoInstructions(
             $instructions->toArray(),
             $claimExperience,

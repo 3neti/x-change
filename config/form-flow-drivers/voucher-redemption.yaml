@@ -112,15 +112,11 @@ steps:
         available_balance: "{{ available_balance }}"     # Remaining balance for withdrawals
         max_slices: "{{ max_slices }}"                   # Total allowed slices
 
-      # Settlement Rail (hidden field)
-      # ------------------------------
-      # TODO/KNOWN ISSUE: Currently hardcoded to INSTAPAY
-      # Future: Add {{ settlement_rail }} variable to driver context from voucher.instructions.cash.settlement_rail
-      # Workaround: Hidden field with default value until the rail is instruction-driven.
-      # See: docs/guides/features/form-flow/INTEGRATION.md#known-limitations
+      # Settlement Rail (server-owned hidden context)
+      # ---------------------------------------------
       - name: "settlement_rail"
         type: "hidden"
-        default: "INSTAPAY"                              # HARDCODED - needs fixing
+        default: "{{ settlement_rail }}"
         required: false
 
       # Primary Action Field (redeemer group)
