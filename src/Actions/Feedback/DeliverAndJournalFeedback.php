@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use LBHurtado\XChange\Contracts\FeedbackDeliveryJournalWriterContract;
 use LBHurtado\XChange\Data\Feedback\JournaledFeedbackDeliveryResultData;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
+use LBHurtado\XFeedback\Contracts\FeedbackChannelContentRendererContract;
 use LBHurtado\XFeedback\Contracts\FeedbackDeliveryAttemptRecorderContract;
 use LBHurtado\XFeedback\Contracts\FeedbackDeliveryAttemptRuntimeContract;
 use LBHurtado\XFeedback\Contracts\FeedbackDispatchPreparerContract;
@@ -26,6 +27,7 @@ final readonly class DeliverAndJournalFeedback
         private FeedbackDeliveryAttemptRuntimeContract $runtime,
         private FeedbackDeliveryAttemptRecorderContract $recorder,
         private FeedbackDeliveryJournalWriterContract $journal,
+        private FeedbackChannelContentRendererContract $content,
     ) {}
 
     public function handle(
@@ -255,7 +257,7 @@ final readonly class DeliverAndJournalFeedback
 
         DeliverQueuedFeedbackSmsJob::dispatch(
             deliveryId: $record->delivery_id,
-            message: $intent->message->body,
+            message: $this->content->text($intent, 'sms'),
             sender: (string) config('x-feedback.transports.sms.sender', 'XCHANGE'),
         )->afterCommit();
     }

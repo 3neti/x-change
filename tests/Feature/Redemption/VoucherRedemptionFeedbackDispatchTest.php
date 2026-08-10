@@ -8,9 +8,12 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\DispatchVoucherRedemptionFeedback;
 use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Enums\ClaimEvidenceKind;
+use LBHurtado\XChange\Enums\ClaimEvidenceStatus;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XFeedback\Contracts\FeedbackWebhookSenderContract;
 use LBHurtado\XFeedback\Data\FeedbackDeliveryData;
 use LBHurtado\XFeedback\Data\FeedbackWebhookMessageData;
@@ -77,6 +80,15 @@ it('delivers configured email sms and webhook feedback through x-feedback', func
         'webhook' => 'https://example.test/x-feedback',
     ]);
     $claim = redemptionFeedbackClaim($voucher);
+    VoucherClaimEvidence::query()->create([
+        'voucher_claim_id' => $claim->getKey(),
+        'voucher_id' => $voucher->getKey(),
+        'requirement_key' => 'signature',
+        'kind' => ClaimEvidenceKind::Image,
+        'status' => ClaimEvidenceStatus::Captured,
+        'summary' => 'Signature captured',
+        'captured_at' => now(),
+    ]);
 
     app(DispatchVoucherRedemptionFeedback::class)->handle($claim->getKey());
 
@@ -95,13 +107,28 @@ it('delivers configured email sms and webhook feedback through x-feedback', func
             ).'#claim-'.$claim->getKey()
             && ! str_contains((string) data_get($mail->intent->message->actions, '0.target'), '/x/claim/'),
     );
+    Mail::assertSent(
+        FeedbackEmailMessage::class,
+        fn (FeedbackEmailMessage $mail): bool => data_get($mail->intent->message->artifacts, '0.type') === 'signature'
+            && data_get($mail->intent->message->artifacts, '0.label') === 'Signature captured'
+            && data_get($mail->intent->message->artifacts, '0.url') === data_get($mail->intent->message->actions, '0.target'),
+    );
     expect($webhookSender->messages)->toHaveCount(1)
         ->and($webhookSender->messages[0]->url)->toBe('https://example.test/x-feedback')
         ->and($webhookSender->messages[0]->payload['intent_key'])->toBe('voucher.redemption.recorded')
         ->and($webhookSender->messages[0]->payload['subject_id'])->toBe($voucher->code);
     Bus::assertDispatched(
         DeliverQueuedFeedbackSmsJob::class,
-        fn (DeliverQueuedFeedbackSmsJob $job): bool => $job->queue === 'x-change-feedback',
+        fn (DeliverQueuedFeedbackSmsJob $job): bool => $job->queue === 'x-change-feedback'
+            && str_contains($job->message, 'Review redemption: '.route(
+                'x-change.cockpit.pay-codes.show',
+                [
+                    'code' => $voucher->code,
+                    'tab' => 'claim',
+                    'claim' => $claim->getKey(),
+                ],
+            ).'#claim-'.$claim->getKey())
+            && ! str_contains($job->message, 'Signature captured'),
     );
 
     expect(FeedbackDeliveryRecord::query()->count())->toBe(3)

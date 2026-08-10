@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Redemption;
 
+use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -27,7 +28,7 @@ final readonly class DispatchVoucherRedemptionFeedback
     public function handle(int $voucherClaimId): void
     {
         $claim = VoucherClaim::query()
-            ->with('voucher')
+            ->with(['voucher', 'evidence'])
             ->findOrFail($voucherClaimId);
 
         if (! $this->isEligible($claim) || ! $claim->voucher instanceof Voucher) {
@@ -161,6 +162,19 @@ final readonly class DispatchVoucherRedemptionFeedback
                         'style' => 'primary',
                     ],
                 ],
+                artifacts: $claim->evidence
+                    ->map(static fn ($evidence): array => [
+                        'type' => (string) $evidence->requirement_key,
+                        'label' => Str::headline((string) $evidence->requirement_key).' captured',
+                        'url' => $reviewUrl,
+                        'preview' => sprintf(
+                            '%s · available after authorized sign in',
+                            Str::headline((string) $evidence->status->value),
+                        ),
+                        'claim_id' => $claim->getKey(),
+                    ])
+                    ->values()
+                    ->all(),
                 meta: [
                     'provider_delivery' => true,
                     'lifecycle_truth_owner' => 'x-change',
