@@ -39,6 +39,11 @@ function cockpitWave30VoucherLifecycle(array $rows): VoucherLifecycleServiceCont
         {
             return [];
         }
+
+        public function expire(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
     };
 }
 

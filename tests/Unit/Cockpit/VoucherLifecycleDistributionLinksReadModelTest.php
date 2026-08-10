@@ -42,6 +42,11 @@ it('adds read only distribution links to voucher detail read models', function (
         {
             return [];
         }
+
+        public function expire(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
     };
 
     $provider = new VoucherLifecycleCockpitReadModelProvider(

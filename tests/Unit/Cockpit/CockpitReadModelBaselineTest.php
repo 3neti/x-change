@@ -139,6 +139,11 @@ it('hydrates dashboard-level integration summaries without requiring a pay code'
             {
                 return [];
             }
+
+            public function expire(string $voucher, array $payload = []): mixed
+            {
+                return [];
+            }
         },
         integrations: new OptionalCockpitIntegrationReadModels(app(), new DefaultCockpitRedactor),
     );
@@ -446,6 +451,11 @@ it('hydrates optional campaign cockpit adoption facts through a configured read-
             {
                 return [];
             }
+
+            public function expire(string $voucher, array $payload = []): mixed
+            {
+                return [];
+            }
         },
         integrations: app(OptionalCockpitIntegrationReadModels::class),
     ))->forCampaignAdoption(new CockpitReadModelQueryData(
@@ -730,6 +740,11 @@ it('adapts voucher lifecycle details into a sanitized cockpit voucher summary', 
         {
             return [];
         }
+
+        public function expire(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
     };
 
     $bundle = (new VoucherLifecycleCockpitReadModelProvider($lifecycle))
@@ -837,6 +852,11 @@ it('falls back to the not wired bundle when voucher lifecycle lookup misses', fu
         }
 
         public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+
+        public function expire(string $voucher, array $payload = []): mixed
         {
             return [];
         }
@@ -977,6 +997,11 @@ it('hydrates optional journal action and feedback read models when integration s
         }
 
         public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+
+        public function expire(string $voucher, array $payload = []): mixed
         {
             return [];
         }
@@ -1214,6 +1239,11 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
         }
 
         public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+
+        public function expire(string $voucher, array $payload = []): mixed
         {
             return [];
         }
@@ -1664,6 +1694,11 @@ it('adapts voucher lifecycle list rows into sanitized cockpit dashboard facts', 
         {
             return [];
         }
+
+        public function expire(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
     };
 
     $readModel = (new VoucherLifecycleCockpitReadModelProvider($lifecycle))
@@ -1801,6 +1836,11 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
         }
 
         public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+
+        public function expire(string $voucher, array $payload = []): mixed
         {
             return [];
         }
