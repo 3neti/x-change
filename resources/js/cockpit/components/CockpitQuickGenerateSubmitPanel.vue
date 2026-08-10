@@ -2564,6 +2564,21 @@ const payoutProviderLabel = computed<string>(
     () => props.settlementRailCapabilities?.provider.label ?? 'Unavailable',
 );
 
+const settlementRailOptions = computed(() => [
+    {
+        code: '',
+        label: 'Automatic',
+        enabled: true,
+        helper: 'Recommended · chosen for each payout amount.',
+    },
+    ...configuredSettlementRails.value.map((capability) => ({
+        code: capability.code,
+        label: capability.label,
+        enabled: capability.enabled,
+        helper: settlementRailHelper(capability),
+    })),
+]);
+
 const automaticSettlementRailCapability = computed<
     CockpitSettlementRailCapability | null
 >(() => {
@@ -5407,6 +5422,79 @@ function instructionRecord(
                     </div>
                 </div>
 
+                <fieldset
+                    v-if="!isAccountFundingClaim"
+                    class="mt-4 grid min-w-0 gap-2 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
+                    data-testid="cockpit-quick-generate-primary-settlement-rail"
+                >
+                    <div
+                        class="flex flex-wrap items-end justify-between gap-2"
+                    >
+                        <legend
+                            class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                            Transfer Network
+                        </legend>
+                        <p
+                            class="text-[11px] text-slate-500 dark:text-slate-400"
+                            data-testid="cockpit-quick-generate-payout-provider"
+                        >
+                            Payout Provider ·
+                            <span class="font-semibold">{{
+                                payoutProviderLabel
+                            }}</span>
+                        </p>
+                    </div>
+                    <div class="grid gap-2 sm:grid-cols-3">
+                        <label
+                            v-for="option in settlementRailOptions"
+                            :key="option.code || 'automatic'"
+                            class="flex items-start gap-2.5 rounded-xl border p-3 transition"
+                            :class="[
+                                settlementRail === option.code
+                                    ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-200 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
+                                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
+                                option.enabled
+                                    ? 'cursor-pointer hover:border-emerald-200'
+                                    : 'cursor-not-allowed opacity-55',
+                            ]"
+                        >
+                            <input
+                                v-model="settlementRail"
+                                type="radio"
+                                :value="option.code"
+                                class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
+                                :disabled="processing || !option.enabled"
+                                :data-testid="`cockpit-quick-generate-settlement-rail-${option.code === '' ? 'automatic' : option.code.toLowerCase()}`"
+                            />
+                            <span class="min-w-0">
+                                <span class="block text-sm font-semibold">{{
+                                    option.label
+                                }}</span>
+                                <span
+                                    class="mt-0.5 block text-[11px] leading-4"
+                                >
+                                    {{ option.helper }}
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                    <p
+                        v-if="settlementRailSelectionError"
+                        class="text-xs font-medium text-rose-600 dark:text-rose-300"
+                        data-testid="cockpit-quick-generate-settlement-rail-error"
+                    >
+                        {{ settlementRailSelectionError }}
+                    </p>
+                    <p
+                        v-else
+                        class="text-[11px] text-slate-500 dark:text-slate-400"
+                    >
+                        Receiving options are limited to institutions compatible
+                        with the effective network.
+                    </p>
+                </fieldset>
+
                 <section
                     class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
                     data-testid="cockpit-quick-generate-starting-point"
@@ -5876,107 +5964,6 @@ function instructionRecord(
                                 data-testid="cockpit-quick-generate-claim-recipient-error"
                             >
                                 {{ claimRecipientError }}
-                            </p>
-                        </fieldset>
-
-                        <fieldset
-                            v-if="!isAccountFundingClaim"
-                            class="grid min-w-0 gap-2 lg:col-span-2"
-                            data-testid="cockpit-quick-generate-primary-settlement-rail"
-                        >
-                            <div
-                                class="flex flex-wrap items-end justify-between gap-2"
-                            >
-                                <legend
-                                    class="text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                >
-                                    Transfer Network
-                                </legend>
-                                <p
-                                    class="text-[11px] text-slate-500 dark:text-slate-400"
-                                    data-testid="cockpit-quick-generate-payout-provider"
-                                >
-                                    Payout Provider ·
-                                    <span class="font-semibold">{{
-                                        payoutProviderLabel
-                                    }}</span>
-                                </p>
-                            </div>
-                            <div class="grid gap-2 sm:grid-cols-3">
-                                <label
-                                    class="flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition"
-                                    :class="
-                                        settlementRail === ''
-                                            ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-200 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
-                                            : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
-                                    "
-                                >
-                                    <input
-                                        v-model="settlementRail"
-                                        type="radio"
-                                        value=""
-                                        class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
-                                        :disabled="processing"
-                                        data-testid="cockpit-quick-generate-settlement-rail-automatic"
-                                    />
-                                    <span class="min-w-0">
-                                        <span class="block text-sm font-semibold"
-                                            >Automatic</span
-                                        >
-                                        <span
-                                            class="mt-0.5 block text-[11px] leading-4"
-                                        >
-                                            Recommended · chosen for each payout
-                                            amount.
-                                        </span>
-                                    </span>
-                                </label>
-                                <label
-                                    v-for="capability in configuredSettlementRails"
-                                    :key="capability.code"
-                                    class="flex items-start gap-2.5 rounded-xl border p-3 transition"
-                                    :class="[
-                                        settlementRail === capability.code
-                                            ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-200 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
-                                            : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
-                                        capability.enabled
-                                            ? 'cursor-pointer hover:border-emerald-200'
-                                            : 'cursor-not-allowed opacity-55',
-                                    ]"
-                                >
-                                    <input
-                                        v-model="settlementRail"
-                                        type="radio"
-                                        :value="capability.code"
-                                        class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
-                                        :disabled="processing || !capability.enabled"
-                                        :data-testid="`cockpit-quick-generate-settlement-rail-${capability.code.toLowerCase()}`"
-                                    />
-                                    <span class="min-w-0">
-                                        <span class="block text-sm font-semibold">{{
-                                            capability.label
-                                        }}</span>
-                                        <span
-                                            class="mt-0.5 block text-[11px] leading-4"
-                                        >
-                                            {{ settlementRailHelper(capability) }}
-                                        </span>
-                                    </span>
-                                </label>
-                            </div>
-                            <p
-                                v-if="settlementRailSelectionError"
-                                class="text-xs font-medium text-rose-600 dark:text-rose-300"
-                                data-testid="cockpit-quick-generate-settlement-rail-error"
-                            >
-                                {{ settlementRailSelectionError }}
-                            </p>
-                            <p
-                                v-else
-                                class="text-[11px] text-slate-500 dark:text-slate-400"
-                            >
-                                Receiving options are limited to institutions
-                                compatible with the effective network.
                             </p>
                         </fieldset>
 

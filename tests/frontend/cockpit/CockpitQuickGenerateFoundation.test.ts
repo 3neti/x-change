@@ -2642,13 +2642,24 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        const railControl = wrapper.get(
+        const orderCard = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-card"]',
+        );
+        const railControl = orderCard.get(
             '[data-testid="cockpit-quick-generate-primary-settlement-rail"]',
         );
 
         expect(railControl.text()).toContain('Automatic');
         expect(railControl.text()).toContain('InstaPay');
         expect(railControl.text()).toContain('PESONet');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-voucher-instruction-builder"]')
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-settlement-rail"]',
+                )
+                .exists(),
+        ).toBe(false);
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-payout-provider"]')
