@@ -9,6 +9,39 @@ use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 final readonly class CockpitPayCodeEngineeringPreview
 {
+    /** @var list<string> */
+    private const SensitiveEvidenceKeys = [
+        'account_number',
+        'address',
+        'email',
+        'kyc_id_back',
+        'kyc_id_front',
+        'location',
+        'mobile',
+        'name',
+        'otp',
+        'reference_code',
+        'secret',
+        'selfie',
+        'signature',
+    ];
+
+    /** @var list<string> */
+    private const SensitiveAttributeKeys = [
+        'account_number',
+        'claimer_mobile',
+        'claimant_mobile',
+        'destination_account',
+        'email',
+        'mobile',
+        'password',
+        'phone',
+        'recipient_account',
+        'recipient_mobile',
+        'secret',
+        'token',
+    ];
+
     public function __construct(
         private CockpitReadOnlyPageProps $props,
     ) {}
@@ -26,10 +59,10 @@ final readonly class CockpitPayCodeEngineeringPreview
                 'status' => $voucher['status'] ?? null,
                 'overview' => $this->array($voucher['overview'] ?? null),
             ],
-            'instructions' => $this->array($voucher['instructions'] ?? null),
-            'claims' => $this->array($voucher['claims'] ?? null),
-            'settlement' => $this->array($voucher['settlement'] ?? null),
-            'treasury' => $this->array($voucher['treasury'] ?? null),
+            'instructions' => $this->redact($this->array($voucher['instructions'] ?? null)),
+            'claims' => $this->redact($this->array($voucher['claims'] ?? null)),
+            'settlement' => $this->redact($this->array($voucher['settlement'] ?? null)),
+            'treasury' => $this->redact($this->array($voucher['treasury'] ?? null)),
             'feedback_deliveries' => $this->deliverySummaries(
                 $this->list(data_get($page, 'read_model.feedback.deliveries')),
             ),
@@ -80,6 +113,39 @@ final readonly class CockpitPayCodeEngineeringPreview
             ]),
             $entries,
         );
+    }
+
+    private function redact(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $evidenceKey = $value['key'] ?? null;
+
+        if (
+            is_string($evidenceKey)
+            && in_array($evidenceKey, self::SensitiveEvidenceKeys, true)
+            && array_key_exists('value', $value)
+        ) {
+            $value['value'] = $value['value'] === null ? null : '[redacted]';
+        }
+
+        foreach ($value as $key => $item) {
+            if (
+                is_string($key)
+                && in_array($key, self::SensitiveAttributeKeys, true)
+                && $item !== null
+            ) {
+                $value[$key] = '[redacted]';
+
+                continue;
+            }
+
+            $value[$key] = $this->redact($item);
+        }
+
+        return $value;
     }
 
     /** @return array<string, mixed> */

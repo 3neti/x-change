@@ -85,6 +85,31 @@ it('serves a versioned sanitized Engineering Preview only to an authorized actor
             'mobile' => '09173011987',
         ],
     ]));
+    app(RecordVoucherClaim::class)->handle(
+        $voucher,
+        new SubmitPayCodeClaimResultData(
+            voucher_code: $voucher->code,
+            claim_type: 'redeem',
+            claimed: true,
+            status: 'succeeded',
+            requested_amount: 20,
+            disbursed_amount: 20,
+            currency: 'PHP',
+            remaining_balance: 0,
+            fully_claimed: true,
+            disbursement: [],
+            messages: ['Claim completed.'],
+        ),
+        [
+            'mobile' => '09173011987',
+            'account_number' => '09173011987',
+            'inputs' => [
+                'account_number' => '09173011987',
+                'name' => 'Private Claimant',
+                'location' => ['formatted_address' => 'Private Location'],
+            ],
+        ],
+    );
 
     $response = $this->actingAs($owner)
         ->getJson(route('x-change.cockpit.pay-codes.engineering-preview.show', [
@@ -98,12 +123,15 @@ it('serves a versioned sanitized Engineering Preview only to an authorized actor
         ->assertJsonPath('claims.redactions.binary_evidence_in_page_props', false)
         ->assertJsonPath('redactions.binary_evidence', 'excluded')
         ->assertJsonPath('redactions.raw_provider_payloads', 'excluded')
-        ->assertJsonPath('redactions.credentials_and_secrets', 'excluded');
+        ->assertJsonPath('redactions.credentials_and_secrets', 'excluded')
+        ->assertJsonPath('claims.evidence.0.value', '[redacted]');
 
     expect($response->getContent())
         ->not->toContain('never-expose-this-secret')
         ->not->toContain('private-issuer@example.test')
-        ->not->toContain('09173011987');
+        ->not->toContain('09173011987')
+        ->not->toContain('Private Claimant')
+        ->not->toContain('Private Location');
 
     $otherAccountHolder = actingAsTestUser();
 
