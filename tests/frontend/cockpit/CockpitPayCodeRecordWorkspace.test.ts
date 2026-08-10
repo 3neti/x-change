@@ -1,5 +1,5 @@
-import { mount } from "@vue/test-utils";
-import { afterEach, describe, expect, it } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import BankEMISelect from "../../../resources/js/components/x-change-shared-financial/BankEMISelect.vue";
 import CockpitPayCodeRecordWorkspace from "../../../resources/js/cockpit/components/CockpitPayCodeRecordWorkspace.vue";
 
@@ -105,6 +105,47 @@ const voucher = {
 describe("Cockpit Pay Code record workspace", () => {
   afterEach(() => {
     window.history.replaceState({}, "", "/");
+    vi.unstubAllGlobals();
+  });
+
+  it("loads the sanitized Engineering Preview only when its tab is opened", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        schema: "x-change.cockpit.pay-code-engineering-preview.v1",
+        pay_code: { code: "CAMP-CB2L" },
+        redactions: { binary_evidence: "excluded" },
+      }),
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Engineering"))!
+      .trigger("click");
+    await flushPromises();
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledWith(
+      "/x/cockpit/pay-codes/CAMP-CB2L/engineering-preview",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
+    expect(wrapper.get('[data-testid="engineering-preview-json"]').text())
+      .toContain("x-change.cockpit.pay-code-engineering-preview.v1");
+    expect(wrapper.get('[data-testid="engineering-preview-json"]').text())
+      .toContain('"binary_evidence": "excluded"');
   });
 
   it("opens and focuses the claim identified by an authenticated feedback link", () => {

@@ -71,6 +71,49 @@ it('limits a Pay Code record to its owner or the system principal', function ():
         ->assertOk();
 });
 
+it('serves a versioned sanitized Engineering Preview only to an authorized actor', function (): void {
+    $owner = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(20.00, overrides: [
+        'cash' => [
+            'validation' => [
+                'secret' => 'never-expose-this-secret',
+                'mobile' => '09173011987',
+            ],
+        ],
+        'feedback' => [
+            'email' => 'private-issuer@example.test',
+            'mobile' => '09173011987',
+        ],
+    ]));
+
+    $response = $this->actingAs($owner)
+        ->getJson(route('x-change.cockpit.pay-codes.engineering-preview.show', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
+        ->assertJsonPath('schema', 'x-change.cockpit.pay-code-engineering-preview.v1')
+        ->assertJsonPath('pay_code.code', $voucher->code)
+        ->assertJsonPath('instructions.raw_payload_exposed', false)
+        ->assertJsonPath('claims.redactions.binary_evidence_in_page_props', false)
+        ->assertJsonPath('redactions.binary_evidence', 'excluded')
+        ->assertJsonPath('redactions.raw_provider_payloads', 'excluded')
+        ->assertJsonPath('redactions.credentials_and_secrets', 'excluded');
+
+    expect($response->getContent())
+        ->not->toContain('never-expose-this-secret')
+        ->not->toContain('private-issuer@example.test')
+        ->not->toContain('09173011987');
+
+    $otherAccountHolder = actingAsTestUser();
+
+    $this->actingAs($otherAccountHolder)
+        ->getJson(route('x-change.cockpit.pay-codes.engineering-preview.show', [
+            'code' => $voucher->code,
+        ]))
+        ->assertNotFound();
+});
+
 it('reveals binary claim evidence only through a no-store audited endpoint', function (): void {
     $owner = actingAsTestUser();
     $voucher = issueVoucher();

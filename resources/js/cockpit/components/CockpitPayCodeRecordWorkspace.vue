@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CockpitPayCodePayoutCorrectionController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodePayoutCorrectionController";
+import CockpitPayCodeEngineeringPreviewController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeEngineeringPreviewController";
 import BankEMISelect from "@/components/financial/BankEMISelect.vue";
 import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue";
 import { Form } from "@inertiajs/vue3";
@@ -7,12 +8,14 @@ import {
   Activity,
   BadgeCheck,
   Banknote,
+  Braces,
   CalendarClock,
   Check,
   ChevronRight,
   CircleDollarSign,
   CircleAlert,
   ClipboardCheck,
+  Copy,
   Clock3,
   ExternalLink,
   Eye,
@@ -44,7 +47,8 @@ type WorkspaceTab =
   | "instructions"
   | "claim"
   | "settlement"
-  | "audit";
+  | "audit"
+  | "engineering";
 type DetailRecord = Record<string, unknown>;
 
 const props = defineProps<{
@@ -67,6 +71,10 @@ const focusedClaimId = ref<number | null>(initialTarget.claimId);
 const revealedEvidence = ref<Set<number>>(new Set());
 const correctedBankCode = ref("");
 const correctedAccountNumber = ref("");
+const engineeringPreview = ref<Record<string, unknown> | null>(null);
+const engineeringLoading = ref(false);
+const engineeringError = ref<string | null>(null);
+const engineeringCopied = ref(false);
 
 const overview = computed(() => record(props.voucher?.overview));
 const instructions = computed(() => record(props.voucher?.instructions));
@@ -164,8 +172,15 @@ const rejectionReason = computed(
     text(redemption.value.rejection_reason) ||
     "The receiving institution rejected the payout destination.",
 );
+const engineeringJson = computed(() =>
+  JSON.stringify(engineeringPreview.value ?? {}, null, 2),
+);
 
 onMounted(async () => {
+  if (activeTab.value === "engineering") {
+    await loadEngineeringPreview();
+  }
+
   if (focusedClaimId.value === null || activeTab.value !== "claim") {
     return;
   }
@@ -175,6 +190,59 @@ onMounted(async () => {
     .getElementById(`claim-${focusedClaimId.value}`)
     ?.scrollIntoView?.({ behavior: "smooth", block: "center" });
 });
+
+async function selectTab(tab: WorkspaceTab): Promise<void> {
+  activeTab.value = tab;
+
+  if (tab === "engineering") {
+    await loadEngineeringPreview();
+  }
+}
+
+async function loadEngineeringPreview(): Promise<void> {
+  if (engineeringPreview.value !== null || engineeringLoading.value) {
+    return;
+  }
+
+  engineeringLoading.value = true;
+  engineeringError.value = null;
+
+  try {
+    const response = await fetch(
+      CockpitPayCodeEngineeringPreviewController({ code: props.code }).url,
+      {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Engineering Preview could not be loaded.");
+    }
+
+    engineeringPreview.value = (await response.json()) as Record<
+      string,
+      unknown
+    >;
+  } catch (error) {
+    engineeringError.value =
+      error instanceof Error
+        ? error.message
+        : "Engineering Preview could not be loaded.";
+  } finally {
+    engineeringLoading.value = false;
+  }
+}
+
+async function copyEngineeringPreview(): Promise<void> {
+  if (engineeringPreview.value === null || !navigator.clipboard) {
+    return;
+  }
+
+  await navigator.clipboard.writeText(engineeringJson.value);
+  engineeringCopied.value = true;
+  window.setTimeout(() => (engineeringCopied.value = false), 1800);
+}
 
 const tabs = computed(() => [
   {
@@ -206,6 +274,12 @@ const tabs = computed(() => [
     label: "Audit",
     icon: History,
     count: journalEntries.value.length + deliveries.value.length,
+  },
+  {
+    key: "engineering" as const,
+    label: "Engineering",
+    icon: Braces,
+    count: null,
   },
 ]);
 
@@ -325,6 +399,7 @@ function workspaceTarget(): { tab: WorkspaceTab; claimId: number | null } {
     "claim",
     "settlement",
     "audit",
+    "engineering",
   ];
   const requestedTab = query.get("tab") as WorkspaceTab | null;
   const requestedClaim = Number(query.get("claim"));
@@ -477,7 +552,7 @@ function number(value: unknown): number {
               ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-white dark:ring-slate-700'
               : 'text-slate-500 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-white',
           ]"
-          @click="activeTab = tab.key"
+          @click="selectTab(tab.key)"
         >
           <component :is="tab.icon" class="h-4 w-4" />
           {{ tab.label }}
@@ -1312,7 +1387,11 @@ function number(value: unknown): number {
         </div>
       </section>
 
-      <section v-else class="space-y-5" data-testid="pay-code-audit-tab">
+      <section
+        v-else-if="activeTab === 'audit'"
+        class="space-y-5"
+        data-testid="pay-code-audit-tab"
+      >
         <div class="grid gap-5 xl:grid-cols-2">
           <div>
             <div class="flex items-center gap-2">
@@ -1401,6 +1480,62 @@ function number(value: unknown): number {
             </p>
           </div>
         </div>
+      </section>
+
+      <section v-else class="space-y-4" data-testid="pay-code-engineering-tab">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <Braces class="h-5 w-5 text-violet-600" />
+              <h3 class="text-sm font-semibold text-slate-950 dark:text-white">
+                Sanitized Engineering Preview
+              </h3>
+            </div>
+            <p class="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">
+              Versioned operational JSON. Raw evidence, provider payloads,
+              credentials, and private storage coordinates are excluded.
+            </p>
+          </div>
+          <button
+            v-if="engineeringPreview"
+            type="button"
+            class="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            data-testid="copy-engineering-preview"
+            @click="copyEngineeringPreview"
+          >
+            <Check v-if="engineeringCopied" class="h-4 w-4 text-emerald-600" />
+            <Copy v-else class="h-4 w-4" />
+            {{ engineeringCopied ? "Copied" : "Copy JSON" }}
+          </button>
+        </div>
+
+        <div
+          v-if="engineeringLoading"
+          class="animate-pulse rounded-2xl border border-slate-200 bg-slate-100 p-8 dark:border-slate-800 dark:bg-slate-950"
+          data-testid="engineering-preview-loading"
+        >
+          <div class="h-3 w-48 rounded bg-slate-300 dark:bg-slate-700"></div>
+          <div class="mt-4 h-40 rounded bg-slate-200 dark:bg-slate-800"></div>
+        </div>
+        <div
+          v-else-if="engineeringError"
+          class="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"
+          data-testid="engineering-preview-error"
+        >
+          {{ engineeringError }}
+          <button
+            type="button"
+            class="ml-2 font-semibold underline"
+            @click="loadEngineeringPreview"
+          >
+            Try again
+          </button>
+        </div>
+        <pre
+          v-else
+          class="max-h-[38rem] overflow-auto rounded-2xl border border-slate-800 bg-slate-950 p-4 text-[0.72rem] leading-5 text-slate-200 shadow-inner"
+          data-testid="engineering-preview-json"
+        ><code>{{ engineeringJson }}</code></pre>
       </section>
     </div>
 
