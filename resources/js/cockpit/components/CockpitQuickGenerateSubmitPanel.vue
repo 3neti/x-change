@@ -39,6 +39,8 @@ import type {
     CockpitQuickGenerateRuntimePricingPreflight,
     CockpitQuickGenerateTemplate,
     CockpitSavedPayCodeTemplate,
+    CockpitSettlementRailCapabilities,
+    CockpitSettlementRailCapability,
 } from '../types';
 import { usePayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
@@ -94,6 +96,7 @@ const props = withDefaults(
         lastInstructions?: CockpitQuickGenerateLastInstructions | null;
         savedTemplates?: CockpitSavedPayCodeTemplate[];
         instructionCapabilities?: CockpitInstructionCapabilityReadinessMap;
+        settlementRailCapabilities?: CockpitSettlementRailCapabilities;
         templates: CockpitQuickGenerateTemplate[];
     }>(),
     {
@@ -1888,6 +1891,7 @@ const canSubmit = computed<boolean>(() => {
         feedbackValid.value &&
         namedClaimSliceValidationMessage.value === null &&
         claimRecipientError.value === null &&
+        settlementRailSelectionError.value === null &&
         (!isAccountFundingClaim.value || sliceMode.value === 'whole')
     );
 });
@@ -1903,7 +1907,8 @@ const canGenerateClaimPreview = computed<boolean>(() => {
         payeePolicy.value.issuable &&
         feedbackValid.value &&
         namedClaimSliceValidationMessage.value === null &&
-        claimRecipientError.value === null
+        claimRecipientError.value === null &&
+        settlementRailSelectionError.value === null
     );
 });
 
@@ -2551,18 +2556,95 @@ const effectiveExpiry = computed<EffectiveExpiry>(() => {
     };
 });
 
+const configuredSettlementRails = computed<CockpitSettlementRailCapability[]>(
+    () => props.settlementRailCapabilities?.rails ?? [],
+);
+
+const payoutProviderLabel = computed<string>(
+    () => props.settlementRailCapabilities?.provider.label ?? 'Unavailable',
+);
+
+const automaticSettlementRailCapability = computed<
+    CockpitSettlementRailCapability | null
+>(() => {
+    const amountMinor = Math.round(Number(amount.value) * 100);
+    const threshold =
+        props.settlementRailCapabilities?.automatic_policy
+            .instapay_below_amount_minor ?? 5_000_000;
+    const code =
+        Number.isFinite(amountMinor) && amountMinor >= threshold
+            ? 'PESONET'
+            : 'INSTAPAY';
+
+    return (
+        configuredSettlementRails.value.find(
+            (capability) => capability.code === code,
+        ) ?? null
+    );
+});
+
+const selectedSettlementRailCapability = computed<
+    CockpitSettlementRailCapability | null
+>(() => {
+    if (settlementRail.value === '') {
+        return automaticSettlementRailCapability.value;
+    }
+
+    return (
+        configuredSettlementRails.value.find(
+            (capability) => capability.code === settlementRail.value,
+        ) ?? null
+    );
+});
+
+const settlementRailSelectionError = computed<string | null>(() => {
+    if (
+        isAccountFundingClaim.value ||
+        props.settlementRailCapabilities === undefined
+    ) {
+        return null;
+    }
+
+    const capability = selectedSettlementRailCapability.value;
+
+    if (capability === null) {
+        return 'The selected transfer network is not available from the configured payout provider.';
+    }
+
+    if (!capability.enabled) {
+        return (
+            capability.availability_reason ??
+            `${capability.label} is not available from the configured payout provider.`
+        );
+    }
+
+    return null;
+});
+
+function settlementRailHelper(
+    capability: CockpitSettlementRailCapability,
+): string {
+    if (!capability.enabled) {
+        return capability.availability_reason ?? 'Unavailable';
+    }
+
+    const minimum = capability.minimum_amount_minor;
+    const maximum = capability.maximum_amount_minor;
+
+    if (minimum !== null && maximum !== null) {
+        return `${formatMoney(minimum / 100)}–${formatMoney(maximum / 100)} · provider cost ${capability.provider_fee_minor === null ? 'not published' : formatMoney(capability.provider_fee_minor / 100)}`;
+    }
+
+    return 'Available for compatible receiving institutions.';
+}
+
 const illustrativeFee = computed<number>(() => {
-    const normalizedAmount = Number(amount.value);
+    const providerFeeMinor =
+        selectedSettlementRailCapability.value?.provider_fee_minor;
 
-    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-        return 0;
-    }
-
-    if (settlementRail.value === 'PESONET') {
-        return 25;
-    }
-
-    return 10;
+    return providerFeeMinor === null || providerFeeMinor === undefined
+        ? 0
+        : providerFeeMinor / 100;
 });
 
 const feeStrategyLabel = computed<string>(() => {
@@ -2592,7 +2674,7 @@ const feeStrategyPreview = computed<{
         return {
             recipientAmount: formatMoney(Math.max(safeAmount - fee, 0)),
             issuerCost: formatMoney(safeAmount),
-            note: 'Illustrative only: fee is deducted from the visible amount.',
+            note: 'Configured provider transfer cost is deducted from the visible amount.',
         };
     }
 
@@ -2600,14 +2682,14 @@ const feeStrategyPreview = computed<{
         return {
             recipientAmount: formatMoney(safeAmount),
             issuerCost: formatMoney(safeAmount + fee),
-            note: 'Illustrative only: fee is added to the issuer cost.',
+            note: 'Configured provider transfer cost is added to the issuer cost.',
         };
     }
 
     return {
         recipientAmount: formatMoney(safeAmount),
         issuerCost: formatMoney(safeAmount + fee),
-        note: 'Illustrative only: issuer absorbs the estimated fee.',
+        note: 'Configured provider transfer cost is absorbed by the issuer.',
     };
 });
 
@@ -5797,6 +5879,107 @@ function instructionRecord(
                             </p>
                         </fieldset>
 
+                        <fieldset
+                            v-if="!isAccountFundingClaim"
+                            class="grid min-w-0 gap-2 lg:col-span-2"
+                            data-testid="cockpit-quick-generate-primary-settlement-rail"
+                        >
+                            <div
+                                class="flex flex-wrap items-end justify-between gap-2"
+                            >
+                                <legend
+                                    class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                >
+                                    Transfer Network
+                                </legend>
+                                <p
+                                    class="text-[11px] text-slate-500 dark:text-slate-400"
+                                    data-testid="cockpit-quick-generate-payout-provider"
+                                >
+                                    Payout Provider ·
+                                    <span class="font-semibold">{{
+                                        payoutProviderLabel
+                                    }}</span>
+                                </p>
+                            </div>
+                            <div class="grid gap-2 sm:grid-cols-3">
+                                <label
+                                    class="flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition"
+                                    :class="
+                                        settlementRail === ''
+                                            ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-200 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                    "
+                                >
+                                    <input
+                                        v-model="settlementRail"
+                                        type="radio"
+                                        value=""
+                                        class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
+                                        :disabled="processing"
+                                        data-testid="cockpit-quick-generate-settlement-rail-automatic"
+                                    />
+                                    <span class="min-w-0">
+                                        <span class="block text-sm font-semibold"
+                                            >Automatic</span
+                                        >
+                                        <span
+                                            class="mt-0.5 block text-[11px] leading-4"
+                                        >
+                                            Recommended · chosen for each payout
+                                            amount.
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    v-for="capability in configuredSettlementRails"
+                                    :key="capability.code"
+                                    class="flex items-start gap-2.5 rounded-xl border p-3 transition"
+                                    :class="[
+                                        settlementRail === capability.code
+                                            ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-200 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
+                                            : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
+                                        capability.enabled
+                                            ? 'cursor-pointer hover:border-emerald-200'
+                                            : 'cursor-not-allowed opacity-55',
+                                    ]"
+                                >
+                                    <input
+                                        v-model="settlementRail"
+                                        type="radio"
+                                        :value="capability.code"
+                                        class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
+                                        :disabled="processing || !capability.enabled"
+                                        :data-testid="`cockpit-quick-generate-settlement-rail-${capability.code.toLowerCase()}`"
+                                    />
+                                    <span class="min-w-0">
+                                        <span class="block text-sm font-semibold">{{
+                                            capability.label
+                                        }}</span>
+                                        <span
+                                            class="mt-0.5 block text-[11px] leading-4"
+                                        >
+                                            {{ settlementRailHelper(capability) }}
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                            <p
+                                v-if="settlementRailSelectionError"
+                                class="text-xs font-medium text-rose-600 dark:text-rose-300"
+                                data-testid="cockpit-quick-generate-settlement-rail-error"
+                            >
+                                {{ settlementRailSelectionError }}
+                            </p>
+                            <p
+                                v-else
+                                class="text-[11px] text-slate-500 dark:text-slate-400"
+                            >
+                                Receiving options are limited to institutions
+                                compatible with the effective network.
+                            </p>
+                        </fieldset>
+
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
@@ -5971,31 +6154,6 @@ function instructionRecord(
                             <label
                                 class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                <span class="leading-none"
-                                    >Transfer Network</span
-                                >
-                                <select
-                                    v-model="settlementRail"
-                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                    data-testid="cockpit-quick-generate-settlement-rail"
-                                    :disabled="
-                                        processing || isAccountFundingClaim
-                                    "
-                                >
-                                    <option value="">Default</option>
-                                    <option value="INSTAPAY">INSTAPAY</option>
-                                    <option value="PESONET">PESONET</option>
-                                </select>
-                                <span
-                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
-                                >
-                                    Optional preference for the eventual
-                                    transfer.
-                                </span>
-                            </label>
-                            <label
-                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                            >
                                 <span class="leading-none">Fee Handling</span>
                                 <select
                                     v-model="feeStrategy"
@@ -6018,8 +6176,8 @@ function instructionRecord(
                                 <span
                                     class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
-                                    Preview how a possible fee affects the
-                                    recipient and issuer.
+                                    Preview how the configured provider transfer
+                                    cost affects the recipient and issuer.
                                 </span>
                             </label>
                             <div
@@ -6043,7 +6201,7 @@ function instructionRecord(
                                         <p
                                             class="text-[11px] tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
                                         >
-                                            Estimated Fee
+                                            Provider Transfer Cost
                                         </p>
                                         <p class="font-semibold">
                                             {{ formatMoney(illustrativeFee) }}
@@ -6075,8 +6233,9 @@ function instructionRecord(
                                 <p
                                     class="text-[11px] text-emerald-700 dark:text-emerald-300"
                                 >
-                                    {{ feeStrategyPreview.note }} The final fee
-                                    is confirmed during issuance.
+                                    {{ feeStrategyPreview.note }} x-change
+                                    issuance pricing remains separately itemized
+                                    under Cost.
                                 </p>
                             </div>
                             <label

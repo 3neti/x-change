@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
+use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Services\WithdrawalRailGuard;
 
 it('allows instapay disbursement to emi', function () {
     $bankRegistry = Mockery::mock(BankRegistry::class);
 
-    $bankRegistry->shouldReceive('isEMI')
-        ->never();
+    $bankRegistry->shouldReceive('supportsRail')->once()->andReturn(true);
+    $capabilities = Mockery::mock(SettlementRailCapabilityRegistryContract::class);
+    $capabilities->shouldReceive('assertSupports')->once();
 
-    $guard = new WithdrawalRailGuard($bankRegistry);
+    $guard = new WithdrawalRailGuard($bankRegistry, $capabilities);
 
     $guard->assertAllowed(PayoutRequestData::from([
         'reference' => 'REF-001',
@@ -35,8 +37,11 @@ it('allows pesonet disbursement to non emi', function () {
 
     $bankRegistry->shouldReceive('getBankName')
         ->never();
+    $bankRegistry->shouldReceive('supportsRail')->once()->andReturn(true);
+    $capabilities = Mockery::mock(SettlementRailCapabilityRegistryContract::class);
+    $capabilities->shouldReceive('assertSupports')->once();
 
-    $guard = new WithdrawalRailGuard($bankRegistry);
+    $guard = new WithdrawalRailGuard($bankRegistry, $capabilities);
 
     $guard->assertAllowed(PayoutRequestData::from([
         'reference' => 'REF-002',
@@ -61,8 +66,11 @@ it('blocks pesonet disbursement to emi', function () {
         ->once()
         ->with('GXCHPHM2XXX')
         ->andReturn('GCash');
+    $bankRegistry->shouldReceive('supportsRail')->never();
+    $capabilities = Mockery::mock(SettlementRailCapabilityRegistryContract::class);
+    $capabilities->shouldReceive('assertSupports')->once();
 
-    $guard = new WithdrawalRailGuard($bankRegistry);
+    $guard = new WithdrawalRailGuard($bankRegistry, $capabilities);
 
     $guard->assertAllowed(PayoutRequestData::from([
         'reference' => 'REF-003',
@@ -75,3 +83,23 @@ it('blocks pesonet disbursement to emi', function () {
     RuntimeException::class,
     'Cannot disburse to GCash via PESONET. E-money institutions require INSTAPAY.'
 );
+
+it('fails capability validation before destination or provider work', function (): void {
+    $bankRegistry = Mockery::mock(BankRegistry::class);
+    $bankRegistry->shouldNotReceive('isEMI', 'supportsRail', 'getBankName');
+
+    $capabilities = Mockery::mock(SettlementRailCapabilityRegistryContract::class);
+    $capabilities->shouldReceive('assertSupports')
+        ->once()
+        ->andThrow(new RuntimeException('InstaPay is disabled.'));
+
+    $guard = new WithdrawalRailGuard($bankRegistry, $capabilities);
+
+    expect(fn () => $guard->assertAllowed(PayoutRequestData::from([
+        'reference' => 'REF-004',
+        'amount' => 100.00,
+        'account_number' => '001234567890',
+        'bank_code' => 'BNORPHMMXXX',
+        'settlement_rail' => 'INSTAPAY',
+    ])))->toThrow(RuntimeException::class, 'InstaPay is disabled.');
+});

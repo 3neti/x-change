@@ -1596,6 +1596,38 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     last_instructions?: CockpitQuickGenerateLastInstructions | null;
     saved_templates?: CockpitSavedPayCodeTemplate[];
     instruction_capabilities?: CockpitInstructionCapabilityReadinessMap;
+    settlement_rail_capabilities?: CockpitSettlementRailCapabilities;
+};
+
+export type CockpitSettlementRailCapability = {
+    code: 'INSTAPAY' | 'PESONET';
+    label: string;
+    enabled: boolean;
+    currency: string;
+    minimum_amount_minor: number | null;
+    maximum_amount_minor: number | null;
+    provider_fee_minor: number | null;
+    availability_reason: string | null;
+};
+
+export type CockpitSettlementRailCapabilities = {
+    schema: string;
+    provider: {
+        code: string;
+        label: string;
+        enabled: boolean;
+        binding_provider: string | null;
+        binding_coherent: boolean;
+    };
+    connection_reference: string | null;
+    default_mode: 'automatic';
+    automatic_policy: {
+        instapay_below_amount_minor: number;
+        resolved_per_payout: boolean;
+    };
+    rails: CockpitSettlementRailCapability[];
+    source: string;
+    live_provider_call: false;
 };
 
 export type CockpitInstructionCapabilityReadiness = {

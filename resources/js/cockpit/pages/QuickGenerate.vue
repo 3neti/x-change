@@ -1158,6 +1158,9 @@ function stringValue(value: unknown): string | null {
                     :instruction-capabilities="
                         props.instruction_capabilities ?? {}
                     "
+                    :settlement-rail-capabilities="
+                        props.settlement_rail_capabilities
+                    "
                     :templates="templates"
                 />
             </div>

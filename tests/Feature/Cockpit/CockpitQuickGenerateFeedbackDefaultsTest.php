@@ -60,3 +60,38 @@ it('hydrates sanitized instruction capability readiness', function (): void {
     expect($response->getContent())
         ->not->toContain('open-cage-secret');
 });
+
+it('hydrates provider-owned settlement rail capabilities without sensitive configuration', function (): void {
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('x-change.provider_runtime.providers.netbank.enabled', true);
+    config()->set('omnipay.gateways.netbank.options.clientSecret', 'do-not-expose');
+    config()->set('omnipay.gateways.netbank.options.rails', [
+        'INSTAPAY' => [
+            'enabled' => true,
+            'min_amount' => 1,
+            'max_amount' => 5_000_000,
+            'fee' => 1_000,
+        ],
+        'PESONET' => [
+            'enabled' => true,
+            'min_amount' => 1,
+            'max_amount' => 100_000_000,
+            'fee' => 2_500,
+        ],
+    ]);
+
+    actingAsTestUser();
+
+    $response = $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('props.settlement_rail_capabilities.provider.code', 'netbank')
+        ->assertJsonPath('props.settlement_rail_capabilities.provider.label', 'NetBank')
+        ->assertJsonPath('props.settlement_rail_capabilities.default_mode', 'automatic')
+        ->assertJsonPath('props.settlement_rail_capabilities.rails.0.code', 'INSTAPAY')
+        ->assertJsonPath('props.settlement_rail_capabilities.rails.0.provider_fee_minor', 1_000)
+        ->assertJsonPath('props.settlement_rail_capabilities.live_provider_call', false);
+
+    expect($response->getContent())->not->toContain('do-not-expose');
+});

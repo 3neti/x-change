@@ -22,6 +22,7 @@ use LBHurtado\XChange\Contracts\ProviderProvisioningManagerContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
+use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Contracts\SystemAccountFundingPayCodeAuthorizationContract;
 use LBHurtado\XChange\Contracts\SystemWalletResolverContract;
 use LBHurtado\XChange\Contracts\TerminologyServiceContract;
@@ -58,6 +59,7 @@ use LBHurtado\XChange\Services\Cockpit\XJournalCockpitOperatorIssuanceActivityJo
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderRuntimeSettingsResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
+use LBHurtado\XChange\Services\ConfigSettlementRailCapabilityRegistry;
 use LBHurtado\XChange\Services\ContextUserResolver;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
@@ -524,6 +526,7 @@ return [
         'onboarding_gateway' => DefaultXChangeOnboardingGateway::class,
         'provider_topology_resolver' => ConfigProviderTopologyResolver::class,
         'provider_runtime_settings' => ConfigProviderRuntimeSettingsResolver::class,
+        'settlement_rail_capabilities' => ConfigSettlementRailCapabilityRegistry::class,
         'provider_account_links' => EloquentProviderAccountLinkRepository::class,
         'provider_provisioning_gateway' => DelegatingProviderProvisioningGateway::class,
         'provider_provisioning_manager' => DefaultProviderProvisioningManager::class,
@@ -575,6 +578,7 @@ return [
         XChangeOnboardingGatewayContract::class => 'onboarding_gateway',
         XChangeProviderTopologyResolverContract::class => 'provider_topology_resolver',
         ProviderRuntimeSettingsResolverContract::class => 'provider_runtime_settings',
+        SettlementRailCapabilityRegistryContract::class => 'settlement_rail_capabilities',
         ProviderAccountLinkRepositoryContract::class => 'provider_account_links',
         ProviderProvisioningGatewayContract::class => 'provider_provisioning_gateway',
         ProviderProvisioningManagerContract::class => 'provider_provisioning_manager',
@@ -1395,6 +1399,7 @@ return [
     ],
     'payout' => [
         'provider' => env('XCHANGE_PAYOUT_PROVIDER', NetbankPayoutProvider::class),
+        'automatic_rail_threshold_minor' => 5_000_000,
         'wallet_proxy' => SystemWalletProxy::class,
         'system_user_id' => env('XCHANGE_SYSTEM_USER_ID'),
         'system_user_column' => env('XCHANGE_SYSTEM_USER_COLUMN', 'id'),

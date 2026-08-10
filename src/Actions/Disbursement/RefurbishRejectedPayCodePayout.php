@@ -17,6 +17,7 @@ use LBHurtado\MoneyIssuer\Contracts\MoneyIssuerDirectoryContract;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
+use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
@@ -33,6 +34,7 @@ final readonly class RefurbishRejectedPayCodePayout
         private DisbursementStatusResolverContract $statuses,
         private PayCodePayoutCorrectionJournal $journal,
         private MoneyIssuerDirectoryContract $institutions,
+        private SettlementRailCapabilityRegistryContract $railCapabilities,
     ) {}
 
     /**
@@ -83,6 +85,15 @@ final readonly class RefurbishRejectedPayCodePayout
                     'account_number' => $validation->message,
                 ]);
             }
+
+            $this->railCapabilities->assertSupports(new PayoutRequestData(
+                reference: (string) $voucher->code.'-validation',
+                amount: (float) $rejection->amount,
+                account_number: $validation->accountNumber,
+                bank_code: $validation->bankCode,
+                settlement_rail: $rail,
+                currency: (string) $rejection->currency,
+            ));
 
             [$revision, $reconciliation, $request] = DB::transaction(
                 function () use (

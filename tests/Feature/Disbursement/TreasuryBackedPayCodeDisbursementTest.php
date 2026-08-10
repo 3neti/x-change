@@ -31,6 +31,23 @@ use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
+beforeEach(function (): void {
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('x-change.provider_runtime.providers.netbank.enabled', true);
+    config()->set('omnipay.gateways.netbank.options.rails.INSTAPAY', [
+        'enabled' => true,
+        'min_amount' => 1,
+        'max_amount' => 5_000_000,
+        'fee' => 1_000,
+    ]);
+    config()->set('omnipay.gateways.netbank.options.rails.PESONET', [
+        'enabled' => true,
+        'min_amount' => 1,
+        'max_amount' => 100_000_000,
+        'fee' => 2_500,
+    ]);
+});
+
 it('pays a treasury-backed pay code without a legacy cash entity', function (): void {
     Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
     ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();

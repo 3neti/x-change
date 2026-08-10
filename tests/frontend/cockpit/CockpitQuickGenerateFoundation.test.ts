@@ -2576,15 +2576,150 @@ describe('Cockpit Quick Generate foundation', () => {
         );
         expect(
             wrapper
-                .find('[data-testid="cockpit-quick-generate-settlement-rail"]')
-                .attributes('disabled'),
-        ).toBeDefined();
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-settlement-rail"]',
+                )
+                .exists(),
+        ).toBe(false);
         expect(
             wrapper
                 .find('[data-testid="cockpit-quick-generate-slice-mode-open"]')
                 .attributes('disabled'),
         ).toBeDefined();
         expect(wrapper.text()).toContain('No bank payout occurs');
+    });
+
+    it('surfaces backend-owned settlement rails in the primary payout settings', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+                settlementRailCapabilities: {
+                    schema: 'x-change.cockpit.settlement-rail-capabilities.v1',
+                    provider: {
+                        code: 'netbank',
+                        label: 'NetBank',
+                        enabled: true,
+                        binding_provider: 'netbank',
+                        binding_coherent: true,
+                    },
+                    connection_reference: 'netbank-primary',
+                    default_mode: 'automatic',
+                    automatic_policy: {
+                        instapay_below_amount_minor: 5_000_000,
+                        resolved_per_payout: true,
+                    },
+                    rails: [
+                        {
+                            code: 'INSTAPAY',
+                            label: 'InstaPay',
+                            enabled: true,
+                            currency: 'PHP',
+                            minimum_amount_minor: 1,
+                            maximum_amount_minor: 5_000_000,
+                            provider_fee_minor: 1_000,
+                            availability_reason: null,
+                        },
+                        {
+                            code: 'PESONET',
+                            label: 'PESONet',
+                            enabled: true,
+                            currency: 'PHP',
+                            minimum_amount_minor: 1,
+                            maximum_amount_minor: 100_000_000,
+                            provider_fee_minor: 2_500,
+                            availability_reason: null,
+                        },
+                    ],
+                    source: 'configured-provider-capabilities',
+                    live_provider_call: false,
+                },
+            },
+        });
+
+        const railControl = wrapper.get(
+            '[data-testid="cockpit-quick-generate-primary-settlement-rail"]',
+        );
+
+        expect(railControl.text()).toContain('Automatic');
+        expect(railControl.text()).toContain('InstaPay');
+        expect(railControl.text()).toContain('PESONet');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-payout-provider"]')
+                .text(),
+        ).toContain('NetBank');
+        expect(
+            quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
+        ).toBeUndefined();
+
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-settlement-rail-pesonet"]',
+            )
+            .setValue();
+
+        expect(
+            quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
+        ).toBe('PESONET');
+    });
+
+    it('prevents a disabled configured rail from being selected', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                settlementRailCapabilities: {
+                    schema: 'x-change.cockpit.settlement-rail-capabilities.v1',
+                    provider: {
+                        code: 'netbank',
+                        label: 'NetBank',
+                        enabled: true,
+                        binding_provider: 'netbank',
+                        binding_coherent: true,
+                    },
+                    connection_reference: 'netbank-primary',
+                    default_mode: 'automatic',
+                    automatic_policy: {
+                        instapay_below_amount_minor: 5_000_000,
+                        resolved_per_payout: true,
+                    },
+                    rails: [
+                        {
+                            code: 'INSTAPAY',
+                            label: 'InstaPay',
+                            enabled: false,
+                            currency: 'PHP',
+                            minimum_amount_minor: 1,
+                            maximum_amount_minor: 5_000_000,
+                            provider_fee_minor: 1_000,
+                            availability_reason: 'InstaPay is disabled.',
+                        },
+                    ],
+                    source: 'configured-provider-capabilities',
+                    live_provider_call: false,
+                },
+            },
+        });
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-settlement-rail-instapay"]',
+                )
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-settlement-rail-error"]',
+                )
+                .text(),
+        ).toContain('InstaPay is disabled');
     });
 
     it('hands an Account Funding Pay Code to the Funding workspace without exposing it in the URL', async () => {

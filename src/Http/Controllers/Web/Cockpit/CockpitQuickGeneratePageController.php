@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
@@ -20,6 +21,7 @@ class CockpitQuickGeneratePageController extends Controller
         private readonly QuickGenerateLastInstructionsStore $lastInstructions,
         private readonly PayCodeTemplateReadModel $templates,
         private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
+        private readonly SettlementRailCapabilityRegistryContract $settlementRails,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -49,6 +51,7 @@ class CockpitQuickGeneratePageController extends Controller
             'last_instructions' => $this->lastInstructions->for($request->user()),
             'saved_templates' => $this->templates->for($request->user()),
             'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
+            'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
         ]);
     }
 
