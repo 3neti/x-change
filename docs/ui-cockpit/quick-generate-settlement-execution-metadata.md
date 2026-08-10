@@ -109,6 +109,21 @@ claim / redemption / execution reads the persisted instructions
 
 Cockpit prepares the payload. x-change performs the existing issuance handoff. Voucher owns execution semantics.
 
+## Settlement Rail Policy
+
+Quick Generate presents the payout provider and settlement rail as different concepts. The provider is the configured service that executes a payout; the rail is the transfer network used by that provider. `NetBank` is therefore a provider label, never a settlement-rail value.
+
+The operator may choose `Automatic`, `InstaPay`, or `PESONet` for a Cash Payout:
+
+- `Automatic` omits `cash.settlement_rail`. x-change resolves the rail from the actual withdrawal amount when the payout request is created.
+- `InstaPay` persists `cash.settlement_rail=INSTAPAY` and remains fixed through claim presentation, dispatch, retry, reconciliation, and journal evidence.
+- `PESONet` persists `cash.settlement_rail=PESONET` and remains fixed through the same lifecycle.
+- Account Funding does not submit a settlement rail because it does not create a recipient bank payout.
+
+Automatic intentionally resolves per actual withdrawal rather than at issuance. This preserves correct behavior for open and divisible Pay Codes: different slices may resolve to different rails when their amounts cross the configured threshold. The resolved rail is recorded on each disbursement attempt before any provider call, and a retry reuses that persisted attempt rail rather than recalculating it after configuration changes.
+
+Cockpit obtains enabled rails, amount limits, provider transfer costs, and safe availability reasons from the package capability read model. Rendering and estimation read configuration only; they do not contact the provider. Provider transfer cost remains distinct from the x-change instruction price and the issuer's fee strategy.
+
 ## Current Execution OS Capability
 
 The voucher execution runtime currently has these capabilities:
