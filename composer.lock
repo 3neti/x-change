@@ -1259,16 +1259,16 @@
         },
         {
             "name": "3neti/voucher",
-            "version": "v1.0.0-beta.1",
+            "version": "v1.0.0-beta.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/voucher.git",
-                "reference": "4b7fe33ce5cdc14f0c961c7b29176e5f5cb742f6"
+                "reference": "57f166b92dc7af91a20591b81421d8bc8b2d9129"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/voucher/zipball/4b7fe33ce5cdc14f0c961c7b29176e5f5cb742f6",
-                "reference": "4b7fe33ce5cdc14f0c961c7b29176e5f5cb742f6",
+                "url": "https://api.github.com/repos/3neti/voucher/zipball/57f166b92dc7af91a20591b81421d8bc8b2d9129",
+                "reference": "57f166b92dc7af91a20591b81421d8bc8b2d9129",
                 "shasum": ""
             },
             "require": {
@@ -1336,7 +1336,7 @@
                 "issues": "https://github.com/3neti/voucher/issues",
                 "source": "https://github.com/3neti/voucher"
             },
-            "time": "2026-07-31T08:07:13+00:00"
+            "time": "2026-08-09T23:43:00+00:00"
         },
         {
             "name": "3neti/wallet",
