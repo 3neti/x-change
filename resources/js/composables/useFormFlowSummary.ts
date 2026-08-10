@@ -1,4 +1,5 @@
 import { Wallet, User, MapPin, Camera, PenTool, Shield } from 'lucide-vue-next'
+import { destinationInstitution, settlementRailLabel } from '@/components/x-change/support/payoutDestinations'
 
 export interface DataSection {
     title: string
@@ -29,22 +30,6 @@ const FIELD_LABELS: Record<string, string> = {
     otp_code: 'Verification Code',
 }
 
-const BANK_NAMES: Record<string, string> = {
-    'GXCHPHM2XXX': 'GCash',
-    'OYABPHM1XXX': 'Maya (PayMaya)',
-    'BNORPHMM': 'BDO',
-    'BOPIPHMM': 'BPI',
-    'UBPHPHMM': 'UnionBank',
-    'MBTCPHMM': 'Metrobank',
-    'RCBCPHMM': 'RCBC',
-    'SECDPHMM': 'Security Bank',
-}
-
-const SETTLEMENT_RAIL_LABELS: Record<string, string> = {
-    'INSTAPAY': 'InstaPay (Real-time)',
-    'PESONET': 'PESONet (Next Day)',
-}
-
 export interface HeroData {
     amount: string | null
     bankName: string | null
@@ -71,8 +56,8 @@ export function useFormFlowSummary() {
     function extractHeroData(data: Record<string, any>): HeroData {
         return {
             amount: 'amount' in data ? formatFieldValue('amount', data.amount) : null,
-            bankName: 'bank_code' in data ? (BANK_NAMES[data.bank_code] || data.bank_code) : null,
-            settlementRail: 'settlement_rail' in data ? (SETTLEMENT_RAIL_LABELS[data.settlement_rail] || data.settlement_rail) : null,
+            bankName: 'bank_code' in data ? destinationInstitution(data.bank_code).shortLabel : null,
+            settlementRail: 'settlement_rail' in data ? settlementRailLabel(data.settlement_rail) : null,
         }
     }
     
@@ -91,10 +76,10 @@ export function useFormFlowSummary() {
             }
             
             case 'bank_code':
-                return BANK_NAMES[value] || value
+                return destinationInstitution(value).shortLabel
             
             case 'settlement_rail':
-                return SETTLEMENT_RAIL_LABELS[value] || value
+                return settlementRailLabel(value)
             
             case 'recipient_country':
                 return value === 'PH' ? 'Philippines' : value

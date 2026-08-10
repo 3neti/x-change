@@ -8,6 +8,10 @@ use Illuminate\Support\Arr;
 
 class FormFlowClaimPayloadNormalizer
 {
+    public function __construct(
+        protected PayoutDestinationRegistry $destinations,
+    ) {}
+
     public function normalize(array $collectedData): array
     {
         $flatData = $this->normalizeFieldAliases(
@@ -18,16 +22,21 @@ class FormFlowClaimPayloadNormalizer
 
         $mobile = $flatData['mobile'] ?? null;
         $country = $flatData['recipient_country'] ?? 'PH';
+        $bankCode = $flatData['bank_code'] ?? null;
+        $accountNumber = $flatData['account_number'] ?? null;
+        $settlementRail = $flatData['settlement_rail'] ?? null;
+        $destination = $this->destinations->snapshot($bankCode, $accountNumber, $settlementRail);
 
         return [
             'secret' => $flatData['secret'] ?? null,
             'mobile' => $mobile,
             'country' => $country,
-            'bank_code' => $flatData['bank_code'] ?? null,
-            'account_number' => $flatData['account_number'] ?? null,
+            'bank_code' => $bankCode,
+            'account_number' => $accountNumber,
             'amount' => $flatData['amount'] ?? null,
             'slice_ids' => $flatData['slice_ids'] ?? [],
-            'settlement_rail' => $flatData['settlement_rail'] ?? null,
+            'settlement_rail' => $settlementRail,
+            'destination' => $destination,
             'inputs' => $inputs,
             '_flat_data' => Arr::except($flatData, [
                 'otp_code',

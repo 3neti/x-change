@@ -32,6 +32,7 @@ use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 use LBHurtado\XChange\Support\Claim\FormFlowSplashSkipPolicy;
+use LBHurtado\XChange\Support\Claim\PayoutDestinationRegistry;
 
 class ClaimStartController extends Controller
 {
@@ -45,6 +46,7 @@ class ClaimStartController extends Controller
         protected ClaimWorkflowResolverContract $claimWorkflows,
         protected FormFlowClaimWorkflowMutator $formFlowWorkflows,
         protected ClaimAuthenticationIntent $claimAuthenticationIntent,
+        protected PayoutDestinationRegistry $destinations,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -255,6 +257,8 @@ class ClaimStartController extends Controller
             data_set($instructionPayload, 'metadata.onboarding_reference', $onboardingReference);
         }
 
+        $instructionPayload = $this->applyClaimDestinationDefaults($instructionPayload);
+
         $instructions = FormFlowInstructionsData::from($instructionPayload);
 
         $state = $this->formFlowService->startFlow($instructions);
@@ -292,6 +296,7 @@ class ClaimStartController extends Controller
             sliceIds: $sliceIds,
             compiledInputs: $inputs,
         );
+        $instructionPayload = $this->applyClaimDestinationDefaults($instructionPayload);
 
         $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructionPayload);
 
@@ -371,6 +376,50 @@ class ClaimStartController extends Controller
 
         if ($amount !== null) {
             data_set($instructionPayload, 'metadata.named_slices.amount', $amount);
+        }
+
+        return $instructionPayload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructionPayload
+     * @return array<string, mixed>
+     */
+    protected function applyClaimDestinationDefaults(array $instructionPayload): array
+    {
+        $defaultBankCode = $this->destinations->defaultBankCode();
+        $defaultSettlementRail = $this->destinations->defaultSettlementRail();
+
+        foreach ((array) data_get($instructionPayload, 'steps', []) as $stepIndex => $step) {
+            if (data_get($step, 'handler') !== 'form') {
+                continue;
+            }
+
+            $fields = (array) data_get($step, 'config.fields', []);
+
+            foreach ($fields as $fieldIndex => $field) {
+                if (! is_array($field)) {
+                    continue;
+                }
+
+                if (($field['name'] ?? null) === 'bank_code' && $defaultBankCode !== null) {
+                    $currentDefault = data_get($field, 'default');
+
+                    if ($currentDefault === null || $currentDefault === '' || $currentDefault === 'GXCHPHM2XXX') {
+                        $fields[$fieldIndex]['default'] = $defaultBankCode;
+                    }
+
+                    $fields[$fieldIndex]['destination_default'] = true;
+                }
+
+                if (($field['name'] ?? null) === 'settlement_rail') {
+                    $fields[$fieldIndex]['default'] ??= $defaultSettlementRail;
+                }
+            }
+
+            data_set($instructionPayload, "steps.{$stepIndex}.config.fields", $fields);
+
+            break;
         }
 
         return $instructionPayload;

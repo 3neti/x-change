@@ -39,6 +39,15 @@ it('builds compiled form claim payload from prepared compiled claim data', funct
         'amount' => '75',
         'slice_ids' => ['slice_1'],
         'settlement_rail' => 'INSTAPAY',
+        'destination' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'bank_name' => 'GCash',
+            'bank_label' => 'GCash',
+            'provider_icon_key' => 'wallet.gcash',
+            'settlement_rail' => 'INSTAPAY',
+            'account_number_masked' => '*******1987',
+            'route' => ['x-change', 'NetBank', 'InstaPay', 'GCash', '*******1987'],
+        ],
         'inputs' => [
             'mobile' => '09173011987',
             'bank_code' => 'GXCHPHM2XXX',

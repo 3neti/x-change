@@ -34,11 +34,15 @@ export function parseBanks(): Bank[] {
 export const BANKS = parseBanks();
 
 /**
- * Popular EMIs (shown first in dropdowns)
+ * Common institutions shown first in dropdowns.
+ *
+ * Keep this separate from EMI classification. Maya Wallet and Maya Bank are
+ * distinct destinations, and only the wallet is an EMI.
  */
-export const POPULAR_EMIS = [
+export const COMMON_INSTITUTIONS = [
     'GXCHPHM2XXX', // GCash
-    'PYMYPHM2XXX', // PayMaya
+    'PAPHPHM1XXX', // Maya Wallet / PayMaya
+    'MYDBPHM2XXX', // Maya Bank
     'GHPEPHM1XXX', // GrabPay
     'SHPHPHM1XXX', // ShopeePay
 ];
@@ -60,10 +64,17 @@ export function getBanksByRail(rail: 'INSTAPAY' | 'PESONET' | null): Bank[] {
 }
 
 /**
- * Get popular EMIs
+ * Get common institutions.
  */
-export function getPopularEMIs(): Bank[] {
-    return POPULAR_EMIS
+export function getCommonInstitutions(): Bank[] {
+    return COMMON_INSTITUTIONS
         .map(code => BANKS.find(b => b.code === code))
         .filter((b): b is Bank => b !== undefined);
+}
+
+/**
+ * @deprecated Use getCommonInstitutions. Common placement is not the same as EMI classification.
+ */
+export function getPopularEMIs(): Bank[] {
+    return getCommonInstitutions();
 }

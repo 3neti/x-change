@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Redemption;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Support\Claim\PayoutDestinationRegistry;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class RecordVoucherClaim
@@ -16,6 +17,7 @@ class RecordVoucherClaim
     public function __construct(
         protected QueueVoucherRedemptionFeedback $queueFeedback,
         protected PersistVoucherClaimEvidence $persistEvidence,
+        protected PayoutDestinationRegistry $destinations,
     ) {}
 
     /**
@@ -43,6 +45,9 @@ class RecordVoucherClaim
 
         $bankCode = data_get($payload, 'bank_account.bank_code', data_get($payload, 'bank_code'));
         $accountNumber = data_get($payload, 'bank_account.account_number', data_get($payload, 'account_number'));
+        $settlementRail = data_get($payload, 'settlement_rail')
+            ?? data_get($payload, 'bank_account.settlement_rail')
+            ?? data_get($result->disbursement, 'settlement_rail');
 
         $attributes = [
             'voucher_id' => $voucher->getKey(),
@@ -63,6 +68,11 @@ class RecordVoucherClaim
             'failure_message' => $this->resolveFailureMessage($result),
             'meta' => [
                 'messages' => $result->messages,
+                'destination' => (array) data_get(
+                    $payload,
+                    'destination',
+                    $this->destinations->snapshot($bankCode, $accountNumber, $settlementRail),
+                ),
                 'disbursement' => $result->disbursement,
                 'fully_claimed' => $result->fully_claimed,
                 'named_slices' => [

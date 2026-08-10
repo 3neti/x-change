@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BANKS, getPopularEMIs, getBanksByRail } from '@/data/banks';
+import { BANKS, getCommonInstitutions, getBanksByRail } from '@/data/banks';
 
 interface Props {
     modelValue?: string;
@@ -54,16 +54,18 @@ const canonicalInstitutions = computed<MoneyIssuerOption[]>(() => {
         return props.institutions;
     }
 
+    const commonCodes = new Set(getCommonInstitutions().map((institution) => institution.code));
+
     return availableBanks.value.map((bank) => ({
         key: bank.code,
         value: bank.code,
         name: bank.name,
         short_name: bank.name,
-        category: getPopularEMIs().some((emi) => emi.code === bank.code) ? 'wallet' : 'bank',
+        category: bank.isEMI ? 'wallet' : 'bank',
         account_label: 'Account Number',
         identifier_scheme: 'account_number',
         aliases: [],
-        commonly_used: getPopularEMIs().some((emi) => emi.code === bank.code),
+        commonly_used: commonCodes.has(bank.code),
     }));
 });
 

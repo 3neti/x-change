@@ -25,9 +25,9 @@ export const EMI_RESTRICTIONS: Record<string, BankRestriction> = {
         name: 'GCash',
         reason: 'EMI - Real-time transfers only',
     },
-    PYMYPHM2XXX: {
+    PAPHPHM1XXX: {
         allowed_rails: ['INSTAPAY'],
-        name: 'PayMaya',
+        name: 'Maya Wallet',
         reason: 'EMI - Real-time transfers only',
     },
     APHIPHM2XXX: {

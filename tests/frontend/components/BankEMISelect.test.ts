@@ -29,4 +29,11 @@ describe("Bank and wallet selector", () => {
     expect(wrapper.text()).toContain("Philippine National Bank");
     expect(wrapper.text()).not.toContain("Bank 0");
   });
+
+  it("keeps Maya Wallet and Maya Bank as separate common choices", () => {
+    const wrapper = mount(BankEMISelect);
+
+    expect(wrapper.text()).toContain("PayMaya Philippines Inc");
+    expect(wrapper.text()).toContain("Maya Bank, Inc.");
+  });
 });

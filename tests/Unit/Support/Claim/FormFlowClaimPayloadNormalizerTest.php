@@ -5,7 +5,7 @@ declare(strict_types=1);
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 
 beforeEach(function (): void {
-    $this->normalizer = new FormFlowClaimPayloadNormalizer;
+    $this->normalizer = app(FormFlowClaimPayloadNormalizer::class);
 });
 
 it('preserves wallet fields and builds mobile country bank account payload', function (): void {
@@ -29,6 +29,15 @@ it('preserves wallet fields and builds mobile country bank account payload', fun
         ->toHaveKey('amount', '100')
         ->toHaveKey('slice_ids', ['slice_1'])
         ->toHaveKey('settlement_rail', 'INSTAPAY')
+        ->and($payload['destination'])
+        ->toMatchArray([
+            'bank_code' => 'GXCHPHM2XXX',
+            'bank_name' => 'GCash',
+            'bank_label' => 'GCash',
+            'settlement_rail' => 'INSTAPAY',
+            'account_number_masked' => '*******1987',
+            'route' => ['x-change', 'NetBank', 'InstaPay', 'GCash', '*******1987'],
+        ])
         ->and($payload['inputs'])
         ->toHaveKey('mobile', '+639173011987')
         ->toHaveKey('bank_code', 'GXCHPHM2XXX')

@@ -2019,6 +2019,30 @@ return [
         ],
         'submission_lock_seconds' => 30,
         'submission_lock_wait_seconds' => 3,
+        'destination' => [
+            'default_bank_code' => env('XCHANGE_CLAIM_DEFAULT_BANK_CODE', 'GXCHPHM2XXX'),
+            'default_settlement_rail' => env('XCHANGE_CLAIM_DEFAULT_SETTLEMENT_RAIL', 'INSTAPAY'),
+            'institutions' => [
+                'GXCHPHM2XXX' => [
+                    'label' => 'GCash',
+                    'short_label' => 'GCash',
+                    'category' => 'wallet',
+                    'icon_key' => 'wallet.gcash',
+                ],
+                'PAPHPHM1XXX' => [
+                    'label' => 'Maya Wallet',
+                    'short_label' => 'Maya Wallet',
+                    'category' => 'wallet',
+                    'icon_key' => 'wallet.maya',
+                ],
+                'MYDBPHM2XXX' => [
+                    'label' => 'Maya Bank',
+                    'short_label' => 'Maya Bank',
+                    'category' => 'bank',
+                    'icon_key' => 'bank.maya',
+                ],
+            ],
+        ],
         'experience_ui' => [
             'variant' => env(
                 'XCHANGE_CLAIM_UI_VARIANT',

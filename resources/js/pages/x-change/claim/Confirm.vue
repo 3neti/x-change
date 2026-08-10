@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ReceiptText } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
+import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
 
 defineOptions({ layout: null });
 
@@ -20,6 +21,11 @@ interface Props {
         reference_id: string;
         flow_id: string;
         collected_summary: Record<string, string>;
+        wallet?: {
+            bank_code?: string | null;
+            account_number?: string | null;
+            settlement_rail?: string | null;
+        };
     };
 }
 
@@ -55,6 +61,14 @@ const handleSubmit = () => {
                         <p class="text-3xl font-bold">{{ claim.formatted_amount }}</p>
                         <Badge variant="outline" class="mt-1">{{ claim.voucher_code }}</Badge>
                     </div>
+
+                    <PayoutRouteDisplay
+                        v-if="claim.wallet?.bank_code || claim.wallet?.account_number"
+                        :amount="claim.formatted_amount"
+                        :bank-code="claim.wallet?.bank_code"
+                        :account-number="claim.wallet?.account_number"
+                        :settlement-rail="claim.wallet?.settlement_rail || 'INSTAPAY'"
+                    />
 
                     <!-- Collected data summary -->
                     <div v-if="Object.keys(claim.collected_summary).length > 0" class="space-y-2">
