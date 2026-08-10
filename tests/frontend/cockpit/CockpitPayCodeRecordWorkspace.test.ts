@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import BankEMISelect from "../../../resources/js/components/x-change-shared-financial/BankEMISelect.vue";
 import CockpitPayCodeRecordWorkspace from "../../../resources/js/cockpit/components/CockpitPayCodeRecordWorkspace.vue";
 
@@ -103,6 +103,55 @@ const voucher = {
 };
 
 describe("Cockpit Pay Code record workspace", () => {
+  afterEach(() => {
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("opens and focuses the claim identified by an authenticated feedback link", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/x/cockpit/pay-codes/CAMP-CB2L?tab=claim&claim=1#claim-1",
+    );
+
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    expect(wrapper.get('[data-testid="pay-code-claim-tab"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.get("#claim-1").attributes("data-focused")).toBe("true");
+  });
+
+  it("falls back to the overview for an unknown feedback tab", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/x/cockpit/pay-codes/CAMP-CB2L?tab=secrets&claim=1",
+    );
+
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    expect(wrapper.get('[data-testid="pay-code-overview-tab"]').exists()).toBe(
+      true,
+    );
+  });
+
   it("shows the Treasury-safe terminal impact before an owner acts", () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {

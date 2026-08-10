@@ -83,7 +83,17 @@ it('delivers configured email sms and webhook feedback through x-feedback', func
     Mail::assertSent(
         FeedbackEmailMessage::class,
         fn (FeedbackEmailMessage $mail): bool => $mail->hasTo('issuer@example.test')
-            && $mail->intent->key === 'voucher.redemption.recorded',
+            && $mail->intent->key === 'voucher.redemption.recorded'
+            && data_get($mail->intent->message->actions, '0.key') === 'review_redemption'
+            && data_get($mail->intent->message->actions, '0.target') === route(
+                'x-change.cockpit.pay-codes.show',
+                [
+                    'code' => $voucher->code,
+                    'tab' => 'claim',
+                    'claim' => $claim->getKey(),
+                ],
+            ).'#claim-'.$claim->getKey()
+            && ! str_contains((string) data_get($mail->intent->message->actions, '0.target'), '/x/claim/'),
     );
     expect($webhookSender->messages)->toHaveCount(1)
         ->and($webhookSender->messages[0]->url)->toBe('https://example.test/x-feedback')

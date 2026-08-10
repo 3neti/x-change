@@ -31,7 +31,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-vue-next";
-import { computed, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import type {
   CockpitDependentReadModel,
   CockpitMoneyIssuerOption,
@@ -61,7 +61,9 @@ const props = defineProps<{
   terminalControl?: CockpitPayCodeTerminalControl;
 }>();
 
-const activeTab = ref<WorkspaceTab>("overview");
+const initialTarget = workspaceTarget();
+const activeTab = ref<WorkspaceTab>(initialTarget.tab);
+const focusedClaimId = ref<number | null>(initialTarget.claimId);
 const revealedEvidence = ref<Set<number>>(new Set());
 const correctedBankCode = ref("");
 const correctedAccountNumber = ref("");
@@ -162,6 +164,17 @@ const rejectionReason = computed(
     text(redemption.value.rejection_reason) ||
     "The receiving institution rejected the payout destination.",
 );
+
+onMounted(async () => {
+  if (focusedClaimId.value === null || activeTab.value !== "claim") {
+    return;
+  }
+
+  await nextTick();
+  document
+    .getElementById(`claim-${focusedClaimId.value}`)
+    ?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+});
 
 const tabs = computed(() => [
   {
@@ -298,6 +311,34 @@ function claimTimingLabel(claim: DetailRecord): string {
   }
 
   return "Claim attempted";
+}
+
+function workspaceTarget(): { tab: WorkspaceTab; claimId: number | null } {
+  if (typeof window === "undefined") {
+    return { tab: "overview", claimId: null };
+  }
+
+  const query = new URLSearchParams(window.location.search);
+  const allowedTabs: WorkspaceTab[] = [
+    "overview",
+    "instructions",
+    "claim",
+    "settlement",
+    "audit",
+  ];
+  const requestedTab = query.get("tab") as WorkspaceTab | null;
+  const requestedClaim = Number(query.get("claim"));
+
+  return {
+    tab:
+      requestedTab !== null && allowedTabs.includes(requestedTab)
+        ? requestedTab
+        : "overview",
+    claimId:
+      requestedTab === "claim" && Number.isInteger(requestedClaim) && requestedClaim > 0
+        ? requestedClaim
+        : null,
+  };
 }
 
 function title(value: unknown): string {
@@ -885,7 +926,14 @@ function number(value: unknown): number {
               <article
                 v-for="claim in claimRecords"
                 :key="number(claim.id)"
-                class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+                :id="`claim-${number(claim.id)}`"
+                :class="[
+                  'rounded-2xl border p-4 transition',
+                  focusedClaimId === number(claim.id)
+                    ? 'border-blue-300 bg-blue-50/60 ring-2 ring-blue-100 dark:border-blue-700 dark:bg-blue-950/30 dark:ring-blue-900/40'
+                    : 'border-slate-200 dark:border-slate-800',
+                ]"
+                :data-focused="focusedClaimId === number(claim.id) ? 'true' : 'false'"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div>

@@ -124,6 +124,11 @@ final readonly class DispatchVoucherRedemptionFeedback
         $eventKey = $rejected
             ? 'voucher.payout.rejected'
             : ($pending ? 'voucher.redemption.pending' : self::IntentKey);
+        $reviewUrl = route('x-change.cockpit.pay-codes.show', [
+            'code' => $voucher->code,
+            'tab' => 'claim',
+            'claim' => $claim->getKey(),
+        ]).'#claim-'.$claim->getKey();
 
         return FeedbackIntentData::forEvent(
             key: $eventKey,
@@ -147,6 +152,14 @@ final readonly class DispatchVoucherRedemptionFeedback
                     'claim_id' => $claim->getKey(),
                     'claim_status' => $claim->status,
                     'claim_outcome' => $outcome,
+                ],
+                actions: [
+                    [
+                        'key' => 'review_redemption',
+                        'label' => 'Review redemption',
+                        'target' => $reviewUrl,
+                        'style' => 'primary',
+                    ],
                 ],
                 meta: [
                     'provider_delivery' => true,
