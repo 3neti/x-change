@@ -5,6 +5,7 @@ import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
 import EmailFieldRenderer from './renderers/EmailFieldRenderer.vue';
 import DateFieldRenderer from './renderers/DateFieldRenderer.vue';
 import NumberFieldRenderer from './renderers/NumberFieldRenderer.vue';
+import PasswordFieldRenderer from './renderers/PasswordFieldRenderer.vue';
 import SelectFieldRenderer from './renderers/SelectFieldRenderer.vue';
 import SliceSelectorFieldRenderer from './renderers/SliceSelectorFieldRenderer.vue';
 import TextareaFieldRenderer from './renderers/TextareaFieldRenderer.vue';
@@ -15,6 +16,7 @@ export const FORM_FLOW_RENDERER_COMPONENTS = {
     EmailFieldRenderer,
     DateFieldRenderer,
     NumberFieldRenderer,
+    PasswordFieldRenderer,
     SelectFieldRenderer,
     SliceSelectorFieldRenderer,
     TextareaFieldRenderer,

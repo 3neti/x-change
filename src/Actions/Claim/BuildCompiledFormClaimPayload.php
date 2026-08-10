@@ -16,12 +16,13 @@ final class BuildCompiledFormClaimPayload
         $inputs = $prepared->inputs;
         $claimInputs = $inputs;
 
-        unset($claimInputs['amount'], $claimInputs['settlement_rail'], $claimInputs['slice_ids']);
+        unset($claimInputs['amount'], $claimInputs['settlement_rail'], $claimInputs['slice_ids'], $claimInputs['secret']);
 
         return [
             'source' => 'compiled_form',
             'code' => $prepared->code,
             'voucher_id' => $prepared->voucherId,
+            'secret' => $inputs['secret'] ?? null,
             'mobile' => $inputs['mobile'] ?? null,
             'country' => $inputs['recipient_country'] ?? $inputs['country'] ?? 'PH',
             'bank_code' => $inputs['bank_code'] ?? null,

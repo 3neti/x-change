@@ -206,3 +206,31 @@ it('emits a slice selector field for named slice vouchers', function () {
         ->and($sliceField['type'])->toBe('slice_selector')
         ->and($sliceField['options'])->toHaveCount(2);
 });
+
+it('emits a passcode gate before payout details when issuer secret validation is required', function () {
+    $voucher = fakeClaimVoucher([
+        'cash' => [
+            'amount' => 100,
+            'currency' => 'PHP',
+            'validation' => [
+                'country' => 'PH',
+                'secret' => 'ABC123',
+            ],
+        ],
+    ]);
+
+    $experience = app(ClaimExperienceCompiler::class)
+        ->compile($voucher)
+        ->toArray();
+
+    $formFlow = collect($experience['phases'])->firstWhere('key', 'form_flow');
+    $secretField = collect($formFlow['fields'])->firstWhere('key', 'secret');
+
+    expect($formFlow['owner'])->toBe('claim-widget')
+        ->and($formFlow['fields'])->toHaveCount(1)
+        ->and($secretField['type'])->toBe('password')
+        ->and($secretField['label'])->toBe('Pay Code Passcode')
+        ->and($secretField['required'])->toBeTrue()
+        ->and($secretField['presentation'])->toBe('claim_secret_gate')
+        ->and($experience['diagnostics']['form_flow_owner'])->toBe('claim-widget');
+});

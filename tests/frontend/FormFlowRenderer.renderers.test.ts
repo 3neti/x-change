@@ -171,6 +171,37 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="number-field-renderer"]').exists()).toBe(false);
     });
 
+    it('delegates password fields to PasswordFieldRenderer', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'secret',
+                            type: 'password',
+                            label: 'Pay Code Passcode',
+                            description: 'Enter the passcode shared by the issuer.',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="password-field-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="password-field-renderer-label"]').text()).toBe('Pay Code Passcode');
+        expect(wrapper.find('[data-testid="password-field-renderer-kind"]').text()).toBe('password field');
+        expect(wrapper.find('[data-testid="password-field-renderer-required"]').text()).toBe('required');
+        expect(wrapper.find('[data-testid="password-field-renderer-description"]').text()).toBe('Enter the passcode shared by the issuer.');
+        expect(wrapper.find('[data-testid="password-field-renderer-input"]').attributes('type')).toBe('password');
+
+        expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
+    });
+
     it('delegates textarea fields to TextareaFieldRenderer', () => {
         const wrapper = mount(FormFlowRenderer, {
             props: {

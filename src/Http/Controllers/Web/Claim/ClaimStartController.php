@@ -75,9 +75,21 @@ class ClaimStartController extends Controller
                 ]);
             }
 
-            if ($this->namedSlices->hasNamedSlices($prepared->voucher)) {
+            if (
+                $this->voucherRequiresSecret($prepared->voucher)
+                && ! $this->claimSecretMatches($prepared->voucher, $preparedData->inputs['secret'] ?? null)
+            ) {
+                return back()->withErrors([
+                    'secret' => 'That passcode does not match this Pay Code.',
+                ]);
+            }
+
+            if (
+                $this->namedSlices->hasNamedSlices($prepared->voucher)
+                || $this->voucherRequiresSecret($prepared->voucher)
+            ) {
                 try {
-                    return $this->startFormFlowForNamedSlices(
+                    return $this->startFormFlowForCompiledInputs(
                         voucher: $prepared->voucher,
                         claimExperience: ResolveClaimExperience::run($prepared->voucher)->toArray(),
                         inputs: $preparedData->inputs,
@@ -227,6 +239,16 @@ class ClaimStartController extends Controller
         }
 
         $compiledFlow = $this->claimFlowCompiler->compile($voucher, $authenticatedMobile);
+        $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
+
+        if ($this->claimExperienceUsesClaimWidgetFormFlow($claimExperience)) {
+            return $this->claimEntryResponse()->render(
+                initialCode: $code,
+                claimExperience: $claimExperience,
+                provisioningRequirement: null,
+            );
+        }
+
         $instructionPayload = $compiledFlow->instructions->toArray();
 
         if ($onboardingReference !== null) {
@@ -244,11 +266,19 @@ class ClaimStartController extends Controller
      * @param  array<string, mixed>  $claimExperience
      * @param  array<string, mixed>  $inputs
      */
-    protected function startFormFlowForNamedSlices(Voucher $voucher, array $claimExperience, array $inputs): RedirectResponse
+    protected function startFormFlowForCompiledInputs(Voucher $voucher, array $claimExperience, array $inputs): RedirectResponse
     {
-        $payload = $this->namedSlices->enrichClaimPayload($voucher, [
-            'slice_ids' => $inputs['slice_ids'] ?? [],
-        ]);
+        $sliceIds = $inputs['slice_ids'] ?? [];
+        $amount = null;
+
+        if ($this->namedSlices->hasNamedSlices($voucher)) {
+            $payload = $this->namedSlices->enrichClaimPayload($voucher, [
+                'slice_ids' => $sliceIds,
+            ]);
+
+            $amount = (float) data_get($payload, 'amount', 0);
+            $sliceIds = data_get($payload, 'slice_ids', []);
+        }
 
         $instructions = $this->driverService->transform($voucher);
         $instructionPayload = ClaimExperiencePayload::putIntoInstructions(
@@ -258,8 +288,9 @@ class ClaimStartController extends Controller
 
         $instructionPayload = $this->applyNamedSliceDefaults(
             instructionPayload: $instructionPayload,
-            amount: (float) data_get($payload, 'amount', 0),
-            sliceIds: data_get($payload, 'slice_ids', []),
+            amount: $amount,
+            sliceIds: $sliceIds,
+            compiledInputs: $inputs,
         );
 
         $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructionPayload);
@@ -279,7 +310,7 @@ class ClaimStartController extends Controller
      * @param  array<int, string>  $sliceIds
      * @return array<string, mixed>
      */
-    protected function applyNamedSliceDefaults(array $instructionPayload, float $amount, array $sliceIds): array
+    protected function applyNamedSliceDefaults(array $instructionPayload, ?float $amount, array $sliceIds, array $compiledInputs = []): array
     {
         foreach ((array) data_get($instructionPayload, 'steps', []) as $stepIndex => $step) {
             if (data_get($step, 'handler') !== 'form') {
@@ -294,7 +325,7 @@ class ClaimStartController extends Controller
                     continue;
                 }
 
-                if (($field['name'] ?? null) === 'amount') {
+                if ($amount !== null && ($field['name'] ?? null) === 'amount') {
                     $fields[$fieldIndex]['default'] = $amount;
                     $fields[$fieldIndex]['readonly'] = true;
                     $fields[$fieldIndex]['slice_mode'] = null;
@@ -307,11 +338,24 @@ class ClaimStartController extends Controller
                 }
             }
 
-            if (! $hasSliceIdsField) {
+            if ($sliceIds !== [] && ! $hasSliceIdsField) {
                 $fields[] = [
                     'name' => 'slice_ids',
                     'type' => 'hidden',
                     'default' => implode(',', $sliceIds),
+                    'required' => false,
+                ];
+            }
+
+            if (
+                array_key_exists('secret', $compiledInputs)
+                && is_string($compiledInputs['secret'])
+                && trim($compiledInputs['secret']) !== ''
+            ) {
+                $fields[] = [
+                    'name' => 'secret',
+                    'type' => 'hidden',
+                    'default' => trim($compiledInputs['secret']),
                     'required' => false,
                 ];
             }
@@ -321,10 +365,50 @@ class ClaimStartController extends Controller
             break;
         }
 
-        data_set($instructionPayload, 'metadata.named_slices.selected_ids', $sliceIds);
-        data_set($instructionPayload, 'metadata.named_slices.amount', $amount);
+        if ($sliceIds !== []) {
+            data_set($instructionPayload, 'metadata.named_slices.selected_ids', $sliceIds);
+        }
+
+        if ($amount !== null) {
+            data_set($instructionPayload, 'metadata.named_slices.amount', $amount);
+        }
 
         return $instructionPayload;
+    }
+
+    protected function voucherRequiresSecret(Voucher $voucher): bool
+    {
+        return filled(data_get($voucher->metadata ?? [], 'instructions.cash.validation.secret'));
+    }
+
+    protected function claimSecretMatches(Voucher $voucher, mixed $secret): bool
+    {
+        $expected = data_get($voucher->metadata ?? [], 'instructions.cash.validation.secret');
+
+        if (! is_string($expected) || trim($expected) === '') {
+            return true;
+        }
+
+        if (! is_string($secret)) {
+            return false;
+        }
+
+        return hash_equals($expected, trim($secret));
+    }
+
+    /**
+     * @param  array<string, mixed>  $claimExperience
+     */
+    protected function claimExperienceUsesClaimWidgetFormFlow(array $claimExperience): bool
+    {
+        $formFlow = collect((array) data_get($claimExperience, 'phases', []))
+            ->firstWhere('key', 'form_flow');
+        $fields = is_array($formFlow) ? data_get($formFlow, 'fields') : null;
+
+        return is_array($formFlow)
+            && ($formFlow['owner'] ?? null) === 'claim-widget'
+            && is_array($fields)
+            && $fields !== [];
     }
 
     private function claimEntryResponse(): ClaimEntryResponseFactory

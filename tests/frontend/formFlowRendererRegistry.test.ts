@@ -14,6 +14,9 @@ describe('form flow renderer registry', () => {
         expect(resolveFormFlowRenderer('date'))
             .toBe('DateFieldRenderer');
 
+        expect(resolveFormFlowRenderer('password'))
+            .toBe('PasswordFieldRenderer');
+
         expect(resolveFormFlowRenderer('slice_selector'))
             .toBe('SliceSelectorFieldRenderer');
     });

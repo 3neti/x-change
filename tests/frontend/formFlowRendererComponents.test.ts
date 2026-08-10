@@ -12,6 +12,7 @@ describe('form flow renderer components', () => {
             'EmailFieldRenderer',
             'DateFieldRenderer',
             'NumberFieldRenderer',
+            'PasswordFieldRenderer',
             'SelectFieldRenderer',
             'SliceSelectorFieldRenderer',
             'TextareaFieldRenderer',
@@ -35,6 +36,11 @@ describe('form flow renderer components', () => {
             key: 'email',
             type: 'email',
         })).toBe('EmailFieldRenderer');
+
+        expect(resolveFormFlowRendererComponentName({
+            key: 'secret',
+            type: 'password',
+        })).toBe('PasswordFieldRenderer');
 
         expect(resolveFormFlowRendererComponentName({
             key: 'photo',

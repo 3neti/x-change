@@ -2,7 +2,10 @@ export type FormFlowField = {
     key: string;
     type?: string;
     label?: string;
+    description?: string;
     required?: boolean;
+    autocomplete?: string;
+    inputmode?: string;
     options?: unknown[];
     selection?: string;
 };
@@ -36,6 +39,7 @@ export const SUPPORTED_FORM_FLOW_FIELD_TYPES = [
     'email',
     'date',
     'number',
+    'password',
     'select',
     'textarea',
     'slice_selector',

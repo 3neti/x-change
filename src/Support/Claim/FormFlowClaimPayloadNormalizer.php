@@ -20,6 +20,7 @@ class FormFlowClaimPayloadNormalizer
         $country = $flatData['recipient_country'] ?? 'PH';
 
         return [
+            'secret' => $flatData['secret'] ?? null,
             'mobile' => $mobile,
             'country' => $country,
             'bank_code' => $flatData['bank_code'] ?? null,
@@ -30,6 +31,7 @@ class FormFlowClaimPayloadNormalizer
             'inputs' => $inputs,
             '_flat_data' => Arr::except($flatData, [
                 'otp_code',
+                'secret',
                 'verification_reference',
                 'verification_purpose',
             ]),
@@ -57,6 +59,7 @@ class FormFlowClaimPayloadNormalizer
                 'amount',
                 'settlement_rail',
                 'slice_ids',
+                'secret',
                 'otp_code',
                 'verified_at',
                 'reference_id',

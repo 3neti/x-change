@@ -172,19 +172,37 @@ class ClaimExperienceCompiler
      */
     private function formFlowFields(Voucher $voucher): array
     {
-        if (! $this->namedSlices->hasNamedSlices($voucher)) {
-            return [];
+        $fields = [];
+
+        if ($this->requiresClaimSecret($voucher)) {
+            $fields[] = [
+                'key' => 'secret',
+                'type' => 'password',
+                'label' => 'Pay Code Passcode',
+                'required' => true,
+                'autocomplete' => 'off',
+                'inputmode' => 'text',
+                'presentation' => 'claim_secret_gate',
+                'description' => 'Enter the passcode shared by the issuer before payout details are collected.',
+            ];
         }
 
-        return [
-            [
+        if ($this->namedSlices->hasNamedSlices($voucher)) {
+            $fields[] = [
                 'key' => 'slice_ids',
                 'type' => 'slice_selector',
                 'label' => 'Slices to Redeem',
                 'required' => true,
                 'options' => $this->namedSlices->claimOptions($voucher),
                 'selection' => 'one_or_many',
-            ],
-        ];
+            ];
+        }
+
+        return $fields;
+    }
+
+    private function requiresClaimSecret(Voucher $voucher): bool
+    {
+        return filled(data_get($this->instructions($voucher), 'cash.validation.secret'));
     }
 }

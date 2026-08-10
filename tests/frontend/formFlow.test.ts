@@ -17,6 +17,7 @@ describe('formFlow field type support', () => {
             'email',
             'date',
             'number',
+            'password',
             'select',
             'textarea',
             'slice_selector',
@@ -37,6 +38,7 @@ describe('formFlow field type support', () => {
         expect(formFlowFieldPreviewKind('email')).toBe('email field');
         expect(formFlowFieldPreviewKind('date')).toBe('date field');
         expect(formFlowFieldPreviewKind('number')).toBe('number field');
+        expect(formFlowFieldPreviewKind('password')).toBe('password field');
         expect(formFlowFieldPreviewKind('select')).toBe('select field');
         expect(formFlowFieldPreviewKind('textarea')).toBe('textarea field');
         expect(formFlowFieldPreviewKind('camera')).toBe('unsupported field');
@@ -55,6 +57,7 @@ describe('formFlow field type support', () => {
         expect(formFlowFieldRendererKind('email')).toBe('email field');
         expect(formFlowFieldRendererKind('date')).toBe('date field');
         expect(formFlowFieldRendererKind('number')).toBe('number field');
+        expect(formFlowFieldRendererKind('password')).toBe('password field');
         expect(formFlowFieldRendererKind('select')).toBe('select field');
         expect(formFlowFieldRendererKind('textarea')).toBe('textarea field');
         expect(formFlowFieldRendererKind('camera')).toBe('unsupported field');

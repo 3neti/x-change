@@ -51,6 +51,22 @@ it('defaults country to PH when recipient country is missing', function (): void
     expect($payload['country'])->toBe('PH');
 });
 
+it('promotes claim passcode to top-level secret without retaining it in display-oriented payloads', function (): void {
+    $payload = $this->normalizer->normalize([
+        'wallet_info' => [
+            'mobile' => '+639173011987',
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+            'secret' => 'ABC123',
+        ],
+    ]);
+
+    expect($payload)
+        ->toHaveKey('secret', 'ABC123')
+        ->and($payload['inputs'])->not->toHaveKey('secret')
+        ->and($payload['_flat_data'])->not->toHaveKey('secret');
+});
+
 it('preserves selfie and signature while grouping location evidence', function (): void {
     $payload = $this->normalizer->normalize([
         'wallet_info' => [

@@ -3,6 +3,7 @@ export const FORM_FLOW_RENDERERS = {
     email: 'EmailFieldRenderer',
     date: 'DateFieldRenderer',
     number: 'NumberFieldRenderer',
+    password: 'PasswordFieldRenderer',
     select: 'SelectFieldRenderer',
     textarea: 'TextareaFieldRenderer',
     slice_selector: 'SliceSelectorFieldRenderer',

@@ -414,6 +414,134 @@ it('starts form flow with selected named slice amount after slice selection', fu
         ->and(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse();
 });
 
+it('renders the claim entry passcode gate before payout details for secret-required vouchers', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'cash' => [
+                'validation' => [
+                    'country' => 'PH',
+                    'secret' => 'ABC123',
+                ],
+            ],
+        ],
+    ));
+
+    $inertiaResponse = Mockery::mock(Response::class);
+    $inertiaResponse
+        ->shouldReceive('toResponse')
+        ->once()
+        ->andReturn(response('claim entry'));
+
+    $responseFactory = Mockery::mock(ClaimEntryResponseFactory::class);
+    $responseFactory
+        ->shouldReceive('render')
+        ->once()
+        ->with(
+            $voucher->code,
+            Mockery::on(function (array $experience): bool {
+                $formFlow = collect(data_get($experience, 'phases', []))->firstWhere('key', 'form_flow');
+
+                return is_array($formFlow)
+                    && data_get($formFlow, 'owner') === 'claim-widget'
+                    && data_get($formFlow, 'fields.0.key') === 'secret'
+                    && data_get($formFlow, 'fields.0.type') === 'password';
+            }),
+            null,
+        )
+        ->andReturn($inertiaResponse);
+
+    app()->instance(ClaimEntryResponseFactory::class, $responseFactory);
+
+    $this->get('/x/claim?code='.$voucher->code)
+        ->assertOk()
+        ->assertSee('claim entry');
+});
+
+it('rejects an invalid compiled passcode before starting payout details form flow', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'cash' => [
+                'validation' => [
+                    'country' => 'PH',
+                    'secret' => 'ABC123',
+                ],
+            ],
+        ],
+    ));
+
+    $driver = Mockery::mock(DriverService::class);
+    $driver->shouldNotReceive('transform');
+    app()->instance(DriverService::class, $driver);
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'secret' => 'WRONG',
+        ],
+    ])->assertSessionHasErrors([
+        'secret' => 'That passcode does not match this Pay Code.',
+    ]);
+});
+
+it('carries a verified compiled passcode into the payout details form flow', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'cash' => [
+                'validation' => [
+                    'country' => 'PH',
+                    'secret' => 'ABC123',
+                ],
+            ],
+        ],
+    ));
+
+    mockDriverForClaimVoucher($this, $voucher, [
+        [
+            'handler' => 'form',
+            'config' => [
+                'step_name' => 'wallet_info',
+                'fields' => [
+                    [
+                        'name' => 'mobile',
+                        'type' => 'tel',
+                        'label' => 'Mobile Number',
+                        'required' => true,
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    assertClaimExperienceStartFlow($this, function (array $experience, array $payload) {
+        $fields = collect(data_get($payload, 'steps.0.config.fields'));
+        $formFlow = collect(data_get($experience, 'phases', []))->firstWhere('key', 'form_flow');
+
+        expect(data_get($formFlow, 'owner'))->toBe('claim-widget')
+            ->and(data_get($formFlow, 'fields.0.key'))->toBe('secret')
+            ->and($fields->firstWhere('name', 'secret')['type'])->toBe('hidden')
+            ->and($fields->firstWhere('name', 'secret')['default'])->toBe('ABC123')
+            ->and(data_get($payload, 'metadata.named_slices.selected_ids'))->toBeNull();
+    }, 'flow-secret-gate-test');
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'secret' => 'ABC123',
+        ],
+    ])->assertRedirect('/form-flow/flow-secret-gate-test');
+
+    expect(session()->has(CompiledClaimSessionKeys::SUBMISSION))->toBeFalse()
+        ->and(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse();
+});
+
 it('requires a code for compiled form claim submissions', function () {
     $this->withoutMiddleware();
 

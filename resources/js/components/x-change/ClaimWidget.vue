@@ -186,13 +186,26 @@ const isSliceSelectionOnly = computed(
         compiledFormFields.value[0]?.type === 'slice_selector',
 );
 
+const isSecretGateOnly = computed(
+    () =>
+        compiledFormFields.value.length === 1 &&
+        compiledFormFields.value[0]?.key === 'secret' &&
+        compiledFormFields.value[0]?.type === 'password',
+);
+
 const compiledFormTitle = computed(() =>
-    isSliceSelectionOnly.value ? 'Choose Slices' : 'Claim Information',
+    isSliceSelectionOnly.value
+        ? 'Choose Slices'
+        : isSecretGateOnly.value
+          ? 'Pay Code Passcode'
+          : 'Claim Information',
 );
 
 const compiledFormDescription = computed(() =>
     isSliceSelectionOnly.value
         ? 'Choose which slices to redeem. Payout details are collected in the next step.'
+        : isSecretGateOnly.value
+          ? "Enter the passcode shared by the issuer. We'll check it before asking for payout details."
         : 'Complete the required claim details to continue.',
 );
 

@@ -5,6 +5,7 @@ import TextFieldRenderer from '../../resources/js/components/x-change/renderers/
 import EmailFieldRenderer from '../../resources/js/components/x-change/renderers/EmailFieldRenderer.vue';
 import DateFieldRenderer from '../../resources/js/components/x-change/renderers/DateFieldRenderer.vue';
 import NumberFieldRenderer from '../../resources/js/components/x-change/renderers/NumberFieldRenderer.vue';
+import PasswordFieldRenderer from '../../resources/js/components/x-change/renderers/PasswordFieldRenderer.vue';
 import SelectFieldRenderer from '../../resources/js/components/x-change/renderers/SelectFieldRenderer.vue';
 import TextareaFieldRenderer from '../../resources/js/components/x-change/renderers/TextareaFieldRenderer.vue';
 import UnsupportedFieldRenderer from '../../resources/js/components/x-change/renderers/UnsupportedFieldRenderer.vue';
@@ -33,6 +34,12 @@ const supportedRenderers = [
         testId: 'number-field-renderer',
         kind: 'number field',
         type: 'number',
+    },
+    {
+        component: PasswordFieldRenderer,
+        testId: 'password-field-renderer',
+        kind: 'password field',
+        type: 'password',
     },
     {
         component: SelectFieldRenderer,
@@ -187,6 +194,26 @@ describe('form flow field renderer contract', () => {
             .setValue('25000');
 
         expect(wrapper.emitted('update:value')?.[0]).toEqual(['25000']);
+    });
+
+    it('emits update value from password field input', async () => {
+        const wrapper = mount(PasswordFieldRenderer, {
+            props: {
+                field: {
+                    key: 'secret',
+                    type: 'password',
+                    label: 'Pay Code Passcode',
+                    required: true,
+                },
+                value: 'ABC',
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="password-field-renderer-input"]')
+            .setValue('ABC123');
+
+        expect(wrapper.emitted('update:value')?.[0]).toEqual(['ABC123']);
     });
 
     it('emits update value from textarea field input', async () => {
