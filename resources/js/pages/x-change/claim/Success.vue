@@ -25,12 +25,13 @@ import {
     shouldRenderSuccessRiderMessage,
 } from '@/components/x-change/successFallback';
 import { resolveSuccessViewModel } from '@/components/x-change/successViewModel';
-import {
-    resolveSuccessCompiledClaimResultViewModel,
+import { resolveSuccessCompiledClaimResultViewModel,
     type CompiledClaimResultPayload,
 } from '@/components/x-change/successCompiledClaimResult';
 import { resolveSuccessPageTone } from '@/components/x-change/successPageTone';
 import { resolveSuccessCountdownViewModel } from '@/components/x-change/successCountdownViewModel';
+import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
+import type { PayoutDestinationSnapshot } from '@/components/x-change/support/payoutDestinations';
 
 defineOptions({ layout: null });
 
@@ -54,6 +55,7 @@ interface Props {
         delay_seconds?: number | null;
     } | null;
     compiled_claim_result?: CompiledClaimResultPayload;
+    destination?: PayoutDestinationSnapshot | null;
 }
 
 const props = defineProps<Props>();
@@ -270,6 +272,15 @@ const pageTone = computed(() =>
                 >
                     {{ voucher.code }}
                 </div>
+
+                <PayoutRouteDisplay
+                    v-if="destination?.bank_code"
+                    class="text-left"
+                    :amount="formattedAmount"
+                    :bank-code="destination.bank_code"
+                    :account-number="destination.account_number_masked"
+                    :settlement-rail="destination.settlement_rail || 'INSTAPAY'"
+                />
             </div>
 
             <RiderRuntimeSequencer

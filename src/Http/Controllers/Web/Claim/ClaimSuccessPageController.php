@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
@@ -59,6 +60,7 @@ class ClaimSuccessPageController
             'claim_experience' => $claimExperience,
             'redirect' => ClaimExperiencePayload::redirect($claimExperience),
             'compiled_claim_result' => app(CompiledClaimSuccessPayload::class)->pull(),
+            'destination' => $this->destinationSnapshot($voucher),
         ];
 
         if (request()->wantsJson()) {
@@ -66,5 +68,20 @@ class ClaimSuccessPageController
         }
 
         return Inertia::render('x-change/claim/Success', $props);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function destinationSnapshot(Voucher $voucher): ?array
+    {
+        $latestClaim = VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('id')
+            ->first();
+
+        $destination = is_array($latestClaim?->meta) ? data_get($latestClaim->meta, 'destination') : null;
+
+        return is_array($destination) && $destination !== [] ? $destination : null;
     }
 }

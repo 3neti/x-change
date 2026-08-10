@@ -14,6 +14,7 @@ use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
+use LBHurtado\XChange\Support\Claim\PayoutDestinationRegistry;
 
 final class ClaimApprovalPageController
 {
@@ -57,6 +58,7 @@ final class ClaimApprovalPageController
             'approval' => $this->approvalPayload($compiled),
             'approval_entry_mode' => $this->approvalEntryMode($request),
             'message' => 'Your claim has been submitted and is awaiting approval.',
+            'destination' => $this->destinationSnapshot($voucher),
         ];
 
         if (request()->wantsJson()) {
@@ -64,6 +66,26 @@ final class ClaimApprovalPageController
         }
 
         return Inertia::render('x-change/claim/Approval', $props);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function destinationSnapshot(Voucher $voucher): ?array
+    {
+        $workflow = app(ClaimApprovalWorkflowStoreContract::class)->get($voucher);
+        $payload = (array) data_get($workflow, 'payload', []);
+
+        $bankCode = data_get($payload, 'bank_account.bank_code', data_get($payload, 'bank_code'));
+        $accountNumber = data_get($payload, 'bank_account.account_number', data_get($payload, 'account_number'));
+        $settlementRail = data_get($payload, 'settlement_rail')
+            ?? data_get($payload, 'bank_account.settlement_rail');
+
+        if ($bankCode === null && $accountNumber === null) {
+            return null;
+        }
+
+        return app(PayoutDestinationRegistry::class)->snapshot($bankCode, $accountNumber, $settlementRail);
     }
 
     private function approvalPayload(?array $compiled): array

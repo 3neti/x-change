@@ -14,6 +14,8 @@ import {
     type ApprovalOtpSubmissionPayload,
 } from '@/components/x-change/approvalOtpSubmission';
 import { submitApprovalOtp } from '@/components/x-change/approvalOtpSubmitAdapter';
+import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
+import type { PayoutDestinationSnapshot } from '@/components/x-change/support/payoutDestinations';
 
 defineOptions({ layout: null });
 
@@ -38,6 +40,7 @@ const props = defineProps<{
     approval_entry_mode?: ApprovalEntryMode | null;
     compiled_claim_result?: CompiledClaimResultPayload;
     message?: string | null;
+    destination?: PayoutDestinationSnapshot | null;
 }>();
 
 const page = usePage<{
@@ -169,6 +172,15 @@ function submitOtp(): void {
             >
                 {{ voucher.code }}
             </div>
+
+            <PayoutRouteDisplay
+                v-if="destination?.bank_code"
+                class="text-left"
+                :amount="viewModel.amountText"
+                :bank-code="destination.bank_code"
+                :account-number="destination.account_number_masked"
+                :settlement-rail="destination.settlement_rail || 'INSTAPAY'"
+            />
 
             <div
                 v-if="viewModel.missingContext"

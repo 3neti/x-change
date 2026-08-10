@@ -2,6 +2,22 @@ import iconMetadata from '@/../../resources/documents/payout-destination-icons.j
 
 export type SettlementRail = 'INSTAPAY' | 'PESONET';
 
+/**
+ * Mirrors `PayoutDestinationRegistry::snapshot()`'s return shape on the PHP
+ * side. Pages that receive a persisted/in-flight destination snapshot as an
+ * Inertia prop (e.g. claim Success/Approval) should type it with this.
+ */
+export type PayoutDestinationSnapshot = {
+    bank_code: string | null;
+    bank_name: string | null;
+    bank_label: string | null;
+    icon_asset: string | null;
+    settlement_rail: string | null;
+    account_number_masked: string | null;
+    route: string[];
+    route_icons: (string | null)[];
+};
+
 export type DestinationInstitution = {
     code: string;
     label: string;
