@@ -62,3 +62,54 @@ it('reads the configurable default destination from x-change config', function (
     expect($registry->defaultBankCode())->toBe('PAPHPHM1XXX')
         ->and($registry->defaultSettlementRail())->toBe('INSTAPAY');
 });
+
+it('resolves an unconfigured bank code via the canonical money-issuer directory', function (): void {
+    $registry = app(PayoutDestinationRegistry::class);
+
+    expect($registry->institution('PNBMPHMMTOD'))->toMatchArray([
+        'label' => 'Philippine National Bank',
+        'short_label' => 'Philippine National Bank',
+        'category' => 'bank',
+    ]);
+});
+
+it('never shows the raw PNB routing code as the visible institution label', function (): void {
+    $snapshot = app(PayoutDestinationRegistry::class)->snapshot(
+        bankCode: 'PNBMPHMMTOD',
+        accountNumber: '09173011987',
+        settlementRail: 'INSTAPAY',
+    );
+
+    expect($snapshot['bank_name'])->toBe('Philippine National Bank')
+        ->and($snapshot['bank_label'])->toBe('Philippine National Bank')
+        ->and($snapshot['route'])->toContain('Philippine National Bank')
+        ->and($snapshot['route'])->not->toContain('PNBMPHMMTOD');
+});
+
+it('falls back to the raw code for a genuinely unknown institution', function (): void {
+    $registry = app(PayoutDestinationRegistry::class);
+
+    expect($registry->institution('NOT-A-REAL-CODE'))->toMatchArray([
+        'label' => 'NOT-A-REAL-CODE',
+        'short_label' => 'NOT-A-REAL-CODE',
+        'category' => null,
+    ]);
+});
+
+it('lets an explicit x-change config override take precedence over the canonical directory', function (): void {
+    config()->set('x-change.claim.destination.institutions.PNBMPHMMTOD', [
+        'label' => 'PNB (Configured Override)',
+        'short_label' => 'PNB Override',
+        'category' => 'bank',
+        'icon_key' => 'bank.pnb',
+    ]);
+
+    $registry = app(PayoutDestinationRegistry::class);
+
+    expect($registry->institution('PNBMPHMMTOD'))->toMatchArray([
+        'label' => 'PNB (Configured Override)',
+        'short_label' => 'PNB Override',
+        'category' => 'bank',
+        'icon_key' => 'bank.pnb',
+    ]);
+});

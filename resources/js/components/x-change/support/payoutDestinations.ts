@@ -1,4 +1,5 @@
 import iconMetadata from '@/../../resources/documents/payout-destination-icons.json';
+import { getBank } from '@/data/banks';
 
 export type SettlementRail = 'INSTAPAY' | 'PESONET';
 
@@ -110,6 +111,21 @@ export function destinationInstitution(code: string | null | undefined): Destina
 
     if (known) {
         return { ...known, iconAsset: known.iconAsset ?? iconAsset };
+    }
+
+    const bank = getBank(normalized);
+
+    if (bank) {
+        const category = bank.isEMI ? 'wallet' : 'bank';
+
+        return {
+            code: normalized,
+            label: bank.name,
+            shortLabel: bank.name,
+            category,
+            iconKey: `${category}.generic`,
+            iconAsset,
+        };
     }
 
     return {

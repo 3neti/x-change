@@ -39,6 +39,23 @@ describe("payout destination display helpers", () => {
     });
   });
 
+  it("resolves an unconfigured bank code via the canonical bank directory", () => {
+    expect(destinationInstitution("PNBMPHMMTOD")).toMatchObject({
+      label: "Philippine National Bank",
+      shortLabel: "Philippine National Bank",
+      category: "bank",
+      iconAsset: "/vendor/x-change/images/payout-destinations/pnb-128.png",
+    });
+  });
+
+  it("falls back to the raw code for a genuinely unknown institution", () => {
+    expect(destinationInstitution("NOT-A-REAL-CODE")).toMatchObject({
+      code: "NOT-A-REAL-CODE",
+      label: "NOT-A-REAL-CODE",
+      category: "unknown",
+    });
+  });
+
   it("builds the human confirmation sentence", () => {
     expect(settlementRailLabel("PESONET")).toBe("PESONet");
     expect(

@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Support\Claim;
 
+use LBHurtado\MoneyIssuer\Contracts\MoneyIssuerDirectoryContract;
+use LBHurtado\MoneyIssuer\Data\MoneyIssuerData;
+
 final class PayoutDestinationRegistry
 {
     public function __construct(
+        private readonly MoneyIssuerDirectoryContract $institutions,
         private readonly PayoutDestinationIconCatalog $iconCatalog = new PayoutDestinationIconCatalog,
     ) {
     }
@@ -78,15 +82,49 @@ final class PayoutDestinationRegistry
         }
 
         $configured = (array) config("x-change.claim.destination.institutions.{$bankCode}", []);
-        $label = $this->nullableString($configured['label'] ?? null) ?? $bankCode;
 
+        if ($configured !== []) {
+            $label = $this->nullableString($configured['label'] ?? null) ?? $bankCode;
+
+            return [
+                'label' => $label,
+                'short_label' => $this->nullableString($configured['short_label'] ?? null) ?? $label,
+                'category' => $this->nullableString($configured['category'] ?? null),
+                'icon_key' => $this->nullableString($configured['icon_key'] ?? null) ?? 'institution.generic',
+                'icon_asset' => $this->iconCatalog->iconAssetForCode($bankCode),
+            ];
+        }
+
+        $resolved = $this->institutions->findInstitutionByBankCode($bankCode);
+
+        if ($resolved instanceof MoneyIssuerData) {
+            $label = $this->nullableString($resolved->name) ?? $bankCode;
+
+            return [
+                'label' => $label,
+                'short_label' => $label,
+                'category' => $this->normalizeCategory($resolved->category),
+                'icon_key' => 'institution.generic',
+                'icon_asset' => $this->iconCatalog->iconAssetForCode($bankCode),
+            ];
+        }
+
+        // Genuinely unknown code: safe raw-code fallback.
         return [
-            'label' => $label,
-            'short_label' => $this->nullableString($configured['short_label'] ?? null) ?? $label,
-            'category' => $this->nullableString($configured['category'] ?? null),
-            'icon_key' => $this->nullableString($configured['icon_key'] ?? null) ?? 'institution.generic',
+            'label' => $bankCode,
+            'short_label' => $bankCode,
+            'category' => null,
+            'icon_key' => 'institution.generic',
             'icon_asset' => $this->iconCatalog->iconAssetForCode($bankCode),
         ];
+    }
+
+    private function normalizeCategory(string $category): string
+    {
+        return match ($category) {
+            'wallet', 'e_wallet', 'emi' => 'wallet',
+            default => 'bank',
+        };
     }
 
     public function defaultBankCode(): ?string
