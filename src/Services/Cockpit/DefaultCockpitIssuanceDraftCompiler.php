@@ -55,7 +55,7 @@ class DefaultCockpitIssuanceDraftCompiler implements CockpitIssuanceDraftCompile
     {
         return array_replace_recursive($template?->default_feedback ?? [], [
             'email' => $draft->feedback['email'] ?? null,
-            'mobile' => $draft->feedback['mobile'] ?? $draft->recipient_reference,
+            'mobile' => $draft->feedback['mobile'] ?? null,
             'webhook' => $draft->feedback['webhook'] ?? null,
         ]);
     }

@@ -21,6 +21,7 @@ use LBHurtado\XChange\Enums\CockpitPayeeKind;
 use LBHurtado\XChange\Http\Requests\Concerns\SanitizesRiderSplashHtml;
 use LBHurtado\XChange\Http\Requests\Concerns\ValidatesCockpitPayeePolicy;
 use LBHurtado\XChange\Http\Requests\Concerns\ValidatesMinimumWithdrawalPolicy;
+use Propaganistas\LaravelPhone\Rules\Phone;
 
 class GeneratePayCodeRequest extends FormRequest
 {
@@ -82,8 +83,8 @@ class GeneratePayCodeRequest extends FormRequest
 
             'feedback' => ['required', 'array'],
             'feedback.email' => ['nullable', 'email'],
-            'feedback.mobile' => ['nullable', 'string'],
-            'feedback.webhook' => ['nullable', 'url'],
+            'feedback.mobile' => ['nullable', (new Phone)->country('PH')->type('mobile')],
+            'feedback.webhook' => ['nullable', 'url:http,https'],
 
             'rider' => ['required', 'array'],
             'rider.message' => ['nullable'],

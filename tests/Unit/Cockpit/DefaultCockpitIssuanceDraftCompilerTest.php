@@ -38,7 +38,7 @@ it('compiles a cockpit issuance draft into a GeneratePayCodeRequest compatible p
         'count' => 1,
         'feedback' => [
             'email' => null,
-            'mobile' => '09173011987',
+            'mobile' => null,
             'webhook' => null,
         ],
         'rider' => [
@@ -76,6 +76,25 @@ it('preserves campaign context as metadata without mutating campaigns', function
     ]);
 });
 
+it('preserves only explicitly selected feedback destinations', function (): void {
+    $payload = (new DefaultCockpitIssuanceDraftCompiler)->compile(new CockpitIssuanceDraftData(
+        template_key: 'money-changer',
+        amount: '25.00',
+        recipient_reference: '09173011987',
+        feedback: [
+            'email' => 'issuer@example.com',
+            'mobile' => '+639285243656',
+            'webhook' => 'https://example.test/redemption-feedback',
+        ],
+    ));
+
+    expect(data_get($payload, 'feedback'))->toBe([
+        'email' => 'issuer@example.com',
+        'mobile' => '+639285243656',
+        'webhook' => 'https://example.test/redemption-feedback',
+    ]);
+});
+
 it('applies template profile defaults while preserving explicit draft values', function () {
     $payload = (new DefaultCockpitIssuanceDraftCompiler(new DefaultCockpitIssuanceTemplateRegistry))->compile(new CockpitIssuanceDraftData(
         template_key: 'ofw-remittance',
@@ -93,7 +112,7 @@ it('applies template profile defaults while preserving explicit draft values', f
 
     expect(data_get($payload, 'inputs.fields'))->toBe(['mobile'])
         ->and(data_get($payload, 'cash.validation.mobile'))->toBe('09173011987')
-        ->and(data_get($payload, 'feedback.mobile'))->toBe('09173011987')
+        ->and(data_get($payload, 'feedback.mobile'))->toBeNull()
         ->and(data_get($payload, 'rider.message'))->toBe('Explicit remittance message')
         ->and(data_get($payload, 'metadata.template.purpose'))->toBe('remittance');
 });

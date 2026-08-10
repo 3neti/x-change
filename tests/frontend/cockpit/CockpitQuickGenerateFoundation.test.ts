@@ -56,6 +56,45 @@ function quickGenerateEngineeringPreview(
 }
 
 describe('Cockpit Quick Generate foundation', () => {
+    it('uses recognized Status Update chips as the feedback payload source', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                feedbackDefaults: {
+                    email: 'saved@example.com',
+                    mobile: '+639170000000',
+                    webhook: null,
+                },
+            },
+        });
+
+        const editor = wrapper.get(
+            '[data-testid="cockpit-feedback-destination-editor"]',
+        );
+
+        await editor.trigger('paste', {
+            clipboardData: {
+                getData: () =>
+                    'custom@example.com,09173011987;https://example.test/feedback',
+            },
+        });
+        await wrapper.vm.$nextTick();
+
+        const preview = quickGenerateEngineeringPreview(wrapper);
+
+        expect(preview.feedback).toEqual({
+            email: 'custom@example.com',
+            mobile: '+639173011987',
+            webhook: 'https://example.test/feedback',
+        });
+        expect(preview.inputs.fields).not.toContain('email');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-primary-feedback"]')
+                .text(),
+        ).toContain('Email + SMS + Webhook');
+    });
+
     it('keeps the Order inputs aligned and focuses Amount first', async () => {
         const host = document.createElement('div');
         document.body.appendChild(host);
@@ -4052,18 +4091,16 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(
             essentialsCanvas
-                .find(
-                    '[data-testid="cockpit-pay-code-canvas-action-rail"]',
-                )
+                .find('[data-testid="cockpit-pay-code-canvas-action-rail"]')
                 .exists(),
         ).toBe(false);
         expect(orderSubmitButton.classes()).toContain('min-h-10');
         expect(orderSubmitButton.classes()).toContain('rounded-xl');
         expect(orderSubmitButton.classes()).toContain('bg-emerald-600');
         expect(
-            templateControls.findAll('button').some((button) =>
-                button.classes().includes('bg-emerald-600'),
-            ),
+            templateControls
+                .findAll('button')
+                .some((button) => button.classes().includes('bg-emerald-600')),
         ).toBe(false);
         expect(
             orderSubmitButton
