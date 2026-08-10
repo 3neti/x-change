@@ -1,0 +1,2640 @@
+{
+    "generated": "2026-08-10",
+    "notes": "Icon metadata for the payout-destination icon library. Codes are SWIFT/BIC bank codes from resources/documents/banks.json, or synthetic codes (RAIL:*, PROVIDER:*, ORCHESTRATOR:*) for non-bank route segments. Multiple codes may share the same slug/assets when they represent sub-brands of the same visual identity (documented per-entry in license_notes).",
+    "entries": {
+        "AGBUPHM1XXX": {
+            "code": "AGBUPHM1XXX",
+            "slug": "agribank",
+            "display_name": "Agribank (Agribusiness Rural Bank)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "agribank-64.png",
+                "png128": "agribank-128.png",
+                "png256": "agribank-256.png"
+            },
+            "source_url": "https://www.agribank.com.ph/wp-content/uploads/2025/10/AGRIBANK-favicon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Agribusiness Banking Corporation - A Rural Bank's (doing business as AGRIBANK, formerly Agribusiness Rural Bank, Inc.) own site favicon asset. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ALKBPHM2XXX": {
+            "code": "ALKBPHM2XXX",
+            "slug": "allbank",
+            "display_name": "AllBank, Inc.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "allbank-64.png",
+                "png128": "allbank-128.png",
+                "png256": "allbank-256.png"
+            },
+            "source_url": "https://www.google.com/s2/favicons?sz=256&domain=allbank.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Direct fetch of allbank.ph is blocked by Cloudflare bot-protection (JS challenge page returned instead of assets), so this was sourced via Google's favicon service, which returned AllBank (A Thrift Bank), Inc.'s actual wordmark at low resolution (40x40). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ANZBPHMXXXX": {
+            "code": "ANZBPHMXXXX",
+            "slug": "anz",
+            "display_name": "ANZ (Australia & New Zealand Bank)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "anz-64.png",
+                "png128": "anz-128.png",
+                "png256": "anz-256.png"
+            },
+            "source_url": "https://www.anz.com/apple-touch-icon.png",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Australia and New Zealand Banking Group Limited is a registered trademark. Fetched directly from anz.com's apple-touch-icon. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "APHIPHM2XXX": {
+            "code": "APHIPHM2XXX",
+            "slug": "alipay",
+            "display_name": "Alipay Philippines / Lazada Wallet",
+            "kind": "emi",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "alipay-64.png",
+                "png128": "alipay-128.png",
+                "png256": "alipay-256.png"
+            },
+            "source_url": "https://img.alicdn.com/tfs/TB1qEwuzrj1gK0jSZFOXXc7GpXa-32-32.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from alipay.com's own icon link tag (Alibaba CDN-hosted). Alipay is a registered trademark of Ant Group / Alipay Philippines, Inc. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "AUBKPHMMXXX": {
+            "code": "AUBKPHMMXXX",
+            "slug": "aub",
+            "display_name": "AUB",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "aub-64.png",
+                "png128": "aub-128.png",
+                "png256": "aub-256.png"
+            },
+            "source_url": "https://aub.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Source favicon is a small (16px) abstract mark; visual match to Asia United Bank's official brand could not be confidently verified. Recommend re-sourcing from an official press kit before production use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "BIURPHM2XXX": {
+            "code": "BIURPHM2XXX",
+            "slug": "binan-rural-bank",
+            "display_name": "Biñan Rural Bank, Inc.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "binan-rural-bank-64.png",
+                "png128": "binan-rural-bank-128.png",
+                "png256": "binan-rural-bank-256.png"
+            },
+            "source_url": "https://www.brbi.com.ph/wp-content/uploads/2020/02/logo.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Biñan Rural Bank, Inc.'s own site uploads (nav logo). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "BKCHPHMMXXX": {
+            "code": "BKCHPHMMXXX",
+            "slug": "bank-of-china",
+            "display_name": "Bank of China",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bank-of-china-64.png",
+                "png128": "bank-of-china-128.png",
+                "png256": "bank-of-china-256.png"
+            },
+            "source_url": "https://www.bankofchina.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from bankofchina.com's favicon, but source resolution is low (16x16). Bank of China Limited is a registered trademark. Verify brand usage terms and consider a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "BNORPHMMXXX": {
+            "code": "BNORPHMMXXX",
+            "slug": "bdo",
+            "display_name": "BDO",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bdo-64.png",
+                "png128": "bdo-128.png",
+                "png256": "bdo-256.png"
+            },
+            "source_url": "https://bdo.com.ph",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Banco de Oro Unibank Inc. is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "BOFAPH2XXXX": {
+            "code": "BOFAPH2XXXX",
+            "slug": "bank-of-america",
+            "display_name": "Bank of America, N.A.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bank-of-america-64.png",
+                "png128": "bank-of-america-128.png",
+                "png256": "bank-of-america-256.png"
+            },
+            "source_url": "https://www.bankofamerica.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from bankofamerica.com's favicon, but source resolution is low (16x16). Bank of America Corporation is a registered trademark. Verify brand usage terms and consider a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "BOPIPHMMXXX": {
+            "code": "BOPIPHMMXXX",
+            "slug": "bpi",
+            "display_name": "BPI",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bpi-64.png",
+                "png128": "bpi-128.png",
+                "png256": "bpi-256.png"
+            },
+            "source_url": "https://bpi.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Bank of the Philippine Islands is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "BORRPHM1XXX": {
+            "code": "BORRPHM1XXX",
+            "slug": "bank-of-florida",
+            "display_name": "Bank of Florida, Inc. (BOF)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bank-of-florida-64.png",
+                "png128": "bank-of-florida-128.png",
+                "png256": "bank-of-florida-256.png"
+            },
+            "source_url": "https://bof.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from BOF Inc. (A Rural Bank)'s own site favicon (an abstract 'O' mark consistent with the bank's recent 2025 rebranding). Verify against the bank's current approved brand assets before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "BOTKPHMMXXX": {
+            "code": "BOTKPHMMXXX",
+            "slug": "mufg",
+            "display_name": "MUFG Bank, Ltd.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "mufg-64.png",
+                "png128": "mufg-128.png",
+                "png256": "mufg-256.png"
+            },
+            "source_url": "https://www.mufg.jp/apple-touch-icon.png",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "MUFG Bank, Ltd. (Mitsubishi UFJ Financial Group) is a registered trademark. Fetched directly from mufg.jp's apple-touch-icon. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "BPDIPHM1XXX": {
+            "code": "BPDIPHM1XXX",
+            "slug": "bpi",
+            "display_name": "BPI Direct BanKo",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bpi-64.png",
+                "png128": "bpi-128.png",
+                "png256": "bpi-256.png"
+            },
+            "source_url": "https://bpi.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Reuses the parent BPI mark. BPI Direct BanKo is a BPI subsidiary savings bank that may warrant a distinct sub-brand mark in a future pass.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CBMFPHM1XXX": {
+            "code": "CBMFPHM1XXX",
+            "slug": "card-bank",
+            "display_name": "CARD Bank, Inc.",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "card-bank-64.png",
+                "png128": "card-bank-128.png",
+                "png256": "card-bank-256.png"
+            },
+            "source_url": "https://cardbankph.com/wp-content/uploads/2018/04/cropped-cardbank1-192x192.png",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from cardbankph.com's own site favicon asset (a member institution of the CARD MRI group). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CBQPPHM2XXX": {
+            "code": "CBQPPHM2XXX",
+            "slug": "cbqp",
+            "display_name": "Cooperative Bank of Quezon Province",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "cbqp-64.png",
+                "png128": "cbqp-128.png",
+                "png256": "cbqp-256.png"
+            },
+            "source_url": "https://www.cbqp.com.ph/assets/images/lg-128x123.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Cooperative Bank of Quezon Province's own site (cbqp.com.ph) nav logo asset. This is a third-party registered institution mark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CELRPHM1XXX": {
+            "code": "CELRPHM1XXX",
+            "slug": "cebuana-lhuillier-bank",
+            "display_name": "Cebuana Lhuillier Rural Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "cebuana-lhuillier-bank-64.png",
+                "png128": "cebuana-lhuillier-bank-128.png",
+                "png256": "cebuana-lhuillier-bank-256.png"
+            },
+            "source_url": "https://www.cebuanalhuillierbank.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Cebuana Lhuillier Rural Bank Inc.'s own site (cebuanalhuillierbank.com) favicon, a clear 'C' mark. This is a third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CESNPHM1XXX": {
+            "code": "CESNPHM1XXX",
+            "slug": "century-savings-bank",
+            "display_name": "Century Savings Bank",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "century-savings-bank-64.png",
+                "png128": "century-savings-bank-128.png",
+                "png256": "century-savings-bank-256.png"
+            },
+            "source_url": "https://centurysavingsbank.com.ph/app/uploads/2025/09/cropped-cropped-Century-192x192.webp",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Century Savings Bank Corporation's own site (centurysavingsbank.com.ph) icon asset. This is a third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CHASPHMMXXX": {
+            "code": "CHASPHMMXXX",
+            "slug": "chase",
+            "display_name": "JPMorgan Chase Bank",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "chase-64.png",
+                "png128": "chase-128.png",
+                "png256": "chase-256.png"
+            },
+            "source_url": "https://chase.com/apple-touch-icon.png",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from JPMorgan Chase Bank, N.A.'s own site (chase.com) apple-touch-icon. Chase is a registered trademark of JPMorgan Chase & Co. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CHBKPHMMXXX": {
+            "code": "CHBKPHMMXXX",
+            "slug": "chinabank",
+            "display_name": "Chinabank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "chinabank-64.png",
+                "png128": "chinabank-128.png",
+                "png256": "chinabank-256.png"
+            },
+            "source_url": "https://www.chinabank.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "China Banking Corporation is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CHSVPHM1XXX": {
+            "code": "CHSVPHM1XXX",
+            "slug": "chinabank",
+            "display_name": "China Bank Savings",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "chinabank-64.png",
+                "png128": "chinabank-128.png",
+                "png256": "chinabank-256.png"
+            },
+            "source_url": "https://www.chinabank.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Reuses the parent Chinabank mark. China Bank Savings Inc. is a subsidiary that may warrant a distinct sub-brand mark in a future pass.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CIPHPHMMXXX": {
+            "code": "CIPHPHMMXXX",
+            "slug": "cimb",
+            "display_name": "CIMB",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "cimb-64.png",
+                "png128": "cimb-128.png",
+                "png256": "cimb-256.png"
+            },
+            "source_url": "https://cimbbank.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "CIMB Bank Philippines Inc. is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CITIPHMXXXX": {
+            "code": "CITIPHMXXXX",
+            "slug": "citibank",
+            "display_name": "Citibank, N.A.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "citibank-64.png",
+                "png128": "citibank-128.png",
+                "png256": "citibank-256.png"
+            },
+            "source_url": "https://citi.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Citigroup's own site (citi.com) favicon; source is low-resolution (16x16). Citibank is a registered trademark of Citigroup Inc. Verify brand usage terms and consider a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CIVAPHM1XXX": {
+            "code": "CIVAPHM1XXX",
+            "slug": "city-savings-bank",
+            "display_name": "City Savings Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "city-savings-bank-64.png",
+                "png128": "city-savings-bank-128.png",
+                "png256": "city-savings-bank-256.png"
+            },
+            "source_url": "https://www.citysavings.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from City Savings Bank, Inc.'s own site (citysavings.com.ph) favicon (256x256 bee mark). This is a third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CIYCPHM2XXX": {
+            "code": "CIYCPHM2XXX",
+            "slug": "bayad",
+            "display_name": "Bayad (CIS Bayad Center, Inc.)",
+            "kind": "emi",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "bayad-64.png",
+                "png128": "bayad-128.png",
+                "png256": "bayad-256.png"
+            },
+            "source_url": "https://www.bayad.com/src/images/bayad-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from CIS Bayad Center, Inc.'s own site (bayad.com) icon asset. Bayad is a registered trademark of CIS Bayad Center, Inc. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CNRLPHM1XXX": {
+            "code": "CNRLPHM1XXX",
+            "slug": "cantilan-bank",
+            "display_name": "Cantilan Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "cantilan-bank-64.png",
+                "png128": "cantilan-bank-128.png",
+                "png256": "cantilan-bank-256.png"
+            },
+            "source_url": "https://cantilanbank.com/wp-content/uploads/2021/04/cropped-favi-1-192x192.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Cantilan Bank, Inc. (A Rural Bank)'s own site (cantilanbank.com) icon asset. This is a third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "COUKPHM1XXX": {
+            "code": "COUKPHM1XXX",
+            "slug": "top-bank",
+            "display_name": "Top Bank Philippines (formerly Country Builders Bank)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "top-bank-64.png",
+                "png128": "top-bank-128.png",
+                "png256": "top-bank-256.png"
+            },
+            "source_url": "https://www.topbank.com.ph/",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Country Builders Bank, Inc. rebranded to Top Bank Philippines, Inc. in 2024 (BSP/SEC approved); the old cbb.com.ph domain is now defunct (expired TLS certificate). Icon sourced from the current live successor entity's official site (topbank.com.ph). Verify whether the BIC record's legal name will be updated to reflect the rebrand, and confirm brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CPHIPHMMXXX": {
+            "code": "CPHIPHMMXXX",
+            "slug": "pbcom",
+            "display_name": "Philippine Bank of Communications",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "pbcom-64.png",
+                "png128": "pbcom-128.png",
+                "png256": "pbcom-256.png"
+            },
+            "source_url": "https://www.pbcom.com.ph/sites/default/files/2019%20P%20-%20FAVICON.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Philippine Bank of Communications' own site (pbcom.com.ph) favicon; source is low-resolution (16x16, single letter 'P' mark). Verify brand usage terms and consider a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CRMHPHM1XXX": {
+            "code": "CRMHPHM1XXX",
+            "slug": "card-sme-bank",
+            "display_name": "CARD SME Bank, Inc.",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "card-sme-bank-64.png",
+                "png128": "card-sme-bank-128.png",
+                "png256": "card-sme-bank-256.png"
+            },
+            "source_url": "https://cardsmebankph.com/wp-content/uploads/2018/06/cropped-SME-logo-192x192.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from CARD SME Bank, Inc.'s own site (cardsmebankph.com) icon asset. This is a third-party registered trademark of the CARD MRI group pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CTCBPHMMXXX": {
+            "code": "CTCBPHMMXXX",
+            "slug": "ctbc-bank",
+            "display_name": "CTBC Bank (Philippines) Corp.",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "ctbc-bank-64.png",
+                "png128": "ctbc-bank-128.png",
+                "png256": "ctbc-bank-256.png"
+            },
+            "source_url": "https://www.google.com/s2/favicons?sz=256&domain=ctbcbank.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Direct fetch against CTBC Bank (Philippines) Corp.'s own site (ctbcbank.com.ph) returned 404 for apple-touch-icon/favicon.ico with no discoverable icon link tags, so this was sourced via Google's favicon service instead; result is low-resolution (16x16). CTBC is a registered trademark of CTBC Financial Holding Co., Ltd. Recommend re-sourcing a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "CUOBPHM2XXX": {
+            "code": "CUOBPHM2XXX",
+            "slug": "netbank",
+            "display_name": "Netbank (A Rural Bank), Inc.",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "netbank-64.png",
+                "png128": "netbank-128.png",
+                "png256": "netbank-256.png"
+            },
+            "source_url": "https://netbank.ph/our-company/",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Same institution as PROVIDER:NETBANK (x-change's settlement partner); this entry covers Netbank as an ordinary InstaPay/PESONet participant bank code.",
+            "retrieved_at": "2026-08-10"
+        },
+        "DBPHPHMMXXX": {
+            "code": "DBPHPHMMXXX",
+            "slug": "dbp",
+            "display_name": "DBP",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "dbp-64.png",
+                "png128": "dbp-128.png",
+                "png256": "dbp-256.png"
+            },
+            "source_url": "https://www.dbp.ph/wp-content/uploads/2018/11/DBP-Logo-192.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Development Bank of the Philippines is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "DCDEPHM1XXX": {
+            "code": "DCDEPHM1XXX",
+            "slug": "dumaguete-bank",
+            "display_name": "Dumaguete City Development Bank, Inc.",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "dumaguete-bank-64.png",
+                "png128": "dumaguete-bank-128.png",
+                "png256": "dumaguete-bank-256.png"
+            },
+            "source_url": "https://dumaguetebank.com/wp-content/uploads/2026/05/cropped-New-DCDB-Logo-Raw-192x192.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Dumaguete City Development Bank, Inc.'s own site (dumaguetebank.com) icon asset. This is a third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "DCPHPHM1XXX": {
+            "code": "DCPHPHM1XXX",
+            "slug": "coins-ph",
+            "display_name": "Coins.ph",
+            "kind": "emi",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "coins-ph-64.png",
+                "png128": "coins-ph-128.png",
+                "png256": "coins-ph-256.png"
+            },
+            "source_url": "https://coins.ph",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from coins.ph's own CDN-hosted favicon (static.pro.coins.xyz). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "DEUTPHMMXXX": {
+            "code": "DEUTPHMMXXX",
+            "slug": "deutsche-bank",
+            "display_name": "Deutsche Bank",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "deutsche-bank-64.png",
+                "png128": "deutsche-bank-128.png",
+                "png256": "deutsche-bank-256.png"
+            },
+            "source_url": "https://db.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Deutsche Bank AG's own site (db.com) favicon; source is low-resolution (16x16). Deutsche Bank is a registered trademark of Deutsche Bank AG. Verify brand usage terms and consider a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "DUMTPHM1XXX": {
+            "code": "DUMTPHM1XXX",
+            "slug": "dungganon-bank",
+            "display_name": "Dungganon Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "dungganon-bank-64.png",
+                "png128": "dungganon-bank-128.png",
+                "png256": "dungganon-bank-256.png"
+            },
+            "source_url": "https://dungganonbank.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Dungganon Bank (A Microfinance Rural Bank), Inc.'s own site is behind a bot-challenge page that blocked HTML scraping, but its raw /favicon.ico resolved to a small (16px) generic shield-style icon rather than a distinct wordmark. Recommend re-sourcing a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "EAWRPHM2XXX": {
+            "code": "EAWRPHM2XXX",
+            "slug": "eastwest",
+            "display_name": "Komo (East West Rural Bank)",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "eastwest-64.png",
+                "png128": "eastwest-128.png",
+                "png256": "eastwest-256.png"
+            },
+            "source_url": "https://eastwestbanker.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Placeholder reuse of the parent EastWest mark. Komo is East West Rural Bank's distinct digital sub-brand and should be sourced separately (e.g. komo.ph) in a future pass.",
+            "retrieved_at": "2026-08-10"
+        },
+        "EQSNPHM1XXX": {
+            "code": "EQSNPHM1XXX",
+            "slug": "equicom-savings-bank",
+            "display_name": "Equicom Savings Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "equicom-savings-bank-64.png",
+                "png128": "equicom-savings-bank-128.png",
+                "png256": "equicom-savings-bank-256.png"
+            },
+            "source_url": "https://www.equicomsavings.com/wp-content/uploads/2018/09/cropped-favicon-1-192x192.png",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Equicom Savings Bank, Inc.'s own WordPress-hosted favicon (192px). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "EWBCPHMMXXX": {
+            "code": "EWBCPHMMXXX",
+            "slug": "eastwest",
+            "display_name": "EastWest",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "eastwest-64.png",
+                "png128": "eastwest-128.png",
+                "png256": "eastwest-256.png"
+            },
+            "source_url": "https://eastwestbanker.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Source favicon is a small (16px) generic diamond mark; visual match to East West Banking Corporation's official brand could not be confidently verified. Recommend re-sourcing from an official press kit before production use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "FIOOPHM1XXX": {
+            "code": "FIOOPHM1XXX",
+            "slug": "first-consolidated-bank",
+            "display_name": "First Consolidated Bank",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "first-consolidated-bank-64.png",
+                "png128": "first-consolidated-bank-128.png",
+                "png256": "first-consolidated-bank-256.png"
+            },
+            "source_url": "https://www.fcb.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "First Consolidated Bank, Inc. (A Private Development Bank) is a registered trademark; source favicon is a multi-resolution ico topping out at 32px. Verify brand usage terms and consider a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "GHPESGSGXXX": {
+            "code": "GHPESGSGXXX",
+            "slug": "grabpay",
+            "display_name": "GrabPay",
+            "kind": "emi",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "grabpay-64.png",
+                "png128": "grabpay-128.png",
+                "png256": "grabpay-256.png"
+            },
+            "source_url": "https://grab.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Uses the general Grab brand mark; Grab does not appear to expose a GrabPay-specific favicon. Grab is a registered trademark of Grab Holdings Inc.",
+            "retrieved_at": "2026-08-10"
+        },
+        "GMBANKLUZON": {
+            "code": "GMBANKLUZON",
+            "slug": "gm-bank-of-luzon",
+            "display_name": "GM Bank of Luzon",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "gm-bank-of-luzon-64.png",
+                "png128": "gm-bank-of-luzon-128.png",
+                "png256": "gm-bank-of-luzon-256.png"
+            },
+            "source_url": "https://gmbank.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "GM Bank of Luzon, Inc. is a registered trademark; source favicon is a small (32px) monogram mark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "GOTYPHM2XXX": {
+            "code": "GOTYPHM2XXX",
+            "slug": "gotyme",
+            "display_name": "GoTyme",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "gotyme-64.png",
+                "png128": "gotyme-128.png",
+                "png256": "gotyme-256.png"
+            },
+            "source_url": "https://gotyme.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Direct site fetch returned the single-page-app HTML shell instead of the static asset, so this was sourced via Google's favicon service instead. GoTyme Bank Corporation is a registered trademark.",
+            "retrieved_at": "2026-08-10"
+        },
+        "GRBUPHM1XXX": {
+            "code": "GRBUPHM1XXX",
+            "slug": "guagua-rural-bank",
+            "display_name": "Guagua Rural Bank (GRBank)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "guagua-rural-bank-64.png",
+                "png128": "guagua-rural-bank-128.png",
+                "png256": "guagua-rural-bank-256.png"
+            },
+            "source_url": "https://www.grbank.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Guagua Rural Bank, Inc. (GRBank) is a registered trademark; source favicon is a small (32px) triangular mark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "GXCHPHM2XXX": {
+            "code": "GXCHPHM2XXX",
+            "slug": "gcash",
+            "display_name": "GCash",
+            "kind": "emi",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "gcash-64.png",
+                "png128": "gcash-128.png",
+                "png256": "gcash-256.png"
+            },
+            "source_url": "https://gcash.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "GCash is a registered trademark of G-Xchange, Inc. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "HBPHPHMMXXX": {
+            "code": "HBPHPHMMXXX",
+            "slug": "hsbc",
+            "display_name": "HSBC Savings Bank Phils. (merged into HSBC Philippines)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "hsbc-64.png",
+                "png128": "hsbc-128.png",
+                "png256": "hsbc-256.png"
+            },
+            "source_url": "https://www.hsbc.com.ph/etc.clientlibs/dpws/clientlibs-public/clientlib-site/resources/favicons/apple-touch-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "HSBC Savings Bank (Philippines), Inc. voluntarily surrendered its banking license in October 2023 and its accounts were migrated into The Hongkong and Shanghai Banking Corporation Limited - Philippine Branch; this entry reuses the parent HSBC hexagon mark since the Savings Bank sub-brand no longer operates independently.",
+            "retrieved_at": "2026-08-10"
+        },
+        "HSBCPHMMXXX": {
+            "code": "HSBCPHMMXXX",
+            "slug": "hsbc",
+            "display_name": "HSBC",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "hsbc-64.png",
+                "png128": "hsbc-128.png",
+                "png256": "hsbc-256.png"
+            },
+            "source_url": "https://www.hsbc.com.ph/etc.clientlibs/dpws/clientlibs-public/clientlib-site/resources/favicons/apple-touch-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from HSBC Philippines' own site (apple-touch-icon, 180px), the well-known HSBC hexagon mark. The Hongkong and Shanghai Banking Corporation Limited is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "IBKOPHMMXXX": {
+            "code": "IBKOPHMMXXX",
+            "slug": "ibk-manila",
+            "display_name": "Industrial Bank of Korea - Manila",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "ibk-manila-64.png",
+                "png128": "ibk-manila-128.png",
+                "png256": "ibk-manila-256.png"
+            },
+            "source_url": "https://global.ibk.co.kr/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from IBK's own global-facing site favicon (256px 'IBK Global' app-style mark) since the Manila branch does not maintain its own distinct website/domain. Industrial Bank of Korea is a Korean government-affiliated bank; verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ICBCPHMMXXX": {
+            "code": "ICBCPHMMXXX",
+            "slug": "mega-intl-commercial-bank",
+            "display_name": "Mega International Commercial Bank",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "mega-intl-commercial-bank-64.png",
+                "png128": "mega-intl-commercial-bank-128.png",
+                "png256": "mega-intl-commercial-bank-256.png"
+            },
+            "source_url": "https://www.megabank.com.tw/apple-touch-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Note: despite the SWIFT/BIC code beginning with 'ICBC' (a legacy artifact from Mega's predecessor, the former International Commercial Bank of China), this code (ICBCPHMMXXX) belongs to Mega International Commercial Bank Co., Ltd. - Manila Branch, a Taiwanese bank, NOT the separate Chinese state bank ICBC (see ICBKPHMMXXX for that entity). Fetched directly from megabank.com.tw's (Mega Bank Taiwan, parent of the Manila branch) own site asset (48px gold swirl mark). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ICBKPHMMXXX": {
+            "code": "ICBKPHMMXXX",
+            "slug": "icbc",
+            "display_name": "Industrial and Commercial Bank of China (ICBC) - Manila",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "icbc-64.png",
+                "png128": "icbc-128.png",
+                "png256": "icbc-256.png"
+            },
+            "source_url": "https://www.icbc.com.cn/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "The Manila branch's own domain (icbcmanila.com.cn) was unreachable (connection failure) during sourcing, so this reuses the parent ICBC Group's small (32px) official favicon from icbc.com.cn. Industrial and Commercial Bank of China Limited is a registered trademark; distinct from Mega International Commercial Bank (see ICBCPHMMXXX) despite the superficially similar SWIFT prefixes. Verify brand usage terms and consider a higher-resolution asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "IFIPPHM2XXX": {
+            "code": "IFIPPHM2XXX",
+            "slug": "nationlink",
+            "display_name": "Nationlink (Infoserve, Inc.)",
+            "kind": "provider",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "nationlink-64.png",
+                "png128": "nationlink-128.png",
+                "png256": "nationlink-256.png"
+            },
+            "source_url": "https://www.nationlink.ph/img/logos/logo-nationlink-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Nationlink (operated by Infoserve, Inc.) is a non-bank financial institution/ATM-switch network regulated by the BSP, not a bank; fetched directly from its own site's icon asset. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "INGBPHMMRTL": {
+            "code": "INGBPHMMRTL",
+            "slug": "ing-bank",
+            "display_name": "ING Bank N.V.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "ing-bank-64.png",
+                "png128": "ing-bank-128.png",
+                "png256": "ing-bank-256.png"
+            },
+            "source_url": "https://ingwb.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from ING's wholesale-banking site (ingwb.com), which is now ING Philippines' primary site following its 2022 exit from retail banking. ING's lion mark is a registered trademark of ING Groep N.V. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "IORUPHM1XXX": {
+            "code": "IORUPHM1XXX",
+            "slug": "innovative-bank",
+            "display_name": "Innovative Bank (Innobank)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "innovative-bank-64.png",
+                "png128": "innovative-bank-128.png",
+                "png256": "innovative-bank-256.png"
+            },
+            "source_url": "https://www.innobankph.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Innovative Bank, Inc. (A Rural Bank)'s own site favicon (192px, full logo with wordmark). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ISTHPHM1XXX": {
+            "code": "ISTHPHM1XXX",
+            "slug": "isla-bank",
+            "display_name": "ISLA Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "isla-bank-64.png",
+                "png128": "isla-bank-128.png",
+                "png256": "isla-bank-256.png"
+            },
+            "source_url": "https://www.islabank.com/img_logo.gif",
+            "source_type": "official_site_asset",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "ISLA Bank (A Thrift Bank), Inc. is a registered trademark. The only logo asset found on the bank's own site is a small (79x70) GIF embedded via CSS background-image; no higher-resolution official asset was found. Verify brand usage terms and consider sourcing a sharper asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "KOEXPHMMXXX": {
+            "code": "KOEXPHMMXXX",
+            "slug": "keb-hana-bank",
+            "display_name": "KEB Hana Bank",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "keb-hana-bank-64.png",
+                "png128": "keb-hana-bank-128.png",
+                "png256": "keb-hana-bank-256.png"
+            },
+            "source_url": "https://www.kebhana.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Hana Bank / KEB Hana Bank is a registered trademark of Hana Financial Group (South Korea); this is the Manila Branch's parent-group favicon (60x60). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "LAUIPHM2XXX": {
+            "code": "LAUIPHM2XXX",
+            "slug": "seabank",
+            "display_name": "SeaBank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "seabank-64.png",
+                "png128": "seabank-128.png",
+                "png256": "seabank-256.png"
+            },
+            "source_url": "https://seabank.ph",
+            "source_type": "official_site_asset",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "The favicon linked from seabank.ph resolves to an 'M' mark hosted on maribank.ph infrastructure (Sea Group's sister-brand name used in other markets) rather than a distinct 'SeaBank' wordmark. Needs verification against SeaBank Philippines' actual approved brand assets before use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "LESIPHM1XXX": {
+            "code": "LESIPHM1XXX",
+            "slug": "legazpi-savings-bank",
+            "display_name": "Legazpi Savings Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "legazpi-savings-bank-64.png",
+                "png128": "legazpi-savings-bank-128.png",
+                "png256": "legazpi-savings-bank-256.png"
+            },
+            "source_url": "https://www.legazpibank.com.ph/dist/images/legazpi-savings-bank-logo-small.png",
+            "source_type": "official_site_asset",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Legazpi Savings Bank, Inc. (now operating as 'BPI LSB', a wholly-owned BPI subsidiary) is a registered trademark. The only logo asset found on the bank's own site is a small (50x43) wordmark; no higher-resolution official asset was found. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "LFSHPHM2XXX": {
+            "code": "LFSHPHM2XXX",
+            "slug": "lulu-financial",
+            "display_name": "Lulu Financial Services (Phils.), Inc.",
+            "kind": "emi",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "lulu-financial-64.png",
+                "png128": "lulu-financial-128.png",
+                "png256": "lulu-financial-256.png"
+            },
+            "source_url": "https://lulumoney.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Lulu Financial Services (Phils.), Inc.'s own site (lulumoney.com.ph), a Philippine subsidiary of LuLu Financial Holdings. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "LPCRPHM2XXX": {
+            "code": "LPCRPHM2XXX",
+            "slug": "laguna-prestige-bank",
+            "display_name": "Laguna Prestige Banking Corporation",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "laguna-prestige-bank-64.png",
+                "png128": "laguna-prestige-bank-128.png",
+                "png256": "laguna-prestige-bank-256.png"
+            },
+            "source_url": "http://www.prestigebank.com.ph/images/pblogo2025.jpg",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Cropped the 'pb' mark from Laguna Prestige Banking Corporation (A Rural Bank)'s own header logo banner. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "LUDVPHM1XXX": {
+            "code": "LUDVPHM1XXX",
+            "slug": "luzon-development-bank",
+            "display_name": "Luzon Development Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "luzon-development-bank-64.png",
+                "png128": "luzon-development-bank-128.png",
+                "png256": "luzon-development-bank-256.png"
+            },
+            "source_url": "https://ldb.ph/ (apple-touch-icon)",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Luzon Development Bank's own site (ldb.ph) apple-touch-icon asset. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MAARPHM1XXX": {
+            "code": "MAARPHM1XXX",
+            "slug": "malayan-bank-savings",
+            "display_name": "Malayan Bank Savings",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "malayan-bank-savings-64.png",
+                "png128": "malayan-bank-savings-128.png",
+                "png256": "malayan-bank-savings-256.png"
+            },
+            "source_url": "https://msb.com.ph/images/icons/favicon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Malayan Bank Savings and Mortgage Bank, Inc.'s (MSB) own site (msb.com.ph, its newer digital-services domain distinct from the legacy malayanbank.com). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MBBEPHMMXXX": {
+            "code": "MBBEPHMMXXX",
+            "slug": "maybank",
+            "display_name": "Maybank Philippines",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "maybank-64.png",
+                "png128": "maybank-128.png",
+                "png256": "maybank-256.png"
+            },
+            "source_url": "https://www.maybank.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Maybank Philippines, Inc. is a subsidiary of Malayan Banking Berhad (Maybank), a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MBTCPHMMXXX": {
+            "code": "MBTCPHMMXXX",
+            "slug": "metrobank",
+            "display_name": "Metrobank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "metrobank-64.png",
+                "png128": "metrobank-128.png",
+                "png256": "metrobank-256.png"
+            },
+            "source_url": "https://metrobank.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Metropolitan Bank and Trust Company is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MHCBPHMMXXX": {
+            "code": "MHCBPHMMXXX",
+            "slug": "mizuho-bank",
+            "display_name": "Mizuho Bank, Ltd.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "mizuho-bank-64.png",
+                "png128": "mizuho-bank-128.png",
+                "png256": "mizuho-bank-256.png"
+            },
+            "source_url": "https://www.mizuhogroup.com/asia-pacific/philippines (apple-touch-icon)",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Mizuho Bank, Ltd. Manila Branch's parent-group mark, fetched from Mizuho Financial Group's own corporate site. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MIOCPHM1XXX": {
+            "code": "MIOCPHM1XXX",
+            "slug": "mindanao-consolidated-coop",
+            "display_name": "Mindanao Consolidated Cooperative Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "mindanao-consolidated-coop-64.png",
+                "png128": "mindanao-consolidated-coop-128.png",
+                "png256": "mindanao-consolidated-coop-256.png"
+            },
+            "source_url": "https://mccb.com.ph/img/favicon.png",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Mindanao Consolidated Cooperative Bank's own site (mccb.com.ph). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MKRUPHM1XXX": {
+            "code": "MKRUPHM1XXX",
+            "slug": "bank-of-makati",
+            "display_name": "Bank of Makati",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bank-of-makati-64.png",
+                "png128": "bank-of-makati-128.png",
+                "png256": "bank-of-makati-256.png"
+            },
+            "source_url": "https://bankofmakati.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Bank of Makati (A Savings Bank), Inc. is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MLRUPHM2XXX": {
+            "code": "MLRUPHM2XXX",
+            "slug": "malarayat-rural-bank",
+            "display_name": "Malarayat Rural Bank, Inc.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "malarayat-rural-bank-64.png",
+                "png128": "malarayat-rural-bank-128.png",
+                "png256": "malarayat-rural-bank-256.png"
+            },
+            "source_url": "https://malarayatruralbankinc.com/wp-content/uploads/2025/11/Malarayat-Logo.webp",
+            "source_type": "official_site_asset",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Malarayat Rural Bank, Inc.'s own WordPress site header logo (96x60). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MRTCPHM1XXX": {
+            "code": "MRTCPHM1XXX",
+            "slug": "bangko-mabuhay",
+            "display_name": "Bangko Mabuhay",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bangko-mabuhay-64.png",
+                "png128": "bangko-mabuhay-128.png",
+                "png256": "bangko-mabuhay-256.png"
+            },
+            "source_url": "https://bangkomabuhay.com.ph/storage/2020/02/cropped-BM-Official-Logo-1-192x192.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Bangko Mabuhay (A Rural Bank), Inc.'s own site (WordPress-hosted cropped logo asset). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MVRSPHM2XXX": {
+            "code": "MVRSPHM2XXX",
+            "slug": "mvsm-bank",
+            "display_name": "MVSM Bank (A Rural Bank), Inc.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "mvsm-bank-64.png",
+                "png128": "mvsm-bank-128.png",
+                "png256": "mvsm-bank-256.png"
+            },
+            "source_url": "https://mvsmbank.com/",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched from the <link rel=\"icon\"> asset declared on mvsmbank.com's own homepage (CDN-hosted logo image). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MYDBPHM2XXX": {
+            "code": "MYDBPHM2XXX",
+            "slug": "maya",
+            "display_name": "Maya Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "maya-64.png",
+                "png128": "maya-128.png",
+                "png256": "maya-256.png"
+            },
+            "source_url": "https://www.maya.ph/hubfs/Maya/favicons/MAYA_FAVICONS-Mint-OnBlackBG.png",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Same shared Maya favicon as PAPHPHM1XXX (Maya Wallet); see that entry's note on Wallet vs Bank visual distinction.",
+            "retrieved_at": "2026-08-10"
+        },
+        "MYYAPHM2XXX": {
+            "code": "MYYAPHM2XXX",
+            "slug": "maya",
+            "display_name": "Maya Bank",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "maya-64.png",
+                "png128": "maya-128.png",
+                "png256": "maya-256.png"
+            },
+            "source_url": "https://www.maya.ph/hubfs/Maya/favicons/MAYA_FAVICONS-Mint-OnBlackBG.png",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Duplicate Maya Bank, Inc. BIC record (PESONet leg) alongside MYDBPHM2XXX (InstaPay leg); same brand asset.",
+            "retrieved_at": "2026-08-10"
+        },
+        "NRSLPHM1XXX": {
+            "code": "NRSLPHM1XXX",
+            "slug": "nrb-san-leonardo",
+            "display_name": "New Rural Bank of San Leonardo (Nueva Ecija), Inc.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "nrb-san-leonardo-64.png",
+                "png128": "nrb-san-leonardo-128.png",
+                "png256": "nrb-san-leonardo-256.png"
+            },
+            "source_url": "https://nrbsl.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from nrbsl.com's own favicon.ico (extracted the largest embedded 128x128 frame). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ONNRPHM1XXX": {
+            "code": "ONNRPHM1XXX",
+            "slug": "bdo",
+            "display_name": "BDO Network Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bdo-64.png",
+                "png128": "bdo-128.png",
+                "png256": "bdo-256.png"
+            },
+            "source_url": "https://bdo.com.ph",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Reuses the parent BDO Unibank mark. BDO Network Bank Inc. is a BDO subsidiary that may warrant a distinct sub-brand mark in a future pass.",
+            "retrieved_at": "2026-08-10"
+        },
+        "OPDVPHM1XXX": {
+            "code": "OPDVPHM1XXX",
+            "slug": "allbank",
+            "display_name": "AllBank Inc",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "allbank-64.png",
+                "png128": "allbank-128.png",
+                "png256": "allbank-256.png"
+            },
+            "source_url": "https://allbank.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Direct fetch of allbank.ph returned HTTP 403 (bot protection) for all standard favicon paths, so this was sourced via Google's favicon service instead. AllBank (A Thrift Bank), Inc. is a registered trademark; verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ORCHESTRATOR:XCHANGE": {
+            "code": "ORCHESTRATOR:XCHANGE",
+            "slug": "x-change",
+            "display_name": "x-change",
+            "kind": "orchestrator",
+            "rails": [],
+            "assets": {
+                "png64": "x-change-64.png",
+                "png128": "x-change-128.png",
+                "png256": "x-change-256.png"
+            },
+            "source_url": "resources/assets/images/brand-library/x-change/png/x-change-mark.png",
+            "source_type": "existing_brand_library",
+            "confidence": "high",
+            "needs_legal_review": false,
+            "license_notes": "Reuses x-change's own canonical brand-library mark (see resources/assets/images/brand-library/inventory.json); no third-party trademark exposure.",
+            "retrieved_at": "2026-08-10"
+        },
+        "OWNOPHM2XXX": {
+            "code": "OWNOPHM2XXX",
+            "slug": "own-bank",
+            "display_name": "Own Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "own-bank-64.png",
+                "png128": "own-bank-128.png",
+                "png256": "own-bank-256.png"
+            },
+            "source_url": "https://ownbank.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from ownbank.com.ph's own favicon.ico (OWN BANK, The Rural Bank of Cavite City, Inc.). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PABIPHMMXXX": {
+            "code": "PABIPHMMXXX",
+            "slug": "bank-of-commerce",
+            "display_name": "Bank of Commerce",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bank-of-commerce-64.png",
+                "png128": "bank-of-commerce-128.png",
+                "png256": "bank-of-commerce-256.png"
+            },
+            "source_url": "https://www.bankcom.com.ph/wp-content/themes/bankofcommerce/images/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from bankcom.com.ph's own theme-hosted favicon asset (BankCom, an affiliate of San Miguel Corporation). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PAEYPHM2XXX": {
+            "code": "PAEYPHM2XXX",
+            "slug": "paymongo",
+            "display_name": "PayMongo Payments, Inc.",
+            "kind": "emi",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "paymongo-64.png",
+                "png128": "paymongo-128.png",
+                "png256": "paymongo-256.png"
+            },
+            "source_url": "https://paymongo.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from paymongo.com's own favicon.ico. PayMongo Philippines, Inc. is a registered trademark; verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PAPHPHM1XXX": {
+            "code": "PAPHPHM1XXX",
+            "slug": "maya",
+            "display_name": "Maya Wallet",
+            "kind": "emi",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "maya-64.png",
+                "png128": "maya-128.png",
+                "png256": "maya-256.png"
+            },
+            "source_url": "https://www.maya.ph/hubfs/Maya/favicons/MAYA_FAVICONS-Mint-OnBlackBG.png",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Maya (Maya Philippines, Inc.) serves the same tiny (17x17) favicon site-wide for both the Wallet and Bank products; no distinct official mark exists to separate them visually. The claim UI must rely on the text label to distinguish Maya Wallet from Maya Bank -- see report for a recommendation to commission distinct badges.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PASVPHM1XXX": {
+            "code": "PASVPHM1XXX",
+            "slug": "pacific-ace-bank",
+            "display_name": "Pacific Ace Savings Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "pacific-ace-bank-64.png",
+                "png128": "pacific-ace-bank-128.png",
+                "png256": "pacific-ace-bank-256.png"
+            },
+            "source_url": "https://www.pacificacebank.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from pacificacebank.com.ph's own favicon.ico (bird/leaf mark). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PDAXPHM2XXX": {
+            "code": "PDAXPHM2XXX",
+            "slug": "pdax",
+            "display_name": "PDAX",
+            "kind": "emi",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "pdax-64.png",
+                "png128": "pdax-128.png",
+                "png256": "pdax-256.png"
+            },
+            "source_url": "https://i0.wp.com/pdax.ph/wp-content/uploads/2025/01/cropped-pdax-n-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched via the <link rel=\"icon\"> asset declared on pdax.ph (the site's default apple-touch-icon.png was a blank 1-color placeholder, so the linked higher-resolution 192x192 icon asset was used instead). Philippine Digital Asset Exchange (PDAX), Inc. is a registered trademark; verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PDAXTESTXXX": {
+            "code": "PDAXTESTXXX",
+            "slug": "pdax",
+            "display_name": "Philippine Digital Asset Exchange (PDAX), Inc.",
+            "kind": "emi",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "pdax-64.png",
+                "png128": "pdax-128.png",
+                "png256": "pdax-256.png"
+            },
+            "source_url": "https://i0.wp.com/pdax.ph/wp-content/uploads/2025/01/cropped-pdax-n-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Duplicate PDAX BIC record (PESONet leg) alongside PDAXPHM2XXX (InstaPay leg); same brand asset.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PHSBPHMMXXX": {
+            "code": "PHSBPHMMXXX",
+            "slug": "psbank",
+            "display_name": "Philippine Savings Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "psbank-64.png",
+                "png128": "psbank-128.png",
+                "png256": "psbank-256.png"
+            },
+            "source_url": "https://psbank.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "psbank.com.ph is a JavaScript-rendered SPA with no static favicon/apple-touch-icon link tags discoverable in the served HTML, so this was sourced via Google's favicon service instead. Source image is only 16x16. Philippine Savings Bank (PSBank), a BPI subsidiary, is a registered trademark; recommend re-sourcing a higher-resolution official asset before production use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PHTBPHMMXXX": {
+            "code": "PHTBPHMMXXX",
+            "slug": "philtrust-bank",
+            "display_name": "Philtrust Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "philtrust-bank-64.png",
+                "png128": "philtrust-bank-128.png",
+                "png256": "philtrust-bank-256.png"
+            },
+            "source_url": "https://philtrustbank.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Direct fetch of philtrustbank.com returned HTTP 403 (bot protection) for all standard favicon paths, so this was sourced via Google's favicon service instead. Source image is only 16x16. Philippine Trust Company (Philtrust Bank) is a registered trademark; recommend re-sourcing a higher-resolution official asset before production use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PHVBPHMMXXX": {
+            "code": "PHVBPHMMXXX",
+            "slug": "veterans-bank",
+            "display_name": "Philippine Veterans Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "veterans-bank-64.png",
+                "png128": "veterans-bank-128.png",
+                "png256": "veterans-bank-256.png"
+            },
+            "source_url": "https://www.veteransbank.com.ph/images/favicon.png",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from veteransbank.com.ph's own declared shortcut icon asset (star/eagle mark), though the source image is a modest 40x40. Philippine Veterans Bank is a registered trademark; verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PNBMPHMMTOD": {
+            "code": "PNBMPHMMTOD",
+            "slug": "pnb",
+            "display_name": "PNB",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "pnb-64.png",
+                "png128": "pnb-128.png",
+                "png256": "pnb-256.png"
+            },
+            "source_url": "https://pnb.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Duplicate PNB BIC record (InstaPay leg) alongside PNBMPHMMXXX (PESONet leg); same brand asset.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PNBMPHMMXXX": {
+            "code": "PNBMPHMMXXX",
+            "slug": "pnb",
+            "display_name": "PNB",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "pnb-64.png",
+                "png128": "pnb-128.png",
+                "png256": "pnb-256.png"
+            },
+            "source_url": "https://pnb.com.ph",
+            "source_type": "favicon_service_proxy",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Philippine National Bank is a registered trademark; source favicon is low-resolution (48px). Verify brand usage terms and consider a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PPBUPHMMXXX": {
+            "code": "PPBUPHMMXXX",
+            "slug": "philippine-business-bank",
+            "display_name": "Philippine Business Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "philippine-business-bank-64.png",
+                "png128": "philippine-business-bank-128.png",
+                "png256": "philippine-business-bank-256.png"
+            },
+            "source_url": "https://pbb.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Philippine Business Bank (A Savings Bank) is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PPSFPHM2XXX": {
+            "code": "PPSFPHM2XXX",
+            "slug": "palawanpay",
+            "display_name": "PalawanPay",
+            "kind": "emi",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "palawanpay-64.png",
+                "png128": "palawanpay-128.png",
+                "png256": "palawanpay-256.png"
+            },
+            "source_url": "https://palawanpay.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "PalawanPay is a product of PPS-PEPP Financial Services Corporation (Palawan Pawnshop / Palawan Express Pera Padala Group) and a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PROVIDER:NETBANK": {
+            "code": "PROVIDER:NETBANK",
+            "slug": "netbank",
+            "display_name": "NetBank",
+            "kind": "provider",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "netbank-64.png",
+                "png128": "netbank-128.png",
+                "png256": "netbank-256.png"
+            },
+            "source_url": "https://netbank.ph/our-company/",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Netbank (A Rural Bank) Inc.'s own site uploads (their nav logo). Verify partner brand usage permission before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PROVIDER:PAYNAMICS": {
+            "code": "PROVIDER:PAYNAMICS",
+            "slug": "paynamics",
+            "display_name": "Paynamics",
+            "kind": "provider",
+            "rails": [],
+            "assets": {
+                "png64": "paynamics-64.png",
+                "png128": "paynamics-128.png",
+                "png256": "paynamics-256.png"
+            },
+            "source_url": "https://paynamics.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched via Google's favicon service after direct-fetch timeouts against paynamics.com. Verify against Paynamics Technologies, Inc. brand guidelines before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PRTOPHM1XXX": {
+            "code": "PRTOPHM1XXX",
+            "slug": "partner-rural-bank",
+            "display_name": "Partner Rural Bank (Cotabato), Inc.",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "partner-rural-bank-64.png",
+                "png128": "partner-rural-bank-128.png",
+                "png256": "partner-rural-bank-256.png"
+            },
+            "source_url": "https://partnerbank.com.ph/images/logo.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Partner Rural Bank (Cotabato), Inc.'s own site nav logo. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "PSCOPHM1XXX": {
+            "code": "PSCOPHM1XXX",
+            "slug": "producers-bank",
+            "display_name": "Producers Savings Bank Corporation",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "producers-bank-64.png",
+                "png128": "producers-bank-128.png",
+                "png256": "producers-bank-256.png"
+            },
+            "source_url": "https://www.producersbank.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Source favicon is a small (16px) abstract green/gold mark; the site's larger apple-touch-icon variant returned the HTML shell instead of an image. Producers Savings Bank Corporation is a registered trademark; recommend re-sourcing a higher-resolution official asset before production use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "QCDFPHM1XXX": {
+            "code": "QCDFPHM1XXX",
+            "slug": "queenbank",
+            "display_name": "Queen City Development Bank Inc",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "queenbank-64.png",
+                "png128": "queenbank-128.png",
+                "png256": "queenbank-256.png"
+            },
+            "source_url": "https://queenbank.com.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Site-wide favicon is an abstract geometric maze-like mark rather than a distinct wordmark/monogram; visual match to Queenbank's primary brand identity could not be fully confirmed. Recommend re-sourcing from an official press kit before production use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "QCRIPHM1XXX": {
+            "code": "QCRIPHM1XXX",
+            "slug": "quezon-capital-rural-bank",
+            "display_name": "Quezon Capital Rural Bank Inc",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "quezon-capital-rural-bank-64.png",
+                "png128": "quezon-capital-rural-bank-128.png",
+                "png256": "quezon-capital-rural-bank-256.png"
+            },
+            "source_url": "https://www.qcrblive.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Quezon Capital Rural Bank, Inc. is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RAIL:INSTAPAY": {
+            "code": "RAIL:INSTAPAY",
+            "slug": "rail-instapay",
+            "display_name": "InstaPay",
+            "kind": "rail",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "rail-instapay-64.png",
+                "png128": "rail-instapay-128.png",
+                "png256": "rail-instapay-256.png"
+            },
+            "source_url": "https://www.philpayments.org.ph/instapay",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "PPMI (Philippine Payments Management, Inc.) operates both InstaPay and PESONet under one operator mark; this favicon does not visually distinguish the two rails from each other. Recommend commissioning distinct InstaPay/PESONet rail badges for production.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RAIL:PESONET": {
+            "code": "RAIL:PESONET",
+            "slug": "rail-instapay",
+            "display_name": "PESONet",
+            "kind": "rail",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "rail-instapay-64.png",
+                "png128": "rail-instapay-128.png",
+                "png256": "rail-instapay-256.png"
+            },
+            "source_url": "https://www.philpayments.org.ph/pesonet",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Shares the PPMI operator mark with InstaPay (see RAIL:INSTAPAY); no distinct official PESONet mark was found. Recommend commissioning a distinct badge for production.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RARLPHM1XXX": {
+            "code": "RARLPHM1XXX",
+            "slug": "rang-ay-bank",
+            "display_name": "Rang-Ay Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "rang-ay-bank-64.png",
+                "png128": "rang-ay-bank-128.png",
+                "png256": "rang-ay-bank-256.png"
+            },
+            "source_url": "https://rangaybank.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Rang-ay Bank (A Rural Bank), Inc. is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RBRUPHM2XXX": {
+            "code": "RBRUPHM2XXX",
+            "slug": "rbt-bank",
+            "display_name": "RBT Bank, Inc. (A Rural Bank)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "rbt-bank-64.png",
+                "png128": "rbt-bank-128.png",
+                "png256": "rbt-bank-256.png"
+            },
+            "source_url": "https://rbtbank.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Source favicon is a small (16px) circular badge mark upscaled for this library. RBT Bank, Inc. (formerly Rural Bank of Talisayan) is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RCBCPHMMXXX": {
+            "code": "RCBCPHMMXXX",
+            "slug": "rcbc",
+            "display_name": "RCBC",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "rcbc-64.png",
+                "png128": "rcbc-128.png",
+                "png256": "rcbc-256.png"
+            },
+            "source_url": "https://rcbc.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Rizal Commercial Banking Corporation is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ROBPPHMQXXX": {
+            "code": "ROBPPHMQXXX",
+            "slug": "robinsons-bank",
+            "display_name": "Robinsons Bank Corporation",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "robinsons-bank-64.png",
+                "png128": "robinsons-bank-128.png",
+                "png256": "robinsons-bank-256.png"
+            },
+            "source_url": "https://web.archive.org/web/2024id_/https://www.robinsonsbank.com.ph/wp-content/uploads/2024/03/RBank-merged-with-BPI-logo_300x64-1-01.png",
+            "source_type": "official_site_asset",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Robinsons Bank Corporation completed its merger into BPI in mid-2026 and robinsonsbank.com.ph is now fully decommissioned (redirects/serves no live assets); this wordmark was recovered via the Wayback Machine from the bank's own site archive (cropped to remove a 'Merged with BPI' banner overlay). Robinsons Bank Corporation is a registered trademark now owned/operated by BPI; verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RSNAPHM2XXX": {
+            "code": "RSNAPHM2XXX",
+            "slug": "snr-bank",
+            "display_name": "Rural Bank of San Narciso, Inc.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "snr-bank-64.png",
+                "png128": "snr-bank-128.png",
+                "png256": "snr-bank-256.png"
+            },
+            "source_url": "https://snrbank.com.ph/wp-content/uploads/2025/10/cropped-SNR-LOGO_WITH-RURAL-BANK_hor-Copy-180x180.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Rural Bank of San Narciso, Inc. rebranded to SNR Bank (A Rural Bank) in 2024; fetched directly from SNR Bank's own site (apple-touch-icon asset). SNR Bank / Rural Bank of San Narciso, Inc. is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RUATPHM1XXX": {
+            "code": "RUATPHM1XXX",
+            "slug": "bayanihan-bank",
+            "display_name": "Bayanihan Bank, Inc. (Atimonan)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "bayanihan-bank-64.png",
+                "png128": "bayanihan-bank-128.png",
+                "png256": "bayanihan-bank-256.png"
+            },
+            "source_url": "https://bayanihanbank.com/assets/bbnk-icon/bayanihan.ico",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Bayanihan Bank, Inc. (formerly Rural Bank of Atimonan, Inc.) is a registered trademark. Fetched the largest embedded frame (256px) from the bank's own multi-resolution site icon. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RUBUPHM2XXX": {
+            "code": "RUBUPHM2XXX",
+            "slug": "rural-bank-of-bauang",
+            "display_name": "Rural Bank of Bauang, Inc.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "rural-bank-of-bauang-64.png",
+                "png128": "rural-bank-of-bauang-128.png",
+                "png256": "rural-bank-of-bauang-256.png"
+            },
+            "source_url": "https://ruralbankofbauang.com/wp-content/uploads/2021/12/cropped-rbbi-logo-new.jpg",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Official round seal logo fetched directly from Rural Bank of Bauang, Inc.'s own WordPress site (custom-logo asset). Third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RUCAPHM1XXX": {
+            "code": "RUCAPHM1XXX",
+            "slug": "camalig-bank",
+            "display_name": "Camalig Bank, Inc.",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "camalig-bank-64.png",
+                "png128": "camalig-bank-128.png",
+                "png256": "camalig-bank-256.png"
+            },
+            "source_url": "https://camaligbank.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Favicon fetched directly from Camalig Bank, Inc.'s own site; matches the bank's described blue/green triangle mark (Mayon Volcano-inspired) from their About Us page. Third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RUGUPHM1XXX": {
+            "code": "RUGUPHM1XXX",
+            "slug": "rb-guinobatan",
+            "display_name": "Rural Bank of Guinobatan, Inc. (Asenso)",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "rb-guinobatan-64.png",
+                "png128": "rb-guinobatan-128.png",
+                "png256": "rb-guinobatan-256.png"
+            },
+            "source_url": "https://rbguinobatan.com/wp-content/uploads/2020/11/cropped-favicon-1-180x180.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Apple-touch-icon fetched directly from Rural Bank of Guinobatan, Inc.'s own WordPress site (operator of the Asenso Mobile App brand). Third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RUPPPHM2XXX": {
+            "code": "RUPPPHM2XXX",
+            "slug": "porac-bank",
+            "display_name": "Porac Bank (A Rural Bank)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "porac-bank-64.png",
+                "png128": "porac-bank-128.png",
+                "png256": "porac-bank-256.png"
+            },
+            "source_url": "https://poracbank.com/assets/img/brands/logo-main-tagline.svg",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Official 'PoracBank, A Rural Bank since 1968' wordmark SVG fetched directly from Rural Bank of Porac (Pampanga), Inc.'s own site assets. Third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RUSGPHM1XXX": {
+            "code": "RUSGPHM1XXX",
+            "slug": "signabank",
+            "display_name": "Rural Bank of Sta. Ignacia, Inc. (Signabank)",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "signabank-64.png",
+                "png128": "signabank-128.png",
+                "png256": "signabank-256.png"
+            },
+            "source_url": "https://signabank.ph/image/favicon1.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Favicon (stylized 'S' mark) fetched directly from Signabank's own site. Third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "RUSTPHM2XXX": {
+            "code": "RUSTPHM2XXX",
+            "slug": "rb-silay",
+            "display_name": "Rural Bank of Silay City, Inc.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "rb-silay-64.png",
+                "png128": "rb-silay-128.png",
+                "png256": "rb-silay-256.png"
+            },
+            "source_url": "https://img1.wsimg.com/isteam/ip/841f6311-d897-435b-a4b3-75da360fd51b/blob-24ebdca.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Official 'rbsilay' wordmark logo referenced as the site's own apple-touch-icon asset on rbsilay.com (GoDaddy-hosted site). Third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "SCBLPHMMXXX": {
+            "code": "SCBLPHMMXXX",
+            "slug": "standard-chartered",
+            "display_name": "Standard Chartered Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "standard-chartered-64.png",
+                "png128": "standard-chartered-128.png",
+                "png256": "standard-chartered-256.png"
+            },
+            "source_url": "https://www.sc.com/ph/content/themes/standard-chartered-non-retail/assets/src/images/site-icons/apple-touch-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Apple-touch-icon fetched directly from Standard Chartered's own Philippines site theme assets. Standard Chartered is a registered trademark of Standard Chartered PLC. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "SETCPHMMXXX": {
+            "code": "SETCPHMMXXX",
+            "slug": "security-bank",
+            "display_name": "Security Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "security-bank-64.png",
+                "png128": "security-bank-128.png",
+                "png256": "security-bank-256.png"
+            },
+            "source_url": "https://securitybank.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Security Bank Corporation is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "SHPHPHM2XXX": {
+            "code": "SHPHPHM2XXX",
+            "slug": "shopeepay",
+            "display_name": "ShopeePay",
+            "kind": "emi",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "shopeepay-64.png",
+                "png128": "shopeepay-128.png",
+                "png256": "shopeepay-256.png"
+            },
+            "source_url": "https://shopeepay.ph/wallet_icon.jpg",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from ShopeePay Philippines Inc.'s own site. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "SMBCPHMMXXX": {
+            "code": "SMBCPHMMXXX",
+            "slug": "smbc",
+            "display_name": "Sumitomo Mitsui Banking Corporation",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "smbc-64.png",
+                "png128": "smbc-128.png",
+                "png256": "smbc-256.png"
+            },
+            "source_url": "https://www.smbc.co.jp/apple-touch-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Apple-touch-icon fetched directly from Sumitomo Mitsui Banking Corporation's own global corporate site (the Manila Branch page is served under this same domain and does not have a distinct logo). Third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "SRCPPHM2XXX": {
+            "code": "SRCPPHM2XXX",
+            "slug": "starpay",
+            "display_name": "Starpay Corporation",
+            "kind": "emi",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "starpay-64.png",
+                "png128": "starpay-128.png",
+                "png256": "starpay-256.png"
+            },
+            "source_url": "https://play-lh.googleusercontent.com/GLSshhfDKNeyZ1_iQW0GMlFkeIMaV6jPjbor407DEUOpKX2UbZy3KyvEeHigArj8Cg",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Starpay's own domain (starpay.com.ph) was unreachable from this environment despite resolving DNS (connection timeouts on all IPs), so the official 'SP' app icon was instead fetched from Starpay Corporation's own Google Play Store listing (developer-supplied asset, hosted on Google's CDN). Third-party registered trademark pending brand/legal review before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "STLAPH22XXX": {
+            "code": "STLAPH22XXX",
+            "slug": "sterling-bank-asia",
+            "display_name": "Sterling Bank of Asia",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "sterling-bank-asia-64.png",
+                "png128": "sterling-bank-asia-128.png",
+                "png256": "sterling-bank-asia-256.png"
+            },
+            "source_url": "https://sterlingbankasia.com/sites/default/files/favicon.png",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Sterling Bank of Asia, Inc.'s own heart-shaped brand mark (referenced on their About Us page as 'the Bank's heart-shaped logo'), fetched directly from their own site. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "TAYOPHM2XXX": {
+            "code": "TAYOPHM2XXX",
+            "slug": "tayocash",
+            "display_name": "TayoCash",
+            "kind": "emi",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "tayocash-64.png",
+                "png128": "tayocash-128.png",
+                "png256": "tayocash-256.png"
+            },
+            "source_url": "https://tayocash.com/img/logo.cbd20e96.svg",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from TayoCash Incorporated's own site (header logo SVG). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "TDBIPHM2XXX": {
+            "code": "TDBIPHM2XXX",
+            "slug": "tonik",
+            "display_name": "Tonik",
+            "kind": "bank",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "tonik-64.png",
+                "png128": "tonik-128.png",
+                "png256": "tonik-256.png"
+            },
+            "source_url": "https://tonikbank.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Tonik Digital Bank, Inc. is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "TLBPPHMMXXX": {
+            "code": "TLBPPHMMXXX",
+            "slug": "landbank",
+            "display_name": "LandBank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "landbank-64.png",
+                "png128": "landbank-128.png",
+                "png256": "landbank-256.png"
+            },
+            "source_url": "https://landbank.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Land Bank of the Philippines is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "TODGPHM2XXX": {
+            "code": "TODGPHM2XXX",
+            "slug": "tonik",
+            "display_name": "Tonik",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "tonik-64.png",
+                "png128": "tonik-128.png",
+                "png256": "tonik-256.png"
+            },
+            "source_url": "https://tonikbank.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Duplicate Tonik BIC record (PESONet leg) alongside TDBIPHM2XXX (InstaPay leg); same brand asset.",
+            "retrieved_at": "2026-08-10"
+        },
+        "TOPJPHM2XXX": {
+            "code": "TOPJPHM2XXX",
+            "slug": "topwallet",
+            "display_name": "TopJuan Tech (TopWallet)",
+            "kind": "emi",
+            "rails": [
+                "instapay"
+            ],
+            "assets": {
+                "png64": "topwallet-64.png",
+                "png128": "topwallet-128.png",
+                "png256": "topwallet-256.png"
+            },
+            "source_url": "https://topwallet.ph/apple-touch-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from topwallet.ph (TopJuan Tech Corporation's TopWallet product site) apple-touch-icon asset. The mark is a generic 'community/people' glyph rather than a wordmark, so brand distinctiveness is uncertain; verify against an official press kit before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "UBPHPHMMXXX": {
+            "code": "UBPHPHMMXXX",
+            "slug": "unionbank",
+            "display_name": "UnionBank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "unionbank-64.png",
+                "png128": "unionbank-128.png",
+                "png256": "unionbank-256.png"
+            },
+            "source_url": "https://unionbankph.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Union Bank of the Philippines is a registered trademark. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "UCSVPHM1XXX": {
+            "code": "UCSVPHM1XXX",
+            "slug": "ucpb-savings",
+            "display_name": "UCPB Savings Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "ucpb-savings-64.png",
+                "png128": "ucpb-savings-128.png",
+                "png256": "ucpb-savings-256.png"
+            },
+            "source_url": "https://www.ucpbsavings.com/wp-content/uploads/2025/04/cropped-Favicon-192x192.png",
+            "source_type": "official_site_favicon",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "UCPB Savings Bank, Inc. operates its own distinct site (ucpbsavings.com, separate from the now-defunct parent UCPB) and this is its own uploaded favicon asset. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "UNOBPHM2XXX": {
+            "code": "UNOBPHM2XXX",
+            "slug": "unobank",
+            "display_name": "UNObank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "unobank-64.png",
+                "png128": "unobank-128.png",
+                "png256": "unobank-256.png"
+            },
+            "source_url": "https://uno.bank",
+            "source_type": "favicon_service_proxy",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Direct fetch was blocked (HTTP 403, bot protection) on uno.bank; the favicon-service fallback returned only a generic placeholder icon, not a distinct UNO Digital Bank mark. Needs manual sourcing from an official press kit.",
+            "retrieved_at": "2026-08-10"
+        },
+        "UNODPHM2XXX": {
+            "code": "UNODPHM2XXX",
+            "slug": "unionbank",
+            "display_name": "UnionDigital Bank",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "unionbank-64.png",
+                "png128": "unionbank-128.png",
+                "png256": "unionbank-256.png"
+            },
+            "source_url": "https://unionbankph.com",
+            "source_type": "favicon_service_proxy",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Reuses the parent UnionBank mark as a placeholder. UnionDigital Bank Inc. is a distinct digital-bank subsidiary with its own brand identity that should be sourced separately in a future pass.",
+            "retrieved_at": "2026-08-10"
+        },
+        "UOVBPHMMXXX": {
+            "code": "UOVBPHMMXXX",
+            "slug": "uob-philippines",
+            "display_name": "United Overseas Bank Phils.",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "uob-philippines-64.png",
+                "png128": "uob-philippines-128.png",
+                "png256": "uob-philippines-256.png"
+            },
+            "source_url": "https://uobgroup.com/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Source favicon is a small (16px) stylized 'U' mark fetched directly from UOB Group's own domain; it does not clearly reproduce UOB's full five-bar logo mark. Recommend re-sourcing a higher-resolution official asset before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "USMEPHM2XXX": {
+            "code": "USMEPHM2XXX",
+            "slug": "umsi",
+            "display_name": "USSC Money Services Inc",
+            "kind": "emi",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "umsi-64.png",
+                "png128": "umsi-128.png",
+                "png256": "umsi-256.png"
+            },
+            "source_url": "https://umsi.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from umsi.ph (USSC Money Services Inc.'s own EMI site). Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "UWCBPHMMXXX": {
+            "code": "UWCBPHMMXXX",
+            "slug": "cathay-united-bank",
+            "display_name": "Cathay United Bank Co. Ltd",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "cathay-united-bank-64.png",
+                "png128": "cathay-united-bank-128.png",
+                "png256": "cathay-united-bank-256.png"
+            },
+            "source_url": "https://www.cathaybk.com.tw/apple-touch-icon.png",
+            "source_type": "official_site_asset",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from Cathay United Bank Co., Ltd.'s (Cathay Financial Holdings subsidiary) own domain apple-touch-icon asset. Cathay United Bank is a registered trademark; verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "VGBCPHM1XXX": {
+            "code": "VGBCPHM1XXX",
+            "slug": "vbank",
+            "display_name": "Vigan Banco Rural, Incorporada",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "vbank-64.png",
+                "png128": "vbank-128.png",
+                "png256": "vbank-256.png"
+            },
+            "source_url": "https://www.vbank.ph/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "medium",
+            "needs_legal_review": true,
+            "license_notes": "Fetched directly from vbank.ph, Vigan Banco Rural Incorporada's own digital-banking brand (VBank) site. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "WEDVPHM1XXX": {
+            "code": "WEDVPHM1XXX",
+            "slug": "wealthbank",
+            "display_name": "Wealth Development Bank Corporation",
+            "kind": "bank",
+            "rails": [
+                "instapay",
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "wealthbank-64.png",
+                "png128": "wealthbank-128.png",
+                "png256": "wealthbank-256.png"
+            },
+            "source_url": "https://wealthbank.com.ph/assets/imgs/favicon.ico",
+            "source_type": "official_site_favicon",
+            "confidence": "low",
+            "needs_legal_review": true,
+            "license_notes": "Source favicon is a very small (16px), low-detail icon fetched directly from wealthbank.com.ph; fine brand details are not discernible at this resolution. Recommend re-sourcing a higher-resolution official asset (e.g. from a press kit) before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        },
+        "ZARUPHM1XXX": {
+            "code": "ZARUPHM1XXX",
+            "slug": "zambank",
+            "display_name": "Zambales Rural Bank, Inc",
+            "kind": "bank",
+            "rails": [
+                "pesonet"
+            ],
+            "assets": {
+                "png64": "zambank-64.png",
+                "png128": "zambank-128.png",
+                "png256": "zambank-256.png"
+            },
+            "source_url": "https://www.zambank.com.ph/",
+            "source_type": "official_site_asset",
+            "confidence": "high",
+            "needs_legal_review": true,
+            "license_notes": "Zambales Rural Bank, Inc.'s ('Zambank') own site-icon asset (green 'Z' mark with a wheat motif reflecting its agricultural/rural-lending roots), linked directly from the bank's own homepage. Verify brand usage terms before production marketing use.",
+            "retrieved_at": "2026-08-10"
+        }
+    }
+}

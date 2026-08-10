@@ -36,6 +36,23 @@ it('keeps Maya Wallet and Maya Bank distinct', function (): void {
     ]);
 });
 
+it('resolves icon assets for known institutions, rails, and the orchestrator', function (): void {
+    $registry = app(PayoutDestinationRegistry::class);
+
+    $snapshot = $registry->snapshot(
+        bankCode: 'GXCHPHM2XXX',
+        accountNumber: '09173011987',
+        settlementRail: 'INSTAPAY',
+    );
+
+    expect($snapshot['icon_asset'])->toBe('/vendor/x-change/images/payout-destinations/gcash-128.png')
+        ->and($snapshot['route_icons'])->toHaveCount(4)
+        ->and($snapshot['route_icons'][0])->toBe('/vendor/x-change/images/payout-destinations/x-change-128.png')
+        ->and($snapshot['route_icons'][3])->toBe('/vendor/x-change/images/payout-destinations/gcash-128.png');
+
+    expect($registry->institution('UNKNOWNBANKCODE')['icon_asset'])->toBeNull();
+});
+
 it('reads the configurable default destination from x-change config', function (): void {
     config()->set('x-change.claim.destination.default_bank_code', 'PAPHPHM1XXX');
     config()->set('x-change.claim.destination.default_settlement_rail', 'INSTAPAY');

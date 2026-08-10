@@ -1,3 +1,5 @@
+import iconMetadata from '@/../../resources/documents/payout-destination-icons.json';
+
 export type SettlementRail = 'INSTAPAY' | 'PESONET';
 
 export type DestinationInstitution = {
@@ -6,6 +8,7 @@ export type DestinationInstitution = {
     shortLabel: string;
     category: 'wallet' | 'bank' | 'provider' | 'rail' | 'unknown';
     iconKey: string;
+    iconAsset: string | null;
 };
 
 const INSTITUTIONS: Record<string, DestinationInstitution> = {
@@ -15,6 +18,7 @@ const INSTITUTIONS: Record<string, DestinationInstitution> = {
         shortLabel: 'GCash',
         category: 'wallet',
         iconKey: 'wallet.gcash',
+        iconAsset: null,
     },
     PAPHPHM1XXX: {
         code: 'PAPHPHM1XXX',
@@ -22,6 +26,7 @@ const INSTITUTIONS: Record<string, DestinationInstitution> = {
         shortLabel: 'Maya Wallet',
         category: 'wallet',
         iconKey: 'wallet.maya',
+        iconAsset: null,
     },
     MYDBPHM2XXX: {
         code: 'MYDBPHM2XXX',
@@ -29,6 +34,7 @@ const INSTITUTIONS: Record<string, DestinationInstitution> = {
         shortLabel: 'Maya Bank',
         category: 'bank',
         iconKey: 'bank.maya',
+        iconAsset: null,
     },
 };
 
@@ -37,15 +43,66 @@ const RAIL_LABELS: Record<string, string> = {
     PESONET: 'PESONet',
 };
 
-export function destinationInstitution(code: string | null | undefined): DestinationInstitution {
+const PAYOUT_DESTINATION_ICON_BASE = '/vendor/x-change/images/payout-destinations';
+
+type IconAssetFiles = { png64?: string; png128?: string; png256?: string; svg?: string };
+type IconEntry = { slug?: string; assets?: IconAssetFiles };
+
+const ICON_ENTRIES: Record<string, IconEntry> =
+    (iconMetadata as { entries?: Record<string, IconEntry> }).entries ?? {};
+
+function iconAssetFromEntry(entry: IconEntry | undefined): string | null {
+    const file = entry?.assets?.png128 ?? entry?.assets?.png64 ?? entry?.assets?.png256 ?? entry?.assets?.svg;
+
+    return file ? `${PAYOUT_DESTINATION_ICON_BASE}/${file}` : null;
+}
+
+/**
+ * Resolves a packaged local icon asset path for any code in the payout
+ * destination icon metadata (bank/EMI SWIFT codes, or synthetic
+ * `RAIL:*` / `PROVIDER:*` / `ORCHESTRATOR:*` codes). Returns null when the
+ * code has no covered icon -- callers must keep rendering text labels
+ * regardless of icon availability.
+ */
+export function iconAssetForCode(code: string | null | undefined): string | null {
     const normalized = String(code ?? '').trim().toUpperCase();
 
-    return INSTITUTIONS[normalized] ?? {
+    return normalized ? iconAssetFromEntry(ICON_ENTRIES[normalized]) : null;
+}
+
+export function iconAssetForRail(rail: string | null | undefined): string | null {
+    const normalized = String(rail ?? '').trim().toUpperCase();
+
+    return normalized ? iconAssetForCode(`RAIL:${normalized}`) : null;
+}
+
+export function iconAssetForProvider(provider: string | null | undefined): string | null {
+    const normalized = String(provider ?? '').trim().toUpperCase();
+
+    return normalized ? iconAssetForCode(`PROVIDER:${normalized}`) : null;
+}
+
+export function orchestratorIconAsset(): string | null {
+    return iconAssetForCode('ORCHESTRATOR:XCHANGE');
+}
+
+export function destinationInstitution(code: string | null | undefined): DestinationInstitution {
+    const normalized = String(code ?? '').trim().toUpperCase();
+    const iconAsset = iconAssetForCode(normalized);
+
+    const known = INSTITUTIONS[normalized];
+
+    if (known) {
+        return { ...known, iconAsset: known.iconAsset ?? iconAsset };
+    }
+
+    return {
         code: normalized,
         label: normalized || 'Selected destination',
         shortLabel: normalized || 'Destination',
         category: 'unknown',
         iconKey: 'institution.generic',
+        iconAsset,
     };
 }
 
@@ -71,6 +128,30 @@ export function payoutRouteSegments(input: {
         institution.shortLabel,
         input.accountNumber || null,
     ].filter((segment): segment is string => Boolean(segment));
+}
+
+/**
+ * Returns one icon asset path (or null) per segment produced by
+ * `payoutRouteSegments`, in the same order: orchestrator, provider, rail,
+ * institution, account number. The account number segment has no icon.
+ */
+export function payoutRouteIcons(input: {
+    orchestrator?: string | null;
+    provider?: string | null;
+    settlementRail?: string | null;
+    bankCode?: string | null;
+    accountNumber?: string | null;
+}): (string | null)[] {
+    const institution = destinationInstitution(input.bankCode);
+    const rail = input.settlementRail || 'INSTAPAY';
+    const icons = [
+        orchestratorIconAsset(),
+        iconAssetForProvider(input.provider || 'NetBank'),
+        iconAssetForRail(rail),
+        institution.iconAsset,
+    ];
+
+    return input.accountNumber ? [...icons, null] : icons;
 }
 
 export function payoutRouteSentence(input: {

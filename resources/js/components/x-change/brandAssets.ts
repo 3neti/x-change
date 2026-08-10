@@ -1,5 +1,13 @@
 const brandLibraryBase = '/vendor/x-change/images/brand-library';
 
+/**
+ * Base public path for the payout-destination icon library (rails,
+ * providers, x-change, banks, and EMIs). See
+ * resources/documents/payout-destination-icons.json for the metadata that
+ * resolves specific filenames under this base path.
+ */
+export const payoutDestinationsBase = '/vendor/x-change/images/payout-destinations';
+
 export const xChangeBrandAssets = {
     logo: `${brandLibraryBase}/x-change/svg/x-change-logo.svg`,
     mark: `${brandLibraryBase}/x-change/svg/x-change-mark.svg`,

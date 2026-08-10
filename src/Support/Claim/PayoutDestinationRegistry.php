@@ -6,15 +6,22 @@ namespace LBHurtado\XChange\Support\Claim;
 
 final class PayoutDestinationRegistry
 {
+    public function __construct(
+        private readonly PayoutDestinationIconCatalog $iconCatalog = new PayoutDestinationIconCatalog,
+    ) {
+    }
+
     /**
      * @return array{
      *     bank_code: string|null,
      *     bank_name: string|null,
      *     bank_label: string|null,
      *     provider_icon_key: string|null,
+     *     icon_asset: string|null,
      *     settlement_rail: string|null,
      *     account_number_masked: string|null,
-     *     route: list<string>
+     *     route: list<string>,
+     *     route_icons: list<string|null>
      * }
      */
     public function snapshot(
@@ -28,26 +35,35 @@ final class PayoutDestinationRegistry
             ?? (string) config('x-change.claim.destination.default_settlement_rail', 'INSTAPAY');
         $institution = $this->institution($bankCode);
         $label = $institution['short_label'];
+        $provider = 'NetBank';
+        $maskedAccountNumber = $this->maskAccountNumber($accountNumber);
 
         return [
             'bank_code' => $bankCode,
             'bank_name' => $institution['label'],
             'bank_label' => $label,
             'provider_icon_key' => $institution['icon_key'],
+            'icon_asset' => $institution['icon_asset'],
             'settlement_rail' => $settlementRail,
-            'account_number_masked' => $this->maskAccountNumber($accountNumber),
+            'account_number_masked' => $maskedAccountNumber,
             'route' => array_values(array_filter([
                 'x-change',
-                'NetBank',
+                $provider,
                 $this->railLabel($settlementRail),
                 $label,
-                $this->maskAccountNumber($accountNumber),
+                $maskedAccountNumber,
             ])),
+            'route_icons' => [
+                $this->iconCatalog->orchestratorIconAsset(),
+                $this->iconCatalog->iconAssetForProvider($provider),
+                $this->iconCatalog->iconAssetForRail($settlementRail),
+                $institution['icon_asset'],
+            ],
         ];
     }
 
     /**
-     * @return array{label: string|null, short_label: string|null, category: string|null, icon_key: string|null}
+     * @return array{label: string|null, short_label: string|null, category: string|null, icon_key: string|null, icon_asset: string|null}
      */
     public function institution(?string $bankCode): array
     {
@@ -57,6 +73,7 @@ final class PayoutDestinationRegistry
                 'short_label' => null,
                 'category' => null,
                 'icon_key' => null,
+                'icon_asset' => null,
             ];
         }
 
@@ -68,6 +85,7 @@ final class PayoutDestinationRegistry
             'short_label' => $this->nullableString($configured['short_label'] ?? null) ?? $label,
             'category' => $this->nullableString($configured['category'] ?? null),
             'icon_key' => $this->nullableString($configured['icon_key'] ?? null) ?? 'institution.generic',
+            'icon_asset' => $this->iconCatalog->iconAssetForCode($bankCode),
         ];
     }
 

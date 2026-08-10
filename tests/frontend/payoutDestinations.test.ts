@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   destinationInstitution,
+  iconAssetForCode,
+  iconAssetForProvider,
+  iconAssetForRail,
+  orchestratorIconAsset,
+  payoutRouteIcons,
   payoutRouteSegments,
   payoutRouteSentence,
   settlementRailLabel,
@@ -44,5 +49,40 @@ describe("payout destination display helpers", () => {
         accountNumber: "09703812037",
       }),
     ).toBe("Send ₱2,000.00 to GCash account 09703812037 via InstaPay.");
+  });
+
+  it("resolves local icon assets for rails, providers, the orchestrator, and known institutions", () => {
+    expect(orchestratorIconAsset()).toBe(
+      "/vendor/x-change/images/payout-destinations/x-change-128.png",
+    );
+    expect(iconAssetForRail("INSTAPAY")).toBe(
+      "/vendor/x-change/images/payout-destinations/rail-instapay-128.png",
+    );
+    expect(iconAssetForProvider("NetBank")).toBe(
+      "/vendor/x-change/images/payout-destinations/netbank-128.png",
+    );
+    expect(iconAssetForCode("GXCHPHM2XXX")).toBe(
+      "/vendor/x-change/images/payout-destinations/gcash-128.png",
+    );
+    expect(iconAssetForCode("NOT-A-REAL-CODE")).toBeNull();
+    expect(destinationInstitution("GXCHPHM2XXX").iconAsset).toBe(
+      "/vendor/x-change/images/payout-destinations/gcash-128.png",
+    );
+  });
+
+  it("pairs one icon (or null) per route segment, in order", () => {
+    const icons = payoutRouteIcons({
+      bankCode: "GXCHPHM2XXX",
+      settlementRail: "INSTAPAY",
+      accountNumber: "09173011987",
+    });
+
+    expect(icons).toEqual([
+      "/vendor/x-change/images/payout-destinations/x-change-128.png",
+      "/vendor/x-change/images/payout-destinations/netbank-128.png",
+      "/vendor/x-change/images/payout-destinations/rail-instapay-128.png",
+      "/vendor/x-change/images/payout-destinations/gcash-128.png",
+      null,
+    ]);
   });
 });

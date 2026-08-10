@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Landmark, Route, Send, WalletCards } from 'lucide-vue-next';
+import PayoutDestinationIcon from '@/components/x-change/PayoutDestinationIcon.vue';
 import {
     destinationInstitution,
+    payoutRouteIcons,
     payoutRouteSegments,
     payoutRouteSentence,
     settlementRailLabel,
@@ -27,6 +29,12 @@ const props = withDefaults(defineProps<{
 const institution = computed(() => destinationInstitution(props.bankCode));
 const rail = computed(() => settlementRailLabel(props.settlementRail || 'INSTAPAY'));
 const routeSegments = computed(() => payoutRouteSegments({
+    provider: props.provider,
+    settlementRail: props.settlementRail || 'INSTAPAY',
+    bankCode: props.bankCode,
+    accountNumber: props.accountNumber,
+}));
+const routeIcons = computed(() => payoutRouteIcons({
     provider: props.provider,
     settlementRail: props.settlementRail || 'INSTAPAY',
     bankCode: props.bankCode,
@@ -74,9 +82,11 @@ const sentence = computed(() => payoutRouteSentence({
                                 'font-mono': index === routeSegments.length - 1,
                             }"
                         >
-                            <Send v-if="index === 0" class="h-3.5 w-3.5" />
-                            <Landmark v-else-if="segment === props.provider" class="h-3.5 w-3.5" />
-                            <WalletCards v-else-if="segment === institution.shortLabel" class="h-3.5 w-3.5" />
+                            <PayoutDestinationIcon
+                                :icon-asset="routeIcons[index]"
+                                :fallback-icon="index === 0 ? Send : segment === props.provider ? Landmark : segment === institution.shortLabel ? WalletCards : null"
+                                :alt="segment"
+                            />
                             {{ segment }}
                         </span>
                         <span
