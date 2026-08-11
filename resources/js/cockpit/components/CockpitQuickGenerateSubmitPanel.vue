@@ -70,8 +70,14 @@ import {
     type FeedbackDestinations,
     normalizePhilippineFeedbackMobile,
 } from '../feedbackDestinations';
+import { resolvePayCodeIndicator } from '../payCodeIndicators';
 import CockpitAmountPicker from './CockpitAmountPicker.vue';
 import CockpitClaimExperiencePreview from './CockpitClaimExperiencePreview.vue';
+import CockpitClaimRequirementsControl from './CockpitClaimRequirementsControl.vue';
+import type {
+    CockpitClaimRequirementOption,
+    CockpitClaimRequirementPreset,
+} from './CockpitClaimRequirementsControl.vue';
 import CockpitFeedbackDestinationInput from './CockpitFeedbackDestinationInput.vue';
 import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
@@ -2438,6 +2444,134 @@ function toggleInputField(field: string, selected: boolean): void {
     selectedInputFieldValues.value = voucherInputFieldPayloadOrder.filter(
         (candidate) => fields.has(candidate),
     );
+}
+
+// Human-readable explanation for a locked/automatic Claim Requirements chip.
+// This mirrors isAutomaticInputField's existing conditions exactly and adds
+// no new dependency policy — it only narrates rules that already exist.
+function automaticInputFieldReason(field: string): string {
+    if (field === 'mobile' && payeeRequiresMobile.value) {
+        return 'Required because Pay To is a mobile number.';
+    }
+
+    if (field === 'otp' && payeeRequiresMobile.value) {
+        return 'Required because Pay To is a mobile number.';
+    }
+
+    if (field === 'email' && payeeRequiresEmail.value) {
+        return 'Required because Pay To is an email address.';
+    }
+
+    if (
+        onboardingEnabled.value &&
+        ['name', 'email', 'mobile'].includes(field)
+    ) {
+        return 'Required because Set Up Recipient Account is enabled.';
+    }
+
+    if (field === 'otp' && onboardingOtpEnforced.value) {
+        return 'Required because Set Up Recipient Account requires a one-time passcode.';
+    }
+
+    return 'Required by an existing claim rule.';
+}
+
+// Optional price hint sourced only from the existing live pricing estimate's
+// charges (see usePayCodeCostEstimate below) — never calculated locally.
+function claimRequirementPriceLabel(field: string): string | null {
+    const charges = livePricingEstimate.value?.charges;
+
+    if (!Array.isArray(charges)) {
+        return null;
+    }
+
+    const charge = charges.find(
+        (candidate) =>
+            candidate.catalog_item_reference === `inputs.fields.${field}`,
+    );
+    const price = optionalMoney(
+        charge?.price ?? charge?.amount ?? charge?.total,
+    );
+
+    return price === null ? null : `+${formatAccountMoney(price)}`;
+}
+
+// Compact Order-card Claim Requirements control: a second *view* of the
+// same voucherInputFieldOptions / selectedInputFieldValues state used by
+// the detailed Claim Experience controls below, never a competing model.
+const claimRequirementOptions = computed<CockpitClaimRequirementOption[]>(
+    () => {
+        return voucherInputFieldOptions.map((field) => {
+            const indicator = resolvePayCodeIndicator(`input.${field.value}`);
+            const capabilityKey = inputFieldCapability(field.value);
+            const selected = isInputFieldSelected(field.value);
+            const locked = isAutomaticInputField(field.value);
+            const unavailable =
+                capabilityKey !== null &&
+                capabilityUnavailable(capabilityKey);
+
+            return {
+                value: field.value,
+                label: indicator.label,
+                icon: indicator.icon,
+                category:
+                    capabilityKey !== null
+                        ? ('evidence' as const)
+                        : ('common' as const),
+                helper: field.helper,
+                selected,
+                locked,
+                lockedReason: locked
+                    ? automaticInputFieldReason(field.value)
+                    : null,
+                disabled:
+                    locked ||
+                    (capabilityKey !== null &&
+                        capabilitySelectionDisabled(capabilityKey, selected)),
+                unavailable,
+                unavailableReason:
+                    capabilityKey !== null && unavailable
+                        ? capabilityReason(capabilityKey, field.helper)
+                        : null,
+                priceLabel: claimRequirementPriceLabel(field.value),
+            };
+        });
+    },
+);
+
+const claimRequirementPresets: CockpitClaimRequirementPreset[] = [
+    { key: 'basic_identity', label: 'Basic Identity' },
+    { key: 'proof_of_receipt', label: 'Proof of Receipt' },
+    { key: 'full_identity_check', label: 'Full Identity Check' },
+    { key: 'clear_optional', label: 'Clear Optional Requirements' },
+];
+
+// Presets only bundle multiple existing toggleInputField() calls over the
+// existing catalog; they invent no new Voucher Instruction semantics.
+const claimRequirementPresetFields: Record<string, string[]> = {
+    basic_identity: ['name', 'reference_code'],
+    proof_of_receipt: ['signature', 'selfie'],
+    full_identity_check: ['name', 'address', 'kyc', 'signature', 'selfie'],
+};
+
+function applyClaimRequirementPreset(key: string): void {
+    if (key === 'clear_optional') {
+        selectedInputFields.value
+            .filter((field) => !isAutomaticInputField(field))
+            .forEach((field) => toggleInputField(field, false));
+
+        return;
+    }
+
+    (claimRequirementPresetFields[key] ?? []).forEach((field) => {
+        const capabilityKey = inputFieldCapability(field);
+
+        if (capabilityKey !== null && capabilityUnavailable(capabilityKey)) {
+            return;
+        }
+
+        toggleInputField(field, true);
+    });
 }
 
 watch(
@@ -5489,6 +5623,15 @@ function instructionRecord(
                             :unavailable="feedbackUnavailableReasons"
                             :disabled="processing"
                             @validation="feedbackTokenErrors = $event"
+                        />
+                    </div>
+                    <div class="min-w-0 sm:col-span-2">
+                        <CockpitClaimRequirementsControl
+                            :options="claimRequirementOptions"
+                            :presets="claimRequirementPresets"
+                            :disabled="processing"
+                            @toggle="toggleInputField"
+                            @preset="applyClaimRequirementPreset"
                         />
                     </div>
                 </div>
