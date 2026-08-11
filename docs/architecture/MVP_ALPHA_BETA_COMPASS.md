@@ -106,9 +106,12 @@ onboarding to campaign beneficiaries. The onboarding execution driver:
 
 This is the correct architectural invitation primitive. MVP still needs an
 obvious delivery/status language around that primitive. The Cockpit now exposes
-**Invite Someone**, which opens Quick Generate with onboarding identity
-requirements already enabled; it does not introduce a second invitation route
-or execution path.
+**Invite**, which opens Quick Generate with a first-class Invitation mode:
+onboarding identity requirements already enabled, a durable mode selector that
+survives Blank/Repeat Last/template selection, and a truthful "Account
+Invitation" classification in place of the ordinary Pay Code label. It does
+not introduce a second invitation route or execution path, and claiming an
+invitation still grants no operator authority.
 
 ## Navigation Baseline
 

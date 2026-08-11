@@ -74,11 +74,10 @@ describe('Cockpit Quick Generate hydration', () => {
         );
 
         expect(
-            (
-                wrapper.get('[data-testid="cockpit-quick-generate-onboarding"]')
-                    .element as HTMLInputElement
-            ).checked,
-        ).toBe(true);
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
         expect(preview.onboarding).toBe(true);
         expect(preview.inputs.fields).toEqual(
             expect.arrayContaining(['mobile', 'email', 'name', 'otp']),
@@ -96,8 +95,8 @@ describe('Cockpit Quick Generate hydration', () => {
         });
 
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-onboarding"]')
-            .setValue(true);
+            .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+            .trigger('click');
 
         const preview = JSON.parse(
             wrapper
@@ -128,8 +127,8 @@ describe('Cockpit Quick Generate hydration', () => {
         });
 
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-onboarding"]')
-            .setValue(true);
+            .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+            .trigger('click');
 
         let preview = JSON.parse(
             wrapper
@@ -160,8 +159,8 @@ describe('Cockpit Quick Generate hydration', () => {
         });
 
         await restrictedWrapper
-            .get('[data-testid="cockpit-quick-generate-onboarding"]')
-            .setValue(true);
+            .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+            .trigger('click');
 
         preview = JSON.parse(
             restrictedWrapper

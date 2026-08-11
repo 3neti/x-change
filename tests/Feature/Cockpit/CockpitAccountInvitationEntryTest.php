@@ -36,7 +36,7 @@ it('keeps the invitation entry tied to Quick Generate and its execution driver',
     );
 
     expect($dashboard)
-        ->toContain("label: 'Invite Someone'")
+        ->toContain("label: 'Invite'")
         ->toContain("quickGenerate({ query: { intent: 'invite' } }).url")
         ->and($quickGenerate)
         ->toContain(':onboarding-preset=')

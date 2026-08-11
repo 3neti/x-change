@@ -154,6 +154,29 @@ assets. It does not own onboarding business logic.
 
 ## Slice Log
 
+### 2026-08-11 — Cockpit Invitation mode made first-class
+
+- Renamed the Cockpit Dashboard entry from **Invite Someone** to **Invite**;
+  it still opens Quick Generate with `?intent=invite`.
+- Added a compact Pay Code/Invitation segmented mode control to the Quick
+  Generate Order card, bound directly to the existing `onboardingEnabled`
+  state. Selecting Invitation sets only the canonical `onboarding: true`
+  authoring flag; no new DTO, route, or execution driver was introduced.
+- Fixed a durability defect where selecting Blank, Repeat Last, or any
+  template silently forced `onboarding` back to `false`. Templates and
+  saved/last instructions may now only turn Invitation mode on; only the
+  explicit mode control turns it off.
+- The Order card badge now truthfully shows **Account Invitation** (instead
+  of the ordinary Disburseable/Payable/Settlement label) and the Issue button
+  reads **Issue Invitation** whenever onboarding is enabled, with no payload
+  change.
+- Removed the duplicate **Set Up Recipient Account** checkbox from the
+  detailed Claim Requirements section; the segmented mode control is now the
+  single place to toggle Invitation mode.
+- Claiming an Account invitation still grants no operator authority; that
+  remains a separate, unimplemented maker/checker concern.
+- Focused frontend verification passes.
+
 ### 2026-08-02 — Slices 17–18 authoritative identity OTP completed
 
 - Published txtcmdr `v1.1.0` with authenticated, owner-bound `/api/v1/otp`

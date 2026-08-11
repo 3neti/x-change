@@ -513,7 +513,7 @@ describe('Cockpit dashboard read model hydration', () => {
         ).toContain('Cockpit');
         expect(panel.text()).toContain('Choose a workspace');
         expect(panel.text()).toContain('Create');
-        expect(panel.text()).toContain('Invite Someone');
+        expect(panel.text()).toContain('Invite');
         expect(panel.text()).toContain('Funding');
         expect(panel.text()).toContain('Pay Codes');
         expect(panel.text()).toContain('Campaigns');
