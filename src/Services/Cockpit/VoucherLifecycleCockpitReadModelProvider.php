@@ -8,6 +8,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
@@ -154,7 +155,10 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     actionStatus: $actions->status,
                     feedbackStatus: $feedback->status,
                 ),
-                distribution_links: $this->distributionLinks($this->summaryCode($detail, $code)),
+                distribution_links: $this->distributionLinks(
+                    $this->summaryCode($detail, $code),
+                    data_get($detail, 'operational_status.can_claim') === true,
+                ),
                 redactions: [
                     'payloads' => 'sanitized-summary-only',
                     'excluded' => [
@@ -190,15 +194,21 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     /**
      * @return array<string, mixed>
      */
-    private function distributionLinks(?string $code): array
+    private function distributionLinks(?string $code, bool $canClaim): array
     {
-        if ($code === null || trim($code) === '' || ! Route::has('x-change.claim.show')) {
+        if (
+            ! $canClaim
+            || $code === null
+            || trim($code) === ''
+            || ! Route::has('x-change.claim.show')
+        ) {
             return [
                 'schema' => 'x-change.cockpit.distribution-links.v1',
                 'status' => 'unavailable',
                 'available' => false,
                 'read_only' => true,
                 'delivery_enabled' => false,
+                'reason' => $canClaim ? 'claim-route-unavailable' : 'pay-code-not-claimable',
                 'redactions' => [
                     'payloads' => 'distribution-links-unavailable',
                 ],
@@ -1506,7 +1516,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             currency: $this->nullableString($row['currency'] ?? null),
             status: $status,
             display_status: $this->stringValue($row['display_status'] ?? null, $status),
-            party: $this->payCodeParty($row),
+            party: $this->payCodeParty($row, $status),
             timing: $this->payCodeTiming($row),
             owner: $this->stringValue($row['owner'] ?? null, 'Redacted'),
             last_activity: $this->nullableString(
@@ -1517,7 +1527,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     ?? null
             ),
             attention: $this->payCodeAttention($row),
-            actions: $this->payCodeRowActions($code),
+            actions: $this->payCodeRowActions($code, $this->canDistributePayCode($row, $status)),
         );
     }
 
@@ -1578,9 +1588,21 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->all();
     }
 
-    private function payCodeParty(array $row): CockpitPayCodePartyData
+    private function payCodeParty(array $row, string $status): CockpitPayCodePartyData
     {
         $party = is_array($row['party'] ?? null) ? $row['party'] : [];
+
+        if ($party === [] && in_array($status, ['cancelled', 'canceled', 'closed', 'expired'], true)) {
+            $label = Str::headline($status === 'canceled' ? 'cancelled' : $status);
+
+            return new CockpitPayCodePartyData(
+                state: $status,
+                label: 'Availability',
+                primary: $label,
+                secondary: null,
+                masked: false,
+            );
+        }
 
         return new CockpitPayCodePartyData(
             state: $this->stringValue($party['state'] ?? null, 'open'),
@@ -1606,7 +1628,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     /**
      * @return array<int, CockpitPayCodeRowActionData>
      */
-    private function payCodeRowActions(string $code): array
+    private function payCodeRowActions(string $code, bool $canDistribute): array
     {
         $encodedCode = rawurlencode($code);
 
@@ -1622,10 +1644,12 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             new CockpitPayCodeRowActionData(
                 key: 'distribution',
                 label: 'Distribution',
-                enabled: true,
+                enabled: $canDistribute,
                 read_only: true,
-                href: "/x/cockpit/pay-codes/{$encodedCode}/distribution",
-                reason: 'Read-only Cockpit distribution workspace route.',
+                href: $canDistribute ? "/x/cockpit/pay-codes/{$encodedCode}/distribution" : null,
+                reason: $canDistribute
+                    ? 'Read-only Cockpit distribution workspace route.'
+                    : 'Terminal Pay Codes cannot be distributed for claim.',
             ),
             new CockpitPayCodeRowActionData(
                 key: 'timeline',
@@ -1642,6 +1666,29 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 reason: 'Feedback delivery remains separately gated through x-feedback.',
             ),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function canDistributePayCode(array $row, string $status): bool
+    {
+        $canClaim = data_get($row, 'operational_status.can_claim');
+
+        if (is_bool($canClaim)) {
+            return $canClaim;
+        }
+
+        return ! in_array($status, [
+            'cancelled',
+            'canceled',
+            'closed',
+            'expired',
+            'paid',
+            'redeemed',
+            'payout_pending',
+            'payout_rejected',
+        ], true);
     }
 
     /**
@@ -1721,11 +1768,11 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'active' => in_array($status, ['active', 'issued', 'ready', 'locked', 'scheduled', 'partially_claimed'], true),
             'awaiting_approval' => $status === 'awaiting_approval',
             'processing' => in_array($status, ['payout_pending', 'pending', 'processing'], true),
-            'completed' => in_array($status, ['paid', 'redeemed', 'completed'], true),
+            'completed' => in_array($status, ['paid', 'redeemed', 'completed', 'closed'], true),
             'needs_attention' => $status === 'payout_rejected'
                 || $this->nullableString(data_get($row, 'attention.key')) !== null,
             'expired' => $status === 'expired',
-            'cancelled' => in_array($status, ['cancelled', 'canceled', 'closed'], true),
+            'cancelled' => in_array($status, ['cancelled', 'canceled'], true),
             default => $status === $filter,
         };
     }

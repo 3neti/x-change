@@ -162,6 +162,8 @@ it('filters canonical operational outcomes and preserves legacy aliases', functi
         ['code' => 'pc-locked-001', 'display_status' => 'locked'],
         ['code' => 'pc-paid-001', 'display_status' => 'paid'],
         ['code' => 'pc-redeemed-001', 'display_status' => 'redeemed'],
+        ['code' => 'pc-cancelled-001', 'display_status' => 'cancelled'],
+        ['code' => 'pc-closed-001', 'display_status' => 'closed'],
         [
             'code' => 'pc-rejected-001',
             'display_status' => 'payout_rejected',
@@ -181,6 +183,7 @@ it('filters canonical operational outcomes and preserves legacy aliases', functi
         ->and(collect($readModel->records)->pluck('code')->all())->toBe([
             'PC-PAID-001',
             'PC-REDEEMED-001',
+            'PC-CLOSED-001',
         ])
         ->and(collect($readModel->filters)->firstWhere('value', 'completed')->active)->toBeTrue()
         ->and(collect($readModel->filters)->pluck('value')->all())->toBe([
@@ -202,6 +205,22 @@ it('filters canonical operational outcomes and preserves legacy aliases', functi
     expect($attention->status_filter)->toBe('needs_attention')
         ->and($attention->records)->toHaveCount(1)
         ->and($attention->records[0]->code)->toBe('PC-REJECTED-001');
+
+    $cancelled = $provider->forPayCodeList(new CockpitReadModelQueryData(
+        payCodeStatus: 'cancelled',
+    ));
+
+    expect(collect($cancelled->records)->pluck('code')->all())->toBe([
+        'PC-CANCELLED-001',
+    ])->and($cancelled->records[0]->party->toArray())->toMatchArray([
+        'state' => 'cancelled',
+        'label' => 'Availability',
+        'primary' => 'Cancelled',
+    ])->and($cancelled->records[0]->actions[1]->toArray())->toMatchArray([
+        'key' => 'distribution',
+        'enabled' => false,
+        'href' => null,
+    ]);
 });
 
 it('keeps only typed operational summaries in cockpit list records', function () {

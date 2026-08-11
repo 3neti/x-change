@@ -29,6 +29,7 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
         $claimStatus = $this->normalize($claim?->status);
         $payoutStatus = $this->normalize($reconciliation?->status);
         $internalStatus = $this->normalize($reconciliation?->internal_status);
+        $voucherState = $this->normalize($voucher->state->value) ?? 'active';
         $requiresRecovery = data_get($voucher->metadata, 'disbursement.requires_recovery') === true;
 
         if (
@@ -84,6 +85,19 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
             );
         }
 
+        if ($voucherState === 'cancelled') {
+            return $this->status(
+                key: 'cancelled',
+                label: 'Cancelled',
+                tone: 'neutral',
+                availabilityKey: 'cancelled',
+                availabilityLabel: 'Cancelled',
+                settlementOutcome: 'not_applicable',
+                terminal: true,
+                canClaim: false,
+            );
+        }
+
         if ($fullyClaimed) {
             return $this->status(
                 key: 'redeemed',
@@ -98,15 +112,53 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
         }
 
         if ($claimed) {
+            $claimWindowClosed = $voucher->isClosed()
+                || $voucherState === 'expired'
+                || $voucher->isExpired();
+
             return $this->status(
                 key: 'partially_claimed',
                 label: 'Partially Claimed',
-                tone: 'informative',
-                availabilityKey: $voucher->isExpired() ? 'expired' : 'claimable',
-                availabilityLabel: $voucher->isExpired() ? 'Expired' : 'Claimable',
+                tone: $claimWindowClosed ? 'neutral' : 'informative',
+                availabilityKey: match (true) {
+                    $voucher->isClosed() => 'closed',
+                    $voucherState === 'expired' || $voucher->isExpired() => 'expired',
+                    default => 'claimable',
+                },
+                availabilityLabel: match (true) {
+                    $voucher->isClosed() => 'Closed',
+                    $voucherState === 'expired' || $voucher->isExpired() => 'Expired',
+                    default => 'Claimable',
+                },
                 settlementOutcome: 'not_applicable',
-                terminal: $voucher->isExpired(),
-                canClaim: ! $voucher->isExpired() && ! $voucher->isClosed(),
+                terminal: $claimWindowClosed,
+                canClaim: ! $claimWindowClosed,
+            );
+        }
+
+        if ($voucher->isClosed()) {
+            return $this->status(
+                key: 'closed',
+                label: 'Closed',
+                tone: 'neutral',
+                availabilityKey: 'closed',
+                availabilityLabel: 'Closed',
+                settlementOutcome: 'not_applicable',
+                terminal: true,
+                canClaim: false,
+            );
+        }
+
+        if ($voucherState === 'expired' || $voucher->isExpired()) {
+            return $this->status(
+                key: 'expired',
+                label: 'Expired',
+                tone: 'neutral',
+                availabilityKey: 'expired',
+                availabilityLabel: 'Expired',
+                settlementOutcome: 'not_applicable',
+                terminal: true,
+                canClaim: false,
             );
         }
 
@@ -123,34 +175,6 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
             );
         }
 
-        if ($voucher->isClosed()) {
-            return $this->status(
-                key: 'cancelled',
-                label: 'Cancelled',
-                tone: 'neutral',
-                availabilityKey: 'cancelled',
-                availabilityLabel: 'Cancelled',
-                settlementOutcome: 'not_applicable',
-                terminal: true,
-                canClaim: false,
-            );
-        }
-
-        if ($voucher->isExpired()) {
-            return $this->status(
-                key: 'expired',
-                label: 'Expired',
-                tone: 'neutral',
-                availabilityKey: 'expired',
-                availabilityLabel: 'Expired',
-                settlementOutcome: 'not_applicable',
-                terminal: true,
-                canClaim: false,
-            );
-        }
-
-        $state = $this->normalize($voucher->state->value) ?? 'active';
-
         if ($voucher->starts_at?->isFuture() === true) {
             return $this->status(
                 key: 'scheduled',
@@ -164,7 +188,7 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
             );
         }
 
-        if ($state === 'locked') {
+        if ($voucherState === 'locked') {
             return $this->status(
                 key: 'locked',
                 label: 'Locked',

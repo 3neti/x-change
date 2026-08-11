@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Illuminate\Database\Eloquent\Builder;
+use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
@@ -71,6 +72,10 @@ class VoucherAccessService implements VoucherAccessContract
 
     public function assertRedeemable(Voucher $voucher): void
     {
+        if ($voucher->state === VoucherState::CANCELLED) {
+            throw new VoucherNotRedeemable('Voucher has been cancelled.');
+        }
+
         if ($voucher->isExpired()) {
             throw new VoucherNotRedeemable('Voucher has expired.');
         }
@@ -99,9 +104,13 @@ class VoucherAccessService implements VoucherAccessContract
 
         match ($normalized) {
             'redeemed' => $query->whereNotNull('redeemed_at'),
-            'expired' => $query->where('expires_at', '<', now()),
-            'cancelled', 'closed' => $query->where('state', 'CLOSED'),
-            default => $query->where('state', strtoupper($normalized)),
+            'expired' => $query->where(function (Builder $query): void {
+                $query->where('state', VoucherState::EXPIRED->value)
+                    ->orWhere('expires_at', '<', now());
+            }),
+            'cancelled' => $query->where('state', VoucherState::CANCELLED->value),
+            'closed' => $query->where('state', VoucherState::CLOSED->value),
+            default => $query->where('state', $normalized),
         };
     }
 

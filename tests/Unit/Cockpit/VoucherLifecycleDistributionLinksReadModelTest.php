@@ -30,6 +30,9 @@ it('adds read only distribution links to voucher detail read models', function (
                 'currency' => 'PHP',
                 'claimed' => false,
                 'fully_claimed' => false,
+                'operational_status' => [
+                    'can_claim' => true,
+                ],
             ];
         }
 
@@ -76,4 +79,60 @@ it('adds read only distribution links to voucher detail read models', function (
             'wallet_data_exposed' => false,
             'delivery_payloads_exposed' => false,
         ]);
+});
+
+it('does not expose a claim link for a terminal voucher', function (): void {
+    $service = new class implements VoucherLifecycleServiceContract
+    {
+        public function list(array $filters = []): array
+        {
+            return [];
+        }
+
+        public function show(string $voucher): mixed
+        {
+            return $this->showByCode($voucher);
+        }
+
+        public function showByCode(string $code): mixed
+        {
+            return [
+                'code' => $code,
+                'status' => 'cancelled',
+                'display_status' => 'cancelled',
+                'operational_status' => ['can_claim' => false],
+            ];
+        }
+
+        public function status(string $voucher): mixed
+        {
+            return [];
+        }
+
+        public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+
+        public function expire(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+    };
+
+    $provider = new VoucherLifecycleCockpitReadModelProvider(
+        vouchers: $service,
+        fallback: new NullCockpitReadModelProvider,
+    );
+
+    $links = $provider
+        ->forVoucher(new CockpitReadModelQueryData(code: 'pc-cancelled'))
+        ->voucher
+        ->distribution_links;
+
+    expect($links)->toMatchArray([
+        'status' => 'unavailable',
+        'available' => false,
+        'reason' => 'pay-code-not-claimable',
+    ])->not->toHaveKey('redeem_url');
 });

@@ -161,8 +161,6 @@ function statusBadgeClass(status: string): string {
             'payout-rejected',
             'expired',
             'failed',
-            'cancelled',
-            'canceled',
         ].includes(normalizedStatus)
     ) {
         return 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:ring-rose-800';

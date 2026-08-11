@@ -741,6 +741,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
                                 can_retry_payout: false,
                             },
                         },
+                        {
+                            ...payCodesReadModel.records[0],
+                            code: 'PC-STATUS-CANCELLED',
+                            status: 'cancelled',
+                            display_status: 'cancelled',
+                        },
                     ],
                 },
             },
@@ -753,7 +759,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             '[data-testid="cockpit-pay-code-mobile-status-badge"]',
         );
 
-        expect(statusBadges).toHaveLength(4);
+        expect(statusBadges).toHaveLength(5);
         expect(statusBadges[0].text()).toBe('Issued');
         expect(statusBadges[0].classes()).toContain('bg-emerald-50');
         expect(statusBadges[1].text()).toBe('Expired');
@@ -763,6 +769,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileStatusBadges[2].text()).toBe('Awaiting Approval');
         expect(statusBadges[3].text()).toBe('Paid');
         expect(statusBadges[3].classes()).toContain('bg-emerald-50');
+        expect(statusBadges[4].text()).toBe('Cancelled');
+        expect(statusBadges[4].classes()).toContain('bg-slate-100');
+        expect(statusBadges[4].classes()).not.toContain('bg-rose-50');
     });
 
     it('keeps a rejected payout primary while surfacing destination attention', () => {

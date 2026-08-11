@@ -374,6 +374,29 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ];
         }
 
+        if (
+            in_array($voucher->state, [
+                VoucherState::CANCELLED,
+                VoucherState::CLOSED,
+                VoucherState::EXPIRED,
+            ], true)
+            || $voucher->isExpired()
+        ) {
+            $status = match (true) {
+                $voucher->state === VoucherState::CANCELLED => 'Cancelled',
+                $voucher->state === VoucherState::EXPIRED || $voucher->isExpired() => 'Expired',
+                default => 'Closed',
+            };
+
+            return [
+                'state' => strtolower($status),
+                'label' => 'Availability',
+                'primary' => $status,
+                'secondary' => null,
+                'masked' => false,
+            ];
+        }
+
         return [
             'state' => 'open',
             'label' => 'Availability',
@@ -1018,11 +1041,15 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
     protected function voucherStatusLabel(Voucher $voucher): string
     {
-        if ($voucher->isClosed()) {
+        if ($voucher->state === VoucherState::CANCELLED) {
             return 'cancelled';
         }
 
-        if ($voucher->isExpired()) {
+        if ($voucher->isClosed()) {
+            return 'closed';
+        }
+
+        if ($voucher->state === VoucherState::EXPIRED || $voucher->isExpired()) {
             return 'expired';
         }
 

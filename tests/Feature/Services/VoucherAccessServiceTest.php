@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FrittenKeeZ\Vouchers\Config;
+use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherNotRedeemable;
 use LBHurtado\XChange\Services\VoucherAccessService;
@@ -48,6 +49,39 @@ it('does not throw when a voucher is redeemable', function () {
 
     expect(fn () => $service->assertRedeemable($voucher))
         ->not->toThrow(VoucherNotRedeemable::class);
+});
+
+it('rejects a cancelled voucher with a precise terminal-state message', function () {
+    $voucher = issueVoucher();
+    $voucher->update(['state' => VoucherState::CANCELLED]);
+
+    expect(fn () => (new VoucherAccessService)->assertRedeemable($voucher->fresh()))
+        ->toThrow(VoucherNotRedeemable::class, 'Voucher has been cancelled.');
+});
+
+it('filters cancelled closed expired and active states without conflating them', function () {
+    $active = issueVoucher();
+    $cancelled = issueVoucher();
+    $cancelled->update(['state' => VoucherState::CANCELLED]);
+    $closed = issueVoucher();
+    $closed->update(['state' => VoucherState::CLOSED]);
+    $expired = issueVoucher();
+    $expired->update([
+        'state' => VoucherState::EXPIRED,
+        'expires_at' => now()->addDay(),
+    ]);
+
+    $service = new VoucherAccessService;
+
+    expect(collect($service->list(['status' => 'cancelled']))->pluck('id')->all())
+        ->toBe([$cancelled->id])
+        ->and(collect($service->list(['status' => 'closed']))->pluck('id')->all())
+        ->toBe([$closed->id])
+        ->and(collect($service->list(['status' => 'expired']))->pluck('id')->all())
+        ->toBe([$expired->id])
+        ->and(collect($service->list(['status' => 'active']))->pluck('id')->all())
+        ->toContain($active->id)
+        ->not->toContain($cancelled->id, $closed->id, $expired->id);
 });
 
 use LBHurtado\Contact\Models\Contact;

@@ -81,6 +81,30 @@ it('cancels a regular Pay Code but rejects a different owner', function (): void
         ->toBe(20_000);
 });
 
+it('presents a cancelled Pay Code as terminal and does not offer cancellation again', function (): void {
+    [, $voucher] = terminalControlVoucher();
+
+    $this->post(route(
+        'x-change.cockpit.pay-codes.terminal-actions.store',
+        ['code' => $voucher->code],
+    ), [
+        'action' => 'cancel',
+        'reason' => 'Recipient details changed.',
+        'confirmed' => true,
+    ])->assertRedirect(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]));
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.status', 'cancelled')
+        ->assertJsonPath('props.read_model.voucher.summary.operational_status.key', 'cancelled')
+        ->assertJsonPath('props.read_model.voucher.summary.operational_status.is_terminal', true)
+        ->assertJsonPath('props.read_model.voucher.summary.operational_status.can_claim', false)
+        ->assertJsonPath('props.read_model.voucher.distribution_links.available', false)
+        ->assertJsonPath('props.terminal_control.status', 'blocked')
+        ->assertJsonPath('props.terminal_control.can_cancel', false);
+});
+
 /**
  * @return array{0: User, 1: Voucher}
  */

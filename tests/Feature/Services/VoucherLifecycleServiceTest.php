@@ -9,6 +9,7 @@ use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 
 it('lists vouchers as lifecycle summaries', function () {
@@ -569,12 +570,35 @@ it('cancels a voucher', function () {
         ->and($result['cancelled'])->toBeTrue()
         ->and($result['reason'])->toBe('customer_requested');
 
-    expect($voucher->fresh()->state)->toBe(VoucherState::CLOSED);
+    expect($voucher->fresh()->state)->toBe(VoucherState::CANCELLED);
+
+    $readService = new VoucherLifecycleService(new VoucherAccessService);
+    $projections = [
+        collect($readService->list())->firstWhere('code', $voucher->code),
+        $readService->showByCode($voucher->code),
+        $readService->status((string) $voucher->id),
+    ];
+
+    foreach ($projections as $projection) {
+        expect($projection)->toMatchArray([
+            'status' => 'cancelled',
+            'display_status' => 'cancelled',
+            'voucher_status' => 'cancelled',
+        ])->and($projection['operational_status'])->toMatchArray([
+            'key' => 'cancelled',
+            'is_terminal' => true,
+            'can_claim' => false,
+        ]);
+    }
+
+    expect($readService->showByCode($voucher->code)['claims'])->toBe([])
+        ->and(VoucherClaim::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DisbursementReconciliation::query()->where('voucher_id', $voucher->id)->count())->toBe(0);
 });
 
-it('marks cancelled voucher status correctly', function () {
+it('projects cancelled vouchers as terminal and not claimable', function () {
     $voucher = issueVoucher();
-    $voucher->state = VoucherState::CLOSED;
+    $voucher->state = VoucherState::CANCELLED;
     $voucher->closed_at = now();
     $voucher->save();
 
@@ -589,5 +613,45 @@ it('marks cancelled voucher status correctly', function () {
     $result = $service->status((string) $voucher->id);
 
     expect($result)->toBeArray()
-        ->and($result['status'])->toBe('cancelled');
+        ->and($result['status'])->toBe('cancelled')
+        ->and($result['display_status'])->toBe('cancelled')
+        ->and($result['voucher_status'])->toBe('cancelled')
+        ->and($result['operational_status'])->toMatchArray([
+            'key' => 'cancelled',
+            'label' => 'Cancelled',
+            'tone' => 'neutral',
+            'availability_key' => 'cancelled',
+            'availability_label' => 'Cancelled',
+            'settlement_outcome' => 'not_applicable',
+            'is_terminal' => true,
+            'can_claim' => false,
+            'can_retry_payout' => false,
+        ]);
+});
+
+it('keeps an unclaimed closed voucher distinct from cancellation', function () {
+    $voucher = issueVoucher();
+    $voucher->update([
+        'state' => VoucherState::CLOSED,
+        'closed_at' => now(),
+    ]);
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('findOrFail')
+        ->once()
+        ->with((string) $voucher->id)
+        ->andReturn($voucher->fresh());
+
+    $result = (new VoucherLifecycleService($access))->status((string) $voucher->id);
+
+    expect($result)->toMatchArray([
+        'status' => 'closed',
+        'display_status' => 'closed',
+        'voucher_status' => 'closed',
+    ])->and($result['operational_status'])->toMatchArray([
+        'key' => 'closed',
+        'label' => 'Closed',
+        'is_terminal' => true,
+        'can_claim' => false,
+    ]);
 });
