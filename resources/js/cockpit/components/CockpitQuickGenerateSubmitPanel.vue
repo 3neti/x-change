@@ -2636,6 +2636,20 @@ const settlementRailSelectionError = computed<string | null>(() => {
     return null;
 });
 
+function formatSettlementRailMoney(value: number, currencyCode: string): string {
+    // Mirrors formatAccountMoney's ₱-for-PHP convention so rail descriptions
+    // render consistently with the rest of the Cockpit, but is parameterized
+    // by the capability's own currency instead of the unrelated live pricing
+    // currency, since a settlement rail's currency is authoritative here.
+    const code = currencyCode.trim().toUpperCase() || 'PHP';
+    const formattedValue = value.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+
+    return code === 'PHP' ? `₱${formattedValue}` : `${code} ${formattedValue}`;
+}
+
 function settlementRailHelper(
     capability: CockpitSettlementRailCapability,
 ): string {
@@ -2647,7 +2661,15 @@ function settlementRailHelper(
     const maximum = capability.maximum_amount_minor;
 
     if (minimum !== null && maximum !== null) {
-        return `${formatMoney(minimum / 100)}–${formatMoney(maximum / 100)} · provider cost ${capability.provider_fee_minor === null ? 'not published' : formatMoney(capability.provider_fee_minor / 100)}`;
+        const feeLabel =
+            capability.provider_fee_minor === null
+                ? 'not published'
+                : formatSettlementRailMoney(
+                      capability.provider_fee_minor / 100,
+                      capability.currency,
+                  );
+
+        return `${formatSettlementRailMoney(minimum / 100, capability.currency)}–${formatSettlementRailMoney(maximum / 100, capability.currency)} · provider cost ${feeLabel}`;
     }
 
     return 'Available for compatible receiving institutions.';
@@ -5457,23 +5479,17 @@ function instructionRecord(
                         </span>
                     </label>
                     <div
-                        class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
+                        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-primary-feedback"
                     >
-                        <div
-                            class="flex flex-wrap items-center gap-2 sm:flex-nowrap"
-                        >
-                            <span class="shrink-0">Status Updates</span>
-                            <div class="min-w-0 flex-1">
-                                <CockpitFeedbackDestinationInput
-                                    v-model="feedbackDestinations"
-                                    :defaults="feedbackDestinationDefaults"
-                                    :unavailable="feedbackUnavailableReasons"
-                                    :disabled="processing"
-                                    @validation="feedbackTokenErrors = $event"
-                                />
-                            </div>
-                        </div>
+                        <span>Status Updates</span>
+                        <CockpitFeedbackDestinationInput
+                            v-model="feedbackDestinations"
+                            :defaults="feedbackDestinationDefaults"
+                            :unavailable="feedbackUnavailableReasons"
+                            :disabled="processing"
+                            @validation="feedbackTokenErrors = $event"
+                        />
                     </div>
                 </div>
 

@@ -231,10 +231,13 @@ function useDefault(channel: FeedbackChannel): void {
 </script>
 
 <template>
-    <div class="grid gap-1" data-testid="cockpit-feedback-destination-input">
-        <div class="flex items-stretch gap-1.5">
+    <div
+        class="grid min-w-0 gap-1"
+        data-testid="cockpit-feedback-destination-input"
+    >
+        <div class="flex min-w-0 items-stretch gap-1.5">
             <div
-                class="flex min-h-9 flex-1 flex-wrap items-center gap-1 rounded-lg border bg-white px-2 py-1 shadow-sm transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 dark:bg-slate-900 dark:focus-within:border-emerald-600 dark:focus-within:ring-emerald-950"
+                class="flex min-h-9 min-w-0 flex-1 flex-wrap items-center gap-1 rounded-lg border bg-white px-2 py-1 shadow-sm transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 dark:bg-slate-900 dark:focus-within:border-emerald-600 dark:focus-within:ring-emerald-950"
                 :class="
                     validationErrors.length > 0
                         ? 'border-rose-300 dark:border-rose-800'
@@ -306,7 +309,7 @@ function useDefault(channel: FeedbackChannel): void {
                     type="text"
                     inputmode="text"
                     autocomplete="off"
-                    class="min-w-32 flex-1 border-0 bg-transparent px-1 py-1 text-sm text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50 dark:placeholder:text-slate-500"
+                    class="min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-sm text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50 dark:placeholder:text-slate-500"
                     placeholder="Email, mobile, or webhook URL"
                     data-testid="cockpit-feedback-destination-editor"
                     :disabled="disabled"

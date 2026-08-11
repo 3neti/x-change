@@ -109,6 +109,32 @@ describe('CockpitFeedbackDestinationInput', () => {
         ).toContain('min-h-9');
     });
 
+    it('lets the whole control shrink to fit a narrow Order card instead of forcing a fixed editor width', () => {
+        const wrapper = mount(CockpitFeedbackDestinationInput, {
+            props: {
+                modelValue: emptyFeedbackDestinations(),
+            },
+        });
+        const root = wrapper.get(
+            '[data-testid="cockpit-feedback-destination-input"]',
+        );
+        const editor = wrapper.get(
+            '[data-testid="cockpit-feedback-destination-editor"]',
+        );
+        const editorRow = editor.element.parentElement?.parentElement;
+
+        // The control no longer depends on a hard min-w-32 that prevented it
+        // from shrinking below the card's available width.
+        expect(editor.classes()).not.toContain('min-w-32');
+        expect(editor.classes()).toContain('min-w-0');
+
+        // Every flex boundary between the root and the editor input must be
+        // allowed to shrink (min-w-0) so the row can compact to the card.
+        expect(root.classes()).toContain('min-w-0');
+        expect(editorRow?.className).toContain('min-w-0');
+        expect(editor.element.parentElement?.className).toContain('min-w-0');
+    });
+
     it('keeps saved-destination shortcuts as keyboard-accessible, clearly labelled icon buttons', () => {
         const wrapper = mount(CockpitFeedbackDestinationInput, {
             props: {

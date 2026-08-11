@@ -285,6 +285,62 @@ describe('Cockpit Quick Generate foundation', () => {
         });
     });
 
+    it('keeps Status Updates shrinkable so it never overflows the narrow Order card', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                feedbackDefaults: {
+                    email: 'saved@example.com',
+                    mobile: '+639170000000',
+                    webhook: 'https://example.test/hook',
+                },
+            },
+        });
+        const feedbackBand = wrapper.get(
+            '[data-testid="cockpit-quick-generate-primary-feedback"]',
+        );
+
+        // The label sits on its own line; only the editor and shortcut
+        // buttons attempt one row, so the label can never force overflow.
+        expect(feedbackBand.classes()).toContain('grid');
+        expect(feedbackBand.classes()).toContain('min-w-0');
+        expect(feedbackBand.classes()).not.toContain('flex-nowrap');
+        expect(feedbackBand.text()).toContain('Status Updates');
+
+        const destinationInput = feedbackBand.get(
+            '[data-testid="cockpit-feedback-destination-input"]',
+        );
+        const editor = feedbackBand.get(
+            '[data-testid="cockpit-feedback-destination-editor"]',
+        );
+
+        // Every shrink boundary between the band and the editor must allow
+        // the row to compact to the card instead of forcing a fixed width.
+        expect(destinationInput.classes()).toContain('min-w-0');
+        expect(editor.classes()).not.toContain('min-w-32');
+        expect(editor.classes()).toContain('min-w-0');
+
+        // The three compact shortcut buttons remain present and functional.
+        const shortcuts = feedbackBand.findAll(
+            '[data-testid^="cockpit-feedback-destination-suggestion-"]',
+        );
+
+        expect(shortcuts).toHaveLength(3);
+        expect(
+            shortcuts.every(
+                (button) => button.element.tagName.toLowerCase() === 'button',
+            ),
+        ).toBe(true);
+
+        await shortcuts[0].trigger('click');
+
+        expect(
+            feedbackBand
+                .get('[data-testid="cockpit-feedback-destination-email"]')
+                .text(),
+        ).toContain('saved@example.com');
+    });
+
     it('disables unavailable evidence while allowing an incompatible saved design to remove it', async () => {
         const capability = {
             key: 'location',
@@ -2740,6 +2796,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).text();
 
         expect(instapayDescription).not.toBe(automaticDescription);
+        // InstaPay is a PHP rail: render ₱, not the raw "PHP" currency code.
+        expect(instapayDescription).toContain('₱');
+        expect(instapayDescription).not.toContain('PHP ');
 
         await cycleButton.trigger('click');
 
@@ -2752,6 +2811,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).text();
 
         expect(pesonetDescription).not.toBe(instapayDescription);
+        // PESONet follows the same ₱-for-PHP convention as InstaPay.
+        expect(pesonetDescription).toContain('₱');
+        expect(pesonetDescription).not.toContain('PHP ');
 
         await cycleButton.trigger('click');
 
