@@ -88,4 +88,58 @@ describe('CockpitFeedbackDestinationInput', () => {
                 .exists(),
         ).toBe(false);
     });
+
+    it('renders a compact editor without the removed instructional paragraph', () => {
+        const wrapper = mount(CockpitFeedbackDestinationInput, {
+            props: {
+                modelValue: emptyFeedbackDestinations(),
+            },
+        });
+
+        expect(wrapper.text()).not.toContain(
+            'Separate destinations with a comma',
+        );
+        expect(wrapper.text()).not.toContain(
+            'Updates are sent after the Pay Code is claimed',
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-feedback-destination-editor"]')
+                .element.parentElement?.className,
+        ).toContain('min-h-9');
+    });
+
+    it('keeps saved-destination shortcuts as keyboard-accessible, clearly labelled icon buttons', () => {
+        const wrapper = mount(CockpitFeedbackDestinationInput, {
+            props: {
+                modelValue: emptyFeedbackDestinations(),
+                defaults: {
+                    email: 'saved@example.com',
+                    mobile: '+639173011987',
+                    webhook: 'https://example.test/hook',
+                },
+            },
+        });
+        const suggestions = wrapper.findAll(
+            '[data-testid^="cockpit-feedback-destination-suggestion-"]',
+        );
+
+        expect(suggestions).toHaveLength(3);
+        expect(
+            suggestions.every(
+                (button) => button.element.tagName.toLowerCase() === 'button',
+            ),
+        ).toBe(true);
+        expect(
+            suggestions.map((button) => button.attributes('aria-label')),
+        ).toEqual(['Use My Email', 'Use My Mobile', 'Use My Webhook']);
+        expect(
+            suggestions.map((button) => button.attributes('title')),
+        ).toEqual(['Use My Email', 'Use My Mobile', 'Use My Webhook']);
+        expect(
+            suggestions.every(
+                (button) => button.attributes('tabindex') !== '-1',
+            ),
+        ).toBe(true);
+    });
 });

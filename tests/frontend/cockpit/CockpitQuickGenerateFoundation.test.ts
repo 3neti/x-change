@@ -92,7 +92,8 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .get('[data-testid="cockpit-quick-generate-primary-feedback"]')
                 .text(),
-        ).toContain('Email + SMS + Webhook');
+        ).toContain('Status Updates');
+        expect(wrapper.text()).not.toContain('Email + SMS + Webhook');
     });
 
     it('keeps the Order inputs aligned and focuses Amount first', async () => {
@@ -233,6 +234,55 @@ describe('Cockpit Quick Generate foundation', () => {
 
         wrapper.unmount();
         host.remove();
+    });
+
+    it('keeps the Templates band compact with one non-wrapping action toolbar', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-10T00:00:00Z',
+                    instructions: {
+                        cash: { amount: 75, currency: 'PHP' },
+                        inputs: { fields: [] },
+                    },
+                },
+            },
+        });
+
+        await flushPromises();
+
+        expect(wrapper.text()).not.toContain(
+            'Choose a starting template, reuse your last Pay Code, or save these settings.',
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-current-template"]')
+                .text(),
+        ).toContain('Current ·');
+
+        const toolbar = wrapper.get(
+            '[data-testid="cockpit-quick-generate-template-toolbar"]',
+        );
+
+        expect(toolbar.classes()).toContain('flex-nowrap');
+        expect(toolbar.classes()).toContain('overflow-x-auto');
+
+        const actionTestIds = [
+            'cockpit-quick-generate-start-blank',
+            'cockpit-quick-generate-repeat-last',
+            'cockpit-quick-generate-choose-template',
+            'cockpit-quick-generate-save-template',
+        ];
+
+        actionTestIds.forEach((testId) => {
+            const action = toolbar.get(`[data-testid="${testId}"]`);
+
+            expect(action.classes()).toContain('h-9');
+            // No Template action may compete with the filled Issue Pay Code button.
+            expect(action.classes()).not.toContain('bg-emerald-600');
+        });
     });
 
     it('disables unavailable evidence while allowing an incompatible saved design to remove it', async () => {
@@ -2589,7 +2639,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('No bank payout occurs');
     });
 
-    it('surfaces backend-owned settlement rails in the primary payout settings', async () => {
+    it('surfaces backend-owned settlement rails through a compact cycling control', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -2648,10 +2698,12 @@ describe('Cockpit Quick Generate foundation', () => {
         const railControl = orderCard.get(
             '[data-testid="cockpit-quick-generate-primary-settlement-rail"]',
         );
+        const cycleButton = railControl.get(
+            '[data-testid="cockpit-quick-generate-settlement-rail-cycle"]',
+        );
 
-        expect(railControl.text()).toContain('Automatic');
-        expect(railControl.text()).toContain('InstaPay');
-        expect(railControl.text()).toContain('PESONet');
+        // 1. Starts at Automatic.
+        expect(cycleButton.text()).toContain('Automatic');
         expect(
             wrapper
                 .get('[data-testid="cockpit-voucher-instruction-builder"]')
@@ -2665,22 +2717,51 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('[data-testid="cockpit-quick-generate-payout-provider"]')
                 .text(),
         ).toContain('NetBank');
+
+        // 3. Automatic leaves cash.settlement_rail absent.
         expect(
             quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
         ).toBeUndefined();
+        const automaticDescription = railControl.get(
+            '[data-testid="cockpit-quick-generate-settlement-rail-description"]',
+        ).text();
 
-        await wrapper
-            .get(
-                '[data-testid="cockpit-quick-generate-settlement-rail-pesonet"]',
-            )
-            .setValue();
+        // 2. Successive clicks cycle Automatic -> InstaPay -> PESONet -> Automatic.
+        await cycleButton.trigger('click');
 
+        expect(cycleButton.text()).toContain('InstaPay');
+        // 4. Explicit choices emit the canonical uppercase value.
+        expect(
+            quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
+        ).toBe('INSTAPAY');
+        // 5. The displayed helper changes with the selected value.
+        const instapayDescription = railControl.get(
+            '[data-testid="cockpit-quick-generate-settlement-rail-description"]',
+        ).text();
+
+        expect(instapayDescription).not.toBe(automaticDescription);
+
+        await cycleButton.trigger('click');
+
+        expect(cycleButton.text()).toContain('PESONet');
         expect(
             quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
         ).toBe('PESONET');
+        const pesonetDescription = railControl.get(
+            '[data-testid="cockpit-quick-generate-settlement-rail-description"]',
+        ).text();
+
+        expect(pesonetDescription).not.toBe(instapayDescription);
+
+        await cycleButton.trigger('click');
+
+        expect(cycleButton.text()).toContain('Automatic');
+        expect(
+            quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
+        ).toBeUndefined();
     });
 
-    it('prevents a disabled configured rail from being selected', () => {
+    it('skips a disabled configured rail while cycling and keeps the fail-closed error visible', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -2710,20 +2791,55 @@ describe('Cockpit Quick Generate foundation', () => {
                             provider_fee_minor: 1_000,
                             availability_reason: 'InstaPay is disabled.',
                         },
+                        {
+                            code: 'PESONET',
+                            label: 'PESONet',
+                            enabled: true,
+                            currency: 'PHP',
+                            minimum_amount_minor: 1,
+                            maximum_amount_minor: 100_000_000,
+                            provider_fee_minor: 2_500,
+                            availability_reason: null,
+                        },
                     ],
                     source: 'configured-provider-capabilities',
                     live_provider_call: false,
                 },
             },
         });
+        const cycleButton = wrapper.get(
+            '[data-testid="cockpit-quick-generate-settlement-rail-cycle"]',
+        );
 
+        // 7. Existing fail-closed capability errors remain visible when Automatic
+        // resolves to the disabled InstaPay rail for a small amount.
         expect(
             wrapper
                 .get(
-                    '[data-testid="cockpit-quick-generate-settlement-rail-instapay"]',
+                    '[data-testid="cockpit-quick-generate-settlement-rail-error"]',
                 )
-                .attributes('disabled'),
-        ).toBeDefined();
+                .text(),
+        ).toContain('InstaPay is disabled');
+
+        // 6. A disabled rail is skipped and can never become selected: the next
+        // click from Automatic must land on the only enabled manual rail, PESONet.
+        await cycleButton.trigger('click');
+
+        expect(cycleButton.text()).toContain('PESONet');
+        expect(
+            quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
+        ).toBe('PESONET');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-settlement-rail-error"]',
+                )
+                .exists(),
+        ).toBe(false);
+
+        await cycleButton.trigger('click');
+
+        expect(cycleButton.text()).toContain('Automatic');
         expect(
             wrapper
                 .get(

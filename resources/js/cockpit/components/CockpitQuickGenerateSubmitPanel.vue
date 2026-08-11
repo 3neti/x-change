@@ -2653,6 +2653,77 @@ function settlementRailHelper(
     return 'Available for compatible receiving institutions.';
 }
 
+const settlementRailCycleCodes = ['', 'INSTAPAY', 'PESONET'] as const;
+
+const settlementRailCycleOptions = computed(() => {
+    return settlementRailCycleCodes
+        .map((code) =>
+            settlementRailOptions.value.find((option) => option.code === code),
+        )
+        .filter(
+            (option): option is (typeof settlementRailOptions.value)[number] =>
+                option !== undefined,
+        );
+});
+
+const availableSettlementRailCycleOptions = computed(() => {
+    return settlementRailCycleOptions.value.filter(
+        (option) => option.code === '' || option.enabled,
+    );
+});
+
+function cycleSettlementRail(): void {
+    const options = availableSettlementRailCycleOptions.value;
+
+    if (options.length === 0) {
+        return;
+    }
+
+    const currentIndex = options.findIndex(
+        (option) => option.code === settlementRail.value,
+    );
+    const nextIndex =
+        currentIndex === -1 ? 0 : (currentIndex + 1) % options.length;
+
+    settlementRail.value = options[nextIndex].code;
+}
+
+const currentSettlementRailLabel = computed<string>(() => {
+    return (
+        settlementRailOptions.value.find(
+            (option) => option.code === settlementRail.value,
+        )?.label ?? 'Automatic'
+    );
+});
+
+const settlementRailCycleAccessibleLabel = computed<string>(() => {
+    return `Transfer network: ${currentSettlementRailLabel.value}. Tap to cycle to the next available network.`;
+});
+
+const automaticSettlementRailDescription = computed<string>(() => {
+    const capability = automaticSettlementRailCapability.value;
+
+    if (capability === null) {
+        return 'x-change chooses the eligible network for this amount.';
+    }
+
+    return `x-change chooses the eligible network for this amount — currently ${capability.label}.`;
+});
+
+const settlementRailCycleDescription = computed<string>(() => {
+    if (settlementRail.value === '') {
+        return automaticSettlementRailDescription.value;
+    }
+
+    const capability = selectedSettlementRailCapability.value;
+
+    if (capability === null) {
+        return 'The selected transfer network is not available from the configured payout provider.';
+    }
+
+    return settlementRailHelper(capability);
+});
+
 const illustrativeFee = computed<number>(() => {
     const providerFeeMinor =
         selectedSettlementRailCapability.value?.provider_fee_minor;
@@ -5389,95 +5460,58 @@ function instructionRecord(
                         class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-primary-feedback"
                     >
-                        <div class="flex items-center justify-between gap-3">
-                            <span>Status Updates</span>
-                            <span
-                                v-if="
-                                    Object.values(feedbackSummary).some(
-                                        (value) => value !== null,
-                                    )
-                                "
-                                class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-                            >
-                                {{
-                                    [
-                                        feedbackSummary.email ? 'Email' : null,
-                                        feedbackSummary.mobile ? 'SMS' : null,
-                                        feedbackSummary.webhook
-                                            ? 'Webhook'
-                                            : null,
-                                    ]
-                                        .filter(Boolean)
-                                        .join(' + ')
-                                }}
-                            </span>
+                        <div
+                            class="flex flex-wrap items-center gap-2 sm:flex-nowrap"
+                        >
+                            <span class="shrink-0">Status Updates</span>
+                            <div class="min-w-0 flex-1">
+                                <CockpitFeedbackDestinationInput
+                                    v-model="feedbackDestinations"
+                                    :defaults="feedbackDestinationDefaults"
+                                    :unavailable="feedbackUnavailableReasons"
+                                    :disabled="processing"
+                                    @validation="feedbackTokenErrors = $event"
+                                />
+                            </div>
                         </div>
-                        <CockpitFeedbackDestinationInput
-                            v-model="feedbackDestinations"
-                            :defaults="feedbackDestinationDefaults"
-                            :unavailable="feedbackUnavailableReasons"
-                            :disabled="processing"
-                            @validation="feedbackTokenErrors = $event"
-                        />
                     </div>
                 </div>
 
                 <fieldset
                     v-if="!isAccountFundingClaim"
-                    class="mt-4 grid min-w-0 gap-2 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
+                    class="mt-4 grid min-w-0 gap-1.5 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
                     data-testid="cockpit-quick-generate-primary-settlement-rail"
                 >
                     <div
-                        class="flex flex-wrap items-end justify-between gap-2"
+                        class="flex flex-wrap items-center justify-between gap-2"
                     >
-                        <legend
-                            class="text-xs font-semibold text-slate-700 dark:text-slate-300"
-                        >
-                            Transfer Network
-                        </legend>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <legend
+                                class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                                Transfer Network
+                            </legend>
+                            <button
+                                type="button"
+                                class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                                :disabled="processing"
+                                :aria-label="settlementRailCycleAccessibleLabel"
+                                data-testid="cockpit-quick-generate-settlement-rail-cycle"
+                                @click="cycleSettlementRail"
+                            >
+                                <RotateCcw class="size-3.5" aria-hidden="true" />
+                                {{ currentSettlementRailLabel }}
+                            </button>
+                        </div>
                         <p
                             class="text-[11px] text-slate-500 dark:text-slate-400"
                             data-testid="cockpit-quick-generate-payout-provider"
                         >
-                            Payout Provider ·
+                            via
                             <span class="font-semibold">{{
                                 payoutProviderLabel
                             }}</span>
                         </p>
-                    </div>
-                    <div class="grid gap-2 sm:grid-cols-3">
-                        <label
-                            v-for="option in settlementRailOptions"
-                            :key="option.code || 'automatic'"
-                            class="flex items-start gap-2.5 rounded-xl border p-3 transition"
-                            :class="[
-                                settlementRail === option.code
-                                    ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-200 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
-                                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
-                                option.enabled
-                                    ? 'cursor-pointer hover:border-emerald-200'
-                                    : 'cursor-not-allowed opacity-55',
-                            ]"
-                        >
-                            <input
-                                v-model="settlementRail"
-                                type="radio"
-                                :value="option.code"
-                                class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
-                                :disabled="processing || !option.enabled"
-                                :data-testid="`cockpit-quick-generate-settlement-rail-${option.code === '' ? 'automatic' : option.code.toLowerCase()}`"
-                            />
-                            <span class="min-w-0">
-                                <span class="block text-sm font-semibold">{{
-                                    option.label
-                                }}</span>
-                                <span
-                                    class="mt-0.5 block text-[11px] leading-4"
-                                >
-                                    {{ option.helper }}
-                                </span>
-                            </span>
-                        </label>
                     </div>
                     <p
                         v-if="settlementRailSelectionError"
@@ -5489,9 +5523,9 @@ function instructionRecord(
                     <p
                         v-else
                         class="text-[11px] text-slate-500 dark:text-slate-400"
+                        data-testid="cockpit-quick-generate-settlement-rail-description"
                     >
-                        Receiving options are limited to institutions compatible
-                        with the effective network.
+                        {{ settlementRailCycleDescription }}
                     </p>
                 </fieldset>
 
@@ -5499,36 +5533,29 @@ function instructionRecord(
                     class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
                     data-testid="cockpit-quick-generate-starting-point"
                 >
-                    <div
-                        class="flex flex-wrap items-start justify-between gap-2"
-                    >
-                        <div>
-                            <p
-                                class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
-                            >
-                                Templates
-                            </p>
-                            <p
-                                class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
-                            >
-                                Choose a starting template, reuse your last Pay
-                                Code, or save these settings.
-                            </p>
-                        </div>
+                    <div class="flex items-center justify-between gap-2">
+                        <p
+                            class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
+                        >
+                            Templates
+                        </p>
                         <span
-                            class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                            class="min-w-0 truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                             data-testid="cockpit-quick-generate-current-template"
                         >
                             Current · {{ currentTemplateName }}
                         </span>
                     </div>
 
-                    <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div
+                        class="mt-2 flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1"
+                        data-testid="cockpit-quick-generate-template-toolbar"
+                    >
                         <button
                             type="button"
                             :aria-pressed="startingPoint === 'blank'"
                             :class="[
-                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600',
+                                'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600',
                                 startingPoint === 'blank'
                                     ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
                                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
@@ -5538,13 +5565,13 @@ function instructionRecord(
                         >
                             <Check
                                 v-if="startingPoint === 'blank'"
-                                class="size-4"
+                                class="size-3.5"
                                 aria-hidden="true"
                                 data-testid="cockpit-quick-generate-start-blank-check"
                             />
                             <FilePlus2
                                 v-else
-                                class="size-4"
+                                class="size-3.5"
                                 aria-hidden="true"
                             />
                             Blank
@@ -5554,7 +5581,7 @@ function instructionRecord(
                             :disabled="!lastInstructions"
                             :aria-pressed="startingPoint === 'last'"
                             :class="[
-                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-45',
+                                'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-45',
                                 startingPoint === 'last'
                                     ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
                                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
@@ -5564,33 +5591,33 @@ function instructionRecord(
                         >
                             <Check
                                 v-if="startingPoint === 'last'"
-                                class="size-4"
+                                class="size-3.5"
                                 aria-hidden="true"
                                 data-testid="cockpit-quick-generate-repeat-last-check"
                             />
                             <RotateCcw
                                 v-else
-                                class="size-4"
+                                class="size-3.5"
                                 aria-hidden="true"
                             />
                             Repeat Last
                         </button>
                         <button
                             type="button"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                            class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold whitespace-nowrap text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                             data-testid="cockpit-quick-generate-choose-template"
                             @click="templatePickerOpen = true"
                         >
-                            <LayoutTemplate class="size-4" aria-hidden="true" />
+                            <LayoutTemplate class="size-3.5" aria-hidden="true" />
                             Choose Template
                         </button>
                         <button
                             type="button"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                            class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold whitespace-nowrap text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                             data-testid="cockpit-quick-generate-save-template"
                             @click="openSaveTemplateDialog"
                         >
-                            <Save class="size-4" aria-hidden="true" />
+                            <Save class="size-3.5" aria-hidden="true" />
                             Save Template
                         </button>
                     </div>
