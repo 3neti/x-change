@@ -2411,6 +2411,18 @@ const effectiveValidationSecret = computed<string>(() =>
 // applyTemplateDefaults/applyInstructionBlueprint) so switching Pay Code mode
 // off requires this deliberate operator action.
 function setOnboardingMode(enabled: boolean): void {
+    if (!enabled && onboardingEnabled.value) {
+        // While Invitation mode is on, selectedInputFields projects Name,
+        // Email, Mobile, and (when applicable) OTP on top of whatever is
+        // canonically selected — those projected fields may never have been
+        // written back into selectedInputFieldValues (e.g. after Blank
+        // replaced it with an empty array). Materialize the currently
+        // effective set now, before turning onboarding off, so an explicit
+        // switch to Pay Code preserves them as ordinary, unlocked, removable
+        // requirements instead of silently dropping them.
+        selectedInputFieldValues.value = [...selectedInputFields.value];
+    }
+
     onboardingEnabled.value = enabled;
 }
 
@@ -5467,105 +5479,103 @@ function instructionRecord(
                 class="rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
                 data-testid="cockpit-quick-generate-order-card"
             >
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
                         <h4
                             class="text-lg font-semibold text-slate-950 dark:text-slate-50"
                         >
                             Order
                         </h4>
-                        <p
-                            class="mt-1 text-sm text-slate-600 dark:text-slate-300"
-                        >
-                            Set the value, payee, and purpose.
-                        </p>
                     </div>
-                    <div
-                        class="flex shrink-0 flex-wrap items-center justify-end gap-2"
+                    <button
+                        type="submit"
+                        class="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                        data-testid="cockpit-quick-generate-submit-button"
+                        :disabled="!canSubmit || processing"
                     >
-                        <span
-                            class="inline-flex items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
-                            :class="voucherKindTone"
-                            data-testid="cockpit-quick-generate-voucher-kind"
-                        >
-                            {{ voucherKindLabel }}
-                        </span>
-                        <button
-                            type="submit"
-                            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-                            data-testid="cockpit-quick-generate-submit-button"
-                            :disabled="!canSubmit || processing"
-                        >
-                            <LoaderCircle
-                                v-if="processing"
-                                class="size-4 animate-spin"
-                                aria-hidden="true"
-                                data-testid="cockpit-quick-generate-issue-spinner"
-                            />
-                            <TicketCheck
-                                v-else
-                                class="size-4"
-                                aria-hidden="true"
-                                data-testid="cockpit-quick-generate-issue-icon"
-                            />
-                            {{
-                                processing
-                                    ? 'Issuing…'
-                                    : onboardingEnabled
-                                      ? 'Issue Invitation'
-                                      : 'Issue Pay Code'
-                            }}
-                        </button>
-                    </div>
-                </div>
-                <div
-                    class="mt-3 flex flex-wrap items-center gap-2"
-                    data-testid="cockpit-quick-generate-mode-control"
-                >
-                    <span
-                        class="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
-                    >
-                        Mode
-                        <CockpitFieldHelp
-                            label="About Mode"
-                            tooltip="Pay Code issues a claimable value. Invitation also collects the identity details needed to open or link the recipient’s Account."
+                        <LoaderCircle
+                            v-if="processing"
+                            class="size-4 animate-spin"
+                            aria-hidden="true"
+                            data-testid="cockpit-quick-generate-issue-spinner"
                         />
+                        <TicketCheck
+                            v-else
+                            class="size-4"
+                            aria-hidden="true"
+                            data-testid="cockpit-quick-generate-issue-icon"
+                        />
+                        {{
+                            processing
+                                ? 'Issuing…'
+                                : onboardingEnabled
+                                  ? 'Issue Invitation'
+                                  : 'Issue Pay Code'
+                        }}
+                    </button>
+                </div>
+                <p
+                    class="mt-1 min-w-0 text-sm text-slate-600 dark:text-slate-300"
+                >
+                    Set the value, payee, and purpose.
+                </p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <span
+                        class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
+                        :class="voucherKindTone"
+                        data-testid="cockpit-quick-generate-voucher-kind"
+                    >
+                        {{ voucherKindLabel }}
                     </span>
                     <div
-                        class="inline-grid grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
-                        role="group"
-                        aria-label="Issuance mode"
+                        class="flex flex-wrap items-center gap-2"
+                        data-testid="cockpit-quick-generate-mode-control"
                     >
-                        <button
-                            type="button"
-                            :aria-pressed="!onboardingEnabled"
-                            :class="[
-                                'min-h-8 rounded-full px-3 text-xs font-semibold transition',
-                                !onboardingEnabled
-                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                    : 'text-slate-600 dark:text-slate-300',
-                            ]"
-                            :disabled="processing"
-                            data-testid="cockpit-quick-generate-mode-paycode"
-                            @click="setOnboardingMode(false)"
+                        <span
+                            class="flex shrink-0 items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
                         >
-                            Pay Code
-                        </button>
-                        <button
-                            type="button"
-                            :aria-pressed="onboardingEnabled"
-                            :class="[
-                                'min-h-8 rounded-full px-3 text-xs font-semibold transition',
-                                onboardingEnabled
-                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                    : 'text-slate-600 dark:text-slate-300',
-                            ]"
-                            :disabled="processing"
-                            data-testid="cockpit-quick-generate-mode-invitation"
-                            @click="setOnboardingMode(true)"
+                            Mode
+                            <CockpitFieldHelp
+                                label="About Mode"
+                                tooltip="Pay Code issues a claimable value. Invitation also collects the identity details needed to open or link the recipient’s Account."
+                            />
+                        </span>
+                        <div
+                            class="inline-grid shrink-0 grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
+                            role="group"
+                            aria-label="Issuance mode"
                         >
-                            Invitation
-                        </button>
+                            <button
+                                type="button"
+                                :aria-pressed="!onboardingEnabled"
+                                :class="[
+                                    'min-h-8 rounded-full px-3 text-xs font-semibold transition',
+                                    !onboardingEnabled
+                                        ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                        : 'text-slate-600 dark:text-slate-300',
+                                ]"
+                                :disabled="processing"
+                                data-testid="cockpit-quick-generate-mode-paycode"
+                                @click="setOnboardingMode(false)"
+                            >
+                                Pay Code
+                            </button>
+                            <button
+                                type="button"
+                                :aria-pressed="onboardingEnabled"
+                                :class="[
+                                    'min-h-8 rounded-full px-3 text-xs font-semibold transition',
+                                    onboardingEnabled
+                                        ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                        : 'text-slate-600 dark:text-slate-300',
+                                ]"
+                                :disabled="processing"
+                                data-testid="cockpit-quick-generate-mode-invitation"
+                                @click="setOnboardingMode(true)"
+                            >
+                                Invitation
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div

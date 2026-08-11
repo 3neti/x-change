@@ -233,6 +233,171 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         ).toBe('true');
     });
 
+    it('preserves Name, Email, Mobile, and OTP as selected-but-unlocked after Invitation → Blank → Pay Code', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-start-blank"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
+            .trigger('click');
+
+        // omits onboarding from the payload.
+        const preview = quickGenerateEngineeringPreview(wrapper);
+        expect(preview.onboarding).toBeUndefined();
+
+        // retains the previously onboarding-imposed fields in inputs.fields.
+        expect(preview.inputs.fields).toEqual(
+            expect.arrayContaining(['mobile', 'email', 'name', 'otp']),
+        );
+
+        // no field remains locked once Pay Code mode is explicit.
+        expect(
+            wrapper.findAll('[data-onboarding-locked="true"]'),
+        ).toHaveLength(0);
+
+        for (const field of ['name', 'email', 'mobile', 'otp']) {
+            const chip = wrapper.get(
+                `[data-testid="cockpit-claim-requirement-chip-${field}"]`,
+            );
+
+            expect(chip.attributes('data-locked')).toBe('false');
+        }
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+    });
+
+    it('lets the user remove each formerly onboarding-imposed field after switching back to Pay Code', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-start-blank"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
+            .trigger('click');
+
+        for (const field of ['name', 'email', 'mobile', 'otp']) {
+            await wrapper
+                .get(`[data-testid="cockpit-claim-requirement-chip-${field}"]`)
+                .get('[data-testid="cockpit-claim-requirement-chip-remove"]')
+                .trigger('click');
+
+            expect(
+                wrapper
+                    .find(
+                        `[data-testid="cockpit-claim-requirement-chip-${field}"]`,
+                    )
+                    .exists(),
+            ).toBe(false);
+        }
+
+        const preview = quickGenerateEngineeringPreview(wrapper);
+        expect(preview.inputs.fields).not.toEqual(
+            expect.arrayContaining(['name', 'email', 'mobile', 'otp']),
+        );
+    });
+
+    it('preserves only the fields actually required under an OTP-disabled onboarding policy', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                onboardingOtpRequired: false,
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-start-blank"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
+            .trigger('click');
+
+        const preview = quickGenerateEngineeringPreview(wrapper);
+
+        expect(preview.inputs.fields).toEqual(
+            expect.arrayContaining(['mobile', 'email', 'name']),
+        );
+        expect(preview.inputs.fields).not.toContain('otp');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-requirement-chip-otp"]')
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('retains unrelated manually selected requirements across the Invitation → Pay Code transition', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-trigger"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirement-option-kyc"]')
+            .get('input[type="checkbox"]')
+            .setValue(true);
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
+            .trigger('click');
+
+        const preview = quickGenerateEngineeringPreview(wrapper);
+        expect(preview.inputs.fields).toContain('kyc');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-requirement-chip-kyc"]')
+                .exists(),
+        ).toBe(true);
+    });
+
+    it('leaves ordinary Pay Code entry (never switched to Invitation) unaffected', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates },
+        });
+        const preview = quickGenerateEngineeringPreview(wrapper);
+
+        expect(preview.onboarding).toBeUndefined();
+        expect(preview.inputs.fields).not.toContain('name');
+        expect(preview.inputs.fields).not.toContain('email');
+        expect(preview.inputs.fields).not.toContain('otp');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+    });
+
     it('exposes the mode toggle as a keyboard-operable aria-pressed group with no legacy checkbox remaining', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: { templates: cockpitQuickGenerateTemplates },
