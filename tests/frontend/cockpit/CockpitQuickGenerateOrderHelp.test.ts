@@ -1,6 +1,6 @@
+import { afterEach, describe, expect, it } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
 import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
 import { cockpitQuickGenerateTemplates } from '../../../resources/js/cockpit/quickGenerateDefaults';
 
@@ -16,11 +16,41 @@ function quickGenerateEngineeringPreview(
     );
 }
 
+// Each CockpitFieldHelp instance teleports its tooltip to document.body.
+// Unmounting between tests keeps that shared DOM clean so a later test's
+// id-based tooltip lookup can't accidentally resolve a stale element.
+const activeWrappers: VueWrapper[] = [];
+
+function mountPanel(
+    props: InstanceType<typeof CockpitQuickGenerateSubmitPanel>['$props'],
+): VueWrapper {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props });
+
+    activeWrappers.push(wrapper);
+
+    return wrapper;
+}
+
+function tooltipFor(
+    trigger: ReturnType<VueWrapper['get']>,
+): Element | undefined {
+    const describedBy = trigger.attributes('aria-describedby');
+
+    return Array.from(
+        document.body.querySelectorAll(
+            '[data-testid="cockpit-field-help-tooltip"]',
+        ),
+    ).find((candidate) => candidate.id === describedBy);
+}
+
+afterEach(() => {
+    activeWrappers.forEach((wrapper) => wrapper.unmount());
+    activeWrappers.length = 0;
+});
+
 describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanup', () => {
     it('renders no removed resting helper sentences at rest', () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
-            props: { templates: cockpitQuickGenerateTemplates },
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
@@ -39,9 +69,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('exposes no visible documentation placeholders on Amount, Pay To, Purpose, or Status Updates', () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
-            props: { templates: cockpitQuickGenerateTemplates },
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
 
         expect(
             wrapper
@@ -78,10 +106,8 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBeTruthy();
     });
 
-    it('gives each Order-card help glyph a keyboard-focusable trigger with an accessible name and a focus-reachable tooltip', () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
-            props: { templates: cockpitQuickGenerateTemplates },
-        });
+    it('gives each Order-card help glyph a keyboard-focusable trigger with an accessible name and a focus-reachable tooltip', async () => {
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
@@ -93,35 +119,41 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         // Transfer Network.
         expect(glyphs.length).toBe(6);
 
-        glyphs.forEach((glyph) => {
+        for (const glyph of glyphs) {
             const trigger = glyph.get(
                 '[data-testid="cockpit-field-help-trigger"]',
             );
-            const tooltip = glyph.get(
-                '[data-testid="cockpit-field-help-tooltip"]',
-            );
+            // The tooltip is teleported to document.body, so it is no
+            // longer a DOM descendant of the glyph; resolve it by the
+            // aria-describedby id it shares with the trigger instead.
+            const tooltip = tooltipFor(trigger);
 
             expect(trigger.element.tagName.toLowerCase()).toBe('button');
             expect(trigger.attributes('disabled')).toBeUndefined();
             expect(trigger.attributes('aria-label')).toBeTruthy();
-            expect(tooltip.attributes('role')).toBe('tooltip');
+            expect(tooltip).toBeDefined();
+            expect(tooltip?.getAttribute('role')).toBe('tooltip');
             expect(trigger.attributes('aria-describedby')).toBe(
-                tooltip.attributes('id'),
+                tooltip?.getAttribute('id'),
             );
+            expect(tooltip?.textContent?.length).toBeGreaterThan(0);
+            expect(tooltip?.classList.contains('opacity-100')).toBe(false);
+
             // Available on focus, not only hover.
-            expect(tooltip.classes()).toContain(
-                'group-focus-within/field-help:opacity-100',
-            );
-            expect(tooltip.classes()).toContain(
-                'group-hover/field-help:opacity-100',
-            );
-            expect(tooltip.text().length).toBeGreaterThan(0);
-        });
+            await trigger.trigger('focus');
+            expect(tooltip?.classList.contains('opacity-100')).toBe(true);
+            await trigger.trigger('blur');
+            expect(tooltip?.classList.contains('opacity-100')).toBe(false);
+
+            await trigger.trigger('mouseenter');
+            expect(tooltip?.classList.contains('opacity-100')).toBe(true);
+            await trigger.trigger('mouseleave');
+            expect(tooltip?.classList.contains('opacity-100')).toBe(false);
+        }
     });
 
     it('moves the ordinary Transfer Network description into its tooltip while keeping validation/unavailable errors visible', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
-            props: {
+        const wrapper = mountPanel({
                 templates: cockpitQuickGenerateTemplates,
                 settlementRailCapabilities: {
                     schema: 'x-change.cockpit.settlement-rail-capabilities.v1',
@@ -153,10 +185,12 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
                     source: 'configured-provider-capabilities',
                     live_provider_call: false,
                 },
-            },
         });
         const railControl = wrapper.get(
             '[data-testid="cockpit-quick-generate-primary-settlement-rail"]',
+        );
+        const railTrigger = railControl.get(
+            '[data-testid="cockpit-field-help-trigger"]',
         );
 
         expect(
@@ -164,10 +198,9 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
                 .get('[data-testid="cockpit-quick-generate-settlement-rail-error"]')
                 .text(),
         ).toContain('InstaPay is disabled');
-        expect(
-            railControl.get('[data-testid="cockpit-field-help-tooltip"]').text()
-                .length,
-        ).toBeGreaterThan(0);
+        expect(tooltipFor(railTrigger)?.textContent?.length).toBeGreaterThan(
+            0,
+        );
         expect(
             railControl
                 .find(
@@ -205,9 +238,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('keeps Pay To inference locking Mobile and OTP in the Claim Requirements chips', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
-            props: { templates: cockpitQuickGenerateTemplates },
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
 
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
@@ -229,14 +260,12 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('keeps Status Updates parsing and saved-destination shortcuts unchanged', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
-            props: {
-                templates: cockpitQuickGenerateTemplates,
-                feedbackDefaults: {
-                    email: 'saved@example.com',
-                    mobile: null,
-                    webhook: null,
-                },
+        const wrapper = mountPanel({
+            templates: cockpitQuickGenerateTemplates,
+            feedbackDefaults: {
+                email: 'saved@example.com',
+                mobile: null,
+                webhook: null,
             },
         });
 
@@ -262,9 +291,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('keeps the Claim Requirements compact/detailed synchronization unchanged', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
-            props: { templates: cockpitQuickGenerateTemplates },
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
 
         await wrapper
             .get('[data-testid="cockpit-claim-requirements-trigger"]')
@@ -285,9 +312,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('has no forced horizontal overflow at the ~304px Order-card width and no secondary control using the primary Issue Pay Code styling', () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
-            props: { templates: cockpitQuickGenerateTemplates },
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
