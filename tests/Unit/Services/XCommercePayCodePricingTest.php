@@ -3,9 +3,32 @@
 declare(strict_types=1);
 
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
+use LBHurtado\XCommerce\Data\CommercialOfferingData;
+
+beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+
+    app()->bind(
+        CommercialOfferingResolverContract::class,
+        fn ($app): CommercialOfferingResolverContract => new class($app->make(BootstrapCommercialOfferingFactory::class)) implements CommercialOfferingResolverContract
+        {
+            public function __construct(
+                private readonly BootstrapCommercialOfferingFactory $offerings,
+            ) {}
+
+            public function resolve(string $profile): CommercialOfferingData
+            {
+                return $this->offerings->make($profile);
+            }
+        },
+    );
+});
 
 it('uses the immutable x-commerce catalog for Pay Code pricing and projections', function () {
     $instructions = VoucherInstructionsData::from([
@@ -41,13 +64,12 @@ it('uses the immutable x-commerce catalog for Pay Code pricing and projections',
     expect($service)->toBeInstanceOf(InstructionBackedPricingService::class)
         ->and($first)->toBe($second)
         ->and($first['currency'])->toBe('PHP')
-        ->and($first['total_minor'])->toBe(4_150)
-        ->and($first['total'])->toBe(41.5)
+        ->and($first['total_minor'])->toBe(2_350)
+        ->and($first['total'])->toBe(23.5)
         ->and(collect($first['charges'])->pluck('catalog_item_reference')->all())->toBe([
             'cash.amount',
             'inputs.fields.selfie',
             'inputs.fields.signature',
-            'inputs.fields.kyc',
             'feedback.email',
             'cash.validation.secret',
             'rider.message',
@@ -57,6 +79,36 @@ it('uses the immutable x-commerce catalog for Pay Code pricing and projections',
         ->and($first['waterfall_policy_reference'])->toBe('pay-code-commercial-waterfall')
         ->and($first['waterfall_policy_version'])->toBe(1)
         ->and($first['commercial_quote_reference'])->toStartWith('commercial-quote:');
+});
+
+it('prices KYC only when it is explicitly selected in the Voucher Instructions', function () {
+    $selfieOnly = validVoucherInstructions(100, 'INSTAPAY', [
+        'inputs' => ['fields' => ['selfie']],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]);
+    $selfieAndKyc = validVoucherInstructions(100, 'INSTAPAY', [
+        'inputs' => ['fields' => ['selfie', 'kyc']],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]);
+
+    $selfieOnlyCharges = collect(app(PricingServiceContract::class)->estimate($selfieOnly)['charges'])
+        ->pluck('catalog_item_reference');
+    $selfieAndKycCharges = collect(app(PricingServiceContract::class)->estimate($selfieAndKyc)['charges'])
+        ->pluck('catalog_item_reference');
+
+    expect($selfieOnlyCharges)
+        ->toContain('inputs.fields.selfie')
+        ->not->toContain('inputs.fields.kyc')
+        ->and($selfieAndKycCharges)
+        ->toContain('inputs.fields.selfie', 'inputs.fields.kyc');
 });
 
 it('prices onboarding as an explicit versioned commercial instruction', function () {

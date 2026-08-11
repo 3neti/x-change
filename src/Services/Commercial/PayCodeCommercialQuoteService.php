@@ -193,10 +193,6 @@ final class PayCodeCommercialQuoteService
             $selected[] = 'inputs.fields.'.$field;
         }
 
-        if (array_intersect($fields, ['selfie', 'id_card', 'government_id']) !== []) {
-            $selected[] = 'inputs.fields.kyc';
-        }
-
         if (in_array('otp', $fields, true)
             || data_get($instructions, 'cash.validation.payable') === 'otp'
             || filled(data_get($instructions, 'cash.validation.otp'))) {

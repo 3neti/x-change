@@ -378,4 +378,82 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         vi.unstubAllGlobals();
         vi.useRealTimers();
     });
+
+    it('keeps Selfie-only claim requirements and the Cost face free of an implicit KYC charge', async () => {
+        vi.useFakeTimers();
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                success: true,
+                data: {
+                    currency: 'PHP',
+                    base_fee: 12,
+                    charges: [
+                        { label: 'Pay Code Generation', price: 12 },
+                        {
+                            catalog_item_reference: 'inputs.fields.selfie',
+                            label: 'Selfie Photo',
+                            price: 3,
+                        },
+                    ],
+                    total: 15,
+                    pay_code_value: 50,
+                    account_debit: 65,
+                },
+            }),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                clientFundsMinor: 100_000,
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+            .setValue('50');
+        await openClaimRequirementsPopover(wrapper);
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirement-option-selfie"]')
+            .get('input[type="checkbox"]')
+            .setValue(true);
+        await vi.advanceTimersByTimeAsync(600);
+        await flushPromises();
+        await wrapper.vm.$nextTick();
+
+        const lastCallBody = JSON.parse(
+            String(fetchMock.mock.calls.at(-1)?.[1]?.body),
+        );
+
+        expect(lastCallBody.inputs.fields).toContain('selfie');
+        expect(lastCallBody.inputs.fields).not.toContain('kyc');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-requirement-chip-kyc"]')
+                .exists(),
+        ).toBe(false);
+
+        await wrapper
+            .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        const costLedger = wrapper.get(
+            '[data-testid="cockpit-pay-code-cost-ledger"]',
+        );
+
+        expect(costLedger.text()).toContain('Selfie Photo');
+        expect(costLedger.text()).not.toContain('KYC Verification');
+
+        wrapper.unmount();
+        vi.unstubAllGlobals();
+        vi.useRealTimers();
+    });
 });
