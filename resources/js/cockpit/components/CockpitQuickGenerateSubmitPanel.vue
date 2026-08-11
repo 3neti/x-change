@@ -5472,11 +5472,11 @@ function instructionRecord(
         </div>
 
         <div
-            class="grid gap-5 xl:grid-cols-[minmax(19rem,0.74fr)_minmax(28rem,1.26fr)]"
+            class="grid min-w-0 gap-5 xl:grid-cols-[minmax(19rem,0.74fr)_minmax(28rem,1.26fr)]"
             data-testid="cockpit-quick-generate-essentials-canvas"
         >
             <div
-                class="rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
+                class="min-w-0 rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
                 data-testid="cockpit-quick-generate-order-card"
             >
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -5898,7 +5898,7 @@ function instructionRecord(
 
             <div
                 ref="canvasSectionElement"
-                class="xl:sticky xl:top-4 xl:self-start"
+                class="min-w-0 xl:sticky xl:top-4 xl:self-start"
             >
                 <CockpitPayCodeCanvas
                     v-model:view="canvasView"
