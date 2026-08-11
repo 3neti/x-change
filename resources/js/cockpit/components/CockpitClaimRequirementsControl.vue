@@ -2,6 +2,7 @@
 import { Lock, Plus, Search, X } from 'lucide-vue-next';
 import { computed, nextTick, ref, watch } from 'vue';
 import type { LucideIcon } from 'lucide-vue-next';
+import CockpitFieldHelp from './CockpitFieldHelp.vue';
 
 export type CockpitClaimRequirementCategory = 'common' | 'evidence';
 
@@ -30,10 +31,12 @@ const props = withDefaults(
         options: CockpitClaimRequirementOption[];
         presets?: CockpitClaimRequirementPreset[];
         disabled?: boolean;
+        helpTooltip?: string;
     }>(),
     {
         presets: () => [],
         disabled: false,
+        helpTooltip: '',
     },
 );
 
@@ -150,17 +153,24 @@ function applyPreset(key: string): void {
         <div
             class="flex h-9 min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-1 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
-            <button
-                type="button"
-                class="shrink-0 rounded-md px-1.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:text-slate-200 dark:hover:bg-slate-800"
-                :disabled="disabled"
-                :aria-expanded="open"
-                aria-haspopup="dialog"
-                data-testid="cockpit-claim-requirements-trigger"
-                @click="openPopover"
-            >
-                Claim Requirements
-            </button>
+            <div class="flex shrink-0 items-center gap-0.5">
+                <button
+                    type="button"
+                    class="shrink-0 rounded-md px-1.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:text-slate-200 dark:hover:bg-slate-800"
+                    :disabled="disabled"
+                    :aria-expanded="open"
+                    aria-haspopup="dialog"
+                    data-testid="cockpit-claim-requirements-trigger"
+                    @click="openPopover"
+                >
+                    Claim Requirements
+                </button>
+                <CockpitFieldHelp
+                    v-if="helpTooltip !== ''"
+                    label="About Claim Requirements"
+                    :tooltip="helpTooltip"
+                />
+            </div>
 
             <div
                 class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"

@@ -79,6 +79,7 @@ import type {
     CockpitClaimRequirementPreset,
 } from './CockpitClaimRequirementsControl.vue';
 import CockpitFeedbackDestinationInput from './CockpitFeedbackDestinationInput.vue';
+import CockpitFieldHelp from './CockpitFieldHelp.vue';
 import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
@@ -5490,8 +5491,15 @@ function instructionRecord(
                         class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-amount-field"
                     >
-                        <label for="cockpit-quick-generate-primary-amount">
+                        <label
+                            class="flex items-center gap-1"
+                            for="cockpit-quick-generate-primary-amount"
+                        >
                             Amount
+                            <CockpitFieldHelp
+                                label="About Amount"
+                                tooltip="Value the recipient can claim. Select the field to open the calculator."
+                            />
                         </label>
                         <CockpitAmountPicker
                             ref="amountInputElement"
@@ -5560,7 +5568,13 @@ function instructionRecord(
                         class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-recipient-field"
                     >
-                        Pay To
+                        <span class="flex items-center gap-1">
+                            Pay To
+                            <CockpitFieldHelp
+                                label="About Pay To"
+                                tooltip='Leave blank or use CASH for an open claim. A mobile, email, @vendor, or quoted secret adds the matching safeguards.'
+                            />
+                        </span>
                         <input
                             v-model="recipientReference"
                             :type="
@@ -5568,7 +5582,6 @@ function instructionRecord(
                                     ? 'password'
                                     : 'text'
                             "
-                            placeholder='Anyone, mobile, email, @vendor, or "secret"'
                             class="h-12 w-full rounded-xl border bg-white px-3 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
                             :class="
                                 payeePolicy.kind === 'invalid' ||
@@ -5582,6 +5595,7 @@ function instructionRecord(
                             @blur="payeeInputFocused = false"
                         />
                         <span
+                            v-if="payeeType !== 'anyone'"
                             class="min-h-5 px-0.5 text-[0.7rem] leading-5 font-normal"
                             :class="
                                 payeePolicy.kind === 'invalid' ||
@@ -5597,26 +5611,32 @@ function instructionRecord(
                     <label
                         class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
                     >
-                        Purpose
+                        <span class="flex items-center gap-1">
+                            Purpose
+                            <CockpitFieldHelp
+                                label="About Purpose"
+                                tooltip="Shown to the recipient as the Rider Message."
+                            />
+                        </span>
                         <input
                             v-model="purpose"
                             type="text"
-                            placeholder="What is this Pay Code for?"
                             class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                             data-testid="cockpit-quick-generate-primary-purpose"
                             :disabled="processing"
                         />
-                        <span
-                            class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
-                        >
-                            Used as the Rider Message.
-                        </span>
                     </label>
                     <div
                         class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-primary-feedback"
                     >
-                        <span>Status Updates</span>
+                        <span class="flex items-center gap-1">
+                            Status Updates
+                            <CockpitFieldHelp
+                                label="About Status Updates"
+                                tooltip="Optional email, mobile, or webhook destinations notified after the claim."
+                            />
+                        </span>
                         <CockpitFeedbackDestinationInput
                             v-model="feedbackDestinations"
                             :defaults="feedbackDestinationDefaults"
@@ -5630,6 +5650,7 @@ function instructionRecord(
                             :options="claimRequirementOptions"
                             :presets="claimRequirementPresets"
                             :disabled="processing"
+                            help-tooltip="Information or evidence the recipient must provide before claiming."
                             @toggle="toggleInputField"
                             @preset="applyClaimRequirementPreset"
                         />
@@ -5646,9 +5667,13 @@ function instructionRecord(
                     >
                         <div class="flex flex-wrap items-center gap-2">
                             <legend
-                                class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                class="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
                                 Transfer Network
+                                <CockpitFieldHelp
+                                    label="About Transfer Network"
+                                    :tooltip="settlementRailCycleDescription"
+                                />
                             </legend>
                             <button
                                 type="button"
@@ -5678,13 +5703,6 @@ function instructionRecord(
                         data-testid="cockpit-quick-generate-settlement-rail-error"
                     >
                         {{ settlementRailSelectionError }}
-                    </p>
-                    <p
-                        v-else
-                        class="text-[11px] text-slate-500 dark:text-slate-400"
-                        data-testid="cockpit-quick-generate-settlement-rail-description"
-                    >
-                        {{ settlementRailCycleDescription }}
                     </p>
                 </fieldset>
 

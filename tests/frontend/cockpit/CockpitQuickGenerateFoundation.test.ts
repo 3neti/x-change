@@ -2778,8 +2778,10 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
         ).toBeUndefined();
+        // The ordinary reactive description now lives in the Transfer
+        // Network help tooltip instead of a resting paragraph.
         const automaticDescription = railControl.get(
-            '[data-testid="cockpit-quick-generate-settlement-rail-description"]',
+            '[data-testid="cockpit-field-help-tooltip"]',
         ).text();
 
         // 2. Successive clicks cycle Automatic -> InstaPay -> PESONet -> Automatic.
@@ -2792,7 +2794,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe('INSTAPAY');
         // 5. The displayed helper changes with the selected value.
         const instapayDescription = railControl.get(
-            '[data-testid="cockpit-quick-generate-settlement-rail-description"]',
+            '[data-testid="cockpit-field-help-tooltip"]',
         ).text();
 
         expect(instapayDescription).not.toBe(automaticDescription);
@@ -2807,7 +2809,7 @@ describe('Cockpit Quick Generate foundation', () => {
             quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
         ).toBe('PESONET');
         const pesonetDescription = railControl.get(
-            '[data-testid="cockpit-quick-generate-settlement-rail-description"]',
+            '[data-testid="cockpit-field-help-tooltip"]',
         ).text();
 
         expect(pesonetDescription).not.toBe(instapayDescription);
