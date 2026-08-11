@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Data\MobileVerificationConfigData;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
@@ -85,6 +86,56 @@ it('returns pricing estimate from voucher instructions input', function () {
     expect($result->total)->toBe(5.0);
     expect($result->pay_code_value)->toBe(100.0);
     expect($result->account_debit)->toBe(105.0);
+});
+
+it('creates instructions from the structured mobile verification contract', function (): void {
+    $input = [
+        'cash' => [
+            'amount' => 25.0,
+            'currency' => 'PHP',
+            'validation' => [
+                'mobile' => '+639173011987',
+                'mobile_verification' => [],
+            ],
+        ],
+        'inputs' => [
+            'fields' => ['name', 'email', 'mobile', 'otp'],
+        ],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+        'rider' => [
+            'message' => null,
+            'url' => null,
+            'splash' => null,
+        ],
+        'count' => 1,
+        'onboarding' => true,
+    ];
+
+    $pricing = Mockery::mock(PricingServiceContract::class);
+    $pricing->shouldReceive('estimate')
+        ->once()
+        ->with(Mockery::on(function (VoucherInstructionsData $instructions): bool {
+            expect($instructions->cash->validation->mobile_verification)
+                ->toBeInstanceOf(MobileVerificationConfigData::class)
+                ->and($instructions->cash->validation->mobile_verification->driver)->toBeNull()
+                ->and($instructions->cash->validation->mobile_verification->enforcement)->toBeNull();
+
+            return true;
+        }))
+        ->andReturn([
+            'currency' => 'PHP',
+            'base_fee' => 0.0,
+            'components' => [],
+            'total' => 0.0,
+        ]);
+
+    $result = (new EstimatePayCodeCost($pricing))->handle($input);
+
+    expect($result->account_debit)->toBe(25.0);
 });
 
 it('excludes a collectible target from the account debit', function () {

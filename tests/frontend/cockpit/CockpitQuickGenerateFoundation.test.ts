@@ -2262,7 +2262,7 @@ describe('Cockpit Quick Generate foundation', () => {
             fee_strategy: 'absorb',
             validation: {
                 mobile: '+639173011987',
-                mobile_verification: 'otp',
+                mobile_verification: {},
             },
         });
         expect(payload.inputs).toEqual({
@@ -3575,7 +3575,7 @@ describe('Cockpit Quick Generate foundation', () => {
             fee_strategy: 'absorb',
             validation: {
                 mobile: '+639173011987',
-                mobile_verification: 'otp',
+                mobile_verification: {},
             },
         });
         expect(payload.inputs).toEqual({

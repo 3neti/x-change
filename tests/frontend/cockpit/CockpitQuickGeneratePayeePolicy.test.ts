@@ -54,7 +54,7 @@ describe('Cockpit Quick Generate payee policy', () => {
         const payload = preview(wrapper);
 
         expect(payload.cash.validation.mobile).toBe('+639173011987');
-        expect(payload.cash.validation.mobile_verification).toBe('otp');
+        expect(payload.cash.validation.mobile_verification).toEqual({});
         expect(payload.inputs.fields).toEqual(
             expect.arrayContaining(['mobile', 'otp']),
         );

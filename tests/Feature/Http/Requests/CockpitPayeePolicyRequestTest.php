@@ -66,7 +66,7 @@ it('accepts the complete mobile and OTP invariant', function (string $requestCla
         'cash' => [
             'validation' => [
                 'mobile' => '+639173011987',
-                'mobile_verification' => 'otp',
+                'mobile_verification' => [],
             ],
         ],
         'inputs' => [

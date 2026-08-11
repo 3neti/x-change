@@ -3056,7 +3056,7 @@ const validationSummary = computed<Record<string, unknown>>(() => {
             ? { location: 'required', radius: '100' }
             : {}),
         ...(effectiveVerificationOtp.value
-            ? { mobile_verification: 'otp' }
+            ? { mobile_verification: {} }
             : {}),
     };
 });

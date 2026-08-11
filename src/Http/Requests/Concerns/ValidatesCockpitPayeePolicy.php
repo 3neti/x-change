@@ -75,7 +75,7 @@ trait ValidatesCockpitPayeePolicy
             $validator->errors()->add('inputs.requirements', 'OTP verification is required for a mobile-bound Pay Code.');
         }
 
-        if ($this->input('cash.validation.mobile_verification') !== 'otp' || $this->input('validation.otp.required') !== true) {
+        if (! is_array($this->input('cash.validation.mobile_verification')) || $this->input('validation.otp.required') !== true) {
             $validator->errors()->add('validation.otp', 'OTP must remain enabled for a mobile-bound Pay Code.');
         }
     }
