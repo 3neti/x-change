@@ -1,5 +1,13 @@
 # x-change Agent Notes
 
+## Package-first onboarding
+
+Every new AI-agent session must read
+[AI agent package onboarding](./docs/deployment/AI_AGENT_PACKAGE_ONBOARDING.md)
+before inspecting or changing code. It defines repository ownership,
+generated-host boundaries, local integration, verification, and release
+authority. The host and its `vendor/` tree are never durable package source.
+
 ## Setup and deployment
 
 Use [DEPLOYMENT.md](./DEPLOYMENT.md) as the canonical deployment runbook.

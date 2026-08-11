@@ -1,5 +1,10 @@
 # Package development workflow
 
+New AI-agent sessions must begin with the reusable
+[AI agent package onboarding protocol](./AI_AGENT_PACKAGE_ONBOARDING.md). It
+turns the package-first workflow, generated-host boundary, safety gates, and
+required hand-off into an explicit session contract.
+
 ## The three copies
 
 An extracted package has three distinct representations:
@@ -147,6 +152,10 @@ contract package
 For example, an environment descriptor change starts in `emi-core`, followed by NetBank or Paynamics contributors, then x-change, then the host. Each repository receives its own focused tests, commit, push, and tag. Downstream manifests and lockfiles are updated only after the upstream tag exists.
 
 ## AI-agent guardrails
+
+The complete, copy-ready session protocol lives in
+[AI agent package onboarding](./AI_AGENT_PACKAGE_ONBOARDING.md). The rules below
+are its minimum package-development guardrails.
 
 An AI agent working on package code must:
 
