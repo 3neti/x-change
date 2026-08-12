@@ -105,7 +105,11 @@ vi.mock('@/components/x-change/XRayClaimPreview.vue', () => ({
 }));
 
 vi.mock('@/components/x-rider/RiderRuntimeSequencer.vue', () => ({
-    default: { props: ['stages'], template: '<div />' },
+    default: {
+        props: ['stages'],
+        template:
+            '<div data-testid="rider-runtime">{{ stages?.map((stage) => stage.key).join(",") }}</div>',
+    },
 }));
 
 vi.mock('lucide-vue-next', () => ({
@@ -174,6 +178,102 @@ describe('ClaimWidget claim surface gating', () => {
         expect(region.exists()).toBe(true);
         expect(region.text()).toContain('public_preview');
         expect(wrapper.find('form').exists()).toBe(false);
+    });
+
+    it('suppresses rider and form-flow regions when an issuer surface takes over', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'runtime',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'owner-splash',
+                                    type: 'message',
+                                    phase: 'runtime',
+                                    content: 'Owner supplied splash',
+                                },
+                            ],
+                        },
+                        {
+                            key: 'form_flow',
+                            owner: 'claim-widget',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [],
+                        },
+                    ],
+                },
+                claimSurface: issuerConsoleSurface,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="claim-widget-surface-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-widget-runtime-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Owner supplied splash');
+    });
+
+    it('suppresses rider and form-flow regions when a terminal public surface takes over', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'runtime',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'terminal-splash',
+                                    type: 'message',
+                                    phase: 'runtime',
+                                    content: 'Terminal splash',
+                                },
+                            ],
+                        },
+                        {
+                            key: 'redirect',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'terminal-redirect',
+                                    type: 'message',
+                                    phase: 'redirect',
+                                    content: 'Terminal redirect',
+                                },
+                            ],
+                        },
+                        {
+                            key: 'form_flow',
+                            owner: 'claim-widget',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [],
+                        },
+                    ],
+                },
+                claimSurface: terminalPublicSurface,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="claim-widget-surface-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-widget-runtime-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-redirect-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Terminal splash');
+        expect(wrapper.text()).not.toContain('Terminal redirect');
     });
 
     it('stops trusting the resolved surface once the visitor types a different code', async () => {

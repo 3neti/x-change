@@ -568,21 +568,21 @@ watch(
 
         <!-- Runtime Sequencer -->
         <div
-            v-if="runtimeStages.length > 0"
+            v-if="runtimeStages.length > 0 && !surfaceTakesOver"
             data-testid="claim-widget-runtime-region"
         >
             <RiderRuntimeSequencer :stages="runtimeStages" />
         </div>
 
         <div
-            v-if="redirectStages.length > 0"
+            v-if="redirectStages.length > 0 && !surfaceTakesOver"
             data-testid="claim-widget-redirect-region"
         >
             <RiderRuntimeSequencer :stages="redirectStages" />
         </div>
 
         <div
-            v-if="formFlowSection.visible"
+            v-if="formFlowSection.visible && !surfaceTakesOver"
             data-testid="claim-widget-form-flow-boundary-region"
             :class="formFlowSection.className"
         >
