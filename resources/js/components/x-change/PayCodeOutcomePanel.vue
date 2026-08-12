@@ -23,6 +23,24 @@ const props = defineProps<{
 const icon = computed(() => statusIcon(props.statusKey));
 const badgeVariant = computed(() => statusBadgeVariant(props.statusKey));
 
+const badgeLabel = computed(() => {
+    const labels: Record<string, string> = {
+        redeemed: 'Complete',
+        paid: 'Complete',
+        partially_claimed: 'Still claimable',
+        payout_pending: 'Pending',
+        awaiting_approval: 'Needs approval',
+        expired: 'Expired',
+        cancelled: 'Cancelled',
+        closed: 'Closed',
+        payout_rejected: 'Failed',
+    };
+
+    const label = labels[props.statusKey] ?? null;
+
+    return label !== props.statusLabel ? label : null;
+});
+
 function formatDate(value?: string | null): string | null {
     if (!value) {
         return null;
@@ -60,8 +78,8 @@ const formattedRedeemedAt = computed(() => formatDate(props.redeemedAt));
                         {{ statusLabel }}
                     </p>
                 </div>
-                <Badge :variant="badgeVariant" class="shrink-0">
-                    {{ statusKey.replace(/_/g, ' ') }}
+                <Badge v-if="badgeLabel" :variant="badgeVariant" class="shrink-0">
+                    {{ badgeLabel }}
                 </Badge>
             </div>
 

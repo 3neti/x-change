@@ -13,6 +13,8 @@ describe('PayCodeOutcomePanel', () => {
         });
 
         expect(wrapper.text()).toContain('Already claimed');
+        expect(wrapper.text()).toContain('Complete');
+        expect(wrapper.text()).not.toContain('redeemed');
         expect(wrapper.text()).toContain('ABC12345');
         expect(wrapper.find('[data-testid="pay-code-outcome-panel"]').exists()).toBe(true);
         expect(wrapper.text().match(/Already claimed/g)).toHaveLength(1);
@@ -45,5 +47,6 @@ describe('PayCodeOutcomePanel', () => {
 
         expect(wrapper.find('[data-testid="pay-code-outcome-redeemed-at"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="pay-code-outcome-payout-status"]').exists()).toBe(false);
+        expect(wrapper.text().match(/Expired/g)).toHaveLength(1);
     });
 });
