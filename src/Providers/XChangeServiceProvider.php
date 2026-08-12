@@ -708,6 +708,7 @@ class XChangeServiceProvider extends ServiceProvider
                 liabilities: $app->make(VoucherLiabilitySummaryContract::class),
                 moneyMovementDecision: $app->make(MoneyMovementAccountingDecisionContract::class),
                 payCodeDetails: $app->make(CockpitPayCodeDetailProjection::class),
+                qrRenderer: $app->make(ClaimUrlQrRendererContract::class),
             );
         });
         $this->app->singleton(

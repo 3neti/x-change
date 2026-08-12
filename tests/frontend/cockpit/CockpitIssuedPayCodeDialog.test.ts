@@ -79,21 +79,23 @@ describe('issued Pay Code dialog', () => {
         ).toBe('/x/cockpit/pay-codes/PAY-READY-7');
 
         const whatsapp = wrapper
-            .get('[data-testid="cockpit-issued-pay-code-whatsapp"]')
+            .get('[data-testid="cockpit-pay-code-share-whatsapp"]')
             .attributes('href');
         const sms = wrapper
-            .get('[data-testid="cockpit-issued-pay-code-sms"]')
+            .get('[data-testid="cockpit-pay-code-share-sms"]')
             .attributes('href');
         const email = wrapper
-            .get('[data-testid="cockpit-issued-pay-code-email"]')
+            .get('[data-testid="cockpit-pay-code-share-email"]')
             .attributes('href');
 
         expect(decodeURIComponent(whatsapp)).toContain(
-            'Claim this Pay Code: PAY-READY-7 (PHP 125.50)',
+            'Claim Pay Code || PAY-READY-7 ||',
         );
         expect(decodeURIComponent(whatsapp)).toContain(
             'https://example.test/x/claim/PAY-READY-7/experience',
         );
+        expect(wrapper.text()).toContain('Claim this Pay Code');
+        expect(wrapper.text()).toContain('PHP 125.50');
         expect(sms).toContain('sms:?body=');
         expect(email).toContain('mailto:?subject=');
 
@@ -120,7 +122,7 @@ describe('issued Pay Code dialog', () => {
         expect(wrapper.text().match(/₱/g) ?? []).toHaveLength(4);
 
         await wrapper
-            .get('[data-testid="cockpit-issued-pay-code-copy"]')
+            .get('[data-testid="cockpit-pay-code-share-copy"]')
             .trigger('click');
 
         expect(clipboardWrite).toHaveBeenCalledWith(
@@ -155,16 +157,62 @@ describe('issued Pay Code dialog', () => {
         });
 
         await wrapper
-            .get('[data-testid="cockpit-issued-pay-code-native-share"]')
+            .get('[data-testid="cockpit-pay-code-share-native"]')
             .trigger('click');
 
         expect(nativeShare).toHaveBeenCalledWith({
             title: 'Pay Code FUND-NATIVE-1',
-            text: expect.stringContaining(
-                'Add this Pay Code to your Account: FUND-NATIVE-1',
-            ),
+            text: expect.stringContaining('Claim Pay Code || FUND-NATIVE-1 ||'),
             url: 'https://example.test/x/claim/FUND-NATIVE-1/experience',
         });
+        expect(wrapper.text()).toContain('Add this Pay Code to your Account');
+    });
+
+    it('reuses the compact share card without duplicating the QR already shown on the Stamp canvas', () => {
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'PAY-COMPACT-1',
+                amount: 50,
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                claimUrl:
+                    'https://example.test/x/claim/PAY-COMPACT-1/experience',
+                claimQr: 'data:image/png;base64,FAKE-QR',
+            },
+            global: {
+                stubs: {
+                    Teleport: true,
+                },
+            },
+        });
+
+        const shareCard = wrapper.get(
+            '[data-testid="cockpit-pay-code-share-card"]',
+        );
+
+        expect(shareCard.attributes('data-variant')).toBe('compact');
+        expect(
+            shareCard
+                .find('[data-testid="cockpit-pay-code-share-qr"]')
+                .exists(),
+        ).toBe(false);
+
+        const facebook = shareCard
+            .get('[data-testid="cockpit-pay-code-share-facebook"]')
+            .attributes('href');
+
+        expect(decodeURIComponent(facebook)).toContain(
+            'https://example.test/x/claim/PAY-COMPACT-1/experience',
+        );
+
+        const download = shareCard.get(
+            '[data-testid="cockpit-pay-code-share-download"]',
+        );
+
+        expect(download.attributes('href')).toBe('data:image/png;base64,FAKE-QR');
+        expect(download.attributes('download')).toBe('pay-code-pay-compact-1.png');
     });
 
     it('preserves explicit rider artwork composition in the finalized canvas', () => {

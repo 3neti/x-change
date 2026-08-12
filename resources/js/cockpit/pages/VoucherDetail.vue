@@ -44,6 +44,9 @@ const distributionLinks = computed<Record<string, unknown> | null>(() => {
 });
 const beneficiaryRedeemUrl = computed(() => stringValue(distributionLinks.value?.redeem_url));
 const beneficiaryRedeemPath = computed(() => stringValue(distributionLinks.value?.redeem_path));
+// A QR-rendering problem on the backend simply omits this field; the
+// read-only detail page must keep working without it.
+const beneficiaryClaimQr = computed(() => stringValue(distributionLinks.value?.claim_qr));
 const distributionLinksPolicy = computed(() => {
     const linkRedactions = objectValue(distributionLinks.value?.redactions);
 
@@ -883,6 +886,7 @@ function policyLabel(value: string): string {
                 :redemption="redemption"
                 :payout-institutions="props.payout_institutions ?? []"
                 :claim-url="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
+                :claim-qr="beneficiaryClaimQr"
                 :distribution-url="distributionWorkspaceHref"
                 :explorer-url="explorerHref"
                 :terminal-control="props.terminal_control"

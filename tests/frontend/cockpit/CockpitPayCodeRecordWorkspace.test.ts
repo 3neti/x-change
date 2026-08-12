@@ -459,6 +459,48 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(rejection.text()).not.toContain("PNBMPHMMTOD");
   });
 
+  it("places the prominent share card near the beginning of the Overview tab only when a canonical claim URL is available", () => {
+    const claimable = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "active",
+        voucher,
+        claimUrl: "https://example.test/x/claim/CAMP-CB2L",
+        claimQr: "data:image/png;base64,FAKE-QR",
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    const overview = claimable.get('[data-testid="pay-code-overview-tab"]');
+    const shareCard = overview.get(
+      '[data-testid="cockpit-pay-code-share-card"]',
+    );
+
+    expect(shareCard.attributes("data-variant")).toBe("prominent");
+    expect(
+      overview.get('[data-testid="cockpit-pay-code-share-code"]').text(),
+    ).toBe("|| CAMP-CB2L ||");
+    // Prominent and near the beginning: it is the first element in the tab.
+    expect(overview.element.firstElementChild).toBe(shareCard.element);
+
+    const nonClaimable = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    expect(
+      nonClaimable
+        .find('[data-testid="cockpit-pay-code-share-card"]')
+        .exists(),
+    ).toBe(false);
+  });
+
   it("shows exact journal and delivery evidence with its delivery time", async () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {

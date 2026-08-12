@@ -2,6 +2,7 @@
 import CockpitPayCodePayoutCorrectionController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodePayoutCorrectionController";
 import CockpitPayCodeEngineeringPreviewController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeEngineeringPreviewController";
 import BankEMISelect from "@/components/financial/BankEMISelect.vue";
+import CockpitPayCodeShareCard from "./CockpitPayCodeShareCard.vue";
 import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue";
 import { Form } from "@inertiajs/vue3";
 import {
@@ -60,6 +61,7 @@ const props = defineProps<{
   redemption?: Record<string, unknown> | null;
   payoutInstitutions?: CockpitMoneyIssuerOption[];
   claimUrl?: string | null;
+  claimQr?: string | null;
   distributionUrl: string;
   explorerUrl: string;
   terminalControl?: CockpitPayCodeTerminalControl;
@@ -571,6 +573,14 @@ function number(value: unknown): number {
         class="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]"
         data-testid="pay-code-overview-tab"
       >
+        <CockpitPayCodeShareCard
+          v-if="claimUrl"
+          class="xl:col-span-2"
+          :code="code"
+          :claim-url="claimUrl"
+          :claim-qr="claimQr"
+          variant="prominent"
+        />
         <article
           v-if="payoutRejected"
           class="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between xl:col-span-2 dark:border-rose-900/70 dark:bg-rose-950/30"

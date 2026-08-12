@@ -100,6 +100,7 @@ const readModel = {
             read_only: true,
             redeem_url: 'https://example.test/x/claim/PC-HYDRATED-001/experience',
             redeem_path: '/x/claim/PC-HYDRATED-001/experience',
+            claim_qr: 'data:image/png;base64,FAKE-HYDRATED-QR',
             source: 'x-change.claim.experience',
             delivery_enabled: false,
             redactions: {
@@ -483,6 +484,64 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(rejectedWrapper.get('[data-testid="cockpit-voucher-detail-lifecycle-guidance"]').text())
             .toContain('Payout Rejected')
             .toContain('provider rejected the payout');
+    });
+
+    it('places the reusable prominent share card near the beginning of the record workspace Overview with the hydrated canonical QR', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        const shareCard = wrapper.get(
+            '[data-testid="cockpit-pay-code-share-card"]',
+        );
+
+        expect(shareCard.attributes('data-variant')).toBe('prominent');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-share-code"]').text(),
+        ).toBe('|| PC-HYDRATED-001 ||');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-share-url-link"]').text(),
+        ).toBe('https://example.test/x/claim/PC-HYDRATED-001/experience');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-share-qr"]').attributes('src'),
+        ).toBe('data:image/png;base64,FAKE-HYDRATED-QR');
+    });
+
+    it('does not render an actionable sharing card for a non-claimable Pay Code', () => {
+        const nonClaimableReadModel = structuredClone(readModel);
+        nonClaimableReadModel.voucher.status = 'redeemed';
+        nonClaimableReadModel.voucher.summary.status = 'redeemed';
+        nonClaimableReadModel.voucher.summary.display_status = 'redeemed';
+        nonClaimableReadModel.voucher.distribution_links = {
+            schema: 'x-change.cockpit.distribution-links.v1',
+            status: 'unavailable',
+            available: false,
+            read_only: true,
+            delivery_enabled: false,
+            reason: 'pay-code-not-claimable',
+            redactions: {
+                payloads: 'distribution-links-unavailable',
+            },
+        };
+
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: nonClaimableReadModel,
+            },
+        });
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-share-card"]')
+                .exists(),
+        ).toBe(false);
+        // The rest of the detail information and audit evidence stays visible.
+        expect(wrapper.text()).toContain('Pay Code Detail');
+        expect(wrapper.text()).toContain('PC-HYDRATED-001');
     });
 
     it('renders the beneficiary Pay Code URL as a read-only distribution link', () => {

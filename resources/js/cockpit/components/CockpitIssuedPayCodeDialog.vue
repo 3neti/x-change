@@ -1,14 +1,5 @@
 <script setup lang="ts">
-import {
-    Check,
-    Copy,
-    ExternalLink,
-    Mail,
-    MessageCircle,
-    Share2,
-    Smartphone,
-    X,
-} from 'lucide-vue-next';
+import { Check, ExternalLink, X } from 'lucide-vue-next';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import type {
@@ -16,6 +7,7 @@ import type {
     RiderStampPreviewSource,
 } from '../riderStampPreview';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
+import CockpitPayCodeShareCard from './CockpitPayCodeShareCard.vue';
 
 const props = withDefaults(
     defineProps<{
@@ -64,7 +56,6 @@ const emit = defineEmits<{
 }>();
 
 const dialog = ref<HTMLElement | null>(null);
-const copyState = ref<'idle' | 'copied' | 'failed'>('idle');
 let returnFocus: HTMLElement | null = null;
 
 const normalizedCode = computed<string>(() => props.code?.trim() || 'Pay Code');
@@ -78,9 +69,6 @@ const normalizedShareCardUrl = computed<string | null>(() => {
 
     return value ? value : null;
 });
-const shareValue = computed<string>(() => {
-    return normalizedClaimUrl.value ?? normalizedCode.value;
-});
 const formattedAmount = computed<string>(() => {
     const amount = Number(props.amount);
 
@@ -93,44 +81,22 @@ const formattedAmount = computed<string>(() => {
         maximumFractionDigits: 2,
     })}`;
 });
-const shareTitle = computed<string>(() => {
-    return `Pay Code ${normalizedCode.value}`;
-});
-const shareMessage = computed<string>(() => {
+// Safe, already-authorized presentation context only — never raw claim or
+// instruction data. Passed to the reusable share card as display text; it
+// never becomes part of the composed share message itself.
+const shareContextText = computed<string>(() => {
     const action =
         props.claimOutcome === 'account_funding'
             ? 'Add this Pay Code to your Account'
             : 'Claim this Pay Code';
 
-    return `${action}: ${normalizedCode.value} (${formattedAmount.value})\n${shareValue.value}`;
+    return `${action} \u00b7 ${formattedAmount.value}`;
 });
-const encodedMessage = computed<string>(() =>
-    encodeURIComponent(shareMessage.value),
-);
-const encodedSubject = computed<string>(() =>
-    encodeURIComponent(shareTitle.value),
-);
-const canNativeShare = computed<boolean>(() => {
-    return (
-        typeof navigator !== 'undefined' &&
-        typeof navigator.share === 'function'
-    );
-});
-const whatsappUrl = computed<string>(
-    () => `https://wa.me/?text=${encodedMessage.value}`,
-);
-const smsUrl = computed<string>(() => `sms:?body=${encodedMessage.value}`);
-const emailUrl = computed<string>(
-    () =>
-        `mailto:?subject=${encodedSubject.value}&body=${encodedMessage.value}`,
-);
 
 watch(
     () => props.open,
     async (open): Promise<void> => {
         if (!open) {
-            copyState.value = 'idle';
-
             return;
         }
 
@@ -153,43 +119,6 @@ function close(): void {
         returnFocus?.focus();
         returnFocus = null;
     });
-}
-
-async function shareNative(): Promise<void> {
-    if (!canNativeShare.value) {
-        return;
-    }
-
-    try {
-        await navigator.share({
-            title: shareTitle.value,
-            text: shareMessage.value,
-            ...(normalizedClaimUrl.value
-                ? { url: normalizedClaimUrl.value }
-                : {}),
-        });
-    } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-            return;
-        }
-    }
-}
-
-async function copyClaimLink(): Promise<void> {
-    const clipboard = globalThis.navigator?.clipboard;
-
-    if (!clipboard?.writeText) {
-        copyState.value = 'failed';
-
-        return;
-    }
-
-    try {
-        await clipboard.writeText(shareValue.value);
-        copyState.value = 'copied';
-    } catch {
-        copyState.value = 'failed';
-    }
 }
 </script>
 
@@ -303,93 +232,15 @@ async function copyClaimLink(): Promise<void> {
                     />
 
                     <aside
-                        class="flex flex-col rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70"
+                        class="flex min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70"
                     >
-                        <div>
-                            <p
-                                class="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400"
-                            >
-                                Share Pay Code
-                            </p>
-                            <p
-                                class="mt-2 font-mono text-sm font-bold break-all text-slate-950 dark:text-white"
-                            >
-                                {{ normalizedCode }}
-                            </p>
-                        </div>
-
-                        <div class="mt-4 grid grid-cols-2 gap-2">
-                            <button
-                                v-if="canNativeShare"
-                                type="button"
-                                class="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                                data-testid="cockpit-issued-pay-code-native-share"
-                                @click="shareNative"
-                            >
-                                <Share2 class="size-4" aria-hidden="true" />
-                                Share
-                            </button>
-
-                            <a
-                                :href="whatsappUrl"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                                data-testid="cockpit-issued-pay-code-whatsapp"
-                            >
-                                <MessageCircle
-                                    class="size-4"
-                                    aria-hidden="true"
-                                />
-                                WhatsApp
-                            </a>
-                            <a
-                                :href="smsUrl"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                                data-testid="cockpit-issued-pay-code-sms"
-                            >
-                                <Smartphone class="size-4" aria-hidden="true" />
-                                SMS
-                            </a>
-                            <a
-                                :href="emailUrl"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                                data-testid="cockpit-issued-pay-code-email"
-                            >
-                                <Mail class="size-4" aria-hidden="true" />
-                                Email
-                            </a>
-                            <button
-                                type="button"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                                data-testid="cockpit-issued-pay-code-copy"
-                                @click="copyClaimLink"
-                            >
-                                <Check
-                                    v-if="copyState === 'copied'"
-                                    class="size-4 text-emerald-600"
-                                    aria-hidden="true"
-                                />
-                                <Copy
-                                    v-else
-                                    class="size-4"
-                                    aria-hidden="true"
-                                />
-                                {{
-                                    copyState === 'copied'
-                                        ? 'Copied'
-                                        : 'Copy Link'
-                                }}
-                            </button>
-                        </div>
-
-                        <p
-                            v-if="copyState === 'failed'"
-                            class="mt-2 text-xs text-rose-600 dark:text-rose-300"
-                            role="status"
-                        >
-                            Copy is unavailable in this browser.
-                        </p>
+                        <CockpitPayCodeShareCard
+                            :code="normalizedCode"
+                            :claim-url="normalizedClaimUrl"
+                            :claim-qr="claimQr"
+                            :context-text="shareContextText"
+                            variant="compact"
+                        />
 
                         <a
                             v-if="detailUrl"

@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use JsonSerializable;
+use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
@@ -75,6 +76,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly ?MoneyMovementAccountingDecisionContract $moneyMovementDecision = null,
         private readonly ?CockpitPayCodeDetailProjection $payCodeDetails = null,
         private readonly ?CockpitPayCodeIntegrationReferenceResolver $integrationReferences = null,
+        private readonly ?ClaimUrlQrRendererContract $qrRenderer = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -215,12 +217,14 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ];
         }
 
-        return [
+        $redeemUrl = route('x-change.claim.show', ['code' => $code]);
+
+        $links = [
             'schema' => 'x-change.cockpit.distribution-links.v1',
             'status' => 'available',
             'available' => true,
             'read_only' => true,
-            'redeem_url' => route('x-change.claim.show', ['code' => $code]),
+            'redeem_url' => $redeemUrl,
             'redeem_path' => route('x-change.claim.show', ['code' => $code], false),
             'source' => 'x-change.claim.show',
             'delivery_enabled' => false,
@@ -232,6 +236,35 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 'delivery_payloads_exposed' => false,
             ],
         ];
+
+        $claimQr = $this->renderClaimQr($redeemUrl);
+
+        if ($claimQr !== null) {
+            $links['claim_qr'] = $claimQr;
+        }
+
+        return $links;
+    }
+
+    /**
+     * Renders the canonical claim URL into a QR data URI using the injected
+     * renderer. This never calls a provider and never mutates anything; a
+     * rendering problem simply omits the QR field from an otherwise
+     * unaffected read-only detail page.
+     */
+    private function renderClaimQr(string $redeemUrl): ?string
+    {
+        if ($this->qrRenderer === null) {
+            return null;
+        }
+
+        try {
+            return $this->qrRenderer->render($redeemUrl);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return null;
+        }
     }
 
     /**
