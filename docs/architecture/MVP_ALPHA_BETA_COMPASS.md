@@ -241,6 +241,16 @@ Every item is required before inviting real alpha users.
 
 - [ ] Use durable shared object storage for funding evidence, Rider Splash
       snapshots, and immutable Stamp artifacts.
+- [ ] Set `XCHANGE_CLAIM_SHARE_ARTIFACT_DISK` to a durable shared object-store
+      disk in every Cloud or multi-instance deployment; the default `local`
+      disk is acceptable only for a single-node local development environment.
+- [ ] Teach commissioning and `x-change:doctor --strict` to reject an
+      instance-local Claim Share artifact disk in Cloud/production profiles.
+- [ ] Backfill or rematerialize persisted Stamp descriptors whose immutable
+      bytes are absent, then verify their SHA-256, MIME type, and 1200 × 630
+      dimensions before advertising the content-addressed URL again.
+- [ ] Prove across a deploy and instance replacement that an issued Pay Code's
+      Open Graph image remains byte-identical and publicly readable.
 - [ ] Do not use an ephemeral instance-local disk in a multi-instance cloud
       environment.
 - [ ] Enforce private evidence access and public claim-artifact boundaries.

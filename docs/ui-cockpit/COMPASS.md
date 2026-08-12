@@ -4921,3 +4921,47 @@ Current boundary:
   and preserves append-only x-journal evidence.
 - Focused acceptance passed with 67 backend tests / 1,060 assertions, 8 Vue
   tests, published-asset diagnostics, and the production Vite build.
+
+# 2026-08-12 — TODO: Durable Claim Share Artifacts
+
+Cloud acceptance of Pay Code `PSFJ` exposed a storage-boundary failure: the
+Voucher retained its immutable Rider Stamp descriptor and SHA-256 in the
+database, but the corresponding PNG bytes had been written to the default
+instance-local `local` disk and did not survive the Cloud runtime lifecycle.
+The claim HTML therefore advertised a content-addressed Open Graph image that
+could not be served.
+
+The fail-soft rendering contract remains mandatory: a missing or corrupt
+immutable artifact must never produce a server error. The URL resolver must
+advertise the dynamic 1200 × 630 share-card endpoint until verified immutable
+bytes are available. That fallback preserves sharing for existing Pay Codes,
+but it is not the final durability design.
+
+Deferred persistent-storage slice:
+
+- [ ] Configure `XCHANGE_CLAIM_SHARE_ARTIFACT_DISK` with a durable shared
+      object-store disk for Laravel Cloud and every multi-instance deployment.
+- [ ] Keep the bucket private at the storage layer; expose artifacts only
+      through the package-owned, code-bound public share-card controller.
+- [ ] Add the effective artifact disk, driver class, writability probe, and
+      durability classification to commissioning and `x-change:doctor`.
+- [ ] Fail production commissioning when the configured disk is local,
+      ephemeral, missing, or not writable; allow `local` only in explicit
+      local-development profiles.
+- [ ] Add an idempotent backfill/rematerialization command for descriptors with
+      missing bytes. It must reproduce and verify the content hash before the
+      immutable URL becomes canonical again.
+- [ ] Preserve dynamic fallback behavior for historical artifacts that cannot
+      be reproduced; never fetch arbitrary Rider artwork during crawler
+      requests.
+- [ ] Verify an issued artifact before and after deployment and instance
+      replacement: identical bytes, SHA-256, MIME `image/png`, dimensions
+      1200 × 630, immutable caching, canonical claim URL, and successful OG
+      retrieval without an authenticated session.
+- [ ] Record operational metrics for missing, corrupt, fallback-rendered, and
+      successfully backfilled share artifacts without logging Rider content or
+      recipient data.
+
+This slice is presentation durability only. It cannot authorize a claim,
+change Voucher Instructions, call a settlement provider, post Treasury
+entries, or move money.
