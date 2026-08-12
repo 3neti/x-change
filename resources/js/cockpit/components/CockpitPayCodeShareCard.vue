@@ -171,13 +171,12 @@ async function copyClaimLink(): Promise<void> {
         :data-variant="variant"
     >
         <div
-            class="grid min-w-0 gap-4"
-            :class="isProminent ? 'sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start' : ''"
+            class="grid min-w-0 justify-items-center gap-4 text-center"
             data-testid="cockpit-pay-code-share-lead"
         >
             <div
                 v-if="isProminent && normalizedClaimQr"
-                class="flex shrink-0 justify-center sm:justify-start"
+                class="flex shrink-0 justify-center"
             >
                 <img
                     :src="normalizedClaimQr"
@@ -187,7 +186,7 @@ async function copyClaimLink(): Promise<void> {
                 />
             </div>
 
-            <div class="grid min-w-0 gap-2">
+            <div class="grid min-w-0 justify-items-center gap-2 text-center">
                 <p
                     class="text-[0.65rem] font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
                 >
@@ -201,12 +200,12 @@ async function copyClaimLink(): Promise<void> {
                 </p>
                 <p
                     v-if="normalizedContextText"
-                    class="text-sm text-slate-600 dark:text-slate-300"
+                    class="text-center text-sm text-slate-600 dark:text-slate-300"
                 >
                     {{ normalizedContextText }}
                 </p>
                 <p
-                    class="min-w-0 break-all text-sm leading-5"
+                    class="min-w-0 max-w-full break-all text-center text-sm leading-5"
                     data-testid="cockpit-pay-code-share-url"
                 >
                     <a

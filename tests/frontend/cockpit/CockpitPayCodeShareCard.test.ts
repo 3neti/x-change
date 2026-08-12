@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 describe('CockpitPayCodeShareCard', () => {
-    it('renders a large QR, the visual || CODE || treatment, and the full canonical URL in the prominent variant', () => {
+    it('centers the large QR, visual || CODE || treatment, and full canonical URL in the prominent variant', () => {
         const wrapper = mount(CockpitPayCodeShareCard, {
             props: { ...baseProps, variant: 'prominent' },
         });
@@ -35,6 +35,23 @@ describe('CockpitPayCodeShareCard', () => {
                 .get('[data-testid="cockpit-pay-code-share-url-link"]')
                 .attributes('href'),
         ).toBe(baseProps.claimUrl);
+
+        const lead = wrapper.get(
+            '[data-testid="cockpit-pay-code-share-lead"]',
+        );
+        const code = wrapper.get(
+            '[data-testid="cockpit-pay-code-share-code"]',
+        );
+        const url = wrapper.get(
+            '[data-testid="cockpit-pay-code-share-url"]',
+        );
+
+        expect(lead.classes()).toContain('justify-items-center');
+        expect(lead.classes()).toContain('text-center');
+        expect(code.element.parentElement?.className).toContain(
+            'justify-items-center',
+        );
+        expect(url.classes()).toContain('text-center');
     });
 
     it('passes a safe title, headline text, and the canonical URL to navigator.share', async () => {
@@ -267,7 +284,7 @@ describe('CockpitPayCodeShareCard', () => {
             wrapper
                 .get('[data-testid="cockpit-pay-code-share-lead"]')
                 .classes(),
-        ).toContain('sm:grid-cols-[auto_minmax(0,1fr)]');
+        ).toContain('justify-items-center');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-share-code"]')
