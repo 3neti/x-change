@@ -123,6 +123,21 @@ it('refuses Stamp bytes that no longer match their persisted descriptor', functi
     expect($artifacts->read($voucher))->toBeNull();
 });
 
+it('treats a missing stored Stamp as unavailable so the share renderer can fall back', function (): void {
+    $voucher = issueVoucher();
+    $artifacts = app(RiderStampArtifactStoreContract::class);
+    $artifact = $artifacts->materialize(
+        $voucher,
+        'https://example.test/x/claim/'.$voucher->code,
+    );
+
+    Storage::disk('local')->delete(
+        'x-change/claim/stamp-artifacts/'.$artifact->sha256.'.png',
+    );
+
+    expect($artifacts->read($voucher))->toBeNull();
+});
+
 it('persists a verified Stamp artifact before Pay Code issuance finishes', function (): void {
     $user = actingAsTestUser();
     $result = app(PayCodeIssuanceContract::class)->issue(

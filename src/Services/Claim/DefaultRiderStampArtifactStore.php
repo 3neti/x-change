@@ -90,6 +90,10 @@ final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifac
             return null;
         }
 
+        if (! is_string($contents)) {
+            return null;
+        }
+
         try {
             $verified = $this->artifactFromContents($contents);
         } catch (RiderStampArtifactUnavailable) {
