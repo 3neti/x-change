@@ -19,7 +19,11 @@ final readonly class DefaultClaimShareCardUrlResolver implements ClaimShareCardU
     {
         $artifact = $this->artifacts->descriptor($voucher);
 
-        if ($artifact !== null && Route::has('x-change.claim.share-card.artifact')) {
+        if (
+            $artifact !== null
+            && $this->artifacts->read($voucher) !== null
+            && Route::has('x-change.claim.share-card.artifact')
+        ) {
             return route('x-change.claim.share-card.artifact', [
                 'code' => $voucher->code,
                 'sha256' => $artifact->sha256,

@@ -110,6 +110,33 @@ it('serves the exact immutable artifact materialized during issuance', function 
     ]))->assertNotFound();
 });
 
+it('advertises the dynamic share card when immutable Stamp bytes are unavailable', function (): void {
+    Storage::fake('local');
+    $user = actingAsTestUser();
+    $issued = app(PayCodeIssuanceContract::class)->issue(
+        $user,
+        validVoucherInstructions()->toArray(),
+    );
+    $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
+    $descriptor = app(RiderStampArtifactStoreContract::class)->descriptor($voucher);
+
+    expect($descriptor)->not->toBeNull();
+
+    Storage::disk('local')->delete(
+        'x-change/claim/stamp-artifacts/'.$descriptor?->sha256.'.png',
+    );
+
+    $url = app(ClaimShareCardUrlResolverContract::class)->resolve($voucher);
+
+    expect($url)->toBe(route('x-change.claim.share-card', [
+        'code' => $voucher->code,
+    ]));
+
+    $this->get($url)
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+});
+
 it('paints the masked recipient in the lower Stamp region', function (): void {
     $voucher = issueVoucher(validVoucherInstructions(overrides: [
         'feedback' => [
