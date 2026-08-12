@@ -654,6 +654,30 @@ it('attaches onboarding reference metadata before restarting the claim form flow
         ->assertRedirect('/form-flow/flow-onboarding-reference-test');
 });
 
+it('redirects redeemed query-style claim links to the canonical claim surface', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+    $voucher->forceFill([
+        'redeemed_at' => now(),
+    ])->save();
+
+    $this->get('/x/claim?code='.$voucher->code)
+        ->assertRedirect(route('x-change.claim.show', ['code' => $voucher->code]));
+});
+
+it('redirects expired query-style claim links to the canonical claim surface', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+    $voucher->forceFill([
+        'expires_at' => now()->subMinute(),
+    ])->save();
+
+    $this->get('/x/claim?code='.$voucher->code)
+        ->assertRedirect(route('x-change.claim.show', ['code' => $voucher->code]));
+});
+
 it('does not enter the redemption bridge when voucher is missing', function () {
     $this->withoutMiddleware();
 

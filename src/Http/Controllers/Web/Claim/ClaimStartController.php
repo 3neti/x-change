@@ -186,17 +186,11 @@ class ClaimStartController extends Controller
 
         if ($this->namedSlices->hasNamedSlices($voucher)) {
             if ($this->namedSlices->allSlicesClaimed($voucher)) {
-                return $this->claimEntryResponse()->error(
-                    message: 'This Pay Code has already been redeemed.',
-                    code: $code,
-                );
+                return $this->redirectToCanonicalClaimSurface($code);
             }
 
             if ($voucher->isExpired()) {
-                return $this->claimEntryResponse()->error(
-                    message: 'This Pay Code has expired.',
-                    code: $code,
-                );
+                return $this->redirectToCanonicalClaimSurface($code);
             }
 
             if ($voucher->redeemed_at === null && ! $voucher->canRedeem()) {
@@ -216,24 +210,15 @@ class ClaimStartController extends Controller
         }
 
         if ($voucher->redeemed_at !== null) {
-            return $this->claimEntryResponse()->error(
-                message: 'This Pay Code has already been redeemed.',
-                code: $code,
-            );
+            return $this->redirectToCanonicalClaimSurface($code);
         }
 
         if ($this->isExhaustedDivisibleVoucher($voucher)) {
-            return $this->claimEntryResponse()->error(
-                message: 'This Pay Code has already been redeemed.',
-                code: $code,
-            );
+            return $this->redirectToCanonicalClaimSurface($code);
         }
 
         if ($voucher->isExpired()) {
-            return $this->claimEntryResponse()->error(
-                message: 'This Pay Code has expired.',
-                code: $code,
-            );
+            return $this->redirectToCanonicalClaimSurface($code);
         }
 
         $compiledFlow = $this->claimFlowCompiler->compile($voucher, $authenticatedMobile);
@@ -462,6 +447,11 @@ class ClaimStartController extends Controller
     private function claimEntryResponse(): ClaimEntryResponseFactory
     {
         return app(ClaimEntryResponseFactory::class);
+    }
+
+    private function redirectToCanonicalClaimSurface(string $code): RedirectResponse
+    {
+        return redirect()->route('x-change.claim.show', ['code' => $code]);
     }
 
     protected function normalizedOnboardingReference(mixed $reference): ?string
