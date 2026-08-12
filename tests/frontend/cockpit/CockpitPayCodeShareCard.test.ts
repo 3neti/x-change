@@ -307,6 +307,22 @@ describe('CockpitPayCodeShareCard', () => {
         ).toBe(baseProps.claimQr);
     });
 
+    it('lays out all six share actions as three rows of two without truncating labels', () => {
+        const wrapper = mount(CockpitPayCodeShareCard, {
+            props: { ...baseProps, variant: 'compact' },
+        });
+        const actions = wrapper.get(
+            '[data-testid="cockpit-pay-code-share-actions"]',
+        );
+
+        expect(actions.classes()).toContain('grid-cols-2');
+        expect(actions.classes()).not.toContain('sm:grid-cols-3');
+        expect(actions.findAll('button, a')).toHaveLength(6);
+        expect(actions.text()).toContain('Copy Link');
+        expect(actions.text()).toContain('Download QR');
+        expect(actions.html()).not.toContain('truncate');
+    });
+
     it('shows optional safe context text without embedding it into the share message', async () => {
         const nativeShare = vi.fn().mockResolvedValue(undefined);
 

@@ -229,7 +229,10 @@ async function copyClaimLink(): Promise<void> {
             Share
         </button>
 
-        <div class="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
+        <div
+            class="grid min-w-0 grid-cols-2 gap-2"
+            data-testid="cockpit-pay-code-share-actions"
+        >
             <button
                 type="button"
                 class="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:text-emerald-300"
@@ -242,7 +245,7 @@ async function copyClaimLink(): Promise<void> {
                     aria-hidden="true"
                 />
                 <Copy v-else class="size-4 shrink-0" aria-hidden="true" />
-                <span class="truncate">{{
+                <span class="text-center leading-4">{{
                     copyState === 'copied' ? 'Copied' : 'Copy Link'
                 }}</span>
             </button>
@@ -252,7 +255,7 @@ async function copyClaimLink(): Promise<void> {
                 data-testid="cockpit-pay-code-share-sms"
             >
                 <Smartphone class="size-4 shrink-0" aria-hidden="true" />
-                <span class="truncate">SMS</span>
+                <span class="text-center leading-4">SMS</span>
             </a>
             <a
                 :href="emailUrl"
@@ -260,7 +263,7 @@ async function copyClaimLink(): Promise<void> {
                 data-testid="cockpit-pay-code-share-email"
             >
                 <Mail class="size-4 shrink-0" aria-hidden="true" />
-                <span class="truncate">Email</span>
+                <span class="text-center leading-4">Email</span>
             </a>
             <a
                 :href="whatsappUrl"
@@ -270,7 +273,7 @@ async function copyClaimLink(): Promise<void> {
                 data-testid="cockpit-pay-code-share-whatsapp"
             >
                 <MessageCircle class="size-4 shrink-0" aria-hidden="true" />
-                <span class="truncate">WhatsApp</span>
+                <span class="text-center leading-4">WhatsApp</span>
             </a>
             <a
                 :href="facebookUrl"
@@ -280,7 +283,7 @@ async function copyClaimLink(): Promise<void> {
                 data-testid="cockpit-pay-code-share-facebook"
             >
                 <Facebook class="size-4 shrink-0" aria-hidden="true" />
-                <span class="truncate">Facebook</span>
+                <span class="text-center leading-4">Facebook</span>
             </a>
             <a
                 v-if="normalizedClaimQr"
@@ -290,7 +293,7 @@ async function copyClaimLink(): Promise<void> {
                 data-testid="cockpit-pay-code-share-download"
             >
                 <Download class="size-4 shrink-0" aria-hidden="true" />
-                <span class="truncate">Download QR</span>
+                <span class="text-center leading-4">Download QR</span>
             </a>
         </div>
 
