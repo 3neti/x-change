@@ -149,6 +149,42 @@ vi.mock('lucide-vue-next', () => ({
     AlertCircle: {
         template: '<span />',
     },
+    CheckCircle2: {
+        template: '<span />',
+    },
+    Clock: {
+        template: '<span />',
+    },
+    HelpCircle: {
+        template: '<span />',
+    },
+    XCircle: {
+        template: '<span />',
+    },
+    Camera: {
+        template: '<span />',
+    },
+    IdCard: {
+        template: '<span />',
+    },
+    KeyRound: {
+        template: '<span />',
+    },
+    MapPin: {
+        template: '<span />',
+    },
+    PenLine: {
+        template: '<span />',
+    },
+    ShieldCheck: {
+        template: '<span />',
+    },
+    Smartphone: {
+        template: '<span />',
+    },
+    Wallet: {
+        template: '<span />',
+    },
 }));
 
 describe('ClaimWidget compiled form flow rendering', () => {

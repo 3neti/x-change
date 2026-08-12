@@ -4,6 +4,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-vue-next';
+import {
+    resolveXRayRequirementViewModel,
+    resolveXRayStatusViewModel,
+} from '@/components/x-change/xrayClaimPreviewViewModel';
 
 interface XRayDisclosure {
     key: string;
@@ -42,28 +46,31 @@ const props = defineProps<{
     error?: string | null;
 }>();
 
-const statusLabel = computed(() => {
-    const status = props.result?.status || 'unknown';
+// This is the redeemer-facing "Pay Code preview" panel. It is presentational
+// only: the underlying x-ray disclosure policy already decided what this
+// viewer is allowed to see (see DefaultXRayDisclosurePolicy). This component
+// never adds, infers, or re-derives hidden data -- it only makes what was
+// already disclosed easier to scan.
+const status = computed(() =>
+    resolveXRayStatusViewModel({
+        status: props.result?.status,
+        visible: props.result?.visible,
+    }),
+);
 
-    return String(status)
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (character) => character.toUpperCase());
-});
+const requirements = computed(() =>
+    (props.result?.requirements ?? []).map(resolveXRayRequirementViewModel),
+);
 
-const badgeVariant = computed(() => {
-    switch (props.result?.status) {
-        case 'claimable':
-        case 'partially_claimable':
-            return 'default';
-        case 'redeemed':
-        case 'expired':
-        case 'hidden':
-        case 'not_found':
-            return 'destructive';
-        default:
-            return 'secondary';
-    }
-});
+// Anything disclosed besides the status itself (e.g. amount/issuer for a
+// non-guest audience). Guests typically see nothing here, since the status
+// is already shown in the friendly header above.
+const extraDisclosures = computed(() =>
+    (props.result?.disclosures ?? []).filter((item) => item.key !== 'status'),
+);
+
+const stages = computed(() => props.result?.stages ?? []);
+const hasRedactions = computed(() => Boolean(props.result?.redactions?.length));
 
 function stageText(stage: XRayStage): string {
     const payload = stage.payload ?? {};
@@ -91,10 +98,10 @@ function stageText(stage: XRayStage): string {
 </script>
 
 <template>
-    <div class="space-y-4" data-testid="xray-claim-preview">
+    <div class="space-y-2" data-testid="xray-claim-preview">
         <Card v-if="loading">
             <CardContent class="py-6 text-center text-sm text-muted-foreground">
-                Inspecting Pay Code...
+                Checking Pay Code...
             </CardContent>
         </Card>
 
@@ -107,89 +114,102 @@ function stageText(stage: XRayStage): string {
 
         <template v-else-if="result">
             <Card>
-                <CardContent class="space-y-3 py-4">
+                <CardContent class="space-y-4 py-4">
+                    <!-- Status -->
                     <div class="flex items-center justify-between gap-3">
-                        <h3
-                            class="flex items-center gap-2 text-base font-medium"
-                        >
-                            Pay Code x-ray
-                        </h3>
-                        <Badge :variant="badgeVariant">
-                            {{ statusLabel }}
+                        <div class="flex min-w-0 items-center gap-2">
+                            <component
+                                :is="status.icon"
+                                class="h-4 w-4 shrink-0 text-muted-foreground"
+                                aria-hidden="true"
+                            />
+                            <p
+                                class="truncate text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+                            >
+                                Pay Code preview
+                            </p>
+                        </div>
+                        <Badge :variant="status.badgeVariant" class="shrink-0">
+                            {{ status.label }}
                         </Badge>
                     </div>
-                    <p class="text-sm text-muted-foreground">
-                        {{
-                            result.visible
-                                ? 'This Pay Code can be inspected under the current disclosure policy.'
-                                : 'Details are hidden or unavailable for this viewer.'
-                        }}
-                    </p>
-                </CardContent>
-
-                <CardContent
-                    v-if="result.disclosures?.length"
-                    class="space-y-3"
-                >
-                    <div
-                        v-for="item in result.disclosures"
-                        :key="item.key"
-                        class="flex items-center justify-between gap-4 rounded-lg border bg-muted/20 p-3 text-sm"
+                    <p
+                        v-if="status.description"
+                        class="text-sm text-foreground"
+                        data-testid="xray-status-description"
                     >
-                        <span class="text-muted-foreground">
-                            {{ item.label || item.key }}
-                        </span>
-                        <span class="text-right font-medium">
-                            {{ item.value }}
-                        </span>
-                    </div>
-                </CardContent>
-            </Card>
+                        {{ status.description }}
+                    </p>
 
-            <Card v-if="result.requirements?.length">
-                <CardContent class="space-y-4 py-4">
-                    <h3 class="text-base font-medium">Claim requirements</h3>
-                    <ul class="space-y-3">
-                        <li
-                            v-for="item in result.requirements"
+                    <!-- Other disclosed details (non-guest audiences only) -->
+                    <div v-if="extraDisclosures.length" class="space-y-2">
+                        <div
+                            v-for="item in extraDisclosures"
                             :key="item.key"
-                            class="rounded-lg border bg-background p-3"
+                            class="flex items-center justify-between gap-4 text-sm"
                         >
-                            <p class="text-sm font-medium">
+                            <span class="text-muted-foreground">
                                 {{ item.label || item.key }}
-                            </p>
-                            <p
-                                v-if="item.description"
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                {{ item.description }}
-                            </p>
-                        </li>
-                    </ul>
-                </CardContent>
-            </Card>
+                            </span>
+                            <span class="text-right font-medium">
+                                {{ item.value }}
+                            </span>
+                        </div>
+                    </div>
 
-            <Card v-if="result.stages?.length">
-                <CardContent class="space-y-3">
-                    <h3 class="text-base font-medium">Issuer preview</h3>
-                    <div
-                        v-for="(stage, index) in result.stages"
-                        :key="stage.key || index"
-                        class="rounded-lg border bg-primary/5 p-3 text-sm"
-                    >
-                        {{ stageText(stage) }}
+                    <!-- Requirements -->
+                    <div v-if="requirements.length" class="space-y-2">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+                        >
+                            What you'll need
+                        </p>
+                        <ul class="flex flex-wrap gap-2">
+                            <li
+                                v-for="item in requirements"
+                                :key="item.key"
+                                class="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-muted/30 px-3 py-1 text-xs font-medium text-foreground"
+                                :title="item.description || undefined"
+                            >
+                                <component
+                                    :is="item.icon"
+                                    v-if="item.icon"
+                                    class="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <span class="truncate">{{ item.label }}</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Issuer preview -->
+                    <div v-if="stages.length" class="space-y-2">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+                        >
+                            Note from the issuer
+                        </p>
+                        <div
+                            v-for="(stage, index) in stages"
+                            :key="stage.key || index"
+                            class="rounded-lg border bg-primary/5 p-3 text-sm text-foreground"
+                        >
+                            {{ stageText(stage) }}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card v-if="result.redactions?.length">
-                <CardContent class="py-4">
-                    <p class="text-sm text-muted-foreground">
-                        Some Pay Code details are intentionally hidden for this
-                        viewer.
-                    </p>
-                </CardContent>
-            </Card>
+            <!-- Quiet, non-alarming redaction footer. No card, no warning
+                 icon -- just enough context for a curious redeemer. -->
+            <p
+                v-if="hasRedactions"
+                class="px-1 text-center text-[11px] text-muted-foreground/70"
+                data-testid="xray-redaction-footer"
+            >
+                Private issuer and payout details are protected until they are
+                needed.
+            </p>
         </template>
     </div>
 </template>

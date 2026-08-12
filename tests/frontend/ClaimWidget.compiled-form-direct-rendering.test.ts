@@ -145,6 +145,42 @@ vi.mock('lucide-vue-next', () => ({
     AlertCircle: {
         template: '<span data-testid="alert-circle" />',
     },
+    CheckCircle2: {
+        template: '<span />',
+    },
+    Clock: {
+        template: '<span />',
+    },
+    HelpCircle: {
+        template: '<span />',
+    },
+    XCircle: {
+        template: '<span />',
+    },
+    Camera: {
+        template: '<span />',
+    },
+    IdCard: {
+        template: '<span />',
+    },
+    KeyRound: {
+        template: '<span />',
+    },
+    MapPin: {
+        template: '<span />',
+    },
+    PenLine: {
+        template: '<span />',
+    },
+    ShieldCheck: {
+        template: '<span />',
+    },
+    Smartphone: {
+        template: '<span />',
+    },
+    Wallet: {
+        template: '<span />',
+    },
 }));
 
 vi.mock('@/components/x-change/FormFlowRenderer.vue', () => ({
