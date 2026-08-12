@@ -93,6 +93,9 @@ it('projects capability instructions target and timing without raw instruction p
                 'required' => true,
             ],
         ],
+        'inputs' => [
+            'fields' => ['mobile', 'email', 'name', 'otp', 'selfie'],
+        ],
     ]));
 
     $record = collect(app(VoucherLifecycleServiceContract::class)->list([
@@ -111,7 +114,11 @@ it('projects capability instructions target and timing without raw instruction p
         'instruction_badges' => [
             ['key' => 'vendor_bound', 'label' => 'Vendor-bound'],
             ['key' => 'settlement_rail', 'label' => 'InstaPay'],
+            ['key' => 'input_mobile', 'label' => 'Mobile'],
+            ['key' => 'input_email', 'label' => 'Email'],
+            ['key' => 'input_name', 'label' => 'Name'],
             ['key' => 'otp', 'label' => 'OTP'],
+            ['key' => 'selfie', 'label' => 'Selfie'],
         ],
         'party' => [
             'state' => 'targeted',
@@ -122,5 +129,7 @@ it('projects capability instructions target and timing without raw instruction p
         ],
     ])
         ->and($record['timing']['created_at'])->not->toBeNull()
+        ->and(collect($record['instruction_badges'])->pluck('label')->duplicates())->toBeEmpty()
+        ->and(collect($record['instruction_badges'])->pluck('label'))->not->toContain('Inputs · 5')
         ->and($record)->not->toHaveKey('instructions');
 });

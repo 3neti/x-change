@@ -694,7 +694,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(amount.classes()).toContain('text-right');
         expect(instructions.text()).toContain('Mobile-bound');
         expect(instructions.text()).toContain('InstaPay');
-        expect(instructions.text()).toContain('+1');
+        expect(instructions.text()).toContain('OTP');
+        expect(instructions.text()).toContain('Signature');
+        expect(instructions.text()).not.toContain('+1');
         expect(party.text()).toContain('Claimed by');
         expect(party.text()).toContain('Leslie Chong');
         expect(party.text()).toContain('•••• 4567');
@@ -893,7 +895,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(identity.find('p').classes()).toContain('font-semibold');
         expect(instructions.text()).toContain('Mobile-bound');
         expect(instructions.text()).toContain('InstaPay');
-        expect(instructions.text()).toContain('+1');
+        expect(instructions.text()).toContain('OTP');
+        expect(instructions.text()).toContain('Signature');
+        expect(instructions.text()).not.toContain('+1');
         expect(party.text()).toContain('Claimed by');
         expect(party.text()).toContain('Leslie Chong');
         expect(party.text()).toContain('•••• 4567');
