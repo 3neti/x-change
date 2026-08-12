@@ -146,6 +146,8 @@ use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
+use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceResolverContract;
+use LBHurtado\XChange\Contracts\Claim\ClaimViewerResolverContract;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
@@ -282,7 +284,9 @@ use LBHurtado\XChange\Services\Campaigns\NetbankCampaignBankTransferDispatcher;
 use LBHurtado\XChange\Services\Campaigns\NetbankCampaignBankTransferStatusChecker;
 use LBHurtado\XChange\Services\Campaigns\NullCampaignBankTransferDispatcher;
 use LBHurtado\XChange\Services\Campaigns\NullCampaignBankTransferStatusChecker;
+use LBHurtado\XChange\Services\Claim\ClaimViewerResolver;
 use LBHurtado\XChange\Services\Claim\DefaultClaimShareCardUrlResolver;
+use LBHurtado\XChange\Services\Claim\DefaultClaimSurfaceResolver;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderSplashArtworkSnapshotter;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampArtifactStore;
@@ -908,6 +912,8 @@ class XChangeServiceProvider extends ServiceProvider
             DefaultVoucherOperationalStatusResolver::class,
         );
         $this->app->bind(VoucherLifecycleServiceContract::class, VoucherLifecycleService::class);
+        $this->app->bind(ClaimViewerResolverContract::class, ClaimViewerResolver::class);
+        $this->app->bind(ClaimSurfaceResolverContract::class, DefaultClaimSurfaceResolver::class);
 
         $this->app->bind(ReconciliationLifecycleServiceContract::class, ReconciliationLifecycleService::class);
 

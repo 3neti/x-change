@@ -145,6 +145,15 @@ vi.mock('lucide-vue-next', () => ({
     AlertCircle: {
         template: '<span data-testid="alert-circle" />',
     },
+    AlertTriangle: {
+        template: '<span />',
+    },
+    Ban: {
+        template: '<span />',
+    },
+    CalendarClock: {
+        template: '<span />',
+    },
     CheckCircle2: {
         template: '<span />',
     },
@@ -152,6 +161,9 @@ vi.mock('lucide-vue-next', () => ({
         template: '<span />',
     },
     HelpCircle: {
+        template: '<span />',
+    },
+    Lock: {
         template: '<span />',
     },
     XCircle: {
@@ -172,10 +184,16 @@ vi.mock('lucide-vue-next', () => ({
     PenLine: {
         template: '<span />',
     },
+    ShieldAlert: {
+        template: '<span />',
+    },
     ShieldCheck: {
         template: '<span />',
     },
     Smartphone: {
+        template: '<span />',
+    },
+    User: {
         template: '<span />',
     },
     Wallet: {

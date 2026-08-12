@@ -22,6 +22,7 @@ const props = defineProps<{
     initial_code?: string | null;
     claim_experience?: Record<string, unknown> | null;
     provisioning_requirement?: ProvisioningRequirement | null;
+    claim_surface?: Record<string, unknown> | null;
 }>();
 
 const compiledFormSubmitted = ref(false);
@@ -87,6 +88,7 @@ function resetCompiledFormSubmitState(): void {
                 v-if="!hasProvisioningRequirement"
                 :initial-code="initial_code"
                 :claim-experience="claim_experience"
+                :claim-surface="claim_surface"
                 :compiled-form-submitted="compiledFormSubmitted"
                 :compiled-form-submit-error="compiledFormSubmitError"
                 @update:compiled-form-values="resetCompiledFormSubmitState"

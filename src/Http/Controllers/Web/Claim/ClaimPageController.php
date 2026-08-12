@@ -11,10 +11,12 @@ use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Actions\Claim\ValidateCompiledClaimVoucher;
+use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceResolverContract;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Data\Claim\ClaimSurfaceData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
@@ -31,6 +33,7 @@ class ClaimPageController extends Controller
         ClaimShareMetadataResolverContract $shareMetadata,
         ClaimShareCardUrlResolverContract $shareCardUrls,
         ClaimEntryResponseFactory $responses,
+        ClaimSurfaceResolverContract $claimSurfaces,
     ): Response|RedirectResponse {
         $code = strtoupper(trim($code));
         $voucher = Voucher::query()->where('code', $code)->first();
@@ -71,15 +74,46 @@ class ClaimPageController extends Controller
             }
         }
 
+        // Viewer-aware claim surface: this is the only place that decides
+        // what this specific visitor is allowed to see. An issuer opening
+        // their own already-claimed Pay Code always gets the issuer
+        // console, bypassing the redeemer-oriented voucher validator
+        // entirely (a claimed/terminal voucher is exactly what they came to
+        // review). Every other viewer still goes through the existing
+        // validator; the calm outcome panel (instead of the old hard error
+        // page) is only used once we've confirmed via the same operational
+        // status resolver that the voucher's state is genuinely terminal --
+        // any other validator rejection keeps the pre-existing error page.
+        $surface = $claimSurfaces->resolve($voucher, $request->user());
+
+        if ($surface->visibility === 'issuer_console') {
+            return $this->renderEntry($responses, $shareMetadata, $shareCardUrls, $voucher, $code, $surface);
+        }
+
         $message = $validator->handle($voucher);
 
         if ($message !== null) {
+            if ($surface->state->terminal) {
+                return $this->renderEntry($responses, $shareMetadata, $shareCardUrls, $voucher, $code, $surface);
+            }
+
             return $responses->error(
                 message: $message,
                 code: $code,
             );
         }
 
+        return $this->renderEntry($responses, $shareMetadata, $shareCardUrls, $voucher, $code, $surface);
+    }
+
+    private function renderEntry(
+        ClaimEntryResponseFactory $responses,
+        ClaimShareMetadataResolverContract $shareMetadata,
+        ClaimShareCardUrlResolverContract $shareCardUrls,
+        Voucher $voucher,
+        string $code,
+        ClaimSurfaceData $surface,
+    ): Response {
         return $responses->render(
             initialCode: $code,
             claimExperience: ResolveClaimExperience::run($voucher)->toArray(),
@@ -89,6 +123,7 @@ class ClaimPageController extends Controller
                 route('x-change.claim.show', ['code' => $voucher->code]),
                 $shareCardUrls->resolve($voucher),
             ),
+            claimSurface: $surface,
         );
     }
 }

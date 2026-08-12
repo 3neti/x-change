@@ -9,6 +9,8 @@ import { Spinner } from '@/components/ui/spinner';
 import VoucherStatusStamp from '@/components/x-change/VoucherStatusStamp.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import XRayClaimPreview from '@/components/x-change/XRayClaimPreview.vue';
+import ClaimSurfaceRenderer from '@/components/x-change/ClaimSurfaceRenderer.vue';
+import type { ClaimSurfaceLike } from '@/components/x-change/ClaimSurfaceRenderer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
 import { initializeTheme } from '@/composables/useTheme';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
@@ -33,6 +35,7 @@ initializeTheme();
 interface Props {
     initialCode?: string | null;
     claimExperience?: Record<string, unknown> | null;
+    claimSurface?: ClaimSurfaceLike | null;
     compiledFormSubmitted?: boolean;
     compiledFormSubmitError?: string | null;
 }
@@ -92,6 +95,31 @@ const currentClaimExperience = computed(() => {
 });
 
 const isReturningRedeemer = computed(() => isReturningRedeemerFromStorage());
+
+// A resolved `claimSurface` is only trustworthy for the exact code it was
+// server-resolved for (the initial code) -- once the visitor types a
+// different code, this component's own client-side preview fetch (below)
+// takes over instead.
+const activeClaimSurface = computed<ClaimSurfaceLike | null>(() =>
+    props.claimSurface && normalizedCode.value === normalizedInitialCode.value
+        ? props.claimSurface
+        : null,
+);
+
+const showIssuerConsole = computed(
+    () => activeClaimSurface.value?.visibility === 'issuer_console',
+);
+
+// The calm outcome panel replaces the old client-fetched
+// `VoucherStatusStamp` block whenever the server already resolved a
+// terminal surface for this code -- avoids rendering both at once.
+const showSurfaceOutcome = computed(
+    () => !showIssuerConsole.value && Boolean(activeClaimSurface.value?.state?.terminal),
+);
+
+const surfaceTakesOver = computed(
+    () => showIssuerConsole.value || showSurfaceOutcome.value,
+);
 
 const riderStages = computed<RawRiderStage[]>(() =>
     resolveLegacyRiderStages(
@@ -376,14 +404,26 @@ watch(
 
 <template>
     <div class="flex flex-col gap-6">
+        <!-- Viewer-aware claim surface: issuer console takes over entirely
+             once the backend has resolved the visitor as the issuer of an
+             already-claimed Pay Code. -->
+        <ClaimSurfaceRenderer
+            v-if="showIssuerConsole"
+            :surface="activeClaimSurface"
+            data-testid="claim-widget-surface-region"
+        />
+
         <!-- Title -->
-        <div v-if="!previewViewModel.isNonActive" class="space-y-2 text-center">
+        <div
+            v-if="!previewViewModel.isNonActive && !surfaceTakesOver"
+            class="space-y-2 text-center"
+        >
             <h1 class="text-xl font-medium">Claim Pay Code</h1>
         </div>
 
         <!-- Form -->
         <form
-            v-if="!previewViewModel.isNonActive"
+            v-if="!previewViewModel.isNonActive && !surfaceTakesOver"
             @submit.prevent="submitClaim"
             class="space-y-6"
         >
@@ -429,9 +469,15 @@ watch(
             />
         </form>
 
+        <ClaimSurfaceRenderer
+            v-if="showSurfaceOutcome"
+            :surface="activeClaimSurface"
+            data-testid="claim-widget-surface-region"
+        />
+
         <!-- Voucher Preview -->
         <div
-            v-if="showPreview"
+            v-if="showPreview && !surfaceTakesOver"
             :class="previewViewModel.isNonActive ? '' : 'mt-6'"
         >
             <!-- Loading State -->
@@ -463,7 +509,6 @@ watch(
 
             <!-- Non-Active State: Stamp + Rider Content -->
             <div v-else-if="previewMode === 'non-active'" class="space-y-2.5">
-                <!-- Status Stamp -->
                 <VoucherStatusStamp
                     :status="voucherData.status as 'redeemed' | 'expired'"
                     :status-date="previewViewModel.statusDate"
