@@ -45,8 +45,8 @@ export interface XRayRequirementViewModel {
  */
 const STATUS_VIEW_MODELS: Record<string, XRayStatusViewModel> = {
     claimable: {
-        label: 'Ready to claim',
-        description: 'This Pay Code is ready to be claimed.',
+        label: 'Verified',
+        description: '',
         badgeVariant: 'default',
         icon: CheckCircle2,
     },

@@ -70,7 +70,13 @@ const extraDisclosures = computed(() =>
 );
 
 const stages = computed(() => props.result?.stages ?? []);
-const hasRedactions = computed(() => Boolean(props.result?.redactions?.length));
+const isPlainClaimable = computed(
+    () => props.result?.visible !== false && props.result?.status === 'claimable',
+);
+const headingLabel = computed(() =>
+    isPlainClaimable.value ? 'Pay Code verified' : 'Pay Code preview',
+);
+const showStatusBadge = computed(() => !isPlainClaimable.value);
 
 function stageText(stage: XRayStage): string {
     const payload = stage.payload ?? {};
@@ -126,10 +132,14 @@ function stageText(stage: XRayStage): string {
                             <p
                                 class="truncate text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
                             >
-                                Pay Code preview
+                                {{ headingLabel }}
                             </p>
                         </div>
-                        <Badge :variant="status.badgeVariant" class="shrink-0">
+                        <Badge
+                            v-if="showStatusBadge"
+                            :variant="status.badgeVariant"
+                            class="shrink-0"
+                        >
                             {{ status.label }}
                         </Badge>
                     </div>
@@ -199,17 +209,6 @@ function stageText(stage: XRayStage): string {
                     </div>
                 </CardContent>
             </Card>
-
-            <!-- Quiet, non-alarming redaction footer. No card, no warning
-                 icon -- just enough context for a curious redeemer. -->
-            <p
-                v-if="hasRedactions"
-                class="px-1 text-center text-[11px] text-muted-foreground/70"
-                data-testid="xray-redaction-footer"
-            >
-                Private issuer and payout details are protected until they are
-                needed.
-            </p>
         </template>
     </div>
 </template>

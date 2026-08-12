@@ -45,7 +45,7 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('XRayClaimPreview', () => {
-    it('renders a friendly "Pay Code preview" panel with a human status label, not the raw status string', () => {
+    it('renders a verified Pay Code panel without repeating the claim action', () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {
                 result: {
@@ -63,11 +63,9 @@ describe('XRayClaimPreview', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Pay Code preview');
-        expect(wrapper.text()).toContain('Ready to claim');
-        expect(wrapper.get('[data-testid="xray-status-description"]').text()).toBe(
-            'This Pay Code is ready to be claimed.',
-        );
+        expect(wrapper.text()).toContain('Pay Code verified');
+        expect(wrapper.text()).not.toContain('Ready to claim');
+        expect(wrapper.find('[data-testid="xray-status-description"]').exists()).toBe(false);
         // The raw status disclosure row is redundant with the friendly badge
         // above and should not be dumped verbatim.
         expect(wrapper.text()).not.toContain('claimable');
@@ -75,7 +73,7 @@ describe('XRayClaimPreview', () => {
 
     it('renders friendly status labels for every claimability state', () => {
         const cases: Array<[string, string]> = [
-            ['claimable', 'Ready to claim'],
+            ['claimable', 'Pay Code verified'],
             ['partially_claimable', 'Partially claimable'],
             ['redeemed', 'Already claimed'],
             ['expired', 'Expired'],
@@ -143,7 +141,7 @@ describe('XRayClaimPreview', () => {
         expect(wrapper.text()).toContain('Issuer preview message.');
     });
 
-    it('shows a quiet redaction footer outside of any card or alert, never a loud warning', () => {
+    it('does not render a disclosure-style redaction footer on the claim page', () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {
                 result: {
@@ -154,19 +152,9 @@ describe('XRayClaimPreview', () => {
             },
         });
 
-        const footer = wrapper.get('[data-testid="xray-redaction-footer"]');
-
-        expect(footer.text()).toBe(
-            'Private issuer and payout details are protected until they are needed.',
-        );
-        expect(footer.text().toLowerCase()).not.toContain('warning');
-        expect(footer.text().toLowerCase()).not.toContain('hidden');
-
-        // The footer must not be nested inside any Card/Alert -- it should
-        // read as a small aside, not a prominent notice.
-        for (const card of wrapper.findAll('[data-testid="card"]')) {
-            expect(card.text()).not.toContain('Private issuer');
-        }
+        expect(wrapper.find('[data-testid="xray-redaction-footer"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Private issuer');
+        expect(wrapper.text()).not.toContain('protected until they are needed');
         expect(wrapper.find('[data-testid="alert"]').exists()).toBe(false);
     });
 
