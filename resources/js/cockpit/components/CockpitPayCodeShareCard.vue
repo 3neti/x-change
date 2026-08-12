@@ -172,7 +172,8 @@ async function copyClaimLink(): Promise<void> {
     >
         <div
             class="grid min-w-0 gap-4"
-            :class="isProminent ? 'sm:grid-cols-[auto,minmax(0,1fr)] sm:items-start' : ''"
+            :class="isProminent ? 'sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start' : ''"
+            data-testid="cockpit-pay-code-share-lead"
         >
             <div
                 v-if="isProminent && normalizedClaimQr"

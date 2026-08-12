@@ -265,6 +265,11 @@ describe('CockpitPayCodeShareCard', () => {
         expect(card.classes()).toContain('grid');
         expect(
             wrapper
+                .get('[data-testid="cockpit-pay-code-share-lead"]')
+                .classes(),
+        ).toContain('sm:grid-cols-[auto_minmax(0,1fr)]');
+        expect(
+            wrapper
                 .get('[data-testid="cockpit-pay-code-share-code"]')
                 .classes(),
         ).toContain('break-all');
