@@ -87,6 +87,66 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         ).toContain('Issue Invitation');
     });
 
+    it('keeps the ordinary Issuance entry in Pay Code mode when the last instructions were an invitation', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-12T00:00:00Z',
+                    instructions: {
+                        onboarding: true,
+                        cash: { amount: 50, currency: 'PHP' },
+                        inputs: {
+                            fields: ['name', 'email', 'mobile', 'otp'],
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-submit-button"]')
+                .text(),
+        ).toContain('Issue Pay Code');
+        expect(quickGenerateEngineeringPreview(wrapper).onboarding).toBeUndefined();
+    });
+
+    it('keeps the explicit invitation entry in Invitation mode when the last instructions were an ordinary Pay Code', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                onboardingPreset: true,
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-12T00:00:00Z',
+                    instructions: {
+                        cash: { amount: 50, currency: 'PHP' },
+                        inputs: { fields: ['mobile'] },
+                    },
+                },
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-submit-button"]')
+                .text(),
+        ).toContain('Issue Invitation');
+        expect(quickGenerateEngineeringPreview(wrapper).onboarding).toBe(true);
+    });
+
     it('emits onboarding:true and locks name/email/mobile/otp only when Invitation mode is selected', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: { templates: cockpitQuickGenerateTemplates },

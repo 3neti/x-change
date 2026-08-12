@@ -994,6 +994,7 @@ function hydrateLastInstructions(): void {
     }
 
     applyInstructionBlueprint(instructions, true);
+    onboardingEnabled.value = props.onboardingPreset;
     startingPoint.value = 'last';
     activeSavedTemplate.value = savedTemplateRecordedBy(instructions);
     lastStatus.value = 'ready';
