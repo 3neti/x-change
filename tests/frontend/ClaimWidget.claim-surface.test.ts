@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { nextTick } from 'vue';
+import { nextTick, type Ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
 
@@ -28,6 +28,7 @@ vi.mock('@inertiajs/vue3', () => ({
 // mount -- `code` starts out equal to `initialCode` (ClaimWidget seeds it on
 // mount), so divergence can only be observed by mutating this ref later.
 let capturedCodeRef: { value: string } | null = null;
+let capturedVoucherDataRef: Ref<Record<string, unknown> | null> | null = null;
 
 vi.mock('@/composables/useVoucherPreview', async () => {
     const { ref } = await vi.importActual<typeof import('vue')>('vue');
@@ -35,18 +36,20 @@ vi.mock('@/composables/useVoucherPreview', async () => {
     return {
         useVoucherPreview: () => {
             const codeRef = ref('TEST123');
+            const voucherDataRef = ref<Record<string, unknown> | null>({
+                code: 'TEST123',
+                status: 'active',
+                instructions: {},
+                rider: { stages: { stages: [] } },
+            });
             capturedCodeRef = codeRef;
+            capturedVoucherDataRef = voucherDataRef;
 
             return {
                 code: codeRef,
                 loading: ref(false),
                 error: ref(null),
-                voucherData: ref({
-                    code: 'TEST123',
-                    status: 'active',
-                    instructions: {},
-                    rider: { stages: { stages: [] } },
-                }),
+                voucherData: voucherDataRef,
                 showPreview: ref(true),
             };
         },
@@ -306,8 +309,8 @@ describe('ClaimWidget claim surface gating', () => {
         expect(wrapper.find('[data-testid="claim-widget-surface-region"]').exists()).toBe(false);
     });
 
-    it('canonicalizes a typed code before starting the claim flow', async () => {
-        const wrapper = mount(ClaimWidget, {
+    it('canonicalizes a resolved typed code without waiting for Start Claim', async () => {
+        mount(ClaimWidget, {
             props: {
                 initialCode: null,
                 claimExperience: null,
@@ -318,11 +321,18 @@ describe('ClaimWidget claim surface gating', () => {
         capturedCodeRef!.value = '82b6';
         await nextTick();
 
-        await wrapper.find('form').trigger('submit');
+        capturedVoucherDataRef!.value = {
+            code: '82B6',
+            status: 'redeemed',
+            instructions: {},
+            rider: { stages: { stages: [] } },
+        };
+        await nextTick();
 
         expect(routerVisit).toHaveBeenCalledWith('/x/claim?code=82B6', {
             preserveScroll: true,
             preserveState: false,
+            replace: true,
         });
         expect(formPost).not.toHaveBeenCalled();
     });

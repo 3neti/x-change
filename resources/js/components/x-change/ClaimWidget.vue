@@ -78,6 +78,7 @@ const xrayResult = ref<Record<string, unknown> | null>(null);
 const xrayLoading = ref(false);
 const xrayError = ref<string | null>(null);
 let xrayAbortController: AbortController | null = null;
+const canonicalizingCode = ref<string | null>(null);
 
 const normalizedCode = computed(() => code.value.trim().toUpperCase());
 const normalizedInitialCode = computed(() =>
@@ -134,18 +135,29 @@ function submit() {
         return;
     }
 
-    if (claimCode !== normalizedInitialCode.value) {
-        router.visit(routes.claim.startWithCode(claimCode), {
-            preserveScroll: true,
-            preserveState: false,
-        });
-
-        return;
-    }
-
     submitLegacyClaimStart(form, code.value, (claimCode) =>
         startClaimFlow.url(claimCode),
     );
+}
+
+function canonicalizeResolvedClaimCode(voucherCode: string): void {
+    const claimCode = voucherCode.trim().toUpperCase();
+
+    if (
+        claimCode.length < 4 ||
+        claimCode === normalizedInitialCode.value ||
+        canonicalizingCode.value === claimCode
+    ) {
+        return;
+    }
+
+    canonicalizingCode.value = claimCode;
+
+    router.visit(routes.claim.startWithCode(claimCode), {
+        preserveScroll: true,
+        preserveState: false,
+        replace: true,
+    });
 }
 
 const experienceStages = computed(() =>
@@ -402,6 +414,8 @@ watch(
 
             return;
         }
+
+        canonicalizeResolvedClaimCode(voucherCode);
 
         if (voucher.status === 'redeemed' || voucher.status === 'expired') {
             reactiveClaimExperience.value = null;
