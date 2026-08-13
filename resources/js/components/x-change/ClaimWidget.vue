@@ -15,7 +15,7 @@ import type { RawRiderStage } from '@/components/x-rider/types';
 import { initializeTheme } from '@/composables/useTheme';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import { useVoucherPreview } from '@/composables/useVoucherPreview';
-import { useForm, usePage } from '@inertiajs/vue3';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 import { AlertCircle } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
 import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimWidgetExperienceStages';
@@ -128,6 +128,21 @@ const riderStages = computed<RawRiderStage[]>(() =>
 );
 
 function submit() {
+    const claimCode = normalizedCode.value;
+
+    if (claimCode === '') {
+        return;
+    }
+
+    if (claimCode !== normalizedInitialCode.value) {
+        router.visit(routes.claim.startWithCode(claimCode), {
+            preserveScroll: true,
+            preserveState: false,
+        });
+
+        return;
+    }
+
     submitLegacyClaimStart(form, code.value, (claimCode) =>
         startClaimFlow.url(claimCode),
     );

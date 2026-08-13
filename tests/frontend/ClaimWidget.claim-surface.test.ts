@@ -3,11 +3,19 @@ import { nextTick } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
 
+const { routerVisit, formPost } = vi.hoisted(() => ({
+    routerVisit: vi.fn(),
+    formPost: vi.fn(),
+}));
+
 vi.mock('@inertiajs/vue3', () => ({
+    router: {
+        visit: routerVisit,
+    },
     useForm: () => ({
         code: '',
         processing: false,
-        get: vi.fn(),
+        post: formPost,
     }),
     usePage: () => ({
         props: {
@@ -137,6 +145,11 @@ const terminalPublicSurface = {
 };
 
 describe('ClaimWidget claim surface gating', () => {
+    beforeEach(() => {
+        routerVisit.mockClear();
+        formPost.mockClear();
+    });
+
     it('hides the claim form and renders the issuer console when the surface resolves to issuer_console for the initial code', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
@@ -291,5 +304,26 @@ describe('ClaimWidget claim surface gating', () => {
         await nextTick();
 
         expect(wrapper.find('[data-testid="claim-widget-surface-region"]').exists()).toBe(false);
+    });
+
+    it('canonicalizes a typed code before starting the claim flow', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: null,
+                claimExperience: null,
+                claimSurface: null,
+            },
+        });
+
+        capturedCodeRef!.value = '82b6';
+        await nextTick();
+
+        await wrapper.find('form').trigger('submit');
+
+        expect(routerVisit).toHaveBeenCalledWith('/x/claim?code=82B6', {
+            preserveScroll: true,
+            preserveState: false,
+        });
+        expect(formPost).not.toHaveBeenCalled();
     });
 });
