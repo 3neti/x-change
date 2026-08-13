@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, reactive } from 'vue';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, ImageIcon, MessageSquareText, Share2 } from 'lucide-vue-next';
@@ -25,6 +25,8 @@ export interface ClaimExperienceOgMeta {
     site_name?: string | null;
     image_url?: string | null;
     image_alt?: string | null;
+    amount_label?: string | null;
+    message_preview?: string | null;
 }
 
 export interface ClaimExperienceSummaryProps {
@@ -53,6 +55,10 @@ const hasAnyExperience = computed(
 
 const messageDocument = computed(() => previewDocument(props.message?.content));
 const splashDocument = computed(() => previewDocument(props.splash?.content));
+const frameHeights = reactive({
+    message: 112,
+    splash: 288,
+});
 
 const redirectHost = computed(() => {
     const url = props.redirect?.url;
@@ -77,16 +83,45 @@ function previewDocument(content?: string | null): string {
 <base target="_blank">
 <style>
 html,body{margin:0;padding:0;background:transparent;color:#111827;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
-body{padding:12px;}
+body{padding:12px;overflow:hidden;}
 img,video,iframe{max-width:100%;height:auto;}
 *{box-sizing:border-box;}
 .preview-root{width:100%;overflow:hidden;}
+.preview-root>*:first-child{margin-top:0;}
+.preview-root>*:last-child{margin-bottom:0;}
 </style>
 </head>
 <body>
 <div class="preview-root">${content ?? ''}</div>
 </body>
 </html>`;
+}
+
+function resizeExperienceFrame(kind: 'message' | 'splash', event: Event): void {
+    const frame = event.target as HTMLIFrameElement | null;
+    const documentElement = frame?.contentDocument?.documentElement;
+    const body = frame?.contentDocument?.body;
+
+    if (!documentElement || !body) {
+        return;
+    }
+
+    const measure = (): void => {
+        frameHeights[kind] = Math.max(
+            kind === 'message' ? 112 : 288,
+            documentElement.scrollHeight,
+            body.scrollHeight,
+        );
+    };
+
+    measure();
+
+    for (const image of Array.from(body.querySelectorAll('img'))) {
+        image.addEventListener('load', measure, { once: true });
+    }
+
+    window.setTimeout(measure, 120);
+    window.setTimeout(measure, 500);
 }
 </script>
 
@@ -117,10 +152,13 @@ img,video,iframe{max-width:100%;height:auto;}
                     </div>
                     <iframe
                         title="Rider message preview"
-                        class="h-28 w-full rounded-md border border-border/60 bg-background"
+                        class="w-full rounded-md border border-border/60 bg-background"
                         data-testid="claim-experience-message"
-                        sandbox=""
+                        sandbox="allow-same-origin"
+                        scrolling="no"
+                        :style="{ height: `${frameHeights.message}px` }"
                         :srcdoc="messageDocument"
+                        @load="resizeExperienceFrame('message', $event)"
                     />
                 </CardContent>
             </Card>
@@ -141,10 +179,13 @@ img,video,iframe{max-width:100%;height:auto;}
                     </div>
                     <iframe
                         title="Rider splash preview"
-                        class="h-72 w-full rounded-md border border-border/60 bg-background"
+                        class="w-full rounded-md border border-border/60 bg-background"
                         data-testid="claim-experience-splash"
-                        sandbox=""
+                        sandbox="allow-same-origin"
+                        scrolling="no"
+                        :style="{ height: `${frameHeights.splash}px` }"
                         :srcdoc="splashDocument"
+                        @load="resizeExperienceFrame('splash', $event)"
                     />
                 </CardContent>
             </Card>
@@ -196,6 +237,12 @@ img,video,iframe{max-width:100%;height:auto;}
                                 OG preview
                             </p>
                             <p
+                                v-if="og_meta?.amount_label"
+                                class="text-sm font-semibold text-foreground"
+                            >
+                                {{ og_meta.amount_label }}
+                            </p>
+                            <p
                                 v-if="og_meta?.title"
                                 class="line-clamp-2 text-sm font-semibold text-foreground"
                             >
@@ -206,6 +253,12 @@ img,video,iframe{max-width:100%;height:auto;}
                                 class="line-clamp-2 text-xs leading-relaxed text-muted-foreground"
                             >
                                 {{ og_meta.description }}
+                            </p>
+                            <p
+                                v-if="og_meta?.message_preview"
+                                class="line-clamp-2 text-xs leading-relaxed text-muted-foreground"
+                            >
+                                {{ og_meta.message_preview }}
                             </p>
                         </div>
                     </div>

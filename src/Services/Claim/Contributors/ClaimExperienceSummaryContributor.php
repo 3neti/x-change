@@ -10,6 +10,7 @@ use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceContributor;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimSurfaceContextData;
+use LBHurtado\XChange\Services\Claim\ClaimShareCardAmountFormatter;
 use LBHurtado\XChange\Services\Claim\ClaimSurfaceBuilder;
 
 /**
@@ -25,6 +26,7 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
         private readonly ResolveClaimExperience $claimExperience,
         private readonly ClaimShareMetadataResolverContract $shareMetadata,
         private readonly ClaimShareCardUrlResolverContract $shareCardUrls,
+        private readonly ClaimShareCardAmountFormatter $amounts,
     ) {}
 
     public function contribute(ClaimSurfaceBuilder $surface, ClaimSurfaceContextData $context): void
@@ -75,7 +77,7 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
                 'delay_seconds' => data_get($redirect, 'delay_seconds'),
                 'show_countdown' => (bool) data_get($redirect, 'show_countdown', false),
             ] : null,
-            'og_meta' => $this->ogMeta($context),
+            'og_meta' => $this->ogMeta($context, $messageStage),
             'options' => [
                 'static_preview' => true,
                 'disable_countdown' => true,
@@ -133,14 +135,43 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
     /**
      * @return array<string, mixed>
      */
-    private function ogMeta(ClaimSurfaceContextData $context): array
+    private function ogMeta(
+        ClaimSurfaceContextData $context,
+        ?array $messageStage,
+    ): array
     {
         $claimUrl = Route::has('x-change.claim.show')
             ? route('x-change.claim.show', ['code' => $context->code])
             : url('/x/claim/'.$context->code);
 
-        return $this->shareMetadata
+        $metadata = $this->shareMetadata
             ->resolve($context->voucher, $claimUrl, $this->shareCardUrls->resolve($context->voucher))
             ->toArray();
+
+        return [
+            ...$metadata,
+            'amount_label' => $this->amounts->format($context->voucher),
+            'message_preview' => $this->plainPreview(data_get(
+                $messageStage,
+                'payload.content',
+            ) ?? data_get($messageStage, 'content')),
+        ];
+    }
+
+    private function plainPreview(mixed $content): ?string
+    {
+        if (! is_string($content) || trim($content) === '') {
+            return null;
+        }
+
+        $preview = trim((string) preg_replace(
+            '/\s+/u',
+            ' ',
+            strip_tags($content),
+        ));
+
+        return $preview === ''
+            ? null
+            : mb_substr($preview, 0, 180);
     }
 }

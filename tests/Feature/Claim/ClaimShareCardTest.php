@@ -436,6 +436,59 @@ it('renders a validated remote Rider Splash snapshot without fetching at share t
     Http::assertSentCount(1);
 });
 
+it('falls back instead of failing when a legacy Splash artwork snapshot is missing bytes', function (): void {
+    Storage::fake('local');
+    config()->set(
+        'x-change.claim.share.splash_artwork.allowed_hosts',
+        ['raw.githubusercontent.com'],
+    );
+    $splashImage = imagecreatetruecolor(8, 8);
+    $red = imagecolorallocate($splashImage, 244, 63, 94);
+    imagefilledrectangle($splashImage, 0, 0, 8, 8, $red);
+    ob_start();
+    imagepng($splashImage);
+    $splashContents = ob_get_clean();
+    imagedestroy($splashImage);
+
+    expect($splashContents)->toBeString()->not->toBeEmpty();
+
+    Http::fake([
+        'https://raw.githubusercontent.com/example/art/main/legacy.png' => Http::response(
+            $splashContents,
+            200,
+            ['Content-Type' => 'image/png'],
+        ),
+    ]);
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'A legacy splash introduction',
+            'splash' => '<img src="https://github.com/example/art/blob/main/legacy.png?raw=true">',
+            'stamp' => [
+                'version' => 2,
+                'source' => 'splash',
+                'artwork_source' => 'splash',
+                'copy_source' => 'message',
+            ],
+        ],
+    ]));
+
+    $snapshot = app(RiderSplashArtworkSnapshotterContract::class)->capture($voucher);
+
+    expect($snapshot)->not->toBeNull();
+
+    Storage::disk('local')->delete(
+        'x-change/claim/splash-artwork/'.$snapshot?->sha256.'.png',
+    );
+
+    $response = $this->get(
+        route('x-change.claim.share-card', ['code' => $voucher->code]),
+    )->assertOk();
+
+    expect((string) $response->getContent())->toStartWith("\x89PNG\r\n\x1a\n");
+    Http::assertSentCount(1);
+});
+
 it('does not expose a share card for an unknown Pay Code', function (): void {
     $this->get(route('x-change.claim.share-card', ['code' => 'MISSING']))
         ->assertNotFound();

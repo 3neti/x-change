@@ -260,6 +260,8 @@ it('adds a static claim experience summary for a redeemed rider Pay Code', funct
         ->and(data_get($summary, 'props.splash.content'))->toContain('Before you claim')
         ->and(data_get($summary, 'props.redirect.url'))->toBe('https://example.test/rider')
         ->and(data_get($summary, 'props.og_meta.image_url'))->toContain('/x/claim/')
+        ->and(data_get($summary, 'props.og_meta.amount_label'))->toBe('₱100.00')
+        ->and(data_get($summary, 'props.og_meta.message_preview'))->toBe('Thank you for riding with us.')
         ->and(data_get($summary, 'props.options.static_preview'))->toBeTrue()
         ->and(data_get($summary, 'props.options.disable_auto_redirect'))->toBeTrue();
 });

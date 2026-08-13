@@ -111,7 +111,8 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
         }
 
         if (
-            $contents === ''
+            ! is_string($contents)
+            || $contents === ''
             || ! hash_equals($snapshot->sha256, hash('sha256', $contents))
         ) {
             return null;
@@ -358,7 +359,8 @@ final class DefaultRiderSplashArtworkSnapshotter implements RiderSplashArtworkSn
         $dimensions = @getimagesizefromstring($contents);
 
         if (
-            ! $this->withinByteLimit($contents)
+            ! is_string($contents)
+            || ! $this->withinByteLimit($contents)
             || ! hash_equals($snapshot->sha256, hash('sha256', $contents))
             || ! is_array($dimensions)
             || ($dimensions['mime'] ?? null) !== $snapshot->mimeType
