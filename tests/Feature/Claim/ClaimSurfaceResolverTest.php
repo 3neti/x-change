@@ -132,7 +132,8 @@ it('includes an open pay code action for a claimed Pay Code issuer view', functi
 
     expect($action)->not->toBeNull()
         ->and($action['method'])->toBe('get')
-        ->and($action['href'])->toContain($voucher->code);
+        ->and($action['href'])->toContain('/x/cockpit/pay-codes/'.$voucher->code)
+        ->and($action['href'])->not->toContain('/x/pay-codes/'.$voucher->code);
 });
 
 it('includes an approve payout action when the claim is pending issuer approval', function () {

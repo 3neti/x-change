@@ -95,11 +95,15 @@ final class IssuerClaimRequirementSummaryContributor implements ClaimSurfaceCont
 
     private function payCodeUrl(string $code): string
     {
+        if (Route::has('x-change.cockpit.pay-codes.show')) {
+            return route('x-change.cockpit.pay-codes.show', ['code' => $code]);
+        }
+
         if (Route::has('x-change.pay-codes.show')) {
             return route('x-change.pay-codes.show', ['code' => $code]);
         }
 
-        return '/x/pay-codes/'.$code;
+        return '/x/cockpit/pay-codes/'.$code;
     }
 
     private function approvalUrl(ClaimSurfaceContextData $context): string
