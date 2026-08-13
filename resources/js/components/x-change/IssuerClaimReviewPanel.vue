@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import ClaimExperienceSummary from '@/components/x-change/ClaimExperienceSummary.vue';
+import type { ClaimExperienceSummaryProps } from '@/components/x-change/ClaimExperienceSummary.vue';
 import ClaimRequirementSummary from '@/components/x-change/ClaimRequirementSummary.vue';
 import type { ClaimRequirementSummaryItem } from '@/components/x-change/ClaimRequirementSummary.vue';
 import PayCodeOutcomePanel from '@/components/x-change/PayCodeOutcomePanel.vue';
@@ -40,6 +42,7 @@ defineProps<{
     description?: string | null;
     outcomePanel?: ClaimSurfaceOutcomePanelProps | null;
     requirementItems?: ClaimRequirementSummaryItem[] | null;
+    claimExperience?: ClaimExperienceSummaryProps | null;
     payoutRoute?: ClaimSurfacePayoutRouteProps | null;
     actions?: ClaimSurfaceActionLike[];
 }>();
@@ -76,6 +79,11 @@ function actionButtonClass(variant?: string): string {
             <ClaimRequirementSummary
                 v-if="requirementItems && requirementItems.length > 0"
                 :items="requirementItems"
+            />
+
+            <ClaimExperienceSummary
+                v-if="claimExperience"
+                v-bind="claimExperience"
             />
 
             <PayoutRouteDisplay

@@ -336,4 +336,40 @@ describe('ClaimWidget claim surface gating', () => {
         });
         expect(formPost).not.toHaveBeenCalled();
     });
+
+    it('suppresses pre-claim rider playback while a typed code is canonicalizing', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: null,
+                claimExperience: null,
+                claimSurface: null,
+            },
+        });
+
+        capturedCodeRef!.value = '82b6';
+        await nextTick();
+
+        capturedVoucherDataRef!.value = {
+            code: '82B6',
+            status: 'active',
+            preview: { enabled: true },
+            instructions: {
+                rider: {
+                    splash: '<h1>Old splash should not flash</h1>',
+                    splash_timeout: 3,
+                },
+            },
+            rider: { stages: { stages: [] } },
+        };
+        await nextTick();
+
+        expect(routerVisit).toHaveBeenCalledWith('/x/claim?code=82B6', {
+            preserveScroll: true,
+            preserveState: false,
+            replace: true,
+        });
+        expect(wrapper.find('[data-testid="pre-claim-rider-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Old splash should not flash');
+    });
 });

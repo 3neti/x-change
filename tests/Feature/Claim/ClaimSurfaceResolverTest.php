@@ -231,6 +231,76 @@ it('maps a redeemed Pay Code to an outcome panel', function () {
         ->and(collect($surface->components)->pluck('type'))->toContain('outcome_panel');
 });
 
+it('adds a static claim experience summary for a redeemed rider Pay Code', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Thank you for riding with us.',
+            'url' => 'https://example.test/rider',
+            'redirect_timeout' => 5,
+            'splash' => '<h1>Before you claim</h1>',
+            'splash_timeout' => 3,
+            'og_source' => 'splash',
+            'stamp' => [
+                'version' => 2,
+                'source' => 'splash',
+                'artwork_source' => 'splash',
+                'copy_source' => 'message',
+            ],
+        ],
+    ]));
+    $voucher->forceFill(['redeemed_at' => now()])->save();
+    auth()->logout();
+
+    $surface = claimSurfaceResolver()->resolve($voucher, null);
+    $summary = collect($surface->components)->firstWhere('type', 'claim_experience_summary');
+
+    expect($summary)->not->toBeNull()
+        ->and(data_get($summary, 'props.message.content'))->toContain('Thank you for riding with us.')
+        ->and(data_get($summary, 'props.splash.content'))->toContain('Before you claim')
+        ->and(data_get($summary, 'props.redirect.url'))->toBe('https://example.test/rider')
+        ->and(data_get($summary, 'props.og_meta.image_url'))->toContain('/x/claim/')
+        ->and(data_get($summary, 'props.options.static_preview'))->toBeTrue()
+        ->and(data_get($summary, 'props.options.disable_auto_redirect'))->toBeTrue();
+});
+
+it('adds claim requirements and claim experience for the issuer review surface', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'inputs' => ['fields' => ['mobile', 'selfie', 'signature']],
+        'rider' => [
+            'message' => 'Claim complete message.',
+            'url' => 'https://example.test/after',
+            'splash' => '<section>Issuer configured splash</section>',
+        ],
+    ]));
+    recordClaimWithEvidence($voucher, ['mobile', 'selfie', 'signature']);
+
+    $surface = claimSurfaceResolver()->resolve($voucher, $issuer);
+    $componentTypes = collect($surface->components)->pluck('type');
+
+    expect($surface->visibility)->toBe('issuer_console')
+        ->and($componentTypes)->toContain('claim_requirement_summary')
+        ->and($componentTypes)->toContain('claim_experience_summary');
+});
+
+it('does not add the static claim experience summary for an active claimable Pay Code', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Claim complete message.',
+            'url' => 'https://example.test/after',
+            'splash' => '<section>Issuer configured splash</section>',
+        ],
+    ]));
+    auth()->logout();
+
+    $surface = claimSurfaceResolver()->resolve($voucher, null);
+
+    expect($surface->state->can_claim)->toBeTrue()
+        ->and(collect($surface->components)->pluck('type'))->not->toContain('claim_experience_summary');
+});
+
 it('keeps a partially claimed Pay Code with remaining balance claimable', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(1_000, 'INSTAPAY', [

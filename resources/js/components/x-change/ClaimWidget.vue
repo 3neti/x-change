@@ -122,6 +122,11 @@ const surfaceTakesOver = computed(
     () => showIssuerConsole.value || showSurfaceOutcome.value,
 );
 
+const isCanonicalizingResolvedCode = computed(() =>
+    Boolean(canonicalizingCode.value)
+    && canonicalizingCode.value !== normalizedInitialCode.value,
+);
+
 const riderStages = computed<RawRiderStage[]>(() =>
     resolveLegacyRiderStages(
         voucherData.value as Record<string, any> | null | undefined,
@@ -417,6 +422,13 @@ watch(
 
         canonicalizeResolvedClaimCode(voucherCode);
 
+        if (canonicalizingCode.value === voucherCode) {
+            reactiveClaimExperience.value = null;
+            xrayResult.value = null;
+
+            return;
+        }
+
         if (voucher.status === 'redeemed' || voucher.status === 'expired') {
             reactiveClaimExperience.value = null;
             void fetchXRay(voucherCode);
@@ -506,7 +518,7 @@ watch(
 
         <!-- Voucher Preview -->
         <div
-            v-if="showPreview && !surfaceTakesOver"
+            v-if="showPreview && !surfaceTakesOver && !isCanonicalizingResolvedCode"
             :class="previewViewModel.isNonActive ? '' : 'mt-6'"
         >
             <!-- Loading State -->
@@ -597,21 +609,21 @@ watch(
 
         <!-- Runtime Sequencer -->
         <div
-            v-if="runtimeStages.length > 0 && !surfaceTakesOver"
+            v-if="runtimeStages.length > 0 && !surfaceTakesOver && !isCanonicalizingResolvedCode"
             data-testid="claim-widget-runtime-region"
         >
             <RiderRuntimeSequencer :stages="runtimeStages" />
         </div>
 
         <div
-            v-if="redirectStages.length > 0 && !surfaceTakesOver"
+            v-if="redirectStages.length > 0 && !surfaceTakesOver && !isCanonicalizingResolvedCode"
             data-testid="claim-widget-redirect-region"
         >
             <RiderRuntimeSequencer :stages="redirectStages" />
         </div>
 
         <div
-            v-if="formFlowSection.visible && !surfaceTakesOver"
+            v-if="formFlowSection.visible && !surfaceTakesOver && !isCanonicalizingResolvedCode"
             data-testid="claim-widget-form-flow-boundary-region"
             :class="formFlowSection.className"
         >

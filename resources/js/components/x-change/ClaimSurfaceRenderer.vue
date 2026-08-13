@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import ClaimExperienceSummary from '@/components/x-change/ClaimExperienceSummary.vue';
+import type { ClaimExperienceSummaryProps } from '@/components/x-change/ClaimExperienceSummary.vue';
 import IssuerClaimReviewPanel from '@/components/x-change/IssuerClaimReviewPanel.vue';
 import PayCodeOutcomePanel from '@/components/x-change/PayCodeOutcomePanel.vue';
 import type {
@@ -54,6 +56,10 @@ const requirementSummary = computed(() => {
     return summary?.items ?? null;
 });
 
+const claimExperienceSummary = computed(() =>
+    componentProps<ClaimExperienceSummaryProps>('claim_experience_summary'),
+);
+
 const payoutRoute = computed(() =>
     componentProps<ClaimSurfacePayoutRouteProps>('payout_route'),
 );
@@ -77,6 +83,7 @@ const showOutcomeOnly = computed(
         :description="surface.description"
         :outcome-panel="outcomePanel"
         :requirement-items="requirementSummary"
+        :claim-experience="claimExperienceSummary"
         :payout-route="payoutRoute"
         :actions="surface.actions ?? []"
     />
@@ -97,6 +104,11 @@ const showOutcomeOnly = computed(
             :formatted-amount="outcomePanel.formatted_amount"
             :redeemed-at="outcomePanel.redeemed_at"
             :payout-status="outcomePanel.payout_status"
+        />
+
+        <ClaimExperienceSummary
+            v-if="claimExperienceSummary"
+            v-bind="claimExperienceSummary"
         />
     </div>
 </template>

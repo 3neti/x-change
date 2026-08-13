@@ -61,7 +61,23 @@ describe('IssuerClaimReviewPanel', () => {
         expect(wrapper.find('[data-testid="payout-route-display"]').exists()).toBe(true);
     });
 
-    it('omits the requirement summary, payout route, and actions region when none are provided', () => {
+    it('renders the claim experience summary when provided', () => {
+        const wrapper = mount(IssuerClaimReviewPanel, {
+            props: {
+                headline: 'Your Pay Code was claimed',
+                claimExperience: {
+                    message: {
+                        content: 'Claim complete message.',
+                        content_type: 'html',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="claim-experience-summary"]').exists()).toBe(true);
+    });
+
+    it('omits the requirement summary, claim experience, payout route, and actions region when none are provided', () => {
         const wrapper = mount(IssuerClaimReviewPanel, {
             props: {
                 headline: 'Your Pay Code was claimed',
@@ -69,6 +85,7 @@ describe('IssuerClaimReviewPanel', () => {
         });
 
         expect(wrapper.find('[data-testid="claim-requirement-summary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-experience-summary"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="payout-route-display"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="issuer-claim-review-panel-actions"]').exists()).toBe(false);
     });

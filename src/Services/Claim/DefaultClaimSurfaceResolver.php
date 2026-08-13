@@ -16,6 +16,7 @@ use LBHurtado\XChange\Data\Claim\ClaimSurfaceData;
 use LBHurtado\XChange\Data\Claim\ClaimSurfaceStateData;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\Contributors\BaseClaimStatusContributor;
+use LBHurtado\XChange\Services\Claim\Contributors\ClaimExperienceSummaryContributor;
 use LBHurtado\XChange\Services\Claim\Contributors\IssuerClaimRequirementSummaryContributor;
 use LBHurtado\XChange\Services\Claim\Contributors\NonActiveOutcomeContributor;
 use LBHurtado\XChange\Services\Claim\Contributors\XRayPreviewContributor;
@@ -38,6 +39,7 @@ final class DefaultClaimSurfaceResolver implements ClaimSurfaceResolverContract
         BaseClaimStatusContributor::class,
         XRayPreviewContributor::class,
         NonActiveOutcomeContributor::class,
+        ClaimExperienceSummaryContributor::class,
         IssuerClaimRequirementSummaryContributor::class,
     ];
 

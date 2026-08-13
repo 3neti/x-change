@@ -4,8 +4,15 @@ import ClaimSurfaceRenderer from '../../resources/js/components/x-change/ClaimSu
 
 vi.mock('@/components/x-change/IssuerClaimReviewPanel.vue', () => ({
     default: {
-        props: ['headline', 'description', 'outcomePanel', 'requirementItems', 'payoutRoute', 'actions'],
-        template: '<div data-testid="issuer-claim-review-panel-stub">{{ headline }}</div>',
+        props: ['headline', 'description', 'outcomePanel', 'requirementItems', 'claimExperience', 'payoutRoute', 'actions'],
+        template: '<div data-testid="issuer-claim-review-panel-stub">{{ headline }} {{ claimExperience ? "has-experience" : "" }}</div>',
+    },
+}));
+
+vi.mock('@/components/x-change/ClaimExperienceSummary.vue', () => ({
+    default: {
+        props: ['message', 'splash', 'redirect', 'ogMeta'],
+        template: '<div data-testid="claim-experience-summary-stub">Claim Experience</div>',
     },
 }));
 
@@ -51,6 +58,7 @@ describe('ClaimSurfaceRenderer', () => {
                     state: { terminal: true },
                     components: [
                         { type: 'outcome_panel', props: { status_key: 'redeemed', status_label: 'Already claimed' } },
+                        { type: 'claim_experience_summary', props: { message: { content: 'Thanks' } } },
                     ],
                     actions: [],
                 },
@@ -60,6 +68,7 @@ describe('ClaimSurfaceRenderer', () => {
         expect(wrapper.find('[data-testid="claim-surface-outcome"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Already claimed');
         expect(wrapper.find('[data-testid="pay-code-outcome-panel-stub"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-experience-summary-stub"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="issuer-claim-review-panel-stub"]').exists()).toBe(false);
     });
 
@@ -72,6 +81,7 @@ describe('ClaimSurfaceRenderer', () => {
                     state: { terminal: false },
                     components: [
                         { type: 'claim_requirement_summary', props: { items: [] } },
+                        { type: 'claim_experience_summary', props: { message: { content: 'Thanks' } } },
                     ],
                     actions: [{ key: 'open_pay_code', label: 'Open Pay Code', href: '/x/pay-codes/ABC123' }],
                 },
@@ -79,6 +89,7 @@ describe('ClaimSurfaceRenderer', () => {
         });
 
         expect(wrapper.find('[data-testid="issuer-claim-review-panel-stub"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('has-experience');
         expect(wrapper.find('[data-testid="claim-surface-outcome"]').exists()).toBe(false);
     });
 });
