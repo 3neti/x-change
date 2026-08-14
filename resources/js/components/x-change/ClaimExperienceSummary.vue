@@ -89,6 +89,35 @@ img,video,iframe{max-width:100%;height:auto;}
 .preview-root{width:100%;overflow:hidden;}
 .preview-root>*:first-child{margin-top:0;}
 .preview-root>*:last-child{margin-bottom:0;}
+.relative{position:relative;}
+.absolute{position:absolute;}
+.inset-0{inset:0;}
+.pointer-events-none{pointer-events:none;}
+.mx-auto{margin-left:auto;margin-right:auto;}
+.text-center{text-align:center;}
+.text-right{text-align:right;}
+.overflow-hidden{overflow:hidden;}
+.bg-black{background:#000;}
+.rounded-lg{border-radius:0.5rem;}
+.shadow-lg{box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);}
+.flex{display:flex;}
+.items-center{align-items:center;}
+.justify-end{justify-content:flex-end;}
+.text-white{color:#fff;}
+.font-serif{font-family:ui-serif,Georgia,Cambria,"Times New Roman",Times,serif;}
+.font-normal{font-weight:400;}
+.italic{font-style:italic;}
+.tracking-wide{letter-spacing:.025em;}
+.tracking-widest{letter-spacing:.1em;}
+.mb-3{margin-bottom:.75rem;}
+.mb-8{margin-bottom:2rem;}
+.text-xs{font-size:.75rem;line-height:1rem;}
+.text-sm{font-size:.875rem;line-height:1.25rem;}
+.text-lg{font-size:1.125rem;line-height:1.75rem;}
+.text-2xl{font-size:1.5rem;line-height:2rem;}
+.preview-root h1,.preview-root h2,.preview-root h3,.preview-root p{margin-top:0;}
+.preview-root .relative>img:first-child{display:block;width:100%;}
+@media (min-width:640px){.sm\\:text-sm{font-size:.875rem;line-height:1.25rem;}.sm\\:text-2xl{font-size:1.5rem;line-height:2rem;}.sm\\:text-4xl{font-size:2.25rem;line-height:2.5rem;}}
 </style>
 </head>
 <body>
@@ -218,11 +247,16 @@ function resizeExperienceFrame(kind: 'message' | 'splash', event: Event): void {
 
                     <div
                         v-if="hasOgMeta"
-                        class="grid gap-3 rounded-md border border-border/60 bg-muted/20 p-2 sm:grid-cols-[5rem_1fr]"
+                        class="space-y-3 rounded-md border border-border/60 bg-muted/20 p-3"
                         data-testid="claim-experience-og-meta"
                     >
+                        <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                            <Share2 class="h-3.5 w-3.5" />
+                            Share preview
+                        </div>
                         <div
-                            class="flex aspect-[1.91/1] items-center justify-center overflow-hidden rounded bg-muted sm:aspect-square"
+                            class="flex aspect-[1.91/1] items-center justify-center overflow-hidden rounded-md bg-muted"
+                            data-testid="claim-experience-og-image"
                         >
                             <img
                                 v-if="og_meta?.image_url"
@@ -232,9 +266,12 @@ function resizeExperienceFrame(kind: 'message' | 'splash', event: Event): void {
                             />
                             <Share2 v-else class="h-5 w-5 text-muted-foreground" />
                         </div>
-                        <div class="min-w-0 space-y-1">
-                            <p class="truncate text-xs font-medium text-muted-foreground">
-                                OG preview
+                        <div
+                            class="min-w-0 space-y-1 rounded-md bg-background/70 p-2"
+                            data-testid="claim-experience-og-copy"
+                        >
+                            <p class="text-xs font-medium text-muted-foreground">
+                                Shared link copy
                             </p>
                             <p
                                 v-if="og_meta?.amount_label"

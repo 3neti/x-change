@@ -26,7 +26,7 @@ describe('ClaimExperienceSummary', () => {
                     content_type: 'html',
                 },
                 splash: {
-                    content: '<section>Issuer configured splash</section>',
+                    content: '<section class="relative"><img src="/splash.png"><div class="absolute inset-0 flex items-center justify-end text-white">Issuer configured splash</div></section>',
                     content_type: 'html',
                     timeout: 3,
                 },
@@ -43,6 +43,9 @@ describe('ClaimExperienceSummary', () => {
         expect(splash.attributes('scrolling')).toBe('no');
         expect(message.attributes('srcdoc')).toContain('Claim complete message.');
         expect(splash.attributes('srcdoc')).toContain('Issuer configured splash');
+        expect(splash.attributes('srcdoc')).toContain('.absolute{position:absolute;}');
+        expect(splash.attributes('srcdoc')).toContain('.inset-0{inset:0;}');
+        expect(splash.attributes('srcdoc')).toContain('.items-center{align-items:center;}');
         expect(wrapper.text()).toContain('3s in live flow');
     });
 
@@ -70,10 +73,14 @@ describe('ClaimExperienceSummary', () => {
 
         expect(link.attributes('href')).toBe('https://example.test/rider');
         expect(wrapper.text()).toContain('example.test');
+        expect(wrapper.text()).toContain('Share preview');
+        expect(wrapper.text()).toContain('Shared link copy');
         expect(wrapper.text()).toContain('₱25.00');
         expect(wrapper.text()).toContain('A little something');
         expect(wrapper.text()).toContain('Open this Pay Code when you are ready.');
         expect(wrapper.text()).toContain('Enjoy the ride.');
         expect(image.attributes('src')).toBe('/x/claim/ABCD/share-card.png');
+        expect(wrapper.find('[data-testid="claim-experience-og-image"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-experience-og-copy"]').exists()).toBe(true);
     });
 });
