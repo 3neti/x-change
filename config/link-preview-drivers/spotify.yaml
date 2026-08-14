@@ -1,0 +1,28 @@
+schema_version: x-change.link-preview-driver.v1
+key: spotify
+label: Spotify
+enabled: true
+
+canonicalization:
+  strategy: strip_query
+
+match:
+  hosts:
+    - open.spotify.com
+  path_pattern: '#^/(track|album|playlist|episode|show|artist)/[A-Za-z0-9]+/?$#'
+
+metadata:
+  strategies:
+    - oembed
+    - open_graph
+  oembed_endpoint: https://open.spotify.com/oembed
+
+artwork:
+  hosts:
+    - i.scdn.co
+    - image-cdn-ak.spotifycdn.com
+    - mosaic.scdn.co
+  mime_types:
+    - image/jpeg
+    - image/png
+    - image/webp

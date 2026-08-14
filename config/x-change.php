@@ -298,6 +298,27 @@ return [
                     'XCHANGE_COCKPIT_URL_ARTWORK_MAXIMUM_DOCUMENT_BYTES',
                     524288,
                 ),
+                'maximum_metadata_bytes' => (int) env(
+                    'XCHANGE_COCKPIT_URL_ARTWORK_MAXIMUM_METADATA_BYTES',
+                    65536,
+                ),
+                'driver_source' => env(
+                    'XCHANGE_COCKPIT_LINK_PREVIEW_DRIVER_SOURCE',
+                    'yaml',
+                ),
+                'driver_directory' => env(
+                    'XCHANGE_COCKPIT_LINK_PREVIEW_DRIVER_DIRECTORY',
+                ) ?: null,
+                'enabled_drivers' => [
+                    'spotify' => (bool) env(
+                        'XCHANGE_COCKPIT_SPOTIFY_ARTWORK_ENABLED',
+                        true,
+                    ),
+                    'youtube' => (bool) env(
+                        'XCHANGE_COCKPIT_YOUTUBE_ARTWORK_ENABLED',
+                        false,
+                    ),
+                ],
                 'providers' => [
                     'spotify' => [
                         'enabled' => (bool) env(

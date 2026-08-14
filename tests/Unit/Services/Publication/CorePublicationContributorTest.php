@@ -19,6 +19,7 @@ it('classifies the complete package publication inventory by ownership boundary'
             'x-change.ui',
             'x-change.assets',
             'x-change.form-flow-driver',
+            'x-change.link-preview-drivers',
             'x-change.envelope-driver',
             'form-flow.drivers',
             'form-flow.views',

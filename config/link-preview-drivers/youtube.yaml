@@ -1,0 +1,28 @@
+schema_version: x-change.link-preview-driver.v1
+key: youtube
+label: YouTube
+enabled: false
+
+canonicalization:
+  strategy: youtube_video
+
+match:
+  hosts:
+    - youtube.com
+    - www.youtube.com
+    - m.youtube.com
+    - youtu.be
+  path_pattern: '#^/(?:[A-Za-z0-9_-]{11}|watch|(?:shorts|embed|live)/[A-Za-z0-9_-]{11})/?$#'
+
+metadata:
+  strategies:
+    - oembed
+    - open_graph
+  oembed_endpoint: https://www.youtube.com/oembed
+
+artwork:
+  hosts:
+    - i.ytimg.com
+  mime_types:
+    - image/jpeg
+    - image/webp

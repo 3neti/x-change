@@ -38,6 +38,10 @@ final class CorePublicationContributor implements XChangePublicationContributor
         yield $this->build('x-change.form-flow-driver', '3neti/x-change', 'x-change-form-flow-drivers', 'Voucher redemption Form Flow driver.', [
             config_path('form-flow-drivers/voucher-redemption.yaml'),
         ]);
+        yield $this->build('x-change.link-preview-drivers', '3neti/x-change', 'x-change-link-preview-drivers', 'Safe URL artwork preview drivers.', [
+            config_path('link-preview-drivers/spotify.yaml'),
+            config_path('link-preview-drivers/youtube.yaml'),
+        ]);
         yield $this->build('x-change.envelope-driver', '3neti/x-change', 'x-change-envelope-drivers', 'Account funding settlement-envelope driver.', [
             config_path('envelope-drivers/account-funding-review.yaml'),
         ]);

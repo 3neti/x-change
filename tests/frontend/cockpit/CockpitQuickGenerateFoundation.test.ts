@@ -1849,6 +1849,89 @@ describe('Cockpit Quick Generate foundation', () => {
         vi.useRealTimers();
     });
 
+    it('loads YouTube artwork through the same provider-neutral preview contract', async () => {
+        vi.useFakeTimers();
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                schema: 'x-change.cockpit.rider-artwork-preview.v1',
+                available: true,
+                source: 'youtube',
+                title: 'The Killers - I Want to Hold Your Hand',
+                description: 'YouTube',
+                image_url:
+                    'https://i.ytimg.com/vi/Hz_wdBH0fTo/hqdefault.jpg',
+                reference: 'YouTube',
+            }),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await flushPromises();
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-rider-url"]')
+            .setValue(
+                'https://youtu.be/Hz_wdBH0fTo?si=KnyudYHL2qXGXtb5',
+            );
+        await wrapper
+            .find(
+                '[data-testid="cockpit-quick-generate-rider-stamp-source-url"]',
+            )
+            .setValue();
+        await vi.advanceTimersByTimeAsync(351);
+        await flushPromises();
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            '/x/cockpit/quick-generate/artwork-previews',
+            expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({
+                    url: 'https://youtu.be/Hz_wdBH0fTo?si=KnyudYHL2qXGXtb5',
+                }),
+            }),
+        );
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
+                .attributes('srcdoc'),
+        ).toContain('class="artwork-cover"');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-url-artwork-preview"]',
+                )
+                .attributes('srcdoc'),
+        ).toContain('class="artwork-contain"');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-rider-url-preview-status"]',
+                )
+                .text(),
+        ).toContain('YouTube artwork ready.');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
+                .text(),
+        ).toContain('The Killers - I Want to Hold Your Hand');
+
+        wrapper.unmount();
+        vi.unstubAllGlobals();
+        vi.useRealTimers();
+    });
+
     it('renders runtime inputs as reference facts without a submit form', () => {
         const wrapper = mount(CockpitRuntimeInputPanel, {
             props: {

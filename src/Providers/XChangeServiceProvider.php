@@ -65,6 +65,7 @@ use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\CloudRecipeCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
+use LBHurtado\XChange\Console\Commands\Cockpit\ValidateLinkPreviewDriversCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ApprovePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
@@ -135,6 +136,8 @@ use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferDispatcherContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferStatusCheckerContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
+use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceResolverContract;
+use LBHurtado\XChange\Contracts\Claim\ClaimViewerResolverContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalExecutionContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalNotificationContract;
@@ -146,8 +149,6 @@ use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
-use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceResolverContract;
-use LBHurtado\XChange\Contracts\Claim\ClaimViewerResolverContract;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
@@ -392,6 +393,9 @@ use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
+use LBHurtado\XChange\Services\LinkPreview\LinkCanonicalizerRegistry;
+use LBHurtado\XChange\Services\LinkPreview\LinkPreviewDriverRepository;
+use LBHurtado\XChange\Services\LinkPreview\LinkPreviewEngine;
 use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
@@ -462,6 +466,10 @@ class XChangeServiceProvider extends ServiceProvider
             };
         });
         $this->mergeLifecycleScenarioDefaults();
+
+        $this->app->singleton(LinkCanonicalizerRegistry::class);
+        $this->app->singleton(LinkPreviewDriverRepository::class);
+        $this->app->singleton(LinkPreviewEngine::class);
 
         $this->app->singleton(CoreDeploymentEnvironmentContributor::class);
         $this->app->tag(
@@ -1387,6 +1395,7 @@ class XChangeServiceProvider extends ServiceProvider
                 AdoptCommissioningManifestCommand::class,
                 SeedCockpitDiagnosticActivityCommand::class,
                 ShowCockpitOperatorActivityRuntimeProfileCommand::class,
+                ValidateLinkPreviewDriversCommand::class,
             ]);
         }
 
@@ -1909,6 +1918,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->publishes([
             $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml') => config_path('form-flow-drivers/voucher-redemption.yaml'),
         ], 'x-change-form-flow-drivers');
+
+        $this->publishes([
+            $this->packagePath('config/link-preview-drivers') => config_path('link-preview-drivers'),
+        ], 'x-change-link-preview-drivers');
 
         $this->publishes([
             $this->packagePath('config/envelope-drivers/account-funding-review.yaml') => config_path('envelope-drivers/account-funding-review.yaml'),
