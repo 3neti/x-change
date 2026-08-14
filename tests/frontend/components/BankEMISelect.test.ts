@@ -62,6 +62,19 @@ describe("Bank and wallet selector", () => {
     expect(trigger.text()).not.toContain("Choose wallet or bank");
   });
 
+  it("renders the closed picker as a large mobile destination tile", () => {
+    const wrapper = mount(BankEMISelect, {
+      props: { institutions, modelValue: "GXCHPHM2XXX" },
+    });
+
+    const trigger = wrapper.get('[data-testid="bank-emi-select-trigger"]');
+
+    expect(trigger.classes()).toContain("min-h-16");
+    expect(trigger.classes()).toContain("rounded-xl");
+    expect(trigger.html()).toContain("h-6 w-6");
+    expect(trigger.html()).toContain("text-lg");
+  });
+
   it("keeps Maya Wallet and Maya Bank textually distinct in the selected trigger", () => {
     const wallet = mount(BankEMISelect, {
       props: { institutions, modelValue: "PAPHPHM1XXX" },

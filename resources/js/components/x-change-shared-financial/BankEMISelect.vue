@@ -130,27 +130,32 @@ const selectInstitution = (value: string) => {
             :disabled="disabled"
             :aria-expanded="open"
             aria-haspopup="listbox"
-            class="flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-left text-sm font-semibold shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex min-h-16 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left text-base font-semibold text-slate-950 shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
             data-testid="bank-emi-select-trigger"
             @click="open = !open"
             @keydown.esc="open = false"
         >
             <span
                 v-if="selectedInstitution"
-                class="flex min-w-0 items-center gap-2"
+                class="flex min-w-0 items-center gap-3"
             >
                 <PayoutDestinationIcon
                     :icon-asset="selectedInstitution.iconAsset"
                     :alt="selectedInstitution.label"
-                    size-class="h-4 w-4"
+                    size-class="h-6 w-6"
                 />
-                <span class="truncate">{{ selectedInstitution.label }}</span>
+                <span class="truncate text-lg leading-tight">{{ selectedInstitution.label }}</span>
             </span>
-            <span v-else class="text-muted-foreground">
-                Choose wallet or bank
+            <span v-else class="flex min-w-0 flex-col">
+                <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Destination
+                </span>
+                <span class="truncate text-lg font-semibold text-slate-950 dark:text-white">
+                    Choose wallet or bank
+                </span>
             </span>
             <svg
-                class="h-4 w-4 shrink-0 opacity-50"
+                class="h-5 w-5 shrink-0 text-slate-400"
                 viewBox="0 0 24 24"
                 fill="none"
                 aria-hidden="true"
@@ -194,7 +199,7 @@ const selectInstitution = (value: string) => {
                     autocomplete="off"
                     placeholder="Search wallet or bank"
                     aria-label="Search wallet or bank"
-                    class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950"
+                    class="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950"
                     @keydown.esc="open = false"
                 />
             </div>
@@ -208,7 +213,7 @@ const selectInstitution = (value: string) => {
                         v-for="institution in commonInstitutions"
                         :key="institution.key"
                         type="button"
-                        class="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                        class="flex min-h-11 w-full min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         role="option"
                         :aria-selected="institution.value === localValue"
                         @click="selectInstitution(institution.value)"
@@ -216,7 +221,7 @@ const selectInstitution = (value: string) => {
                         <PayoutDestinationIcon
                             :icon-asset="iconAssetForCode(institution.value)"
                             :alt="institution.name"
-                            size-class="h-4 w-4"
+                            size-class="h-5 w-5"
                         />
                         <span class="truncate">{{ institution.name }}</span>
                     </button>
@@ -230,7 +235,7 @@ const selectInstitution = (value: string) => {
                         v-for="institution in otherInstitutions"
                         :key="institution.key"
                         type="button"
-                        class="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                        class="flex min-h-11 w-full min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         role="option"
                         :aria-selected="institution.value === localValue"
                         @click="selectInstitution(institution.value)"
@@ -238,7 +243,7 @@ const selectInstitution = (value: string) => {
                         <PayoutDestinationIcon
                             :icon-asset="iconAssetForCode(institution.value)"
                             :alt="institution.name"
-                            size-class="h-4 w-4"
+                            size-class="h-5 w-5"
                         />
                         <span class="truncate">{{ institution.name }}</span>
                     </button>
