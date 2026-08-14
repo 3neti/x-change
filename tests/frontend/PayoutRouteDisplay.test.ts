@@ -14,10 +14,11 @@ describe('PayoutRouteDisplay', () => {
         });
 
         const text = wrapper.text();
-        expect(text).toContain('GCash');
-        expect(text).toContain('InstaPay');
         expect(text).toContain('₱50.00');
         expect(text).toContain('09173011987');
+        expect(text).not.toContain('Send ₱50.00 to GCash account');
+        expect(text).not.toContain('GCash');
+        expect(text).not.toContain('InstaPay');
         expect(text).not.toContain('x-change');
         expect(text).not.toContain('NetBank');
 
@@ -64,10 +65,18 @@ describe('PayoutRouteDisplay', () => {
 
     it('keeps Maya Wallet and Maya Bank textually distinct even though they may share an icon', () => {
         const wallet = mount(PayoutRouteDisplay, {
-            props: { bankCode: 'PAPHPHM1XXX', accountNumber: '09173011987' },
+            props: {
+                mode: 'operational',
+                bankCode: 'PAPHPHM1XXX',
+                accountNumber: '09173011987',
+            },
         });
         const bank = mount(PayoutRouteDisplay, {
-            props: { bankCode: 'MYDBPHM2XXX', accountNumber: '09173011987' },
+            props: {
+                mode: 'operational',
+                bankCode: 'MYDBPHM2XXX',
+                accountNumber: '09173011987',
+            },
         });
 
         expect(wallet.text()).toContain('Maya Wallet');
@@ -79,10 +88,18 @@ describe('PayoutRouteDisplay', () => {
 
     it('keeps InstaPay and PESONet textually distinct even though they share an operator icon', () => {
         const instapay = mount(PayoutRouteDisplay, {
-            props: { bankCode: 'GXCHPHM2XXX', settlementRail: 'INSTAPAY' },
+            props: {
+                mode: 'operational',
+                bankCode: 'GXCHPHM2XXX',
+                settlementRail: 'INSTAPAY',
+            },
         });
         const pesonet = mount(PayoutRouteDisplay, {
-            props: { bankCode: 'GXCHPHM2XXX', settlementRail: 'PESONET' },
+            props: {
+                mode: 'operational',
+                bankCode: 'GXCHPHM2XXX',
+                settlementRail: 'PESONET',
+            },
         });
 
         expect(instapay.text()).toContain('InstaPay');
@@ -102,10 +119,12 @@ describe('PayoutRouteDisplay', () => {
             },
         });
 
-        // The text label is still shown even without an icon asset.
-        expect(wrapper.text()).toContain('AL-AMANAH ISLAMIC BANK');
+        // The readable anchors are still shown even without a destination
+        // icon asset.
+        expect(wrapper.text()).toContain('09173011987');
+        expect(wrapper.text()).not.toContain('AL-AMANAH ISLAMIC BANK');
 
-        // No broken <img> is rendered for the destination pill; the
+        // No broken <img> is rendered for the destination segment; the
         // component falls back to the lucide glyph instead.
         const destinationImages = wrapper
             .findAll('img')
