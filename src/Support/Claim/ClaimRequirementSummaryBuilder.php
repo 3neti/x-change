@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Support\Claim;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Enums\ClaimEvidenceKind;
 use LBHurtado\XChange\Enums\ClaimEvidenceStatus;
+use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Models\VoucherClaim;
+use Throwable;
 
 /**
  * Produces `claim_requirement_summary` items: status only, never a raw
@@ -16,9 +21,10 @@ use LBHurtado\XChange\Models\VoucherClaim;
  * (see `VoucherClaimEvidence::$hidden`); this builder additionally never
  * reads or forwards `summary` for capture-style requirements (selfie,
  * location, signature, KYC, name) so a redacted-looking string can never
- * leak into the issuer console. Destination account status is read from
- * the claim's own already-masked `bank_code`/`account_number_masked`
- * columns, never from evidence.
+ * leak into the issuer console. Image captures may expose only a protected
+ * reveal URL that already enforces Cockpit evidence authorization. Destination
+ * account status is read from the claim's own already-masked
+ * `bank_code`/`account_number_masked` columns, never from evidence.
  */
 final class ClaimRequirementSummaryBuilder
 {
@@ -36,7 +42,7 @@ final class ClaimRequirementSummaryBuilder
     ];
 
     /**
-     * @return array<int, array{key: string, label: string, status: string, tone: string, description: null}>
+     * @return array<int, array<string, mixed>>
      */
     public function build(Voucher $voucher, ?VoucherClaim $claim, bool $approvalRequired): array
     {
@@ -65,7 +71,11 @@ final class ClaimRequirementSummaryBuilder
                 continue;
             }
 
-            $items[] = $this->item($key, $this->captureStatus($claim, $key));
+            $items[] = $this->item(
+                $key,
+                $this->captureStatus($claim, $key),
+                $this->capturePreview($voucher, $claim, $key),
+            );
         }
 
         if (in_array('secret', $configured, true)) {
@@ -84,9 +94,9 @@ final class ClaimRequirementSummaryBuilder
     }
 
     /**
-     * @return array{key: string, label: string, status: string, tone: string, description: null}
+     * @return array<string, mixed>
      */
-    private function item(string $key, string $status): array
+    private function item(string $key, string $status, ?array $preview = null): array
     {
         return [
             'key' => $key,
@@ -94,6 +104,7 @@ final class ClaimRequirementSummaryBuilder
             'status' => $status,
             'tone' => $this->tone($status),
             'description' => null,
+            'preview' => $preview,
         ];
     }
 
@@ -186,6 +197,49 @@ final class ClaimRequirementSummaryBuilder
             ClaimEvidenceStatus::Missing => 'missing',
             ClaimEvidenceStatus::Captured => 'captured',
         };
+    }
+
+    /**
+     * @return array{type: string, href: string, label: string}|null
+     */
+    private function capturePreview(Voucher $voucher, ?VoucherClaim $claim, string $requirementKey): ?array
+    {
+        if ($claim === null || ! Route::has('x-change.cockpit.pay-codes.evidence.show')) {
+            return null;
+        }
+
+        $evidence = $claim->evidence->firstWhere('requirement_key', $requirementKey);
+
+        if (! $evidence instanceof VoucherClaimEvidence || $evidence->kind !== ClaimEvidenceKind::Image) {
+            return null;
+        }
+
+        if (
+            ! filled($evidence->artifact_disk)
+            || ! filled($evidence->artifact_path)
+            || ! filled($evidence->mime_type)
+            || ! in_array((string) $evidence->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true)
+        ) {
+            return null;
+        }
+
+        try {
+            if (! Storage::disk((string) $evidence->artifact_disk)->exists((string) $evidence->artifact_path)) {
+                return null;
+            }
+        } catch (Throwable) {
+            return null;
+        }
+
+        return [
+            'type' => 'image',
+            'href' => route('x-change.cockpit.pay-codes.evidence.show', [
+                'code' => $voucher->code,
+                'source' => 'claim',
+                'evidence' => $evidence->getKey(),
+            ]),
+            'label' => (self::LABELS[$requirementKey] ?? $requirementKey).' preview',
+        ];
     }
 
     private function hasOtpEvidence(?VoucherClaim $claim): bool

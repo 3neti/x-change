@@ -31,4 +31,55 @@ describe('ClaimRequirementSummary', () => {
 
         expect(wrapper.text()).not.toContain('this should never appear');
     });
+
+    it('shows a retained image preview while a captured badge is pressed', async () => {
+        const wrapper = mount(ClaimRequirementSummary, {
+            props: {
+                items: [
+                    {
+                        key: 'selfie',
+                        label: 'Selfie',
+                        status: 'captured',
+                        tone: 'positive',
+                        description: null,
+                        preview: {
+                            type: 'image',
+                            href: '/x/cockpit/pay-codes/ABCD/evidence/claim/123',
+                            label: 'Selfie preview',
+                        },
+                    },
+                ],
+            },
+        });
+
+        const trigger = wrapper.find('[data-testid="claim-requirement-preview-trigger-selfie"]');
+
+        expect(wrapper.find('[data-testid="claim-requirement-image-preview-selfie"]').exists()).toBe(false);
+
+        await trigger.trigger('pointerdown');
+
+        const preview = wrapper.find('[data-testid="claim-requirement-image-preview-selfie"]');
+        const image = preview.find('img');
+
+        expect(preview.exists()).toBe(true);
+        expect(image.attributes('src')).toBe('/x/cockpit/pay-codes/ABCD/evidence/claim/123');
+        expect(image.attributes('alt')).toBe('Selfie preview');
+
+        await trigger.trigger('pointerup');
+
+        expect(wrapper.find('[data-testid="claim-requirement-image-preview-selfie"]').exists()).toBe(false);
+    });
+
+    it('does not turn plain captured statuses into preview triggers', () => {
+        const wrapper = mount(ClaimRequirementSummary, {
+            props: {
+                items: [
+                    { key: 'location', label: 'Location', status: 'captured', tone: 'positive', description: null },
+                ],
+            },
+        });
+
+        expect(wrapper.find('[data-testid="claim-requirement-preview-trigger-location"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-requirement-summary-item-location"]').text()).toContain('Captured');
+    });
 });

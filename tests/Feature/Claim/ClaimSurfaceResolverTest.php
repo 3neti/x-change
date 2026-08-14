@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
@@ -51,6 +52,23 @@ function recordClaimWithEvidence(Voucher $voucher, array $requirementKeys = ['mo
     ]);
 
     foreach ($requirementKeys as $key) {
+        $artifact = null;
+
+        if ($key === 'selfie') {
+            $contents = 'fake-selfie-image';
+            $path = 'testing/claim-evidence/'.$voucher->code.'-selfie.png';
+
+            Storage::disk('local')->put($path, $contents);
+
+            $artifact = [
+                'disk' => 'local',
+                'path' => $path,
+                'mime_type' => 'image/png',
+                'size' => strlen($contents),
+                'sha256' => hash('sha256', $contents),
+            ];
+        }
+
         VoucherClaimEvidence::query()->create([
             'voucher_claim_id' => $claim->getKey(),
             'voucher_id' => $voucher->getKey(),
@@ -58,6 +76,11 @@ function recordClaimWithEvidence(Voucher $voucher, array $requirementKeys = ['mo
             'kind' => $key === 'selfie' ? ClaimEvidenceKind::Image : ClaimEvidenceKind::Text,
             'status' => ClaimEvidenceStatus::Captured,
             'summary' => $key === 'mobile' ? '•••• 1987' : ucfirst($key).' captured',
+            'artifact_disk' => $artifact['disk'] ?? null,
+            'artifact_path' => $artifact['path'] ?? null,
+            'mime_type' => $artifact['mime_type'] ?? null,
+            'size' => $artifact['size'] ?? null,
+            'sha256' => $artifact['sha256'] ?? null,
             'captured_at' => now(),
         ]);
     }
@@ -114,11 +137,13 @@ it('includes the claim requirement summary component for a claimed Pay Code issu
         ->and($items->has('selfie'))->toBeTrue()
         ->and($items['mobile']['status'])->toBe('completed')
         ->and($items['destination_account']['status'])->toBe('completed')
-        ->and($items['selfie']['status'])->toBe('captured');
+        ->and($items['selfie']['status'])->toBe('captured')
+        ->and($items['selfie']['preview']['type'])->toBe('image')
+        ->and($items['selfie']['preview']['href'])->toContain('/x/cockpit/pay-codes/'.$voucher->code.'/evidence/claim/');
 
-    // Never a raw value -- only status/tone/label.
+    // Never a raw value -- only status/tone/label and protected preview metadata.
     foreach ($items as $item) {
-        expect($item)->toHaveKeys(['key', 'label', 'status', 'tone', 'description'])
+        expect($item)->toHaveKeys(['key', 'label', 'status', 'tone', 'description', 'preview'])
             ->and($item['description'])->toBeNull();
     }
 });
