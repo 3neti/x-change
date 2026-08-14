@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
@@ -233,10 +235,29 @@ it('maps a redeemed Pay Code to an outcome panel', function () {
 
 it('adds a static claim experience summary for a redeemed rider Pay Code', function () {
     $issuer = actingAsTestUser();
+    Cache::clear();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://open.spotify.com/oembed*' => Http::response(
+            [
+                'title' => 'An Example Track',
+                'provider_name' => 'Spotify',
+                'thumbnail_url' => 'https://i.scdn.co/image/example-artwork',
+            ],
+            200,
+            ['Content-Type' => 'application/json'],
+        ),
+        'https://i.scdn.co/image/example-artwork' => Http::response(
+            'fake-jpeg-bytes',
+            200,
+            ['Content-Type' => 'image/jpeg'],
+        ),
+    ]);
+
     $voucher = issueVoucher(validVoucherInstructions(overrides: [
         'rider' => [
             'message' => 'Thank you for riding with us.',
-            'url' => 'https://example.test/rider',
+            'url' => 'https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH?si=tracking-token',
             'redirect_timeout' => 5,
             'splash' => '<h1>Before you claim</h1>',
             'splash_timeout' => 3,
@@ -258,12 +279,17 @@ it('adds a static claim experience summary for a redeemed rider Pay Code', funct
     expect($summary)->not->toBeNull()
         ->and(data_get($summary, 'props.message.content'))->toContain('Thank you for riding with us.')
         ->and(data_get($summary, 'props.splash.content'))->toContain('Before you claim')
-        ->and(data_get($summary, 'props.redirect.url'))->toBe('https://example.test/rider')
-        ->and(data_get($summary, 'props.og_meta.image_url'))->toContain('/x/claim/')
-        ->and(data_get($summary, 'props.og_meta.amount_label'))->toBe('₱100.00')
-        ->and(data_get($summary, 'props.og_meta.message_preview'))->toBe('Thank you for riding with us.')
+        ->and(data_get($summary, 'props.redirect.url'))->toBe('https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH?si=tracking-token')
+        ->and(data_get($summary, 'props.og_meta.title'))->toBe('An Example Track')
+        ->and(data_get($summary, 'props.og_meta.description'))->toBe('Spotify')
+        ->and(data_get($summary, 'props.og_meta.image_url'))->toBe('data:image/jpeg;base64,'.base64_encode('fake-jpeg-bytes'))
+        ->and(data_get($summary, 'props.og_meta.public_image_url'))->toBe('https://i.scdn.co/image/example-artwork')
+        ->and(data_get($summary, 'props.og_meta.amount_label'))->toBeNull()
+        ->and(data_get($summary, 'props.og_meta.message_preview'))->toBeNull()
         ->and(data_get($summary, 'props.options.static_preview'))->toBeTrue()
         ->and(data_get($summary, 'props.options.disable_auto_redirect'))->toBeTrue();
+
+    Http::assertSentCount(2);
 });
 
 it('adds claim requirements and claim experience for the issuer review surface', function () {

@@ -49,21 +49,21 @@ describe('ClaimExperienceSummary', () => {
         expect(wrapper.text()).toContain('3s in live flow');
     });
 
-    it('renders rider URL and OG meta without starting a redirect', () => {
+    it('renders rider URL metadata without starting a redirect', () => {
         const wrapper = mount(ClaimExperienceSummary, {
             props: {
                 redirect: {
-                    url: 'https://example.test/rider',
+                    url: 'https://open.spotify.com/track/example',
                     delay_seconds: 5,
                     show_countdown: true,
                 },
                 og_meta: {
-                    title: 'A little something',
-                    description: 'Open this Pay Code when you are ready.',
-                    image_url: '/x/claim/ABCD/share-card.png',
-                    image_alt: 'A little something preview',
-                    amount_label: '₱25.00',
-                    message_preview: 'Enjoy the ride.',
+                    title: 'An Example Track',
+                    description: 'An Example Artist',
+                    url: 'https://open.spotify.com/track/example',
+                    site_name: 'Spotify',
+                    image_url: 'data:image/jpeg;base64,ZmFrZQ==',
+                    image_alt: 'An Example Track preview',
                 },
             },
         });
@@ -71,15 +71,15 @@ describe('ClaimExperienceSummary', () => {
         const link = wrapper.find('[data-testid="claim-experience-redirect"] a');
         const image = wrapper.find('[data-testid="claim-experience-og-meta"] img');
 
-        expect(link.attributes('href')).toBe('https://example.test/rider');
-        expect(wrapper.text()).toContain('example.test');
-        expect(wrapper.text()).toContain('Share preview');
-        expect(wrapper.text()).toContain('Shared link copy');
-        expect(wrapper.text()).toContain('₱25.00');
-        expect(wrapper.text()).toContain('A little something');
-        expect(wrapper.text()).toContain('Open this Pay Code when you are ready.');
-        expect(wrapper.text()).toContain('Enjoy the ride.');
-        expect(image.attributes('src')).toBe('/x/claim/ABCD/share-card.png');
+        expect(link.attributes('href')).toBe('https://open.spotify.com/track/example');
+        expect(wrapper.text()).toContain('open.spotify.com');
+        expect(wrapper.text()).toContain('Rider URL preview');
+        expect(wrapper.text()).toContain('Link preview copy');
+        expect(wrapper.text()).toContain('An Example Track');
+        expect(wrapper.text()).toContain('An Example Artist');
+        expect(wrapper.text()).not.toContain('₱25.00');
+        expect(wrapper.text()).not.toContain('Enjoy the ride.');
+        expect(image.attributes('src')).toBe('data:image/jpeg;base64,ZmFrZQ==');
         expect(wrapper.find('[data-testid="claim-experience-og-image"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="claim-experience-og-copy"]').exists()).toBe(true);
     });

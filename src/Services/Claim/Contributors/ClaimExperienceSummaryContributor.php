@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Claim\Contributors;
 
-use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceContributor;
-use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
-use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimSurfaceContextData;
-use LBHurtado\XChange\Services\Claim\ClaimShareCardAmountFormatter;
 use LBHurtado\XChange\Services\Claim\ClaimSurfaceBuilder;
+use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 
 /**
  * Converts live Rider/claim-experience steps into a static audit preview for
@@ -24,9 +21,7 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
 
     public function __construct(
         private readonly ResolveClaimExperience $claimExperience,
-        private readonly ClaimShareMetadataResolverContract $shareMetadata,
-        private readonly ClaimShareCardUrlResolverContract $shareCardUrls,
-        private readonly ClaimShareCardAmountFormatter $amounts,
+        private readonly RiderUrlArtworkPreviewResolver $riderUrlArtwork,
     ) {}
 
     public function contribute(ClaimSurfaceBuilder $surface, ClaimSurfaceContextData $context): void
@@ -77,7 +72,7 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
                 'delay_seconds' => data_get($redirect, 'delay_seconds'),
                 'show_countdown' => (bool) data_get($redirect, 'show_countdown', false),
             ] : null,
-            'og_meta' => $this->ogMeta($context, $messageStage),
+            'og_meta' => $this->riderUrlOgMeta($redirectUrl),
             'options' => [
                 'static_preview' => true,
                 'disable_countdown' => true,
@@ -133,45 +128,29 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null
      */
-    private function ogMeta(
-        ClaimSurfaceContextData $context,
-        ?array $messageStage,
-    ): array
+    private function riderUrlOgMeta(mixed $redirectUrl): ?array
     {
-        $claimUrl = Route::has('x-change.claim.show')
-            ? route('x-change.claim.show', ['code' => $context->code])
-            : url('/x/claim/'.$context->code);
-
-        $metadata = $this->shareMetadata
-            ->resolve($context->voucher, $claimUrl, $this->shareCardUrls->resolve($context->voucher))
-            ->toArray();
-
-        return [
-            ...$metadata,
-            'amount_label' => $this->amounts->format($context->voucher),
-            'message_preview' => $this->plainPreview(data_get(
-                $messageStage,
-                'payload.content',
-            ) ?? data_get($messageStage, 'content')),
-        ];
-    }
-
-    private function plainPreview(mixed $content): ?string
-    {
-        if (! is_string($content) || trim($content) === '') {
+        if (! is_string($redirectUrl) || trim($redirectUrl) === '') {
             return null;
         }
 
-        $preview = trim((string) preg_replace(
-            '/\s+/u',
-            ' ',
-            strip_tags($content),
-        ));
+        $metadata = $this->riderUrlArtwork->resolve($redirectUrl);
 
-        return $preview === ''
-            ? null
-            : mb_substr($preview, 0, 180);
+        if (! ($metadata['available'] ?? false)) {
+            return null;
+        }
+
+        return [
+            'title' => $metadata['title'],
+            'description' => $metadata['description'],
+            'url' => $redirectUrl,
+            'site_name' => $metadata['reference'],
+            'image_url' => $metadata['image_url'],
+            'image_alt' => $metadata['title'].' preview',
+            'source' => $metadata['source'],
+            'public_image_url' => $metadata['public_image_url'],
+        ];
     }
 }

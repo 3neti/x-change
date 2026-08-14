@@ -27,6 +27,8 @@ export interface ClaimExperienceOgMeta {
     image_alt?: string | null;
     amount_label?: string | null;
     message_preview?: string | null;
+    public_image_url?: string | null;
+    source?: string | null;
 }
 
 export interface ClaimExperienceSummaryProps {
@@ -252,7 +254,7 @@ function resizeExperienceFrame(kind: 'message' | 'splash', event: Event): void {
                     >
                         <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                             <Share2 class="h-3.5 w-3.5" />
-                            Share preview
+                            Rider URL preview
                         </div>
                         <div
                             class="flex aspect-[1.91/1] items-center justify-center overflow-hidden rounded-md bg-muted"
@@ -271,7 +273,7 @@ function resizeExperienceFrame(kind: 'message' | 'splash', event: Event): void {
                             data-testid="claim-experience-og-copy"
                         >
                             <p class="text-xs font-medium text-muted-foreground">
-                                Shared link copy
+                                Link preview copy
                             </p>
                             <p
                                 v-if="og_meta?.amount_label"
