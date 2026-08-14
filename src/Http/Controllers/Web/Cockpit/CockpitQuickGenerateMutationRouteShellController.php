@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Cockpit\RememberRiderLibraryUsage;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
@@ -47,6 +49,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         BuildBalanceOverview $balanceOverview,
         CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
         QuickGenerateLastInstructionsStore $lastInstructions,
+        RememberRiderLibraryUsage $rememberRiderLibraryUsage,
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
@@ -105,6 +108,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             $validatedPayload,
             $lastInstructions,
         );
+        $this->rememberRiderLibraryUsage(
+            $request,
+            $validatedPayload,
+            $rememberRiderLibraryUsage,
+        );
 
         return response()->json($response, 201);
     }
@@ -125,6 +133,27 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
 
         try {
             $lastInstructions->remember($operator, $instructions);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     */
+    private function rememberRiderLibraryUsage(
+        GeneratePayCodeRequest $request,
+        array $instructions,
+        RememberRiderLibraryUsage $remember,
+    ): void {
+        $operator = $request->user();
+
+        if (! $operator instanceof Model) {
+            return;
+        }
+
+        try {
+            $remember->handle($operator, $instructions);
         } catch (Throwable $exception) {
             report($exception);
         }

@@ -84,6 +84,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationR
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderArtworkPreviewController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderLibraryForgetController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderLibraryPinController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderLibraryStoreController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRuntimeProfilePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitStandingFundingReceiptApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
@@ -439,6 +442,19 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             CockpitPayCodeTemplateUpdateController::class,
         )->middleware('throttle:20,1')
             ->name('x-change.cockpit.pay-code-templates.update');
+        Route::post('rider-library', CockpitRiderLibraryStoreController::class)
+            ->middleware('throttle:20,1')
+            ->name('x-change.cockpit.rider-library.store');
+        Route::patch(
+            'rider-library/{riderLibraryEntry:reference}/pin',
+            CockpitRiderLibraryPinController::class,
+        )->middleware('throttle:30,1')
+            ->name('x-change.cockpit.rider-library.pin');
+        Route::delete(
+            'rider-library/{riderLibraryEntry:reference}',
+            CockpitRiderLibraryForgetController::class,
+        )->middleware('throttle:20,1')
+            ->name('x-change.cockpit.rider-library.forget');
         Route::get('diagnostics/runtime-profile', CockpitRuntimeProfilePageController::class)->name('x-change.cockpit.diagnostics.runtime-profile');
         Route::prefix('pay-codes')->group(function (): void {
             Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');

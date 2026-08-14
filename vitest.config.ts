@@ -114,6 +114,21 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/pay-code-template-update-route.ts",
         ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitRiderLibraryStoreController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/rider-library-store-route.ts",
+        ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitRiderLibraryPinController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/rider-library-pin-route.ts",
+        ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitRiderLibraryForgetController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/rider-library-forget-route.ts",
+        ),
       "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitRiderArtworkPreviewController":
         path.resolve(
           import.meta.dirname,

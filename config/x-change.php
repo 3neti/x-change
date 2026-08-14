@@ -267,6 +267,9 @@ return [
         ],
 
         'quick_generate' => [
+            'rider_library' => [
+                'recent_limit_per_kind' => 20,
+            ],
             'last_instructions_ttl_seconds' => (int) env(
                 'XCHANGE_COCKPIT_QUICK_GENERATE_LAST_INSTRUCTIONS_TTL_SECONDS',
                 604800,

@@ -1595,6 +1595,7 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     invitation_preset?: CockpitQuickGenerateInvitationPreset;
     last_instructions?: CockpitQuickGenerateLastInstructions | null;
     saved_templates?: CockpitSavedPayCodeTemplate[];
+    rider_library?: CockpitRiderLibraryEntry[];
     instruction_capabilities?: CockpitInstructionCapabilityReadinessMap;
     settlement_rail_capabilities?: CockpitSettlementRailCapabilities;
 };
@@ -1663,6 +1664,18 @@ export type CockpitSavedPayCodeTemplate = {
     instructions: Record<string, unknown>;
     include_amount: boolean;
     include_purpose: boolean;
+    updated_at?: string | null;
+};
+
+export type CockpitRiderLibraryEntry = {
+    reference: string;
+    kind: 'url' | 'splash';
+    label: string;
+    payload: Record<string, unknown>;
+    saved: boolean;
+    pinned: boolean;
+    use_count: number;
+    last_used_at?: string | null;
     updated_at?: string | null;
 };
 

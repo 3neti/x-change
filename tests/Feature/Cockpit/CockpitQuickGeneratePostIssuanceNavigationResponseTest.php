@@ -12,6 +12,7 @@ use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Models\RiderLibraryEntry;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 
 it('hydrates quick generate post issuance navigation links without adding side effects', function () {
@@ -32,7 +33,10 @@ it('hydrates quick generate post issuance navigation links without adding side e
 
     $operator = actingAsTestUser();
 
-    $this->withHeader('Accept', 'application/json')
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'wave-34c-rider-library',
+    ])
         ->post(route('x-change.cockpit.quick-generate.store'), cockpitWave34cPayload())
         ->assertCreated()
         ->assertJsonPath('result.code', 'PC-WAVE-34C')
@@ -81,7 +85,21 @@ it('hydrates quick generate post issuance navigation links without adding side e
         ->assertJsonMissingPath('props.last_instructions.instructions.feedback.mobile')
         ->assertJsonMissingPath('props.last_instructions.instructions.feedback.email')
         ->assertJsonMissingPath('props.last_instructions.instructions.metadata.custom.cockpit.recipient_reference')
-        ->assertJsonMissingPath('props.last_instructions.instructions.metadata.issuer_id');
+        ->assertJsonMissingPath('props.last_instructions.instructions.metadata.issuer_id')
+        ->assertJsonCount(2, 'props.rider_library')
+        ->assertJsonPath('props.rider_library.0.saved', false);
+
+    expect(RiderLibraryEntry::query()->sum('use_count'))->toBe(2);
+
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'wave-34c-rider-library',
+    ])
+        ->post(route('x-change.cockpit.quick-generate.store'), cockpitWave34cPayload())
+        ->assertOk()
+        ->assertJsonPath('status', 'replayed');
+
+    expect(RiderLibraryEntry::query()->sum('use_count'))->toBe(2);
 
     $otherOperator = actingAsTestUser();
 
@@ -90,7 +108,8 @@ it('hydrates quick generate post issuance navigation links without adding side e
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.quick-generate'))
         ->assertOk()
-        ->assertJsonPath('props.last_instructions', null);
+        ->assertJsonPath('props.last_instructions', null)
+        ->assertJsonCount(0, 'props.rider_library');
 });
 
 function cockpitWave34cPricingFake(): EstimatePayCodeCost
@@ -177,6 +196,9 @@ function cockpitWave34cPayload(): array
         ],
         'rider' => [
             'message' => 'Wave 34C post issuance navigation',
+            'url' => 'https://example.test/after-claim',
+            'splash' => 'Welcome to the claim.',
+            'splash_format' => 'plain',
         ],
         'starts_at' => '2026-07-28T09:00:00+08:00',
         'expires_at' => '2026-07-29T09:00:00+08:00',
