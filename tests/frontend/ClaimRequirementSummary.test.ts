@@ -70,16 +70,54 @@ describe('ClaimRequirementSummary', () => {
         expect(wrapper.find('[data-testid="claim-requirement-image-preview-selfie"]').exists()).toBe(false);
     });
 
-    it('does not turn plain captured statuses into preview triggers', () => {
+    it('shows a retained location map preview while the captured location badge is pressed', async () => {
         const wrapper = mount(ClaimRequirementSummary, {
             props: {
                 items: [
-                    { key: 'location', label: 'Location', status: 'captured', tone: 'positive', description: null },
+                    {
+                        key: 'location',
+                        label: 'Location',
+                        status: 'captured',
+                        tone: 'positive',
+                        description: null,
+                        preview: {
+                            type: 'image',
+                            href: '/x/cockpit/pay-codes/ABCD/evidence/claim/456',
+                            label: 'Location preview',
+                        },
+                    },
                 ],
             },
         });
 
-        expect(wrapper.find('[data-testid="claim-requirement-preview-trigger-location"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="claim-requirement-summary-item-location"]').text()).toContain('Captured');
+        const trigger = wrapper.find('[data-testid="claim-requirement-preview-trigger-location"]');
+
+        expect(wrapper.find('[data-testid="claim-requirement-image-preview-location"]').exists()).toBe(false);
+
+        await trigger.trigger('pointerdown');
+
+        const preview = wrapper.find('[data-testid="claim-requirement-image-preview-location"]');
+        const image = preview.find('img');
+
+        expect(preview.exists()).toBe(true);
+        expect(image.attributes('src')).toBe('/x/cockpit/pay-codes/ABCD/evidence/claim/456');
+        expect(image.attributes('alt')).toBe('Location preview');
+
+        await trigger.trigger('pointerup');
+
+        expect(wrapper.find('[data-testid="claim-requirement-image-preview-location"]').exists()).toBe(false);
+    });
+
+    it('does not turn plain captured statuses into preview triggers', () => {
+        const wrapper = mount(ClaimRequirementSummary, {
+            props: {
+                items: [
+                    { key: 'name', label: 'Name', status: 'captured', tone: 'positive', description: null },
+                ],
+            },
+        });
+
+        expect(wrapper.find('[data-testid="claim-requirement-preview-trigger-name"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-requirement-summary-item-name"]').text()).toContain('Captured');
     });
 });

@@ -21,10 +21,11 @@ use Throwable;
  * (see `VoucherClaimEvidence::$hidden`); this builder additionally never
  * reads or forwards `summary` for capture-style requirements (selfie,
  * location, signature, KYC, name) so a redacted-looking string can never
- * leak into the issuer console. Image captures may expose only a protected
- * reveal URL that already enforces Cockpit evidence authorization. Destination
- * account status is read from the claim's own already-masked
- * `bank_code`/`account_number_masked` columns, never from evidence.
+ * leak into the issuer console. Image and location-map captures may expose
+ * only a protected reveal URL that already enforces Cockpit evidence
+ * authorization. Destination account status is read from the claim's own
+ * already-masked `bank_code`/`account_number_masked` columns, never from
+ * evidence.
  */
 final class ClaimRequirementSummaryBuilder
 {
@@ -137,6 +138,10 @@ final class ClaimRequirementSummaryBuilder
             $keys[] = 'secret';
         }
 
+        if (filled(data_get($instructions, 'cash.validation.location'))) {
+            $keys[] = 'location';
+        }
+
         return array_values(array_unique($keys));
     }
 
@@ -210,7 +215,10 @@ final class ClaimRequirementSummaryBuilder
 
         $evidence = $claim->evidence->firstWhere('requirement_key', $requirementKey);
 
-        if (! $evidence instanceof VoucherClaimEvidence || $evidence->kind !== ClaimEvidenceKind::Image) {
+        if (
+            ! $evidence instanceof VoucherClaimEvidence
+            || ! in_array($evidence->kind, [ClaimEvidenceKind::Image, ClaimEvidenceKind::Location], true)
+        ) {
             return null;
         }
 

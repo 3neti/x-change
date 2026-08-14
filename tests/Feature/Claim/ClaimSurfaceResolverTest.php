@@ -54,9 +54,9 @@ function recordClaimWithEvidence(Voucher $voucher, array $requirementKeys = ['mo
     foreach ($requirementKeys as $key) {
         $artifact = null;
 
-        if ($key === 'selfie') {
-            $contents = 'fake-selfie-image';
-            $path = 'testing/claim-evidence/'.$voucher->code.'-selfie.png';
+        if (in_array($key, ['selfie', 'location'], true)) {
+            $contents = 'fake-'.$key.'-image';
+            $path = 'testing/claim-evidence/'.$voucher->code.'-'.$key.'.png';
 
             Storage::disk('local')->put($path, $contents);
 
@@ -73,7 +73,11 @@ function recordClaimWithEvidence(Voucher $voucher, array $requirementKeys = ['mo
             'voucher_claim_id' => $claim->getKey(),
             'voucher_id' => $voucher->getKey(),
             'requirement_key' => $key,
-            'kind' => $key === 'selfie' ? ClaimEvidenceKind::Image : ClaimEvidenceKind::Text,
+            'kind' => match ($key) {
+                'selfie' => ClaimEvidenceKind::Image,
+                'location' => ClaimEvidenceKind::Location,
+                default => ClaimEvidenceKind::Text,
+            },
             'status' => ClaimEvidenceStatus::Captured,
             'summary' => $key === 'mobile' ? '•••• 1987' : ucfirst($key).' captured',
             'artifact_disk' => $artifact['disk'] ?? null,
@@ -122,9 +126,10 @@ it('gives the issuer an issuer console surface once their Pay Code has been clai
 it('includes the claim requirement summary component for a claimed Pay Code issuer view', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [
-        'inputs' => ['fields' => ['mobile', 'selfie']],
+        'cash' => ['validation' => ['location' => '14.5995,120.9842']],
+        'inputs' => ['fields' => ['mobile', 'selfie', 'location']],
     ]));
-    recordClaimWithEvidence($voucher);
+    recordClaimWithEvidence($voucher, ['mobile', 'selfie', 'location']);
 
     $surface = claimSurfaceResolver()->resolve($voucher, $issuer);
 
@@ -135,11 +140,15 @@ it('includes the claim requirement summary component for a claimed Pay Code issu
         ->and($items->has('mobile'))->toBeTrue()
         ->and($items->has('destination_account'))->toBeTrue()
         ->and($items->has('selfie'))->toBeTrue()
+        ->and($items->has('location'))->toBeTrue()
         ->and($items['mobile']['status'])->toBe('completed')
         ->and($items['destination_account']['status'])->toBe('completed')
         ->and($items['selfie']['status'])->toBe('captured')
         ->and($items['selfie']['preview']['type'])->toBe('image')
-        ->and($items['selfie']['preview']['href'])->toContain('/x/cockpit/pay-codes/'.$voucher->code.'/evidence/claim/');
+        ->and($items['selfie']['preview']['href'])->toContain('/x/cockpit/pay-codes/'.$voucher->code.'/evidence/claim/')
+        ->and($items['location']['status'])->toBe('captured')
+        ->and($items['location']['preview']['type'])->toBe('image')
+        ->and($items['location']['preview']['href'])->toContain('/x/cockpit/pay-codes/'.$voucher->code.'/evidence/claim/');
 
     // Never a raw value -- only status/tone/label and protected preview metadata.
     foreach ($items as $item) {
