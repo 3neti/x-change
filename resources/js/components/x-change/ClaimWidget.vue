@@ -200,6 +200,31 @@ const redirectStages = computed<RawRiderStage[]>(
     () => experienceStages.value.redirectStages,
 );
 
+function withClaimRuntimeContext(stages: RawRiderStage[]): RawRiderStage[] {
+    const claimCode = normalizedCode.value;
+
+    if (!claimCode) {
+        return stages;
+    }
+
+    return stages.map((stage) => ({
+        ...stage,
+        payload: {
+            ...(stage.payload ?? {}),
+            context_code: stage.payload?.context_code ?? claimCode,
+            context_label: stage.payload?.context_label ?? 'Pay Code',
+        },
+    }));
+}
+
+const contextualRuntimeStages = computed<RawRiderStage[]>(() =>
+    withClaimRuntimeContext(runtimeStages.value),
+);
+
+const contextualRedirectStages = computed<RawRiderStage[]>(() =>
+    withClaimRuntimeContext(redirectStages.value),
+);
+
 const emit = defineEmits<{
     'submit:compiled-form': [
         payload: {
@@ -612,14 +637,14 @@ watch(
             v-if="runtimeStages.length > 0 && !surfaceTakesOver && !isCanonicalizingResolvedCode"
             data-testid="claim-widget-runtime-region"
         >
-            <RiderRuntimeSequencer :stages="runtimeStages" />
+            <RiderRuntimeSequencer :stages="contextualRuntimeStages" />
         </div>
 
         <div
             v-if="redirectStages.length > 0 && !surfaceTakesOver && !isCanonicalizingResolvedCode"
             data-testid="claim-widget-redirect-region"
         >
-            <RiderRuntimeSequencer :stages="redirectStages" />
+            <RiderRuntimeSequencer :stages="contextualRedirectStages" />
         </div>
 
         <div

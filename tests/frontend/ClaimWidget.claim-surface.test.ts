@@ -119,7 +119,7 @@ vi.mock('@/components/x-rider/RiderRuntimeSequencer.vue', () => ({
     default: {
         props: ['stages'],
         template:
-            '<div data-testid="rider-runtime">{{ stages?.map((stage) => stage.key).join(",") }}</div>',
+            '<div data-testid="rider-runtime">{{ stages?.map((stage) => `${stage.key}:${stage.payload?.context_code ?? ""}`).join(",") }}</div>',
     },
 }));
 
@@ -371,5 +371,35 @@ describe('ClaimWidget claim surface gating', () => {
         expect(wrapper.find('[data-testid="pre-claim-rider-region"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('Old splash should not flash');
+    });
+
+    it('adds the active Pay Code context to runtime rider stages', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'runtime',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'runtime-splash',
+                                    type: 'splash',
+                                    phase: 'runtime',
+                                    presentation: 'fullscreen',
+                                    content: 'Runtime splash',
+                                },
+                            ],
+                        },
+                    ],
+                },
+                claimSurface: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-runtime"]').text()).toContain('runtime-splash:TEST123');
     });
 });
