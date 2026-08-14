@@ -88,6 +88,7 @@ function actionButtonClass(variant?: string): string {
 
             <PayoutRouteDisplay
                 v-if="payoutRoute"
+                mode="operational"
                 :bank-code="payoutRoute.bank_code"
                 :account-number="payoutRoute.account_number_masked"
                 :settlement-rail="payoutRoute.settlement_rail"

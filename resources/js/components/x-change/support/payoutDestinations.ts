@@ -162,6 +162,22 @@ export function payoutRouteSegments(input: {
     ].filter((segment): segment is string => Boolean(segment));
 }
 
+export function payoutDestinationRouteSegments(input: {
+    amount?: string | number | null;
+    settlementRail?: string | null;
+    bankCode?: string | null;
+    accountNumber?: string | null;
+}): string[] {
+    const institution = destinationInstitution(input.bankCode);
+
+    return [
+        input.amount ? String(input.amount) : null,
+        settlementRailLabel(input.settlementRail || 'INSTAPAY'),
+        institution.shortLabel,
+        input.accountNumber || null,
+    ].filter((segment): segment is string => Boolean(segment));
+}
+
 /**
  * Returns one icon asset path (or null) per segment produced by
  * `payoutRouteSegments`, in the same order: orchestrator, provider, rail,
@@ -184,6 +200,28 @@ export function payoutRouteIcons(input: {
     ];
 
     return input.accountNumber ? [...icons, null] : icons;
+}
+
+/**
+ * Returns one icon asset path (or null) per compact destination segment:
+ * amount, rail, institution, account number. Amount and account number have
+ * no icons because the text is the authoritative visual.
+ */
+export function payoutDestinationRouteIcons(input: {
+    amount?: string | number | null;
+    settlementRail?: string | null;
+    bankCode?: string | null;
+    accountNumber?: string | null;
+}): (string | null)[] {
+    const institution = destinationInstitution(input.bankCode);
+    const icons: (string | null)[] = [
+        input.amount ? null : undefined,
+        iconAssetForRail(input.settlementRail || 'INSTAPAY'),
+        institution.iconAsset,
+        input.accountNumber ? null : undefined,
+    ].filter((icon): icon is string | null => icon !== undefined);
+
+    return icons;
 }
 
 export function payoutRouteSentence(input: {

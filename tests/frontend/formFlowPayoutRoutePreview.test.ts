@@ -9,8 +9,8 @@ import {
 } from "../../resources/js/components/x-change/support/formFlowPayoutRoutePreview";
 import {
   destinationInstitution,
-  payoutRouteIcons,
-  payoutRouteSegments,
+  payoutDestinationRouteIcons,
+  payoutDestinationRouteSegments,
   payoutRouteSentence,
 } from "../../resources/js/components/x-change/support/payoutDestinations";
 import type { ClaimWorkflowMetadata } from "../../resources/js/components/x-change/formFlowClaimWorkflow";
@@ -186,13 +186,22 @@ describe("Form Flow payout route preview end-to-end route rendering", () => {
       category: "wallet",
     });
     expect(
-      payoutRouteSegments({ bankCode, accountNumber, settlementRail }),
-    ).toEqual(["x-change", "NetBank", "InstaPay", "GCash", "09173011987"]);
+      payoutDestinationRouteSegments({
+        amount: "₱50.00",
+        bankCode,
+        accountNumber,
+        settlementRail,
+      }),
+    ).toEqual(["₱50.00", "InstaPay", "GCash", "09173011987"]);
     expect(
-      payoutRouteIcons({ bankCode, accountNumber, settlementRail }),
+      payoutDestinationRouteIcons({
+        amount: "₱50.00",
+        bankCode,
+        accountNumber,
+        settlementRail,
+      }),
     ).toEqual([
-      "/vendor/x-change/images/payout-destinations/x-change-128.png",
-      "/vendor/x-change/images/payout-destinations/netbank-128.png",
+      null,
       "/vendor/x-change/images/payout-destinations/rail-instapay-128.png",
       "/vendor/x-change/images/payout-destinations/gcash-128.png",
       null,

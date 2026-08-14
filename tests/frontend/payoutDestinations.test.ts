@@ -5,6 +5,8 @@ import {
   iconAssetForProvider,
   iconAssetForRail,
   orchestratorIconAsset,
+  payoutDestinationRouteIcons,
+  payoutDestinationRouteSegments,
   payoutRouteIcons,
   payoutRouteSegments,
   payoutRouteSentence,
@@ -26,6 +28,17 @@ describe("payout destination display helpers", () => {
         accountNumber: "09173011987",
       }),
     ).toEqual(["x-change", "NetBank", "InstaPay", "GCash", "09173011987"]);
+  });
+
+  it("builds a redeemer destination route without operational segments", () => {
+    expect(
+      payoutDestinationRouteSegments({
+        amount: "₱50.00",
+        bankCode: "GXCHPHM2XXX",
+        settlementRail: "INSTAPAY",
+        accountNumber: "09173011987",
+      }),
+    ).toEqual(["₱50.00", "InstaPay", "GCash", "09173011987"]);
   });
 
   it("keeps Maya Wallet and Maya Bank distinct", () => {
@@ -97,6 +110,22 @@ describe("payout destination display helpers", () => {
     expect(icons).toEqual([
       "/vendor/x-change/images/payout-destinations/x-change-128.png",
       "/vendor/x-change/images/payout-destinations/netbank-128.png",
+      "/vendor/x-change/images/payout-destinations/rail-instapay-128.png",
+      "/vendor/x-change/images/payout-destinations/gcash-128.png",
+      null,
+    ]);
+  });
+
+  it("pairs icons for the redeemer destination route without amount or account icons", () => {
+    const icons = payoutDestinationRouteIcons({
+      amount: "₱50.00",
+      bankCode: "GXCHPHM2XXX",
+      settlementRail: "INSTAPAY",
+      accountNumber: "09173011987",
+    });
+
+    expect(icons).toEqual([
+      null,
       "/vendor/x-change/images/payout-destinations/rail-instapay-128.png",
       "/vendor/x-change/images/payout-destinations/gcash-128.png",
       null,

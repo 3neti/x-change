@@ -4,6 +4,8 @@ import { Landmark, Route, Send, WalletCards } from 'lucide-vue-next';
 import PayoutDestinationIcon from '@/components/x-change/PayoutDestinationIcon.vue';
 import {
     destinationInstitution,
+    payoutDestinationRouteIcons,
+    payoutDestinationRouteSegments,
     payoutRouteIcons,
     payoutRouteSegments,
     payoutRouteSentence,
@@ -17,6 +19,7 @@ const props = withDefaults(defineProps<{
     settlementRail?: string | null;
     provider?: string | null;
     compact?: boolean;
+    mode?: 'redeemer' | 'operational';
 }>(), {
     amount: null,
     bankCode: null,
@@ -24,28 +27,57 @@ const props = withDefaults(defineProps<{
     settlementRail: 'INSTAPAY',
     provider: 'NetBank',
     compact: false,
+    mode: 'redeemer',
 });
 
 const institution = computed(() => destinationInstitution(props.bankCode));
 const rail = computed(() => settlementRailLabel(props.settlementRail || 'INSTAPAY'));
-const routeSegments = computed(() => payoutRouteSegments({
-    provider: props.provider,
-    settlementRail: props.settlementRail || 'INSTAPAY',
-    bankCode: props.bankCode,
-    accountNumber: props.accountNumber,
-}));
-const routeIcons = computed(() => payoutRouteIcons({
-    provider: props.provider,
-    settlementRail: props.settlementRail || 'INSTAPAY',
-    bankCode: props.bankCode,
-    accountNumber: props.accountNumber,
-}));
+const routeSegments = computed(() => props.mode === 'operational'
+    ? payoutRouteSegments({
+        provider: props.provider,
+        settlementRail: props.settlementRail || 'INSTAPAY',
+        bankCode: props.bankCode,
+        accountNumber: props.accountNumber,
+    })
+    : payoutDestinationRouteSegments({
+        amount: props.amount,
+        settlementRail: props.settlementRail || 'INSTAPAY',
+        bankCode: props.bankCode,
+        accountNumber: props.accountNumber,
+    }));
+const routeIcons = computed(() => props.mode === 'operational'
+    ? payoutRouteIcons({
+        provider: props.provider,
+        settlementRail: props.settlementRail || 'INSTAPAY',
+        bankCode: props.bankCode,
+        accountNumber: props.accountNumber,
+    })
+    : payoutDestinationRouteIcons({
+        amount: props.amount,
+        settlementRail: props.settlementRail || 'INSTAPAY',
+        bankCode: props.bankCode,
+        accountNumber: props.accountNumber,
+    }));
 const sentence = computed(() => payoutRouteSentence({
     amount: props.amount,
     settlementRail: props.settlementRail || 'INSTAPAY',
     bankCode: props.bankCode,
     accountNumber: props.accountNumber,
 }));
+
+function fallbackIconFor(index: number, segment: string) {
+    if (props.mode === 'operational') {
+        return index === 0
+            ? Send
+            : segment === props.provider
+                ? Landmark
+                : segment === institution.value.shortLabel
+                    ? WalletCards
+                    : null;
+    }
+
+    return segment === institution.value.shortLabel ? WalletCards : null;
+}
 </script>
 
 <template>
@@ -68,30 +100,34 @@ const sentence = computed(() => payoutRouteSentence({
                     </p>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                <div
+                    class="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[11px] font-semibold sm:text-xs"
+                    data-testid="payout-route-segments"
+                >
                     <template
                         v-for="(segment, index) in routeSegments"
                         :key="`${segment}-${index}`"
                     >
                         <span
-                            class="inline-flex min-h-7 items-center gap-1.5 rounded-full border border-border bg-background px-2.5 text-foreground"
+                            class="inline-flex min-h-7 min-w-0 items-center gap-1.5 rounded-full border border-border bg-background px-2 text-foreground"
                             :class="{
-                                'border-primary/25 bg-primary/10 text-primary': index === 0,
+                                'shrink-0 border-primary/25 bg-primary/10 text-primary': index === 0,
                                 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200': segment === rail,
                                 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200': segment === institution.shortLabel,
-                                'font-mono': index === routeSegments.length - 1,
+                                'shrink font-mono': index === routeSegments.length - 1,
                             }"
                         >
                             <PayoutDestinationIcon
                                 :icon-asset="routeIcons[index]"
-                                :fallback-icon="index === 0 ? Send : segment === props.provider ? Landmark : segment === institution.shortLabel ? WalletCards : null"
+                                :fallback-icon="fallbackIconFor(index, segment)"
                                 :alt="segment"
+                                size-class="h-3.5 w-3.5"
                             />
-                            {{ segment }}
+                            <span class="min-w-0 truncate">{{ segment }}</span>
                         </span>
                         <span
                             v-if="index < routeSegments.length - 1"
-                            class="text-muted-foreground"
+                            class="shrink-0 text-muted-foreground"
                             aria-hidden="true"
                         >
                             ->

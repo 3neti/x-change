@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import PayoutRouteDisplay from '../../resources/js/components/x-change/PayoutRouteDisplay.vue';
 
 describe('PayoutRouteDisplay', () => {
-    it('shows the GCash icon alongside its text label', () => {
+    it('shows a compact redeemer route by default', () => {
         const wrapper = mount(PayoutRouteDisplay, {
             props: {
+                amount: '₱50.00',
                 bankCode: 'GXCHPHM2XXX',
                 accountNumber: '09173011987',
                 settlementRail: 'INSTAPAY',
@@ -15,14 +16,50 @@ describe('PayoutRouteDisplay', () => {
         const text = wrapper.text();
         expect(text).toContain('GCash');
         expect(text).toContain('InstaPay');
-        expect(text).toContain('x-change');
-        expect(text).toContain('NetBank');
+        expect(text).toContain('₱50.00');
+        expect(text).toContain('09173011987');
+        expect(text).not.toContain('x-change');
+        expect(text).not.toContain('NetBank');
 
         const images = wrapper.findAll('img');
         const gcashIcon = images.find((img) =>
             img.attributes('src')?.includes('gcash'),
         );
         expect(gcashIcon).toBeDefined();
+    });
+
+    it('can show the full operational route for issuer surfaces', () => {
+        const wrapper = mount(PayoutRouteDisplay, {
+            props: {
+                mode: 'operational',
+                amount: '₱50.00',
+                bankCode: 'GXCHPHM2XXX',
+                accountNumber: '09173011987',
+                settlementRail: 'INSTAPAY',
+            },
+        });
+
+        const text = wrapper.text();
+        expect(text).toContain('x-change');
+        expect(text).toContain('NetBank');
+        expect(text).toContain('InstaPay');
+        expect(text).toContain('GCash');
+        expect(text).toContain('09173011987');
+    });
+
+    it('keeps the visible route on one line', () => {
+        const wrapper = mount(PayoutRouteDisplay, {
+            props: {
+                amount: '₱2,000.00',
+                bankCode: 'GXCHPHM2XXX',
+                accountNumber: '09703812037',
+                settlementRail: 'INSTAPAY',
+            },
+        });
+
+        const route = wrapper.find('[data-testid="payout-route-segments"]');
+        expect(route.classes()).toContain('whitespace-nowrap');
+        expect(route.classes()).toContain('overflow-hidden');
     });
 
     it('keeps Maya Wallet and Maya Bank textually distinct even though they may share an icon', () => {
@@ -66,7 +103,7 @@ describe('PayoutRouteDisplay', () => {
         });
 
         // The text label is still shown even without an icon asset.
-        expect(wrapper.text()).toContain('AIIPPHM1XXX');
+        expect(wrapper.text()).toContain('AL-AMANAH ISLAMIC BANK');
 
         // No broken <img> is rendered for the destination pill; the
         // component falls back to the lucide glyph instead.
