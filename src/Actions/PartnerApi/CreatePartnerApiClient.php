@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\PartnerApi;
 
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -12,10 +13,15 @@ use Laravel\Passport\ClientRepository;
 use LBHurtado\XChange\Data\PartnerApi\PartnerApiCredentialData;
 use LBHurtado\XChange\Enums\PartnerApiClientStatus;
 use LBHurtado\XChange\Models\PartnerApiClient;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiGovernanceJournal;
 
 class CreatePartnerApiClient
 {
-    public function __construct(protected ClientRepository $clients) {}
+    public function __construct(
+        protected Application $app,
+        protected ClientRepository $clients,
+        protected PartnerApiGovernanceJournal $journal,
+    ) {}
 
     /**
      * @param  list<string>  $scopes
@@ -27,6 +33,7 @@ class CreatePartnerApiClient
         string $environment = 'sandbox',
         array $scopes = [],
         array $mandate = [],
+        Model|string $operator = 'commissioning_authority',
     ): PartnerApiCredentialData {
         $allowedScopes = array_keys((array) config('x-change.partner_api.scopes', []));
         $resolvedScopes = $scopes === []
@@ -38,11 +45,19 @@ class CreatePartnerApiClient
             throw new InvalidArgumentException('Unknown Partner API scopes: '.implode(', ', $unknownScopes));
         }
 
-        if (! in_array($environment, ['sandbox', 'production'], true)) {
-            throw new InvalidArgumentException('Partner API environment must be sandbox or production.');
+        if ($environment !== 'sandbox') {
+            throw new InvalidArgumentException(
+                'Production Partner API clients require governed maker-checker activation.',
+            );
         }
 
-        return DB::transaction(function () use ($name, $issuer, $environment, $resolvedScopes, $mandate): PartnerApiCredentialData {
+        if ($this->app->environment('production')) {
+            throw new InvalidArgumentException(
+                'Sandbox Partner API clients cannot be activated in a production application.',
+            );
+        }
+
+        return DB::transaction(function () use ($name, $issuer, $environment, $resolvedScopes, $mandate, $operator): PartnerApiCredentialData {
             $oauthClient = $this->clients->createClientCredentialsGrantClient(trim($name));
             $resolvedMandate = array_replace_recursive(
                 (array) config('x-change.partner_api.default_mandate', []),
@@ -61,6 +76,7 @@ class CreatePartnerApiClient
                 'mandate' => $resolvedMandate,
                 'activated_at' => now(),
             ]);
+            $this->journal->recordClient($partner, 'partner_api.client.activated', $operator);
 
             return new PartnerApiCredentialData(
                 reference: $partner->reference,

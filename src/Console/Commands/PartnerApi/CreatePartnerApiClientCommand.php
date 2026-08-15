@@ -31,8 +31,10 @@ final class CreatePartnerApiClientCommand extends Command
     {
         $environment = (string) $this->option('environment');
 
-        if ($environment === 'production' && ! (bool) $this->option('confirm-production')) {
-            $this->components->error('Production Partner API credentials require --confirm-production.');
+        if ($environment !== 'sandbox') {
+            $this->components->error(
+                'Production Partner API credentials require governed maker-checker activation and cannot be created by this command.',
+            );
 
             return self::FAILURE;
         }

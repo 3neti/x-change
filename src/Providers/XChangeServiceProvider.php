@@ -105,6 +105,7 @@ use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioGroupComman
 use LBHurtado\XChange\Console\Commands\Onboarding\OnboardIssuerCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\VerifyTestMobileCommand;
+use LBHurtado\XChange\Console\Commands\PartnerApi\AuthorizePartnerApiOperatorCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\CreatePartnerApiClientCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
@@ -1354,6 +1355,7 @@ class XChangeServiceProvider extends ServiceProvider
                 TestFeedbackSmsCommand::class,
                 ShowFeedbackHistoryCommand::class,
                 CreatePartnerApiClientCommand::class,
+                AuthorizePartnerApiOperatorCommand::class,
                 RunPartnerApiLifecycleCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,

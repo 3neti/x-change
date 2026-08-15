@@ -60,6 +60,10 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestReviewCo
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransferCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientConnectionController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientStatusController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutBatchController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutReconciliationController;
@@ -149,6 +153,20 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             ->name('x-change.cockpit.documentation');
         Route::get('commercial', CockpitCommercialOfferingPageController::class)
             ->name('x-change.cockpit.commercial.index');
+        Route::get('api-partners', CockpitPartnerApiPageController::class)
+            ->name('x-change.cockpit.api-partners.index');
+        Route::post('api-partners/clients', [CockpitPartnerApiClientController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.api-partners.clients.store');
+        Route::post('api-partners/clients/{partnerApiClient}/checks', CockpitPartnerApiClientConnectionController::class)
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.api-partners.clients.checks.store');
+        Route::post('api-partners/clients/{partnerApiClient}/suspensions', [CockpitPartnerApiClientStatusController::class, 'suspend'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.api-partners.clients.suspensions.store');
+        Route::post('api-partners/clients/{partnerApiClient}/revocations', [CockpitPartnerApiClientStatusController::class, 'revoke'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.api-partners.clients.revocations.store');
         Route::post('commercial/offerings', [CockpitCommercialOfferingController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.commercial.offerings.store');

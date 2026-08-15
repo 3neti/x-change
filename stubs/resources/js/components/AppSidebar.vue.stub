@@ -7,6 +7,7 @@ import {
     FileStack,
     Landmark,
     Megaphone,
+    PlugZap,
     RadioTower,
     Scale,
     UsersRound,
@@ -32,6 +33,7 @@ import {
     quickGenerate,
 } from '@/routes/x-change/cockpit';
 import accounts from '@/routes/x-change/cockpit/accounts';
+import apiPartners from '@/routes/x-change/cockpit/api-partners';
 import campaigns from '@/routes/x-change/cockpit/campaigns';
 import commercial from '@/routes/x-change/cockpit/commercial';
 import diagnostics from '@/routes/x-change/cockpit/diagnostics';
@@ -97,12 +99,23 @@ type XChangeSharedProps = {
         navigation?: {
             system_readiness_visible?: boolean;
             commercial_controls_visible?: boolean;
+            api_partner_controls_visible?: boolean;
         };
     };
 };
 
 const page = usePage<XChangeSharedProps>();
 const systemItems = computed<XChangeNavigationItem[]>(() => [
+    ...(page.props.xchange?.navigation?.api_partner_controls_visible
+        ? [
+              {
+                  title: 'API Partners',
+                  description: 'Govern machine access and limits',
+                  href: apiPartners.index(),
+                  icon: PlugZap,
+              },
+          ]
+        : []),
     ...(page.props.xchange?.navigation?.commercial_controls_visible
         ? [
               {

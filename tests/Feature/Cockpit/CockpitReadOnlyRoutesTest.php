@@ -1306,6 +1306,10 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         );
 
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
+        'x-change.cockpit.api-partners.clients.store',
+        'x-change.cockpit.api-partners.clients.checks.store',
+        'x-change.cockpit.api-partners.clients.suspensions.store',
+        'x-change.cockpit.api-partners.clients.revocations.store',
         'x-change.cockpit.commercial.offerings.store',
         'x-change.cockpit.commercial.offerings.approvals.store',
         'x-change.cockpit.commercial.offerings.activations.store',
@@ -1364,6 +1368,9 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         'x-change.cockpit.quick-generate.artwork-previews.store',
         'x-change.cockpit.pay-code-templates.store',
         'x-change.cockpit.pay-code-templates.update',
+        'x-change.cockpit.rider-library.store',
+        'x-change.cockpit.rider-library.pin',
+        'x-change.cockpit.rider-library.forget',
         'x-change.cockpit.pay-codes.payout-corrections.store',
         'x-change.cockpit.pay-codes.terminal-actions.store',
     ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())

@@ -11,6 +11,7 @@ use Inertia\Inertia;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessAccess;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 use Symfony\Component\HttpFoundation\Response;
 
 class ShareXChangeBranding
@@ -18,6 +19,7 @@ class ShareXChangeBranding
     public function __construct(
         private readonly CockpitSystemReadinessAccess $systemReadinessAccess,
         private readonly CommercialOperatorAuthorityContract $commercialAuthority,
+        private readonly PartnerApiOperatorAuthority $partnerApiAuthority,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -33,6 +35,8 @@ class ShareXChangeBranding
                 'system_readiness_visible' => $this->systemReadinessAccess->isVisible(),
                 'commercial_controls_visible' => $request->user() instanceof Model
                     && $this->mayViewCommercialControls($request->user()),
+                'api_partner_controls_visible' => $request->user() instanceof Model
+                    && $this->partnerApiAuthority->mayView($request->user()),
             ],
         ]);
 

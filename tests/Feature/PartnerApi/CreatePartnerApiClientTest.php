@@ -59,3 +59,25 @@ it('rejects scopes that are not in the Partner API contract', function () {
     expect(PartnerApiClient::query()->count())->toBe(0)
         ->and(Client::query()->count())->toBe(0);
 });
+
+it('refuses sandbox credential activation in a production application', function () {
+    $issuer = User::query()->create([
+        'name' => 'Production Issuer',
+        'email' => 'production-sandbox@example.test',
+        'password' => Hash::make('password'),
+    ]);
+    $create = app(CreatePartnerApiClient::class);
+    $this->app->detectEnvironment(static fn (): string => 'production');
+
+    try {
+        expect(fn () => $create->handle(
+            name: 'Unsafe Sandbox Client',
+            issuer: $issuer,
+        ))->toThrow(InvalidArgumentException::class, 'cannot be activated in a production application');
+    } finally {
+        $this->app->detectEnvironment(static fn (): string => 'testing');
+    }
+
+    expect(PartnerApiClient::query()->count())->toBe(0)
+        ->and(Client::query()->count())->toBe(0);
+});
