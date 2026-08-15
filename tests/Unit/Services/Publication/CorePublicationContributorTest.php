@@ -65,6 +65,25 @@ it('keeps build publication granular, generated, and safely replaceable', functi
     }
 });
 
+it('publishes every packaged link-preview driver as a build input', function (): void {
+    $build = (new PublicationCatalog([new CorePublicationContributor]))
+        ->definitions(PublicationScope::Build);
+    $definition = collect($build)->firstWhere('id', 'x-change.link-preview-drivers');
+    $packagedDrivers = collect(glob(dirname(__DIR__, 4).'/config/link-preview-drivers/*.yaml'))
+        ->map(fn (string $path): string => basename($path))
+        ->sort()
+        ->values()
+        ->all();
+    $publishedDrivers = collect($definition?->verificationPaths ?? [])
+        ->map(fn (string $path): string => basename($path))
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($definition)->not->toBeNull()
+        ->and($publishedDrivers)->toBe($packagedDrivers);
+});
+
 it('keeps configuration overrides out of automatic build publication', function (): void {
     $catalog = new PublicationCatalog([new CorePublicationContributor]);
     $buildTargets = array_column($catalog->definitions(PublicationScope::Build), 'target');

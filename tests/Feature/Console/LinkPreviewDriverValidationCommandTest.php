@@ -20,6 +20,9 @@ it('validates the package link-preview drivers without network access', function
         ])
         ->and(collect($report['drivers'])->every(
             fn (array $driver): bool => $driver['valid'],
+        ))->toBeTrue()
+        ->and(collect($report['drivers'])->every(
+            fn (array $driver): bool => $driver['enabled'],
         ))->toBeTrue();
 });
 

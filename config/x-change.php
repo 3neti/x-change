@@ -316,7 +316,7 @@ return [
                     ),
                     'youtube' => (bool) env(
                         'XCHANGE_COCKPIT_YOUTUBE_ARTWORK_ENABLED',
-                        false,
+                        true,
                     ),
                 ],
                 'providers' => [

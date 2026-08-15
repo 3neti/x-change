@@ -8,11 +8,17 @@ use LBHurtado\XChange\Services\LinkPreview\LinkPreviewDriverData;
 use LBHurtado\XChange\Services\LinkPreview\LinkPreviewDriverRepository;
 use Symfony\Component\Yaml\Yaml;
 
-it('loads the package Spotify driver and keeps YouTube disabled by default', function () {
+it('loads every packaged link-preview driver by default', function () {
     $drivers = app(LinkPreviewDriverRepository::class)->all();
+    $manifestKeys = collect(glob(dirname(__DIR__, 3).'/config/link-preview-drivers/*.yaml'))
+        ->map(fn (string $path): mixed => data_get(Yaml::parseFile($path), 'key'))
+        ->filter(fn (mixed $key): bool => is_string($key))
+        ->sort()
+        ->values()
+        ->all();
 
-    expect($drivers)->toHaveKey('spotify')
-        ->and($drivers)->not->toHaveKey('youtube')
+    expect(array_keys($drivers))->toBe($manifestKeys)
+        ->and($drivers)->toHaveKeys(['spotify', 'youtube'])
         ->and($drivers['spotify']->canonicalizer)->toBe('strip_query')
         ->and($drivers['spotify']->oEmbedEndpoint)->toBe('https://open.spotify.com/oembed')
         ->and($drivers['spotify']->imageHosts)->toContain('i.scdn.co');
@@ -27,8 +33,36 @@ it('validates every package link-preview manifest', function () {
             'youtube',
         ])
         ->and(collect($diagnostics)->every('valid'))->toBeTrue()
-        ->and(collect($diagnostics)->firstWhere('key', 'spotify')['enabled'])->toBeTrue()
-        ->and(collect($diagnostics)->firstWhere('key', 'youtube')['enabled'])->toBeFalse();
+        ->and(collect($diagnostics)->every('enabled'))->toBeTrue();
+});
+
+it('honors every packaged driver kill switch', function (string $driver) {
+    config()->set(
+        "x-change.cockpit.quick_generate.url_artwork.enabled_drivers.{$driver}",
+        false,
+    );
+    app()->forgetInstance(LinkPreviewDriverRepository::class);
+
+    expect(app(LinkPreviewDriverRepository::class)->all())
+        ->not->toHaveKey($driver);
+})->with([
+    'Spotify' => 'spotify',
+    'YouTube' => 'youtube',
+]);
+
+it('provides a kill switch for every packaged driver', function () {
+    $manifestKeys = collect(glob(dirname(__DIR__, 3).'/config/link-preview-drivers/*.yaml'))
+        ->map(fn (string $path): mixed => data_get(Yaml::parseFile($path), 'key'))
+        ->filter(fn (mixed $key): bool => is_string($key))
+        ->sort()
+        ->values()
+        ->all();
+    $configuredKeys = collect(config(
+        'x-change.cockpit.quick_generate.url_artwork.enabled_drivers',
+        [],
+    ))->keys()->sort()->values()->all();
+
+    expect($configuredKeys)->toBe($manifestKeys);
 });
 
 it('rejects unsafe or executable driver manifest values', function (array $override, string $message) {

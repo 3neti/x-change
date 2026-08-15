@@ -1,7 +1,7 @@
 schema_version: x-change.link-preview-driver.v1
 key: youtube
 label: YouTube
-enabled: false
+enabled: true
 
 canonicalization:
   strategy: youtube_video

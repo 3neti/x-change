@@ -346,8 +346,12 @@ it('does not follow metadata or artwork redirects', function (string $redirectin
     );
 })->with(['metadata', 'artwork']);
 
-it('keeps YouTube artwork disabled by default', function () {
+it('honors the YouTube artwork kill switch', function () {
     actingAsTestUser();
+    config()->set(
+        'x-change.cockpit.quick_generate.url_artwork.enabled_drivers.youtube',
+        false,
+    );
 
     $this->postJson(
         route('x-change.cockpit.quick-generate.artwork-previews.store'),
@@ -362,10 +366,6 @@ it('keeps YouTube artwork disabled by default', function () {
 
 it('resolves supported YouTube URL variants through one canonical oEmbed URL', function (string $url) {
     actingAsTestUser();
-    config()->set(
-        'x-change.cockpit.quick_generate.url_artwork.enabled_drivers.youtube',
-        true,
-    );
 
     Http::fake([
         'https://www.youtube.com/oembed*' => Http::response(
@@ -464,10 +464,6 @@ it('shares the YouTube cache entry across URL variants and tracking tokens', fun
 
 it('rejects malformed or unsafe YouTube resources before making HTTP requests', function (string $url) {
     actingAsTestUser();
-    config()->set(
-        'x-change.cockpit.quick_generate.url_artwork.enabled_drivers.youtube',
-        true,
-    );
 
     $this->postJson(
         route('x-change.cockpit.quick-generate.artwork-previews.store'),
