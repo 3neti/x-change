@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "X-Change Partner API",
+    "description": "OAuth client-credentials collection for governed Pay Code operations. Store credentials in a Postman environment; never commit real secrets.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url", "value": "https://your-x-change-host.test"},
+    {"key": "client_id", "value": ""},
+    {"key": "client_secret", "value": "", "type": "secret"},
+    {"key": "access_token", "value": "", "type": "secret"},
+    {"key": "pay_code", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "Discovery",
+      "item": [
+        {"name": "Partner API Discovery", "request": {"method": "GET", "url": "{{base_url}}/.well-known/x-change-partner-api"}},
+        {"name": "OpenAPI Contract", "request": {"method": "GET", "url": "{{base_url}}/api/partner/openapi.json"}}
+      ]
+    },
+    {
+      "name": "OAuth",
+      "item": [
+        {
+          "name": "Get Access Token",
+          "event": [{"listen": "test", "script": {"exec": ["const body = pm.response.json();", "pm.collectionVariables.set('access_token', body.access_token);"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+            "body": {"mode": "urlencoded", "urlencoded": [{"key": "grant_type", "value": "client_credentials"}, {"key": "client_id", "value": "{{client_id}}"}, {"key": "client_secret", "value": "{{client_secret}}"}, {"key": "scope", "value": "capabilities:read pay-codes:estimate pay-codes:issue pay-codes:read pay-codes:cancel"}]},
+            "url": "{{base_url}}/oauth/token"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pay Codes",
+      "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+      "item": [
+        {"name": "Capabilities", "request": {"method": "GET", "url": "{{base_url}}/api/partner/v1/capabilities"}},
+        {
+          "name": "Estimate",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"cash\": {\"amount\": 100.00, \"currency\": \"PHP\", \"settlement_rail\": \"INSTAPAY\", \"validation\": {\"mobile\": \"09171234567\"}},\n  \"inputs\": {\"fields\": []},\n  \"feedback\": {\"email\": null, \"mobile\": null, \"webhook\": null},\n  \"rider\": {\"message\": \"API test\", \"url\": null, \"splash\": null}\n}"}, "url": "{{base_url}}/api/partner/v1/pay-code-estimates"}
+        },
+        {
+          "name": "Issue",
+          "event": [{"listen": "test", "script": {"exec": ["const body = pm.response.json();", "if (body.data && body.data.code) pm.collectionVariables.set('pay_code', body.data.code);"]}}],
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Idempotency-Key", "value": "{{$guid}}"}, {"key": "X-Correlation-ID", "value": "postman-{{$guid}}"}], "body": {"mode": "raw", "raw": "{\n  \"cash\": {\"amount\": 100.00, \"currency\": \"PHP\", \"settlement_rail\": \"INSTAPAY\", \"validation\": {\"mobile\": \"09171234567\"}},\n  \"inputs\": {\"fields\": []},\n  \"feedback\": {\"email\": null, \"mobile\": null, \"webhook\": null},\n  \"rider\": {\"message\": \"API-issued Pay Code\", \"url\": null, \"splash\": null}\n}"}, "url": "{{base_url}}/api/partner/v1/pay-codes"}
+        },
+        {"name": "Status", "request": {"method": "GET", "url": "{{base_url}}/api/partner/v1/pay-codes/{{pay_code}}"}},
+        {"name": "Cancel", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"reason\":\"Cancelled by authorized Partner API client.\"}"}, "url": "{{base_url}}/api/partner/v1/pay-codes/{{pay_code}}/cancellation"}
+        }
+      ]
+    }
+  ]
+}

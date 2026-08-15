@@ -465,6 +465,36 @@ it('reports explicitly enabled cockpit operator activity runtime components thro
         ->and($repository['resolved_class'])->toBe(DatabaseCockpitOperatorIssuanceActivityRepository::class);
 });
 
+it('fails closed when Partner API OAuth signing keys are unavailable', function () {
+    config()->set('x-change.partner_api.enabled', true);
+    config()->set('passport.private_key', null);
+    config()->set('passport.public_key', null);
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'partner api oauth');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['meta']['missing_variables'])->toBe([
+            'PASSPORT_PRIVATE_KEY',
+            'PASSPORT_PUBLIC_KEY',
+        ]);
+});
+
+it('does not require OAuth signing keys while Partner API operations are disabled', function () {
+    config()->set('x-change.partner_api.enabled', false);
+    config()->set('passport.private_key', null);
+    config()->set('passport.public_key', null);
+
+    Artisan::call('x-change:doctor', ['--pre-install' => true, '--json' => true]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'partner api oauth');
+
+    expect($check['passed'])->toBeTrue()
+        ->and($check['meta']['missing_variables'])->toBe([])
+        ->and($check['meta']['public_discovery_enabled'])->toBeTrue();
+});
+
 function failingBuildPublicationCatalog(): PublicationCatalog
 {
     return new PublicationCatalog([

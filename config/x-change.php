@@ -537,26 +537,25 @@ return [
 
     'partner_api' => [
         'enabled' => env('XCHANGE_PARTNER_API_ENABLED', false),
+        'public_discovery_enabled' => env('XCHANGE_PARTNER_API_PUBLIC_DISCOVERY_ENABLED', true),
+        'documentation_url' => env('XCHANGE_PARTNER_API_DOCUMENTATION_URL'),
+        'access_contact' => env('XCHANGE_PARTNER_API_ACCESS_CONTACT'),
         'prefix' => env('XCHANGE_PARTNER_API_PREFIX', 'api/partner/v1'),
         'token_ttl_minutes' => (int) env('XCHANGE_PARTNER_API_TOKEN_TTL_MINUTES', 15),
         'rate_limit_per_minute' => (int) env('XCHANGE_PARTNER_API_RATE_LIMIT_PER_MINUTE', 60),
         'scopes' => [
             'capabilities:read' => 'Inspect the authenticated Partner API mandate.',
-            'prices:read' => 'Inspect published pricing and request estimates.',
             'pay-codes:estimate' => 'Estimate a Pay Code without reserving funds.',
             'pay-codes:issue' => 'Issue a Pay Code from the bound Account.',
             'pay-codes:read' => 'Inspect Pay Codes owned by the bound Account.',
             'pay-codes:cancel' => 'Cancel an eligible Pay Code owned by the bound Account.',
-            'deliveries:read' => 'Inspect delivery status for owned Pay Codes.',
         ],
         'default_scopes' => [
             'capabilities:read',
-            'prices:read',
             'pay-codes:estimate',
             'pay-codes:issue',
             'pay-codes:read',
             'pay-codes:cancel',
-            'deliveries:read',
         ],
         'default_mandate' => [
             'currencies' => ['PHP'],

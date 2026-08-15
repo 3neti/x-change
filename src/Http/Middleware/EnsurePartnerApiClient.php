@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Http\Middleware;
 
 use Closure;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Laravel\Passport\AccessToken;
@@ -34,7 +35,7 @@ class EnsurePartnerApiClient extends EnsureClientIsResourceOwner
         }
 
         if (! collect($scopes)->every(fn (string $scope): bool => in_array($scope, $client->scopes, true))) {
-            throw new AuthenticationException('The Partner API mandate does not allow this operation.');
+            throw new AuthorizationException('The Partner API mandate does not allow this operation.');
         }
 
         app(PartnerApiRequestContext::class)->setClient($client);

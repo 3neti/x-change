@@ -136,6 +136,8 @@ abstract class TestCase extends Orchestra
         $app['config']->set('x-change.routes.api', true);
         $app['config']->set('x-change.routes.legacy_lifecycle_api.enabled', true);
         $app['config']->set('x-change.partner_api.enabled', true);
+        $app['config']->set('passport.private_key', 'test-oauth-private-key');
+        $app['config']->set('passport.public_key', 'test-oauth-public-key');
         $app['config']->set('x-change.deployment.profile_explicitly_configured', true);
         $app['config']->set('x-change.commissioning.enabled', false);
 

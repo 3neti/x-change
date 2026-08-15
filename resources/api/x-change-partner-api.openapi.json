@@ -1,0 +1,133 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "X-Change Partner API",
+    "version": "1.0.0",
+    "description": "Governed server-to-server Pay Code issuance. OAuth identity is bound to one issuer Account; server-side mandates, Account funds, Treasury controls, and idempotency remain authoritative."
+  },
+  "servers": [{"url": "/api/partner/v1"}],
+  "security": [{"partnerOAuth": []}],
+  "paths": {
+    "/capabilities": {
+      "get": {
+        "operationId": "showPartnerCapabilities",
+        "summary": "Inspect the authenticated client mandate",
+        "security": [{"partnerOAuth": ["capabilities:read"]}],
+        "responses": {"200": {"description": "Safe client capabilities", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}}}
+      }
+    },
+    "/pay-code-estimates": {
+      "post": {
+        "operationId": "estimatePartnerPayCode",
+        "summary": "Estimate a Pay Code without reserving funds",
+        "security": [{"partnerOAuth": ["pay-codes:estimate"]}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeInstructions"}}}},
+        "responses": {
+          "200": {"description": "Pricing estimate", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/pay-codes": {
+      "post": {
+        "operationId": "issuePartnerPayCode",
+        "summary": "Issue a Pay Code from the token-bound Account",
+        "security": [{"partnerOAuth": ["pay-codes:issue"]}],
+        "parameters": [
+          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
+          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeInstructions"}}}},
+        "responses": {
+          "201": {"description": "Pay Code issued once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "200": {"description": "Idempotent replay of the original result", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "409": {"description": "Idempotency key reused with changed input"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/pay-codes/{code}": {
+      "get": {
+        "operationId": "showPartnerPayCode",
+        "summary": "Inspect a sanitized Pay Code status",
+        "security": [{"partnerOAuth": ["pay-codes:read"]}],
+        "parameters": [{"$ref": "#/components/parameters/PayCode"}],
+        "responses": {
+          "200": {"description": "Owned Pay Code status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "404": {"description": "Unknown or not owned by this client"}
+        }
+      }
+    },
+    "/pay-codes/{code}/cancellation": {
+      "post": {
+        "operationId": "cancelPartnerPayCode",
+        "summary": "Cancel an eligible unclaimed Pay Code and release reserved principal",
+        "security": [{"partnerOAuth": ["pay-codes:cancel"]}],
+        "parameters": [{"$ref": "#/components/parameters/PayCode"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["reason"], "properties": {"reason": {"type": "string", "maxLength": 255}}}}}},
+        "responses": {
+          "200": {"description": "Treasury-safe terminal release result", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "404": {"description": "Unknown or not owned by this client"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "partnerOAuth": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/oauth/token",
+            "scopes": {
+              "capabilities:read": "Inspect the authenticated Partner API mandate",
+              "pay-codes:estimate": "Estimate a Pay Code",
+              "pay-codes:issue": "Issue a Pay Code",
+              "pay-codes:read": "Inspect owned Pay Codes",
+              "pay-codes:cancel": "Cancel eligible owned Pay Codes"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "PayCode": {"name": "code", "in": "path", "required": true, "schema": {"type": "string", "maxLength": 80}}
+    },
+    "schemas": {
+      "PayCodeInstructions": {
+        "type": "object",
+        "required": ["cash", "inputs", "feedback", "rider"],
+        "properties": {
+          "cash": {
+            "type": "object",
+            "required": ["amount", "currency"],
+            "properties": {
+              "amount": {"type": "number", "exclusiveMinimum": 0, "example": 100.00},
+              "currency": {"type": "string", "example": "PHP"},
+              "settlement_rail": {"type": ["string", "null"], "enum": ["INSTAPAY", "PESONET", null]},
+              "validation": {"type": ["object", "null"], "properties": {"mobile": {"type": ["string", "null"]}, "payable": {"type": ["string", "null"]}, "secret": {"type": ["string", "null"]}}}
+            }
+          },
+          "inputs": {"type": "object", "required": ["fields"], "properties": {"fields": {"type": "array", "items": {"type": "string"}}}},
+          "feedback": {"type": "object", "properties": {"email": {"type": ["string", "null"], "format": "email"}, "mobile": {"type": ["string", "null"]}, "webhook": {"type": ["string", "null"], "format": "uri"}}},
+          "rider": {"type": "object", "properties": {"message": {"type": ["string", "null"]}, "url": {"type": ["string", "null"], "format": "uri"}, "splash": {"type": ["string", "null"]}}},
+          "count": {"type": "integer", "minimum": 1, "default": 1},
+          "ttl": {"type": ["integer", "string", "null"]}
+        },
+        "additionalProperties": true
+      },
+      "SuccessEnvelope": {"type": "object", "required": ["success", "data", "meta"], "properties": {"success": {"const": true}, "data": {}, "meta": {"type": "object"}}},
+      "ErrorEnvelope": {"type": "object", "required": ["success", "message", "code", "errors"], "properties": {"success": {"const": false}, "message": {"type": "string"}, "code": {"type": "string"}, "errors": {"type": ["object", "array"]}}}
+    },
+    "responses": {
+      "Unauthorized": {"description": "Missing, expired, revoked, or invalid bearer token"},
+      "Forbidden": {"description": "Token lacks the required scope or client mandate"},
+      "ValidationError": {"description": "Invalid request or mandate violation", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}}
+    }
+  }
+}

@@ -295,6 +295,9 @@ release an immutable package version, and update the host through Composer.
 
 ## Documentation
 
+- [Partner API](docs/partner-api/README.md) — OAuth server-to-server integration, OpenAPI, Postman, and HTTP acceptance.
+- [Partner API Compass](docs/architecture/PARTNER_API_COMPASS.md) — implemented boundary and deferred MCP/security gates.
+
 - [Getting started](./GETTING_STARTED.md)
 - [Deployment and commissioning](./DEPLOYMENT.md)
 - [Thin-host configuration](./docs/deployment/THIN_HOST_CONFIGURATION.md)

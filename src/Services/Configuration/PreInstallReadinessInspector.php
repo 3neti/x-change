@@ -35,6 +35,7 @@ final readonly class PreInstallReadinessInspector
             $deployment,
             $this->systemPrincipalIdentityCheck($liveProfile),
             $this->productionApplicationSecurityCheck(),
+            $this->partnerApiOAuthCheck(),
             $this->productionOnboardingOtpCheck(),
             $this->instructionCapabilityCheck(),
             $this->claimEvidenceStorageCheck(),
@@ -64,6 +65,42 @@ final readonly class PreInstallReadinessInspector
             'missing_variables' => $missing,
             'checks' => $checks,
         ];
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    private function partnerApiOAuthCheck(): array
+    {
+        $enabled = (bool) config('x-change.partner_api.enabled', false);
+        $privateKeyReady = filled(config('passport.private_key'))
+            || is_readable(storage_path('oauth-private.key'));
+        $publicKeyReady = filled(config('passport.public_key'))
+            || is_readable(storage_path('oauth-public.key'));
+        $missing = [];
+
+        if ($enabled && ! $privateKeyReady) {
+            $missing[] = 'PASSPORT_PRIVATE_KEY';
+        }
+
+        if ($enabled && ! $publicKeyReady) {
+            $missing[] = 'PASSPORT_PUBLIC_KEY';
+        }
+
+        return $this->check(
+            'partner api oauth',
+            ! $enabled || $missing === [],
+            ! $enabled
+                ? 'Partner API financial operations are disabled; public discovery remains safe'
+                : ($missing === []
+                    ? 'Partner API OAuth signing keys are ready'
+                    : 'Partner API is enabled but OAuth signing keys are unavailable'),
+            [
+                'enabled' => $enabled,
+                'public_discovery_enabled' => (bool) config('x-change.partner_api.public_discovery_enabled', true),
+                'missing_variables' => $missing,
+            ],
+        );
     }
 
     /**

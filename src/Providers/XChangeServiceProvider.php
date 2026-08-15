@@ -105,6 +105,8 @@ use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioGroupComman
 use LBHurtado\XChange\Console\Commands\Onboarding\OnboardIssuerCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\VerifyTestMobileCommand;
+use LBHurtado\XChange\Console\Commands\PartnerApi\CreatePartnerApiClientCommand;
+use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
@@ -1351,6 +1353,8 @@ class XChangeServiceProvider extends ServiceProvider
                 TestFeedbackEmailCommand::class,
                 TestFeedbackSmsCommand::class,
                 ShowFeedbackHistoryCommand::class,
+                CreatePartnerApiClientCommand::class,
+                RunPartnerApiLifecycleCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
                 RunLifecycleScenarioCommand::class,
@@ -2108,6 +2112,10 @@ class XChangeServiceProvider extends ServiceProvider
             $this->loadRoutesFrom($this->packagePath('routes/api.php'));
         }
 
+        if ((bool) $config->get('x-change.partner_api.public_discovery_enabled', true)) {
+            $this->loadRoutesFrom($this->packagePath('routes/partner-api-discovery.php'));
+        }
+
         if ((bool) $config->get('x-change.partner_api.enabled', false)) {
             $this->loadRoutesFrom($this->packagePath('routes/partner-api.php'));
         }
@@ -2135,6 +2143,9 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootPartnerApiRateLimiter(): void
     {
+        RateLimiter::for('x-change-partner-api-discovery', fn (Request $request): Limit => Limit::perMinute(30)
+            ->by((string) $request->ip()));
+
         RateLimiter::for('x-change-partner-api', function (Request $request): Limit {
             $tokenFingerprint = hash('sha256', (string) $request->bearerToken());
 
