@@ -27,8 +27,16 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
+use LBHurtado\XChange\Actions\Treasury\ApproveTreasuryReconciliationRun;
+use LBHurtado\XChange\Actions\Treasury\ExecuteTreasuryReconciliationRun;
+use LBHurtado\XChange\Actions\Treasury\RequestTreasuryReconciliationRun;
 use LBHurtado\XChange\Contracts\TreasuryOpeningCapitalizationAuthorizationContract;
 use LBHurtado\XChange\Enums\TreasuryOpeningBalanceStatus;
+use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
+use LBHurtado\XChange\Enums\TreasuryReconciliationRunStatus;
+use LBHurtado\XChange\Models\TreasuryOperatorAuthorization;
+use LBHurtado\XChange\Models\TreasuryReconciliationRun;
+use LBHurtado\XChange\Services\Cockpit\TreasuryReconciliationRunReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
@@ -37,6 +45,93 @@ use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+
+it('governs the provider call through independent approval and executes it once', function (): void {
+    [$service, $reader, $catalog, , $systemResolver] = openingBalanceReconciliationService(750_00);
+    app()->instance(TreasuryOpeningBalanceReconciliationService::class, $service);
+    app()->instance(TreasuryProviderConnectionCatalog::class, $catalog);
+    app()->instance(SystemUserResolverContract::class, $systemResolver);
+    $maker = actingAsTestUser();
+    $checker = User::query()->create([
+        'name' => 'Treasury Reconciliation Checker',
+        'email' => 'treasury-reconciliation-checker@example.test',
+        'password' => 'password',
+    ]);
+
+    foreach ([
+        TreasuryOperatorCapability::ViewReconciliation,
+        TreasuryOperatorCapability::RequestReconciliation,
+        TreasuryOperatorCapability::ApproveReconciliation,
+    ] as $capability) {
+        TreasuryOperatorAuthorization::query()->create([
+            'operator_type' => $maker->getMorphClass(),
+            'operator_id' => $maker->getKey(),
+            'capability' => $capability->value,
+            'authorization_reference' => 'reconciliation-maker:'.$capability->value,
+            'valid_from' => now()->subMinute(),
+        ]);
+    }
+
+    foreach ([
+        TreasuryOperatorCapability::ViewReconciliation,
+        TreasuryOperatorCapability::ApproveReconciliation,
+        TreasuryOperatorCapability::ExecuteReconciliation,
+    ] as $capability) {
+        TreasuryOperatorAuthorization::query()->create([
+            'operator_type' => $checker->getMorphClass(),
+            'operator_id' => $checker->getKey(),
+            'capability' => $capability->value,
+            'authorization_reference' => 'reconciliation-checker:'.$capability->value,
+            'valid_from' => now()->subMinute(),
+        ]);
+    }
+
+    $run = app(RequestTreasuryReconciliationRun::class)->handle(
+        connectionReference: 'future-primary',
+        purpose: 'Recognize an owner-funded provider deposit',
+        idempotencyReference: 'treasury-reconciliation:test:001',
+        maker: $maker,
+    );
+    $requestReplay = app(RequestTreasuryReconciliationRun::class)->handle(
+        connectionReference: 'future-primary',
+        purpose: 'Recognize an owner-funded provider deposit',
+        idempotencyReference: 'treasury-reconciliation:test:001',
+        maker: $maker,
+    );
+
+    expect($run->status)->toBe(TreasuryReconciliationRunStatus::AwaitingApproval)
+        ->and($requestReplay->getKey())->toBe($run->getKey())
+        ->and(TreasuryReconciliationRun::query()->count())->toBe(1)
+        ->and($reader->calls)->toBe(0);
+
+    expect(fn () => app(RequestTreasuryReconciliationRun::class)->handle(
+        connectionReference: 'future-primary',
+        purpose: 'Different economic intent',
+        idempotencyReference: 'treasury-reconciliation:test:001',
+        maker: $maker,
+    ))->toThrow(DomainException::class, 'different input');
+
+    expect(fn () => app(ApproveTreasuryReconciliationRun::class)->handle($run, $maker))
+        ->toThrow(DomainException::class, 'independent');
+
+    app(ApproveTreasuryReconciliationRun::class)->handle($run, $checker);
+    $executed = app(ExecuteTreasuryReconciliationRun::class)->handle($run, $checker);
+    $replay = app(ExecuteTreasuryReconciliationRun::class)->handle($run, $checker);
+    $readModel = app(TreasuryReconciliationRunReadModel::class)->build($checker);
+
+    expect($executed->status)->toBe(TreasuryReconciliationRunStatus::Completed)
+        ->and($executed->difference_minor)->toBe(750_00)
+        ->and($executed->evidence_reference)->toBe('future-balance:opening')
+        ->and($replay->getKey())->toBe($executed->getKey())
+        ->and($reader->calls)->toBe(1)
+        ->and(TreasuryReconciliationRun::query()->count())->toBe(1)
+        ->and($readModel['runs'][0]['provider_balance'])->toBe('₱750.00')
+        ->and($readModel['runs'][0])->not->toHaveKey('request_hash')
+        ->and($readModel['runs'][0])->not->toHaveKey('idempotency_reference_hash')
+        ->and(TreasuryPosition::query()->where('purpose', TreasuryPositionPurpose::LegacyUnattributed)->exists())->toBeTrue()
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'treasury.reconciliation.executed')->count())->toBe(1);
+});
 
 it('recognizes an authoritative opening balance once into inventory and unattributed position', function () {
     [$service] = openingBalanceReconciliationService(1_000_000_00);
@@ -309,7 +404,8 @@ it('guards the local provider deposit simulation command', function () {
  *     TreasuryOpeningBalanceReconciliationService,
  *     ProviderBalanceReader&object,
  *     TreasuryProviderConnectionCatalog,
- *     TreasuryProvisioningService
+ *     TreasuryProvisioningService,
+ *     SystemUserResolverContract
  * }
  */
 function openingBalanceReconciliationService(
@@ -360,6 +456,8 @@ function openingBalanceReconciliationService(
     {
         public string $evidenceReference = 'future-balance:opening';
 
+        public int $calls = 0;
+
         public function __construct(public int $amountMinor) {}
 
         public function providerCode(): string
@@ -370,6 +468,8 @@ function openingBalanceReconciliationService(
         public function readBalance(
             ProviderBalanceRequestData $request,
         ): ProviderBalanceObservationData {
+            $this->calls++;
+
             return new ProviderBalanceObservationData(
                 provider: 'future_emi',
                 connectionReference: $request->connectionReference,
@@ -433,5 +533,5 @@ function openingBalanceReconciliationService(
         [$reader],
     );
 
-    return [$service, $reader, $catalog, $provisioning];
+    return [$service, $reader, $catalog, $provisioning, $systemResolver];
 }

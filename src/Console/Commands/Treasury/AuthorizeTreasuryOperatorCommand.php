@@ -67,10 +67,12 @@ final class AuthorizeTreasuryOperatorCommand extends Command
         $makerCapabilities = [
             TreasuryOperatorCapability::RequestAccountGrants->value,
             TreasuryOperatorCapability::RequestInstitutionFunds->value,
+            TreasuryOperatorCapability::RequestReconciliation->value,
         ];
         $checkerCapabilities = [
             TreasuryOperatorCapability::ApproveAccountGrants->value,
             TreasuryOperatorCapability::ApproveInstitutionFunds->value,
+            TreasuryOperatorCapability::ApproveReconciliation->value,
         ];
 
         if (array_intersect($capabilities, $makerCapabilities) !== []

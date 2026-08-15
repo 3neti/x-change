@@ -15,6 +15,43 @@ describe("Cockpit Treasury Operations", () => {
           "/x/cockpit/treasury-operations/account-grants",
         treasuryInstitutionFundStoreUrl:
           "/x/cockpit/treasury-operations/institution-funds",
+        treasuryReconciliationStoreUrl:
+          "/x/cockpit/treasury-operations/reconciliation-runs",
+        treasuryReconciliation: {
+          can_view: true,
+          can_request: true,
+          can_approve: true,
+          can_execute: true,
+          connections: [
+            {
+              reference: "netbank-primary",
+              provider: "netbank",
+              currency: "PHP",
+            },
+          ],
+          runs: [
+            {
+              reference: "RECON-001",
+              status: "approved",
+              connection_reference: "netbank-primary",
+              provider: "netbank",
+              currency: "PHP",
+              purpose: "Verify owner funding",
+              maker: "Amelia",
+              checker: "Michael",
+              provider_balance: null,
+              internal_balance: null,
+              difference: null,
+              evidence_reference: null,
+              reason: null,
+              observed_at: null,
+              actions: {
+                approve: "/reconciliation/approve",
+                execute: "/reconciliation/execute",
+              },
+            },
+          ],
+        },
         treasuryInstitutionFunds: {
           can_view: true,
           can_request: true,
@@ -88,6 +125,9 @@ describe("Cockpit Treasury Operations", () => {
 
     expect(wrapper.text()).toContain("Treasury Operations");
     expect(wrapper.text()).toContain("Institution-Owned Funds");
+    expect(wrapper.text()).toContain("Provider Reconciliation");
+    expect(wrapper.text()).toContain("Submit Check For Approval");
+    expect(wrapper.text()).toContain("Check Provider");
     expect(wrapper.text()).toContain("Authoritative Deposit Evidence");
     expect(wrapper.text()).toContain("Submit Classification");
     expect(wrapper.text()).toContain("Shareholder deposit");

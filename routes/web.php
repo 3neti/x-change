@@ -100,6 +100,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantPa
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryInstitutionFundClassificationApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryInstitutionFundClassificationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryInstitutionFundClassificationExecutionController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
@@ -186,6 +189,19 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             [CockpitTreasuryInstitutionFundClassificationExecutionController::class, 'store'],
         )->middleware('throttle:6,1')
             ->name('x-change.cockpit.treasury.institution-funds.executions.store');
+        Route::post('treasury-operations/reconciliation-runs', [CockpitTreasuryReconciliationRunController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.treasury.reconciliation.store');
+        Route::post(
+            'treasury-operations/reconciliation-runs/{treasuryReconciliationRun}/approvals',
+            [CockpitTreasuryReconciliationRunApprovalController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.treasury.reconciliation.approvals.store');
+        Route::post(
+            'treasury-operations/reconciliation-runs/{treasuryReconciliationRun}/executions',
+            [CockpitTreasuryReconciliationRunExecutionController::class, 'store'],
+        )->middleware('throttle:3,1')
+            ->name('x-change.cockpit.treasury.reconciliation.executions.store');
         Route::post('api-partners/clients', [CockpitPartnerApiClientController::class, 'store'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.api-partners.clients.store');

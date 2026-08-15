@@ -45,6 +45,8 @@ class ShareXChangeBranding
                         $request->user(), TreasuryOperatorCapability::ViewAccountGrants,
                     ) || $this->treasuryAuthority->allows(
                         $request->user(), TreasuryOperatorCapability::ViewInstitutionFunds,
+                    ) || $this->treasuryAuthority->allows(
+                        $request->user(), TreasuryOperatorCapability::ViewReconciliation,
                     )),
             ],
         ]);

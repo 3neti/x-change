@@ -31,6 +31,8 @@ it('grants Treasury maker and checker authority only to separate named humans', 
             TreasuryOperatorCapability::RequestAccountGrants->value,
             TreasuryOperatorCapability::ViewInstitutionFunds->value,
             TreasuryOperatorCapability::RequestInstitutionFunds->value,
+            TreasuryOperatorCapability::ViewReconciliation->value,
+            TreasuryOperatorCapability::RequestReconciliation->value,
         ],
         '--authorization-reference' => 'deployment-control:treasury-maker',
     ])->assertSuccessful();
@@ -45,11 +47,14 @@ it('grants Treasury maker and checker authority only to separate named humans', 
             TreasuryOperatorCapability::ViewInstitutionFunds->value,
             TreasuryOperatorCapability::ApproveInstitutionFunds->value,
             TreasuryOperatorCapability::ExecuteInstitutionFunds->value,
+            TreasuryOperatorCapability::ViewReconciliation->value,
+            TreasuryOperatorCapability::ApproveReconciliation->value,
+            TreasuryOperatorCapability::ExecuteReconciliation->value,
         ],
         '--authorization-reference' => 'deployment-control:treasury-checker',
     ])->assertSuccessful();
 
-    expect(TreasuryOperatorAuthorization::query()->count())->toBe(10);
+    expect(TreasuryOperatorAuthorization::query()->count())->toBe(15);
 
     $this->artisan('x-change:treasury:authorize-operator', [
         'operator' => $maker->email,
@@ -71,5 +76,16 @@ it('grants Treasury maker and checker authority only to separate named humans', 
 
     expect(TreasuryOperatorAuthorization::query()
         ->where('authorization_reference', 'like', 'deployment-control:invalid-cross-workflow-role%')
+        ->exists())->toBeFalse();
+
+    $this->artisan('x-change:treasury:authorize-operator', [
+        'operator' => $maker->email,
+        '--column' => 'email',
+        '--capability' => [TreasuryOperatorCapability::ApproveReconciliation->value],
+        '--authorization-reference' => 'deployment-control:invalid-reconciliation-role',
+    ])->assertFailed();
+
+    expect(TreasuryOperatorAuthorization::query()
+        ->where('authorization_reference', 'like', 'deployment-control:invalid-reconciliation-role%')
         ->exists())->toBeFalse();
 });

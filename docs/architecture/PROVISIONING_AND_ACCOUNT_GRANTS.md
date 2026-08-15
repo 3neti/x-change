@@ -82,7 +82,25 @@ Provider observation
 Unexplained liquidity remains in Suspense or Clearing and is not grantable.
 
 Provider-balance reconciliation records a positive authoritative difference in
-Legacy Unattributed. It does not decide who owns that cash. An explicitly
+Legacy Unattributed. It does not decide who owns that cash. The provider call
+is itself governed: a named maker requests one active Treasury connection, an
+independent checker approves the immutable request, and only an authorized
+executor may run the balance check. Submission and approval never contact the
+provider. A completed or review-required run is terminal, so replay does not
+repeat the provider call.
+
+```text
+Request → independent approval → authoritative provider read
+                               → exact positive difference → Legacy Unattributed
+                               → mismatch or shortfall → Review Required
+```
+
+No automatic retry is performed after a provider failure. A new deliberate
+request and approval are required, preserving an auditable reason for each
+external observation. The stored run contains sanitized balances, evidence,
+and operation references—not provider payloads or credentials.
+
+Once evidence exists, an explicitly
 authorized maker may submit the exact recognition operation as owner-funding
 evidence; an independent checker approves and executes the immutable envelope:
 
@@ -121,6 +139,8 @@ php artisan x-change:treasury:authorize-operator 09170000001 \
   --capability=treasury.account_grants.request \
   --capability=treasury.institution_funds.view \
   --capability=treasury.institution_funds.request \
+  --capability=treasury.reconciliation.view \
+  --capability=treasury.reconciliation.request \
   --authorization-reference=deployment-control:treasury-maker
 
 php artisan x-change:treasury:authorize-operator 09170000002 \
@@ -130,6 +150,9 @@ php artisan x-change:treasury:authorize-operator 09170000002 \
   --capability=treasury.institution_funds.view \
   --capability=treasury.institution_funds.approve \
   --capability=treasury.institution_funds.execute \
+  --capability=treasury.reconciliation.view \
+  --capability=treasury.reconciliation.approve \
+  --capability=treasury.reconciliation.execute \
   --authorization-reference=deployment-control:treasury-checker
 ```
 

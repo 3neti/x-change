@@ -14,4 +14,8 @@ enum TreasuryOperatorCapability: string
     case RequestInstitutionFunds = 'treasury.institution_funds.request';
     case ApproveInstitutionFunds = 'treasury.institution_funds.approve';
     case ExecuteInstitutionFunds = 'treasury.institution_funds.execute';
+    case ViewReconciliation = 'treasury.reconciliation.view';
+    case RequestReconciliation = 'treasury.reconciliation.request';
+    case ApproveReconciliation = 'treasury.reconciliation.approve';
+    case ExecuteReconciliation = 'treasury.reconciliation.execute';
 }

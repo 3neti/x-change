@@ -4,6 +4,7 @@ import {
   BanknoteArrowDown,
   Check,
   Landmark,
+  RefreshCw,
   ShieldCheck,
 } from "lucide-vue-next";
 import { computed, reactive, ref } from "vue";
@@ -42,6 +43,23 @@ type InstitutionFundClassification = {
   updated_at: string | null;
   actions: { approve: string; execute: string };
 };
+type ReconciliationRun = {
+  reference: string;
+  status: string;
+  connection_reference: string;
+  provider: string;
+  currency: string;
+  purpose: string;
+  maker: string;
+  checker: string | null;
+  provider_balance: string | null;
+  internal_balance: string | null;
+  difference: string | null;
+  evidence_reference: string | null;
+  reason: string | null;
+  observed_at: string | null;
+  actions: { approve: string; execute: string };
+};
 
 const props = defineProps<{
   cockpitHeaderReadModel?: Record<string, unknown>;
@@ -70,6 +88,19 @@ const props = defineProps<{
     classifications: InstitutionFundClassification[];
   };
   treasuryInstitutionFundStoreUrl: string;
+  treasuryReconciliation: {
+    can_view: boolean;
+    can_request: boolean;
+    can_approve: boolean;
+    can_execute: boolean;
+    connections: Array<{
+      reference: string;
+      provider: string;
+      currency: string;
+    }>;
+    runs: ReconciliationRun[];
+  };
+  treasuryReconciliationStoreUrl: string;
 }>();
 
 const form = reactive({
@@ -89,6 +120,12 @@ const institutionForm = reactive({
   ownership_basis: "",
 });
 const institutionIdempotencyReference = ref(crypto.randomUUID());
+const reconciliationForm = reactive({
+  connection_reference:
+    props.treasuryReconciliation.connections[0]?.reference ?? "",
+  purpose: "",
+});
+const reconciliationIdempotencyReference = ref(crypto.randomUUID());
 
 const amountMinor = computed(() => {
   const value = form.amount.trim();
@@ -142,6 +179,28 @@ function submitInstitutionFunding(): void {
         institutionIdempotencyReference.value = crypto.randomUUID();
         institutionForm.evidence_operation_reference = "";
         institutionForm.ownership_basis = "";
+      },
+    },
+  );
+}
+
+function submitReconciliation(): void {
+  if (
+    !reconciliationForm.connection_reference ||
+    !reconciliationForm.purpose.trim()
+  )
+    return;
+  router.post(
+    props.treasuryReconciliationStoreUrl,
+    {
+      ...reconciliationForm,
+      idempotency_reference: reconciliationIdempotencyReference.value,
+    },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        reconciliationIdempotencyReference.value = crypto.randomUUID();
+        reconciliationForm.purpose = "";
       },
     },
   );
@@ -237,6 +296,145 @@ function submitInstitutionFunding(): void {
             </button>
           </div>
         </form>
+      </section>
+
+      <section
+        v-if="treasuryReconciliation.can_view"
+        class="rounded-2xl border border-border bg-card p-5 shadow-sm"
+      >
+        <div class="flex min-w-0 items-start gap-3">
+          <RefreshCw class="mt-0.5 size-5 shrink-0 text-sky-600" />
+          <div class="min-w-0">
+            <h2 class="font-semibold">Provider Reconciliation</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Request an authoritative provider balance check. No provider is
+              contacted until an independent checker approves the run.
+            </p>
+          </div>
+        </div>
+
+        <form
+          v-if="treasuryReconciliation.can_request"
+          class="mt-5 grid min-w-0 gap-3 rounded-xl border border-border p-4 md:grid-cols-2"
+          @submit.prevent="submitReconciliation"
+        >
+          <label class="grid min-w-0 gap-1 text-sm">
+            <span class="font-medium">Treasury Connection</span>
+            <select
+              v-model="reconciliationForm.connection_reference"
+              class="h-10 min-w-0 rounded-lg border border-border bg-background px-3"
+            >
+              <option
+                v-for="connection in treasuryReconciliation.connections"
+                :key="connection.reference"
+                :value="connection.reference"
+              >
+                {{ connection.provider }} · {{ connection.currency }} ·
+                {{ connection.reference }}
+              </option>
+            </select>
+          </label>
+          <label class="grid min-w-0 gap-1 text-sm">
+            <span class="font-medium">Reason For Check</span>
+            <input
+              v-model="reconciliationForm.purpose"
+              class="h-10 min-w-0 rounded-lg border border-border bg-background px-3"
+              aria-label="Reason for provider reconciliation"
+            />
+          </label>
+          <div class="flex justify-end md:col-span-2">
+            <button
+              type="submit"
+              class="inline-flex h-10 items-center gap-2 rounded-xl bg-sky-600 px-4 text-sm font-semibold text-white hover:bg-sky-700"
+            >
+              <ShieldCheck class="size-4" /> Submit Check For Approval
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-4 grid gap-3">
+          <article
+            v-for="run in treasuryReconciliation.runs"
+            :key="run.reference"
+            class="rounded-xl border border-border p-4"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="font-semibold">
+                    {{ run.provider }} · {{ run.connection_reference }}
+                  </p>
+                  <span
+                    class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium capitalize"
+                    >{{ run.status.replaceAll("_", " ") }}</span
+                  >
+                </div>
+                <p class="mt-1 text-sm">{{ run.purpose }}</p>
+                <p
+                  v-if="run.evidence_reference"
+                  class="mt-1 break-all text-xs text-muted-foreground"
+                >
+                  {{ run.evidence_reference }}
+                </p>
+                <p
+                  v-if="run.reason"
+                  class="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300"
+                >
+                  {{ run.reason.replaceAll("-", " ") }}
+                </p>
+              </div>
+              <dl
+                v-if="run.provider_balance"
+                class="grid grid-cols-2 gap-x-4 gap-y-1 text-right text-xs"
+              >
+                <dt class="text-muted-foreground">Provider</dt>
+                <dd class="font-medium tabular-nums">
+                  {{ run.provider_balance }}
+                </dd>
+                <dt class="text-muted-foreground">Attributed</dt>
+                <dd class="font-medium tabular-nums">
+                  {{ run.internal_balance }}
+                </dd>
+                <dt class="text-muted-foreground">Difference</dt>
+                <dd class="font-semibold tabular-nums">{{ run.difference }}</dd>
+              </dl>
+            </div>
+            <div
+              class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-muted-foreground"
+            >
+              <span
+                >Maker · {{ run.maker
+                }}<template v-if="run.checker">
+                  · Checker · {{ run.checker }}</template
+                ></span
+              >
+              <div class="flex gap-2">
+                <button
+                  v-if="
+                    treasuryReconciliation.can_approve &&
+                    run.status === 'awaiting_approval'
+                  "
+                  type="button"
+                  class="inline-flex h-9 items-center gap-1 rounded-lg border border-border px-3 font-medium text-foreground"
+                  @click="router.post(run.actions.approve)"
+                >
+                  <Check class="size-4" /> Approve
+                </button>
+                <button
+                  v-if="
+                    treasuryReconciliation.can_execute &&
+                    run.status === 'approved'
+                  "
+                  type="button"
+                  class="inline-flex h-9 items-center gap-1 rounded-lg bg-sky-600 px-3 font-medium text-white"
+                  @click="router.post(run.actions.execute)"
+                >
+                  <RefreshCw class="size-4" /> Check Provider
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section
