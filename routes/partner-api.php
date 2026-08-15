@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\EstimatePartnerPayCodeController;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\IssuePartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerCapabilitiesController;
 use LBHurtado\XChange\Http\Middleware\EnsurePartnerApiClient;
 
@@ -15,4 +17,12 @@ Route::prefix($prefix)
         Route::middleware(EnsurePartnerApiClient::using('capabilities:read'))
             ->get('/capabilities', ShowPartnerCapabilitiesController::class)
             ->name('capabilities.show');
+
+        Route::middleware(EnsurePartnerApiClient::using('pay-codes:estimate'))
+            ->post('/pay-code-estimates', EstimatePartnerPayCodeController::class)
+            ->name('pay-code-estimates.store');
+
+        Route::middleware(EnsurePartnerApiClient::using('pay-codes:issue'))
+            ->post('/pay-codes', IssuePartnerPayCodeController::class)
+            ->name('pay-codes.store');
     });
