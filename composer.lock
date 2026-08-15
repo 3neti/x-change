@@ -1713,11 +1713,11 @@
         },
         {
             "name": "3neti/x-provisioning",
-            "version": "v1.0.0-beta.1",
+            "version": "v1.0.0-beta.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-provisioning.git",
-                "reference": "196893189985527ba8db5ca4199c6d2798dcac72"
+                "reference": "f9881eb754b0baa092f96c9df5c24e94ba471d9c"
             },
             "require": {
                 "illuminate/contracts": "^12.0 || ^13.0",
@@ -1766,7 +1766,7 @@
                 }
             ],
             "description": "Governed provisioning requests, invitations, acceptance, and authority activation for x-change.",
-            "time": "2026-08-15T10:37:47+00:00"
+            "time": "2026-08-15T15:00:40+00:00"
         },
         {
             "name": "3neti/x-ray",

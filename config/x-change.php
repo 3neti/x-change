@@ -182,6 +182,44 @@ return [
     ],
 
     'provisioning' => [
+        'expiry' => [
+            'scheduled_enabled' => (bool) env('XCHANGE_PROVISIONING_EXPIRY_SCHEDULED_ENABLED', true),
+            'scheduled_batch_size' => (int) env('XCHANGE_PROVISIONING_EXPIRY_BATCH_SIZE', 100),
+        ],
+        'operator_profiles' => [
+            'institution_administrator' => [
+                'label' => 'Institution Administrator',
+                'description' => 'Oversees governed provisioning without becoming the non-interactive System Principal.',
+            ],
+            'commercial_maker' => [
+                'label' => 'Commercial Maker',
+                'description' => 'Prepares Commercial Offerings, Partners, provider costs, and commission requests.',
+            ],
+            'commercial_checker' => [
+                'label' => 'Commercial Checker',
+                'description' => 'Independently approves Commercial changes and commission settlement.',
+            ],
+            'treasury_maker' => [
+                'label' => 'Treasury Maker',
+                'description' => 'Requests reconciliation, classification, and Account Grants.',
+            ],
+            'treasury_checker' => [
+                'label' => 'Treasury Checker',
+                'description' => 'Independently approves and executes Treasury operations.',
+            ],
+            'api_partner_administrator' => [
+                'label' => 'API Partner Administrator',
+                'description' => 'Manages governed machine clients and sandbox access.',
+            ],
+            'api_production_maker' => [
+                'label' => 'API Production Maker',
+                'description' => 'Prepares production API mandates without issuing credentials.',
+            ],
+            'api_production_checker' => [
+                'label' => 'API Production Checker',
+                'description' => 'Independently approves production API mandates.',
+            ],
+        ],
         'commissioning_seats' => [
             ['key' => 'institution-administrator', 'label' => 'Institution Administrator', 'profile' => 'institution_administrator', 'required' => true],
             ['key' => 'commercial-maker', 'label' => 'Commercial Maker', 'profile' => 'commercial_maker', 'required' => true],

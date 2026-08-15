@@ -210,6 +210,7 @@ final class LifecycleScenarioEngine
             'feedback_delivery',
             'commercial_operations_simulation',
             'treasury_account_grant_simulation',
+            'provisioning_governance_simulation',
         ], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,

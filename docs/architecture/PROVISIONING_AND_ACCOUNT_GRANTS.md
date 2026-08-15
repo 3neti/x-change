@@ -177,13 +177,80 @@ It is restricted to `local` and `testing`, creates temporary authority inside
 one outer transaction, verifies that Provider Inventory is unchanged by the
 grant, and proves a complete rollback. It cannot be enabled in production.
 
-## Deliberate next adapters
+The provisioning governance runner exercises the authority envelope itself:
 
-- Bind an approved provisioning request into the existing Invitation issuance
-  UI and execution driver without exposing the opaque token in journal output.
-- Add narrow activators for Commercial, Treasury, and Partner API capabilities.
-- Add revocation and supersession workflows without editing historical
-  authority envelopes.
-- Provision production Partner API credentials only after the corresponding
-  approved API mandate has activated; never treat an invitation as an OAuth
-  credential.
+```bash
+php artisan xchange:lifecycle:run provisioning_governance_simulation \
+  --issuer=<candidate-id> \
+  --maker=<maker-id> \
+  --checker=<checker-id> \
+  --json
+```
+
+It provisions vacant seats, creates and submits an immutable request, proves
+same-person approval is rejected, obtains independent approval, issues a
+one-time high-entropy invitation, records verified acceptance, and confirms
+that activation fails closed when no explicit domain adapter exists. It makes
+no provider call, moves no money, grants no domain authority, and rolls back
+the complete provisioning state.
+
+## Cockpit manifestation
+
+Named provisioning operators use **Cockpit → Provisioning**. The workspace
+shows:
+
+- vacant required and optional commissioning seats;
+- immutable authority requests and their snapshot hashes;
+- maker submission, independent approval or rejection, and maker withdrawal;
+- one-time invitation issuance with a browser-memory-only link ceremony;
+- evidence requirements and append-only lifecycle events; and
+- accepted invitations as **Activation Pending** until a profile-specific
+  adapter has been explicitly approved and installed.
+
+The operator page is concealed from ordinary Account holders. Operator access
+is granted mechanically and cannot be assigned to the System Principal:
+
+```bash
+php artisan x-change:provisioning:authorize-operator 09170000001 \
+  --capability=provisioning.view \
+  --capability=provisioning.request \
+  --capability=provisioning.issue \
+  --authorization-reference=deployment-control:provisioning-maker
+
+php artisan x-change:provisioning:authorize-operator 09170000002 \
+  --capability=provisioning.view \
+  --capability=provisioning.approve \
+  --authorization-reference=deployment-control:provisioning-checker
+```
+
+Elapsed invitation offers are terminally expired by the scheduler through
+`x-change:provisioning:expire-offers`. Rejection, withdrawal, expiry, and
+revocation are append-only state transitions in `3neti/x-provisioning`.
+Revocation remains fail-closed unless the consuming domain supplies a revoker
+that can prove the underlying authority was actually removed.
+
+## Invitation boundary
+
+**Issuance → Invitation** remains the ordinary recipient Account invitation.
+It may carry zero value or cash, and cash continues through the Pay Code
+execution engine.
+
+**Provisioning → Issue Invitation** is a privileged authority invitation. Its
+approved snapshot cannot be weakened by an Issuance template. The recipient
+may need to create or authenticate an Account, but accepting the invitation
+does not move money and does not by itself create an OAuth credential or grant
+Treasury, Commercial, or API authority.
+
+These two experiences intentionally share invitation language, identity
+verification, and onboarding primitives; they do not share authority effects.
+
+## Controlled activation gates
+
+- Commercial, Treasury, and Partner API profiles require separately reviewed
+  capability maps. No broad map is inferred from a profile label.
+- Production API credentials are created only after an approved API mandate
+  activates. An invitation is never an OAuth credential.
+- Supersession must activate a replacement before retiring the old envelope;
+  historical snapshots and evidence remain immutable.
+- Institution-owned cash classification and Account Grants remain separate
+  maker-checker Treasury operations. Provisioning never supplies liquidity.

@@ -111,6 +111,8 @@ use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
+use LBHurtado\XChange\Console\Commands\Provisioning\AuthorizeProvisioningOperatorCommand;
+use LBHurtado\XChange\Console\Commands\Provisioning\ExpireProvisioningOffersCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\ProvisionCommissioningSeatsCommand;
 use LBHurtado\XChange\Console\Commands\PublishXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
@@ -421,6 +423,7 @@ use LBHurtado\XChange\Services\PayoutProviderResolver;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningActorGuard;
+use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningEvidenceVerifier;
 use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
@@ -458,6 +461,7 @@ use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningEvidenceVerifierContract;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -470,6 +474,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             ProvisioningActorGuardContract::class,
             XChangeProvisioningActorGuard::class,
+        );
+        $this->app->singleton(
+            ProvisioningEvidenceVerifierContract::class,
+            XChangeProvisioningEvidenceVerifier::class,
         );
         $this->app->scoped(PartnerApiRequestContext::class);
         $this->configureIdentityOtpGateway();
@@ -1366,6 +1374,8 @@ class XChangeServiceProvider extends ServiceProvider
                 AuthorizePartnerApiOperatorCommand::class,
                 RunPartnerApiLifecycleCommand::class,
                 ProvisionCommissioningSeatsCommand::class,
+                AuthorizeProvisioningOperatorCommand::class,
+                ExpireProvisioningOffersCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
                 RunLifecycleScenarioCommand::class,
@@ -1512,6 +1522,22 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationSchedule(): void
     {
+        if ((bool) config('x-change.provisioning.expiry.scheduled_enabled', true)) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.provisioning.expiry.scheduled_batch_size', 100),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("x-change:provisioning:expire-offers --limit={$batchSize}")
+                    ->name('x-change:provisioning:expire-offers')
+                    ->everyMinute()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
         if ((bool) config(
             'x-change.commercial.operations.scheduled_reconciliation_enabled',
             true,

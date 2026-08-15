@@ -78,6 +78,12 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodePayoutCorrectio
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateStoreController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateUpdateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTerminalStateController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningOfferController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningRejectionController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningRequestController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningWithdrawalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewExportController;
@@ -116,6 +122,8 @@ use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckController;
+use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
+use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
 use LBHurtado\XChange\Http\Middleware\RequireVerifiedMobile;
 use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
@@ -138,6 +146,17 @@ Route::get('x/claim/{code}/share-card.png', ClaimShareCardController::class)
         ['throttle:60,1'],
     ))
     ->name('x-change.claim.share-card');
+
+Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void {
+    Route::get('x/provisioning/{token}', ProvisioningInvitationPageController::class)
+        ->middleware('throttle:30,1')
+        ->where('token', '[A-Za-z0-9]{64}')
+        ->name('x-change.provisioning.claim.show');
+    Route::post('x/provisioning/{token}', ProvisioningInvitationAcceptanceController::class)
+        ->middleware(['auth', 'throttle:6,1'])
+        ->where('token', '[A-Za-z0-9]{64}')
+        ->name('x-change.provisioning.claim.accept');
+});
 
 // Authenticated operator routes
 Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
@@ -165,6 +184,31 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             ->name('x-change.cockpit.commercial.index');
         Route::get('api-partners', CockpitPartnerApiPageController::class)
             ->name('x-change.cockpit.api-partners.index');
+        Route::get('provisioning', CockpitProvisioningPageController::class)
+            ->name('x-change.cockpit.provisioning.index');
+        Route::post('provisioning/requests', [CockpitProvisioningRequestController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.requests.store');
+        Route::post(
+            'provisioning/requests/{provisioningRequest}/approvals',
+            [CockpitProvisioningApprovalController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.requests.approvals.store');
+        Route::post(
+            'provisioning/requests/{provisioningRequest}/rejections',
+            [CockpitProvisioningRejectionController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.requests.rejections.store');
+        Route::post(
+            'provisioning/requests/{provisioningRequest}/withdrawals',
+            [CockpitProvisioningWithdrawalController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.requests.withdrawals.store');
+        Route::post(
+            'provisioning/requests/{provisioningRequest}/offers',
+            [CockpitProvisioningOfferController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.requests.offers.store');
         Route::get('treasury-operations', CockpitTreasuryAccountGrantPageController::class)
             ->name('x-change.cockpit.treasury.account-grants.index');
         Route::post('treasury-operations/account-grants', [CockpitTreasuryAccountGrantController::class, 'store'])

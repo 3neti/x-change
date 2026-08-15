@@ -522,6 +522,14 @@ class InstallXChangeCommand extends Command
 
         }
 
+        if ($this->callSilently('x-change:provisioning:commission') !== self::SUCCESS) {
+            $this->components->error(
+                'Commissioning-seat provisioning failed; X-Change installation is incomplete.',
+            );
+
+            return self::FAILURE;
+        }
+
         if ($freshDatabase) {
             $initialization = $treasuryInitialization->inspect();
 

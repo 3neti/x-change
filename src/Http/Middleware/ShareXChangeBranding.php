@@ -10,9 +10,11 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Enums\ProvisioningOperatorCapability;
 use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessAccess;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
+use LBHurtado\XChange\Services\Provisioning\ProvisioningOperatorAuthority;
 use LBHurtado\XChange\Services\Treasury\TreasuryOperatorAuthority;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -23,6 +25,7 @@ class ShareXChangeBranding
         private readonly CommercialOperatorAuthorityContract $commercialAuthority,
         private readonly PartnerApiOperatorAuthority $partnerApiAuthority,
         private readonly TreasuryOperatorAuthority $treasuryAuthority,
+        private readonly ProvisioningOperatorAuthority $provisioningAuthority,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -48,6 +51,10 @@ class ShareXChangeBranding
                     ) || $this->treasuryAuthority->allows(
                         $request->user(), TreasuryOperatorCapability::ViewReconciliation,
                     )),
+                'provisioning_controls_visible' => $request->user() instanceof Model
+                    && $this->provisioningAuthority->allows(
+                        $request->user(), ProvisioningOperatorCapability::View,
+                    ),
             ],
         ]);
 

@@ -109,6 +109,22 @@ return [
         ],
     ],
 
+    'provisioning_governance_simulation' => [
+        'enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_PROVISIONING_GOVERNANCE_SIMULATION_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+        'allowed_environments' => ['local', 'testing'],
+        'required_tables' => [
+            'x_provisioning_requests',
+            'x_provisioning_revisions',
+            'x_provisioning_offers',
+            'x_provisioning_acceptances',
+            'x_provisioning_seats',
+            'x_provisioning_events',
+        ],
+    ],
+
     'treasury_live_basic_cash' => [
         'enabled' => (bool) env(
             'XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_ENABLED',
@@ -165,6 +181,19 @@ return [
             'mode' => 'treasury_account_grant_simulation',
             'api_executable' => false,
             'treasury' => ['connection' => 'netbank-primary'],
+        ],
+
+        'provisioning_governance_simulation' => [
+            'label' => 'Provisioning Governance Simulation',
+            'description' => 'Exercises vacant commissioning seats, maker-checker approval, one-time invitation, verified acceptance, and fail-closed activation in one rollback-only transaction.',
+            'category' => 'provisioning-governance',
+            'tags' => ['provisioning', 'maker-checker', 'invitation', 'authority', 'rollback'],
+            'mode' => 'provisioning_governance_simulation',
+            'api_executable' => false,
+            'provisioning' => [
+                'profile' => 'treasury_maker',
+                'mobile' => '639170000001',
+            ],
         ],
 
         /*
