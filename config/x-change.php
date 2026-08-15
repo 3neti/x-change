@@ -487,6 +487,11 @@ return [
         'web' => env('XCHANGE_ROUTES_WEB', true),
         'api' => env('XCHANGE_ROUTES_API', true),
 
+        'legacy_lifecycle_api' => [
+            'enabled' => env('XCHANGE_ROUTES_LEGACY_LIFECYCLE_API', false),
+            'environments' => ['local', 'testing'],
+        ],
+
         'experimental' => [
             'enabled' => env('XCHANGE_ROUTES_EXPERIMENTAL_ENABLED', true),
             'prefix' => env('XCHANGE_ROUTES_EXPERIMENTAL_PREFIX', 'x'),

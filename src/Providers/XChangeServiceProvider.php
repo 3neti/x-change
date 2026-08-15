@@ -2102,8 +2102,17 @@ class XChangeServiceProvider extends ServiceProvider
             $this->loadRoutesFrom($this->packagePath('routes/api.php'));
         }
 
-        // New lifecycle API surface for Scramble / public API.
-        $this->loadRoutesFrom(__DIR__.'/../../routes/lifecycle-api.php');
+        $legacyLifecycleApiEnvironments = (array) $config->get(
+            'x-change.routes.legacy_lifecycle_api.environments',
+            ['local', 'testing'],
+        );
+
+        if (
+            (bool) $config->get('x-change.routes.legacy_lifecycle_api.enabled', false)
+            && $this->app->environment($legacyLifecycleApiEnvironments)
+        ) {
+            $this->loadRoutesFrom($this->packagePath('routes/lifecycle-api.php'));
+        }
     }
 
     protected function bootExceptionRendering(): void
