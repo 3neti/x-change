@@ -175,6 +175,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                         : 'Stale · '.$this->formatMoney($value),
                     helper: $this->providerBalanceHelper($balance),
                     tone: $isFresh ? 'healthy' : 'warning',
+                    amount_minor: $value,
                 ),
                 'minor' => $value,
                 'fresh' => $isFresh,
@@ -214,15 +215,18 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                 return $this->disconnectedOutstandingLiability();
             }
 
+            $outstandingLiabilityMinor = max(0, $summary->outstanding_liability_minor);
+
             return [
                 'metric' => new CockpitDashboardMetricData(
                     key: 'outstanding',
                     label: $this->termLabel('outstanding_pay_codes'),
-                    value: $this->formatMoney($summary->outstanding_liability_minor),
+                    value: $this->formatMoney($outstandingLiabilityMinor),
                     helper: $this->termDescription('outstanding_pay_codes'),
-                    tone: $summary->outstanding_liability_minor > 0 ? 'warning' : 'healthy',
+                    tone: $outstandingLiabilityMinor > 0 ? 'warning' : 'healthy',
+                    amount_minor: $outstandingLiabilityMinor,
                 ),
-                'minor' => max(0, $summary->outstanding_liability_minor),
+                'minor' => $outstandingLiabilityMinor,
             ];
         } catch (Throwable) {
             return $this->disconnectedOutstandingLiability();
@@ -264,6 +268,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             value: $this->formatMoney($issuanceCapacityMinor),
             helper: $this->termDescription('issuance_capacity'),
             tone: $issuanceCapacityMinor > 0 ? 'healthy' : 'warning',
+            amount_minor: $issuanceCapacityMinor,
         );
     }
 

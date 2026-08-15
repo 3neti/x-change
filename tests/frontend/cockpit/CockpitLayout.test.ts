@@ -19,12 +19,14 @@ describe('Cockpit shell layout baseline', () => {
                         label: 'Client Funds',
                         value: '₱125,000,000',
                         tone: 'healthy',
+                        amount_minor: 12_500_000_000,
                     },
                     {
                         key: 'live',
                         label: 'NetBank Liquidity',
                         value: '₱123,500,000',
                         tone: 'warning',
+                        amount_minor: 12_350_000_000,
                     },
                 ],
             },
@@ -72,9 +74,7 @@ describe('Cockpit shell layout baseline', () => {
             '/x/cockpit/diagnostics/runtime-profile',
             '/x/cockpit/documentation',
         ]);
-        expect(
-            cockpitNavigationItems.map((item) => item.description),
-        ).toEqual([
+        expect(cockpitNavigationItems.map((item) => item.description)).toEqual([
             'Funds, capacity, and activity',
             'Design and issue a Pay Code',
             'Add and confirm funds',
@@ -86,7 +86,7 @@ describe('Cockpit shell layout baseline', () => {
         ]);
     });
 
-    it('hydrates the global balance HUD from the shared cockpit header read model', () => {
+    it('hydrates the global balance HUD from the shared cockpit header read model', async () => {
         const wrapper = mount(CockpitLayout, {
             props: {
                 cockpitHeaderReadModel: {
@@ -100,18 +100,21 @@ describe('Cockpit shell layout baseline', () => {
                             label: 'Client Funds',
                             value: '₱9,876.50',
                             tone: 'healthy',
+                            amount_minor: 987_650,
                         },
                         {
                             key: 'outstanding',
                             label: 'Outstanding Pay Codes',
                             value: '₱25.00',
                             tone: 'warning',
+                            amount_minor: 2_500,
                         },
                         {
                             key: 'issuance',
                             label: 'Issuance Capacity',
                             value: '₱9,851.50',
                             tone: 'healthy',
+                            amount_minor: 985_150,
                         },
                     ],
                 },
@@ -119,14 +122,39 @@ describe('Cockpit shell layout baseline', () => {
         });
 
         const header = wrapper.find('[data-testid="cockpit-global-header"]');
+        const visibilityToggle = wrapper.find(
+            '[data-testid="cockpit-balance-visibility-toggle"]',
+        );
 
-        expect(header.text()).toContain('₱9,876.50');
-        expect(header.text()).toContain('₱25.00');
-        expect(header.text()).toContain('₱9,851.50');
+        expect(header.text()).not.toContain('₱9,876.50');
+        expect(header.text()).not.toContain('₱25.00');
+        expect(header.text()).not.toContain('₱9,851.50');
+        expect(header.text()).toContain('••••••');
+        expect(visibilityToggle.attributes('aria-label')).toBe(
+            'Show balance values',
+        );
+        expect(visibilityToggle.attributes('aria-pressed')).toBe('false');
         expect(header.text()).toContain('Issuance Capacity');
         expect(header.text()).toContain('Operating as: Account holder');
         expect(header.text()).not.toContain('Provider Liquidity');
         expect(header.text()).not.toContain('Client Funds not connected');
+
+        for (const metric of wrapper.findAll(
+            '[data-testid="cockpit-balance-metric"]',
+        )) {
+            expect(metric.attributes('aria-label')).toContain('Value hidden');
+            expect(metric.attributes('aria-label')).not.toContain('₱');
+        }
+
+        await visibilityToggle.trigger('click');
+
+        expect(header.text()).toContain('₱9,876.50');
+        expect(header.text()).toContain('₱25.00');
+        expect(header.text()).toContain('₱9,851.50');
+        expect(visibilityToggle.attributes('aria-label')).toBe(
+            'Hide balance values',
+        );
+        expect(visibilityToggle.attributes('aria-pressed')).toBe('true');
     });
 
     it('renders balance metrics as header HUD presentation only', () => {
@@ -170,24 +198,28 @@ describe('Cockpit shell layout baseline', () => {
         ).toHaveLength(1);
     });
 
-    it('centers single-line labels and values in width-aware balance columns', () => {
+    it('keeps the three primary balance values in one prominent horizontal rail', () => {
         const wrapper = mount(CockpitBalanceHud, {
             props: {
+                valuesVisible: true,
                 balances: [
                     {
                         key: 'internal',
                         label: 'Client Funds',
                         value: '₱8,241.70',
+                        amount_minor: 824_170,
                     },
                     {
                         key: 'outstanding',
                         label: 'Outstanding Pay Codes',
                         value: '₱0.00',
+                        amount_minor: 0,
                     },
                     {
                         key: 'issuance',
                         label: 'Issuance Capacity',
                         value: '₱8,241.70',
+                        amount_minor: 824_170,
                     },
                 ],
             },
@@ -203,16 +235,77 @@ describe('Cockpit shell layout baseline', () => {
 
         expect(labelRows).toHaveLength(3);
         expect(valueRows).toHaveLength(3);
-        expect(hud.classes()).toContain('xl:grid-cols-[4fr_6fr_6fr]');
+        expect(hud.classes()).toContain('grid-cols-3');
+        expect(hud.classes()).toContain('xl:grid-cols-3');
+        expect(wrapper.text()).toContain('₱8,241.70');
 
         for (const labelRow of labelRows) {
             expect(labelRow.classes()).toContain('text-center');
-            expect(labelRow.classes()).toContain('whitespace-nowrap');
         }
 
         for (const valueRow of valueRows) {
             expect(valueRow.classes()).toContain('text-center');
             expect(valueRow.classes()).toContain('whitespace-nowrap');
+            expect(valueRow.classes()).toContain('font-bold');
         }
+    });
+
+    it('renders authorized provider liquidity dynamically and masks it with the other values', async () => {
+        const wrapper = mount(CockpitGlobalHeader, {
+            props: {
+                balances: [
+                    {
+                        key: 'internal',
+                        label: 'Client Funds',
+                        value: '₱8,241.70',
+                        amount_minor: 824_170,
+                    },
+                    {
+                        key: 'outstanding',
+                        label: 'Outstanding Pay Codes',
+                        value: '₱500.00',
+                        amount_minor: 50_000,
+                    },
+                    {
+                        key: 'issuance',
+                        label: 'Issuance Capacity',
+                        value: '₱7,741.70',
+                        amount_minor: 774_170,
+                    },
+                    {
+                        key: 'live',
+                        label: 'NetBank Liquidity',
+                        value: 'Stale · ₱9,000.00',
+                        amount_minor: 900_000,
+                        tone: 'warning',
+                    },
+                ],
+            },
+        });
+
+        const providerMetric = wrapper
+            .findAll('[data-testid="cockpit-balance-metric"]')
+            .find((metric) => metric.text().includes('NetBank Liquidity'));
+
+        expect(providerMetric).toBeDefined();
+        expect(providerMetric?.classes()).toContain('col-span-3');
+        expect(providerMetric?.classes()).toContain('xl:col-span-1');
+        expect(providerMetric?.text()).not.toContain('₱9,000.00');
+        expect(providerMetric?.text()).toContain('Stale · ••••••');
+        expect(providerMetric?.attributes('aria-label')).not.toContain(
+            '₱9,000.00',
+        );
+        expect(providerMetric?.attributes('aria-label')).toContain(
+            'Stale. Value hidden',
+        );
+
+        await wrapper
+            .find('[data-testid="cockpit-balance-visibility-toggle"]')
+            .trigger('click');
+
+        expect(providerMetric?.text()).toContain('Stale · ₱9,000.00');
+        expect(
+            wrapper.find('[data-testid="cockpit-balance-hud"]').classes(),
+        ).toContain('xl:grid-cols-4');
     });
 });

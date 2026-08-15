@@ -68,6 +68,7 @@ it('caps issuance capacity by internal balance and fresh provider headroom after
     int $outstandingLiabilityMinor,
     bool $providerLiquidityIsStale,
     string $expectedValue,
+    ?int $expectedMinor,
 ) {
     config(['x-change.cockpit.header_provider_balance.enabled' => true]);
 
@@ -133,12 +134,20 @@ it('caps issuance capacity by internal balance and fresh provider headroom after
             'key' => 'issuance',
             'label' => 'Issuance Capacity',
         ])
-        ->and($readModel['balances'][2]['value'])->toContain($expectedValue);
+        ->and($readModel['balances'][1]['amount_minor'])->toBe(max(0, $outstandingLiabilityMinor))
+        ->and($readModel['balances'][2]['value'])->toContain($expectedValue)
+        ->and($readModel['balances'][2]['amount_minor'])->toBe($expectedMinor)
+        ->and(array_column($readModel['balances'], 'key'))->toBe([
+            'internal',
+            'outstanding',
+            'issuance',
+        ])
+        ->and($readModel['redactions']['provider_balance_exposed'])->toBeFalse();
 })->with([
-    'provider headroom is lower than internal balance' => [500_000, 240_000, 25_000, false, '2,150.00'],
-    'client funds already exclude the outstanding reserve' => [100_000, 500_000, 25_000, false, '1,000.00'],
-    'outstanding pay codes exhaust provider liquidity' => [500_000, 240_000, 260_000, false, '0.00'],
-    'stale provider liquidity fails closed' => [500_000, 240_000, 25_000, true, 'Not available'],
+    'provider headroom is lower than internal balance' => [500_000, 240_000, 25_000, false, '2,150.00', 215_000],
+    'client funds already exclude the outstanding reserve' => [100_000, 500_000, 25_000, false, '1,000.00', 100_000],
+    'outstanding pay codes exhaust provider liquidity' => [500_000, 240_000, 260_000, false, '0.00', 0],
+    'stale provider liquidity fails closed' => [500_000, 240_000, 25_000, true, 'Not available', null],
 ]);
 
 it('exposes a read-only provider balance summary only to System Treasury', function () {
@@ -186,6 +195,7 @@ it('exposes a read-only provider balance summary only to System Treasury', funct
         ->and($readModel['operating_identity'])->toBe('System Treasury')
         ->and($readModel['balances'][3]['label'])->toBe('NetBank Liquidity')
         ->and($readModel['balances'][3]['value'])->toContain('24,000')
+        ->and($readModel['balances'][3]['amount_minor'])->toBe(2_400_000)
         ->and($readModel['balances'][3]['helper'])->toBe('NetBank source account liquidity summary.')
         ->and($readModel['balances'][3]['tone'])->toBe('healthy')
         ->and($readModel['redactions']['calls_providers'])->toBeFalse()
@@ -224,6 +234,7 @@ it('labels stale provider liquidity directly in the visible header value', funct
         ->toMatchArray([
             'value' => 'Stale · ₱1,406.32',
             'tone' => 'warning',
+            'amount_minor' => 140_632,
         ])
         ->and($liquidity['helper'])->toContain('Cached snapshot is stale');
 });
