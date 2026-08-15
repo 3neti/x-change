@@ -22,10 +22,25 @@ final readonly class TreasuryAccountGrantReadModel
     /** @return array<string, mixed> */
     public function build(Model $operator): array
     {
+        if (! $this->authority->allows($operator, TreasuryOperatorCapability::ViewAccountGrants)) {
+            return [
+                'schema' => 'x-change.cockpit.treasury-account-grants.v1',
+                'can_view' => false,
+                'can_request' => false,
+                'can_approve' => false,
+                'can_execute' => false,
+                'test_allocations_available' => false,
+                'connections' => [],
+                'recipients' => [],
+                'grants' => [],
+            ];
+        }
+
         $userModel = $this->users->resolve();
 
         return [
             'schema' => 'x-change.cockpit.treasury-account-grants.v1',
+            'can_view' => true,
             'can_request' => $this->authority->allows($operator, TreasuryOperatorCapability::RequestAccountGrants),
             'can_approve' => $this->authority->allows($operator, TreasuryOperatorCapability::ApproveAccountGrants),
             'can_execute' => $this->authority->allows($operator, TreasuryOperatorCapability::ExecuteAccountGrants),

@@ -41,10 +41,11 @@ class ShareXChangeBranding
                 'api_partner_controls_visible' => $request->user() instanceof Model
                     && $this->partnerApiAuthority->mayView($request->user()),
                 'treasury_operations_visible' => $request->user() instanceof Model
-                    && $this->treasuryAuthority->allows(
-                        $request->user(),
-                        TreasuryOperatorCapability::ViewAccountGrants,
-                    ),
+                    && ($this->treasuryAuthority->allows(
+                        $request->user(), TreasuryOperatorCapability::ViewAccountGrants,
+                    ) || $this->treasuryAuthority->allows(
+                        $request->user(), TreasuryOperatorCapability::ViewInstitutionFunds,
+                    )),
             ],
         ]);
 

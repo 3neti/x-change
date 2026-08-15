@@ -10,4 +10,8 @@ enum TreasuryOperatorCapability: string
     case RequestAccountGrants = 'treasury.account_grants.request';
     case ApproveAccountGrants = 'treasury.account_grants.approve';
     case ExecuteAccountGrants = 'treasury.account_grants.execute';
+    case ViewInstitutionFunds = 'treasury.institution_funds.view';
+    case RequestInstitutionFunds = 'treasury.institution_funds.request';
+    case ApproveInstitutionFunds = 'treasury.institution_funds.approve';
+    case ExecuteInstitutionFunds = 'treasury.institution_funds.execute';
 }

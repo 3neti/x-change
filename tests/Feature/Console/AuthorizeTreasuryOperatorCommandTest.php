@@ -29,6 +29,8 @@ it('grants Treasury maker and checker authority only to separate named humans', 
         '--capability' => [
             TreasuryOperatorCapability::ViewAccountGrants->value,
             TreasuryOperatorCapability::RequestAccountGrants->value,
+            TreasuryOperatorCapability::ViewInstitutionFunds->value,
+            TreasuryOperatorCapability::RequestInstitutionFunds->value,
         ],
         '--authorization-reference' => 'deployment-control:treasury-maker',
     ])->assertSuccessful();
@@ -40,11 +42,14 @@ it('grants Treasury maker and checker authority only to separate named humans', 
             TreasuryOperatorCapability::ViewAccountGrants->value,
             TreasuryOperatorCapability::ApproveAccountGrants->value,
             TreasuryOperatorCapability::ExecuteAccountGrants->value,
+            TreasuryOperatorCapability::ViewInstitutionFunds->value,
+            TreasuryOperatorCapability::ApproveInstitutionFunds->value,
+            TreasuryOperatorCapability::ExecuteInstitutionFunds->value,
         ],
         '--authorization-reference' => 'deployment-control:treasury-checker',
     ])->assertSuccessful();
 
-    expect(TreasuryOperatorAuthorization::query()->count())->toBe(5);
+    expect(TreasuryOperatorAuthorization::query()->count())->toBe(10);
 
     $this->artisan('x-change:treasury:authorize-operator', [
         'operator' => $maker->email,
@@ -55,5 +60,16 @@ it('grants Treasury maker and checker authority only to separate named humans', 
 
     expect(TreasuryOperatorAuthorization::query()
         ->where('authorization_reference', 'like', 'deployment-control:invalid-combined-role%')
+        ->exists())->toBeFalse();
+
+    $this->artisan('x-change:treasury:authorize-operator', [
+        'operator' => $maker->email,
+        '--column' => 'email',
+        '--capability' => [TreasuryOperatorCapability::ApproveInstitutionFunds->value],
+        '--authorization-reference' => 'deployment-control:invalid-cross-workflow-role',
+    ])->assertFailed();
+
+    expect(TreasuryOperatorAuthorization::query()
+        ->where('authorization_reference', 'like', 'deployment-control:invalid-cross-workflow-role%')
         ->exists())->toBeFalse();
 });

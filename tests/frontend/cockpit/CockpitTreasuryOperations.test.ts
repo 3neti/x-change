@@ -11,14 +11,57 @@ describe("Cockpit Treasury Operations", () => {
   it("shows a compact maker-checker Account Grant workspace", () => {
     const wrapper = mount(TreasuryOperations, {
       props: {
-        treasuryAccountGrantStoreUrl: "/x/cockpit/treasury-operations/account-grants",
+        treasuryAccountGrantStoreUrl:
+          "/x/cockpit/treasury-operations/account-grants",
+        treasuryInstitutionFundStoreUrl:
+          "/x/cockpit/treasury-operations/institution-funds",
+        treasuryInstitutionFunds: {
+          can_view: true,
+          can_request: true,
+          can_approve: true,
+          can_execute: true,
+          balance: "₱250.00",
+          candidates: [
+            {
+              operation_reference: "opening-position-recognition:001",
+              evidence_reference: "provider-evidence:001",
+              amount_minor: 25000,
+              amount: "₱250.00",
+              currency: "PHP",
+              connection_reference: "netbank-primary",
+              available: true,
+              observed_at: "2026-08-15T00:00:00Z",
+            },
+          ],
+          classifications: [
+            {
+              reference: "CLASS-001",
+              status: "awaiting_approval",
+              amount: "₱250.00",
+              ownership_basis: "Shareholder deposit",
+              evidence_reference: "provider-evidence:001",
+              maker: "Amelia",
+              checker: null,
+              updated_at: "2026-08-15T00:00:00Z",
+              actions: {
+                approve: "/classification/approve",
+                execute: "/classification/execute",
+              },
+            },
+          ],
+        },
         treasuryAccountGrants: {
+          can_view: true,
           can_request: true,
           can_approve: true,
           can_execute: true,
           test_allocations_available: true,
           connections: [
-            { reference: "netbank-primary", provider: "netbank", currency: "PHP" },
+            {
+              reference: "netbank-primary",
+              provider: "netbank",
+              currency: "PHP",
+            },
           ],
           recipients: [{ id: "5", name: "Amelia", identity: "•••• 3656" }],
           grants: [
@@ -44,6 +87,10 @@ describe("Cockpit Treasury Operations", () => {
     });
 
     expect(wrapper.text()).toContain("Treasury Operations");
+    expect(wrapper.text()).toContain("Institution-Owned Funds");
+    expect(wrapper.text()).toContain("Authoritative Deposit Evidence");
+    expect(wrapper.text()).toContain("Submit Classification");
+    expect(wrapper.text()).toContain("Shareholder deposit");
     expect(wrapper.text()).toContain("Submit For Approval");
     expect(wrapper.text()).toContain("Test Allocation");
     expect(wrapper.text()).toContain("Maker · Lester");

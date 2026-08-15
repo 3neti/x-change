@@ -19,7 +19,7 @@ final class AuthorizeTreasuryOperatorCommand extends Command
         {--authorization-reference= : Delegated authority or governance reference}
         {--valid-until= : Optional authorization expiry timestamp}';
 
-    protected $description = 'Grant a named human operator explicit Treasury Account Grant authority.';
+    protected $description = 'Grant a named human operator explicit Treasury governance authority.';
 
     public function handle(SystemUserResolverContract $systemPrincipal): int
     {
@@ -47,7 +47,7 @@ final class AuthorizeTreasuryOperatorCommand extends Command
         }
 
         if ($system instanceof Model && $operator->is($system)) {
-            $this->error('The non-interactive System Principal cannot operate Treasury Account Grants.');
+            $this->error('The non-interactive System Principal cannot operate Treasury governance workflows.');
 
             return self::FAILURE;
         }
@@ -64,12 +64,18 @@ final class AuthorizeTreasuryOperatorCommand extends Command
             return self::FAILURE;
         }
 
-        $makerCapabilities = [TreasuryOperatorCapability::RequestAccountGrants->value];
-        $checkerCapabilities = [TreasuryOperatorCapability::ApproveAccountGrants->value];
+        $makerCapabilities = [
+            TreasuryOperatorCapability::RequestAccountGrants->value,
+            TreasuryOperatorCapability::RequestInstitutionFunds->value,
+        ];
+        $checkerCapabilities = [
+            TreasuryOperatorCapability::ApproveAccountGrants->value,
+            TreasuryOperatorCapability::ApproveInstitutionFunds->value,
+        ];
 
         if (array_intersect($capabilities, $makerCapabilities) !== []
             && array_intersect($capabilities, $checkerCapabilities) !== []) {
-            $this->error('Treasury Account Grant maker and checker authority must belong to different operators.');
+            $this->error('Treasury maker and checker authority must belong to different operators.');
 
             return self::FAILURE;
         }
@@ -84,7 +90,7 @@ final class AuthorizeTreasuryOperatorCommand extends Command
             ->whereIn('capability', $opposite)
             ->currentlyValid()
             ->exists()) {
-            $this->error('Treasury Account Grant maker and checker authority must belong to different operators.');
+            $this->error('Treasury maker and checker authority must belong to different operators.');
 
             return self::FAILURE;
         }

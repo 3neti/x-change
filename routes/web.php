@@ -97,6 +97,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantAp
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryInstitutionFundClassificationApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryInstitutionFundClassificationController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryInstitutionFundClassificationExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
@@ -170,6 +173,19 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('treasury-operations/account-grants/{treasuryAccountGrant}/executions', [CockpitTreasuryAccountGrantExecutionController::class, 'store'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.treasury.account-grants.executions.store');
+        Route::post('treasury-operations/institution-funds', [CockpitTreasuryInstitutionFundClassificationController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.treasury.institution-funds.store');
+        Route::post(
+            'treasury-operations/institution-funds/{treasuryInstitutionFundClassification}/approvals',
+            [CockpitTreasuryInstitutionFundClassificationApprovalController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.treasury.institution-funds.approvals.store');
+        Route::post(
+            'treasury-operations/institution-funds/{treasuryInstitutionFundClassification}/executions',
+            [CockpitTreasuryInstitutionFundClassificationExecutionController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.treasury.institution-funds.executions.store');
         Route::post('api-partners/clients', [CockpitPartnerApiClientController::class, 'store'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.api-partners.clients.store');

@@ -81,6 +81,23 @@ Provider observation
 
 Unexplained liquidity remains in Suspense or Clearing and is not grantable.
 
+Provider-balance reconciliation records a positive authoritative difference in
+Legacy Unattributed. It does not decide who owns that cash. An explicitly
+authorized maker may submit the exact recognition operation as owner-funding
+evidence; an independent checker approves and executes the immutable envelope:
+
+```text
+Legacy Unattributed → Institution-Owned Funds
+Provider Inventory  → unchanged
+Provider call        → none
+```
+
+The maker cannot type or alter the amount. X-Change copies the amount,
+currency, connection, and evidence reference from the committed provider
+recognition. One evidence operation can be classified only once. Provider
+reconciliation remains a separate controlled operation and is not triggered by
+classification approval.
+
 An approved Account Grant executes exactly once:
 
 ```text
@@ -102,12 +119,17 @@ login:
 php artisan x-change:treasury:authorize-operator 09170000001 \
   --capability=treasury.account_grants.view \
   --capability=treasury.account_grants.request \
+  --capability=treasury.institution_funds.view \
+  --capability=treasury.institution_funds.request \
   --authorization-reference=deployment-control:treasury-maker
 
 php artisan x-change:treasury:authorize-operator 09170000002 \
   --capability=treasury.account_grants.view \
   --capability=treasury.account_grants.approve \
   --capability=treasury.account_grants.execute \
+  --capability=treasury.institution_funds.view \
+  --capability=treasury.institution_funds.approve \
+  --capability=treasury.institution_funds.execute \
   --authorization-reference=deployment-control:treasury-checker
 ```
 
@@ -142,4 +164,3 @@ grant, and proves a complete rollback. It cannot be enabled in production.
 - Provision production Partner API credentials only after the corresponding
   approved API mandate has activated; never treat an invitation as an OAuth
   credential.
-

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Head, router } from "@inertiajs/vue3";
-import { BanknoteArrowDown, Check, ShieldCheck } from "lucide-vue-next";
+import {
+  BanknoteArrowDown,
+  Check,
+  Landmark,
+  ShieldCheck,
+} from "lucide-vue-next";
 import { computed, reactive, ref } from "vue";
 import CockpitLayout from "../layouts/CockpitLayout.vue";
 
@@ -16,29 +21,74 @@ type Grant = {
   checker: string | null;
   actions: { approve: string; execute: string };
 };
+type InstitutionFundCandidate = {
+  operation_reference: string;
+  evidence_reference: string;
+  amount_minor: number;
+  amount: string;
+  currency: string;
+  connection_reference: string;
+  available: boolean;
+  observed_at: string | null;
+};
+type InstitutionFundClassification = {
+  reference: string;
+  status: string;
+  amount: string;
+  ownership_basis: string;
+  evidence_reference: string;
+  maker: string;
+  checker: string | null;
+  updated_at: string | null;
+  actions: { approve: string; execute: string };
+};
 
 const props = defineProps<{
   cockpitHeaderReadModel?: Record<string, unknown>;
   treasuryAccountGrants: {
+    can_view: boolean;
     can_request: boolean;
     can_approve: boolean;
     can_execute: boolean;
     test_allocations_available: boolean;
-    connections: Array<{ reference: string; provider: string; currency: string }>;
+    connections: Array<{
+      reference: string;
+      provider: string;
+      currency: string;
+    }>;
     recipients: Recipient[];
     grants: Grant[];
   };
   treasuryAccountGrantStoreUrl: string;
+  treasuryInstitutionFunds: {
+    can_view: boolean;
+    can_request: boolean;
+    can_approve: boolean;
+    can_execute: boolean;
+    balance: string;
+    candidates: InstitutionFundCandidate[];
+    classifications: InstitutionFundClassification[];
+  };
+  treasuryInstitutionFundStoreUrl: string;
 }>();
 
 const form = reactive({
   recipient_id: props.treasuryAccountGrants.recipients[0]?.id ?? "",
-  connection_reference: props.treasuryAccountGrants.connections[0]?.reference ?? "",
+  connection_reference:
+    props.treasuryAccountGrants.connections[0]?.reference ?? "",
   amount: "",
   purpose: "",
   test_allocation: false,
 });
 const idempotencyReference = ref(crypto.randomUUID());
+const institutionForm = reactive({
+  evidence_operation_reference:
+    props.treasuryInstitutionFunds.candidates.find(
+      (candidate) => candidate.available,
+    )?.operation_reference ?? "",
+  ownership_basis: "",
+});
+const institutionIdempotencyReference = ref(crypto.randomUUID());
 
 const amountMinor = computed(() => {
   const value = form.amount.trim();
@@ -53,21 +103,48 @@ function submit(): void {
     (candidate) => candidate.reference === form.connection_reference,
   );
   if (!connection) return;
-  router.post(props.treasuryAccountGrantStoreUrl, {
-    recipient_id: form.recipient_id,
-    amount_minor: amountMinor.value,
-    currency: connection.currency,
-    connection_reference: connection.reference,
-    purpose: form.purpose,
-    idempotency_reference: idempotencyReference.value,
-    test_allocation: form.test_allocation,
-  }, {
-    onSuccess: () => {
-      idempotencyReference.value = crypto.randomUUID();
-      form.amount = "";
-      form.purpose = "";
+  router.post(
+    props.treasuryAccountGrantStoreUrl,
+    {
+      recipient_id: form.recipient_id,
+      amount_minor: amountMinor.value,
+      currency: connection.currency,
+      connection_reference: connection.reference,
+      purpose: form.purpose,
+      idempotency_reference: idempotencyReference.value,
+      test_allocation: form.test_allocation,
     },
-  });
+    {
+      onSuccess: () => {
+        idempotencyReference.value = crypto.randomUUID();
+        form.amount = "";
+        form.purpose = "";
+      },
+    },
+  );
+}
+
+function submitInstitutionFunding(): void {
+  if (
+    !institutionForm.evidence_operation_reference ||
+    !institutionForm.ownership_basis.trim()
+  )
+    return;
+  router.post(
+    props.treasuryInstitutionFundStoreUrl,
+    {
+      ...institutionForm,
+      idempotency_reference: institutionIdempotencyReference.value,
+    },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        institutionIdempotencyReference.value = crypto.randomUUID();
+        institutionForm.evidence_operation_reference = "";
+        institutionForm.ownership_basis = "";
+      },
+    },
+  );
 }
 </script>
 
@@ -81,7 +158,8 @@ function submit(): void {
           <div>
             <h1 class="text-xl font-semibold">Treasury Operations</h1>
             <p class="mt-1 text-sm text-muted-foreground">
-              Allocate reconciled institution-owned funds to an Account through maker-checker approval.
+              Classify owned liquidity and allocate it to an Account through
+              independent maker-checker approval.
             </p>
           </div>
         </div>
@@ -92,72 +170,295 @@ function submit(): void {
         >
           <label class="grid gap-1 text-sm">
             <span class="font-medium">Recipient Account</span>
-            <select v-model="form.recipient_id" class="h-10 rounded-lg border border-border bg-background px-3">
-              <option v-for="recipient in treasuryAccountGrants.recipients" :key="recipient.id" :value="recipient.id">
+            <select
+              v-model="form.recipient_id"
+              class="h-10 rounded-lg border border-border bg-background px-3"
+            >
+              <option
+                v-for="recipient in treasuryAccountGrants.recipients"
+                :key="recipient.id"
+                :value="recipient.id"
+              >
                 {{ recipient.name }} · {{ recipient.identity }}
               </option>
             </select>
           </label>
-          <label v-if="treasuryAccountGrants.connections.length > 1" class="grid gap-1 text-sm">
+          <label
+            v-if="treasuryAccountGrants.connections.length > 1"
+            class="grid gap-1 text-sm"
+          >
             <span class="font-medium">Treasury Connection</span>
-            <select v-model="form.connection_reference" class="h-10 rounded-lg border border-border bg-background px-3">
-              <option v-for="connection in treasuryAccountGrants.connections" :key="connection.reference" :value="connection.reference">
+            <select
+              v-model="form.connection_reference"
+              class="h-10 rounded-lg border border-border bg-background px-3"
+            >
+              <option
+                v-for="connection in treasuryAccountGrants.connections"
+                :key="connection.reference"
+                :value="connection.reference"
+              >
                 {{ connection.provider }} · {{ connection.currency }}
               </option>
             </select>
           </label>
           <label class="grid gap-1 text-sm">
             <span class="font-medium">Amount</span>
-            <div class="flex h-10 items-center rounded-lg border border-border bg-background px-3">
+            <div
+              class="flex h-10 items-center rounded-lg border border-border bg-background px-3"
+            >
               <span class="text-muted-foreground">₱</span>
-              <input v-model="form.amount" inputmode="decimal" class="min-w-0 flex-1 bg-transparent px-2 outline-none" />
+              <input
+                v-model="form.amount"
+                inputmode="decimal"
+                class="min-w-0 flex-1 bg-transparent px-2 outline-none"
+              />
             </div>
           </label>
           <label class="grid gap-1 text-sm md:col-span-2">
             <span class="font-medium">Purpose</span>
-            <input v-model="form.purpose" class="h-10 rounded-lg border border-border bg-background px-3" />
+            <input
+              v-model="form.purpose"
+              class="h-10 rounded-lg border border-border bg-background px-3"
+            />
           </label>
-          <label v-if="treasuryAccountGrants.test_allocations_available" class="flex items-center gap-2 text-sm">
+          <label
+            v-if="treasuryAccountGrants.test_allocations_available"
+            class="flex items-center gap-2 text-sm"
+          >
             <input v-model="form.test_allocation" type="checkbox" />
             Mark as a staging Test Allocation
           </label>
           <div class="flex justify-end md:col-span-2">
-            <button type="submit" class="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700">
+            <button
+              type="submit"
+              class="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
               <ShieldCheck class="size-4" /> Submit For Approval
             </button>
           </div>
         </form>
       </section>
 
-      <section class="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <section
+        v-if="treasuryInstitutionFunds.can_view"
+        class="rounded-2xl border border-border bg-card p-5 shadow-sm"
+      >
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="flex min-w-0 items-start gap-3">
+            <Landmark class="mt-0.5 size-5 shrink-0 text-amber-600" />
+            <div class="min-w-0">
+              <h2 class="font-semibold">Institution-Owned Funds</h2>
+              <p class="mt-1 text-sm text-muted-foreground">
+                Classify only provider-confirmed cash that does not belong to a
+                customer, reserve, cost, or payable.
+              </p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p
+              class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              Grantable
+            </p>
+            <p class="text-xl font-semibold tabular-nums">
+              {{ treasuryInstitutionFunds.balance }}
+            </p>
+          </div>
+        </div>
+
+        <div
+          v-if="treasuryInstitutionFunds.can_request"
+          class="mt-5 grid gap-3 rounded-xl border border-border p-4"
+        >
+          <p class="text-sm font-medium">Authoritative Deposit Evidence</p>
+          <form
+            v-if="treasuryInstitutionFunds.candidates.length"
+            class="grid gap-3 md:grid-cols-2"
+            @submit.prevent="submitInstitutionFunding"
+          >
+            <label class="grid gap-1 text-sm">
+              <span class="font-medium">Unclassified Deposit</span>
+              <select
+                v-model="institutionForm.evidence_operation_reference"
+                class="h-10 min-w-0 rounded-lg border border-border bg-background px-3"
+              >
+                <option value="">Choose evidence</option>
+                <option
+                  v-for="candidate in treasuryInstitutionFunds.candidates"
+                  :key="candidate.operation_reference"
+                  :value="candidate.operation_reference"
+                  :disabled="!candidate.available"
+                >
+                  {{ candidate.amount }} · {{ candidate.connection_reference
+                  }}<template v-if="!candidate.available">
+                    · unavailable</template
+                  >
+                </option>
+              </select>
+            </label>
+            <label class="grid gap-1 text-sm">
+              <span class="font-medium">Ownership Basis</span>
+              <input
+                v-model="institutionForm.ownership_basis"
+                class="h-10 min-w-0 rounded-lg border border-border bg-background px-3"
+                aria-label="Ownership basis"
+              />
+            </label>
+            <div class="flex justify-end md:col-span-2">
+              <button
+                type="submit"
+                class="inline-flex h-10 items-center gap-2 rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700"
+              >
+                <ShieldCheck class="size-4" /> Submit Classification
+              </button>
+            </div>
+          </form>
+          <p
+            v-else
+            class="rounded-lg bg-muted/40 p-4 text-sm text-muted-foreground"
+          >
+            No unclassified provider evidence is available. Reconcile the
+            provider after the owner-funded deposit settles.
+          </p>
+        </div>
+
+        <div class="mt-4 grid gap-3">
+          <article
+            v-for="classification in treasuryInstitutionFunds.classifications"
+            :key="classification.reference"
+            class="rounded-xl border border-border p-4"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="font-semibold">Owner Funding</p>
+                  <span
+                    class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium"
+                    >{{ classification.status.replaceAll("_", " ") }}</span
+                  >
+                </div>
+                <p class="mt-1 break-all text-xs text-muted-foreground">
+                  {{ classification.evidence_reference }}
+                </p>
+                <p class="mt-2 text-sm">{{ classification.ownership_basis }}</p>
+              </div>
+              <p class="text-lg font-semibold tabular-nums">
+                {{ classification.amount }}
+              </p>
+            </div>
+            <div
+              class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-muted-foreground"
+            >
+              <span
+                >Maker · {{ classification.maker
+                }}<template v-if="classification.checker">
+                  · Checker · {{ classification.checker }}</template
+                ></span
+              >
+              <div class="flex gap-2">
+                <button
+                  v-if="
+                    treasuryInstitutionFunds.can_approve &&
+                    classification.status === 'awaiting_approval'
+                  "
+                  type="button"
+                  class="inline-flex h-9 items-center gap-1 rounded-lg border border-border px-3 font-medium text-foreground"
+                  @click="router.post(classification.actions.approve)"
+                >
+                  <Check class="size-4" /> Approve
+                </button>
+                <button
+                  v-if="
+                    treasuryInstitutionFunds.can_execute &&
+                    classification.status === 'approved'
+                  "
+                  type="button"
+                  class="inline-flex h-9 items-center gap-1 rounded-lg bg-amber-600 px-3 font-medium text-white"
+                  @click="router.post(classification.actions.execute)"
+                >
+                  <Landmark class="size-4" /> Classify Funds
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section
+        v-if="treasuryAccountGrants.can_view"
+        class="rounded-2xl border border-border bg-card p-5 shadow-sm"
+      >
         <h2 class="font-semibold">Account Grants</h2>
         <div class="mt-4 grid gap-3">
-          <article v-for="grant in treasuryAccountGrants.grants" :key="grant.reference" class="rounded-xl border border-border p-4">
+          <article
+            v-for="grant in treasuryAccountGrants.grants"
+            :key="grant.reference"
+            class="rounded-xl border border-border p-4"
+          >
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div class="flex flex-wrap items-center gap-2">
                   <p class="font-semibold">{{ grant.recipient.name }}</p>
-                  <span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">{{ grant.status.replaceAll('_', ' ') }}</span>
-                  <span v-if="grant.test_allocation" class="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">Test Allocation</span>
+                  <span
+                    class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium"
+                    >{{ grant.status.replaceAll("_", " ") }}</span
+                  >
+                  <span
+                    v-if="grant.test_allocation"
+                    class="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800"
+                    >Test Allocation</span
+                  >
                 </div>
-                <p class="text-sm text-muted-foreground">{{ grant.recipient.identity }} · {{ grant.reference }}</p>
+                <p class="text-sm text-muted-foreground">
+                  {{ grant.recipient.identity }} · {{ grant.reference }}
+                </p>
                 <p class="mt-2 text-sm">{{ grant.purpose }}</p>
               </div>
-              <p class="text-lg font-semibold tabular-nums">{{ grant.amount }}</p>
+              <p class="text-lg font-semibold tabular-nums">
+                {{ grant.amount }}
+              </p>
             </div>
-            <div class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-muted-foreground">
-              <span>Maker · {{ grant.maker }}<template v-if="grant.checker"> · Checker · {{ grant.checker }}</template></span>
+            <div
+              class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-muted-foreground"
+            >
+              <span
+                >Maker · {{ grant.maker
+                }}<template v-if="grant.checker">
+                  · Checker · {{ grant.checker }}</template
+                ></span
+              >
               <div class="flex gap-2">
-                <button v-if="treasuryAccountGrants.can_approve && grant.status === 'awaiting_approval'" type="button" class="inline-flex h-9 items-center gap-1 rounded-lg border border-border px-3 font-medium text-foreground" @click="router.post(grant.actions.approve)">
+                <button
+                  v-if="
+                    treasuryAccountGrants.can_approve &&
+                    grant.status === 'awaiting_approval'
+                  "
+                  type="button"
+                  class="inline-flex h-9 items-center gap-1 rounded-lg border border-border px-3 font-medium text-foreground"
+                  @click="router.post(grant.actions.approve)"
+                >
                   <Check class="size-4" /> Approve
                 </button>
-                <button v-if="treasuryAccountGrants.can_execute && grant.status === 'approved'" type="button" class="inline-flex h-9 items-center gap-1 rounded-lg bg-emerald-600 px-3 font-medium text-white" @click="router.post(grant.actions.execute)">
+                <button
+                  v-if="
+                    treasuryAccountGrants.can_execute &&
+                    grant.status === 'approved'
+                  "
+                  type="button"
+                  class="inline-flex h-9 items-center gap-1 rounded-lg bg-emerald-600 px-3 font-medium text-white"
+                  @click="router.post(grant.actions.execute)"
+                >
                   <BanknoteArrowDown class="size-4" /> Allocate Funds
                 </button>
               </div>
             </div>
           </article>
-          <p v-if="!treasuryAccountGrants.grants.length" class="rounded-xl bg-muted/40 p-5 text-sm text-muted-foreground">No Account Grants yet.</p>
+          <p
+            v-if="!treasuryAccountGrants.grants.length"
+            class="rounded-xl bg-muted/40 p-5 text-sm text-muted-foreground"
+          >
+            No Account Grants yet.
+          </p>
         </div>
       </section>
     </div>
