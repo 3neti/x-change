@@ -535,6 +535,40 @@ return [
         ],
     ],
 
+    'partner_api' => [
+        'enabled' => env('XCHANGE_PARTNER_API_ENABLED', false),
+        'prefix' => env('XCHANGE_PARTNER_API_PREFIX', 'api/partner/v1'),
+        'token_ttl_minutes' => (int) env('XCHANGE_PARTNER_API_TOKEN_TTL_MINUTES', 15),
+        'rate_limit_per_minute' => (int) env('XCHANGE_PARTNER_API_RATE_LIMIT_PER_MINUTE', 60),
+        'scopes' => [
+            'capabilities:read' => 'Inspect the authenticated Partner API mandate.',
+            'prices:read' => 'Inspect published pricing and request estimates.',
+            'pay-codes:estimate' => 'Estimate a Pay Code without reserving funds.',
+            'pay-codes:issue' => 'Issue a Pay Code from the bound Account.',
+            'pay-codes:read' => 'Inspect Pay Codes owned by the bound Account.',
+            'pay-codes:cancel' => 'Cancel an eligible Pay Code owned by the bound Account.',
+            'deliveries:read' => 'Inspect delivery status for owned Pay Codes.',
+        ],
+        'default_scopes' => [
+            'capabilities:read',
+            'prices:read',
+            'pay-codes:estimate',
+            'pay-codes:issue',
+            'pay-codes:read',
+            'pay-codes:cancel',
+            'deliveries:read',
+        ],
+        'default_mandate' => [
+            'currencies' => ['PHP'],
+            'voucher_profiles' => ['disbursement'],
+            'settlement_rails' => ['automatic', 'INSTAPAY'],
+            'unbound_pay_codes' => false,
+            'maximum_ttl_seconds' => 604800,
+            'maximum_amount_minor' => 1000000,
+            'daily_principal_limit_minor' => 10000000,
+        ],
+    ],
+
     'services' => [
         'user_resolver' => ContextUserResolver::class,
         'voucher_access' => VoucherAccessService::class,

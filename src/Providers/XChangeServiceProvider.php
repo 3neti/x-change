@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Providers;
 
 use Composer\InstalledVersions;
+use DateInterval;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -28,6 +29,7 @@ use Laravel\Fortify\Contracts\RegisterResponse;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Passport\Passport;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
 use LBHurtado\EmiCore\Contracts\DeploymentConnectionContributor;
 use LBHurtado\EmiCore\Contracts\DeploymentEnvironmentContributor;
@@ -403,6 +405,7 @@ use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\Onboarding\DefaultAccountProvisioningService;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
 use LBHurtado\XChange\Services\Payment\AccountFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderWalletCollectionPosting;
@@ -457,6 +460,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('config/x-change.php'),
             'x-change'
         );
+        $this->app->scoped(PartnerApiRequestContext::class);
         $this->configureIdentityOtpGateway();
         $this->configureFormFlowSplashDefaults();
         $this->app->singleton(OtpChallengeGateway::class, function ($app): OtpChallengeGateway {
@@ -1305,10 +1309,12 @@ class XChangeServiceProvider extends ServiceProvider
         $this->decorateOnboardingCompletionHook();
         $this->prependExecutionAwarePostRedemptionGate();
         $this->bootConfig();
+        $this->bootPartnerApiOAuth();
         $this->loadViewsFrom($this->packagePath('resources/views'), 'x-change');
         $this->bootFundingVerificationRateLimiter();
         $this->bootPaymentVerificationRateLimiter();
         $this->bootCommercialSettlementRateLimiter();
+        $this->bootPartnerApiRateLimiter();
         $this->bootFundingVerificationSchedule();
         $this->bootFundingBroadcastChannel();
         $this->bootRoutes();
@@ -2102,6 +2108,10 @@ class XChangeServiceProvider extends ServiceProvider
             $this->loadRoutesFrom($this->packagePath('routes/api.php'));
         }
 
+        if ((bool) $config->get('x-change.partner_api.enabled', false)) {
+            $this->loadRoutesFrom($this->packagePath('routes/partner-api.php'));
+        }
+
         $legacyLifecycleApiEnvironments = (array) $config->get(
             'x-change.routes.legacy_lifecycle_api.environments',
             ['local', 'testing'],
@@ -2113,6 +2123,26 @@ class XChangeServiceProvider extends ServiceProvider
         ) {
             $this->loadRoutesFrom($this->packagePath('routes/lifecycle-api.php'));
         }
+    }
+
+    protected function bootPartnerApiOAuth(): void
+    {
+        Passport::tokensCan((array) config('x-change.partner_api.scopes', []));
+
+        $minutes = max(1, (int) config('x-change.partner_api.token_ttl_minutes', 15));
+        Passport::clientCredentialsTokensExpireIn(new DateInterval(sprintf('PT%dM', $minutes)));
+    }
+
+    protected function bootPartnerApiRateLimiter(): void
+    {
+        RateLimiter::for('x-change-partner-api', function (Request $request): Limit {
+            $tokenFingerprint = hash('sha256', (string) $request->bearerToken());
+
+            return Limit::perMinute(max(
+                1,
+                (int) config('x-change.partner_api.rate_limit_per_minute', 60),
+            ))->by($tokenFingerprint !== hash('sha256', '') ? $tokenFingerprint : $request->ip());
+        });
     }
 
     protected function bootExceptionRendering(): void

@@ -10,6 +10,7 @@ use Illuminate\Cookie\CookieServiceProvider;
 use Illuminate\Session\SessionServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Laravel\Passport\PassportServiceProvider;
 use LBHurtado\Cash\CashServiceProvider;
 use LBHurtado\Contact\ContactServiceProvider;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
@@ -73,6 +74,7 @@ abstract class TestCase extends Orchestra
             SchemalessAttributesServiceProvider::class,
             CookieServiceProvider::class,
             SessionServiceProvider::class,
+            PassportServiceProvider::class,
             BavixWalletServiceProvider::class,
             CashServiceProvider::class,
             LBHurtadoWalletServiceProvider::class,
@@ -115,6 +117,14 @@ abstract class TestCase extends Orchestra
         $app['config']->set('queue.default', 'sync');
         $app['config']->set('session.driver', 'array');
         $app['config']->set('auth.defaults.guard', 'web');
+        $app['config']->set('auth.guards.api', [
+            'driver' => 'passport',
+            'provider' => 'users',
+        ]);
+        $app['config']->set('auth.providers.users', [
+            'driver' => 'eloquent',
+            'model' => User::class,
+        ]);
 
         // Force voucher package to use the extended voucher model.
         $app['config']->set('vouchers.models.voucher', Voucher::class);
@@ -125,6 +135,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('x-change.routes.web', true);
         $app['config']->set('x-change.routes.api', true);
         $app['config']->set('x-change.routes.legacy_lifecycle_api.enabled', true);
+        $app['config']->set('x-change.partner_api.enabled', true);
         $app['config']->set('x-change.deployment.profile_explicitly_configured', true);
         $app['config']->set('x-change.commissioning.enabled', false);
 
@@ -198,6 +209,9 @@ abstract class TestCase extends Orchestra
         $this->loadLaravelMigrations();
 
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        $passportRoot = dirname((new ReflectionClass(PassportServiceProvider::class))->getFileName(), 2);
+        $this->loadMigrationsFrom($passportRoot.'/database/migrations');
 
         // Lower-level dependencies first.
         $this->runBaseWalletTablesMigrations();
