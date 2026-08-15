@@ -15,12 +15,12 @@ final class CockpitTreasuryInstitutionFundClassificationApprovalController exten
 {
     public function store(
         ApproveTreasuryInstitutionFundClassificationRequest $request,
-        TreasuryInstitutionFundClassification $treasuryInstitutionFundClassification,
+        TreasuryInstitutionFundClassification $classification,
         ApproveTreasuryInstitutionFundClassification $approve,
     ): RedirectResponse {
         $checker = $request->user();
         abort_unless($checker instanceof Model, 403);
-        $approve->handle($treasuryInstitutionFundClassification, $checker);
+        $approve->handle($classification, $checker);
 
         return back();
     }

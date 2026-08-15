@@ -224,12 +224,12 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.treasury.institution-funds.store');
         Route::post(
-            'treasury-operations/institution-funds/{treasuryInstitutionFundClassification}/approvals',
+            'treasury-operations/institution-funds/{classification}/approvals',
             [CockpitTreasuryInstitutionFundClassificationApprovalController::class, 'store'],
         )->middleware('throttle:6,1')
             ->name('x-change.cockpit.treasury.institution-funds.approvals.store');
         Route::post(
-            'treasury-operations/institution-funds/{treasuryInstitutionFundClassification}/executions',
+            'treasury-operations/institution-funds/{classification}/executions',
             [CockpitTreasuryInstitutionFundClassificationExecutionController::class, 'store'],
         )->middleware('throttle:6,1')
             ->name('x-change.cockpit.treasury.institution-funds.executions.store');

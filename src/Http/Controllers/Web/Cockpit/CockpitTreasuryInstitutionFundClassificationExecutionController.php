@@ -15,12 +15,12 @@ final class CockpitTreasuryInstitutionFundClassificationExecutionController exte
 {
     public function store(
         ExecuteTreasuryInstitutionFundClassificationRequest $request,
-        TreasuryInstitutionFundClassification $treasuryInstitutionFundClassification,
+        TreasuryInstitutionFundClassification $classification,
         ExecuteTreasuryInstitutionFundClassification $execute,
     ): RedirectResponse {
         $operator = $request->user();
         abort_unless($operator instanceof Model, 403);
-        $execute->handle($treasuryInstitutionFundClassification, $operator);
+        $execute->handle($classification, $operator);
 
         return back();
     }
