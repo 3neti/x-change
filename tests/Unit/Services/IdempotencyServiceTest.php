@@ -51,3 +51,19 @@ it('throws conflict when the same idempotency key is reused with a different pay
         'The supplied idempotency key has already been used with a different payload.'
     );
 });
+
+it('isolates identical idempotency keys across client and operation namespaces', function () {
+    $service = app(IdempotencyService::class);
+    $payload = ['cash' => ['amount' => 100]];
+
+    $service->remember('shared-key', $payload, ['code' => 'FIRST'], 'partner:first:issue');
+    $service->remember('shared-key', $payload, ['code' => 'SECOND'], 'partner:second:issue');
+    $service->remember('shared-key', $payload, ['code' => 'CANCELLED'], 'partner:first:cancel');
+
+    expect($service->recallOrValidate('shared-key', $payload, 'partner:first:issue'))
+        ->toBe(['code' => 'FIRST'])
+        ->and($service->recallOrValidate('shared-key', $payload, 'partner:second:issue'))
+        ->toBe(['code' => 'SECOND'])
+        ->and($service->recallOrValidate('shared-key', $payload, 'partner:first:cancel'))
+        ->toBe(['code' => 'CANCELLED']);
+});

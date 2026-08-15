@@ -67,7 +67,11 @@
         "operationId": "cancelPartnerPayCode",
         "summary": "Cancel an eligible unclaimed Pay Code and release reserved principal",
         "security": [{"partnerOAuth": ["pay-codes:cancel"]}],
-        "parameters": [{"$ref": "#/components/parameters/PayCode"}],
+        "parameters": [
+          {"$ref": "#/components/parameters/PayCode"},
+          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
+          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
+        ],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["reason"], "properties": {"reason": {"type": "string", "maxLength": 255}}}}}},
         "responses": {
           "200": {"description": "Treasury-safe terminal release result", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},

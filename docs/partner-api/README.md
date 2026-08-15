@@ -94,6 +94,8 @@ Cache the returned token only until `expires_in`; request a new token after expi
 
 Issuance requires `Idempotency-Key`; `X-Correlation-ID` is recommended. Repeating the same key and payload returns the original result. Reusing the key with changed input is rejected.
 
+Cancellation also requires `Idempotency-Key`. Its replay identity is scoped to the authenticated Partner client and cancellation operation, so retrying an identical request cannot release principal twice. Partner idempotency storage is scoped by client and operation; identical raw keys used by different approved clients cannot collide or reveal another client's result.
+
 Money in Partner status resources is expressed as integer `amount_minor` plus ISO currency. Instruction inputs continue to use human major units at this contract boundary, as declared by OpenAPI.
 
 ## Financial safety
@@ -147,4 +149,3 @@ The Postman collection contains placeholders only. Store real credentials in a p
 ## Not exposed
 
 The Partner API intentionally excludes wallet ledgers, raw voucher instructions, claim evidence, settlement envelopes, reconciliation controls, users/KYC lookup, event payloads, webhooks, dashboards, scenario administration, and operator/Treasury mutations. These remain internal, recipient-facing, or provider-facing surfaces.
-

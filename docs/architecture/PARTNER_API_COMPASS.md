@@ -20,6 +20,7 @@ Approved external services can estimate, issue, inspect, and safely cancel Pay C
 - Conditional commissioning/doctor gate for OAuth signing keys.
 - One-time operator credential provisioning command.
 - HTTP-native lifecycle acceptance runner with a read-only default and explicit mutation confirmation.
+- Client-and-operation-scoped issuance and cancellation idempotency, with an advertised Partner contract version and hash.
 
 ## Gates before Saras production credentials
 
@@ -30,9 +31,9 @@ Approved external services can estimate, issue, inspect, and safely cancel Pay C
 - Run Cloud acceptance using a sandbox client and record the tested package/version manifest.
 - Complete an independent security review and abuse/rate-limit exercise.
 
-## Deferred AI/MCP wave
+## Active AI/MCP wave
 
-Build an X-Change MCP server only on top of the Partner API—not directly on Actions, models, Treasury, or the legacy lifecycle API. MCP tools inherit OAuth client identity, scopes, mandates, idempotency, and audit controls. Initial tools should be `inspect_capabilities`, `estimate_pay_code`, `issue_pay_code`, `get_pay_code`, and `cancel_pay_code`. Destructive tools must surface confirmation and idempotency requirements in their schema.
+`3neti/x-mcp`, under the `LBHurtado\\XMcp` namespace, is the separate HTTP-only adapter over this Partner API. It does not depend on x-change internals. Its initial server exposes `inspect_capabilities`, `estimate_pay_code`, `issue_pay_code`, `get_pay_code`, and `cancel_pay_code`. Mutation tools require explicit confirmation and stable idempotency keys in their schemas.
 
 MCP is a client/interface layer, never an alternate authority boundary.
 

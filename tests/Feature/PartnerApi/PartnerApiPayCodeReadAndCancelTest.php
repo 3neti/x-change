@@ -112,7 +112,7 @@ it('cancels only an owned Pay Code through the Treasury-safe lifecycle service',
     authenticatePartnerPayCodeOwner($issuer, ['pay-codes:cancel']);
     $voucher = partnerOwnedVoucher($issuer, 'SARS-CANCEL');
     $lifecycle = Mockery::mock(VoucherLifecycleServiceContract::class);
-    $lifecycle->shouldReceive('show')->once()->with((string) $voucher->getKey())
+    $lifecycle->shouldReceive('show')->twice()->with((string) $voucher->getKey())
         ->andReturn(partnerLifecycleDetail($voucher->code, $issuer->getKey()));
     $lifecycle->shouldReceive('cancel')->once()->with('SARS-CANCEL', [
         'reason' => 'Recipient request withdrawn.',
@@ -137,10 +137,26 @@ it('cancels only an owned Pay Code through the Treasury-safe lifecycle service',
 
     $this->postJson('/api/partner/v1/pay-codes/SARS-CANCEL/cancellation', [
         'reason' => 'Recipient request withdrawn.',
-    ])->assertSuccessful()
+    ], [
+        'Idempotency-Key' => 'cancel-saras-001',
+        'X-Correlation-ID' => 'cancel-run-001',
+    ])
+        ->assertSuccessful()
+        ->assertHeader('X-Correlation-ID', 'cancel-run-001')
         ->assertJsonPath('data.cancelled', true)
         ->assertJsonPath('data.treasury_release.amount_minor', 12550)
+        ->assertJsonPath('meta.correlation_id', 'cancel-run-001')
+        ->assertJsonPath('meta.idempotency.replayed', false)
         ->assertJsonMissingPath('data.treasury_release.operation_reference');
+
+    $this->postJson('/api/partner/v1/pay-codes/SARS-CANCEL/cancellation', [
+        'reason' => 'Recipient request withdrawn.',
+    ], [
+        'Idempotency-Key' => 'cancel-saras-001',
+        'X-Correlation-ID' => 'cancel-run-001',
+    ])
+        ->assertSuccessful()
+        ->assertJsonPath('meta.idempotency.replayed', true);
 });
 
 it('requires cancellation scope and never invokes lifecycle for another owner', function () {
@@ -158,5 +174,16 @@ it('requires cancellation scope and never invokes lifecycle for another owner', 
 
     $this->postJson('/api/partner/v1/pay-codes/SARS-DENY/cancellation', [
         'reason' => 'Unauthorized attempt.',
-    ])->assertForbidden();
+    ], ['Idempotency-Key' => 'cancel-denied-001'])->assertForbidden();
+});
+
+it('requires an idempotency key for cancellation', function () {
+    $issuer = actingAsTestUser();
+    authenticatePartnerPayCodeOwner($issuer, ['pay-codes:cancel']);
+    partnerOwnedVoucher($issuer, 'SARS-NO-KEY');
+
+    $this->postJson('/api/partner/v1/pay-codes/SARS-NO-KEY/cancellation', [
+        'reason' => 'Recipient request withdrawn.',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('_partner.idempotency_key');
 });

@@ -115,11 +115,14 @@ it('issues idempotently and never accepts caller-controlled issuer identity', fu
 
     $this->postJson('/api/partner/v1/pay-codes', $payload, $headers)
         ->assertCreated()
+        ->assertHeader('X-Correlation-ID', 'saras-run-001')
         ->assertJsonPath('data.code', 'SARS-1234')
+        ->assertJsonPath('meta.correlation_id', 'saras-run-001')
         ->assertJsonPath('meta.idempotency.replayed', false);
 
     $this->postJson('/api/partner/v1/pay-codes', $payload, $headers)
         ->assertSuccessful()
+        ->assertHeader('X-Correlation-ID', 'saras-run-001')
         ->assertJsonPath('data.code', 'SARS-1234')
         ->assertJsonPath('meta.idempotency.replayed', true);
 

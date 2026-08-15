@@ -42,6 +42,9 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             '/pay-codes/{code}',
             '/pay-codes/{code}/cancellation',
         ])
+        ->and(collect(data_get($document, 'paths./pay-codes/{code}/cancellation.post.parameters'))
+            ->firstWhere('name', 'Idempotency-Key'))
+        ->toMatchArray(['in' => 'header', 'required' => true])
         ->and($response->getContent())->not->toContain('/api/x/v1')
         ->not->toContain('issuer_id');
 });

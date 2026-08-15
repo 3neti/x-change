@@ -52,9 +52,9 @@ class IdempotencyService
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>|null
      */
-    public function recallOrValidate(string $key, array $payload): ?array
+    public function recallOrValidate(string $key, array $payload, ?string $namespace = null): ?array
     {
-        $existing = $this->store->find($key);
+        $existing = $this->store->find($this->storageKey($key, $namespace));
 
         if (! $existing) {
             return null;
@@ -76,12 +76,21 @@ class IdempotencyService
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $response
      */
-    public function remember(string $key, array $payload, array $response): void
+    public function remember(string $key, array $payload, array $response, ?string $namespace = null): void
     {
-        $this->store->put($key, [
+        $this->store->put($this->storageKey($key, $namespace), [
             'fingerprint' => $this->fingerprint($payload),
             'response' => $response,
         ], $this->ttlSeconds());
+    }
+
+    protected function storageKey(string $key, ?string $namespace): string
+    {
+        if ($namespace === null || trim($namespace) === '') {
+            return $key;
+        }
+
+        return 'scoped:'.hash('sha256', trim($namespace)."\0".$key);
     }
 
     /**

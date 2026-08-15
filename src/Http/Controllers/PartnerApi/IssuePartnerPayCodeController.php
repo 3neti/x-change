@@ -38,7 +38,8 @@ class IssuePartnerPayCodeController extends Controller
             $client = PartnerApiClient::query()->lockForUpdate()->findOrFail($context->client()->getKey());
             $context->setClient($client);
             $mandates->assertAllows($payload, $context);
-            $recalled = $idempotency->recallOrValidate($key, $payload);
+            $namespace = sprintf('partner-api:%s:pay-codes:issue', $client->reference);
+            $recalled = $idempotency->recallOrValidate($key, $payload, $namespace);
 
             if (is_array($recalled)) {
                 return ['data' => $recalled, 'replayed' => true];
@@ -60,15 +61,28 @@ class IssuePartnerPayCodeController extends Controller
                 'currency' => $currency,
                 'occurred_at' => now(),
             ]);
-            $idempotency->remember($key, $payload, $data);
+            $idempotency->remember($key, $payload, $data, $namespace);
 
             return ['data' => $data, 'replayed' => false];
         }, attempts: 5);
 
-        return $responses->success(
+        $correlationId = data_get($headers, 'correlation_id');
+        $response = $responses->success(
             $outcome['data'],
-            ['idempotency' => ['key' => $key, 'replayed' => $outcome['replayed']]],
+            [
+                'idempotency' => ['key' => $key, 'replayed' => $outcome['replayed']],
+                'correlation_id' => $correlationId,
+            ],
             $outcome['replayed'] ? 200 : 201,
         );
+
+        if (is_string($correlationId) && $correlationId !== '') {
+            $response->headers->set(
+                (string) config('x-change.api.correlation.header', 'X-Correlation-ID'),
+                $correlationId,
+            );
+        }
+
+        return $response;
     }
 }

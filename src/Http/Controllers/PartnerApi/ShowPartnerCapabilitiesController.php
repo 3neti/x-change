@@ -16,9 +16,14 @@ class ShowPartnerCapabilitiesController extends Controller
         ApiResponseFactory $responses,
     ): JsonResponse {
         $client = $context->client();
+        $contractPath = dirname(__DIR__, 4).'/resources/api/x-change-partner-api.openapi.json';
 
         return $responses->success([
             'schema' => 'x-change.partner-capabilities.v1',
+            'contract' => [
+                'version' => '1.0.0',
+                'sha256' => is_file($contractPath) ? hash_file('sha256', $contractPath) : null,
+            ],
             'client' => [
                 'reference' => $client->reference,
                 'name' => $client->name,
