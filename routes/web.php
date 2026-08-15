@@ -64,6 +64,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientConnec
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientStatusController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiProductionMandateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutBatchController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutReconciliationController;
@@ -78,11 +79,15 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodePayoutCorrectio
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateStoreController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateUpdateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTerminalStateController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningActivationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningOfferController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningOfferDeliveryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningRejectionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningRequestController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningRevocationController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningSupersessionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningWithdrawalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewController;
@@ -209,6 +214,26 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             [CockpitProvisioningOfferController::class, 'store'],
         )->middleware('throttle:6,1')
             ->name('x-change.cockpit.provisioning.requests.offers.store');
+        Route::post(
+            'provisioning/offers/{provisioningOffer}/activations',
+            [CockpitProvisioningActivationController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.offers.activations.store');
+        Route::post(
+            'provisioning/offers/{provisioningOffer}/revocations',
+            [CockpitProvisioningRevocationController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.offers.revocations.store');
+        Route::post(
+            'provisioning/offers/{provisioningOffer}/supersessions',
+            [CockpitProvisioningSupersessionController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.offers.supersessions.store');
+        Route::post(
+            'provisioning/offers/{provisioningOffer}/deliveries',
+            CockpitProvisioningOfferDeliveryController::class,
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.provisioning.offers.deliveries.store');
         Route::get('treasury-operations', CockpitTreasuryAccountGrantPageController::class)
             ->name('x-change.cockpit.treasury.account-grants.index');
         Route::post('treasury-operations/account-grants', [CockpitTreasuryAccountGrantController::class, 'store'])
@@ -258,6 +283,15 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('api-partners/clients/{partnerApiClient}/revocations', [CockpitPartnerApiClientStatusController::class, 'revoke'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.api-partners.clients.revocations.store');
+        Route::post('api-partners/production-mandates', [CockpitPartnerApiProductionMandateController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.api-partners.production-mandates.store');
+        Route::post('api-partners/production-mandates/{partnerApiProductionMandate}/approvals', [CockpitPartnerApiProductionMandateController::class, 'approve'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.api-partners.production-mandates.approvals.store');
+        Route::post('api-partners/production-mandates/{partnerApiProductionMandate}/activations', [CockpitPartnerApiProductionMandateController::class, 'activate'])
+            ->middleware('throttle:3,1')
+            ->name('x-change.cockpit.api-partners.production-mandates.activations.store');
         Route::post('commercial/offerings', [CockpitCommercialOfferingController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.commercial.offerings.store');

@@ -423,6 +423,7 @@ use LBHurtado\XChange\Services\PayoutProviderResolver;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningActorGuard;
+use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningAuthorityProjector;
 use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningEvidenceVerifier;
 use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
@@ -460,8 +461,10 @@ use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningEvidenceVerifierContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -478,6 +481,14 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             ProvisioningEvidenceVerifierContract::class,
             XChangeProvisioningEvidenceVerifier::class,
+        );
+        $this->app->singleton(
+            ProvisioningActivatorContract::class,
+            XChangeProvisioningAuthorityProjector::class,
+        );
+        $this->app->singleton(
+            ProvisioningRevokerContract::class,
+            XChangeProvisioningAuthorityProjector::class,
         );
         $this->app->scoped(PartnerApiRequestContext::class);
         $this->configureIdentityOtpGateway();

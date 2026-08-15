@@ -223,11 +223,26 @@ php artisan x-change:provisioning:authorize-operator 09170000002 \
   --authorization-reference=deployment-control:provisioning-checker
 ```
 
+The maker chooses the exact capability pills before submission. The immutable
+revision stores that list and its hash. Acceptance identifies the recipient but
+grants nothing. A separately authorized checker activates exactly those pills;
+revocation removes only authorizations whose reference came from that envelope.
+
+Invitation delivery is an explicit post-issuance action. Email and SMS are
+queued on `x-change-feedback`, preserve the normal x-feedback journal lifecycle,
+and never call a mail or SMS provider from the Provisioning controller. The
+one-time claim token is encrypted while it crosses the queue boundary.
+
 Elapsed invitation offers are terminally expired by the scheduler through
 `x-change:provisioning:expire-offers`. Rejection, withdrawal, expiry, and
 revocation are append-only state transitions in `3neti/x-provisioning`.
 Revocation remains fail-closed unless the consuming domain supplies a revoker
 that can prove the underlying authority was actually removed.
+
+Supersession is replacement-first: the replacement envelope must already be
+active for the same verified subject and profile. The predecessor authority is
+then revoked exactly once and preserved as `superseded` with both immutable
+snapshot hashes and the replacement reference.
 
 ## Invitation boundary
 
@@ -254,3 +269,16 @@ verification, and onboarding primitives; they do not share authority effects.
   historical snapshots and evidence remain immutable.
 - Institution-owned cash classification and Account Grants remain separate
   maker-checker Treasury operations. Provisioning never supplies liquidity.
+
+## Production API credential ceremony
+
+API Production Maker authority permits an operator to submit a bounded,
+immutable client mandate. It does not create a Passport client. An independent
+API Production Checker approves the snapshot and may then activate it. Only
+activation creates the OAuth client and reveals its secret once in a
+`no-store` response. Reloaded pages contain the client ID but never the secret.
+The ordinary client suspension and terminal revocation controls revoke existing
+tokens; terminal revocation also revokes the Passport client.
+
+The System Principal cannot be maker, checker, credential activator, or the
+recipient of interactive authority.

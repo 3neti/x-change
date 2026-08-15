@@ -101,6 +101,12 @@
                 <div><dt>Vacant seats</dt><dd>{{ $provisioningGovernance['vacant_count'] }}</dd></div>
                 <div><dt>Offers in progress</dt><dd>{{ $provisioningGovernance['offered_count'] }}</dd></div>
                 <div><dt>Activated seats</dt><dd>{{ $provisioningGovernance['activated_count'] }}</dd></div>
+                <div><dt>Revoked authority</dt><dd>{{ $provisioningGovernance['revoked_count'] }}</dd></div>
+                <div><dt>Superseded authority</dt><dd>{{ $provisioningGovernance['superseded_count'] }}</dd></div>
+                <div><dt>Invitation delivery</dt><dd>{{ $provisioningGovernance['delivery_queue_ready'] ? 'x-change-feedback ready' : 'Action needed' }}</dd></div>
+                <div><dt>Production API ceremony</dt><dd>{{ $provisioningGovernance['partner_api_storage_ready'] ? 'Ready' : 'Action needed' }}</dd></div>
+                <div><dt>Production mandates</dt><dd>{{ $provisioningGovernance['production_mandate_pending_count'] }} pending</dd></div>
+                <div><dt>Production API clients</dt><dd>{{ $provisioningGovernance['production_client_count'] }} active or retained</dd></div>
             </dl>
             <p class="checked"><code>php artisan x-change:provisioning:commission</code> creates missing seats idempotently; it does not invent identities or activate authority.</p>
         </section>

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperatorAuthorization;
+use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionReferenceData;
@@ -71,6 +72,33 @@ final readonly class PartnerApiGovernanceJournal
                 'capability' => $authorization->capability,
                 'valid_from' => $authorization->valid_from?->toIso8601String(),
                 'valid_until' => $authorization->valid_until?->toIso8601String(),
+            ],
+            metadata: $this->metadata(),
+        ));
+    }
+
+    public function recordMandate(PartnerApiProductionMandate $mandate, string $eventType, Model $actor): void
+    {
+        $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: $eventType,
+            occurredAt: CarbonImmutable::parse($mandate->updated_at),
+            actor: $this->actor($actor),
+            subject: new ExecutionSubjectData(
+                id: $mandate->reference,
+                type: 'partner_api_production_mandate',
+                display: $mandate->name,
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'partner-api-production:'.$mandate->reference,
+                causationId: $eventType,
+                executionId: (string) $mandate->getKey(),
+                externalReference: $mandate->reference,
+            ),
+            idempotencyKey: 'x-change:partner-api-governance:'.$eventType.':'.$mandate->getKey(),
+            payload: [
+                'status' => $mandate->status->value,
+                'snapshot_hash' => $mandate->snapshot_hash,
+                'scopes' => $mandate->scopes,
             ],
             metadata: $this->metadata(),
         ));

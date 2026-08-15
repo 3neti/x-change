@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
 use LBHurtado\XChange\Models\PartnerApiClient;
+use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 
 final readonly class PartnerApiClientReadModel
@@ -29,6 +30,9 @@ final readonly class PartnerApiClientReadModel
             'can_create_sandbox' => $this->authority->allows($operator, PartnerApiOperatorCapability::ManageSandboxClients),
             'can_suspend' => $this->authority->allows($operator, PartnerApiOperatorCapability::SuspendClients),
             'can_revoke' => $this->authority->allows($operator, PartnerApiOperatorCapability::RevokeClients),
+            'can_request_production' => $this->authority->allows($operator, PartnerApiOperatorCapability::RequestProductionClients),
+            'can_approve_production' => $this->authority->allows($operator, PartnerApiOperatorCapability::ApproveProductionClients),
+            'can_activate_production' => $this->authority->allows($operator, PartnerApiOperatorCapability::ActivateProductionClients),
             'scopes' => collect((array) config('x-change.partner_api.scopes', []))
                 ->map(fn (string $description, string $scope): array => compact('scope', 'description'))
                 ->values()->all(),
@@ -44,6 +48,28 @@ final readonly class PartnerApiClientReadModel
                 ->get()
                 ->map(fn (PartnerApiClient $client): array => $this->client($client))
                 ->values()->all(),
+            'production_mandates' => PartnerApiProductionMandate::query()
+                ->with(['issuer'])
+                ->latest('submitted_at')
+                ->get()
+                ->map(fn (PartnerApiProductionMandate $mandate): array => [
+                    'reference' => $mandate->reference,
+                    'name' => $mandate->name,
+                    'status' => $mandate->status->value,
+                    'snapshot_hash' => $mandate->snapshot_hash,
+                    'scopes' => $mandate->scopes,
+                    'issuer' => [
+                        'name' => (string) ($mandate->issuer?->getAttribute('name') ?: 'Account holder'),
+                        'identity' => $mandate->issuer instanceof Model ? $this->maskedIdentity($mandate->issuer) : 'Unavailable',
+                    ],
+                    'submitted_at' => $mandate->submitted_at?->toIso8601String(),
+                    'approved_at' => $mandate->approved_at?->toIso8601String(),
+                    'activated_at' => $mandate->activated_at?->toIso8601String(),
+                    'actions' => [
+                        'approve' => route('x-change.cockpit.api-partners.production-mandates.approvals.store', $mandate),
+                        'activate' => route('x-change.cockpit.api-partners.production-mandates.activations.store', $mandate),
+                    ],
+                ])->values()->all(),
         ];
     }
 

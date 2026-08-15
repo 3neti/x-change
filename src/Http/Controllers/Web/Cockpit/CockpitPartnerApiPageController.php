@@ -27,6 +27,7 @@ final class CockpitPartnerApiPageController extends Controller
         return Inertia::render('x-change/cockpit/ApiPartners', [
             'partner_api' => $this->readModel->build($operator),
             'partner_api_store_url' => route('x-change.cockpit.api-partners.clients.store'),
+            'partner_api_production_store_url' => route('x-change.cockpit.api-partners.production-mandates.store'),
             'csrf_token' => csrf_token(),
         ]);
     }

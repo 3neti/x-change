@@ -41,12 +41,26 @@ final readonly class CreateCockpitProvisioningRequest
                 throw new DomainException('The requested provisioning profile is unavailable.');
             }
 
+            $allowedCapabilities = array_values((array) ($profileConfig['capabilities'] ?? []));
+            $capabilities = array_values(array_unique(array_map('strval', (array) ($input['capabilities'] ?? []))));
+
+            if (array_diff($capabilities, $allowedCapabilities) !== []) {
+                throw new DomainException('The request contains authority outside the selected profile.');
+            }
+
+            if (($profileConfig['activation_gate'] ?? 'operator_authority') === 'operator_authority'
+                && $capabilities === []) {
+                throw new DomainException('Select at least one explicit capability for this authority request.');
+            }
+
             $request = $this->create->handle(
                 profile: $profile,
                 snapshot: [
                     'label' => (string) ($profileConfig['label'] ?? $profile->value),
                     'purpose' => trim((string) $input['purpose']),
                     'authority_profile' => $profile->value,
+                    'capabilities' => $capabilities,
+                    'activation_gate' => (string) ($profileConfig['activation_gate'] ?? 'operator_authority'),
                 ],
                 maker: $maker,
                 activationMode: ProvisioningActivationMode::ReviewRequired,

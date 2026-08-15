@@ -9,8 +9,24 @@ use LBHurtado\XChange\Enums\PartnerApiClientStatus;
 use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperatorAuthorization;
+use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+
+beforeEach(function (): void {
+    $system = User::query()->create([
+        'name' => 'Non-Interactive System Principal',
+        'email' => 'partner-api-system@example.test',
+        'password' => 'password',
+    ]);
+    config()->set('account.system_user.candidates', [
+        'x-change' => [
+            'model' => User::class,
+            'identifier' => $system->email,
+            'identifier_column' => 'email',
+        ],
+    ]);
+});
 
 function authorizePartnerApiOperator(User $operator, PartnerApiOperatorCapability ...$capabilities): void
 {
@@ -184,4 +200,77 @@ it('checks client readiness without a provider call or financial mutation', func
         ->assertJsonPath('financial_mutation', false);
 
     expect(PartnerApiClient::query()->sole()->oauth_client_id)->toBe($credential->client_id);
+});
+
+it('creates no production credential before independent approval and reveals the secret once at activation', function (): void {
+    $maker = actingAsTestUser();
+    $checker = User::query()->create([
+        'name' => 'Independent API Checker',
+        'email' => 'api-checker@example.test',
+        'password' => 'password',
+    ]);
+    authorizePartnerApiOperator(
+        $maker,
+        PartnerApiOperatorCapability::ViewClients,
+        PartnerApiOperatorCapability::RequestProductionClients,
+    );
+    authorizePartnerApiOperator(
+        $checker,
+        PartnerApiOperatorCapability::ViewClients,
+        PartnerApiOperatorCapability::ApproveProductionClients,
+        PartnerApiOperatorCapability::ActivateProductionClients,
+    );
+
+    $payload = [
+        'name' => 'Saras Production',
+        'issuer_id' => (string) $maker->getKey(),
+        'scopes' => ['capabilities:read', 'pay-codes:issue', 'pay-codes:read'],
+        'currencies' => ['PHP'],
+        'settlement_rails' => ['automatic', 'INSTAPAY'],
+        'maximum_amount_minor' => 50000,
+        'daily_principal_limit_minor' => 200000,
+        'unbound_pay_codes' => false,
+    ];
+
+    $created = $this->actingAs($maker)
+        ->postJson(route('x-change.cockpit.api-partners.production-mandates.store'), $payload)
+        ->assertCreated()
+        ->assertJsonPath('status', 'awaiting_approval');
+    $mandate = PartnerApiProductionMandate::query()->where('reference', $created->json('reference'))->sole();
+
+    expect(Client::query()->count())->toBe(0)
+        ->and(PartnerApiClient::query()->count())->toBe(0);
+
+    $this->actingAs($maker)
+        ->postJson(route('x-change.cockpit.api-partners.production-mandates.approvals.store', $mandate), [
+            'confirm_snapshot' => true,
+        ])->assertForbidden();
+
+    $this->actingAs($checker)
+        ->postJson(route('x-change.cockpit.api-partners.production-mandates.approvals.store', $mandate), [
+            'confirm_snapshot' => true,
+        ])->assertOk()->assertJsonPath('status', 'approved');
+
+    expect(Client::query()->count())->toBe(0)
+        ->and(PartnerApiClient::query()->count())->toBe(0);
+
+    $credential = $this->actingAs($checker)
+        ->postJson(route('x-change.cockpit.api-partners.production-mandates.activations.store', $mandate), [
+            'acknowledge_secret_once' => true,
+        ])->assertCreated()
+        ->assertHeader('Cache-Control', 'no-store, private')
+        ->assertJsonPath('environment', 'production')
+        ->assertJsonPath('secret_display', 'one_time_only');
+
+    $secret = (string) $credential->json('client_secret');
+    expect($secret)->not->toBeEmpty()
+        ->and(PartnerApiClient::query()->sole()->environment)->toBe('production')
+        ->and($mandate->refresh()->status->value)->toBe('activated')
+        ->and(ExecutionJournalEntry::query()->get()->toJson())->not->toContain($secret);
+
+    $this->actingAs($checker)->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.api-partners.index'))
+        ->assertOk()
+        ->assertJsonMissing([$secret])
+        ->assertJsonMissing(['client_secret']);
 });

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Queue;
 use LBHurtado\XChange\Enums\ProvisioningOperatorCapability;
+use LBHurtado\XChange\Jobs\Provisioning\DeliverProvisioningOfferJob;
 use LBHurtado\XChange\Models\ProvisioningOperatorAuthorization;
 use LBHurtado\XChange\Models\TreasuryOperatorAuthorization;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -48,7 +50,7 @@ it('conceals the workspace and exposes a sanitized seat and request read model t
         ->assertJsonPath('props.xchange.navigation.provisioning_controls_visible', true);
 });
 
-it('runs request approval offer and verified acceptance without granting domain authority', function (): void {
+it('grants and revokes only the immutable capability snapshot after verified acceptance', function (): void {
     enableNetbankTreasuryForTests();
     actingAsTestUser();
     $maker = auth()->user();
@@ -73,6 +75,8 @@ it('runs request approval offer and verified acceptance without granting domain 
         $checker,
         ProvisioningOperatorCapability::View,
         ProvisioningOperatorCapability::Approve,
+        ProvisioningOperatorCapability::Activate,
+        ProvisioningOperatorCapability::Revoke,
     );
     $this->artisan('x-change:provisioning:commission')->assertSuccessful();
     $seat = ProvisioningSeat::query()->where('profile', 'treasury_maker')->sole();
@@ -80,11 +84,23 @@ it('runs request approval offer and verified acceptance without granting domain 
     $this->post(route('x-change.cockpit.provisioning.requests.store'), [
         'seat_reference' => $seat->reference,
         'purpose' => 'Prepare a named Treasury maker for testing.',
+        'capabilities' => [
+            'treasury.institution_funds.view',
+            'treasury.institution_funds.request',
+            'treasury.reconciliation.view',
+            'treasury.reconciliation.request',
+        ],
     ])->assertRedirect();
 
     $provisioning = ProvisioningRequest::query()->sole();
     expect($provisioning->status)->toBe(ProvisioningRequestStatus::AwaitingApproval)
         ->and($provisioning->commissioning)->toBeTrue()
+        ->and($provisioning->revisions()->firstOrFail()->snapshot['capabilities'])->toBe([
+            'treasury.institution_funds.view',
+            'treasury.institution_funds.request',
+            'treasury.reconciliation.view',
+            'treasury.reconciliation.request',
+        ])
         ->and($seat->refresh()->request_id)->toBe($provisioning->getKey());
 
     $this->actingAs($checker)->post(
@@ -103,6 +119,16 @@ it('runs request approval offer and verified acceptance without granting domain 
     $offer = ProvisioningOffer::query()->sole();
     $claimToken = basename((string) $issued->json('claim_url'));
 
+    Queue::fake();
+    $this->actingAs($maker)->postJson(
+        route('x-change.cockpit.provisioning.offers.deliveries.store', $offer),
+        ['channel' => 'sms', 'recipient' => '09171234567', 'claim_token' => $claimToken],
+    )->assertAccepted()->assertJsonPath('queue', 'x-change-feedback');
+    Queue::assertPushed(DeliverProvisioningOfferJob::class, fn (DeliverProvisioningOfferJob $job): bool => $job->queue === 'x-change-feedback'
+        && $job->offerReference === $offer->reference
+        && $job->recipient === '09171234567'
+        && ! str_contains($job->encryptedClaimToken, $claimToken));
+
     $this->actingAs($candidate)->post(
         route('x-change.provisioning.claim.accept', ['token' => $claimToken]),
         ['responsibility_attestation' => true],
@@ -110,6 +136,36 @@ it('runs request approval offer and verified acceptance without granting domain 
 
     expect($offer->refresh()->status)->toBe(ProvisioningRequestStatus::ActivationPending)
         ->and(TreasuryOperatorAuthorization::query()->where('operator_id', $candidate->getKey())->exists())->toBeFalse();
+
+    $this->actingAs($checker)->post(
+        route('x-change.cockpit.provisioning.offers.activations.store', $offer),
+        ['confirm_identity_and_capabilities' => true],
+    )->assertRedirect();
+
+    expect($offer->refresh()->status)->toBe(ProvisioningRequestStatus::Activated)
+        ->and(TreasuryOperatorAuthorization::query()
+            ->where('operator_id', $candidate->getKey())
+            ->currentlyValid()
+            ->pluck('capability')
+            ->sort()
+            ->values()
+            ->all())->toBe([
+                'treasury.institution_funds.request',
+                'treasury.institution_funds.view',
+                'treasury.reconciliation.request',
+                'treasury.reconciliation.view',
+            ]);
+
+    $this->actingAs($checker)->post(
+        route('x-change.cockpit.provisioning.offers.revocations.store', $offer),
+        ['reason' => 'This delegated authority is no longer required.'],
+    )->assertRedirect();
+
+    expect($offer->refresh()->status)->toBe(ProvisioningRequestStatus::Revoked)
+        ->and(TreasuryOperatorAuthorization::query()
+            ->where('operator_id', $candidate->getKey())
+            ->currentlyValid()
+            ->exists())->toBeFalse();
 });
 
 it('rejects incomplete server-verified evidence', function (): void {

@@ -39,6 +39,16 @@ type Credential = {
   environment: string;
   scopes: string[];
 };
+type ProductionMandate = {
+  reference: string;
+  name: string;
+  status: string;
+  snapshot_hash: string;
+  scopes: string[];
+  issuer: { name: string; identity: string };
+  submitted_at: string | null;
+  actions: { approve: string; activate: string };
+};
 
 const props = defineProps<{
   cockpitHeaderReadModel?: Record<string, unknown>;
@@ -48,16 +58,22 @@ const props = defineProps<{
     can_create_sandbox: boolean;
     can_suspend: boolean;
     can_revoke: boolean;
+    can_request_production: boolean;
+    can_approve_production: boolean;
+    can_activate_production: boolean;
     scopes: Scope[];
     rails: string[];
     issuers: Issuer[];
     clients: PartnerClient[];
+    production_mandates: ProductionMandate[];
   };
   partnerApiStoreUrl: string;
+  partnerApiProductionStoreUrl: string;
   csrfToken: string;
 }>();
 
 const showCreate = ref(false);
+const createMode = ref<"sandbox" | "production">("sandbox");
 const credential = ref<Credential | null>(null);
 const submitting = ref(false);
 const errors = ref<Record<string, string[]>>({});
@@ -80,7 +96,7 @@ const canSubmit = computed(
     form.issuer_id !== "" &&
     form.scopes.length > 0 &&
     form.settlement_rails.length > 0 &&
-    form.acknowledge_secret_once,
+    (createMode.value === "production" || form.acknowledge_secret_once),
 );
 
 function toMinor(value: string): number | null {
@@ -105,7 +121,11 @@ async function createClient(): Promise<void> {
 
   submitting.value = true;
   try {
-    const response = await fetch(props.partnerApiStoreUrl, {
+    const response = await fetch(
+      createMode.value === "sandbox"
+        ? props.partnerApiStoreUrl
+        : props.partnerApiProductionStoreUrl,
+      {
       method: "POST",
       credentials: "same-origin",
       headers: {
@@ -116,14 +136,16 @@ async function createClient(): Promise<void> {
       body: JSON.stringify({
         name: form.name,
         issuer_id: form.issuer_id,
-        environment: "sandbox",
+        ...(createMode.value === "sandbox" ? { environment: "sandbox" } : {}),
         scopes: form.scopes,
         currencies: ["PHP"],
         settlement_rails: form.settlement_rails,
         maximum_amount_minor: maximum,
         daily_principal_limit_minor: daily,
         unbound_pay_codes: form.unbound_pay_codes,
-        acknowledge_secret_once: form.acknowledge_secret_once,
+        ...(createMode.value === "sandbox"
+          ? { acknowledge_secret_once: form.acknowledge_secret_once }
+          : {}),
       }),
     });
     const body = await response.json();
@@ -133,11 +155,44 @@ async function createClient(): Promise<void> {
       };
       return;
     }
-    credential.value = body as Credential;
+    if (createMode.value === "sandbox") credential.value = body as Credential;
     showCreate.value = false;
+    if (createMode.value === "production") router.reload({ only: ["partner_api"] });
   } finally {
     submitting.value = false;
   }
+}
+
+function openCreate(mode: "sandbox" | "production"): void {
+  createMode.value = mode;
+  showCreate.value = true;
+}
+
+async function transitionProductionMandate(
+  mandate: ProductionMandate,
+  transition: "approve" | "activate",
+): Promise<void> {
+  const response = await fetch(mandate.actions[transition], {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-CSRF-TOKEN": props.csrfToken,
+    },
+    body: JSON.stringify(
+      transition === "approve"
+        ? { confirm_snapshot: true }
+        : { acknowledge_secret_once: true },
+    ),
+  });
+  const body = await response.json();
+  if (!response.ok) {
+    errors.value = body.errors ?? { submission: [body.message ?? "The mandate could not be updated."] };
+    return;
+  }
+  if (transition === "activate") credential.value = body as Credential;
+  router.reload({ only: ["partner_api"] });
 }
 
 function toggle(list: string[], value: string): void {
@@ -202,9 +257,17 @@ function finishCredentialCeremony(): void {
             v-if="partnerApi.can_create_sandbox"
             type="button"
             class="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700"
-            @click="showCreate = true"
+            @click="openCreate('sandbox')"
           >
             <Plus class="size-4" /> Provision Sandbox Client
+          </button>
+          <button
+            v-if="partnerApi.can_request_production"
+            type="button"
+            class="inline-flex h-10 items-center gap-2 rounded-xl border border-violet-300 px-4 text-sm font-semibold text-violet-700 dark:text-violet-300"
+            @click="openCreate('production')"
+          >
+            <Plus class="size-4" /> Request Production Client
           </button>
         </div>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -234,6 +297,33 @@ function finishCredentialCeremony(): void {
             </p>
           </div>
         </div>
+      </section>
+
+      <section class="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div>
+          <h2 class="font-semibold">Production Mandates</h2>
+          <p class="text-sm text-muted-foreground">Immutable maker requests, independent approval, then a one-time credential ceremony.</p>
+        </div>
+        <div v-if="partnerApi.production_mandates.length" class="mt-4 grid gap-3">
+          <article v-for="mandate in partnerApi.production_mandates" :key="mandate.reference" class="rounded-xl border border-border p-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="font-semibold">{{ mandate.name }}</h3>
+                  <span class="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold capitalize text-violet-800 dark:bg-violet-950 dark:text-violet-200">{{ mandate.status.replaceAll("_", " ") }}</span>
+                </div>
+                <p class="mt-1 text-sm text-muted-foreground">{{ mandate.issuer.name }} · {{ mandate.issuer.identity }}</p>
+                <p class="mt-1 break-all font-mono text-[10px] text-muted-foreground">Snapshot {{ mandate.snapshot_hash }}</p>
+              </div>
+              <div class="flex gap-2">
+                <button v-if="mandate.status === 'awaiting_approval' && partnerApi.can_approve_production" type="button" class="h-9 rounded-lg border px-3 text-sm" @click="transitionProductionMandate(mandate, 'approve')">Approve</button>
+                <button v-if="mandate.status === 'approved' && partnerApi.can_activate_production" type="button" class="h-9 rounded-lg bg-violet-600 px-3 text-sm font-semibold text-white" @click="transitionProductionMandate(mandate, 'activate')">Issue Credentials</button>
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-1.5"><span v-for="scope in mandate.scopes" :key="scope" class="rounded-md bg-muted px-2 py-1 text-xs">{{ scope }}</span></div>
+          </article>
+        </div>
+        <div v-else class="mt-4 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No production mandate requests yet.</div>
       </section>
 
       <section class="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -357,10 +447,9 @@ function finishCredentialCeremony(): void {
       >
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h2 class="text-lg font-semibold">Provision Sandbox Client</h2>
+            <h2 class="text-lg font-semibold">{{ createMode === "sandbox" ? "Provision Sandbox Client" : "Request Production Client" }}</h2>
             <p class="text-sm text-muted-foreground">
-              Bind one machine identity to one issuer Account and a bounded
-              mandate.
+              {{ createMode === "sandbox" ? "Bind one machine identity to one issuer Account and a bounded mandate." : "Submit an immutable mandate. No credential exists until an independent checker approves it." }}
             </p>
           </div>
           <button type="button" aria-label="Close" @click="showCreate = false">
@@ -446,7 +535,7 @@ function finishCredentialCeremony(): void {
             ></span
           ></label
         >
-        <label
+        <label v-if="createMode === 'sandbox'"
           class="mt-3 flex gap-2 rounded-lg border border-amber-300 bg-amber-50/70 p-3 text-sm dark:bg-amber-950/20"
           ><input v-model="form.acknowledge_secret_once" type="checkbox" /><span
             >I understand that the client secret is shown once and cannot be
@@ -473,7 +562,7 @@ function finishCredentialCeremony(): void {
             :disabled="!canSubmit || submitting"
             class="h-10 rounded-lg bg-emerald-600 px-4 font-semibold text-white disabled:opacity-50"
           >
-            {{ submitting ? "Provisioning…" : "Create Client" }}
+            {{ submitting ? "Working…" : (createMode === "sandbox" ? "Create Client" : "Submit Mandate") }}
           </button>
         </div>
       </form>

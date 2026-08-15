@@ -21,10 +21,17 @@ Approved external services can estimate, issue, inspect, and safely cancel Pay C
 - One-time operator credential provisioning command.
 - HTTP-native lifecycle acceptance runner with a read-only default and explicit mutation confirmation.
 - Client-and-operation-scoped issuance and cancellation idempotency, with an advertised Partner contract version and hash.
+- Cockpit sandbox provisioning with one-time credentials, immediate suspension,
+  and terminal revocation.
+- Production maker-checker mandate workflow: submit immutable snapshot, approve
+  independently, then issue the Passport secret exactly once.
+- Provisioning profiles for API Production Maker and Checker authority without
+  creating credentials during invitation acceptance.
 
 ## Gates before Saras production credentials
 
-- Add auditable client lifecycle operations: rotate secret, suspend, reactivate, revoke, and list sanitized clients.
+- Add credential rotation and governed reactivation. Suspension, terminal
+  revocation, and sanitized client listing are implemented.
 - Standardize every Partner API error—including OAuth errors—into documented machine-actionable categories without weakening RFC compliance.
 - Add delivery-status projection after its sanitized owner-scoped read model is finalized.
 - Add webhook delivery for issuer-owned settlement events with signing, replay protection, retry semantics, and journal evidence.

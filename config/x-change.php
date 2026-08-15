@@ -190,34 +190,83 @@ return [
             'institution_administrator' => [
                 'label' => 'Institution Administrator',
                 'description' => 'Oversees governed provisioning without becoming the non-interactive System Principal.',
+                'capabilities' => ['provisioning.view'],
             ],
             'commercial_maker' => [
                 'label' => 'Commercial Maker',
                 'description' => 'Prepares Commercial Offerings, Partners, provider costs, and commission requests.',
+                'capabilities' => [
+                    'commercial.controls.view',
+                    'commercial.offerings.manage',
+                    'commercial.partners.manage',
+                    'commercial.provider_costs.reconcile',
+                    'commercial.commissions.request',
+                ],
             ],
             'commercial_checker' => [
                 'label' => 'Commercial Checker',
                 'description' => 'Independently approves Commercial changes and commission settlement.',
+                'capabilities' => [
+                    'commercial.controls.view',
+                    'commercial.offerings.approve',
+                    'commercial.partners.approve',
+                    'commercial.commissions.approve',
+                    'commercial.commissions.execute',
+                ],
             ],
             'treasury_maker' => [
                 'label' => 'Treasury Maker',
                 'description' => 'Requests reconciliation, classification, and Account Grants.',
+                'capabilities' => [
+                    'treasury.account_grants.view',
+                    'treasury.account_grants.request',
+                    'treasury.institution_funds.view',
+                    'treasury.institution_funds.request',
+                    'treasury.reconciliation.view',
+                    'treasury.reconciliation.request',
+                ],
             ],
             'treasury_checker' => [
                 'label' => 'Treasury Checker',
                 'description' => 'Independently approves and executes Treasury operations.',
+                'capabilities' => [
+                    'treasury.account_grants.view',
+                    'treasury.account_grants.approve',
+                    'treasury.account_grants.execute',
+                    'treasury.institution_funds.view',
+                    'treasury.institution_funds.approve',
+                    'treasury.institution_funds.execute',
+                    'treasury.reconciliation.view',
+                    'treasury.reconciliation.approve',
+                    'treasury.reconciliation.execute',
+                ],
             ],
             'api_partner_administrator' => [
                 'label' => 'API Partner Administrator',
                 'description' => 'Manages governed machine clients and sandbox access.',
+                'capabilities' => [
+                    'partner_api.clients.view',
+                    'partner_api.sandbox.manage',
+                    'partner_api.clients.suspend',
+                    'partner_api.clients.revoke',
+                ],
             ],
             'api_production_maker' => [
                 'label' => 'API Production Maker',
                 'description' => 'Prepares production API mandates without issuing credentials.',
+                'capabilities' => [
+                    'partner_api.clients.view',
+                    'partner_api.production.request',
+                ],
             ],
             'api_production_checker' => [
                 'label' => 'API Production Checker',
                 'description' => 'Independently approves production API mandates.',
+                'capabilities' => [
+                    'partner_api.clients.view',
+                    'partner_api.production.approve',
+                    'partner_api.production.activate',
+                ],
             ],
         ],
         'commissioning_seats' => [

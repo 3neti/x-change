@@ -28,6 +28,7 @@ final class CockpitProvisioningOfferController extends Controller
             'request_reference' => $provisioningRequest->reference,
             'offer_reference' => $credential->offer->reference,
             'claim_url' => route('x-change.provisioning.claim.show', ['token' => $credential->claimToken]),
+            'delivery_url' => route('x-change.cockpit.provisioning.offers.deliveries.store', $credential->offer),
             'expires_at' => $credential->offer->expires_at?->toIso8601String(),
             'secret_display' => 'one_time_only',
         ], 201, [

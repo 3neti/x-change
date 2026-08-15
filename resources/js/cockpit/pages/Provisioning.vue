@@ -14,7 +14,13 @@ import {
 import { computed, reactive, ref } from "vue";
 import CockpitLayout from "../layouts/CockpitLayout.vue";
 
-type Profile = { value: string; label: string; description: string };
+type Profile = {
+  value: string;
+  label: string;
+  description: string;
+  capabilities?: string[];
+  activation_gate?: string;
+};
 type Seat = {
   reference: string;
   key: string;
@@ -25,6 +31,11 @@ type Seat = {
   status: string;
   request_reference: string | null;
 };
+type ReplacementOption = {
+  offer_reference: string;
+  request_reference: string;
+  purpose: string;
+};
 type ProvisioningRequest = {
   reference: string;
   profile: string;
@@ -33,6 +44,8 @@ type ProvisioningRequest = {
   commissioning: boolean;
   purpose: string;
   required_evidence: string[];
+  capabilities?: string[];
+  activation_gate?: string;
   snapshot_hash: string | null;
   revision: number | null;
   submitted_at: string | null;
@@ -44,6 +57,10 @@ type ProvisioningRequest = {
     accepted_at: string | null;
     activated_at: string | null;
     candidate_bound: boolean;
+    activation_reference: string | null;
+    revoked_at: string | null;
+    actions?: { activate: string; revoke: string; supersede: string };
+    replacement_options?: ReplacementOption[];
   };
   events: { type: string; occurred_at: string | null }[];
   actions: { approve: string; reject: string; withdraw: string; issue: string };
@@ -53,6 +70,7 @@ type OneTimeOffer = {
   request_reference: string;
   offer_reference: string;
   claim_url: string;
+  delivery_url: string;
   expires_at: string | null;
 };
 
@@ -79,17 +97,55 @@ const submitting = ref(false);
 const errors = ref<Record<string, string[]>>({});
 const oneTimeOffer = ref<OneTimeOffer | null>(null);
 const copied = ref(false);
+const deliveryChannel = ref<"email" | "sms">("sms");
+const deliveryRecipient = ref("");
+const deliveryNotice = ref("");
 const terminalAction = ref<null | {
   kind: "reject" | "withdraw";
   url: string;
   label: string;
 }>(null);
 const terminalReason = ref("");
-const form = reactive({ seat_reference: "", profile: "", purpose: "" });
+const authorityAction = ref<null | {
+  kind: "activate" | "revoke" | "supersede";
+  url: string;
+  label: string;
+  replacements: ReplacementOption[];
+}>(null);
+const authorityReason = ref("");
+const replacementOfferReference = ref("");
+const form = reactive({
+  seat_reference: "",
+  profile: "",
+  purpose: "",
+  capabilities: [] as string[],
+});
 
 const vacantSeats = computed(() =>
   props.provisioning.seats.filter((seat) => seat.status === "vacant"),
 );
+
+const selectedProfileValue = computed(() => {
+  if (form.seat_reference) {
+    return props.provisioning.seats.find((seat) => seat.reference === form.seat_reference)?.profile ?? "";
+  }
+
+  return form.profile;
+});
+
+const selectedProfile = computed(() =>
+  props.provisioning.profiles.find((profile) => profile.value === selectedProfileValue.value),
+);
+
+function resetCapabilities(): void {
+  form.capabilities = [];
+}
+
+function toggleCapability(capability: string): void {
+  form.capabilities = form.capabilities.includes(capability)
+    ? form.capabilities.filter((value) => value !== capability)
+    : [...form.capabilities, capability];
+}
 
 function createRequest(): void {
   errors.value = {};
@@ -99,6 +155,7 @@ function createRequest(): void {
       seat_reference: form.seat_reference || null,
       profile: form.seat_reference ? null : form.profile,
       purpose: form.purpose,
+      capabilities: form.capabilities,
     },
     {
       preserveScroll: true,
@@ -114,6 +171,7 @@ function createRequest(): void {
         form.seat_reference = "";
         form.profile = "";
         form.purpose = "";
+        form.capabilities = [];
       },
     },
   );
@@ -154,6 +212,38 @@ function submitTerminalAction(): void {
   );
 }
 
+function openAuthorityAction(request: ProvisioningRequest, kind: "activate" | "revoke" | "supersede"): void {
+  if (!request.offer) return;
+  if (!request.offer.actions) return;
+  authorityReason.value = "";
+  replacementOfferReference.value = "";
+  authorityAction.value = {
+    kind,
+    url: request.offer.actions[kind],
+    label: kind === "activate" ? "Activate Exact Authority" : (kind === "revoke" ? "Revoke Authority" : "Supersede Authority"),
+    replacements: request.offer.replacement_options ?? [],
+  };
+}
+
+function submitAuthorityAction(): void {
+  if (!authorityAction.value) return;
+  const payload = authorityAction.value.kind === "activate"
+    ? { confirm_identity_and_capabilities: true }
+    : authorityAction.value.kind === "supersede"
+      ? { reason: authorityReason.value.trim(), replacement_offer_reference: replacementOfferReference.value }
+      : { reason: authorityReason.value.trim() };
+  if (authorityAction.value.kind !== "activate" && !authorityReason.value.trim()) return;
+  if (authorityAction.value.kind === "supersede" && !replacementOfferReference.value) return;
+  router.post(authorityAction.value.url, payload, {
+    preserveScroll: true,
+    onSuccess: () => {
+      authorityAction.value = null;
+      authorityReason.value = "";
+      replacementOfferReference.value = "";
+    },
+  });
+}
+
 async function issueOffer(request: ProvisioningRequest): Promise<void> {
   errors.value = {};
   const response = await fetch(request.actions.issue, {
@@ -182,9 +272,35 @@ async function copyOffer(): Promise<void> {
   copied.value = true;
 }
 
+async function deliverOffer(): Promise<void> {
+  if (!oneTimeOffer.value || !deliveryRecipient.value.trim()) return;
+  const token = new URL(oneTimeOffer.value.claim_url).pathname.split("/").filter(Boolean).pop();
+  if (!token) return;
+  const response = await fetch(oneTimeOffer.value.delivery_url, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-CSRF-TOKEN": props.csrfToken,
+    },
+    body: JSON.stringify({
+      channel: deliveryChannel.value,
+      recipient: deliveryRecipient.value.trim(),
+      claim_token: token,
+    }),
+  });
+  const body = await response.json();
+  deliveryNotice.value = response.ok
+    ? `Invitation queued for ${deliveryChannel.value.toUpperCase()} delivery.`
+    : body.message ?? "Invitation delivery could not be queued.";
+}
+
 function finishOfferCeremony(): void {
   oneTimeOffer.value = null;
   copied.value = false;
+  deliveryRecipient.value = "";
+  deliveryNotice.value = "";
   router.reload({ only: ["provisioning"] });
 }
 
@@ -299,6 +415,30 @@ function formatDate(value: string | null): string {
                     <Check class="size-4" /> Approve
                   </button>
                   <button
+                    v-if="request.status === 'activated' && provisioning.capabilities.revoke && request.offer?.replacement_options?.length"
+                    type="button"
+                    class="inline-flex h-9 items-center gap-2 rounded-xl border border-violet-200 px-3 text-sm font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-900 dark:text-violet-300 dark:hover:bg-violet-950"
+                    @click="openAuthorityAction(request, 'supersede')"
+                  >
+                    <Undo2 class="size-4" /> Replace
+                  </button>
+                  <button
+                    v-if="request.status === 'activation_pending' && provisioning.capabilities.activate"
+                    type="button"
+                    class="inline-flex h-9 items-center gap-2 rounded-xl bg-violet-600 px-3 text-sm font-semibold text-white hover:bg-violet-700"
+                    @click="openAuthorityAction(request, 'activate')"
+                  >
+                    <ShieldCheck class="size-4" /> Activate
+                  </button>
+                  <button
+                    v-if="request.status === 'activated' && provisioning.capabilities.revoke"
+                    type="button"
+                    class="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-200 px-3 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950"
+                    @click="openAuthorityAction(request, 'revoke')"
+                  >
+                    <Ban class="size-4" /> Revoke
+                  </button>
+                  <button
                     v-if="request.status === 'awaiting_approval' && provisioning.capabilities.approve"
                     type="button"
                     class="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-200 px-3 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950"
@@ -333,6 +473,21 @@ function formatDate(value: string | null): string {
                   {{ field.replaceAll("_", " ") }}
                 </span>
               </div>
+              <div v-if="request.capabilities?.length" class="mt-3 rounded-lg border border-border/70 p-3">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Authority Snapshot</p>
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  <span
+                    v-for="capability in request.capabilities ?? []"
+                    :key="capability"
+                    class="rounded-full bg-violet-50 px-2 py-1 font-mono text-[10px] text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+                  >
+                    {{ capability }}
+                  </span>
+                </div>
+              </div>
+              <p v-else-if="request.activation_gate && request.activation_gate !== 'operator_authority'" class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                Continues through {{ request.activation_gate.replaceAll("_", " ") }}. No operator authority is inferred from the profile label.
+              </p>
               <div v-if="request.offer" class="mt-3 rounded-lg bg-muted/45 p-3 text-xs">
                 Offer {{ request.offer.status.replaceAll("_", " ") }} · expires
                 {{ formatDate(request.offer.expires_at) }}
@@ -366,7 +521,7 @@ function formatDate(value: string | null): string {
         </div>
         <label class="grid gap-1.5 text-sm font-medium">
           Commissioning Seat
-          <select v-model="form.seat_reference" class="h-10 rounded-xl border border-input bg-background px-3">
+          <select v-model="form.seat_reference" class="h-10 rounded-xl border border-input bg-background px-3" @change="resetCapabilities">
             <option value="">No seat · choose a profile</option>
             <option v-for="seat in vacantSeats" :key="seat.reference" :value="seat.reference">
               {{ seat.label }}
@@ -375,13 +530,33 @@ function formatDate(value: string | null): string {
         </label>
         <label v-if="!form.seat_reference" class="grid gap-1.5 text-sm font-medium">
           Authority Profile
-          <select v-model="form.profile" required class="h-10 rounded-xl border border-input bg-background px-3">
+          <select v-model="form.profile" required class="h-10 rounded-xl border border-input bg-background px-3" @change="resetCapabilities">
             <option value="" disabled>Choose a profile</option>
             <option v-for="profile in provisioning.profiles" :key="profile.value" :value="profile.value">
               {{ profile.label }}
             </option>
           </select>
         </label>
+        <fieldset v-if="selectedProfile?.capabilities?.length" class="grid gap-2 rounded-xl border border-border p-3">
+          <legend class="px-1 text-sm font-medium">Exact Authority</legend>
+          <p class="text-xs text-muted-foreground">Select only what this recipient should receive. The checker approves this immutable list.</p>
+          <label
+            v-for="capability in selectedProfile.capabilities ?? []"
+            :key="capability"
+            class="flex items-start gap-2 rounded-lg p-2 text-xs hover:bg-muted/60"
+          >
+            <input
+              type="checkbox"
+              class="mt-0.5 size-4 rounded border-input"
+              :checked="form.capabilities.includes(capability)"
+              @change="toggleCapability(capability)"
+            />
+            <span class="break-all font-mono">{{ capability }}</span>
+          </label>
+        </fieldset>
+        <p v-else-if="selectedProfile" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+          This profile continues through {{ (selectedProfile.activation_gate ?? "operator_authority").replaceAll("_", " ") }}. No operator capability is granted by this invitation alone.
+        </p>
         <label class="grid gap-1.5 text-sm font-medium">
           Purpose
           <textarea v-model="form.purpose" required maxlength="255" rows="3" class="rounded-xl border border-input bg-background px-3 py-2" />
@@ -412,10 +587,57 @@ function formatDate(value: string | null): string {
         <button type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white" @click="copyOffer">
           <Clipboard class="size-4" /> {{ copied ? "Copied" : "Copy Invitation Link" }}
         </button>
+        <div class="grid gap-2 rounded-xl border border-border p-3 sm:grid-cols-[7rem_1fr_auto]">
+          <select v-model="deliveryChannel" class="h-10 rounded-lg border border-input bg-background px-2 text-sm" aria-label="Delivery channel">
+            <option value="sms">SMS</option><option value="email">Email</option>
+          </select>
+          <input v-model="deliveryRecipient" class="h-10 min-w-0 rounded-lg border border-input bg-background px-3 text-sm" :placeholder="deliveryChannel === 'sms' ? '09XXXXXXXXX' : 'name@example.com'" aria-label="Invitation recipient" />
+          <button type="button" class="h-10 rounded-lg border border-emerald-300 px-3 text-sm font-semibold text-emerald-700" @click="deliverOffer">Send</button>
+        </div>
+        <p v-if="deliveryNotice" role="status" class="text-sm text-muted-foreground">{{ deliveryNotice }}</p>
         <button type="button" class="h-10 rounded-xl border border-border text-sm font-medium" @click="finishOfferCeremony">
           I Have Saved The Link
         </button>
       </div>
+    </div>
+
+    <div
+      v-if="authorityAction"
+      class="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="authorityAction.label"
+      @click.self="authorityAction = null"
+    >
+      <form class="grid w-full max-w-lg gap-4 rounded-2xl bg-card p-5 shadow-2xl" @submit.prevent="submitAuthorityAction">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold">{{ authorityAction.label }}</h2>
+            <p class="text-sm text-muted-foreground">
+              {{ authorityAction.kind === "activate" ? "Confirm the accepted identity and exact capability pills shown in the immutable snapshot." : (authorityAction.kind === "supersede" ? "The replacement remains active before this predecessor is retired." : "Only authority projected by this envelope will be revoked.") }}
+            </p>
+          </div>
+          <button type="button" class="rounded-lg p-2 hover:bg-muted" aria-label="Close" @click="authorityAction = null">
+            <X class="size-4" />
+          </button>
+        </div>
+        <label v-if="authorityAction.kind === 'supersede'" class="grid gap-1.5 text-sm font-medium">
+          Active Replacement
+          <select v-model="replacementOfferReference" required class="h-10 rounded-xl border border-input bg-background px-3">
+            <option value="" disabled>Choose an activated replacement</option>
+            <option v-for="replacement in authorityAction.replacements" :key="replacement.offer_reference" :value="replacement.offer_reference">
+              {{ replacement.purpose || replacement.request_reference }}
+            </option>
+          </select>
+        </label>
+        <label v-if="authorityAction.kind !== 'activate'" class="grid gap-1.5 text-sm font-medium">
+          Reason
+          <textarea v-model="authorityReason" required maxlength="255" rows="3" class="rounded-xl border border-input bg-background px-3 py-2" />
+        </label>
+        <button type="submit" :class="authorityAction.kind === 'activate' ? 'bg-violet-600 hover:bg-violet-700' : 'bg-rose-600 hover:bg-rose-700'" class="h-11 rounded-xl px-4 text-sm font-semibold text-white">
+          Confirm {{ authorityAction.kind === "activate" ? "Activation" : (authorityAction.kind === "supersede" ? "Supersession" : "Revocation") }}
+        </button>
+      </form>
     </div>
 
     <div

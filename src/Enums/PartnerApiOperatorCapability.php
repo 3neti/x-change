@@ -10,4 +10,7 @@ enum PartnerApiOperatorCapability: string
     case ManageSandboxClients = 'partner_api.sandbox.manage';
     case SuspendClients = 'partner_api.clients.suspend';
     case RevokeClients = 'partner_api.clients.revoke';
+    case RequestProductionClients = 'partner_api.production.request';
+    case ApproveProductionClients = 'partner_api.production.approve';
+    case ActivateProductionClients = 'partner_api.production.activate';
 }

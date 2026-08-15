@@ -39,7 +39,7 @@ final readonly class CockpitProvisioningReadModel
                 'request_reference' => $seat->request?->reference,
             ])->all();
 
-        $requests = ProvisioningRequest::query()
+        $requestModels = ProvisioningRequest::query()
             ->with([
                 'revisions' => fn ($query) => $query->latest('version'),
                 'offer.acceptance',
@@ -47,11 +47,27 @@ final readonly class CockpitProvisioningReadModel
             ])
             ->latest()
             ->limit(100)
-            ->get()
-            ->map(function (ProvisioningRequest $request): array {
+            ->get();
+        $requests = $requestModels
+            ->map(function (ProvisioningRequest $request) use ($requestModels): array {
                 $revision = $request->revisions->firstWhere('version', $request->current_revision_number)
                     ?? $request->revisions->first();
                 $offer = $request->offer;
+                $replacementOptions = $offer === null ? [] : $requestModels
+                    ->filter(fn (ProvisioningRequest $candidate): bool => $candidate->getKey() !== $request->getKey()
+                        && $candidate->profile === $request->profile
+                        && $candidate->status->value === 'activated'
+                        && $candidate->offer?->acceptance?->candidate_type === $offer->acceptance?->candidate_type
+                        && $candidate->offer?->acceptance?->candidate_reference === $offer->acceptance?->candidate_reference)
+                    ->map(fn (ProvisioningRequest $candidate): array => [
+                        'offer_reference' => $candidate->offer?->reference,
+                        'request_reference' => $candidate->reference,
+                        'purpose' => (string) data_get(
+                            $candidate->revisions->firstWhere('version', $candidate->current_revision_number)?->snapshot,
+                            'purpose',
+                            '',
+                        ),
+                    ])->values()->all();
 
                 return [
                     'reference' => $request->reference,
@@ -61,6 +77,8 @@ final readonly class CockpitProvisioningReadModel
                     'commissioning' => $request->commissioning,
                     'purpose' => (string) data_get($revision?->snapshot, 'purpose', ''),
                     'required_evidence' => array_values((array) data_get($revision?->snapshot, 'required_evidence', [])),
+                    'capabilities' => array_values((array) data_get($revision?->snapshot, 'capabilities', [])),
+                    'activation_gate' => (string) data_get($revision?->snapshot, 'activation_gate', 'operator_authority'),
                     'snapshot_hash' => $revision?->snapshot_hash,
                     'revision' => $revision?->version,
                     'submitted_at' => $revision?->submitted_at?->toIso8601String(),
@@ -72,6 +90,14 @@ final readonly class CockpitProvisioningReadModel
                         'accepted_at' => $offer->accepted_at?->toIso8601String(),
                         'activated_at' => $offer->activated_at?->toIso8601String(),
                         'candidate_bound' => $offer->acceptance !== null,
+                        'activation_reference' => $offer->activation_reference,
+                        'revoked_at' => $offer->revoked_at?->toIso8601String(),
+                        'actions' => [
+                            'activate' => route('x-change.cockpit.provisioning.offers.activations.store', $offer),
+                            'revoke' => route('x-change.cockpit.provisioning.offers.revocations.store', $offer),
+                            'supersede' => route('x-change.cockpit.provisioning.offers.supersessions.store', $offer),
+                        ],
+                        'replacement_options' => $replacementOptions,
                     ],
                     'events' => $request->events->map(fn ($event): array => [
                         'type' => $event->event_type,
@@ -111,7 +137,7 @@ final readonly class CockpitProvisioningReadModel
             ])->all();
     }
 
-    /** @return list<array{value:string,label:string,description:string}> */
+    /** @return list<array{value:string,label:string,description:string,capabilities:list<string>,activation_gate:string}> */
     private function profiles(): array
     {
         return collect((array) config('x-change.provisioning.operator_profiles', []))
@@ -119,6 +145,8 @@ final readonly class CockpitProvisioningReadModel
                 'value' => $value,
                 'label' => (string) ($profile['label'] ?? Str::headline($value)),
                 'description' => (string) ($profile['description'] ?? ''),
+                'capabilities' => array_values((array) ($profile['capabilities'] ?? [])),
+                'activation_gate' => (string) ($profile['activation_gate'] ?? 'operator_authority'),
             ])->values()->all();
     }
 
