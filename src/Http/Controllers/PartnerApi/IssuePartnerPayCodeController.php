@@ -7,8 +7,11 @@ namespace LBHurtado\XChange\Http\Controllers\PartnerApi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Http\Requests\PartnerApi\IssuePartnerPayCodeRequest;
+use LBHurtado\XChange\Models\PartnerApiClient;
+use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\IdempotencyService;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiMandateGuard;
@@ -27,24 +30,45 @@ class IssuePartnerPayCodeController extends Controller
         $payload = $request->validated();
         $headers = (array) Arr::pull($payload, '_partner', []);
         $key = (string) data_get($headers, 'idempotency_key');
-        $mandates->assertAllows($payload, $context);
         data_set($payload, 'metadata.issuer_id', (string) $context->issuer()->getKey());
         data_set($payload, '_meta.idempotency_key', $key);
         data_set($payload, '_meta.correlation_id', data_get($headers, 'correlation_id'));
 
-        $recalled = $idempotency->recallOrValidate($key, $payload);
+        $outcome = DB::transaction(function () use ($context, $mandates, $payload, $key, $idempotency, $issue, $headers): array {
+            $client = PartnerApiClient::query()->lockForUpdate()->findOrFail($context->client()->getKey());
+            $context->setClient($client);
+            $mandates->assertAllows($payload, $context);
+            $recalled = $idempotency->recallOrValidate($key, $payload);
 
-        if (is_array($recalled)) {
-            return $responses->success($recalled, ['idempotency' => ['key' => $key, 'replayed' => true]]);
-        }
+            if (is_array($recalled)) {
+                return ['data' => $recalled, 'replayed' => true];
+            }
 
-        $result = $issue->handle($payload);
-        $idempotency->remember($key, $payload, $result->toArray());
+            $currency = strtoupper((string) data_get($payload, 'cash.currency'));
+            $principalMinor = $mandates->principalMinor($payload);
+            $mandates->assertDailyPrincipalAvailable($principalMinor, $context);
+            $result = $issue->handle($payload);
+            $data = $result->toArray();
+
+            PartnerApiOperation::query()->create([
+                'partner_api_client_id' => $client->getKey(),
+                'operation' => 'pay_code_issued',
+                'idempotency_key' => $key,
+                'correlation_id' => data_get($headers, 'correlation_id'),
+                'subject_reference' => data_get($data, 'code'),
+                'principal_minor' => $principalMinor,
+                'currency' => $currency,
+                'occurred_at' => now(),
+            ]);
+            $idempotency->remember($key, $payload, $data);
+
+            return ['data' => $data, 'replayed' => false];
+        }, attempts: 5);
 
         return $responses->success(
-            $result,
-            ['idempotency' => ['key' => $key, 'replayed' => false]],
-            201,
+            $outcome['data'],
+            ['idempotency' => ['key' => $key, 'replayed' => $outcome['replayed']]],
+            $outcome['replayed'] ? 200 : 201,
         );
     }
 }

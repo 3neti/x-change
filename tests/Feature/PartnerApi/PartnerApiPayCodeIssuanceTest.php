@@ -13,6 +13,8 @@ use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Models\PartnerApiClient;
+use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 function partnerApiIssuer(array $scopes, array $mandate = []): array
@@ -121,11 +123,43 @@ it('issues idempotently and never accepts caller-controlled issuer identity', fu
         ->assertJsonPath('data.code', 'SARS-1234')
         ->assertJsonPath('meta.idempotency.replayed', true);
 
+    expect(PartnerApiOperation::query()->count())->toBe(1)
+        ->and(PartnerApiOperation::query()->sole()->principal_minor)->toBe(10000);
+
     $impersonation = partnerApiPayCodePayload();
     data_set($impersonation, 'metadata.issuer_id', '999999');
     $this->postJson('/api/partner/v1/pay-codes', $impersonation, ['Idempotency-Key' => 'saras-issue-002'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('metadata.issuer_id');
+});
+
+it('enforces the append-only daily principal ceiling before issuance', function () {
+    [$issuer, $credential] = partnerApiIssuer(['pay-codes:issue'], [
+        'maximum_amount_minor' => 5000,
+        'daily_principal_limit_minor' => 5000,
+    ]);
+    $client = PartnerApiClient::query()
+        ->where('reference', $credential->reference)
+        ->sole();
+    PartnerApiOperation::query()->create([
+        'partner_api_client_id' => $client->getKey(),
+        'operation' => 'pay_code_issued',
+        'idempotency_key' => 'earlier-issuance',
+        'subject_reference' => 'EARLIER',
+        'principal_minor' => 4000,
+        'currency' => 'PHP',
+        'occurred_at' => now(),
+    ]);
+    $action = Mockery::mock(GeneratePayCode::class);
+    $action->shouldNotReceive('handle');
+    $this->app->instance(GeneratePayCode::class, $action);
+
+    $this->postJson('/api/partner/v1/pay-codes', partnerApiPayCodePayload(10.01), [
+        'Idempotency-Key' => 'daily-limit-issuance',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('cash.amount');
+
+    expect(PartnerApiOperation::query()->count())->toBe(1);
 });
 
 it('enforces mandate amount rail and recipient binding before invoking issuance', function () {
@@ -154,6 +188,24 @@ it('enforces mandate amount rail and recipient binding before invoking issuance'
     $this->postJson('/api/partner/v1/pay-codes', $unbound, ['Idempotency-Key' => 'saras-limit-003'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('cash.validation');
+
+    $batch = partnerApiPayCodePayload(30.00);
+    data_set($batch, 'count', 2);
+    $this->postJson('/api/partner/v1/pay-codes', $batch, ['Idempotency-Key' => 'saras-limit-004'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('cash.amount');
+
+    $onboarding = partnerApiPayCodePayload(10.00);
+    data_set($onboarding, 'onboarding', true);
+    $this->postJson('/api/partner/v1/pay-codes', $onboarding, ['Idempotency-Key' => 'saras-limit-005'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('onboarding');
+
+    $longLived = partnerApiPayCodePayload(10.00);
+    data_set($longLived, 'ttl', 'P8D');
+    $this->postJson('/api/partner/v1/pay-codes', $longLived, ['Idempotency-Key' => 'saras-limit-006'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('ttl');
 });
 
 it('requires an idempotency key and the exact OAuth scope', function () {
