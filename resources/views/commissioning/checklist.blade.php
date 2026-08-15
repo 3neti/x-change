@@ -90,6 +90,20 @@
             </dl>
             <p class="checked">Operator identities remain private. This checklist exposes readiness counts only.</p>
         </section>
+        <section class="governance" aria-labelledby="provisioning-governance-heading">
+            <p class="eyebrow">Authority provisioning</p>
+            <h2 id="provisioning-governance-heading">Provisioning Seats</h2>
+            <p>Commissioning may reserve required human roles before their identities are known. A vacant seat grants no authority.</p>
+            <dl>
+                <div><dt>Storage</dt><dd>{{ $provisioningGovernance['storage_ready'] ? 'Ready' : 'Action needed' }}</dd></div>
+                <div><dt>Configured seats</dt><dd>{{ $provisioningGovernance['configured_count'] }}</dd></div>
+                <div><dt>Required seats</dt><dd>{{ $provisioningGovernance['required_count'] }}</dd></div>
+                <div><dt>Vacant seats</dt><dd>{{ $provisioningGovernance['vacant_count'] }}</dd></div>
+                <div><dt>Offers in progress</dt><dd>{{ $provisioningGovernance['offered_count'] }}</dd></div>
+                <div><dt>Activated seats</dt><dd>{{ $provisioningGovernance['activated_count'] }}</dd></div>
+            </dl>
+            <p class="checked"><code>php artisan x-change:provisioning:commission</code> creates missing seats idempotently; it does not invent identities or activate authority.</p>
+        </section>
         <h2>Runtime processes</h2>
         <p>Configuration checks cannot prove that workers are running. Keep these responsibilities active after deployment.</p>
         <h3>Required queues</h3>

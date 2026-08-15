@@ -15,6 +15,7 @@ final readonly class TreasurySystemPositionCatalog
     {
         return [
             'clearing' => TreasuryPositionPurpose::TreasuryClearing,
+            'institution-owned-funds' => TreasuryPositionPurpose::InstitutionOwnedFunds,
             'unattributed' => TreasuryPositionPurpose::LegacyUnattributed,
             'account-funding-reserve' => TreasuryPositionPurpose::AccountFundingReserve,
             'commercial-clearing' => TreasuryPositionPurpose::CommercialClearing,

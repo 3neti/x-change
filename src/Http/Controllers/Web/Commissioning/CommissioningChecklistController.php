@@ -16,6 +16,7 @@ use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\RuntimeOperationsChecklist;
 use LBHurtado\XChange\Services\Configuration\SystemPrincipalAccountReadinessInspector;
+use LBHurtado\XChange\Services\Provisioning\CommissioningProvisioningInspector;
 
 final readonly class CommissioningChecklistController
 {
@@ -28,6 +29,7 @@ final readonly class CommissioningChecklistController
         private CommissioningRecoveryGuide $recoveryGuide,
         private CommissioningManifestReadinessInspector $manifest,
         private CommercialGovernanceInspector $commercialGovernance,
+        private CommissioningProvisioningInspector $provisioning,
     ) {}
 
     public function show(Request $request): Response
@@ -51,6 +53,7 @@ final readonly class CommissioningChecklistController
                 ->forCommissioningState($commissioning, $systemPrincipalAccount['passed']),
             'checkedAt' => now(),
             'commercialGovernance' => $this->commercialGovernance->inspect(),
+            'provisioningGovernance' => $this->provisioning->inspect(),
         ], Response::HTTP_OK, EnsureXChangeIsCommissioned::headers());
     }
 

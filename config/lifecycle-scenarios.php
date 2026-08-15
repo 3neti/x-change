@@ -92,6 +92,23 @@ return [
         ],
     ],
 
+    'treasury_account_grant_simulation' => [
+        'enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_TREASURY_ACCOUNT_GRANT_SIMULATION_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+        'allowed_environments' => ['local', 'testing'],
+        'required_tables' => [
+            'x_change_treasury_operator_authorizations',
+            'x_change_treasury_account_grants',
+            'treasury_inventories',
+            'treasury_inventory_operations',
+            'treasury_positions',
+            'treasury_position_operations',
+            'execution_journal_entries',
+        ],
+    ],
+
     'treasury_live_basic_cash' => [
         'enabled' => (bool) env(
             'XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_ENABLED',
@@ -138,6 +155,16 @@ return [
             'commercial' => [
                 'connection' => 'netbank-primary',
             ],
+        ],
+
+        'treasury_account_grant_simulation' => [
+            'label' => 'Treasury Account Grant Simulation',
+            'description' => 'Exercises reconciled Institution-Owned Funds allocation through maker-checker approval without provider calls and rolls everything back.',
+            'category' => 'treasury-governance',
+            'tags' => ['treasury', 'account-grant', 'maker-checker', 'rollback'],
+            'mode' => 'treasury_account_grant_simulation',
+            'api_executable' => false,
+            'treasury' => ['connection' => 'netbank-primary'],
         ],
 
         /*

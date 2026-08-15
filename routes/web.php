@@ -93,6 +93,10 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderLibraryPinControl
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderLibraryStoreController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRuntimeProfilePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitStandingFundingReceiptApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantExecutionController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryAccountGrantPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
@@ -155,6 +159,17 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             ->name('x-change.cockpit.commercial.index');
         Route::get('api-partners', CockpitPartnerApiPageController::class)
             ->name('x-change.cockpit.api-partners.index');
+        Route::get('treasury-operations', CockpitTreasuryAccountGrantPageController::class)
+            ->name('x-change.cockpit.treasury.account-grants.index');
+        Route::post('treasury-operations/account-grants', [CockpitTreasuryAccountGrantController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.treasury.account-grants.store');
+        Route::post('treasury-operations/account-grants/{treasuryAccountGrant}/approvals', [CockpitTreasuryAccountGrantApprovalController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.treasury.account-grants.approvals.store');
+        Route::post('treasury-operations/account-grants/{treasuryAccountGrant}/executions', [CockpitTreasuryAccountGrantExecutionController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.treasury.account-grants.executions.store');
         Route::post('api-partners/clients', [CockpitPartnerApiClientController::class, 'store'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.api-partners.clients.store');

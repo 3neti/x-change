@@ -30,6 +30,7 @@ use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\XCommerceServiceProvider;
+use LBHurtado\XProvisioning\XProvisioningServiceProvider;
 use LBHurtado\XRay\XRayServiceProvider;
 use LBHurtado\XRider\XRiderServiceProvider;
 use Mews\Purifier\PurifierServiceProvider;
@@ -93,6 +94,7 @@ abstract class TestCase extends Orchestra
             $this->optionalProvider('LBHurtado\\XCampaign\\XCampaignServiceProvider'),
             $this->optionalProvider('LBHurtado\\SettlementEnvelope\\SettlementEnvelopeServiceProvider'),
             XCommerceServiceProvider::class,
+            XProvisioningServiceProvider::class,
             XChangeServiceProvider::class,
             PurifierServiceProvider::class,
             XRiderServiceProvider::class,
@@ -242,6 +244,7 @@ abstract class TestCase extends Orchestra
 
         // Onboarding package migrations.
         $this->loadOnboardingPackageMigrations();
+        $this->loadProvisioningPackageMigrations();
 
         // Merchant QR profile migrations.
         $this->loadMerchantPackageMigrations();
@@ -288,6 +291,15 @@ abstract class TestCase extends Orchestra
     protected function loadOnboardingPackageMigrations(): void
     {
         $path = $this->packageRoot(OnboardingServiceProvider::class).'/database/migrations';
+
+        if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
+            $this->loadMigrationsFrom($path);
+        }
+    }
+
+    protected function loadProvisioningPackageMigrations(): void
+    {
+        $path = $this->packageRoot(XProvisioningServiceProvider::class).'/database/migrations';
 
         if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
             $this->loadMigrationsFrom($path);

@@ -48,6 +48,7 @@ Last updated: 2026-07-30
 | 4 | x-change Cockpit | Operator shell | Secure Accounts and provider-verified Funding implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 | 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
+| 7 | Governed Provisioning | Vacant commissioning seats, approved authority offers, and Treasury-safe Account Grants | Core and Account Grant slice implemented; narrow domain activators next | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
 
 ## Package Map
 

@@ -10,8 +10,10 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessAccess;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
+use LBHurtado\XChange\Services\Treasury\TreasuryOperatorAuthority;
 use Symfony\Component\HttpFoundation\Response;
 
 class ShareXChangeBranding
@@ -20,6 +22,7 @@ class ShareXChangeBranding
         private readonly CockpitSystemReadinessAccess $systemReadinessAccess,
         private readonly CommercialOperatorAuthorityContract $commercialAuthority,
         private readonly PartnerApiOperatorAuthority $partnerApiAuthority,
+        private readonly TreasuryOperatorAuthority $treasuryAuthority,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -37,6 +40,11 @@ class ShareXChangeBranding
                     && $this->mayViewCommercialControls($request->user()),
                 'api_partner_controls_visible' => $request->user() instanceof Model
                     && $this->partnerApiAuthority->mayView($request->user()),
+                'treasury_operations_visible' => $request->user() instanceof Model
+                    && $this->treasuryAuthority->allows(
+                        $request->user(),
+                        TreasuryOperatorCapability::ViewAccountGrants,
+                    ),
             ],
         ]);
 

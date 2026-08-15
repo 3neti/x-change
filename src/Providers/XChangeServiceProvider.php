@@ -111,6 +111,7 @@ use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
+use LBHurtado\XChange\Console\Commands\Provisioning\ProvisionCommissioningSeatsCommand;
 use LBHurtado\XChange\Console\Commands\PublishXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
@@ -118,6 +119,7 @@ use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
 use LBHurtado\XChange\Console\Commands\SetupXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AttestCommercialAccountingCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\AuthorizeTreasuryOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillCommercialAccountingJournalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillDisbursementSettlementJournalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillStandingFundingPositionsCommand;
@@ -418,6 +420,7 @@ use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PayoutProviderResolver;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
+use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningActorGuard;
 use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
@@ -454,6 +457,7 @@ use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -462,6 +466,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             $this->packagePath('config/x-change.php'),
             'x-change'
+        );
+        $this->app->singleton(
+            ProvisioningActorGuardContract::class,
+            XChangeProvisioningActorGuard::class,
         );
         $this->app->scoped(PartnerApiRequestContext::class);
         $this->configureIdentityOtpGateway();
@@ -1357,6 +1365,7 @@ class XChangeServiceProvider extends ServiceProvider
                 CreatePartnerApiClientCommand::class,
                 AuthorizePartnerApiOperatorCommand::class,
                 RunPartnerApiLifecycleCommand::class,
+                ProvisionCommissioningSeatsCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
                 RunLifecycleScenarioCommand::class,
@@ -1367,6 +1376,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RunLifecycleScenarioGroupCommand::class,
                 BackfillDisbursementSettlementJournalCommand::class,
                 AttestCommercialAccountingCommand::class,
+                AuthorizeTreasuryOperatorCommand::class,
                 AuthorizeCommercialOperatorCommand::class,
                 ApprovePartnerCommissionPayoutBatchCommand::class,
                 CommercialGovernanceStatusCommand::class,

@@ -174,6 +174,25 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
 };
 
 return [
+    'treasury_account_grants' => [
+        'enabled' => true,
+        'test_allocations_enabled' => false,
+        'test_max_amount_minor' => 100_000,
+        'test_daily_limit_minor' => 500_000,
+    ],
+
+    'provisioning' => [
+        'commissioning_seats' => [
+            ['key' => 'institution-administrator', 'label' => 'Institution Administrator', 'profile' => 'institution_administrator', 'required' => true],
+            ['key' => 'commercial-maker', 'label' => 'Commercial Maker', 'profile' => 'commercial_maker', 'required' => true],
+            ['key' => 'commercial-checker', 'label' => 'Commercial Checker', 'profile' => 'commercial_checker', 'required' => true],
+            ['key' => 'treasury-maker', 'label' => 'Treasury Maker', 'profile' => 'treasury_maker', 'required' => true],
+            ['key' => 'treasury-checker', 'label' => 'Treasury Checker', 'profile' => 'treasury_checker', 'required' => true],
+            ['key' => 'api-partner-administrator', 'label' => 'API Partner Administrator', 'profile' => 'api_partner_administrator', 'required' => false],
+            ['key' => 'api-production-maker', 'label' => 'API Production Maker', 'profile' => 'api_production_maker', 'required' => false],
+            ['key' => 'api-production-checker', 'label' => 'API Production Checker', 'profile' => 'api_production_checker', 'required' => false],
+        ],
+    ],
 
     'deployment' => [
         'profile' => env('XCHANGE_DEPLOYMENT_PROFILE', 'development'),

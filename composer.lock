@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1863ac1f4bfbb1c3c01b55d23e3f86a3",
+    "content-hash": "1dbb30bbaa026242f3a8e10f9bdcf894",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1340,16 +1340,16 @@
         },
         {
             "name": "3neti/wallet",
-            "version": "v2.0.0-beta.3",
+            "version": "v2.0.0-beta.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/wallet.git",
-                "reference": "fe6f8f3be112b2e39fc4a7363ba22d8ffb864409"
+                "reference": "8744bd9d6fc2e15b0774db49f34265add7cb7393"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/wallet/zipball/fe6f8f3be112b2e39fc4a7363ba22d8ffb864409",
-                "reference": "fe6f8f3be112b2e39fc4a7363ba22d8ffb864409",
+                "url": "https://api.github.com/repos/3neti/wallet/zipball/8744bd9d6fc2e15b0774db49f34265add7cb7393",
+                "reference": "8744bd9d6fc2e15b0774db49f34265add7cb7393",
                 "shasum": ""
             },
             "require": {
@@ -1391,9 +1391,9 @@
             "description": "Custom wallet for X-Change",
             "support": {
                 "issues": "https://github.com/3neti/wallet/issues",
-                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.3"
+                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.4"
             },
-            "time": "2026-08-04T12:59:04+00:00"
+            "time": "2026-08-15T11:19:19+00:00"
         },
         {
             "name": "3neti/x-action",
@@ -1710,6 +1710,63 @@
             ],
             "description": "Evidentiary journal package for the x-change Settlement Operating System",
             "time": "2026-07-31T08:47:42+00:00"
+        },
+        {
+            "name": "3neti/x-provisioning",
+            "version": "v1.0.0-beta.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/3neti/x-provisioning.git",
+                "reference": "196893189985527ba8db5ca4199c6d2798dcac72"
+            },
+            "require": {
+                "illuminate/contracts": "^12.0 || ^13.0",
+                "illuminate/database": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.0",
+                "orchestra/testbench": "^10.0 || ^11.0",
+                "pestphp/pest": "^3.8 || ^4.0",
+                "pestphp/pest-plugin-laravel": "^3.2 || ^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\XProvisioning\\XProvisioningServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\XProvisioning\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\XProvisioning\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ],
+                "pint": [
+                    "vendor/bin/pint"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Lester B. Hurtado"
+                }
+            ],
+            "description": "Governed provisioning requests, invitations, acceptance, and authority activation for x-change.",
+            "time": "2026-08-15T10:37:47+00:00"
         },
         {
             "name": "3neti/x-ray",
@@ -2045,16 +2102,16 @@
         },
         {
             "name": "bavix/laravel-wallet",
-            "version": "11.5.1",
+            "version": "11.5.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bavix/laravel-wallet.git",
-                "reference": "d6a25c95e14c18a6e1b8c5a16e0459de7af77e6a"
+                "reference": "adf7c9674a8297bdae33913d9193ecfc3ff9c5e8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bavix/laravel-wallet/zipball/d6a25c95e14c18a6e1b8c5a16e0459de7af77e6a",
-                "reference": "d6a25c95e14c18a6e1b8c5a16e0459de7af77e6a",
+                "url": "https://api.github.com/repos/bavix/laravel-wallet/zipball/adf7c9674a8297bdae33913d9193ecfc3ff9c5e8",
+                "reference": "adf7c9674a8297bdae33913d9193ecfc3ff9c5e8",
                 "shasum": ""
             },
             "require": {
@@ -2123,7 +2180,7 @@
             ],
             "support": {
                 "issues": "https://github.com/bavix/laravel-wallet/issues",
-                "source": "https://github.com/bavix/laravel-wallet/tree/11.5.1"
+                "source": "https://github.com/bavix/laravel-wallet/tree/11.5.2"
             },
             "funding": [
                 {
@@ -2135,7 +2192,7 @@
                     "type": "open_collective"
                 }
             ],
-            "time": "2026-06-30T18:56:41+00:00"
+            "time": "2026-08-08T07:50:10+00:00"
         },
         {
             "name": "brick/math",
@@ -13392,19 +13449,21 @@
         },
         {
             "name": "hamcrest/hamcrest-php",
-            "version": "v2.1.1",
+            "version": "v3.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/hamcrest/hamcrest-php.git",
-                "reference": "f8b1c0173b22fa6ec77a81fe63e5b01eba7e6487"
+                "reference": "b61cd040da1a4925bc90a51c074f5297e7c0fa52"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hamcrest/hamcrest-php/zipball/f8b1c0173b22fa6ec77a81fe63e5b01eba7e6487",
-                "reference": "f8b1c0173b22fa6ec77a81fe63e5b01eba7e6487",
+                "url": "https://api.github.com/repos/hamcrest/hamcrest-php/zipball/b61cd040da1a4925bc90a51c074f5297e7c0fa52",
+                "reference": "b61cd040da1a4925bc90a51c074f5297e7c0fa52",
                 "shasum": ""
             },
             "require": {
+                "ext-ctype": "*",
+                "ext-dom": "*",
                 "php": "^7.4|^8.0"
             },
             "replace": {
@@ -13413,13 +13472,15 @@
                 "kodova/hamcrest-php": "*"
             },
             "require-dev": {
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
                 "phpunit/php-file-iterator": "^1.4 || ^2.0 || ^3.0",
                 "phpunit/phpunit": "^4.8.36 || ^5.7 || ^6.5 || ^7.0 || ^8.0 || ^9.0"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.1-dev"
+                    "dev-master": "3.0-dev"
                 }
             },
             "autoload": {
@@ -13437,9 +13498,9 @@
             ],
             "support": {
                 "issues": "https://github.com/hamcrest/hamcrest-php/issues",
-                "source": "https://github.com/hamcrest/hamcrest-php/tree/v2.1.1"
+                "source": "https://github.com/hamcrest/hamcrest-php/tree/v3.0.0"
             },
-            "time": "2025-04-30T06:54:44+00:00"
+            "time": "2026-03-17T11:56:53+00:00"
         },
         {
             "name": "inertiajs/inertia-laravel",
@@ -13782,29 +13843,28 @@
         },
         {
             "name": "mockery/mockery",
-            "version": "1.6.12",
+            "version": "1.6.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mockery/mockery.git",
-                "reference": "1f4efdd7d3beafe9807b08156dfcb176d18f1699"
+                "reference": "9cb54414cdcd2ec5ca292e7ba19dba3a3444885d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mockery/mockery/zipball/1f4efdd7d3beafe9807b08156dfcb176d18f1699",
-                "reference": "1f4efdd7d3beafe9807b08156dfcb176d18f1699",
+                "url": "https://api.github.com/repos/mockery/mockery/zipball/9cb54414cdcd2ec5ca292e7ba19dba3a3444885d",
+                "reference": "9cb54414cdcd2ec5ca292e7ba19dba3a3444885d",
                 "shasum": ""
             },
             "require": {
-                "hamcrest/hamcrest-php": "^2.0.1",
-                "lib-pcre": ">=7.0",
+                "hamcrest/hamcrest-php": "^2.0 || ^3.0",
                 "php": ">=7.3"
             },
             "conflict": {
                 "phpunit/phpunit": "<8.0"
             },
             "require-dev": {
-                "phpunit/phpunit": "^8.5 || ^9.6.17",
-                "symplify/easy-coding-standard": "^12.1.14"
+                "phpunit/phpunit": "^9.6.36",
+                "symplify/easy-coding-standard": "^13.2.17"
             },
             "type": "library",
             "autoload": {
@@ -13861,7 +13921,7 @@
                 "security": "https://github.com/mockery/mockery/security/advisories",
                 "source": "https://github.com/mockery/mockery"
             },
-            "time": "2024-05-16T03:13:13+00:00"
+            "time": "2026-08-15T03:07:32+00:00"
         },
         {
             "name": "myclabs/deep-copy",
@@ -16740,7 +16800,8 @@
         "3neti/emi-core": 10,
         "3neti/emi-paynamics": 10,
         "3neti/voucher": 10,
-        "3neti/wallet": 10
+        "3neti/wallet": 10,
+        "3neti/x-provisioning": 10
     },
     "prefer-stable": true,
     "prefer-lowest": false,

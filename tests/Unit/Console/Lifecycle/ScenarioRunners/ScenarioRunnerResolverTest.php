@@ -10,6 +10,7 @@ use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
 use LBHurtado\XChange\Lifecycle\Runners\SequentialClaimsScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\SettlementEnvelopeEvaluationScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\SettlementThreePartyScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\TreasuryAccountGrantSimulationScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\TreasuryBasicCashScenarioRunner;
 
 it('resolves default scenarios to default claim runner', function () {
@@ -90,6 +91,16 @@ it('resolves commercial operations simulation mode', function () {
     expect($resolution->mode)->toBe('commercial_operations_simulation')
         ->and($resolution->runner)
         ->toBeInstanceOf(CommercialOperationsSimulationScenarioRunner::class);
+});
+
+it('resolves Treasury Account Grant simulation mode', function () {
+    $resolution = app(ScenarioRunnerResolver::class)->resolve([
+        'mode' => 'treasury_account_grant_simulation',
+    ]);
+
+    expect($resolution->mode)->toBe('treasury_account_grant_simulation')
+        ->and($resolution->runner)
+        ->toBeInstanceOf(TreasuryAccountGrantSimulationScenarioRunner::class);
 });
 
 it('throws when no runner is registered for mode', function () {
