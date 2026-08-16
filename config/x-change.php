@@ -1333,6 +1333,28 @@ return [
                 'account_funding',
             ],
         ],
+        'component_economics' => [
+            'bootstrap' => [
+                'version' => 1,
+                'billing_unit' => 'selected_instruction',
+                'billable_event_reference' => 'pay_code.issued_with_component',
+                'recognition_policy_reference' => 'recognition:pay-code-issuance:v1',
+                'category' => 'service_provider_payable',
+                'recipient_reference' => 'counterparty:3neti',
+                'participant_role' => 'service_aggregator',
+                'agreement_reference' => 'agreement:commissioning:institution-3neti:v1',
+                'designation_reference' => 'designation:commissioning:3neti:v1',
+                'tax_policy_reference' => null,
+                'capabilities' => [
+                    'inputs.fields.kyc' => ['identity:hyperverge'],
+                    'inputs.fields.otp' => ['otp:txtcmdr'],
+                    'feedback.mobile' => ['delivery:engagespark'],
+                    'rider.message' => ['rider:message'],
+                    'rider.splash' => ['rider:splash'],
+                    'rider.url' => ['rider:url'],
+                ],
+            ],
+        ],
         'legal' => [
             'enforcement' => env('XCHANGE_COMMERCIAL_LEGAL_ENFORCEMENT', 'advisory'),
         ],

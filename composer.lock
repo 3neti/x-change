@@ -1524,11 +1524,11 @@
         },
         {
             "name": "3neti/x-commerce",
-            "version": "v1.2.0",
+            "version": "v1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-commerce.git",
-                "reference": "dd378d6536bad125948dac212c853cdb47dcb816"
+                "reference": "ccc234df359df0c81243d26f00bb1392c19de1f4"
             },
             "require": {
                 "illuminate/support": "^11.0|^12.0|^13.0",
@@ -1580,7 +1580,7 @@
                 "pricing",
                 "x-change"
             ],
-            "time": "2026-08-07T07:06:05+00:00"
+            "time": "2026-08-16T07:36:25+00:00"
         },
         {
             "name": "3neti/x-feedback",
@@ -1713,11 +1713,11 @@
         },
         {
             "name": "3neti/x-provisioning",
-            "version": "v1.0.0-beta.6",
+            "version": "v1.0.0-beta.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-provisioning.git",
-                "reference": "b8d4c0df081e8cd1555c7ec6a4677fd86aa2de1b"
+                "reference": "3f0a13b210d33f96a8682f5ec68a3590919b93eb"
             },
             "require": {
                 "illuminate/contracts": "^12.0 || ^13.0",
@@ -1766,7 +1766,7 @@
                 }
             ],
             "description": "Governed provisioning requests, invitations, acceptance, and authority activation for x-change.",
-            "time": "2026-08-15T22:22:21+00:00"
+            "time": "2026-08-16T07:41:54+00:00"
         },
         {
             "name": "3neti/x-ray",
