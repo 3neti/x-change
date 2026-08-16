@@ -150,6 +150,11 @@ it('reports active baseline issuance while locking price changes', function (): 
             'complete_profile_count' => 2,
             'required_profile_count' => 2,
         ])
+        ->and($status['recipient_designations'])->toMatchArray([
+            'operational' => true,
+            'required_count' => 1,
+            'active_count' => 1,
+        ])
         ->and($status['changes_locked'])->toBeTrue()
         ->and($status['governance_ready'])->toBeFalse()
         ->and($status['state'])->toBe('baseline_active_changes_locked')

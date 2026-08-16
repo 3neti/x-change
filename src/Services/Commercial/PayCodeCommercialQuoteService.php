@@ -24,6 +24,7 @@ final class PayCodeCommercialQuoteService
         private readonly CommercialOfferingResolverContract $offerings,
         private readonly CommercialComponentEconomicsResolverContract $componentEconomics,
         private readonly DeterministicCommercialQuoteBuilder $quotes,
+        private readonly CommercialRecipientDesignationGuard $recipientDesignations,
     ) {}
 
     /**
@@ -40,7 +41,7 @@ final class PayCodeCommercialQuoteService
         $catalog = $offering->catalog;
         $policy = $offering->waterfallPolicy;
 
-        return $this->quotes->build(
+        $quote = $this->quotes->build(
             sourceCommercialEventReference: $sourceCommercialEventReference,
             catalog: $catalog,
             waterfallPolicy: $policy,
@@ -52,6 +53,9 @@ final class PayCodeCommercialQuoteService
             offering: $offering,
             componentEconomics: $componentEconomics,
         );
+        $this->recipientDesignations->assertPlan($quote->allocationPlan);
+
+        return $quote;
     }
 
     /**

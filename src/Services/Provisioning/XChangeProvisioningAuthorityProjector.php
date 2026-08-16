@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Provisioning;
 
 use BackedEnum;
+use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -17,10 +18,14 @@ use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Models\PartnerApiOperatorAuthorization;
 use LBHurtado\XChange\Models\ProvisioningOperatorAuthorization;
 use LBHurtado\XChange\Models\TreasuryOperatorAuthorization;
+use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceJournal;
+use LBHurtado\XChange\Services\Commercial\RevokeCommercialRecipientDesignation;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiGovernanceJournal;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
+use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
+use LBHurtado\XProvisioning\Enums\ProvisioningProfile;
 use LBHurtado\XProvisioning\Models\ProvisioningAcceptance;
 use LBHurtado\XProvisioning\Models\ProvisioningRevision;
 
@@ -30,6 +35,8 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
         private SystemUserResolverContract $systemUsers,
         private CommercialGovernanceJournal $commercialJournal,
         private PartnerApiGovernanceJournal $partnerApiJournal,
+        private ActivateCommercialRecipientDesignation $activateRecipientDesignation,
+        private RevokeCommercialRecipientDesignation $revokeRecipientDesignation,
     ) {}
 
     public function activate(
@@ -43,6 +50,25 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
 
             if (! $checker instanceof Model) {
                 throw new DomainException('Provisioning activation requires its recorded activation checker.');
+            }
+
+            if ($revision->request->profile === ProvisioningProfile::CommercialRecipientDesignation) {
+                $reference = 'commercial-designation:'.$revision->request->reference.':'.$revision->snapshot_hash;
+                $designation = CommercialRecipientDesignationData::fromArray((array) $revision->snapshot);
+                $this->activateRecipientDesignation->execute(
+                    designation: $designation,
+                    origin: 'provisioning_offer',
+                    authorityReference: $reference,
+                    sourceReference: (string) $revision->request->reference,
+                    acceptedSnapshotHash: (string) $revision->snapshot_hash,
+                    acceptanceEvidenceHash: (string) $acceptance->evidence_hash,
+                    representativeType: $candidate->getMorphClass(),
+                    representativeReference: (string) $candidate->getKey(),
+                    activatedBy: $checker,
+                    activatedAt: CarbonImmutable::now(),
+                );
+
+                return $reference;
             }
 
             $capabilities = $this->approvedCapabilities($revision);
@@ -80,10 +106,20 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
         ProvisioningAcceptance $acceptance,
         string $reason,
     ): string {
-        return DB::transaction(function () use ($revision, $acceptance): string {
+        return DB::transaction(function () use ($revision, $acceptance, $reason): string {
             $revision->loadMissing('request');
             $candidate = $this->candidate($acceptance);
             $reference = 'provisioning:'.$revision->request->reference.':'.$revision->snapshot_hash;
+
+            if ($revision->request->profile === ProvisioningProfile::CommercialRecipientDesignation) {
+                $reference = 'commercial-designation:'.$revision->request->reference.':'.$revision->snapshot_hash;
+                $this->revokeRecipientDesignation->execute(
+                    authorityReference: $reference,
+                    revocationReference: $reference.':revoked:'.hash('sha256', trim($reason)),
+                );
+
+                return $reference.':revoked';
+            }
 
             foreach ($this->approvedCapabilities($revision) as $capability) {
                 [$modelClass] = $this->authorizationTarget($capability);

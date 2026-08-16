@@ -22,6 +22,7 @@ final readonly class ProvisionCommercialBaselines
         private CommercialOfferingManifestCompiler $manifests,
         private BackfillCommercialOfferingManifests $manifestBackfill,
         private ProvisionCommercialComponentEconomicsBaselines $componentEconomicsBaselines,
+        private ProvisionCommercialRecipientDesignationBaselines $recipientDesignationBaselines,
     ) {}
 
     /** @return list<CommercialOfferingActivation> */
@@ -57,6 +58,7 @@ final readonly class ProvisionCommercialBaselines
 
         if ($this->allConfiguredProfilesAreActive()) {
             $this->componentEconomicsBaselines->provision($commissioningManifestReference);
+            $this->recipientDesignationBaselines->provision($commissioningManifestReference);
         }
 
         return $activations;

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
+use LBHurtado\XChange\Contracts\CommercialRecipientDesignationResolverContract;
 use LBHurtado\XChange\Enums\CommercialGovernanceMode;
 use LBHurtado\XChange\Enums\CommercialGovernanceState;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
@@ -27,6 +28,7 @@ final readonly class CommercialGovernanceInspector
 {
     public function __construct(
         private CommercialComponentEconomicsResolverContract $componentEconomics,
+        private CommercialRecipientDesignationResolverContract $recipientDesignations,
     ) {}
 
     /**
@@ -91,16 +93,19 @@ final readonly class CommercialGovernanceInspector
             static fn (array $profile): bool => $profile['origin'] === CommercialOfferingOrigin::MakerCheckerRevision->value,
         );
         $componentEconomics = $this->componentEconomicsReadiness($profiles->all());
+        $recipientDesignations = $this->recipientDesignationReadiness($profiles->all());
 
         $state = match (true) {
-            ! $allProfilesActive || ! $componentEconomics['operational'] => CommercialGovernanceState::ConfigurationInvalid,
+            ! $allProfilesActive || ! $componentEconomics['operational'] || ! $recipientDesignations['operational'] => CommercialGovernanceState::ConfigurationInvalid,
             $publishedAwaitingActivation > 0 => CommercialGovernanceState::PublishedAwaitingActivation,
             $pendingApproval > 0 => CommercialGovernanceState::RevisionAwaitingApproval,
             $governedOfferingActive => CommercialGovernanceState::GovernedOfferingActive,
             $roleReadiness['separation_ready'] => CommercialGovernanceState::RolesReady,
             default => CommercialGovernanceState::BaselineActiveChangesLocked,
         };
-        $operational = $allProfilesActive && $componentEconomics['operational'];
+        $operational = $allProfilesActive
+            && $componentEconomics['operational']
+            && $recipientDesignations['operational'];
 
         return [
             'schema' => 'x-change.commercial-governance-status.v1',
@@ -115,6 +120,7 @@ final readonly class CommercialGovernanceInspector
             'published_awaiting_activation_count' => $publishedAwaitingActivation,
             'profiles' => $profileRows,
             'component_economics' => $componentEconomics,
+            'recipient_designations' => $recipientDesignations,
             'partners' => $this->partnerReadiness(),
             'operations' => $this->operationsReadiness(),
             'message' => $this->message($state),
@@ -129,10 +135,77 @@ final readonly class CommercialGovernanceInspector
                 && Schema::hasTable('x_change_commercial_operator_authorizations')
                 && Schema::hasTable('x_change_commercial_component_economics_manifests')
                 && Schema::hasTable('x_change_commercial_component_economics_activations')
-                && Schema::hasTable('x_change_commercial_component_economics_heads');
+                && Schema::hasTable('x_change_commercial_component_economics_heads')
+                && Schema::hasTable('x_change_commercial_recipient_designations');
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /**
+     * @param  list<string>  $profiles
+     * @return array{operational: bool, required_count: int, active_count: int, designations: list<array<string, mixed>>, message: string}
+     */
+    private function recipientDesignationReadiness(array $profiles): array
+    {
+        $requirements = [];
+
+        foreach ($profiles as $profile) {
+            try {
+                $economics = $this->componentEconomics->resolve($profile);
+            } catch (Throwable) {
+                continue;
+            }
+
+            foreach ($economics->components as $component) {
+                foreach ($component->allocationSchedule?->rules ?? [] as $rule) {
+                    if ($rule->designationReference === null) {
+                        continue;
+                    }
+
+                    $requirements[$rule->designationReference] = [
+                        'reference' => $rule->designationReference,
+                        'counterparty_reference' => $rule->recipientReference,
+                    ];
+                }
+            }
+        }
+
+        $rows = collect($requirements)->map(function (array $requirement): array {
+            try {
+                $designation = $this->recipientDesignations->resolve($requirement['reference']);
+
+                return [
+                    ...$requirement,
+                    'active' => true,
+                    'authority_hash' => $designation->authority_hash,
+                    'origin' => $designation->origin,
+                    'activated_at' => $designation->activated_at?->toIso8601String(),
+                    'message' => 'Commercial Recipient Designation is active.',
+                ];
+            } catch (Throwable $exception) {
+                return [
+                    ...$requirement,
+                    'active' => false,
+                    'authority_hash' => null,
+                    'origin' => null,
+                    'activated_at' => null,
+                    'message' => $exception->getMessage(),
+                ];
+            }
+        })->values();
+        $active = $rows->where('active', true)->count();
+        $operational = $requirements !== [] && $active === count($requirements);
+
+        return [
+            'operational' => $operational,
+            'required_count' => count($requirements),
+            'active_count' => $active,
+            'designations' => $rows->all(),
+            'message' => $operational
+                ? 'Every external component allocation has active recipient authority.'
+                : 'Every external component allocation requires an active Commercial Recipient Designation.',
+        ];
     }
 
     /**
@@ -325,6 +398,13 @@ final readonly class CommercialGovernanceInspector
                 'required_profile_count' => 0,
                 'profiles' => [],
                 'message' => 'Commercial Component Economics storage is not ready.',
+            ],
+            'recipient_designations' => [
+                'operational' => false,
+                'required_count' => 0,
+                'active_count' => 0,
+                'designations' => [],
+                'message' => 'Commercial Recipient Designation storage is not ready.',
             ],
             'partners' => [
                 'storage_ready' => false,

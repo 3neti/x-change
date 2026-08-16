@@ -14,6 +14,7 @@ use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Models\CommercialPartnerDestinationRevision;
 use LBHurtado\XChange\Models\CommercialPartnerRevision;
+use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionReferenceData;
@@ -208,6 +209,51 @@ final readonly class CommercialGovernanceJournal
                 'capability' => $authorization->capability,
                 'valid_from' => $authorization->valid_from?->toIso8601String(),
                 'valid_until' => $authorization->valid_until?->toIso8601String(),
+            ],
+            metadata: $this->metadata(),
+        ));
+    }
+
+    public function recordRecipientDesignation(
+        CommercialRecipientDesignation $designation,
+        string $eventType,
+    ): void {
+        $occurredAt = $eventType === 'commercial.recipient_designation.revoked'
+            ? $designation->revoked_at
+            : $designation->activated_at;
+
+        $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: $eventType,
+            occurredAt: CarbonImmutable::parse($occurredAt),
+            actor: new ExecutionActorData(
+                id: (string) ($designation->activated_by_id ?? $designation->origin),
+                type: (string) ($designation->activated_by_type ?? 'commercial_designation_authority'),
+            ),
+            subject: new ExecutionSubjectData(
+                id: (string) $designation->getKey(),
+                type: 'commercial_recipient_designation',
+                display: $designation->designation_reference,
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'commercial-recipient-designation:'.$designation->designation_reference,
+                causationId: $eventType === 'commercial.recipient_designation.revoked'
+                    ? $designation->revocation_reference
+                    : $designation->authority_reference,
+                executionId: (string) $designation->getKey(),
+                externalReference: $designation->source_reference,
+                metadata: [
+                    'authority_hash' => $designation->authority_hash,
+                    'accepted_snapshot_hash' => $designation->accepted_snapshot_hash,
+                ],
+            ),
+            idempotencyKey: 'x-change:commercial-governance:'.$eventType.':'.$designation->getKey(),
+            payload: [
+                'designation_reference' => $designation->designation_reference,
+                'counterparty_reference' => $designation->counterparty_reference,
+                'commercial_role' => $designation->commercial_role,
+                'agreement_reference' => $designation->agreement_reference,
+                'origin' => $designation->origin,
+                'component_scope_count' => count((array) $designation->component_scope),
             ],
             metadata: $this->metadata(),
         ));

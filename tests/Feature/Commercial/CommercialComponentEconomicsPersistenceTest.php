@@ -9,6 +9,7 @@ use LBHurtado\XChange\Models\CommercialComponentEconomics;
 use LBHurtado\XChange\Models\CommercialComponentEconomicsActivation;
 use LBHurtado\XChange\Models\CommercialComponentEconomicsHead;
 use LBHurtado\XChange\Models\CommercialOffering;
+use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialComponentEconomics;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialOffering;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialComponentEconomicsFactory;
@@ -30,7 +31,8 @@ it('persists and activates complete economics bound to every commissioned offeri
 
     expect(CommercialComponentEconomics::query()->count())->toBe(2)
         ->and(CommercialComponentEconomicsActivation::query()->count())->toBe(2)
-        ->and(CommercialComponentEconomicsHead::query()->count())->toBe(2);
+        ->and(CommercialComponentEconomicsHead::query()->count())->toBe(2)
+        ->and(CommercialRecipientDesignation::query()->count())->toBe(1);
 
     $manifest = CommercialComponentEconomics::query()->where('profile', 'pay_code')->sole();
     $head = CommercialComponentEconomicsHead::query()
@@ -50,6 +52,12 @@ it('persists and activates complete economics bound to every commissioned offeri
         ->and(ExecutionJournalEntry::query()
             ->where('event_type', 'commercial.component_economics.activated')
             ->count())->toBe(2);
+
+    $designation = CommercialRecipientDesignation::query()->sole();
+    expect($designation->designation_reference)->toBe('designation:commissioning:3neti:v1')
+        ->and($designation->counterparty_reference)->toBe('counterparty:3neti')
+        ->and($designation->commercial_role)->toBe('service_aggregator')
+        ->and($designation->component_scope)->toContain('inputs.fields.kyc', 'inputs.fields.otp', 'rider.splash');
 });
 
 it('replays identical commissioning without duplicating manifests activations heads or journals', function (): void {
@@ -60,12 +68,23 @@ it('replays identical commissioning without duplicating manifests activations he
     expect(CommercialComponentEconomics::query()->count())->toBe(2)
         ->and(CommercialComponentEconomicsActivation::query()->count())->toBe(2)
         ->and(CommercialComponentEconomicsHead::query()->count())->toBe(2)
+        ->and(CommercialRecipientDesignation::query()->count())->toBe(1)
         ->and(ExecutionJournalEntry::query()
             ->where('event_type', 'commercial.component_economics.baseline_provisioned')
             ->count())->toBe(2)
         ->and(ExecutionJournalEntry::query()
             ->where('event_type', 'commercial.component_economics.activated')
             ->count())->toBe(2);
+});
+
+it('fails closed when a quote recipient lacks active designation authority', function (): void {
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:designation-guard');
+    CommercialRecipientDesignation::query()->update(['revoked_at' => now()]);
+
+    expect(fn () => app(PayCodeCommercialQuoteService::class)->quote(
+        validVoucherInstructions(100, 'INSTAPAY'),
+        'pay-code-generation:test:missing-designation',
+    ))->toThrow(DomainException::class, 'is not active');
 });
 
 it('keeps activation history append only while moving the locked profile head', function (): void {
