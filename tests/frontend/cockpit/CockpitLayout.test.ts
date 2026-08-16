@@ -55,31 +55,31 @@ describe('Cockpit shell layout baseline', () => {
             cockpitNavigationItems.every((item) => item.enabled !== false),
         ).toBe(true);
         expect(cockpitNavigationItems.map((item) => item.label)).toEqual([
-            'Overview',
-            'Issuance',
             'Funding',
-            'Pay Codes',
+            'Issuance',
             'Campaigns',
+            'Pay Codes',
+            'Overview',
             'Account',
             'System Readiness',
             'Guides',
         ]);
         expect(cockpitNavigationItems.map((item) => item.href)).toEqual([
-            '/x/cockpit',
-            '/x/cockpit/quick-generate',
             '/x/cockpit/funding',
-            '/x/cockpit/pay-codes',
+            '/x/cockpit/quick-generate',
             '/x/cockpit/campaigns',
+            '/x/cockpit/pay-codes',
+            '/x/cockpit/overview',
             '/x/cockpit/accounts',
             '/x/cockpit/diagnostics/runtime-profile',
             '/x/cockpit/documentation',
         ]);
         expect(cockpitNavigationItems.map((item) => item.description)).toEqual([
-            'Funds, capacity, and activity',
-            'Design and issue a Pay Code',
             'Add and confirm funds',
-            'Find and manage Pay Codes',
+            'Design and issue a Pay Code',
             'Issue to many recipients',
+            'Find and manage Pay Codes',
+            'Funds, capacity, and activity',
             'Position and connected services',
             'Deployment and runtime checks',
             'Workflows and terminology',
@@ -155,6 +155,28 @@ describe('Cockpit shell layout baseline', () => {
             'Hide balance values',
         );
         expect(visibilityToggle.attributes('aria-pressed')).toBe('true');
+    });
+
+    it('explains a smart entry redirect without exposing financial values', () => {
+        const wrapper = mount(CockpitLayout, {
+            props: {
+                cockpitEntryNotice: {
+                    schema: 'x-change.cockpit.entry-notice.v1',
+                    destination: 'funding',
+                    title: 'Start with Funding',
+                    message:
+                        'Add funds to increase your Issuance Capacity before creating a Pay Code.',
+                    read_only: true,
+                },
+            },
+        });
+
+        const notice = wrapper.get('[data-testid="cockpit-entry-notice"]');
+
+        expect(notice.attributes('role')).toBe('status');
+        expect(notice.text()).toContain('Start with Funding');
+        expect(notice.text()).toContain('Issuance Capacity');
+        expect(notice.text()).not.toContain('₱');
     });
 
     it('renders balance metrics as header HUD presentation only', () => {

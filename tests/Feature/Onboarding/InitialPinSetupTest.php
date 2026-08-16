@@ -2,15 +2,26 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Response as InertiaResponse;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\InitialPinSetupController;
 use LBHurtado\XChange\Http\Middleware\RequireInitialPinSetup;
 use LBHurtado\XChange\Services\Onboarding\AccountPinSetupState;
 use LBHurtado\XChange\Tests\Fakes\User;
+
+beforeEach(function (): void {
+    $system = provisionTestSystemPrincipalForCommissioning();
+    config()->set('account.system_user.candidates', [
+        'x-change' => [
+            'model' => $system::class,
+            'identifier' => $system->email,
+            'identifier_column' => 'email',
+        ],
+    ]);
+});
 
 it('requires authentication to create an initial PIN', function (): void {
     expect(
@@ -42,7 +53,7 @@ it('shows initial PIN setup only for an onboarding Account that needs it', funct
     );
 
     expect($response->getTargetUrl())
-        ->toBe(route('x-change.cockpit.dashboard'));
+        ->toBe(route('x-change.cockpit.entry'));
 });
 
 it('keeps an onboarding Account out of Cockpit until its PIN is created', function (): void {
@@ -97,7 +108,7 @@ it('creates the first PIN without asking for the generated credential', function
             'password' => '246810',
             'password_confirmation' => '246810',
         ])
-        ->assertRedirect(route('x-change.cockpit.dashboard'))
+        ->assertRedirect(route('x-change.cockpit.entry'))
         ->assertSessionHas(
             'status',
             'Your PIN is ready. Welcome to x-change.',

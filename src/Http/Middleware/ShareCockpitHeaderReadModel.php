@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEntryPageController;
 use Symfony\Component\HttpFoundation\Response;
 
 class ShareCockpitHeaderReadModel
@@ -21,6 +22,10 @@ class ShareCockpitHeaderReadModel
         Inertia::share(
             'cockpit_header_read_model',
             fn (): array => $this->headerReadModels->forOperator($request->user())->toArray(),
+        );
+        Inertia::share(
+            'cockpit_entry_notice',
+            fn (): mixed => $request->session()->get(CockpitEntryPageController::NOTICE_SESSION_KEY),
         );
 
         return $next($request);

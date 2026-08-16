@@ -250,7 +250,7 @@ const campaignDashboardHref = computed(() => {
     const context = campaignNavigationContext.value;
 
     if (!context) {
-        return '/x/cockpit';
+        return '/x/cockpit/overview';
     }
 
     const params = new URLSearchParams({
@@ -271,7 +271,7 @@ const campaignDashboardHref = computed(() => {
         params.set('campaign_recipient_id', context.recipient_id);
     }
 
-    return `/x/cockpit?${params.toString()}`;
+    return `/x/cockpit/overview?${params.toString()}`;
 });
 const campaignExplorerContextParams = computed(() => {
     const context = campaignNavigationContext.value;

@@ -16,6 +16,11 @@ import {
 import { computed } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import NavUser from '@/components/NavUser.vue';
+import CockpitWorkspaceNavigationItem from '@/cockpit/components/CockpitWorkspaceNavigationItem.vue';
+import {
+    cockpitWorkspaceGuides,
+    type CockpitWorkspaceGuide,
+} from '@/cockpit/workspaceNavigationGuides';
 import {
     Sidebar,
     SidebarContent,
@@ -49,36 +54,53 @@ type XChangeNavigationItem = NavItem & {
     description: string;
 };
 
-const workspaceItems: XChangeNavigationItem[] = [
+type XChangeWorkspaceNavigationItem = XChangeNavigationItem & {
+    guide: CockpitWorkspaceGuide;
+    step?: string;
+    branch?: boolean;
+    dividerBefore?: boolean;
+};
+
+const workspaceItems: XChangeWorkspaceNavigationItem[] = [
     {
-        title: 'Overview',
-        description: 'Funds, capacity, and activity',
-        href: dashboard(),
-        icon: CircleGauge,
+        title: 'Funding',
+        description: 'Add and confirm funds',
+        href: funding.index(),
+        icon: Landmark,
+        step: '1',
+        guide: cockpitWorkspaceGuides.funding,
     },
     {
         title: 'Issuance',
         description: 'Design and issue a Pay Code',
         href: quickGenerate(),
         icon: BadgePlus,
-    },
-    {
-        title: 'Funding',
-        description: 'Add and confirm funds',
-        href: funding.index(),
-        icon: Landmark,
-    },
-    {
-        title: 'Pay Codes',
-        description: 'Find and manage Pay Codes',
-        href: payCodes.index(),
-        icon: FileStack,
+        step: '2',
+        guide: cockpitWorkspaceGuides.issuance,
     },
     {
         title: 'Campaigns',
         description: 'Issue to many recipients',
         href: campaigns.index(),
         icon: Megaphone,
+        branch: true,
+        guide: cockpitWorkspaceGuides.campaigns,
+    },
+    {
+        title: 'Pay Codes',
+        description: 'Find and manage Pay Codes',
+        href: payCodes.index(),
+        icon: FileStack,
+        step: '3',
+        guide: cockpitWorkspaceGuides.payCodes,
+    },
+    {
+        title: 'Overview',
+        description: 'Funds, capacity, and activity',
+        href: dashboard(),
+        icon: CircleGauge,
+        dividerBefore: true,
+        guide: cockpitWorkspaceGuides.overview,
     },
 ];
 
@@ -210,8 +232,26 @@ const { isCurrentUrl } = useCurrentUrl();
             >
                 <SidebarGroupLabel>{{ group.label }}</SidebarGroupLabel>
                 <SidebarMenu>
+                    <CockpitWorkspaceNavigationItem
+                        v-for="item in group.label === 'Workspace'
+                            ? (group.items as XChangeWorkspaceNavigationItem[])
+                            : []"
+                        :key="item.title"
+                        :title="item.title"
+                        :description="item.description"
+                        :href="item.href"
+                        :icon="item.icon"
+                        :active="isCurrentUrl(item.href)"
+                        :guide="item.guide"
+                        :guide-href="documentation()"
+                        :step="item.step"
+                        :branch="item.branch"
+                        :divider-before="item.dividerBefore"
+                    />
                     <SidebarMenuItem
-                        v-for="item in group.items"
+                        v-for="item in group.label !== 'Workspace'
+                            ? group.items
+                            : []"
                         :key="item.title"
                     >
                         <SidebarMenuButton

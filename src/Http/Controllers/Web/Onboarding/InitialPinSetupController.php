@@ -31,7 +31,7 @@ final class InitialPinSetupController extends Controller
         }
 
         if (! $pinSetup->isRequired($user)) {
-            return redirect()->route('x-change.cockpit.dashboard');
+            return redirect()->route('x-change.cockpit.entry');
         }
 
         return Inertia::render('x-change/onboarding/InitialPinSetup', [
@@ -52,7 +52,7 @@ final class InitialPinSetupController extends Controller
         $request->session()->regenerate();
 
         return redirect()
-            ->route('x-change.cockpit.dashboard')
+            ->route('x-change.cockpit.entry')
             ->with('status', 'Your PIN is ready. Welcome to x-change.');
     }
 

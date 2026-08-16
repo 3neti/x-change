@@ -8,11 +8,11 @@ import {
 describe('Cockpit navigation baseline', () => {
     it('defines the primary and secondary Cockpit navigation model', () => {
         expect(cockpitPrimaryNavigation.map((item) => item.label)).toEqual([
-            'Overview',
-            'Issuance',
             'Funding',
-            'Pay Codes',
+            'Issuance',
             'Campaigns',
+            'Pay Codes',
+            'Overview',
         ]);
 
         expect(cockpitSecondaryNavigation.map((item) => item.label)).toEqual([
@@ -33,11 +33,11 @@ describe('Cockpit navigation baseline', () => {
         );
 
         expect(enabledItems.map((item) => item.key)).toEqual([
-            'dashboard',
-            'quick-generate',
             'funding',
-            'pay-codes',
+            'quick-generate',
             'campaigns',
+            'pay-codes',
+            'dashboard',
             'accounts',
             'runtime-profile',
             'documentation',

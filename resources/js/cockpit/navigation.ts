@@ -2,11 +2,11 @@ import type { CockpitNavigationItem } from './types';
 
 export const cockpitNavigationItems: CockpitNavigationItem[] = [
     {
-        key: 'dashboard',
-        label: 'Overview',
-        href: '/x/cockpit',
+        key: 'funding',
+        label: 'Funding',
+        href: '/x/cockpit/funding',
         group: 'primary',
-        description: 'Funds, capacity, and activity',
+        description: 'Add and confirm funds',
     },
     {
         key: 'quick-generate',
@@ -16,11 +16,11 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         description: 'Design and issue a Pay Code',
     },
     {
-        key: 'funding',
-        label: 'Funding',
-        href: '/x/cockpit/funding',
+        key: 'campaigns',
+        label: 'Campaigns',
+        href: '/x/cockpit/campaigns',
         group: 'primary',
-        description: 'Add and confirm funds',
+        description: 'Issue to many recipients',
     },
     {
         key: 'pay-codes',
@@ -30,11 +30,11 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         description: 'Find and manage Pay Codes',
     },
     {
-        key: 'campaigns',
-        label: 'Campaigns',
-        href: '/x/cockpit/campaigns',
+        key: 'dashboard',
+        label: 'Overview',
+        href: '/x/cockpit/overview',
         group: 'primary',
-        description: 'Issue to many recipients',
+        description: 'Funds, capacity, and activity',
     },
     {
         key: 'accounts',

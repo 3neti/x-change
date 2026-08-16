@@ -20,6 +20,14 @@ it('shares the installed x-change version without host middleware', function ():
 });
 
 it('treats the legacy x-change dashboard as a Cockpit compatibility route', function () {
+    $system = provisionTestSystemPrincipalForCommissioning();
+    config()->set('account.system_user.candidates', [
+        'x-change' => [
+            'model' => $system::class,
+            'identifier' => $system->email,
+            'identifier_column' => 'email',
+        ],
+    ]);
     $user = User::query()->create([
         'name' => 'Returning Account Holder',
         'email' => 'returning@example.test',
@@ -28,7 +36,7 @@ it('treats the legacy x-change dashboard as a Cockpit compatibility route', func
 
     $this->actingAs($user)
         ->get(route('x-change.dashboard'))
-        ->assertRedirect(route('x-change.cockpit.dashboard'));
+        ->assertRedirect(route('x-change.cockpit.entry'));
 });
 
 it('configures the Cockpit as the successful authentication home', function () {
@@ -41,7 +49,7 @@ it('publishes an x-change landing page with canonical Wayfinder destinations', f
 
     expect($stub)
         ->toContain("from '@/routes/x-change/cockpit'")
-        ->toContain(':href="dashboard()"')
+        ->toContain(':href="entry()"')
         ->toContain("from '@/routes/x-change/claim'")
         ->toContain(':href="startClaim()"')
         ->toContain('Cashless disbursements')

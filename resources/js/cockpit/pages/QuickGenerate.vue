@@ -1107,6 +1107,7 @@ function stringValue(value: unknown): string | null {
     <CockpitLayout
         active-navigation="quick-generate"
         :cockpit-header-read-model="props.cockpit_header_read_model"
+        :cockpit-entry-notice="props.cockpit_entry_notice"
     >
         <section class="space-y-4" data-testid="cockpit-quick-generate-shell">
             <header

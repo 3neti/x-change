@@ -99,7 +99,7 @@ describe('Cockpit campaign explorer navigation boundary', () => {
         const link = wrapper.find('[data-testid="cockpit-campaign-navigation-dashboard-link"]');
 
         expect(link.exists()).toBe(true);
-        expect(link.attributes('href')).toContain('/x/cockpit?');
+        expect(link.attributes('href')).toContain('/x/cockpit/overview?');
         expect(link.attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
         expect(link.attributes('href')).toContain('campaign_execution_id=execution-1');
         expect(link.attributes('href')).toContain('campaign_id=campaign-1');

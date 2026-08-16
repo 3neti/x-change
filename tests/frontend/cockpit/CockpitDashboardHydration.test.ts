@@ -1769,7 +1769,7 @@ describe('Cockpit dashboard read model hydration', () => {
         );
 
         expect(form.attributes('method')).toBe('get');
-        expect(form.attributes('action')).toBe('/x/cockpit');
+        expect(form.attributes('action')).toBe('/x/cockpit/overview');
         expect(search.attributes('name')).toBe('activity_search');
         expect((search.element as HTMLInputElement).value).toBe(
             'money changer',
@@ -1821,7 +1821,7 @@ describe('Cockpit dashboard read model hydration', () => {
                     '[data-testid="cockpit-operator-issuance-activity-filter-clear"]',
                 )
                 .attributes('href'),
-        ).toBe('/x/cockpit');
+        ).toBe('/x/cockpit/overview');
         expect(
             wrapper
                 .find(
@@ -1829,7 +1829,7 @@ describe('Cockpit dashboard read model hydration', () => {
                 )
                 .attributes('href'),
         ).toBe(
-            '/x/cockpit?activity_status=issued&activity_handoff_status=recorded',
+            '/x/cockpit/overview?activity_status=issued&activity_handoff_status=recorded',
         );
         expect(
             wrapper
@@ -1838,7 +1838,7 @@ describe('Cockpit dashboard read model hydration', () => {
                 )
                 .attributes('href'),
         ).toBe(
-            '/x/cockpit?activity_search=money+changer&activity_handoff_status=recorded',
+            '/x/cockpit/overview?activity_search=money+changer&activity_handoff_status=recorded',
         );
         expect(
             wrapper
@@ -1847,7 +1847,7 @@ describe('Cockpit dashboard read model hydration', () => {
                 )
                 .attributes('href'),
         ).toBe(
-            '/x/cockpit?activity_search=money+changer&activity_status=issued',
+            '/x/cockpit/overview?activity_search=money+changer&activity_status=issued',
         );
         expect(
             wrapper

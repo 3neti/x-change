@@ -335,6 +335,15 @@ export type CockpitVocabularyTerm = {
 
 export type CockpitHeaderPageProps = {
     cockpit_header_read_model?: CockpitHeaderReadModel;
+    cockpit_entry_notice?: CockpitEntryNotice | null;
+};
+
+export type CockpitEntryNotice = {
+    schema: 'x-change.cockpit.entry-notice.v1';
+    destination: 'funding' | 'issuance';
+    title: string;
+    message: string;
+    read_only: true;
 };
 
 export type CockpitFundingDestinationSummary = {

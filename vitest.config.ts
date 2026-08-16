@@ -23,6 +23,10 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/ui-dialog.ts",
       ),
+      "@/components/ui/sidebar": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/ui-sidebar.ts",
+      ),
       "@/components/ui/badge": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/ui-badge.ts",

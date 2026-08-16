@@ -45,6 +45,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialProviderCost
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDocumentationPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEntryPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingInstructionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
@@ -182,7 +183,8 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
     Route::get('dashboard', DashboardPageController::class)->name('x-change.dashboard');
 
     Route::prefix('cockpit')->middleware(ShareCockpitHeaderReadModel::class)->group(function (): void {
-        Route::get('/', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
+        Route::get('/', CockpitEntryPageController::class)->name('x-change.cockpit.entry');
+        Route::get('overview', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
         Route::get('documentation', CockpitDocumentationPageController::class)
             ->name('x-change.cockpit.documentation');
         Route::get('commercial', CockpitCommercialOfferingPageController::class)

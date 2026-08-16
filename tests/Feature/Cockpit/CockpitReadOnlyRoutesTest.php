@@ -16,7 +16,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationC
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
 
 it('registers read-only cockpit routes under the x cockpit namespace', function () {
-    expect(route('x-change.cockpit.dashboard'))->toBe('http://localhost/x/cockpit')
+    expect(route('x-change.cockpit.entry'))->toBe('http://localhost/x/cockpit')
+        ->and(route('x-change.cockpit.dashboard'))->toBe('http://localhost/x/cockpit/overview')
         ->and(route('x-change.cockpit.funding.index'))->toBe('http://localhost/x/cockpit/funding')
         ->and(route('x-change.cockpit.quick-generate'))->toBe('http://localhost/x/cockpit/quick-generate')
         ->and(route('x-change.cockpit.documentation'))->toBe('http://localhost/x/cockpit/documentation')

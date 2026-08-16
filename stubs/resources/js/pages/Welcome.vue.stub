@@ -2,7 +2,7 @@
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { login } from '@/routes';
 import { start as startClaim } from '@/routes/x-change/claim';
-import { dashboard } from '@/routes/x-change/cockpit';
+import { entry } from '@/routes/x-change/cockpit';
 import CockpitLandingClaimExperiencePresentation from '@/cockpit/components/CockpitLandingClaimExperiencePresentation.vue';
 import CockpitQuickGenerateOrderPresentation from '@/cockpit/components/CockpitQuickGenerateOrderPresentation.vue';
 import XChangeLogo from '@/components/x-change/XChangeLogo.vue';
@@ -65,7 +65,7 @@ withDefaults(
             <nav aria-label="Account" class="flex items-center gap-1 sm:gap-2">
                 <Link
                     v-if="$page.props.auth.user"
-                    :href="dashboard()"
+                    :href="entry()"
                     class="whitespace-nowrap rounded-full px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 sm:px-4"
                 >
                     Open Cockpit

@@ -11,6 +11,6 @@ final class DashboardPageController extends Controller
 {
     public function __invoke(): RedirectResponse
     {
-        return redirect()->route('x-change.cockpit.dashboard');
+        return redirect()->route('x-change.cockpit.entry');
     }
 }
