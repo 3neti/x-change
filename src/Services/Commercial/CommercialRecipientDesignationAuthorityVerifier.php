@@ -15,28 +15,29 @@ final readonly class CommercialRecipientDesignationAuthorityVerifier
     public function assertValid(CommercialRecipientDesignation $designation): void
     {
         try {
+            $designationAuthority = (new CommercialRecipientDesignationData(
+                counterpartyReference: (string) $designation->counterparty_reference,
+                commercialRole: (string) $designation->commercial_role,
+                componentScope: array_values((array) $designation->component_scope),
+                agreementReference: (string) $designation->agreement_reference,
+                settlementDesignationReference: (string) $designation->settlement_designation_reference,
+                taxProfileReference: filled($designation->tax_profile_reference)
+                    ? (string) $designation->tax_profile_reference
+                    : null,
+                effectiveFrom: $designation->effective_from->toRfc3339String(),
+                effectiveUntil: $designation->effective_until?->toRfc3339String(),
+                settlementDisposition: CommercialSettlementDisposition::from(
+                    (string) $designation->settlement_disposition,
+                ),
+                settlementAccountReference: filled($designation->settlement_account_reference)
+                    ? (string) $designation->settlement_account_reference
+                    : null,
+                settlementPrincipalReference: filled($designation->settlement_principal_reference)
+                    ? (string) $designation->settlement_principal_reference
+                    : null,
+            ))->toArray();
             $authority = [
-                'designation' => (new CommercialRecipientDesignationData(
-                    counterpartyReference: (string) $designation->counterparty_reference,
-                    commercialRole: (string) $designation->commercial_role,
-                    componentScope: array_values((array) $designation->component_scope),
-                    agreementReference: (string) $designation->agreement_reference,
-                    settlementDesignationReference: (string) $designation->settlement_designation_reference,
-                    taxProfileReference: filled($designation->tax_profile_reference)
-                        ? (string) $designation->tax_profile_reference
-                        : null,
-                    effectiveFrom: $designation->effective_from->toRfc3339String(),
-                    effectiveUntil: $designation->effective_until?->toRfc3339String(),
-                    settlementDisposition: CommercialSettlementDisposition::from(
-                        (string) $designation->settlement_disposition,
-                    ),
-                    settlementAccountReference: filled($designation->settlement_account_reference)
-                        ? (string) $designation->settlement_account_reference
-                        : null,
-                    settlementPrincipalReference: filled($designation->settlement_principal_reference)
-                        ? (string) $designation->settlement_principal_reference
-                        : null,
-                ))->toArray(),
+                'designation' => $designationAuthority,
                 'origin' => trim((string) $designation->origin),
                 'authority_reference' => trim((string) $designation->authority_reference),
                 'accepted_snapshot_hash' => strtolower(trim((string) $designation->accepted_snapshot_hash)),
@@ -49,13 +50,44 @@ final readonly class CommercialRecipientDesignationAuthorityVerifier
                 'activated_by_id' => $designation->activated_by_id,
             ];
             $hash = hash('sha256', json_encode($authority, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+
+            if ($this->matches($designation, $hash)) {
+                return;
+            }
+
+            if ($this->canUseLegacyRetainedPayableAuthority($designation)) {
+                unset(
+                    $designationAuthority['settlement_disposition'],
+                    $designationAuthority['settlement_account_reference'],
+                    $designationAuthority['settlement_principal_reference'],
+                );
+                $authority['designation'] = $designationAuthority;
+                $legacyHash = hash(
+                    'sha256',
+                    json_encode($authority, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+                );
+
+                if ($this->matches($designation, $legacyHash)) {
+                    return;
+                }
+            }
         } catch (Throwable) {
             $this->fail($designation);
         }
 
-        if (! hash_equals((string) $designation->authority_hash, $hash)) {
-            $this->fail($designation);
-        }
+        $this->fail($designation);
+    }
+
+    private function matches(CommercialRecipientDesignation $designation, string $hash): bool
+    {
+        return hash_equals((string) $designation->authority_hash, $hash);
+    }
+
+    private function canUseLegacyRetainedPayableAuthority(CommercialRecipientDesignation $designation): bool
+    {
+        return $designation->settlement_disposition === CommercialSettlementDisposition::RetainPayable->value
+            && blank($designation->settlement_account_reference)
+            && blank($designation->settlement_principal_reference);
     }
 
     private function fail(CommercialRecipientDesignation $designation): never

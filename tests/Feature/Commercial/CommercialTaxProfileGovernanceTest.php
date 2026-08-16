@@ -7,6 +7,7 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XChange\Models\CommercialTaxProfile;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
+use LBHurtado\XChange\Services\Commercial\CommercialRecipientDesignationAuthorityVerifier;
 use LBHurtado\XChange\Services\Commercial\CommercialRecipientDesignationGuard;
 use LBHurtado\XChange\Services\Commercial\CommercialTaxProfileRegistry;
 use LBHurtado\XChange\Services\Commercial\PersistCommercialTaxProfile;
@@ -68,6 +69,28 @@ it('does not infer tax authority when both the allocation and designation omit i
     );
 
     expect(CommercialTaxProfile::query()->count())->toBe(0);
+});
+
+it('accepts legacy retained-payable authority without allowing an Account-credit reinterpretation', function (): void {
+    $designation = CommercialRecipientDesignation::query()->firstOrFail();
+    $legacyAuthorityHash = legacyRecipientDesignationAuthorityHash($designation);
+
+    DB::table($designation->getTable())
+        ->where('id', $designation->getKey())
+        ->update(['authority_hash' => $legacyAuthorityHash]);
+
+    app(CommercialRecipientDesignationAuthorityVerifier::class)->assertValid($designation->fresh());
+
+    DB::table($designation->getTable())
+        ->where('id', $designation->getKey())
+        ->update([
+            'settlement_disposition' => 'internal_account_credit',
+            'settlement_account_reference' => 'wallet:counterparty:3neti:php',
+            'settlement_principal_reference' => hash('sha256', 'counterparty:3neti'),
+        ]);
+
+    expect(fn () => app(CommercialRecipientDesignationAuthorityVerifier::class)->assertValid($designation->fresh()))
+        ->toThrow(DomainException::class, 'failed immutable authority verification');
 });
 
 it('fails closed when settlement disposition and Account binding disagree', function (): void {
@@ -161,4 +184,37 @@ function taxAllocationPlan(string $designationReference, ?string $taxProfileRefe
             quantity: 1,
         )],
     );
+}
+
+function legacyRecipientDesignationAuthorityHash(CommercialRecipientDesignation $designation): string
+{
+    $componentScope = array_values((array) $designation->component_scope);
+    sort($componentScope, SORT_STRING);
+
+    $authority = [
+        'designation' => [
+            'counterparty_reference' => trim((string) $designation->counterparty_reference),
+            'commercial_role' => trim((string) $designation->commercial_role),
+            'component_scope' => $componentScope,
+            'agreement_reference' => trim((string) $designation->agreement_reference),
+            'settlement_designation_reference' => trim((string) $designation->settlement_designation_reference),
+            'tax_profile_reference' => filled($designation->tax_profile_reference)
+                ? trim((string) $designation->tax_profile_reference)
+                : null,
+            'effective_from' => $designation->effective_from->toRfc3339String(),
+            'effective_until' => $designation->effective_until?->toRfc3339String(),
+        ],
+        'origin' => trim((string) $designation->origin),
+        'authority_reference' => trim((string) $designation->authority_reference),
+        'accepted_snapshot_hash' => strtolower(trim((string) $designation->accepted_snapshot_hash)),
+        'acceptance_evidence_hash' => filled($designation->acceptance_evidence_hash)
+            ? strtolower(trim((string) $designation->acceptance_evidence_hash))
+            : null,
+        'representative_type' => $designation->representative_type,
+        'representative_reference' => $designation->representative_reference,
+        'activated_by_type' => $designation->activated_by_type,
+        'activated_by_id' => $designation->activated_by_id,
+    ];
+
+    return hash('sha256', json_encode($authority, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
 }
