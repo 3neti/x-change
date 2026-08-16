@@ -65,6 +65,28 @@ it('installs additive commercial settlement operation tables and capabilities', 
         );
 });
 
+it('uses distinct PostgreSQL-safe names for allocation disposition constraints', function (): void {
+    $constraintNames = [
+        'xchg_allocation_dispositions_allocation_unique',
+        'xchg_allocation_dispositions_allocation_foreign',
+        'xchg_allocation_dispositions_operation_unique',
+    ];
+
+    expect($constraintNames)->toHaveCount(count(array_unique($constraintNames)));
+
+    foreach ($constraintNames as $constraintName) {
+        expect(strlen($constraintName))->toBeLessThanOrEqual(63);
+    }
+
+    $migration = file_get_contents(__DIR__.'/../../../database/migrations/2026_08_16_141000_create_x_change_commercial_allocation_dispositions_table.php');
+
+    expect($migration)->not->toBeFalse();
+
+    foreach ($constraintNames as $constraintName) {
+        expect($migration)->toContain($constraintName);
+    }
+});
+
 it('encrypts commission payout destinations at rest', function (): void {
     $batch = PartnerCommissionPayoutBatch::query()->create([
         'reference' => 'commission-payout:test-encryption',
