@@ -13,8 +13,10 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialCatalogData;
+use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
 use LBHurtado\XCommerce\Data\CommercialQuoteData;
 use LBHurtado\XCommerce\Data\CommercialQuoteLineInputData;
+use LBHurtado\XCommerce\Data\CommercialTaxProfileData;
 use LBHurtado\XCommerce\Services\DeterministicCommercialQuoteBuilder;
 
 final class PayCodeCommercialQuoteService
@@ -25,6 +27,7 @@ final class PayCodeCommercialQuoteService
         private readonly CommercialComponentEconomicsResolverContract $componentEconomics,
         private readonly DeterministicCommercialQuoteBuilder $quotes,
         private readonly CommercialRecipientDesignationGuard $recipientDesignations,
+        private readonly CommercialTaxProfileRegistry $taxProfiles,
     ) {}
 
     /**
@@ -52,10 +55,36 @@ final class PayCodeCommercialQuoteService
             lineInputs: $this->lineInputs($instructions, $catalog),
             offering: $offering,
             componentEconomics: $componentEconomics,
+            taxProfiles: $this->taxProfiles($componentEconomics),
         );
         $this->recipientDesignations->assertPlan($quote->allocationPlan);
 
         return $quote;
+    }
+
+    /**
+     * @return array<string, CommercialTaxProfileData>
+     */
+    private function taxProfiles(CommercialComponentEconomicsSetData $componentEconomics): array
+    {
+        $references = [];
+
+        foreach ($componentEconomics->components as $component) {
+            foreach ($component->allocationSchedule?->rules ?? [] as $rule) {
+                if ($rule->taxPolicyReference !== null) {
+                    $references[$rule->taxPolicyReference] = true;
+                }
+            }
+        }
+
+        $profiles = [];
+        foreach (array_keys($references) as $reference) {
+            $profiles[$reference] = $this->taxProfiles->resolveEffective($reference);
+        }
+
+        ksort($profiles);
+
+        return $profiles;
     }
 
     /**

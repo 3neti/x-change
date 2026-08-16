@@ -53,7 +53,7 @@ final readonly class ProvisionCommercialRecipientDesignationBaselines
                 componentScope: $scope,
                 agreementReference: (string) $rule->agreementReference,
                 settlementDesignationReference: (string) $rule->designationReference,
-                taxProfileReference: null,
+                taxProfileReference: $rule->taxPolicyReference,
                 effectiveFrom: '1970-01-01T00:00:00+00:00',
             );
             $snapshotHash = hash('sha256', json_encode($designation->toArray(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));

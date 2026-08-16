@@ -255,6 +255,10 @@ final readonly class PostCommercialSale
                 'tax_policy_reference' => $line->taxPolicyReference,
                 'unit_amount_minor' => $line->unitAmountMinor,
                 'quantity' => $line->quantity,
+                'parent_policy_rule_reference' => $line->parentPolicyRuleReference,
+                'gross_amount_minor' => $line->grossAmountMinor,
+                'tax_profile_version' => $line->taxProfileVersion,
+                'tax_profile_snapshot_hash' => $line->taxProfileSnapshotHash,
             ],
         ]);
     }
