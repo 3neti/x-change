@@ -40,6 +40,20 @@ function configureCockpitCommercialSystemPrincipal(): User
 }
 
 beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    $system = User::query()->create([
+        'name' => 'X-Change System',
+        'email' => 'system@example.test',
+        'password' => 'password',
+    ]);
+    config()->set('account.system_user.candidates', [
+        'x-change' => [
+            'model' => User::class,
+            'identifier' => $system->email,
+            'identifier_column' => 'email',
+        ],
+    ]);
     app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:cockpit-test');
 });
 
@@ -97,6 +111,8 @@ it('shows the active governed offering to an authorized named operator', functio
         ->assertJsonPath('props.commercial_offering.source', 'installation_baseline')
         ->assertJsonPath('props.commercial_offering.active.reference', 'commercial-offering:pay_code')
         ->assertJsonPath('props.commercial_offering.active.legal_trace.jurisdiction', 'PH')
+        ->assertJsonPath('props.commercial_offering.artifact.schema', '3neti.x-change.commercial-offering-manifest.v1')
+        ->assertJsonPath('props.commercial_offering.history.0.version', 1)
         ->assertJsonPath('props.commercial_offering.controls.schema', 'x-change.cockpit.commercial-controls.v1')
         ->assertJsonPath('props.commercial_offering.partners.schema', 'x-change.cockpit.commercial-partners.v1')
         ->assertJsonPath('props.commercial_offering.controls.commissions.earned_minor', 0)

@@ -11,8 +11,10 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Number;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
+use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleUserModelResolver;
+use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use RuntimeException;
 
 class PrepareLifecycleEnvironmentCommand extends Command
@@ -406,89 +408,31 @@ class PrepareLifecycleEnvironmentCommand extends Command
 
     protected function seedInstructionItems(): void
     {
-        $configuredSeeder = config('x-change.lifecycle.seeders.instruction_items');
-
-        if (is_string($configuredSeeder) && $configuredSeeder !== '' && class_exists($configuredSeeder)) {
-            Artisan::call('db:seed', [
-                '--class' => $configuredSeeder,
-                '--force' => true,
-            ]);
-
-            $this->line(Artisan::output());
-        } else {
-            $this->seedInstructionItemsFromPricingConfig();
+        try {
+            $offering = app(CommercialOfferingResolverContract::class)->resolve('pay_code');
+        } catch (\DomainException) {
+            $offering = app(BootstrapCommercialOfferingFactory::class)->make('pay_code');
         }
 
-        $this->seedInstructionItemsFromCommercialCatalog();
-    }
-
-    protected function seedInstructionItemsFromPricingConfig(): void
-    {
-        $items = (array) config('x-change.pricelist', []);
-
-        if ($items === []) {
-            $this->warn('No x-change.pricelist config found; instruction_items not seeded.');
-
-            return;
-        }
-
-        foreach ($items as $index => $data) {
-            if (! is_array($data)) {
-                continue;
-            }
-
-            $meta = [
-                'description' => $data['description'] ?? null,
-                'label' => $data['label'] ?? null,
-                'category' => $data['category'] ?? 'other',
-            ];
-
-            if (! empty($data['deprecated'])) {
-                $meta['deprecated'] = true;
-                $meta['deprecated_reason'] = $data['deprecated_reason'] ?? 'No longer in use';
-            }
+        foreach ($offering->catalog->items as $item) {
+            $index = $item->reference;
 
             DB::table('instruction_items')->updateOrInsert(
                 ['index' => $index],
                 [
-                    'name' => $this->inferInstructionItemName($index, $data),
-                    'type' => $this->inferInstructionItemType($index, $data),
-                    'price' => (int) ($data['price'] ?? 0), // stored in minor units
-                    'currency' => (string) ($data['currency'] ?? 'PHP'),
-                    'meta' => json_encode($meta, JSON_UNESCAPED_SLASHES),
-                    'revenue_destination_type' => null,
-                    'revenue_destination_id' => null,
-                    'updated_at' => now(),
-                    'created_at' => now(),
-                ]
-            );
-        }
-
-        $this->info('Instruction items seeded from x-change.pricelist config.');
-    }
-
-    protected function seedInstructionItemsFromCommercialCatalog(): void
-    {
-        $catalog = (array) config('x-commerce.catalogs.pay_code.items', []);
-
-        foreach ($catalog as $index => $data) {
-            if (! is_string($index) || $index === '' || ! is_array($data)) {
-                continue;
-            }
-
-            DB::table('instruction_items')->updateOrInsert(
-                ['index' => $index],
-                [
-                    'name' => $this->inferInstructionItemName($index, $data),
-                    'type' => $this->inferInstructionItemType($index, $data),
-                    'price' => (int) ($data['unit_price_minor'] ?? 0),
-                    'currency' => (string) config('x-commerce.catalogs.pay_code.currency', 'PHP'),
+                    'name' => $item->label,
+                    'type' => $item->category,
+                    'price' => $item->unitPriceMinor,
+                    'currency' => $offering->catalog->currency,
                     'meta' => json_encode([
-                        'label' => $data['label'] ?? null,
-                        'description' => $data['description'] ?? null,
-                        'category' => $data['category'] ?? 'other',
-                        'catalog_reference' => config('x-commerce.catalogs.pay_code.reference'),
-                        'catalog_version' => config('x-commerce.catalogs.pay_code.version'),
+                        'label' => $item->label,
+                        'category' => $item->category,
+                        'deprecated' => $item->deprecated,
+                        'catalog_reference' => $offering->catalog->reference,
+                        'catalog_version' => $offering->catalog->version,
+                        'commercial_offering_reference' => $offering->reference,
+                        'commercial_offering_version' => $offering->version,
+                        'commercial_offering_snapshot_hash' => $offering->snapshotHash(),
                     ], JSON_UNESCAPED_SLASHES),
                     'revenue_destination_type' => null,
                     'revenue_destination_id' => null,
@@ -497,6 +441,8 @@ class PrepareLifecycleEnvironmentCommand extends Command
                 ]
             );
         }
+
+        $this->info('Instruction items projected from the governed Commercial Offering.');
     }
 
     /**

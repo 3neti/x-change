@@ -2,6 +2,9 @@
 
 x-change commissions an institution with usable prices without pretending that a human maker or checker approved them. The package ships an immutable baseline Commercial Offering for each governed profile. Commissioning records the package version, manifest reference, complete snapshot, and hash, then activates it through the `commissioning_manifest` authority.
 
+The canonical pricing-source and estimate-to-issuance rules are documented in
+[Commercial Pricing Authority](PRICING_AUTHORITY.md).
+
 The default mode is `bootstrap_immutable`:
 
 1. installation activates package-defined pricing;

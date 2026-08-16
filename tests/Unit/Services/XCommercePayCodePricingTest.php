@@ -76,6 +76,9 @@ it('uses the immutable x-commerce catalog for Pay Code pricing and projections',
         ])
         ->and($first['catalog_reference'])->toBe('pay-code')
         ->and($first['catalog_version'])->toBe(3)
+        ->and($first['commercial_offering_reference'])->toBe('commercial-offering:pay_code')
+        ->and($first['commercial_offering_version'])->toBe(1)
+        ->and($first['commercial_offering_snapshot_hash'])->toHaveLength(64)
         ->and($first['waterfall_policy_reference'])->toBe('pay-code-commercial-waterfall')
         ->and($first['waterfall_policy_version'])->toBe(1)
         ->and($first['commercial_quote_reference'])->toStartWith('commercial-quote:');

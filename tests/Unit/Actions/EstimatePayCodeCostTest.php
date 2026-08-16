@@ -62,6 +62,12 @@ it('returns pricing estimate from voucher instructions input', function () {
             'location' => 0.0,
         ],
         'total' => 5.0,
+        'commercial_offering_reference' => 'commercial-offering:pay_code',
+        'commercial_offering_version' => 3,
+        'commercial_offering_snapshot_hash' => str_repeat('a', 64),
+        'commercial_quote_reference' => 'commercial-quote:estimate-1',
+        'catalog_reference' => 'pay-code',
+        'catalog_version' => 7,
     ];
 
     $pricing = Mockery::mock(PricingServiceContract::class);
@@ -86,6 +92,12 @@ it('returns pricing estimate from voucher instructions input', function () {
     expect($result->total)->toBe(5.0);
     expect($result->pay_code_value)->toBe(100.0);
     expect($result->account_debit)->toBe(105.0);
+    expect($result->commercial_offering_reference)->toBe('commercial-offering:pay_code');
+    expect($result->commercial_offering_version)->toBe(3);
+    expect($result->commercial_offering_snapshot_hash)->toBe(str_repeat('a', 64));
+    expect($result->commercial_quote_reference)->toBe('commercial-quote:estimate-1');
+    expect($result->catalog_reference)->toBe('pay-code');
+    expect($result->catalog_version)->toBe(7);
 });
 
 it('creates instructions from the structured mobile verification contract', function (): void {

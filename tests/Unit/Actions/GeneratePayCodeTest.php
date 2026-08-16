@@ -22,6 +22,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Exceptions\RiderStampArtworkUnavailable;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
+use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
@@ -67,8 +68,9 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
         ],
         'count' => 1,
     ];
-    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
-        ->normalize($input);
+    $normalizedInput = app(ClaimEvidenceRequirements::class)->snapshot(
+        app(VoucherIssuancePayloadNormalizer::class)->normalize($input),
+    );
 
     $estimate = new PricingEstimateData(
         currency: 'PHP',
@@ -131,7 +133,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     $commercialSales = Mockery::mock(PayCodeCommercialSaleService::class);
     $commercialSales->shouldReceive('post')
         ->once()
-        ->with($issuer, $normalizedInput, $issued, 'manual')
+        ->with($issuer, $normalizedInput, $issued, 'manual', $estimate)
         ->andReturn([
             'debit' => [
                 'id' => 501,
@@ -191,8 +193,9 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
 
 it('throws when issuer cannot be resolved', function () {
     $input = ['cash' => ['amount' => 100.0, 'currency' => 'PHP']];
-    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
-        ->normalize($input);
+    $normalizedInput = app(ClaimEvidenceRequirements::class)->snapshot(
+        app(VoucherIssuancePayloadNormalizer::class)->normalize($input),
+    );
 
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')
@@ -240,8 +243,9 @@ it('stops before estimating, funding, or issuing when selected Stamp artwork is 
         ],
         'count' => 1,
     ];
-    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
-        ->normalize($input);
+    $normalizedInput = app(ClaimEvidenceRequirements::class)->snapshot(
+        app(VoucherIssuancePayloadNormalizer::class)->normalize($input),
+    );
 
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')
@@ -297,8 +301,9 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
         'feedback' => [],
         'rider' => [],
     ];
-    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
-        ->normalize($input);
+    $normalizedInput = app(ClaimEvidenceRequirements::class)->snapshot(
+        app(VoucherIssuancePayloadNormalizer::class)->normalize($input),
+    );
 
     $estimate = new PricingEstimateData(
         currency: 'PHP',
@@ -371,8 +376,9 @@ it('throws provisioning required when issuer provider wallet is missing', functi
         'feedback' => [],
         'rider' => [],
     ];
-    $normalizedInput = app(VoucherIssuancePayloadNormalizer::class)
-        ->normalize($input);
+    $normalizedInput = app(ClaimEvidenceRequirements::class)->snapshot(
+        app(VoucherIssuancePayloadNormalizer::class)->normalize($input),
+    );
 
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')

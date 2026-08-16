@@ -4088,7 +4088,7 @@ async function submit(): Promise<void> {
     submissionErrorHeading.value = 'Fix these fields before issuing';
 
     const idempotencyKey = generateIdempotencyKey();
-    const payload = buildPayload();
+    const payload = buildIssuancePayload();
 
     emit('submitStart', payload);
 
@@ -4298,6 +4298,29 @@ function refreshReadModel(): void {
 
 function buildPayload(): Record<string, unknown> {
     return buildPayloadShape(false);
+}
+
+function buildIssuancePayload(): Record<string, unknown> {
+    const payload = buildPayload();
+    const estimate = livePricingEstimate.value;
+
+    if (
+        typeof estimate?.commercial_offering_reference === 'string' &&
+        typeof estimate.commercial_offering_version === 'number' &&
+        typeof estimate.commercial_offering_snapshot_hash === 'string'
+    ) {
+        payload._pricing = {
+            offering_reference: estimate.commercial_offering_reference,
+            offering_version: estimate.commercial_offering_version,
+            offering_snapshot_hash:
+                estimate.commercial_offering_snapshot_hash,
+            ...(typeof estimate.commercial_quote_reference === 'string'
+                ? { quote_reference: estimate.commercial_quote_reference }
+                : {}),
+        };
+    }
+
+    return payload;
 }
 
 function buildPayloadShape(

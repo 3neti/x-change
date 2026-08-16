@@ -285,6 +285,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'base_fee' => $estimate->base_fee,
                 'total' => $estimate->total,
                 'components' => $estimate->components,
+                'commercial_offering' => [
+                    'reference' => $estimate->commercial_offering_reference,
+                    'version' => $estimate->commercial_offering_version,
+                    'snapshot_hash' => $estimate->commercial_offering_snapshot_hash,
+                ],
                 'blocking' => false,
                 'source' => 'EstimatePayCodeCost',
             ];

@@ -17,9 +17,12 @@ interface PricelistServiceContract
      *         name:string|null,
      *         category:string|null,
      *         amount:float|null,
+     *         amount_minor?:int|null,
      *         currency:string|null,
      *         active:bool|null
-     *     }>
+     *     }>,
+     *     commercial_offering?:array{reference:string,version:int,snapshot_hash:string,effective_at:string},
+     *     catalog?:array{reference:string,version:int}
      * }
      */
     public function showPricelist(): array;
@@ -33,6 +36,7 @@ interface PricelistServiceContract
      *     name:string|null,
      *     category:string|null,
      *     amount:float|null,
+     *     amount_minor?:int|null,
      *     currency:string|null,
      *     active:bool|null
      * }>

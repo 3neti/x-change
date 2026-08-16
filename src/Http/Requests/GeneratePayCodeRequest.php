@@ -221,6 +221,12 @@ class GeneratePayCodeRequest extends FormRequest
             'metadata.custom.named_slices' => ['nullable', 'array'],
             'metadata.custom.named_slice_policy' => ['nullable', 'array'],
 
+            '_pricing' => ['nullable', 'array:offering_reference,offering_version,offering_snapshot_hash,quote_reference'],
+            '_pricing.offering_reference' => ['required_with:_pricing', 'string', 'max:190'],
+            '_pricing.offering_version' => ['required_with:_pricing', 'integer', 'min:1'],
+            '_pricing.offering_snapshot_hash' => ['required_with:_pricing', 'string', 'size:64', 'regex:/^[a-f0-9]{64}$/'],
+            '_pricing.quote_reference' => ['nullable', 'string', 'max:190'],
+
             'issuer_id' => ['sometimes', 'integer'], // TODO: make this intentional, require this
         ];
     }

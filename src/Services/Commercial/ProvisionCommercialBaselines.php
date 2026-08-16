@@ -19,6 +19,7 @@ final readonly class ProvisionCommercialBaselines
         private BootstrapCommercialOfferingFactory $factory,
         private ActivateCommercialOffering $activate,
         private CommercialGovernanceJournal $journal,
+        private CommercialOfferingManifestCompiler $manifests,
     ) {}
 
     /** @return list<CommercialOfferingActivation> */
@@ -56,9 +57,10 @@ final readonly class ProvisionCommercialBaselines
     private function baseline(string $profile, string $manifestReference): CommercialOffering
     {
         $snapshot = $this->factory->make($profile);
+        $commercialManifest = $this->manifests->compile($profile, $snapshot);
         $packageVersion = InstalledVersions::getPrettyVersion('3neti/x-change') ?? 'dev-source';
 
-        return DB::transaction(function () use ($profile, $snapshot, $packageVersion, $manifestReference): CommercialOffering {
+        return DB::transaction(function () use ($profile, $snapshot, $commercialManifest, $packageVersion, $manifestReference): CommercialOffering {
             $existing = CommercialOffering::query()
                 ->where('reference', $snapshot->reference)
                 ->where('origin', CommercialOfferingOrigin::InstallationBaseline->value)
@@ -70,7 +72,17 @@ final readonly class ProvisionCommercialBaselines
                     throw new \DomainException("Commercial baseline [{$profile}] conflicts with its persisted snapshot.");
                 }
 
-                return $existing;
+                if ($existing->manifest_hash === null) {
+                    $existing->forceFill([
+                        'manifest_schema' => $commercialManifest->schema,
+                        'manifest_hash' => $commercialManifest->hash,
+                        'manifest_yaml' => $commercialManifest->yaml,
+                    ])->save();
+                } elseif ($existing->manifest_hash !== $commercialManifest->hash) {
+                    throw new \DomainException("Commercial baseline [{$profile}] conflicts with its persisted manifest.");
+                }
+
+                return $existing->refresh();
             }
 
             if (CommercialOffering::query()->where('reference', $snapshot->reference)->exists()) {
@@ -88,6 +100,9 @@ final readonly class ProvisionCommercialBaselines
                 'currency' => $snapshot->catalog->currency,
                 'snapshot_hash' => $snapshot->snapshotHash(),
                 'snapshot' => $snapshot->toArray(),
+                'manifest_schema' => $commercialManifest->schema,
+                'manifest_hash' => $commercialManifest->hash,
+                'manifest_yaml' => $commercialManifest->yaml,
                 'source_package' => '3neti/x-change',
                 'source_package_version' => $packageVersion,
                 'commissioning_manifest_reference' => $manifestReference,

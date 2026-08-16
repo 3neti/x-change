@@ -24,6 +24,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
+use LBHurtado\XChange\Services\Commercial\CommercialPricingAcceptanceGuard;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
 use LBHurtado\XChange\Services\Funding\PreparePayCodeAccountFundingIssuance;
@@ -54,6 +55,7 @@ class GeneratePayCode
         protected ?RiderSplashArtworkSnapshotterContract $splashArtwork = null,
         protected ?TreasuryCompatibilityLedgerSynchronizer $compatibilityLedger = null,
         protected ?PreparePayCodeTreasuryIssuance $treasuryIssuance = null,
+        protected ?CommercialPricingAcceptanceGuard $pricingAcceptance = null,
     ) {}
 
     /**
@@ -113,6 +115,7 @@ class GeneratePayCode
         $input = $this->splashArtwork()->prepare($input);
         $wallet = $this->resolveIssuanceWallet($issuer, $input);
         $estimate = $this->estimatePayCodeCost->handle($input);
+        $this->assertAcceptedPricing($input, $estimate);
         $funding = $this->fundingPolicy()->assertCanIssue(
             owner: $issuer,
             localWallet: $wallet,
@@ -173,6 +176,21 @@ class GeneratePayCode
                 allocations: $allocation['allocations'] ?? [],
             );
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function assertAcceptedPricing(array $input, PricingEstimateData $estimate): void
+    {
+        $expected = data_get($input, '_pricing');
+
+        if (! is_array($expected)) {
+            return;
+        }
+
+        ($this->pricingAcceptance ??= app(CommercialPricingAcceptanceGuard::class))
+            ->assertExpected($expected, $estimate);
     }
 
     /**
@@ -292,6 +310,7 @@ class GeneratePayCode
                     'provider',
                     data_get($input, 'provider', 'manual'),
                 ),
+                acceptedEstimate: $estimate,
             );
         }
 

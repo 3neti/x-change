@@ -38,6 +38,24 @@ class EstimatePayCodeCost
             charges: (array) ($estimate['charges'] ?? []),
             pay_code_value: $payCodeValue,
             account_debit: round($payCodeValue + $issueCost, 2),
+            commercial_offering_reference: is_string($estimate['commercial_offering_reference'] ?? null)
+                ? $estimate['commercial_offering_reference']
+                : null,
+            commercial_offering_version: is_numeric($estimate['commercial_offering_version'] ?? null)
+                ? (int) $estimate['commercial_offering_version']
+                : null,
+            commercial_offering_snapshot_hash: is_string($estimate['commercial_offering_snapshot_hash'] ?? null)
+                ? $estimate['commercial_offering_snapshot_hash']
+                : null,
+            commercial_quote_reference: is_string($estimate['commercial_quote_reference'] ?? null)
+                ? $estimate['commercial_quote_reference']
+                : null,
+            catalog_reference: is_string($estimate['catalog_reference'] ?? null)
+                ? $estimate['catalog_reference']
+                : null,
+            catalog_version: is_numeric($estimate['catalog_version'] ?? null)
+                ? (int) $estimate['catalog_version']
+                : null,
         );
     }
 }

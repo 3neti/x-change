@@ -8,6 +8,7 @@ import {
   Calculator,
   Check,
   Coins,
+  FileCode2,
   GitBranch,
   HandCoins,
   Landmark,
@@ -281,6 +282,24 @@ const props = defineProps<{
     profile: "pay_code" | "account_funding";
     active: CommercialOffering;
     source: "installation_baseline" | "maker_checker_revision" | "unavailable";
+    artifact: null | {
+      schema: string | null;
+      hash: string | null;
+      yaml: string | null;
+      snapshot_hash: string;
+      activation_reference: string;
+      activated_at: string | null;
+    };
+    history: Array<{
+      reference: string;
+      version: number;
+      status: string;
+      origin: string;
+      snapshot_hash: string;
+      manifest_hash: string | null;
+      effective_at: string | null;
+      approved_at: string | null;
+    }>;
     can_manage: boolean;
     can_approve: boolean;
     can_reconcile_provider_costs?: boolean;
@@ -307,7 +326,7 @@ const props = defineProps<{
 }>();
 
 const activeTab = ref<
-  "price-list" | "waterfall" | "partners" | "activity" | "operations" | "policy"
+  "price-list" | "waterfall" | "artifact" | "partners" | "activity" | "operations" | "policy"
 >("price-list");
 const approvalReference = ref("");
 const approvingId = ref<number | null>(null);
@@ -430,6 +449,19 @@ function label(value: string): string {
 
 function submit(): void {
   form.post(storeOffering.url(), { preserveScroll: true });
+}
+
+function downloadManifest(): void {
+  const yaml = props.commercialOffering.artifact?.yaml;
+
+  if (!yaml || typeof document === "undefined") return;
+
+  const url = URL.createObjectURL(new Blob([yaml], { type: "application/yaml" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${active.value.reference.replaceAll(":", "-")}-v${active.value.version}.yaml`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function approve(id: number): void {
@@ -761,6 +793,18 @@ function retryCommission(id: number): void {
               type="button"
               class="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold"
               :class="
+                activeTab === 'artifact'
+                  ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-white'
+                  : 'text-slate-500'
+              "
+              @click="activeTab = 'artifact'"
+            >
+              <FileCode2 class="size-4" /> Artifact
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold"
+              :class="
                 activeTab === 'partners'
                   ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-white'
                   : 'text-slate-500'
@@ -979,6 +1023,56 @@ function retryCommission(id: number): void {
               </label>
             </div>
           </article>
+        </div>
+
+        <div v-else-if="activeTab === 'artifact'" class="space-y-5 p-5">
+          <section class="grid gap-3 md:grid-cols-2">
+            <article class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+              <p class="text-xs font-semibold text-slate-500">Executable Authority</p>
+              <p class="mt-1 text-sm font-semibold">
+                {{ active.reference }} · Version {{ active.version }}
+              </p>
+              <p class="mt-2 break-all font-mono text-xs text-slate-500">
+                Snapshot {{ commercialOffering.artifact?.snapshot_hash ?? "Unavailable" }}
+              </p>
+            </article>
+            <article class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+              <p class="text-xs font-semibold text-slate-500">Frozen Source Artifact</p>
+              <p class="mt-1 text-sm font-semibold">
+                {{ commercialOffering.artifact?.schema ?? "Legacy version" }}
+              </p>
+              <p class="mt-2 break-all font-mono text-xs text-slate-500">
+                Manifest {{ commercialOffering.artifact?.hash ?? "Not yet frozen" }}
+              </p>
+            </article>
+          </section>
+
+          <section v-if="commercialOffering.artifact?.yaml" class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+              <div>
+                <h3 class="text-sm font-semibold">Commercial Offering YAML</h3>
+                <p class="text-xs text-slate-500">Generated from the structured draft, frozen, hashed, then compiled for activation.</p>
+              </div>
+              <button type="button" class="h-9 shrink-0 rounded-lg border border-slate-200 px-3 text-xs font-semibold dark:border-slate-700" @click="downloadManifest">
+                Download YAML
+              </button>
+            </div>
+            <pre class="max-h-[30rem] overflow-auto whitespace-pre-wrap break-words bg-slate-950 p-4 text-xs leading-5 text-slate-200">{{ commercialOffering.artifact.yaml }}</pre>
+          </section>
+
+          <section>
+            <h3 class="text-sm font-semibold">Version History</h3>
+            <div class="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+              <article v-for="version in commercialOffering.history" :key="`${version.reference}:${version.version}`" class="grid gap-2 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">v{{ version.version }}</span>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold">{{ label(version.origin) }}</p>
+                  <p class="truncate font-mono text-xs text-slate-500">{{ version.manifest_hash ?? version.snapshot_hash }}</p>
+                </div>
+                <span class="text-xs font-semibold text-slate-500">{{ label(version.status) }}</span>
+              </article>
+            </div>
+          </section>
         </div>
 
         <div v-else-if="activeTab === 'partners'" class="space-y-5 p-5">

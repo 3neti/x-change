@@ -22,6 +22,12 @@ export type PayCodeCostEstimate = {
     total?: number;
     pay_code_value?: number | null;
     account_debit?: number | null;
+    commercial_offering_reference?: string | null;
+    commercial_offering_version?: number | null;
+    commercial_offering_snapshot_hash?: string | null;
+    commercial_quote_reference?: string | null;
+    catalog_reference?: string | null;
+    catalog_version?: number | null;
     [key: string]: unknown;
 };
 

@@ -18,6 +18,11 @@ use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
+beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+});
+
 function grantCommercialCapability(User $operator, CommercialOperatorCapability $capability): void
 {
     CommercialOperatorAuthorization::query()->create([
@@ -86,6 +91,9 @@ it('publishes an immutable offering through distinct maker and checker authority
 
     expect($published->status)->toBe(CommercialOfferingStatus::Published)
         ->and($published->snapshot_hash)->toBe($published->offering()->snapshotHash())
+        ->and($published->manifest_schema)->toBe('3neti.x-change.commercial-offering-manifest.v1')
+        ->and($published->manifest_hash)->toHaveLength(64)
+        ->and($published->manifest_yaml)->toContain('schema: 3neti.x-change.commercial-offering-manifest.v1')
         ->and($published->created_by_id)->toBe($maker->getKey())
         ->and($published->approved_by_id)->toBe($checker->getKey())
         ->and($published->authorization_reference)->toBe('board-resolution:2026-08-07:pricing-v1');
@@ -182,6 +190,34 @@ it('retires the prior active offering only when a later published version is act
 it('fails closed when a governed profile has no active offering', function (): void {
     expect(fn () => app(CommercialOfferingResolverContract::class)->resolve('pay_code'))
         ->toThrow(DomainException::class, 'has no active governed version');
+});
+
+it('refuses to activate an Offering without frozen manifest evidence', function (): void {
+    $maker = actingAsTestUser();
+    $checker = actingAsTestUser();
+    grantCommercialCapability($maker, CommercialOperatorCapability::ManageOfferings);
+    grantCommercialCapability($checker, CommercialOperatorCapability::ApproveOfferings);
+    $action = app(ManageCommercialOffering::class);
+    $published = $action->publish(
+        $checker,
+        $action->submit($maker, $action->createDraft(
+            $maker,
+            'pay_code',
+            commercialOfferingVersion(1, now()->subMinute()->toIso8601String()),
+        )),
+        'pricing-approval:missing-manifest',
+    );
+    $published->forceFill([
+        'manifest_schema' => null,
+        'manifest_hash' => null,
+        'manifest_yaml' => null,
+    ])->save();
+
+    expect(fn () => app(ActivateCommercialOffering::class)->execute(
+        $published,
+        CommercialActivationAuthority::IndependentApproval,
+        'commercial-activation:missing-manifest',
+    ))->toThrow(DomainException::class, 'requires frozen manifest evidence');
 });
 
 it('fails closed for unauthorized operators and same-person approval', function (): void {

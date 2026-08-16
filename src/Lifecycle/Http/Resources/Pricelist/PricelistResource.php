@@ -23,6 +23,16 @@ class PricelistResource extends JsonResource
                 'items' => PricelistItemResource::collection(
                     collect(data_get($this->resource, 'items', []))
                 ),
+                'commercial_offering' => [
+                    'reference' => data_get($this->resource, 'commercial_offering.reference'),
+                    'version' => data_get($this->resource, 'commercial_offering.version'),
+                    'snapshot_hash' => data_get($this->resource, 'commercial_offering.snapshot_hash'),
+                    'effective_at' => data_get($this->resource, 'commercial_offering.effective_at'),
+                ],
+                'catalog' => [
+                    'reference' => data_get($this->resource, 'catalog.reference'),
+                    'version' => data_get($this->resource, 'catalog.version'),
+                ],
             ],
             'meta' => [],
         ];

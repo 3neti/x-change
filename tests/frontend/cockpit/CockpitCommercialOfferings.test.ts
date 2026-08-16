@@ -174,6 +174,28 @@ const active = {
   },
 };
 
+const artifact = {
+  schema: "3neti.x-change.commercial-offering-manifest.v1",
+  hash: "c".repeat(64),
+  yaml: "schema: 3neti.x-change.commercial-offering-manifest.v1\nprofile: pay_code\n",
+  snapshot_hash: "d".repeat(64),
+  activation_reference: "commercial-baseline:pay_code:test",
+  activated_at: "2026-08-07T00:00:00+00:00",
+};
+
+const history = [
+  {
+    reference: "commercial-offering:pay_code",
+    version: 1,
+    status: "published",
+    origin: "installation_baseline",
+    snapshot_hash: artifact.snapshot_hash,
+    manifest_hash: artifact.hash,
+    effective_at: "2026-08-07T00:00:00+00:00",
+    approved_at: null,
+  },
+];
+
 const controls = {
   schema: "x-change.cockpit.commercial-controls.v1",
   sales: {
@@ -353,6 +375,8 @@ describe("Cockpit Commercial Offering administration", () => {
           profile: "pay_code",
           active,
           source: "installation_baseline",
+          artifact,
+          history,
           can_manage: true,
           can_approve: false,
           can_reconcile_provider_costs: true,
@@ -386,11 +410,26 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("OTP Verification");
     expect(wrapper.text()).toContain("Submit New Version");
 
-    await wrapper.get("button:nth-of-type(2)").trigger("click");
+    const waterfallButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("Waterfall"));
+
+    expect(waterfallButton).toBeDefined();
+    await waterfallButton!.trigger("click");
 
     expect(wrapper.text()).toContain("provider cost");
     expect(wrapper.text()).toContain("commercial revenue");
     expect(wrapper.text()).toContain("Independent Maker–Checker");
+
+    const artifactButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("Artifact"));
+
+    expect(artifactButton).toBeDefined();
+    await artifactButton!.trigger("click");
+    expect(wrapper.text()).toContain("Commercial Offering YAML");
+    expect(wrapper.text()).toContain("Frozen Source Artifact");
+    expect(wrapper.text()).toContain("Version History");
 
     const partnersButton = wrapper
       .findAll("button")
@@ -447,6 +486,8 @@ describe("Cockpit Commercial Offering administration", () => {
           profile: "pay_code",
           active,
           source: "installation_baseline",
+          artifact,
+          history,
           can_manage: false,
           can_approve: true,
           controls,
@@ -490,6 +531,8 @@ describe("Cockpit Commercial Offering administration", () => {
           profile: "pay_code",
           active,
           source: "installation_baseline",
+          artifact,
+          history,
           can_manage: false,
           can_approve: true,
           controls,

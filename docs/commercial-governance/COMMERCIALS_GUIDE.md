@@ -1,5 +1,8 @@
 # X-Change Commercials Guide
 
+For the canonical price source, YAML artifact, versioning, and quote-locking
+contract, see [Commercial Pricing Authority](PRICING_AUTHORITY.md).
+
 ## Purpose
 
 Commercials is the governed subsystem that answers four separate questions for every Pay Code or Account Funding instruction:

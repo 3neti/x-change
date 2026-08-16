@@ -41,6 +41,12 @@ final readonly class ActivateCommercialOffering
                 throw new \DomainException('Commercial Offering activation refused a snapshot hash mismatch.');
             }
 
+            if ($locked->manifest_schema === null
+                || $locked->manifest_hash === null
+                || $locked->manifest_yaml === null) {
+                throw new \DomainException('Commercial Offering activation requires frozen manifest evidence.');
+            }
+
             $existing = CommercialOfferingActivation::query()
                 ->where('profile', $locked->profile)
                 ->where('activation_reference', $activationReference)

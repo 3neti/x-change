@@ -20,5 +20,11 @@ class PricingEstimateData extends Data
         public array $charges = [],
         public ?float $pay_code_value = null,
         public ?float $account_debit = null,
+        public ?string $commercial_offering_reference = null,
+        public ?int $commercial_offering_version = null,
+        public ?string $commercial_offering_snapshot_hash = null,
+        public ?string $commercial_quote_reference = null,
+        public ?string $catalog_reference = null,
+        public ?int $catalog_version = null,
     ) {}
 }

@@ -12,6 +12,7 @@ use LBHurtado\XChange\Actions\Commercial\PostCommercialSale;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialSale;
@@ -33,6 +34,7 @@ class PayCodeCommercialSaleService
         private readonly TreasuryPrincipalReferenceResolverContract $principalReferences,
         private readonly CommercialPartnerResolverContract $partners,
         private readonly CommercialPartnerPositionService $partnerPositions,
+        private readonly CommercialPricingAcceptanceGuard $pricingAcceptance,
     ) {}
 
     /**
@@ -45,6 +47,7 @@ class PayCodeCommercialSaleService
         array $input,
         array $issued,
         string $provider,
+        ?PricingEstimateData $acceptedEstimate = null,
     ): array {
         $voucherId = (int) ($issued['voucher_id'] ?? 0);
         $code = trim((string) ($issued['code'] ?? ''));
@@ -65,6 +68,9 @@ class PayCodeCommercialSaleService
             sourceCommercialEventReference: 'pay-code-generation:voucher:'.$voucherId,
             attribution: $attribution,
         );
+        if ($acceptedEstimate instanceof PricingEstimateData) {
+            $this->pricingAcceptance->assertQuote($acceptedEstimate, $quote);
+        }
         $snapshot = (new DeterministicCommercialSaleFactory)->accept(
             quote: $quote,
             acceptanceEventReference: 'pay-code-issued:voucher:'.$voucherId,

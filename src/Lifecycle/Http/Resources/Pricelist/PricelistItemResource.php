@@ -24,6 +24,9 @@ class PricelistItemResource extends JsonResource
             'amount' => data_get($this->resource, 'amount') !== null
                 ? (float) data_get($this->resource, 'amount')
                 : null,
+            'amount_minor' => data_get($this->resource, 'amount_minor') !== null
+                ? (int) data_get($this->resource, 'amount_minor')
+                : null,
             'currency' => data_get($this->resource, 'currency') !== null
                 ? (string) data_get($this->resource, 'currency')
                 : null,

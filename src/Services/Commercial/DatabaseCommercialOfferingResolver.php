@@ -14,6 +14,7 @@ final class DatabaseCommercialOfferingResolver implements CommercialOfferingReso
 {
     public function __construct(
         private readonly BootstrapCommercialOfferingFactory $bootstrap,
+        private readonly CommercialOfferingManifestCompiler $manifests,
     ) {}
 
     public function resolve(string $profile): CommercialOfferingData
@@ -33,6 +34,22 @@ final class DatabaseCommercialOfferingResolver implements CommercialOfferingReso
                     || $offering->snapshot_hash !== $activation->snapshot_hash
                     || $offering->snapshot_hash !== $offering->offering()->snapshotHash()) {
                     throw new \DomainException('Active Commercial Offering evidence is inconsistent.');
+                }
+
+                if ($offering->manifest_hash !== null || $offering->manifest_yaml !== null) {
+                    if ($offering->manifest_schema !== CommercialOfferingManifestCompiler::Schema
+                        || ! is_string($offering->manifest_hash)
+                        || ! is_string($offering->manifest_yaml)) {
+                        throw new \DomainException('Active Commercial Offering manifest evidence is incomplete.');
+                    }
+
+                    $manifest = $this->manifests->parse($offering->manifest_yaml);
+
+                    if ($manifest->profile !== $profile
+                        || $manifest->hash !== $offering->manifest_hash
+                        || $manifest->offering->snapshotHash() !== $offering->snapshot_hash) {
+                        throw new \DomainException('Active Commercial Offering manifest evidence is inconsistent.');
+                    }
                 }
 
                 return $offering->offering();

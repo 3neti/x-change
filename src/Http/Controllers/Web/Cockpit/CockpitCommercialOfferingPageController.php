@@ -45,6 +45,8 @@ final class CockpitCommercialOfferingPageController extends Controller
                 'profile' => $profile,
                 'active' => $offering->toArray(),
                 'source' => $this->source($profile),
+                'artifact' => $this->artifact($profile),
+                'history' => $this->history($profile),
                 'can_manage' => $this->authority->allows(
                     $operator,
                     CommercialOperatorCapability::ManageOfferings,
@@ -138,5 +140,51 @@ final class CockpitCommercialOfferingPageController extends Controller
             ->first();
 
         return $activation?->origin?->value ?? 'unavailable';
+    }
+
+    /** @return array<string, mixed>|null */
+    private function artifact(string $profile): ?array
+    {
+        $activation = CommercialOfferingActivation::query()
+            ->with('offering')
+            ->where('profile', $profile)
+            ->whereNull('deactivated_at')
+            ->latest('activated_at')
+            ->first();
+        $offering = $activation?->offering;
+
+        if (! $offering instanceof CommercialOffering) {
+            return null;
+        }
+
+        return [
+            'schema' => $offering->manifest_schema,
+            'hash' => $offering->manifest_hash,
+            'yaml' => $offering->manifest_yaml,
+            'snapshot_hash' => $offering->snapshot_hash,
+            'activation_reference' => $activation->activation_reference,
+            'activated_at' => $activation->activated_at?->toIso8601String(),
+        ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function history(string $profile): array
+    {
+        return CommercialOffering::query()
+            ->where('profile', $profile)
+            ->orderByDesc('version')
+            ->get()
+            ->map(static fn (CommercialOffering $offering): array => [
+                'reference' => $offering->reference,
+                'version' => $offering->version,
+                'status' => $offering->status->value,
+                'origin' => $offering->origin->value,
+                'snapshot_hash' => $offering->snapshot_hash,
+                'manifest_hash' => $offering->manifest_hash,
+                'effective_at' => $offering->effective_at?->toIso8601String(),
+                'approved_at' => $offering->approved_at?->toIso8601String(),
+            ])
+            ->values()
+            ->all();
     }
 }

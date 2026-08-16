@@ -14,6 +14,7 @@ use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceJournal;
+use LBHurtado\XChange\Services\Commercial\CommercialOfferingManifestCompiler;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 
 final class ManageCommercialOffering
@@ -22,6 +23,7 @@ final class ManageCommercialOffering
         private readonly CommercialOperatorAuthorityContract $authority,
         private readonly CommercialLegalTraceResolverContract $legalTrace,
         private readonly CommercialGovernanceJournal $journal,
+        private readonly CommercialOfferingManifestCompiler $manifests,
     ) {}
 
     public function createDraft(
@@ -31,8 +33,9 @@ final class ManageCommercialOffering
     ): CommercialOffering {
         $this->authorize($maker, CommercialOperatorCapability::ManageOfferings);
         $offering = $this->legalTrace->forPublication($offering);
+        $manifest = $this->manifests->compile($profile, $offering);
 
-        $draft = DB::transaction(function () use ($maker, $profile, $offering): CommercialOffering {
+        $draft = DB::transaction(function () use ($maker, $profile, $offering, $manifest): CommercialOffering {
             $latestVersion = (int) (CommercialOffering::query()
                 ->where('reference', $offering->reference)
                 ->orderByDesc('version')
@@ -52,6 +55,9 @@ final class ManageCommercialOffering
                 'currency' => $offering->catalog->currency,
                 'snapshot_hash' => $offering->snapshotHash(),
                 'snapshot' => $offering->toArray(),
+                'manifest_schema' => $manifest->schema,
+                'manifest_hash' => $manifest->hash,
+                'manifest_yaml' => $manifest->yaml,
                 'created_by_type' => $maker->getMorphClass(),
                 'created_by_id' => $maker->getKey(),
                 'effective_at' => $offering->effectiveAt,
