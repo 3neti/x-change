@@ -77,10 +77,17 @@ return new class extends Migration
 
         Schema::create('x_change_commercial_component_economics_heads', function (Blueprint $table): void {
             $table->string('profile')->primary();
-            $table->foreignId('current_activation_id')
-                ->nullable()
-                ->unique()
-                ->constrained('x_change_commercial_component_economics_activations')
+            $table->foreignId('current_activation_id')->nullable();
+            $table->unique(
+                'current_activation_id',
+                'xchg_comm_economics_head_activation_unique',
+            );
+            $table->foreign(
+                'current_activation_id',
+                'xchg_comm_economics_head_activation_fk',
+            )
+                ->references('id')
+                ->on('x_change_commercial_component_economics_activations')
                 ->restrictOnDelete();
             $table->timestampsTz();
         });

@@ -26,6 +26,25 @@ it('uses distinct PostgreSQL-safe constraint names for transfer matches', functi
     }
 });
 
+it('uses distinct PostgreSQL-safe constraint names for component economics heads', function () {
+    $migration = file_get_contents(
+        dirname(__DIR__, 3).'/database/migrations/2026_08_16_074944_create_x_change_commercial_component_economics_tables.php',
+    );
+
+    $constraintNames = [
+        'xchg_comm_economics_head_activation_unique',
+        'xchg_comm_economics_head_activation_fk',
+    ];
+
+    expect($migration)->not->toBeFalse()
+        ->and(max(array_map(strlen(...), $constraintNames)))->toBeLessThanOrEqual(63)
+        ->and(array_unique($constraintNames))->toHaveCount(count($constraintNames));
+
+    foreach ($constraintNames as $constraintName) {
+        expect($migration)->toContain("'{$constraintName}'");
+    }
+});
+
 it('compiles every create migration without PostgreSQL identifier collisions', function () {
     $connection = new class(null, 'x_change_migration_audit') extends PostgresConnection
     {
