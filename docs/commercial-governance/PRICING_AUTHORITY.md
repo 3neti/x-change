@@ -104,3 +104,29 @@ supersedes it. No unlisted or implicit recipient is permitted. Recognition is
 automatic at issuance; external cash settlement remains a separate,
 evidence-controlled operation. A TIN by itself never invents a tax rate or tax
 liability.
+
+## Billable Event evidence
+
+Every priced quote line accepted at issuance produces one durable Billable
+Event inside the same transaction as its Commercial Sale and Treasury
+allocation. The event records the governed component, event type, recognition
+policy, quantity, unit price, total, currency, source event, and immutable
+payload hash. It never restates a catalog price as a second authority.
+
+```text
+Accepted governed quote line
+    -> received Billable Event
+    -> Commercial charge and itemized allocations post
+    -> Billable Event becomes posted
+    -> append-only recognition journal evidence
+
+Compensating Commercial Sale reversal
+    -> reverse allocations and charge exactly once
+    -> Billable Event becomes reversed under the same reason reference
+    -> append-only reversal journal evidence
+```
+
+The event reference is deterministic per Commercial Sale and component. An
+identical replay returns the original record. A replay with changed economics
+fails closed. Legacy sales without Component Economics remain readable and are
+not retroactively given invented recognition evidence.

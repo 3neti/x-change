@@ -4,6 +4,8 @@ Commercial allocation and cash settlement are separate events.
 
 An accepted Pay Code charge posts the governed waterfall immediately. Provider cost becomes a Provider Cost Payable Position; attributed commission becomes a Partner Commission Payable Position. Neither posting claims that cash has left the provider account.
 
+The durable Billable Event is the recognition evidence that connects an accepted priced component to that posting. A posted Billable Event means the governed charge and allocation were recognized; it does not mean an external recipient was paid. The Commercial Controls Activity view shows these component events and their recognition status alongside each recent sale.
+
 ## Provider Cost
 
 Provider cost is settled only from an authoritative provider statement, invoice, or account-debit record. The operator records one period batch with `x-change:commercial:provider-cost:record`. x-change matches eligible provider-cost allocations by provider, connection, currency, and accepted-sale period.

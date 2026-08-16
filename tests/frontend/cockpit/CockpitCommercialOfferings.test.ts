@@ -205,6 +205,13 @@ const controls = {
     total_charged_minor: 2500,
     currency: "PHP",
   },
+  billable_events: {
+    count: 2,
+    posted_count: 2,
+    reversed_count: 0,
+    recognized_minor: 2500,
+    currency: "PHP",
+  },
   allocation_totals: [
     {
       category: "product_revenue",
@@ -281,7 +288,26 @@ const controls = {
       },
     ],
   },
-  recent_sales: [],
+  recent_sales: [
+    {
+      reference: "commercial-sale:acceptance",
+      buyer_reference: "principal:account:5",
+      amount_minor: 2500,
+      currency: "PHP",
+      status: "posted",
+      accepted_at: "2026-08-16T00:00:00+00:00",
+      billable_events: [
+        {
+          component_reference: "cash.amount",
+          event_type: "pay_code.issued_with_component",
+          recognition_policy_reference: "recognition:pay-code-issuance:v1",
+          amount_minor: 1500,
+          status: "posted",
+        },
+      ],
+      allocations: [],
+    },
+  ],
   policy: {
     attribution: {
       reference: "commercial-attribution:pay-code",
@@ -519,6 +545,8 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("Reconciled");
     expect(wrapper.text()).toContain("Allocation History");
     expect(wrapper.text()).toContain("Reversed sales are excluded");
+    expect(wrapper.text()).toContain("2 component events recognized");
+    expect(wrapper.text()).toContain("Cash Amount · posted");
 
     const operationsButton = wrapper
       .findAll("button")

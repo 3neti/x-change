@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialBillableEvent;
 use LBHurtado\XChange\Models\CommercialProviderCostBatch;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
@@ -58,6 +59,10 @@ final readonly class CommercialAccountingJournal
 
         foreach ($sale->allocations as $allocation) {
             $this->recordAllocationPosted($sale, $allocation);
+        }
+
+        foreach ($sale->billableEvents as $event) {
+            $this->recordBillableEvent($sale, $event, 'posted');
         }
     }
 
@@ -260,6 +265,10 @@ final readonly class CommercialAccountingJournal
         CommercialSale $sale,
         string $reasonReference,
     ): ExecutionJournalEntry {
+        foreach ($sale->billableEvents as $event) {
+            $this->recordBillableEvent($sale, $event, 'reversed');
+        }
+
         return $this->recordSaleEvent(
             sale: $sale,
             eventType: 'commercial.sale.reversed',
@@ -337,6 +346,48 @@ final readonly class CommercialAccountingJournal
             ],
             money: $this->money($allocation->currency, $allocation->amount_minor),
             metadata: $this->metadata('commercial_waterfall'),
+        ));
+    }
+
+    private function recordBillableEvent(
+        CommercialSale $sale,
+        CommercialBillableEvent $event,
+        string $transition,
+    ): ExecutionJournalEntry {
+        $occurredAt = $transition === 'reversed'
+            ? CarbonImmutable::parse($event->reversed_at)
+            : CarbonImmutable::parse($event->posted_at);
+
+        return $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'commercial.billable_event.'.$transition,
+            occurredAt: $occurredAt,
+            actor: new ExecutionActorData(
+                id: 'x-change',
+                type: 'commercial_recognition_engine',
+            ),
+            subject: $this->subject($sale),
+            references: new ExecutionReferenceData(
+                correlationId: $this->correlationId($sale),
+                causationId: $event->source_event_reference,
+                executionId: (string) $event->getKey(),
+                externalReference: $event->event_reference,
+                metadata: [
+                    'component_reference' => $event->component_reference,
+                    'recognition_policy_reference' => $event->recognition_policy_reference,
+                ],
+            ),
+            idempotencyKey: 'x-change:commercial:'.$sale->reference
+                .':billable-event:'.$event->component_reference.':'.$transition,
+            payload: [
+                'status' => $event->status->value,
+                'event_type' => $event->event_type,
+                'recognition_policy_reference' => $event->recognition_policy_reference,
+                'component_reference' => $event->component_reference,
+                'quantity' => $event->quantity,
+                'unit_amount_minor' => $event->unit_amount_minor,
+            ],
+            money: $this->money($event->currency, $event->total_amount_minor),
+            metadata: $this->metadata('commercial_billable_event'),
         ));
     }
 

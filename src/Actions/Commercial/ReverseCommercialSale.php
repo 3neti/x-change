@@ -11,6 +11,7 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
+use LBHurtado\XChange\Services\Commercial\CommercialBillableEventRecorder;
 use LBHurtado\XChange\Services\Commercial\CommercialSaleReversalPolicy;
 
 final readonly class ReverseCommercialSale
@@ -19,6 +20,7 @@ final readonly class ReverseCommercialSale
         private TreasuryPositionOperationContract $positionOperations,
         private CommercialSaleReversalPolicy $policy,
         private CommercialAccountingJournal $journal,
+        private CommercialBillableEventRecorder $billableEvents,
     ) {}
 
     public function execute(string $commercialSaleReference, string $reasonReference): CommercialSale
@@ -30,7 +32,9 @@ final readonly class ReverseCommercialSale
                 ->firstOrFail();
 
             if ($sale->status === 'reversed') {
-                return $sale->load('allocations');
+                $this->billableEvents->assertReversalReplay($sale, $reasonReference);
+
+                return $sale->load(['allocations', 'billableEvents']);
             }
 
             if ($sale->status !== 'posted' || blank($sale->charge_operation_reference)) {
@@ -118,7 +122,9 @@ final readonly class ReverseCommercialSale
                     'updated_at' => now(),
                 ]);
 
-            $reversed = $sale->fresh('allocations');
+            $this->billableEvents->markReversedForSale($sale, $reason);
+
+            $reversed = $sale->fresh(['allocations', 'billableEvents']);
             $this->journal->recordSaleReversed($reversed, $reason);
 
             return $reversed;

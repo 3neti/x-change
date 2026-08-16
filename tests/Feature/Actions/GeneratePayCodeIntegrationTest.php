@@ -28,11 +28,13 @@ use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Enums\CommercialActivationAuthority;
+use LBHurtado\XChange\Enums\CommercialBillableEventStatus;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialBillableEvent;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
@@ -364,7 +366,7 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
     $commercialChargeMinor = (int) round($result->cost->total * 100);
     $accountDebitMinor = (int) round($result->cost->account_debit * 100);
     $sale = CommercialSale::query()
-        ->with('allocations')
+        ->with(['allocations', 'billableEvents'])
         ->where('source_commercial_event_reference', 'pay-code-generation:voucher:'.$result->voucher_id)
         ->sole();
     $allocationTotalMinor = (int) $sale->allocations->sum('amount_minor');
@@ -396,6 +398,19 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
         ->and($allocationTotalMinor)->toBe($commercialChargeMinor)
         ->and(CommercialAllocation::query()->where('commercial_sale_id', $sale->getKey())->count())
         ->toBe(3)
+        ->and($sale->billableEvents)->toHaveCount(3)
+        ->and((int) $sale->billableEvents->sum('total_amount_minor'))->toBe($commercialChargeMinor)
+        ->and($sale->billableEvents->every(
+            static fn (CommercialBillableEvent $event): bool => $event->status === CommercialBillableEventStatus::Posted
+                && $event->event_type === 'pay_code.issued_with_component'
+                && $event->recognition_policy_reference === 'recognition:pay-code-issuance:v1'
+                && $event->quantity === 1
+                && $event->total_amount_minor === $event->unit_amount_minor,
+        ))->toBeTrue()
+        ->and(ExecutionJournalEntry::query()
+            ->where('correlation_id', 'commercial-sale:'.$sale->reference)
+            ->where('event_type', 'commercial.billable_event.posted')
+            ->count())->toBe(3)
         ->and($sale->allocations->every(
             static fn (CommercialAllocation $allocation): bool => $allocation->category === 'service_provider_payable'
                 && data_get($allocation->metadata, 'designation_reference') === 'designation:commissioning:3neti:v1'
@@ -448,6 +463,11 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
         ])->sum(fn (TreasuryPositionPurpose $purpose): int => treasuryPositionBalanceForPurpose($purpose)))
         ->toBe($commercialChargeMinor)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore);
+
+    expect(CommercialBillableEvent::query()
+        ->where('commercial_sale_id', $sale->getKey())
+        ->where('status', CommercialBillableEventStatus::Posted->value)
+        ->count())->toBe(3);
 });
 
 it('does not infer a provider-cost settlement from service-provider royalties', function () {

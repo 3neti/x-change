@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialBillableEvent;
 use LBHurtado\XChange\Models\CommercialProviderCostBatch;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
@@ -51,6 +52,15 @@ final readonly class CommercialControlReadModel
                 'total_charged_minor' => (int) CommercialSale::query()
                     ->where('status', 'posted')
                     ->sum('total_price_minor'),
+                'currency' => $offering->catalog->currency,
+            ],
+            'billable_events' => [
+                'count' => CommercialBillableEvent::query()->count(),
+                'posted_count' => CommercialBillableEvent::query()->where('status', 'posted')->count(),
+                'reversed_count' => CommercialBillableEvent::query()->where('status', 'reversed')->count(),
+                'recognized_minor' => (int) CommercialBillableEvent::query()
+                    ->where('status', 'posted')
+                    ->sum('total_amount_minor'),
                 'currency' => $offering->catalog->currency,
             ],
             'allocation_totals' => $allocationTotals,
@@ -155,7 +165,7 @@ final readonly class CommercialControlReadModel
                     ])->values()->all(),
             ],
             'recent_sales' => CommercialSale::query()
-                ->with('allocations')
+                ->with(['allocations', 'billableEvents'])
                 ->latest('accepted_at')
                 ->limit(10)
                 ->get()
@@ -166,6 +176,16 @@ final readonly class CommercialControlReadModel
                     'currency' => $sale->currency,
                     'status' => $sale->status,
                     'accepted_at' => $sale->accepted_at?->toIso8601String(),
+                    'billable_events' => $sale->billableEvents
+                        ->map(fn (CommercialBillableEvent $event): array => [
+                            'component_reference' => $event->component_reference,
+                            'event_type' => $event->event_type,
+                            'recognition_policy_reference' => $event->recognition_policy_reference,
+                            'amount_minor' => $event->total_amount_minor,
+                            'status' => $event->status->value,
+                        ])
+                        ->values()
+                        ->all(),
                     'allocations' => $sale->allocations
                         ->map(fn (CommercialAllocation $allocation): array => [
                             'category' => $allocation->category,

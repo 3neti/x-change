@@ -42,4 +42,9 @@ final class CommercialSale extends Model
     {
         return $this->hasMany(CommercialAllocation::class)->orderBy('sequence');
     }
+
+    public function billableEvents(): HasMany
+    {
+        return $this->hasMany(CommercialBillableEvent::class)->orderBy('id');
+    }
 }

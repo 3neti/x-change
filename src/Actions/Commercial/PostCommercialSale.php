@@ -13,6 +13,7 @@ use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
+use LBHurtado\XChange\Services\Commercial\CommercialBillableEventRecorder;
 use LBHurtado\XChange\Services\Commercial\CommercialPartnerAttributionResolver;
 use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
 use LBHurtado\XCommerce\Data\CommercialSaleSnapshotData;
@@ -23,6 +24,7 @@ final readonly class PostCommercialSale
         private TreasuryPositionOperationContract $positionOperations,
         private CommercialAccountingJournal $journal,
         private CommercialPartnerAttributionResolver $partners,
+        private CommercialBillableEventRecorder $billableEvents,
     ) {}
 
     /**
@@ -68,7 +70,7 @@ final readonly class PostCommercialSale
                 );
 
                 if ($sale->status === 'posted') {
-                    return $sale->load('allocations');
+                    return $sale->load(['allocations', 'billableEvents']);
                 }
             } else {
                 $sale = CommercialSale::query()->create([
@@ -100,6 +102,8 @@ final readonly class PostCommercialSale
                     $partnerAttributions,
                 );
             }
+
+            $this->billableEvents->recordForSale($sale, $snapshot);
 
             $scope = hash('sha256', $snapshot->reference);
             $charge = $this->positionOperations->charge(
@@ -171,7 +175,9 @@ final readonly class PostCommercialSale
                     'updated_at' => now(),
                 ]);
 
-            $posted = $sale->fresh('allocations');
+            $this->billableEvents->markPostedForSale($sale);
+
+            $posted = $sale->fresh(['allocations', 'billableEvents']);
             $this->journal->recordSalePosted($posted);
 
             return $posted;
