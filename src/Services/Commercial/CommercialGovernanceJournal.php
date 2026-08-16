@@ -7,6 +7,8 @@ namespace LBHurtado\XChange\Services\Commercial;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
+use LBHurtado\XChange\Models\CommercialComponentEconomics;
+use LBHurtado\XChange\Models\CommercialComponentEconomicsActivation;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
@@ -89,6 +91,93 @@ final readonly class CommercialGovernanceJournal
                 'authority' => $activation->authority->value,
                 'version' => $activation->offering_version,
                 'snapshot_hash' => $activation->snapshot_hash,
+            ],
+            metadata: $this->metadata(),
+        ));
+    }
+
+    public function recordComponentEconomics(
+        CommercialComponentEconomics $economics,
+        string $eventType,
+    ): void {
+        $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: $eventType,
+            occurredAt: CarbonImmutable::parse($economics->created_at),
+            actor: new ExecutionActorData(
+                id: $economics->authority->value,
+                type: 'commercial_activation_authority',
+            ),
+            subject: new ExecutionSubjectData(
+                id: (string) $economics->getKey(),
+                type: 'commercial_component_economics',
+                display: $economics->reference.'@'.$economics->version,
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'commercial-component-economics:'.$economics->profile.':'.$economics->reference,
+                causationId: $economics->commissioning_manifest_reference,
+                executionId: (string) $economics->getKey(),
+                externalReference: $economics->commissioning_manifest_reference,
+                metadata: [
+                    'offering_snapshot_hash' => $economics->offering_snapshot_hash,
+                    'component_economics_hash' => $economics->snapshot_hash,
+                    'manifest_hash' => $economics->artifact_hash,
+                ],
+            ),
+            idempotencyKey: 'x-change:commercial-governance:'.$eventType.':'.$economics->getKey(),
+            payload: [
+                'profile' => $economics->profile,
+                'origin' => $economics->origin->value,
+                'authority' => $economics->authority->value,
+                'version' => $economics->version,
+                'offering_reference' => $economics->offering_reference,
+                'offering_version' => $economics->offering_version,
+                'offering_snapshot_hash' => $economics->offering_snapshot_hash,
+                'component_economics_hash' => $economics->snapshot_hash,
+                'manifest_hash' => $economics->artifact_hash,
+            ],
+            metadata: $this->metadata(),
+        ));
+    }
+
+    public function recordComponentEconomicsActivation(
+        CommercialComponentEconomicsActivation $activation,
+    ): void {
+        $economics = $activation->economics()->firstOrFail();
+
+        $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'commercial.component_economics.activated',
+            occurredAt: CarbonImmutable::parse($activation->activated_at),
+            actor: new ExecutionActorData(
+                id: $activation->actor_id === null
+                    ? $activation->authority->value
+                    : (string) $activation->actor_id,
+                type: $activation->actor_type ?? 'commercial_activation_authority',
+            ),
+            subject: new ExecutionSubjectData(
+                id: (string) $economics->getKey(),
+                type: 'commercial_component_economics',
+                display: $economics->reference.'@'.$economics->version,
+            ),
+            references: new ExecutionReferenceData(
+                correlationId: 'commercial-component-economics:'.$activation->profile.':'.$economics->reference,
+                causationId: $activation->activation_reference,
+                executionId: (string) $activation->getKey(),
+                externalReference: $activation->activation_reference,
+                metadata: [
+                    'previous_activation_id' => $activation->previous_activation_id,
+                    'component_economics_hash' => $economics->snapshot_hash,
+                    'manifest_hash' => $economics->artifact_hash,
+                ],
+            ),
+            idempotencyKey: 'x-change:commercial-governance:component-economics-activated:'.$activation->getKey(),
+            payload: [
+                'profile' => $activation->profile,
+                'authority' => $activation->authority->value,
+                'version' => $economics->version,
+                'offering_reference' => $economics->offering_reference,
+                'offering_version' => $economics->offering_version,
+                'component_economics_hash' => $economics->snapshot_hash,
+                'manifest_hash' => $economics->artifact_hash,
             ],
             metadata: $this->metadata(),
         ));

@@ -4,6 +4,11 @@ declare(strict_types=1);
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 
+beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+});
+
 afterEach(function (): void {
     app()->instance('env', 'testing');
 });
@@ -130,6 +135,8 @@ it('hides the recovery directive after the system Account is commissioned', func
         ->assertSee('Bootstrap Immutable')
         ->assertSee('Baseline Active Changes Locked')
         ->assertSee('Changes locked')
+        ->assertSee('Agreement Economics')
+        ->assertSee('2 / 2 active')
         ->assertSee('Pay Code')
         ->assertSee('Account Funding')
         ->assertSee('Partners and settlement operations')

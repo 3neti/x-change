@@ -145,6 +145,11 @@ it('reports active baseline issuance while locking price changes', function (): 
 
     expect($status['operational'])->toBeTrue()
         ->and($status['issuance_available'])->toBeTrue()
+        ->and($status['component_economics'])->toMatchArray([
+            'operational' => true,
+            'complete_profile_count' => 2,
+            'required_profile_count' => 2,
+        ])
         ->and($status['changes_locked'])->toBeTrue()
         ->and($status['governance_ready'])->toBeFalse()
         ->and($status['state'])->toBe('baseline_active_changes_locked')
@@ -152,6 +157,10 @@ it('reports active baseline issuance while locking price changes', function (): 
 
     $this->artisan('x-change:commercial:governance-status', ['--json' => true])
         ->expectsOutputToContain('"state": "baseline_active_changes_locked"')
+        ->assertSuccessful();
+
+    $this->artisan('x-change:doctor', ['--json' => true])
+        ->expectsOutputToContain('"name": "commercial component economics"')
         ->assertSuccessful();
 });
 

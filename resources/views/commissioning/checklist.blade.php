@@ -58,6 +58,14 @@
                 <div><dt>Price changes</dt><dd>{{ $commercialGovernance['changes_locked'] ? 'Changes locked' : 'Maker-checker governed' }}</dd></div>
                 <div><dt>Maker authorities</dt><dd>{{ $commercialGovernance['roles']['maker_count'] }}</dd></div>
                 <div><dt>Checker authorities</dt><dd>{{ $commercialGovernance['roles']['checker_count'] }}</dd></div>
+                <div>
+                    <dt>Agreement Economics</dt>
+                    <dd>{{ $commercialGovernance['component_economics']['operational'] ? 'Active' : 'Action needed' }}</dd>
+                </div>
+                <div>
+                    <dt>Agreement profiles</dt>
+                    <dd>{{ $commercialGovernance['component_economics']['complete_profile_count'] }} / {{ $commercialGovernance['component_economics']['required_profile_count'] }} active</dd>
+                </div>
             </dl>
             <h3>Active Offering profiles</h3>
             <ul class="profiles">

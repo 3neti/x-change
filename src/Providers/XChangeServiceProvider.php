@@ -180,6 +180,7 @@ use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
+use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialLegalTraceResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
@@ -331,6 +332,7 @@ use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
+use LBHurtado\XChange\Services\Commercial\DatabaseCommercialComponentEconomicsResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOfferingResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOperatorAuthority;
 use LBHurtado\XChange\Services\Commercial\OptionalXLegalCommercialTraceResolver;
@@ -542,6 +544,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             CommercialOfferingResolverContract::class,
             DatabaseCommercialOfferingResolver::class,
+        );
+        $this->app->singleton(
+            CommercialComponentEconomicsResolverContract::class,
+            DatabaseCommercialComponentEconomicsResolver::class,
         );
         $this->app->singleton(
             CommercialOperatorAuthorityContract::class,

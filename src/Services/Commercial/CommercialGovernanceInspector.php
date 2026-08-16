@@ -6,11 +6,13 @@ namespace LBHurtado\XChange\Services\Commercial;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Enums\CommercialGovernanceMode;
 use LBHurtado\XChange\Enums\CommercialGovernanceState;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Models\CommercialComponentEconomicsHead;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
@@ -23,6 +25,10 @@ use Throwable;
 
 final readonly class CommercialGovernanceInspector
 {
+    public function __construct(
+        private CommercialComponentEconomicsResolverContract $componentEconomics,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -84,16 +90,17 @@ final readonly class CommercialGovernanceInspector
         $governedOfferingActive = collect($profileRows)->contains(
             static fn (array $profile): bool => $profile['origin'] === CommercialOfferingOrigin::MakerCheckerRevision->value,
         );
+        $componentEconomics = $this->componentEconomicsReadiness($profiles->all());
 
         $state = match (true) {
-            ! $allProfilesActive => CommercialGovernanceState::ConfigurationInvalid,
+            ! $allProfilesActive || ! $componentEconomics['operational'] => CommercialGovernanceState::ConfigurationInvalid,
             $publishedAwaitingActivation > 0 => CommercialGovernanceState::PublishedAwaitingActivation,
             $pendingApproval > 0 => CommercialGovernanceState::RevisionAwaitingApproval,
             $governedOfferingActive => CommercialGovernanceState::GovernedOfferingActive,
             $roleReadiness['separation_ready'] => CommercialGovernanceState::RolesReady,
             default => CommercialGovernanceState::BaselineActiveChangesLocked,
         };
-        $operational = $allProfilesActive;
+        $operational = $allProfilesActive && $componentEconomics['operational'];
 
         return [
             'schema' => 'x-change.commercial-governance-status.v1',
@@ -107,6 +114,7 @@ final readonly class CommercialGovernanceInspector
             'pending_approval_count' => $pendingApproval,
             'published_awaiting_activation_count' => $publishedAwaitingActivation,
             'profiles' => $profileRows,
+            'component_economics' => $componentEconomics,
             'partners' => $this->partnerReadiness(),
             'operations' => $this->operationsReadiness(),
             'message' => $this->message($state),
@@ -118,10 +126,61 @@ final readonly class CommercialGovernanceInspector
         try {
             return Schema::hasTable('x_change_commercial_offerings')
                 && Schema::hasTable('x_change_commercial_offering_activations')
-                && Schema::hasTable('x_change_commercial_operator_authorizations');
+                && Schema::hasTable('x_change_commercial_operator_authorizations')
+                && Schema::hasTable('x_change_commercial_component_economics_manifests')
+                && Schema::hasTable('x_change_commercial_component_economics_activations')
+                && Schema::hasTable('x_change_commercial_component_economics_heads');
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /**
+     * @param  list<string>  $profiles
+     * @return array{operational: bool, complete_profile_count: int, required_profile_count: int, profiles: list<array<string, mixed>>, message: string}
+     */
+    private function componentEconomicsReadiness(array $profiles): array
+    {
+        $rows = collect($profiles)->map(function (string $profile): array {
+            $head = CommercialComponentEconomicsHead::query()
+                ->with('currentActivation.economics')
+                ->whereKey($profile)
+                ->first();
+            $activation = $head?->currentActivation;
+            $economics = $activation?->economics;
+
+            try {
+                $this->componentEconomics->resolve($profile);
+                $active = true;
+                $message = 'Agreement Economics is active and bound to the current Commercial Offering.';
+            } catch (Throwable $exception) {
+                $active = false;
+                $message = $exception->getMessage();
+            }
+
+            return [
+                'profile' => $profile,
+                'active' => $active,
+                'reference' => $economics?->reference,
+                'version' => $economics?->version,
+                'manifest_hash' => $economics?->artifact_hash,
+                'offering_snapshot_hash' => $economics?->offering_snapshot_hash,
+                'activated_at' => $activation?->activated_at?->toIso8601String(),
+                'message' => $message,
+            ];
+        })->values();
+        $complete = $rows->where('active', true)->count();
+        $operational = $profiles !== [] && $complete === count($profiles);
+
+        return [
+            'operational' => $operational,
+            'complete_profile_count' => $complete,
+            'required_profile_count' => count($profiles),
+            'profiles' => $rows->all(),
+            'message' => $operational
+                ? 'Agreement Economics is active for every governed profile.'
+                : 'Agreement Economics must be provisioned and bound to every active Commercial Offering.',
+        ];
     }
 
     /** @return array<string, int|bool> */
@@ -260,6 +319,13 @@ final readonly class CommercialGovernanceInspector
             'pending_approval_count' => 0,
             'published_awaiting_activation_count' => 0,
             'profiles' => [],
+            'component_economics' => [
+                'operational' => false,
+                'complete_profile_count' => 0,
+                'required_profile_count' => 0,
+                'profiles' => [],
+                'message' => 'Commercial Component Economics storage is not ready.',
+            ],
             'partners' => [
                 'storage_ready' => false,
                 'active_count' => 0,

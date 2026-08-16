@@ -21,6 +21,7 @@ final readonly class ProvisionCommercialBaselines
         private CommercialGovernanceJournal $journal,
         private CommercialOfferingManifestCompiler $manifests,
         private BackfillCommercialOfferingManifests $manifestBackfill,
+        private ProvisionCommercialComponentEconomicsBaselines $componentEconomicsBaselines,
     ) {}
 
     /** @return list<CommercialOfferingActivation> */
@@ -54,7 +55,30 @@ final readonly class ProvisionCommercialBaselines
             );
         }
 
+        if ($this->allConfiguredProfilesAreActive()) {
+            $this->componentEconomicsBaselines->provision($commissioningManifestReference);
+        }
+
         return $activations;
+    }
+
+    private function allConfiguredProfilesAreActive(): bool
+    {
+        $profiles = collect((array) config(
+            'x-change.commercial.offerings.profiles',
+            ['pay_code', 'account_funding'],
+        ))
+            ->filter(static fn (mixed $profile): bool => is_string($profile) && trim($profile) !== '')
+            ->map(static fn (string $profile): string => trim($profile))
+            ->unique()
+            ->values();
+
+        return $profiles->isNotEmpty()
+            && CommercialOfferingActivation::query()
+                ->whereIn('profile', $profiles->all())
+                ->whereNull('deactivated_at')
+                ->distinct()
+                ->count('profile') === $profiles->count();
     }
 
     private function baseline(string $profile, string $manifestReference): CommercialOffering

@@ -41,7 +41,10 @@ class DoctorXChangeCommand extends Command
         $checks = $this->option('pre-install')
             ? $preInstallReadiness->inspect()['checks']
             : ($this->option('commercial-governance')
-            ? [$this->commercialGovernanceCheck($commercialGovernance, true)]
+            ? [
+                $this->commercialGovernanceCheck($commercialGovernance, true),
+                $this->commercialComponentEconomicsCheck($commercialGovernance),
+            ]
             : ($this->option('operator-activity-runtime')
             ? [$this->operatorActivityRuntimeProfileCheck($operatorActivityRuntimeProfile)]
             : ($this->option('assets')
@@ -52,6 +55,7 @@ class DoctorXChangeCommand extends Command
                 $systemPrincipalAccount->inspect(),
                 $this->commissioningCheck($commissioning),
                 $this->commercialGovernanceCheck($commercialGovernance),
+                $this->commercialComponentEconomicsCheck($commercialGovernance),
                 $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
                 $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
                 $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
@@ -197,6 +201,22 @@ class DoctorXChangeCommand extends Command
             $requireChangeAuthority && ! $passed
                 ? 'independent maker and checker authorities are required before price changes'
                 : (string) $status['message'],
+            $status,
+        );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function commercialComponentEconomicsCheck(
+        CommercialGovernanceInspector $governance,
+    ): array {
+        $status = $governance->inspect()['component_economics'];
+
+        return $this->check(
+            'commercial component economics',
+            $status['operational'] === true,
+            (string) $status['message'],
             $status,
         );
     }

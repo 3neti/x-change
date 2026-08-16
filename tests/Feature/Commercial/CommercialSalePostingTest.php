@@ -62,6 +62,11 @@ use LBHurtado\XCommerce\Services\DeterministicCommercialWaterfallCalculator;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
+beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+});
+
 it('snapshots governed partner provenance on commission allocations', function (): void {
     $operator = actingAsTestUser();
     $partner = CommercialPartner::query()->create([
