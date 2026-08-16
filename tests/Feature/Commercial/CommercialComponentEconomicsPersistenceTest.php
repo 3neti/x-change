@@ -14,6 +14,7 @@ use LBHurtado\XChange\Services\Commercial\ActivateCommercialOffering;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialComponentEconomicsFactory;
 use LBHurtado\XChange\Services\Commercial\CommercialComponentEconomicsManifestCompiler;
 use LBHurtado\XChange\Services\Commercial\CommercialOfferingManifestCompiler;
+use LBHurtado\XChange\Services\Commercial\PayCodeCommercialQuoteService;
 use LBHurtado\XChange\Services\Commercial\PersistCommercialComponentEconomicsManifest;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
@@ -145,4 +146,27 @@ it('fails closed when active component economics evidence is tampered', function
 
     expect(fn () => app(CommercialComponentEconomicsResolverContract::class)->resolve('pay_code'))
         ->toThrow(DomainException::class, 'evidence is inconsistent');
+});
+
+it('uses the active component economics for authoritative Pay Code quotes', function (): void {
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:quote');
+    $active = app(CommercialComponentEconomicsResolverContract::class)->resolve('pay_code');
+    $pricing = app(PayCodeCommercialQuoteService::class);
+    $instructions = validVoucherInstructions(100, 'INSTAPAY');
+
+    $quote = $pricing->quote($instructions, 'pay-code-generation:test:component-economics');
+    $estimate = $pricing->estimate($instructions);
+
+    expect($quote->componentEconomicsSnapshot?->snapshotHash())->toBe($active->snapshotHash())
+        ->and($quote->allocationPlan->policyReference)->toBe($active->reference)
+        ->and($quote->allocationPlan->totalAllocatedMinor())->toBe($quote->totalPriceMinor)
+        ->and(collect($quote->allocationPlan->lines)->every(
+            static fn ($line): bool => $line->recipientReference === 'counterparty:3neti'
+                && $line->designationReference === 'designation:commissioning:3neti:v1',
+        ))->toBeTrue()
+        ->and($estimate)->toMatchArray([
+            'component_economics_reference' => $active->reference,
+            'component_economics_version' => $active->version,
+            'component_economics_snapshot_hash' => $active->snapshotHash(),
+        ]);
 });

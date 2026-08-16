@@ -1524,11 +1524,11 @@
         },
         {
             "name": "3neti/x-commerce",
-            "version": "v1.3.0",
+            "version": "v1.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-commerce.git",
-                "reference": "ccc234df359df0c81243d26f00bb1392c19de1f4"
+                "reference": "76932f85eaa532dad2514bbd735eb037140d30f7"
             },
             "require": {
                 "illuminate/support": "^11.0|^12.0|^13.0",
@@ -1580,7 +1580,7 @@
                 "pricing",
                 "x-change"
             ],
-            "time": "2026-08-16T07:36:25+00:00"
+            "time": "2026-08-16T08:21:08+00:00"
         },
         {
             "name": "3neti/x-feedback",

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 use BackedEnum;
 use JsonException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
@@ -15,13 +16,14 @@ use LBHurtado\XCommerce\Data\CommercialCatalogData;
 use LBHurtado\XCommerce\Data\CommercialQuoteData;
 use LBHurtado\XCommerce\Data\CommercialQuoteLineInputData;
 use LBHurtado\XCommerce\Services\DeterministicCommercialQuoteBuilder;
-use LBHurtado\XCommerce\Services\DeterministicCommercialWaterfallCalculator;
 
 final class PayCodeCommercialQuoteService
 {
     public function __construct(
         private readonly VoucherClaimPolicyResolver $claimPolicies,
         private readonly CommercialOfferingResolverContract $offerings,
+        private readonly CommercialComponentEconomicsResolverContract $componentEconomics,
+        private readonly DeterministicCommercialQuoteBuilder $quotes,
     ) {}
 
     /**
@@ -32,15 +34,13 @@ final class PayCodeCommercialQuoteService
         string $sourceCommercialEventReference,
         ?CommercialAttributionSnapshotData $attribution = null,
     ): CommercialQuoteData {
-        $offering = $this->offerings->resolve(
-            $this->usesAccountFundingProfile($instructions) ? 'account_funding' : 'pay_code',
-        );
+        $profile = $this->usesAccountFundingProfile($instructions) ? 'account_funding' : 'pay_code';
+        $offering = $this->offerings->resolve($profile);
+        $componentEconomics = $this->componentEconomics->resolve($profile);
         $catalog = $offering->catalog;
         $policy = $offering->waterfallPolicy;
 
-        return (new DeterministicCommercialQuoteBuilder(
-            new DeterministicCommercialWaterfallCalculator,
-        ))->build(
+        return $this->quotes->build(
             sourceCommercialEventReference: $sourceCommercialEventReference,
             catalog: $catalog,
             waterfallPolicy: $policy,
@@ -50,6 +50,7 @@ final class PayCodeCommercialQuoteService
             ),
             lineInputs: $this->lineInputs($instructions, $catalog),
             offering: $offering,
+            componentEconomics: $componentEconomics,
         );
     }
 
@@ -108,6 +109,9 @@ final class PayCodeCommercialQuoteService
             'catalog_version' => $quote->catalogSnapshot->version,
             'waterfall_policy_reference' => $quote->waterfallPolicySnapshot->reference,
             'waterfall_policy_version' => $quote->waterfallPolicySnapshot->version,
+            'component_economics_reference' => $quote->allocationPlan->policyReference,
+            'component_economics_version' => $quote->allocationPlan->policyVersion,
+            'component_economics_snapshot_hash' => $quote->componentEconomicsSnapshot?->snapshotHash(),
         ];
     }
 

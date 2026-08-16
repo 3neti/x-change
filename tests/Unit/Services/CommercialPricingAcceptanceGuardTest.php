@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
+use LBHurtado\XChange\Services\Commercial\BootstrapCommercialComponentEconomicsFactory;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\CommercialPricingAcceptanceGuard;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialQuoteService;
+use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 
 beforeEach(function (): void {
@@ -17,6 +20,7 @@ beforeEach(function (): void {
 
 it('rejects an Offering activation that changes between estimation and sale posting', function (): void {
     $offering = app(BootstrapCommercialOfferingFactory::class)->make('pay_code');
+    $componentEconomics = app(BootstrapCommercialComponentEconomicsFactory::class)->make('pay_code', $offering);
     app()->bind(
         CommercialOfferingResolverContract::class,
         fn (): CommercialOfferingResolverContract => new class($offering) implements CommercialOfferingResolverContract
@@ -26,6 +30,18 @@ it('rejects an Offering activation that changes between estimation and sale post
             public function resolve(string $profile): CommercialOfferingData
             {
                 return $this->offering;
+            }
+        },
+    );
+    app()->bind(
+        CommercialComponentEconomicsResolverContract::class,
+        fn (): CommercialComponentEconomicsResolverContract => new class($componentEconomics) implements CommercialComponentEconomicsResolverContract
+        {
+            public function __construct(private readonly CommercialComponentEconomicsSetData $componentEconomics) {}
+
+            public function resolve(string $profile): CommercialComponentEconomicsSetData
+            {
+                return $this->componentEconomics;
             }
         },
     );
