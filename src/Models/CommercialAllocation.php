@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class CommercialAllocation extends Model
 {
@@ -46,5 +47,10 @@ final class CommercialAllocation extends Model
     public function partnerRevision(): BelongsTo
     {
         return $this->belongsTo(CommercialPartnerRevision::class, 'commercial_partner_revision_id');
+    }
+
+    public function disposition(): HasOne
+    {
+        return $this->hasOne(CommercialAllocationDisposition::class, 'commercial_allocation_id');
     }
 }

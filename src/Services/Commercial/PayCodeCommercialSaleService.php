@@ -10,8 +10,11 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Commercial\PostCommercialSale;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
+use LBHurtado\XChange\Contracts\CommercialRecipientDesignationResolverContract;
+use LBHurtado\XChange\Contracts\CommercialSettlementAccountResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Data\Commercial\CommercialAllocationDispositionPlanData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
@@ -22,7 +25,9 @@ use LBHurtado\XCommerce\Data\CommercialAccountingContextData;
 use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialQuoteData;
+use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
 use LBHurtado\XCommerce\Services\DeterministicCommercialSaleFactory;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 
 class PayCodeCommercialSaleService
 {
@@ -36,6 +41,8 @@ class PayCodeCommercialSaleService
         private readonly CommercialPartnerResolverContract $partners,
         private readonly CommercialPartnerPositionService $partnerPositions,
         private readonly CommercialPricingAcceptanceGuard $pricingAcceptance,
+        private readonly CommercialRecipientDesignationResolverContract $recipientDesignations,
+        private readonly CommercialSettlementAccountResolverContract $settlementAccounts,
     ) {}
 
     /**
@@ -93,6 +100,7 @@ class PayCodeCommercialSaleService
             TreasuryPositionPurpose::CommercialClearing,
         );
         $destinations = [];
+        $dispositions = [];
 
         foreach ($quote->allocationPlan->lines as $line) {
             $positionPurpose = $this->destinationPurpose($line);
@@ -110,14 +118,46 @@ class PayCodeCommercialSaleService
                 $destinations[$line->policyRuleReference] = $this->partnerPositions
                     ->provision($partner, $connection)
                     ->positionReference;
-
-                continue;
+            } else {
+                $destinations[$line->policyRuleReference] = $this->position(
+                    $systemPortfolio->positions,
+                    $positionPurpose,
+                )->positionReference;
             }
 
-            $destinations[$line->policyRuleReference] = $this->position(
-                $systemPortfolio->positions,
-                $positionPurpose,
-            )->positionReference;
+            if ($line->destinationKind === CommercialAllocationDestinationKind::ExternalRecipient) {
+                $designation = $this->recipientDesignations->resolve((string) $line->designationReference);
+                $disposition = CommercialSettlementDisposition::from((string) $designation->settlement_disposition);
+                $accountReference = filled($designation->settlement_account_reference)
+                    ? trim((string) $designation->settlement_account_reference)
+                    : null;
+                $principalReference = filled($designation->settlement_principal_reference)
+                    ? trim((string) $designation->settlement_principal_reference)
+                    : null;
+                $destinationClientFundsPositionReference = null;
+
+                if ($disposition === CommercialSettlementDisposition::InternalAccountCredit) {
+                    if ($accountReference === null || $principalReference === null) {
+                        throw new CommercialSaleConflict(
+                            'Internal commercial settlement is missing its governed Account binding.',
+                        );
+                    }
+
+                    $destinationClientFundsPositionReference = $this->settlementAccounts
+                        ->resolveClientFundsPosition($accountReference, $principalReference, $connection);
+                }
+
+                $dispositions[$line->policyRuleReference] = new CommercialAllocationDispositionPlanData(
+                    policyRuleReference: $line->policyRuleReference,
+                    disposition: $disposition,
+                    designationReference: (string) $designation->designation_reference,
+                    authorityReference: (string) $designation->authority_reference,
+                    authorityHash: (string) $designation->authority_hash,
+                    accountReferenceHash: $accountReference !== null ? hash('sha256', $accountReference) : null,
+                    principalReferenceHash: $principalReference !== null ? hash('sha256', $principalReference) : null,
+                    destinationClientFundsPositionReference: $destinationClientFundsPositionReference,
+                );
+            }
         }
 
         $sale = $this->posting->execute(
@@ -125,6 +165,7 @@ class PayCodeCommercialSaleService
             sourceClientFundsPositionReference: $source->positionReference,
             commercialClearingPositionReference: $clearing->positionReference,
             destinationPositionReferences: $destinations,
+            dispositionPlans: $dispositions,
         );
 
         return $this->result($sale, $code);

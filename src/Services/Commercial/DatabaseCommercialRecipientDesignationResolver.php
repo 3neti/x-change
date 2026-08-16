@@ -10,6 +10,10 @@ use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 
 final readonly class DatabaseCommercialRecipientDesignationResolver implements CommercialRecipientDesignationResolverContract
 {
+    public function __construct(
+        private CommercialRecipientDesignationAuthorityVerifier $authority,
+    ) {}
+
     public function resolve(string $designationReference): CommercialRecipientDesignation
     {
         $designation = CommercialRecipientDesignation::query()
@@ -20,6 +24,8 @@ final readonly class DatabaseCommercialRecipientDesignationResolver implements C
         if (! $designation instanceof CommercialRecipientDesignation) {
             throw new DomainException("Commercial Recipient Designation [{$designationReference}] is not active.");
         }
+
+        $this->authority->assertValid($designation);
 
         return $designation;
     }

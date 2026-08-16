@@ -186,6 +186,7 @@ use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\CommercialRecipientDesignationResolverContract;
+use LBHurtado\XChange\Contracts\CommercialSettlementAccountResolverContract;
 use LBHurtado\XChange\Contracts\Deployment\CloudMutationGatewayContract;
 use LBHurtado\XChange\Contracts\Deployment\CloudStateReaderContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
@@ -338,6 +339,7 @@ use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOfferingResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOperatorAuthority;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialRecipientDesignationResolver;
 use LBHurtado\XChange\Services\Commercial\OptionalXLegalCommercialTraceResolver;
+use LBHurtado\XChange\Services\Commercial\WalletCommercialSettlementAccountResolver;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\Configuration\CoreDeploymentEnvironmentContributor;
@@ -554,6 +556,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             CommercialRecipientDesignationResolverContract::class,
             DatabaseCommercialRecipientDesignationResolver::class,
+        );
+        $this->app->singleton(
+            CommercialSettlementAccountResolverContract::class,
+            WalletCommercialSettlementAccountResolver::class,
         );
         $this->app->singleton(
             CommercialOperatorAuthorityContract::class,

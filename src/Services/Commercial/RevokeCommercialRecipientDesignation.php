@@ -28,10 +28,13 @@ final readonly class RevokeCommercialRecipientDesignation
                 return $designation;
             }
 
-            $designation->forceFill([
-                'revocation_reference' => $revocationReference,
-                'revoked_at' => now(),
-            ])->save();
+            CommercialRecipientDesignation::query()
+                ->whereKey($designation->getKey())
+                ->update([
+                    'revocation_reference' => $revocationReference,
+                    'revoked_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
             return $designation->refresh();
         }, attempts: 5);

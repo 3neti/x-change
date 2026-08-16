@@ -9,6 +9,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionCommercialReversalData;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialAllocationDisposition;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use LBHurtado\XChange\Services\Commercial\CommercialBillableEventRecorder;
@@ -48,6 +49,18 @@ final readonly class ReverseCommercialSale
             }
 
             $this->policy->assertMayReverse($sale, $reason);
+
+            $hasInternalAccountCredit = CommercialAllocationDisposition::query()
+                ->whereHas('allocation', static fn ($query) => $query->where('commercial_sale_id', $sale->getKey()))
+                ->internallyCredited()
+                ->lockForUpdate()
+                ->exists();
+
+            if ($hasInternalAccountCredit) {
+                throw new CommercialSaleConflict(
+                    'A governed Account-credit recovery is required before this commercial sale can be reversed.',
+                );
+            }
 
             $allocations = $sale->allocations()
                 ->orderByDesc('sequence')

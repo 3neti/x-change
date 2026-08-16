@@ -147,9 +147,11 @@ final readonly class CommercialGovernanceInspector
                 && Schema::hasTable('x_change_commercial_component_economics_activations')
                 && Schema::hasTable('x_change_commercial_component_economics_heads')
                 && Schema::hasTable('x_change_commercial_recipient_designations')
+                && Schema::hasTable('x_change_commercial_allocation_dispositions')
                 && Schema::hasColumns('x_change_commercial_recipient_designations', [
                     'settlement_disposition',
                     'settlement_account_reference',
+                    'settlement_principal_reference',
                 ])
                 && Schema::hasTable('x_change_commercial_recognition_policies')
                 && Schema::hasTable('x_change_commercial_tax_profiles');
@@ -184,11 +186,15 @@ final readonly class CommercialGovernanceInspector
                         $designationTaxProfile = filled($designation->tax_profile_reference)
                             ? (string) $designation->tax_profile_reference
                             : null;
-                    } catch (Throwable) {
+                        $designationError = null;
+                    } catch (Throwable $exception) {
                         $designationTaxProfile = null;
+                        $designationError = $exception->getMessage();
                     }
 
-                    if ($rule->taxPolicyReference === null && $designationTaxProfile === null) {
+                    if ($rule->taxPolicyReference === null
+                        && $designationTaxProfile === null
+                        && $designationError === null) {
                         continue;
                     }
 
@@ -197,6 +203,7 @@ final readonly class CommercialGovernanceInspector
                         'reference' => $rule->taxPolicyReference,
                         'designation_reference' => $rule->designationReference,
                         'designation_tax_profile_reference' => $designationTaxProfile,
+                        'designation_error' => $designationError,
                     ];
                 }
             }
@@ -205,7 +212,8 @@ final readonly class CommercialGovernanceInspector
         $rows = collect($requirements)->map(function (array $requirement): array {
             $reference = $requirement['reference'];
 
-            if ($reference === null
+            if ($requirement['designation_error'] !== null
+                || $reference === null
                 || $reference !== $requirement['designation_tax_profile_reference']) {
                 return [
                     ...$requirement,
@@ -216,7 +224,8 @@ final readonly class CommercialGovernanceInspector
                     'collection_method' => null,
                     'snapshot_hash' => null,
                     'ready' => false,
-                    'message' => 'Allocation and recipient designation tax profiles must match exactly.',
+                    'message' => $requirement['designation_error']
+                        ?? 'Allocation and recipient designation tax profiles must match exactly.',
                 ];
             }
 
@@ -385,10 +394,13 @@ final readonly class CommercialGovernanceInspector
                     (string) $designation->settlement_disposition,
                 );
                 $accountBound = filled($designation->settlement_account_reference);
+                $principalBound = filled($designation->settlement_principal_reference);
 
                 if (! $disposition instanceof CommercialSettlementDisposition
-                    || ($disposition === CommercialSettlementDisposition::InternalAccountCredit && ! $accountBound)
-                    || ($disposition === CommercialSettlementDisposition::RetainPayable && $accountBound)) {
+                    || ($disposition === CommercialSettlementDisposition::InternalAccountCredit
+                        && (! $accountBound || ! $principalBound))
+                    || ($disposition === CommercialSettlementDisposition::RetainPayable
+                        && ($accountBound || $principalBound))) {
                     throw new DomainException('Commercial Recipient Designation settlement disposition is incomplete.');
                 }
 
@@ -398,6 +410,7 @@ final readonly class CommercialGovernanceInspector
                     'authority_hash' => $designation->authority_hash,
                     'settlement_disposition' => $designation->settlement_disposition,
                     'settlement_account_bound' => $accountBound,
+                    'settlement_principal_bound' => $principalBound,
                     'origin' => $designation->origin,
                     'activated_at' => $designation->activated_at?->toIso8601String(),
                     'message' => 'Commercial Recipient Designation is active.',

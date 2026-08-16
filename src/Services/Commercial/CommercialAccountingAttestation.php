@@ -7,8 +7,11 @@ namespace LBHurtado\XChange\Services\Commercial;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionOperationType;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialAllocationDisposition;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
@@ -76,6 +79,7 @@ final readonly class CommercialAccountingAttestation
         }
 
         $this->inspectSales($issues);
+        $this->inspectAllocationDispositions($issues);
         $this->inspectCommercialPositions($connections, $issues);
         $this->inspectJournal($issues);
 
@@ -147,9 +151,15 @@ final readonly class CommercialAccountingAttestation
         $expectedByPosition = [];
 
         CommercialAllocation::query()
+            ->with('disposition')
             ->where('status', 'posted')
             ->each(function (CommercialAllocation $allocation) use (&$expectedByPosition): void {
                 $expected = $allocation->amount_minor;
+
+                if ($allocation->disposition?->disposition?->value === 'internal_account_credit'
+                    && $allocation->disposition->status === 'committed') {
+                    $expected -= $allocation->disposition->amount_minor;
+                }
 
                 if ($allocation->category === 'provider_cost') {
                     $expected -= (int) CommercialProviderCostSettlement::query()
@@ -179,8 +189,11 @@ final readonly class CommercialAccountingAttestation
         $commercialPurposes = [
             TreasuryPositionPurpose::CommercialClearing,
             TreasuryPositionPurpose::ProviderCostPayable,
+            TreasuryPositionPurpose::RoyaltyPayable,
+            TreasuryPositionPurpose::TaxPayable,
             TreasuryPositionPurpose::ProductRevenue,
             TreasuryPositionPurpose::PartnerCommissionPayable,
+            TreasuryPositionPurpose::InstitutionOwnedFunds,
             TreasuryPositionPurpose::CommercialRevenue,
         ];
 
@@ -211,6 +224,55 @@ final readonly class CommercialAccountingAttestation
                 }
             }
         }
+    }
+
+    /** @param list<array<string, mixed>> $issues */
+    private function inspectAllocationDispositions(array &$issues): void
+    {
+        $dispositions = CommercialAllocationDisposition::query()
+            ->with('allocation.sale')
+            ->internallyCredited()
+            ->where('status', 'committed')
+            ->get();
+        $operations = TreasuryPositionOperation::query()
+            ->with(['sourcePosition', 'destinationPosition'])
+            ->whereIn(
+                'operation_reference',
+                $dispositions->pluck('treasury_operation_reference')->filter()->all(),
+            )
+            ->get()
+            ->keyBy('operation_reference');
+
+        $dispositions->each(function (CommercialAllocationDisposition $disposition) use (&$issues, $operations): void {
+            $operation = $operations->get($disposition->treasury_operation_reference);
+            $allocation = $disposition->allocation;
+            $valid = $allocation instanceof CommercialAllocation
+                && filled($disposition->treasury_operation_reference)
+                && $disposition->source_position_reference === $allocation->destination_position_reference
+                && $disposition->amount_minor === $allocation->amount_minor
+                && $disposition->currency === $allocation->currency
+                && $disposition->designation_reference === data_get(
+                    $allocation->metadata,
+                    'recipient_designation_governance.designation_reference',
+                )
+                && $operation instanceof TreasuryPositionOperation
+                && $operation->operation_type === TreasuryPositionOperationType::InternalPayableSettlement
+                && $operation->sourcePosition?->position_reference === $disposition->source_position_reference
+                && $operation->destinationPosition?->position_reference === $disposition->destination_position_reference
+                && $operation->amount_minor === $disposition->amount_minor
+                && $operation->currency === $disposition->currency
+                && $operation->external_reference === $allocation->sale->reference
+                && data_get($operation->metadata, 'policy_rule_reference') === $allocation->policy_rule_reference;
+
+            if (! $valid) {
+                $issues[] = [
+                    'code' => 'commercial_allocation_disposition_evidence_mismatch',
+                    'commercial_allocation_id' => $disposition->commercial_allocation_id,
+                    'expected_minor' => $disposition->amount_minor,
+                    'actual_minor' => $operation?->amount_minor,
+                ];
+            }
+        });
     }
 
     /**

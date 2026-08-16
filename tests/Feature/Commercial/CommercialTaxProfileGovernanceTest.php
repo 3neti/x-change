@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XChange\Models\CommercialTaxProfile;
@@ -51,10 +52,12 @@ it('requires exact agreement between an allocation tax profile and recipient des
     expect(fn () => app(CommercialRecipientDesignationGuard::class)->assertPlan($plan))
         ->toThrow(DomainException::class, 'does not authorize tax profile');
 
-    $designation->forceFill(['tax_profile_reference' => 'tax-profile:3neti:ph:v1'])->save();
+    DB::table($designation->getTable())
+        ->where('id', $designation->getKey())
+        ->update(['tax_profile_reference' => 'tax-profile:3neti:ph:v1']);
 
-    app(CommercialRecipientDesignationGuard::class)->assertPlan($plan);
-    expect(true)->toBeTrue();
+    expect(fn () => app(CommercialRecipientDesignationGuard::class)->assertPlan($plan))
+        ->toThrow(DomainException::class, 'failed immutable authority verification');
 });
 
 it('does not infer tax authority when both the allocation and designation omit it', function (): void {
@@ -71,27 +74,30 @@ it('fails closed when settlement disposition and Account binding disagree', func
     $designation = CommercialRecipientDesignation::query()->firstOrFail();
     $plan = taxAllocationPlan($designation->designation_reference, null);
 
-    $designation->forceFill([
+    DB::table($designation->getTable())->where('id', $designation->getKey())->update([
         'settlement_disposition' => 'internal_account_credit',
         'settlement_account_reference' => null,
-    ])->save();
+        'settlement_principal_reference' => null,
+    ]);
 
     expect(fn () => app(CommercialRecipientDesignationGuard::class)->assertPlan($plan))
-        ->toThrow(DomainException::class, 'requires an internal settlement Account');
+        ->toThrow(DomainException::class, 'failed immutable authority verification');
 
-    $designation->forceFill([
+    DB::table($designation->getTable())->where('id', $designation->getKey())->update([
         'settlement_disposition' => 'retain_payable',
         'settlement_account_reference' => 'account:must-not-be-used',
-    ])->save();
+        'settlement_principal_reference' => 'principal:must-not-be-used',
+    ]);
 
     expect(fn () => app(CommercialRecipientDesignationGuard::class)->assertPlan($plan))
-        ->toThrow(DomainException::class, 'cannot bind an Account while retaining its payable');
+        ->toThrow(DomainException::class, 'failed immutable authority verification');
 });
 
 it('makes commissioning fail closed when only the designation claims tax authority', function (): void {
-    CommercialRecipientDesignation::query()->firstOrFail()
-        ->forceFill(['tax_profile_reference' => 'tax-profile:unilateral:v1'])
-        ->save();
+    $designation = CommercialRecipientDesignation::query()->firstOrFail();
+    DB::table($designation->getTable())
+        ->where('id', $designation->getKey())
+        ->update(['tax_profile_reference' => 'tax-profile:unilateral:v1']);
 
     $status = app(CommercialGovernanceInspector::class)->inspect();
 
@@ -102,8 +108,8 @@ it('makes commissioning fail closed when only the designation claims tax authori
             'required_count' => 1,
             'ready_count' => 0,
         ])
-        ->and(data_get($status, 'tax_profiles.profiles.0.message'))
-        ->toBe('Allocation and recipient designation tax profiles must match exactly.');
+        ->and(data_get($status, 'recipient_designations.designations.0.message'))
+        ->toContain('immutable authority verification');
 });
 
 /** @return array<string, int|string|null> */

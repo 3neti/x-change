@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialAllocationDisposition;
 use LBHurtado\XChange\Models\CommercialBillableEvent;
 use LBHurtado\XChange\Models\CommercialProviderCostBatch;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
@@ -59,6 +60,10 @@ final readonly class CommercialAccountingJournal
 
         foreach ($sale->allocations as $allocation) {
             $this->recordAllocationPosted($sale, $allocation);
+
+            if ($allocation->disposition instanceof CommercialAllocationDisposition) {
+                $this->recordAllocationDisposition($sale, $allocation, $allocation->disposition);
+            }
         }
 
         foreach ($sale->billableEvents as $event) {
@@ -392,6 +397,45 @@ final readonly class CommercialAccountingJournal
             ],
             money: $this->money($event->currency, $event->total_amount_minor),
             metadata: $this->metadata('commercial_billable_event'),
+        ));
+    }
+
+    private function recordAllocationDisposition(
+        CommercialSale $sale,
+        CommercialAllocation $allocation,
+        CommercialAllocationDisposition $disposition,
+    ): ExecutionJournalEntry {
+        $event = $disposition->disposition->value === 'internal_account_credit'
+            ? 'commercial.allocation.internal_account_credited'
+            : 'commercial.allocation.payable_retained';
+
+        return $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: $event,
+            occurredAt: CarbonImmutable::parse($disposition->committed_at),
+            actor: new ExecutionActorData(id: 'x-change', type: 'commercial_disposition_engine'),
+            subject: $this->subject($sale),
+            references: new ExecutionReferenceData(
+                correlationId: $this->correlationId($sale),
+                causationId: (string) $allocation->treasury_operation_reference,
+                executionId: (string) $disposition->getKey(),
+                externalReference: $disposition->treasury_operation_reference,
+                metadata: [
+                    'designation_reference' => $disposition->designation_reference,
+                    'authority_hash' => $disposition->authority_hash,
+                    'account_reference_hash' => $disposition->account_reference_hash,
+                    'principal_reference_hash' => $disposition->principal_reference_hash,
+                ],
+            ),
+            idempotencyKey: 'x-change:commercial:'.$sale->reference
+                .':allocation-disposition:'.$disposition->commercial_allocation_id,
+            payload: [
+                'status' => $disposition->status,
+                'disposition' => $disposition->disposition->value,
+                'provider_call' => false,
+                'provider_inventory_changed' => false,
+            ],
+            money: $this->money($disposition->currency, $disposition->amount_minor),
+            metadata: $this->metadata('commercial_allocation_disposition'),
         ));
     }
 

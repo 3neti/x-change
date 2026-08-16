@@ -26,6 +26,7 @@ use LBHurtado\XChange\Actions\Commercial\RequestPartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Actions\Commercial\ReverseCommercialSale;
 use LBHurtado\XChange\Actions\Commercial\SubmitPartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
+use LBHurtado\XChange\Data\Commercial\CommercialAllocationDispositionPlanData;
 use LBHurtado\XChange\Data\Commercial\PartnerCommissionPayoutBatchRequestData;
 use LBHurtado\XChange\Data\Commercial\ProviderCostBatchEvidenceData;
 use LBHurtado\XChange\Data\Disbursement\PayoutDestinationValidationData;
@@ -36,6 +37,7 @@ use LBHurtado\XChange\Enums\CommercialProviderCostBatchStatus;
 use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialAllocationDisposition;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Models\CommercialPartner;
 use LBHurtado\XChange\Models\CommercialPartnerDestinationRevision;
@@ -44,23 +46,31 @@ use LBHurtado\XChange\Models\CommercialProviderCostBatchLine;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatchLine;
+use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
+use LBHurtado\XChange\Services\Commercial\CommercialAccountingAttestation;
 use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
+use LBHurtado\XCommerce\Data\CommercialAllocationPlanData;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialCatalogData;
 use LBHurtado\XCommerce\Data\CommercialCatalogItemData;
+use LBHurtado\XCommerce\Data\CommercialQuoteData;
 use LBHurtado\XCommerce\Data\CommercialQuoteLineInputData;
 use LBHurtado\XCommerce\Data\CommercialSaleSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialWaterfallPolicyData;
 use LBHurtado\XCommerce\Data\CommercialWaterfallRuleData;
+use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
 use LBHurtado\XCommerce\Enums\CommercialWaterfallLineType;
 use LBHurtado\XCommerce\Services\DeterministicCommercialQuoteBuilder;
 use LBHurtado\XCommerce\Services\DeterministicCommercialSaleFactory;
 use LBHurtado\XCommerce\Services\DeterministicCommercialWaterfallCalculator;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
+use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 
 beforeEach(function (): void {
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
@@ -215,6 +225,122 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
                 'commercial.allocation.posted',
                 'commercial.sale.reversed',
             ]);
+});
+
+it('credits a governed recipient Account atomically without a provider call or Inventory mutation', function (): void {
+    enableNetbankTreasuryForTests();
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 25_00, 'internal-account-credit');
+    recognizeCommercialInventoryForTest(25_00, 'internal-account-credit');
+    $snapshot = commercialSaleSnapshotWithExternalProvider('acceptance:internal-account-credit');
+    $inventoryBefore = (int) DB::table('treasury_inventories')->sum('balance_minor');
+    $designation = app(ActivateCommercialRecipientDesignation::class)->execute(
+        new CommercialRecipientDesignationData(
+            counterpartyReference: 'counterparty:provider:test',
+            commercialRole: 'service_aggregator',
+            componentScope: ['inputs.fields.otp'],
+            agreementReference: 'agreement:institution-provider:v1',
+            settlementDesignationReference: 'designation:provider:test',
+            taxProfileReference: null,
+            effectiveFrom: now()->subMinute()->toRfc3339String(),
+            settlementDisposition: CommercialSettlementDisposition::InternalAccountCredit,
+            settlementAccountReference: 'wallet:recipient:test',
+            settlementPrincipalReference: 'principal:recipient:test',
+        ),
+        origin: 'test',
+        authorityReference: 'authority:provider:test:v2',
+        sourceReference: 'test:internal-account-credit',
+        acceptedSnapshotHash: str_repeat('d', 64),
+    );
+    $plan = new CommercialAllocationDispositionPlanData(
+        policyRuleReference: 'rule:provider',
+        disposition: CommercialSettlementDisposition::InternalAccountCredit,
+        designationReference: $designation->designation_reference,
+        authorityReference: $designation->authority_reference,
+        authorityHash: $designation->authority_hash,
+        accountReferenceHash: hash('sha256', 'wallet:recipient:test'),
+        principalReferenceHash: hash('sha256', 'principal:recipient:test'),
+        destinationClientFundsPositionReference: $positions['recipient_client_funds']->position_reference,
+    );
+
+    $sale = app(PostCommercialSale::class)->execute(
+        $snapshot,
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+        ['rule:provider' => $plan],
+    );
+    $operationCount = TreasuryPositionOperation::query()->count();
+    $replayed = app(PostCommercialSale::class)->execute(
+        $snapshot,
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+        ['rule:provider' => $plan],
+    );
+
+    expect($replayed->getKey())->toBe($sale->getKey())
+        ->and(CommercialAllocationDisposition::query()->count())->toBe(1)
+        ->and(CommercialAllocationDisposition::query()->sole()->treasury_operation_reference)
+        ->not->toBeNull()
+        ->and(commercialSalePositionBalance($positions['provider_cost']))->toBe(0)
+        ->and(commercialSalePositionBalance($positions['recipient_client_funds']))->toBe(10_00)
+        ->and(TreasuryPositionOperation::query()->count())->toBe($operationCount)
+        ->and((int) DB::table('treasury_inventories')->sum('balance_minor'))->toBe($inventoryBefore)
+        ->and(data_get($sale->snapshot, 'recipient_designation_governance.rule:provider.authority_hash'))
+        ->toBe($designation->authority_hash)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'commercial.allocation.internal_account_credited')
+            ->count())->toBe(1);
+
+    $attestation = app(CommercialAccountingAttestation::class)->inspect(['netbank-primary']);
+
+    expect($attestation['ready'])->toBeTrue();
+
+    $disposition = CommercialAllocationDisposition::query()->sole();
+    DB::table($disposition->getTable())
+        ->where('id', $disposition->getKey())
+        ->update(['amount_minor' => 9_00]);
+
+    $tamperedAttestation = app(CommercialAccountingAttestation::class)->inspect(['netbank-primary']);
+
+    expect($tamperedAttestation['ready'])->toBeFalse()
+        ->and(collect($tamperedAttestation['issues'])->pluck('code')->all())
+        ->toContain('commercial_allocation_disposition_evidence_mismatch');
+
+    DB::table($disposition->getTable())
+        ->where('id', $disposition->getKey())
+        ->update(['amount_minor' => 10_00]);
+
+    $balancesBeforeReversal = collect($positions)
+        ->mapWithKeys(fn (TreasuryPosition $position, string $key): array => [
+            $key => commercialSalePositionBalance($position),
+        ])
+        ->all();
+
+    expect(fn () => app(ReverseCommercialSale::class)->execute(
+        $sale->reference,
+        'administrative-void:internal-account-credit',
+    ))->toThrow(CommercialSaleConflict::class, 'Account-credit recovery')
+        ->and(collect($positions)->mapWithKeys(fn (TreasuryPosition $position, string $key): array => [
+            $key => commercialSalePositionBalance($position),
+        ])->all())->toBe($balancesBeforeReversal)
+        ->and($sale->fresh()->status)->toBe('posted');
+});
+
+it('rejects governed external allocations without an exact disposition plan before charging', function (): void {
+    $positions = commercialSalePositions();
+    fundCommercialClientPosition($positions, 25_00, 'missing-disposition-plan');
+    $operationCount = TreasuryPositionOperation::query()->count();
+
+    expect(fn () => app(PostCommercialSale::class)->execute(
+        commercialSaleSnapshotWithExternalProvider('acceptance:missing-disposition-plan'),
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+    ))->toThrow(CommercialSaleConflict::class, 'requires frozen settlement disposition authority')
+        ->and(CommercialSale::query()->count())->toBe(0)
+        ->and(TreasuryPositionOperation::query()->count())->toBe($operationCount);
 });
 
 it('records aggregate provider cost evidence without settling a variance', function (): void {
@@ -667,6 +793,7 @@ function commercialSalePositions(): array
         'provider_cost' => [$system, TreasuryPositionPurpose::ProviderCostPayable],
         'product_revenue' => [$system, TreasuryPositionPurpose::ProductRevenue],
         'partner_commission' => [$partner, TreasuryPositionPurpose::PartnerCommissionPayable],
+        'recipient_client_funds' => [$partner, TreasuryPositionPurpose::ClientFunds],
         'commercial_revenue' => [$system, TreasuryPositionPurpose::CommercialRevenue],
     ];
     $positions = [];
@@ -809,6 +936,65 @@ function commercialSaleSnapshot(
         acceptanceEventReference: $acceptanceReference,
         buyerReference: 'principal:account:buyer',
         acceptedAt: $acceptedAt,
+    );
+}
+
+function commercialSaleSnapshotWithExternalProvider(string $acceptanceReference): CommercialSaleSnapshotData
+{
+    $snapshot = commercialSaleSnapshot($acceptanceReference);
+    $quote = $snapshot->quoteSnapshot;
+    $lines = array_map(static function (CommercialAllocationLineData $line): CommercialAllocationLineData {
+        if ($line->policyRuleReference !== 'rule:provider') {
+            return $line;
+        }
+
+        return new CommercialAllocationLineData(...array_replace(
+            $line->constructorArguments(),
+            [
+                'componentReference' => 'inputs.fields.otp',
+                'componentScheduleReference' => 'component-economics:pay-code:v1',
+                'componentScheduleVersion' => 1,
+                'componentRuleReference' => 'component-rule:otp:provider',
+                'componentRuleLineType' => $line->lineType,
+                'destinationKind' => CommercialAllocationDestinationKind::ExternalRecipient,
+                'participantRole' => 'service_aggregator',
+                'agreementReference' => 'agreement:institution-provider:v1',
+                'designationReference' => 'designation:provider:test',
+                'unitAmountMinor' => $line->amountMinor,
+                'quantity' => 1,
+            ],
+        ));
+    }, $quote->allocationPlan->lines);
+    $allocationPlan = new CommercialAllocationPlanData(
+        sourceCommercialEventReference: $quote->allocationPlan->sourceCommercialEventReference,
+        policyReference: $quote->allocationPlan->policyReference,
+        policyVersion: $quote->allocationPlan->policyVersion,
+        currency: $quote->allocationPlan->currency,
+        allocationBaseMinor: $quote->allocationPlan->allocationBaseMinor,
+        lines: $lines,
+    );
+    $governedQuote = new CommercialQuoteData(
+        reference: $quote->reference,
+        sourceCommercialEventReference: $quote->sourceCommercialEventReference,
+        catalogSnapshot: $quote->catalogSnapshot,
+        waterfallPolicySnapshot: $quote->waterfallPolicySnapshot,
+        attributionSnapshot: $quote->attributionSnapshot,
+        lines: $quote->lines,
+        totalPriceMinor: $quote->totalPriceMinor,
+        currency: $quote->currency,
+        allocationPlan: $allocationPlan,
+        offeringSnapshot: $quote->offeringSnapshot,
+        componentEconomicsSnapshot: $quote->componentEconomicsSnapshot,
+        taxProfileSnapshots: $quote->taxProfileSnapshots,
+    );
+
+    return new CommercialSaleSnapshotData(
+        reference: $snapshot->reference,
+        acceptanceEventReference: $snapshot->acceptanceEventReference,
+        buyerReference: $snapshot->buyerReference,
+        acceptedAt: $snapshot->acceptedAt,
+        quoteSnapshot: $governedQuote,
+        accountingContext: $snapshot->accountingContext,
     );
 }
 

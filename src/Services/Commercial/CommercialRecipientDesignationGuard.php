@@ -71,18 +71,21 @@ final readonly class CommercialRecipientDesignationGuard
             $accountReference = filled($designation->settlement_account_reference)
                 ? trim((string) $designation->settlement_account_reference)
                 : null;
+            $principalReference = filled($designation->settlement_principal_reference)
+                ? trim((string) $designation->settlement_principal_reference)
+                : null;
 
             if ($disposition === CommercialSettlementDisposition::InternalAccountCredit
-                && $accountReference === null) {
+                && ($accountReference === null || $principalReference === null)) {
                 throw new DomainException(
-                    "Commercial Recipient Designation [{$line->designationReference}] requires an internal settlement Account.",
+                    "Commercial Recipient Designation [{$line->designationReference}] requires an internal settlement Account and principal.",
                 );
             }
 
             if ($disposition === CommercialSettlementDisposition::RetainPayable
-                && $accountReference !== null) {
+                && ($accountReference !== null || $principalReference !== null)) {
                 throw new DomainException(
-                    "Commercial Recipient Designation [{$line->designationReference}] cannot bind an Account while retaining its payable.",
+                    "Commercial Recipient Designation [{$line->designationReference}] cannot bind an Account or principal while retaining its payable.",
                 );
             }
         }

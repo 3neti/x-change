@@ -15,7 +15,8 @@ final class CommercialRecipientDesignation extends Model
     protected $fillable = [
         'designation_reference', 'counterparty_reference', 'commercial_role',
         'component_scope', 'agreement_reference', 'settlement_designation_reference',
-        'settlement_disposition', 'settlement_account_reference', 'tax_profile_reference',
+        'settlement_disposition', 'settlement_account_reference', 'settlement_principal_reference',
+        'tax_profile_reference',
         'origin', 'authority_reference', 'authority_hash',
         'source_reference', 'representative_type', 'representative_reference',
         'accepted_snapshot_hash', 'acceptance_evidence_hash',
@@ -26,6 +27,17 @@ final class CommercialRecipientDesignation extends Model
     protected $attributes = [
         'settlement_disposition' => 'retain_payable',
     ];
+
+    protected static function booted(): void
+    {
+        self::updating(function (): never {
+            throw new \LogicException('Commercial Recipient Designations are immutable except through guarded lifecycle actions.');
+        });
+
+        self::deleting(function (): never {
+            throw new \LogicException('Commercial Recipient Designations cannot be deleted.');
+        });
+    }
 
     protected function casts(): array
     {

@@ -7,12 +7,15 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionCommercialChargeData;
 use LBHurtado\XChange\Actions\Commercial\PostCommercialSale;
+use LBHurtado\XChange\Data\Commercial\CommercialAllocationDispositionPlanData;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
+use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XChange\Models\CommercialTaxProfile;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialQuoteService;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
 use LBHurtado\XCommerce\Services\DeterministicCommercialSaleFactory;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 
 beforeEach(function (): void {
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
@@ -111,11 +114,28 @@ it('posts net and Tax Payable as distinct idempotent accounting allocations', fu
                 : 'position:commercial-recipient',
         ],
     )->all();
+    $dispositions = collect($quote->allocationPlan->lines)
+        ->where('destinationKind', CommercialAllocationDestinationKind::ExternalRecipient)
+        ->mapWithKeys(static function ($line): array {
+            $designation = CommercialRecipientDesignation::query()
+                ->where('designation_reference', $line->designationReference)
+                ->sole();
+
+            return [$line->policyRuleReference => new CommercialAllocationDispositionPlanData(
+                policyRuleReference: $line->policyRuleReference,
+                disposition: CommercialSettlementDisposition::RetainPayable,
+                designationReference: $designation->designation_reference,
+                authorityReference: $designation->authority_reference,
+                authorityHash: $designation->authority_hash,
+            )];
+        })
+        ->all();
     $sale = app(PostCommercialSale::class)->execute(
         snapshot: $snapshot,
         sourceClientFundsPositionReference: 'position:client-funds',
         commercialClearingPositionReference: 'position:commercial-clearing',
         destinationPositionReferences: $destinations,
+        dispositionPlans: $dispositions,
     );
     $taxAllocations = $sale->allocations->where('category', 'tax_payable');
 

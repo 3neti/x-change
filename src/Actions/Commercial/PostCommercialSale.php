@@ -9,14 +9,18 @@ use JsonException;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionCommercialChargeData;
+use LBHurtado\XChange\Data\Commercial\CommercialAllocationDispositionPlanData;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use LBHurtado\XChange\Services\Commercial\CommercialBillableEventRecorder;
 use LBHurtado\XChange\Services\Commercial\CommercialPartnerAttributionResolver;
+use LBHurtado\XChange\Services\Commercial\CommercialRecipientDesignationAuthorityVerifier;
 use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
 use LBHurtado\XCommerce\Data\CommercialSaleSnapshotData;
+use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
 
 final readonly class PostCommercialSale
 {
@@ -25,10 +29,13 @@ final readonly class PostCommercialSale
         private CommercialAccountingJournal $journal,
         private CommercialPartnerAttributionResolver $partners,
         private CommercialBillableEventRecorder $billableEvents,
+        private ApplyCommercialAllocationDisposition $dispositions,
+        private CommercialRecipientDesignationAuthorityVerifier $designationAuthority,
     ) {}
 
     /**
      * @param  array<string, string>  $destinationPositionReferences
+     * @param  array<string, CommercialAllocationDispositionPlanData>  $dispositionPlans
      *
      * @throws JsonException
      */
@@ -37,10 +44,19 @@ final readonly class PostCommercialSale
         string $sourceClientFundsPositionReference,
         string $commercialClearingPositionReference,
         array $destinationPositionReferences,
+        array $dispositionPlans = [],
     ): CommercialSale {
+        $this->assertDispositionPlans($snapshot, $dispositionPlans);
         $snapshotArray = $snapshot->toArray();
         $partnerAttributions = $this->partners->forSnapshot($snapshot);
         $snapshotArray['partner_governance'] = $partnerAttributions;
+        $dispositionEvidence = collect($dispositionPlans)
+            ->mapWithKeys(static fn (CommercialAllocationDispositionPlanData $plan): array => [
+                $plan->policyRuleReference => $plan->evidence(),
+            ])
+            ->sortKeys()
+            ->all();
+        $snapshotArray['recipient_designation_governance'] = $dispositionEvidence;
         $snapshotHash = hash(
             'sha256',
             json_encode($snapshotArray, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
@@ -49,6 +65,8 @@ final readonly class PostCommercialSale
         return DB::transaction(function () use (
             $commercialClearingPositionReference,
             $destinationPositionReferences,
+            $dispositionPlans,
+            $dispositionEvidence,
             $snapshot,
             $snapshotArray,
             $snapshotHash,
@@ -100,10 +118,12 @@ final readonly class PostCommercialSale
                     $snapshot,
                     $destinationPositionReferences,
                     $partnerAttributions,
+                    $dispositionEvidence,
                 );
             }
 
             $this->billableEvents->recordForSale($sale, $snapshot);
+            $this->assertCurrentDispositionAuthorities($dispositionPlans);
 
             $scope = hash('sha256', $snapshot->reference);
             $charge = $this->positionOperations->charge(
@@ -164,6 +184,16 @@ final readonly class PostCommercialSale
                         'treasury_operation_reference' => $operationReference,
                         'updated_at' => now(),
                     ]);
+                $allocation->forceFill([
+                    'status' => 'posted',
+                    'treasury_operation_reference' => $operationReference,
+                ]);
+
+                $plan = $dispositionPlans[$allocation->policy_rule_reference] ?? null;
+
+                if ($plan instanceof CommercialAllocationDispositionPlanData) {
+                    $this->dispositions->execute($allocation, $plan);
+                }
             }
 
             CommercialSale::query()
@@ -177,7 +207,7 @@ final readonly class PostCommercialSale
 
             $this->billableEvents->markPostedForSale($sale);
 
-            $posted = $sale->fresh(['allocations', 'billableEvents']);
+            $posted = $sale->fresh(['allocations.disposition', 'billableEvents']);
             $this->journal->recordSalePosted($posted);
 
             return $posted;
@@ -187,12 +217,14 @@ final readonly class PostCommercialSale
     /**
      * @param  array<string, string>  $destinationPositionReferences
      * @param  array<string, array<string, mixed>>  $partnerAttributions
+     * @param  array<string, array<string, mixed>>  $dispositionEvidence
      */
     private function createAllocations(
         CommercialSale $sale,
         CommercialSaleSnapshotData $snapshot,
         array $destinationPositionReferences,
         array $partnerAttributions,
+        array $dispositionEvidence,
     ): void {
         $plan = $snapshot->quoteSnapshot->allocationPlan;
 
@@ -215,6 +247,7 @@ final readonly class PostCommercialSale
                 $line,
                 $destination,
                 $partnerAttributions[$line->policyRuleReference] ?? null,
+                $dispositionEvidence[$line->policyRuleReference] ?? null,
             );
         }
     }
@@ -224,6 +257,7 @@ final readonly class PostCommercialSale
         CommercialAllocationLineData $line,
         string $destinationPositionReference,
         ?array $partnerAttribution,
+        ?array $dispositionEvidence,
     ): void {
         CommercialAllocation::query()->create([
             'commercial_sale_id' => $sale->getKey(),
@@ -259,6 +293,7 @@ final readonly class PostCommercialSale
                 'gross_amount_minor' => $line->grossAmountMinor,
                 'tax_profile_version' => $line->taxProfileVersion,
                 'tax_profile_snapshot_hash' => $line->taxProfileSnapshotHash,
+                'recipient_designation_governance' => $dispositionEvidence,
             ],
         ]);
     }
@@ -268,6 +303,70 @@ final readonly class PostCommercialSale
         if (! hash_equals($sale->snapshot_hash, $snapshotHash)) {
             throw new CommercialSaleConflict(
                 'The commercial acceptance reference was replayed with a different immutable sale snapshot.',
+            );
+        }
+    }
+
+    /** @param array<string, CommercialAllocationDispositionPlanData> $plans */
+    private function assertCurrentDispositionAuthorities(array $plans): void
+    {
+        foreach ($plans as $plan) {
+            $designation = CommercialRecipientDesignation::query()
+                ->where('designation_reference', $plan->designationReference)
+                ->currentlyEffective()
+                ->lockForUpdate()
+                ->first();
+
+            if (! $designation instanceof CommercialRecipientDesignation) {
+                throw new CommercialSaleConflict(
+                    "Commercial Recipient Designation [{$plan->designationReference}] is no longer active.",
+                );
+            }
+
+            $this->designationAuthority->assertValid($designation);
+            $accountHash = filled($designation->settlement_account_reference)
+                ? hash('sha256', trim((string) $designation->settlement_account_reference))
+                : null;
+            $principalHash = filled($designation->settlement_principal_reference)
+                ? hash('sha256', trim((string) $designation->settlement_principal_reference))
+                : null;
+
+            if (! hash_equals((string) $designation->authority_hash, $plan->authorityHash)
+                || $designation->authority_reference !== $plan->authorityReference
+                || $designation->settlement_disposition !== $plan->disposition->value
+                || $accountHash !== $plan->accountReferenceHash
+                || $principalHash !== $plan->principalReferenceHash) {
+                throw new CommercialSaleConflict(
+                    'Commercial settlement authority changed before the allocation was posted.',
+                );
+            }
+        }
+    }
+
+    /** @param array<string, CommercialAllocationDispositionPlanData> $plans */
+    private function assertDispositionPlans(CommercialSaleSnapshotData $snapshot, array $plans): void
+    {
+        $expected = [];
+
+        foreach ($snapshot->quoteSnapshot->allocationPlan->lines as $line) {
+            if ($line->destinationKind === CommercialAllocationDestinationKind::ExternalRecipient) {
+                $expected[$line->policyRuleReference] = true;
+            }
+        }
+
+        foreach ($plans as $key => $plan) {
+            if (! $plan instanceof CommercialAllocationDispositionPlanData
+                || $key !== $plan->policyRuleReference
+                || ! isset($expected[$key])) {
+                throw new CommercialSaleConflict(
+                    'Commercial disposition plans must correspond exactly to governed external-recipient allocations.',
+                );
+            }
+        }
+
+        if (count($expected) !== count($plans)) {
+            throw new CommercialSaleConflict(
+                'Every governed external-recipient allocation requires frozen settlement disposition authority.',
             );
         }
     }

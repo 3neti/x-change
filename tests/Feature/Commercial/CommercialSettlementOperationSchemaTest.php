@@ -35,6 +35,26 @@ it('installs additive commercial settlement operation tables and capabilities', 
             'rejection_code',
             'status',
         ]))->toBeTrue()
+        ->and(Schema::hasColumn(
+            'x_change_commercial_recipient_designations',
+            'settlement_principal_reference',
+        ))->toBeTrue()
+        ->and(Schema::hasColumns('x_change_commercial_allocation_dispositions', [
+            'commercial_allocation_id',
+            'disposition',
+            'status',
+            'designation_reference',
+            'authority_reference',
+            'authority_hash',
+            'account_reference_hash',
+            'principal_reference_hash',
+            'source_position_reference',
+            'destination_position_reference',
+            'treasury_operation_reference',
+            'amount_minor',
+            'currency',
+            'committed_at',
+        ]))->toBeTrue()
         ->and(array_column(CommercialOperatorCapability::cases(), 'value'))->toContain(
             'commercial.partners.manage',
             'commercial.partners.approve',
