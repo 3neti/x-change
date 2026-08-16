@@ -314,6 +314,37 @@ const props = defineProps<{
       state: string;
       message: string;
       changes_locked: boolean;
+      component_economics: {
+        operational: boolean;
+        complete_profile_count: number;
+        required_profile_count: number;
+        message: string;
+        profiles: Array<{
+          profile: string;
+          active: boolean;
+          reference: string | null;
+          version: number | null;
+          manifest_hash: string | null;
+          offering_snapshot_hash: string | null;
+          activated_at: string | null;
+          message: string;
+        }>;
+      };
+      recipient_designations: {
+        operational: boolean;
+        active_count: number;
+        required_count: number;
+        message: string;
+        designations: Array<{
+          reference: string;
+          counterparty_reference: string;
+          active: boolean;
+          authority_hash: string | null;
+          origin: string | null;
+          activated_at: string | null;
+          message: string;
+        }>;
+      };
       roles: {
         maker_count: number;
         checker_count: number;
@@ -326,7 +357,13 @@ const props = defineProps<{
 }>();
 
 const activeTab = ref<
-  "price-list" | "waterfall" | "artifact" | "partners" | "activity" | "operations" | "policy"
+  | "price-list"
+  | "waterfall"
+  | "artifact"
+  | "partners"
+  | "activity"
+  | "operations"
+  | "policy"
 >("price-list");
 const approvalReference = ref("");
 const approvingId = ref<number | null>(null);
@@ -456,7 +493,9 @@ function downloadManifest(): void {
 
   if (!yaml || typeof document === "undefined") return;
 
-  const url = URL.createObjectURL(new Blob([yaml], { type: "application/yaml" }));
+  const url = URL.createObjectURL(
+    new Blob([yaml], { type: "application/yaml" }),
+  );
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = `${active.value.reference.replaceAll(":", "-")}-v${active.value.version}.yaml`;
@@ -750,6 +789,99 @@ function retryCommission(id: number): void {
       </section>
 
       <section
+        class="grid gap-3 md:grid-cols-2"
+        data-testid="commercial-agreement-economics-readiness"
+      >
+        <article
+          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        >
+          <div class="flex items-start gap-3">
+            <Calculator class="mt-0.5 size-5 shrink-0 text-violet-600" />
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-sm font-semibold">Agreement Economics</h2>
+                <span
+                  class="rounded-full px-2 py-0.5 text-[0.68rem] font-semibold"
+                  :class="
+                    commercialOffering.governance.component_economics
+                      .operational
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                  "
+                >
+                  {{
+                    commercialOffering.governance.component_economics
+                      .complete_profile_count
+                  }}/{{
+                    commercialOffering.governance.component_economics
+                      .required_profile_count
+                  }}
+                  active
+                </span>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ commercialOffering.governance.component_economics.message }}
+              </p>
+              <p
+                v-for="profile in commercialOffering.governance
+                  .component_economics.profiles"
+                :key="profile.profile"
+                class="mt-2 break-all text-xs text-slate-500"
+              >
+                {{ label(profile.profile) }} · v{{ profile.version ?? "—" }} ·
+                {{ profile.manifest_hash?.slice(0, 12) ?? "not provisioned" }}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        >
+          <div class="flex items-start gap-3">
+            <BadgeCheck class="mt-0.5 size-5 shrink-0 text-sky-600" />
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-sm font-semibold">Recipient Authorities</h2>
+                <span
+                  class="rounded-full px-2 py-0.5 text-[0.68rem] font-semibold"
+                  :class="
+                    commercialOffering.governance.recipient_designations
+                      .operational
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                  "
+                >
+                  {{
+                    commercialOffering.governance.recipient_designations
+                      .active_count
+                  }}/{{
+                    commercialOffering.governance.recipient_designations
+                      .required_count
+                  }}
+                  active
+                </span>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">
+                {{
+                  commercialOffering.governance.recipient_designations.message
+                }}
+              </p>
+              <p
+                v-for="designation in commercialOffering.governance
+                  .recipient_designations.designations"
+                :key="designation.reference"
+                class="mt-2 truncate text-xs text-slate-500"
+              >
+                {{ label(designation.counterparty_reference) }} ·
+                {{ designation.active ? "authorized" : "action needed" }}
+              </p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section
         class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
       >
         <div
@@ -1027,49 +1159,90 @@ function retryCommission(id: number): void {
 
         <div v-else-if="activeTab === 'artifact'" class="space-y-5 p-5">
           <section class="grid gap-3 md:grid-cols-2">
-            <article class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-              <p class="text-xs font-semibold text-slate-500">Executable Authority</p>
+            <article
+              class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+            >
+              <p class="text-xs font-semibold text-slate-500">
+                Executable Authority
+              </p>
               <p class="mt-1 text-sm font-semibold">
                 {{ active.reference }} · Version {{ active.version }}
               </p>
               <p class="mt-2 break-all font-mono text-xs text-slate-500">
-                Snapshot {{ commercialOffering.artifact?.snapshot_hash ?? "Unavailable" }}
+                Snapshot
+                {{
+                  commercialOffering.artifact?.snapshot_hash ?? "Unavailable"
+                }}
               </p>
             </article>
-            <article class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-              <p class="text-xs font-semibold text-slate-500">Frozen Source Artifact</p>
+            <article
+              class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+            >
+              <p class="text-xs font-semibold text-slate-500">
+                Frozen Source Artifact
+              </p>
               <p class="mt-1 text-sm font-semibold">
                 {{ commercialOffering.artifact?.schema ?? "Legacy version" }}
               </p>
               <p class="mt-2 break-all font-mono text-xs text-slate-500">
-                Manifest {{ commercialOffering.artifact?.hash ?? "Not yet frozen" }}
+                Manifest
+                {{ commercialOffering.artifact?.hash ?? "Not yet frozen" }}
               </p>
             </article>
           </section>
 
-          <section v-if="commercialOffering.artifact?.yaml" class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
-            <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <section
+            v-if="commercialOffering.artifact?.yaml"
+            class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
+          >
+            <div
+              class="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800"
+            >
               <div>
                 <h3 class="text-sm font-semibold">Commercial Offering YAML</h3>
-                <p class="text-xs text-slate-500">Generated from the structured draft, frozen, hashed, then compiled for activation.</p>
+                <p class="text-xs text-slate-500">
+                  Generated from the structured draft, frozen, hashed, then
+                  compiled for activation.
+                </p>
               </div>
-              <button type="button" class="h-9 shrink-0 rounded-lg border border-slate-200 px-3 text-xs font-semibold dark:border-slate-700" @click="downloadManifest">
+              <button
+                type="button"
+                class="h-9 shrink-0 rounded-lg border border-slate-200 px-3 text-xs font-semibold dark:border-slate-700"
+                @click="downloadManifest"
+              >
                 Download YAML
               </button>
             </div>
-            <pre class="max-h-[30rem] overflow-auto whitespace-pre-wrap break-words bg-slate-950 p-4 text-xs leading-5 text-slate-200">{{ commercialOffering.artifact.yaml }}</pre>
+            <pre
+              class="max-h-[30rem] overflow-auto whitespace-pre-wrap break-words bg-slate-950 p-4 text-xs leading-5 text-slate-200"
+              >{{ commercialOffering.artifact.yaml }}</pre>
           </section>
 
           <section>
             <h3 class="text-sm font-semibold">Version History</h3>
-            <div class="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-              <article v-for="version in commercialOffering.history" :key="`${version.reference}:${version.version}`" class="grid gap-2 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">v{{ version.version }}</span>
+            <div
+              class="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800"
+            >
+              <article
+                v-for="version in commercialOffering.history"
+                :key="`${version.reference}:${version.version}`"
+                class="grid gap-2 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+              >
+                <span
+                  class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800"
+                  >v{{ version.version }}</span
+                >
                 <div class="min-w-0">
-                  <p class="text-sm font-semibold">{{ label(version.origin) }}</p>
-                  <p class="truncate font-mono text-xs text-slate-500">{{ version.manifest_hash ?? version.snapshot_hash }}</p>
+                  <p class="text-sm font-semibold">
+                    {{ label(version.origin) }}
+                  </p>
+                  <p class="truncate font-mono text-xs text-slate-500">
+                    {{ version.manifest_hash ?? version.snapshot_hash }}
+                  </p>
                 </div>
-                <span class="text-xs font-semibold text-slate-500">{{ label(version.status) }}</span>
+                <span class="text-xs font-semibold text-slate-500">{{
+                  label(version.status)
+                }}</span>
               </article>
             </div>
           </section>

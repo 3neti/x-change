@@ -16,6 +16,7 @@ use LBHurtado\XChange\Actions\Commercial\SettleCommercialProviderCost;
 use LBHurtado\XChange\Actions\Commercial\SettlePartnerCommissionPayout;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
+use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
@@ -39,6 +40,7 @@ use LBHurtado\XChange\Models\PartnerCommissionPayout;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialComponentEconomics;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation;
 use LBHurtado\XChange\Services\Commercial\CommercialComponentEconomicsManifestCompiler;
+use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
 use LBHurtado\XChange\Services\Commercial\PersistCommercialComponentEconomicsManifest;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -375,6 +377,9 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
     ])->mapWithKeys(fn (TreasuryPositionPurpose $purpose): array => [
         $purpose->value => treasuryPositionBalanceForPurpose($purpose),
     ]);
+    $controlPositions = collect(app(CommercialControlReadModel::class)->build(
+        app(CommercialOfferingResolverContract::class)->resolve('pay_code'),
+    )['position_balances'])->keyBy('purpose');
 
     expect($accountDebitMinor)->toBe($principalMinor + $commercialChargeMinor)
         ->and($sale->total_price_minor)->toBe($commercialChargeMinor)
@@ -409,6 +414,13 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
         ))->toBe(0)
         ->and(treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::RoyaltyPayable))
         ->toBe($commercialChargeMinor)
+        ->and($controlPositions->get(TreasuryPositionPurpose::RoyaltyPayable->value))->toMatchArray([
+            'current_minor' => $commercialChargeMinor,
+            'lifetime_allocated_minor' => $commercialChargeMinor,
+            'settled_minor' => 0,
+            'remaining_minor' => $commercialChargeMinor,
+            'reconciled' => true,
+        ])
         ->and(treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::ProviderCostPayable))->toBe(0)
         ->and(treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::PartnerCommissionPayable))->toBe(0)
         ->and((int) $commercialBalances->sum())->toBe($commercialChargeMinor)

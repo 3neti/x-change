@@ -367,6 +367,24 @@ const partners = {
   pending_destinations: [],
 };
 
+const commercialGovernanceReadiness = {
+  component_economics: {
+    operational: true,
+    complete_profile_count: 2,
+    required_profile_count: 2,
+    message: "Agreement Economics is active for every governed profile.",
+    profiles: [],
+  },
+  recipient_designations: {
+    operational: true,
+    active_count: 1,
+    required_count: 1,
+    message:
+      "Every external component allocation has active recipient authority.",
+    designations: [],
+  },
+};
+
 describe("Cockpit Commercial Offering administration", () => {
   it("keeps the Price List primary and exposes the Waterfall without mixing their meaning", async () => {
     const wrapper = mount(CommercialOfferings, {
@@ -392,6 +410,43 @@ describe("Cockpit Commercial Offering administration", () => {
             message:
               "Independent maker and checker authorities can govern revisions.",
             changes_locked: false,
+            component_economics: {
+              operational: true,
+              complete_profile_count: 2,
+              required_profile_count: 2,
+              message:
+                "Agreement Economics is active for every governed profile.",
+              profiles: [
+                {
+                  profile: "pay_code",
+                  active: true,
+                  reference: "commercial-component-economics:pay_code",
+                  version: 1,
+                  manifest_hash: "e".repeat(64),
+                  offering_snapshot_hash: "d".repeat(64),
+                  activated_at: "2026-08-16T00:00:00+00:00",
+                  message: "Agreement Economics is active.",
+                },
+              ],
+            },
+            recipient_designations: {
+              operational: true,
+              active_count: 1,
+              required_count: 1,
+              message:
+                "Every external component allocation has active recipient authority.",
+              designations: [
+                {
+                  reference: "designation:commissioning:3neti:v1",
+                  counterparty_reference: "counterparty:3neti",
+                  active: true,
+                  authority_hash: "a".repeat(64),
+                  origin: "commissioning_baseline",
+                  activated_at: "2026-08-16T00:00:00+00:00",
+                  message: "Commercial Recipient Designation is active.",
+                },
+              ],
+            },
             roles: {
               maker_count: 1,
               checker_count: 1,
@@ -406,6 +461,10 @@ describe("Cockpit Commercial Offering administration", () => {
     });
 
     expect(wrapper.text()).toContain("Price List & Waterfall");
+    expect(wrapper.text()).toContain("Agreement Economics");
+    expect(wrapper.text()).toContain("2/2 active");
+    expect(wrapper.text()).toContain("Recipient Authorities");
+    expect(wrapper.text()).toContain("Counterparty:3neti · authorized");
     expect(wrapper.text()).toContain("Transaction Fee");
     expect(wrapper.text()).toContain("OTP Verification");
     expect(wrapper.text()).toContain("Submit New Version");
@@ -494,6 +553,7 @@ describe("Cockpit Commercial Offering administration", () => {
           partners,
           published: [],
           governance: {
+            ...commercialGovernanceReadiness,
             state: "revision_awaiting_approval",
             message: "A revision is waiting for approval.",
             changes_locked: false,
@@ -549,6 +609,7 @@ describe("Cockpit Commercial Offering administration", () => {
             },
           ],
           governance: {
+            ...commercialGovernanceReadiness,
             state: "published_awaiting_activation",
             message: "An approved version is waiting for activation.",
             changes_locked: false,

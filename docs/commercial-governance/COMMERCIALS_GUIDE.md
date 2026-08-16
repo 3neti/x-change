@@ -20,11 +20,16 @@ It is not a generic shopping cart and it is not a shortcut around Treasury. A Co
 |---|---|
 | Commercial Offering | A versioned Price List, Waterfall, Attribution Policy, and Legal Trace approved for a profile such as `pay_code` or `account_funding`. |
 | Commercial Sale | The immutable acceptance of one governed quote. It retains the Offering snapshot even after later prices change. |
-| Waterfall | The ordered allocation of the accepted charge. Every centavo must be conserved. |
+| Component Economics | The immutable, Offering-bound allocation schedule for every priced instruction component. It never carries an independent price. |
+| Commercial Recipient Designation | Versioned authority connecting an external allocation role and agreement to an eligible recipient. |
+| Waterfall | The ordered allocation of the accepted charge. Legacy or synthetic operational scenarios may still exercise it; governed issuance uses Component Economics. Every centavo must be conserved. |
 | Provider Cost Payable | The amount allocated for an external bank or EMI cost. Allocation is not proof that the provider has collected it. |
 | Product Revenue | Revenue attributed to the instruction product or service. |
 | Partner Commission Payable | An amount earned by a governed Commercial Partner but not necessarily paid yet. |
 | Commercial Revenue | The residual commercial allocation after the preceding rules. |
+| Royalty Payable | Amount recognized for an external service or intellectual-property recipient, including the default 3neti commissioning recipient. |
+| Tax Payable | Withheld value produced only by an explicit governed tax allocation policy; a TIN alone is not a tax rule. |
+| Institution-Owned Funds | Value expressly retained by the commissioning institution instead of becoming an external payable. |
 | Provider Inventory | Recognized money held at a bank or EMI. It changes only when authoritative evidence establishes a corresponding cash movement. |
 | Client Funds | The Account holder's institution-positioned funds. Commercial charges debit Client Funds through Treasury, not through an arbitrary balance edit. |
 
@@ -60,7 +65,7 @@ Named maker + different named checker
 
 Publication makes a reviewed Offering eligible. Activation is the separate controlled instant when new work starts using it. Existing Pay Codes and Commercial Sales retain the Offering version and hash accepted when they were created.
 
-## Sale and waterfall flow
+## Sale and allocation flow
 
 For an illustrative ₱25.00 instruction charge:
 
@@ -70,7 +75,13 @@ For an illustrative ₱25.00 instruction charge:
 | Charge | ₱0.00 | ₱25.00 | ₱0.00 | ₱0.00 | ₱0.00 | ₱0.00 |
 | Waterfall posted | ₱0.00 | ₱0.00 | ₱10.00 | ₱8.00 | ₱2.00 | ₱5.00 |
 
-The example is illustrative; the active Offering is always the source of truth. The posting is atomic and idempotent. Replaying the same accepted sale produces no duplicate charge or allocation. Reusing an idempotency reference with different content fails closed.
+The example is illustrative; the active Offering is always the source of truth. Governed issuance resolves the exact Offering-bound Component Economics artifact and every required Recipient Designation before accepting the quote. The posting is atomic and idempotent. Replaying the same accepted sale produces no duplicate charge or allocation. Reusing an idempotency reference with different content fails closed.
+
+The commissioning baseline is deliberately complete: every catalog item is
+listed, every nonzero price has an explicit allocation, and the initial payable
+recipient is 3neti. A later agreement may replace that schedule with provider,
+partner, institution-retained, or governed tax allocations, but it cannot leave
+a priced component partially allocated or assign more than its price.
 
 Commercial allocations do not move provider cash. They classify value within Treasury Positions:
 
@@ -141,13 +152,14 @@ The System Principal and authorized operators use **Commercial Controls**:
 - **Partners** administers legal attribution and independently approved payout destinations.
 - **Provider Costs** records and reconciles external cost evidence.
 - **Commissions** groups earned allocations and carries payment through maker-checker and provider reconciliation.
-- **Activity** exposes sanitized, append-only operational history.
+- **Activity** exposes the itemized payable/revenue Positions and sanitized, append-only operational history.
+- **Agreement Economics** shows whether every Offering profile is bound to a complete economics artifact and whether every external recipient authority is active. It displays only safe references, counts, and shortened hashes.
 
 Ordinary Account holders do not see institutional operator identities, payout destinations, provider liquidity, or Commercial Controls.
 
 ## Commissioning and runtime
 
-Commissioning reports the governance mode, baseline origin, active Offering profiles, maker/checker readiness, and whether issuance or price changes are available. The package baseline must match its stored snapshot hash; a conflict stops installation rather than overwriting evidence.
+Commissioning reports the governance mode, baseline origin, active Offering profiles, Component Economics readiness, Recipient Designation readiness, maker/checker readiness, and whether issuance or price changes are available. The package baseline must match its stored snapshot hash; a conflict stops installation rather than overwriting evidence.
 
 Required operational responsibilities include the `x-change-funding` queue for scheduled commercial settlement reconciliation, the other named x-change queues documented by commissioning, and Laravel Scheduler. Environment files select deployment behavior; they never contain fabricated approvals.
 

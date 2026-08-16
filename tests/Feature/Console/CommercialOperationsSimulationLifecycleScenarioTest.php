@@ -61,6 +61,14 @@ it('simulates governed commercial operations and rolls every record back', funct
         ->and(data_get($payload, 'rollback_completed'))->toBeTrue()
         ->and(data_get($payload, 'safety.external_provider_calls'))->toBeFalse()
         ->and(data_get($payload, 'safety.real_money_movement'))->toBeFalse()
+        ->and(data_get($payload, 'agreement_economics'))->toMatchArray([
+            'operational' => true,
+            'active_profiles' => 2,
+            'required_profiles' => 2,
+            'recipient_authorities_active' => 1,
+            'recipient_authorities_required' => 1,
+            'simulation_control_policy' => 'synthetic_provider-cost-and-commission-waterfall',
+        ])
         ->and(data_get($payload, 'provider_simulation.disbursement_calls'))->toBe(1)
         ->and(data_get($payload, 'provider_simulation.status_calls'))->toBe(1)
         ->and(collect(data_get($payload, 'invariants'))->every(

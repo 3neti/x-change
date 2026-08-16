@@ -43,6 +43,7 @@ use LBHurtado\XChange\Lifecycle\Runners\Support\CommercialSimulationDestinationV
 use LBHurtado\XChange\Lifecycle\Runners\Support\CommercialSimulationPayoutProvider;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XCommerce\Data\CommercialAccountingContextData;
@@ -61,6 +62,10 @@ final class CommercialOperationsSimulationScenarioRunner implements ScenarioRunn
         'x_change_commercial_offerings',
         'x_change_commercial_offering_activations',
         'x_change_commercial_operator_authorizations',
+        'x_change_commercial_component_economics_manifests',
+        'x_change_commercial_component_economics_activations',
+        'x_change_commercial_component_economics_heads',
+        'x_change_commercial_recipient_designations',
         'x_change_commercial_partners',
         'x_change_commercial_partner_revisions',
         'x_change_commercial_partner_destination_revisions',
@@ -89,6 +94,7 @@ final class CommercialOperationsSimulationScenarioRunner implements ScenarioRunn
         private readonly TreasuryPositionOperationContract $positionOperations,
         private readonly TreasuryInventoryOperationContract $inventoryOperations,
         private readonly ProvisionCommercialBaselines $baselines,
+        private readonly CommercialGovernanceInspector $governance,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -189,6 +195,7 @@ final class CommercialOperationsSimulationScenarioRunner implements ScenarioRunn
         $this->baselines->provision('lifecycle-simulation:'.$context->idempotencyKey);
 
         $offering = $this->offerings->resolve('pay_code');
+        $governance = $this->governance->inspect();
         $treasuryConnection = collect($this->connections->active([
             (string) data_get($context->scenario, 'commercial.connection', 'netbank-primary'),
         ]))->sole();
@@ -430,6 +437,14 @@ final class CommercialOperationsSimulationScenarioRunner implements ScenarioRunn
                 'waterfall_reference' => $offering->waterfallPolicy->reference,
                 'waterfall_version' => $offering->waterfallPolicy->version,
                 'legal_trace' => $offering->legalTrace->toArray(),
+            ],
+            'agreement_economics' => [
+                'operational' => (bool) data_get($governance, 'component_economics.operational', false),
+                'active_profiles' => (int) data_get($governance, 'component_economics.complete_profile_count', 0),
+                'required_profiles' => (int) data_get($governance, 'component_economics.required_profile_count', 0),
+                'recipient_authorities_active' => (int) data_get($governance, 'recipient_designations.active_count', 0),
+                'recipient_authorities_required' => (int) data_get($governance, 'recipient_designations.required_count', 0),
+                'simulation_control_policy' => 'synthetic_provider-cost-and-commission-waterfall',
             ],
             'partner' => [
                 'reference' => $partner->reference,

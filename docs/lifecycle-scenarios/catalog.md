@@ -106,6 +106,13 @@ Every lifecycle scenario may define the following metadata:
 
 The rollback-only `treasury_basic_cash` report includes the exact Commercial Offering snapshot used for issuance: Price List, Waterfall, Attribution Policy, and Legal Trace. Its default run has no attributed sales partner, so it proves that the commission rule is skipped and the unallocated value flows to Commercial Revenue rather than a synthetic partner.
 
+`commercial_operations_simulation` also reports Agreement Economics and
+Commercial Recipient Designation readiness before exercising its deliberately
+synthetic provider-cost and commission control waterfall. The report names that
+simulation-only policy explicitly, performs no external provider call or real
+money movement, and rolls back Offering, economics, designation, Treasury,
+Partner, and journal records before returning.
+
 The rollback-only `commercial_operations_simulation` scenario requires distinct maker and checker actor IDs. It exercises the governed Commercial actions through a simulation-only provider boundary, reports stage-by-stage accounting and journal evidence, makes no external provider call, and rolls the complete database transaction back before returning. See the [Commercials Guide](../commercial-governance/COMMERCIALS_GUIDE.md#rollback-only-lifecycle-simulation).
 
 ---

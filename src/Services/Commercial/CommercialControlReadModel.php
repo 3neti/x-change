@@ -195,10 +195,13 @@ final readonly class CommercialControlReadModel
     private function positionBalances(array $allocationTotals): array
     {
         $purposes = [
-            TreasuryPositionPurpose::ProviderCostPayable->value => 'provider_cost',
-            TreasuryPositionPurpose::ProductRevenue->value => 'product_revenue',
-            TreasuryPositionPurpose::PartnerCommissionPayable->value => 'partner_commission',
-            TreasuryPositionPurpose::CommercialRevenue->value => 'commercial_revenue',
+            TreasuryPositionPurpose::ProviderCostPayable->value => ['provider_cost', 'provider_cost_payable'],
+            TreasuryPositionPurpose::ProductRevenue->value => ['product_revenue'],
+            TreasuryPositionPurpose::PartnerCommissionPayable->value => ['partner_commission'],
+            TreasuryPositionPurpose::RoyaltyPayable->value => ['service_provider_payable', 'royalty', 'royalty_payable'],
+            TreasuryPositionPurpose::TaxPayable->value => ['tax', 'tax_payable'],
+            TreasuryPositionPurpose::InstitutionOwnedFunds->value => ['institution_owned_funds'],
+            TreasuryPositionPurpose::CommercialRevenue->value => ['commercial_revenue'],
         ];
         $current = [];
 
@@ -247,27 +250,29 @@ final readonly class CommercialControlReadModel
         }
         $rows = [];
 
-        foreach ($purposes as $purpose => $category) {
+        foreach ($purposes as $purpose => $categories) {
             $totals = collect($allocationTotals)
-                ->where('category', $category)
-                ->keyBy('currency');
+                ->whereIn('category', $categories);
             $currencies = collect(array_keys($current))
                 ->filter(fn (string $key): bool => str_starts_with($key, $purpose.'|'))
                 ->map(fn (string $key): string => str($key)->after('|')->toString())
-                ->merge($totals->keys())
+                ->merge($totals->pluck('currency'))
                 ->unique()
                 ->sort()
                 ->values();
 
             foreach ($currencies as $currency) {
-                $lifetimeAllocatedMinor = (int) ($totals->get($currency)['amount_minor'] ?? 0);
-                $settledMinor = (int) $settled->get($category.'|'.$currency, 0);
+                $lifetimeAllocatedMinor = (int) $totals
+                    ->where('currency', $currency)
+                    ->sum('amount_minor');
+                $settledMinor = (int) collect($categories)
+                    ->sum(fn (string $category): int => (int) $settled->get($category.'|'.$currency, 0));
                 $currentMinor = (int) ($current[$purpose.'|'.$currency] ?? 0);
                 $expectedRemainingMinor = $lifetimeAllocatedMinor - $settledMinor;
 
                 $rows[] = [
                     'purpose' => $purpose,
-                    'category' => $category,
+                    'category' => $categories[0],
                     'currency' => $currency,
                     'current_minor' => $currentMinor,
                     'lifetime_allocated_minor' => $lifetimeAllocatedMinor,

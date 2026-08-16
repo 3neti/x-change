@@ -75,10 +75,32 @@ Runtime service bindings, lifecycle projections, public price-list reads, Pay
 Code estimation, issuance, and Commercial Sale posting must all resolve the
 active governed Offering.
 
-## Scope of this foundation
+## Agreement Economics
 
-This foundation consolidates prices and provenance. Component recipient
-allocations, automatic payable/revenue consummation, Institution-Owned Funds,
-and tax withholding remain subsequent governed schemas. Those schemas must
-reference the same immutable Offering version; they must not introduce another
-price list.
+The active Offering remains the only price authority. A separate immutable
+Component Economics artifact binds each catalog item to its complete allocation
+schedule without restating or overriding the item's price. It references the
+exact Offering version and snapshot hash, conserves every centavo, and fails
+closed when a priced component, external recipient designation, or authority is
+missing.
+
+```text
+Active Commercial Offering price
+    -> versioned Component Economics schedule
+    -> active Commercial Recipient Designation
+    -> accepted Commercial Quote snapshot
+    -> atomic, itemized Treasury recognition
+       -> Royalty Payable
+       -> Provider Cost Payable
+       -> Partner Commission Payable
+       -> Tax Payable (only under an explicit governed tax policy)
+       -> Product or Commercial Revenue
+       -> Institution-Owned Funds
+```
+
+The default commissioning artifact explicitly assigns every priced component
+to the 3neti service-provider recipient until a later governed agreement
+supersedes it. No unlisted or implicit recipient is permitted. Recognition is
+automatic at issuance; external cash settlement remains a separate,
+evidence-controlled operation. A TIN by itself never invents a tax rate or tax
+liability.
