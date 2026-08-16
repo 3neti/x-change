@@ -45,6 +45,7 @@ class DoctorXChangeCommand extends Command
                 $this->commercialGovernanceCheck($commercialGovernance, true),
                 $this->commercialComponentEconomicsCheck($commercialGovernance),
                 $this->commercialRecipientDesignationsCheck($commercialGovernance),
+                $this->commercialRecognitionPoliciesCheck($commercialGovernance),
             ]
             : ($this->option('operator-activity-runtime')
             ? [$this->operatorActivityRuntimeProfileCheck($operatorActivityRuntimeProfile)]
@@ -58,6 +59,7 @@ class DoctorXChangeCommand extends Command
                 $this->commercialGovernanceCheck($commercialGovernance),
                 $this->commercialComponentEconomicsCheck($commercialGovernance),
                 $this->commercialRecipientDesignationsCheck($commercialGovernance),
+                $this->commercialRecognitionPoliciesCheck($commercialGovernance),
                 $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
                 $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
                 $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
@@ -233,6 +235,22 @@ class DoctorXChangeCommand extends Command
 
         return $this->check(
             'commercial recipient designations',
+            $status['operational'] === true,
+            (string) $status['message'],
+            $status,
+        );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function commercialRecognitionPoliciesCheck(
+        CommercialGovernanceInspector $governance,
+    ): array {
+        $status = $governance->inspect()['recognition_policies'];
+
+        return $this->check(
+            'commercial recognition policies',
             $status['operational'] === true,
             (string) $status['message'],
             $status,

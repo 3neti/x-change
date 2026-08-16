@@ -404,6 +404,10 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
             static fn (CommercialBillableEvent $event): bool => $event->status === CommercialBillableEventStatus::Posted
                 && $event->event_type === 'pay_code.issued_with_component'
                 && $event->recognition_policy_reference === 'recognition:pay-code-issuance:v1'
+                && $event->recognition_policy_version === 1
+                && data_get($event->recognition_policy_snapshot, 'trigger') === 'commercial_sale.accepted'
+                && data_get($event->recognition_policy_snapshot, 'timing') === 'immediate'
+                && preg_match('/^[a-f0-9]{64}$/', (string) $event->recognition_policy_hash) === 1
                 && $event->quantity === 1
                 && $event->total_amount_minor === $event->unit_amount_minor,
         ))->toBeTrue()

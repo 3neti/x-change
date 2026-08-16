@@ -197,6 +197,9 @@ type CommercialControls = {
       component_reference: string;
       event_type: string;
       recognition_policy_reference: string;
+      recognition_policy_version: number | null;
+      recognition_policy_hash: string | null;
+      recognition_timing: string | null;
       amount_minor: number;
       status: string;
     }>;
@@ -356,6 +359,22 @@ const props = defineProps<{
           authority_hash: string | null;
           origin: string | null;
           activated_at: string | null;
+          message: string;
+        }>;
+      };
+      recognition_policies: {
+        operational: boolean;
+        ready_count: number;
+        required_count: number;
+        message: string;
+        policies: Array<{
+          reference: string;
+          version: number | null;
+          billable_event_reference: string;
+          trigger: string | null;
+          timing: string | null;
+          snapshot_hash: string | null;
+          ready: boolean;
           message: string;
         }>;
       };
@@ -803,7 +822,7 @@ function retryCommission(id: number): void {
       </section>
 
       <section
-        class="grid gap-3 md:grid-cols-2"
+        class="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
         data-testid="commercial-agreement-economics-readiness"
       >
         <article
@@ -889,6 +908,52 @@ function retryCommission(id: number): void {
               >
                 {{ label(designation.counterparty_reference) }} ·
                 {{ designation.active ? "authorized" : "action needed" }}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        >
+          <div class="flex items-start gap-3">
+            <GitBranch class="mt-0.5 size-5 shrink-0 text-emerald-600" />
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-sm font-semibold">Recognition Authority</h2>
+                <span
+                  class="rounded-full px-2 py-0.5 text-[0.68rem] font-semibold"
+                  :class="
+                    commercialOffering.governance.recognition_policies
+                      .operational
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                  "
+                >
+                  {{
+                    commercialOffering.governance.recognition_policies
+                      .ready_count
+                  }}/{{
+                    commercialOffering.governance.recognition_policies
+                      .required_count
+                  }}
+                  ready
+                </span>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ commercialOffering.governance.recognition_policies.message }}
+              </p>
+              <p
+                v-for="policy in commercialOffering.governance
+                  .recognition_policies.policies"
+                :key="`${policy.reference}-${policy.billable_event_reference}`"
+                class="mt-2 truncate text-xs text-slate-500"
+                :title="policy.snapshot_hash ?? policy.message"
+              >
+                {{ label(policy.billable_event_reference) }} · v{{
+                  policy.version ?? "—"
+                }}
+                · {{ label(policy.timing ?? "unavailable") }}
               </p>
             </div>
           </div>
@@ -1828,10 +1893,11 @@ function retryCommission(id: number): void {
                       v-for="event in sale.billable_events"
                       :key="`${sale.reference}-${event.component_reference}`"
                       class="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[0.68rem] font-medium text-violet-700 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300"
-                      :title="event.recognition_policy_reference"
+                      :title="`${event.recognition_policy_reference} · v${event.recognition_policy_version ?? 'legacy'} · ${event.recognition_policy_hash ?? 'legacy evidence'}`"
                     >
                       {{ label(event.component_reference) }} ·
-                      {{ event.status }}
+                      {{ event.status }} ·
+                      {{ label(event.recognition_timing ?? "legacy") }}
                     </span>
                   </div>
                 </div>

@@ -155,6 +155,19 @@ it('reports active baseline issuance while locking price changes', function (): 
             'required_count' => 1,
             'active_count' => 1,
         ])
+        ->and($status['recognition_policies'])->toMatchArray([
+            'operational' => true,
+            'required_count' => 1,
+            'ready_count' => 1,
+        ])
+        ->and(data_get($status, 'recognition_policies.policies.0'))->toMatchArray([
+            'reference' => 'recognition:pay-code-issuance:v1',
+            'version' => 1,
+            'billable_event_reference' => 'pay_code.issued_with_component',
+            'trigger' => 'commercial_sale.accepted',
+            'timing' => 'immediate',
+            'ready' => true,
+        ])
         ->and($status['changes_locked'])->toBeTrue()
         ->and($status['governance_ready'])->toBeFalse()
         ->and($status['state'])->toBe('baseline_active_changes_locked')
@@ -166,6 +179,10 @@ it('reports active baseline issuance while locking price changes', function (): 
 
     $this->artisan('x-change:doctor', ['--json' => true])
         ->expectsOutputToContain('"name": "commercial component economics"')
+        ->assertSuccessful();
+
+    $this->artisan('x-change:doctor', ['--json' => true])
+        ->expectsOutputToContain('"name": "commercial recognition policies"')
         ->assertSuccessful();
 });
 

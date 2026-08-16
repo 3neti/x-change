@@ -374,6 +374,8 @@ final readonly class CommercialAccountingJournal
                 metadata: [
                     'component_reference' => $event->component_reference,
                     'recognition_policy_reference' => $event->recognition_policy_reference,
+                    'recognition_policy_version' => $event->recognition_policy_version,
+                    'recognition_policy_hash' => $event->recognition_policy_hash,
                 ],
             ),
             idempotencyKey: 'x-change:commercial:'.$sale->reference
@@ -382,6 +384,8 @@ final readonly class CommercialAccountingJournal
                 'status' => $event->status->value,
                 'event_type' => $event->event_type,
                 'recognition_policy_reference' => $event->recognition_policy_reference,
+                'recognition_policy_version' => $event->recognition_policy_version,
+                'recognition_policy_hash' => $event->recognition_policy_hash,
                 'component_reference' => $event->component_reference,
                 'quantity' => $event->quantity,
                 'unit_amount_minor' => $event->unit_amount_minor,

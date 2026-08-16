@@ -29,6 +29,7 @@ final readonly class CommercialGovernanceInspector
     public function __construct(
         private CommercialComponentEconomicsResolverContract $componentEconomics,
         private CommercialRecipientDesignationResolverContract $recipientDesignations,
+        private CommercialRecognitionPolicyRegistry $recognitionPolicies,
     ) {}
 
     /**
@@ -94,9 +95,10 @@ final readonly class CommercialGovernanceInspector
         );
         $componentEconomics = $this->componentEconomicsReadiness($profiles->all());
         $recipientDesignations = $this->recipientDesignationReadiness($profiles->all());
+        $recognitionPolicies = $this->recognitionPolicyReadiness($profiles->all());
 
         $state = match (true) {
-            ! $allProfilesActive || ! $componentEconomics['operational'] || ! $recipientDesignations['operational'] => CommercialGovernanceState::ConfigurationInvalid,
+            ! $allProfilesActive || ! $componentEconomics['operational'] || ! $recipientDesignations['operational'] || ! $recognitionPolicies['operational'] => CommercialGovernanceState::ConfigurationInvalid,
             $publishedAwaitingActivation > 0 => CommercialGovernanceState::PublishedAwaitingActivation,
             $pendingApproval > 0 => CommercialGovernanceState::RevisionAwaitingApproval,
             $governedOfferingActive => CommercialGovernanceState::GovernedOfferingActive,
@@ -105,7 +107,8 @@ final readonly class CommercialGovernanceInspector
         };
         $operational = $allProfilesActive
             && $componentEconomics['operational']
-            && $recipientDesignations['operational'];
+            && $recipientDesignations['operational']
+            && $recognitionPolicies['operational'];
 
         return [
             'schema' => 'x-change.commercial-governance-status.v1',
@@ -121,6 +124,7 @@ final readonly class CommercialGovernanceInspector
             'profiles' => $profileRows,
             'component_economics' => $componentEconomics,
             'recipient_designations' => $recipientDesignations,
+            'recognition_policies' => $recognitionPolicies,
             'partners' => $this->partnerReadiness(),
             'operations' => $this->operationsReadiness(),
             'message' => $this->message($state),
@@ -136,10 +140,87 @@ final readonly class CommercialGovernanceInspector
                 && Schema::hasTable('x_change_commercial_component_economics_manifests')
                 && Schema::hasTable('x_change_commercial_component_economics_activations')
                 && Schema::hasTable('x_change_commercial_component_economics_heads')
-                && Schema::hasTable('x_change_commercial_recipient_designations');
+                && Schema::hasTable('x_change_commercial_recipient_designations')
+                && Schema::hasTable('x_change_commercial_recognition_policies');
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /**
+     * @param  list<string>  $profiles
+     * @return array{operational: bool, required_count: int, ready_count: int, policies: list<array<string, mixed>>, message: string}
+     */
+    private function recognitionPolicyReadiness(array $profiles): array
+    {
+        $requirements = [];
+
+        foreach ($profiles as $profile) {
+            try {
+                $economics = $this->componentEconomics->resolve($profile);
+            } catch (Throwable) {
+                continue;
+            }
+
+            foreach ($economics->components as $component) {
+                if (! $component->isBillable()
+                    || $component->recognitionPolicyReference === null
+                    || $component->billableEventReference === null) {
+                    continue;
+                }
+
+                $key = $component->recognitionPolicyReference.'|'.$component->billableEventReference;
+                $requirements[$key] = [
+                    'reference' => $component->recognitionPolicyReference,
+                    'billable_event_reference' => $component->billableEventReference,
+                ];
+            }
+        }
+
+        $rows = collect($requirements)->map(function (array $requirement): array {
+            try {
+                $policy = $this->recognitionPolicies->resolve(
+                    $requirement['reference'],
+                    $requirement['billable_event_reference'],
+                );
+                $ready = $policy->trigger === 'commercial_sale.accepted'
+                    && $policy->timing === 'immediate';
+
+                return [
+                    ...$requirement,
+                    'ready' => $ready,
+                    'version' => $policy->version,
+                    'trigger' => $policy->trigger,
+                    'timing' => $policy->timing,
+                    'snapshot_hash' => $policy->snapshotHash(),
+                    'message' => $ready
+                        ? 'Recognition policy is ready for immediate Commercial Sale posting.'
+                        : 'Recognition policy requires an unsupported deferred-recognition path.',
+                ];
+            } catch (Throwable $exception) {
+                return [
+                    ...$requirement,
+                    'ready' => false,
+                    'version' => null,
+                    'trigger' => null,
+                    'timing' => null,
+                    'snapshot_hash' => null,
+                    'message' => $exception->getMessage(),
+                ];
+            }
+        })->values();
+        $ready = $rows->where('ready', true)->count();
+        $operational = $requirements !== [] && $ready === count($requirements);
+
+        return [
+            'operational' => $operational,
+            'required_count' => count($requirements),
+            'ready_count' => $ready,
+            'policies' => $rows->all(),
+            'message' => $operational
+                ? 'Every Billable Event has an executable governed recognition policy.'
+                : 'Every Billable Event requires an executable governed recognition policy.',
+        ];
     }
 
     /**
@@ -405,6 +486,13 @@ final readonly class CommercialGovernanceInspector
                 'active_count' => 0,
                 'designations' => [],
                 'message' => 'Commercial Recipient Designation storage is not ready.',
+            ],
+            'recognition_policies' => [
+                'operational' => false,
+                'required_count' => 0,
+                'ready_count' => 0,
+                'policies' => [],
+                'message' => 'Commercial Recognition Policy storage is not ready.',
             ],
             'partners' => [
                 'storage_ready' => false,

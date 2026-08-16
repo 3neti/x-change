@@ -14,9 +14,13 @@ final class CommercialBillableEvent extends Model
 
     protected $fillable = [
         'commercial_sale_id',
+        'commercial_recognition_policy_id',
         'event_reference',
         'event_type',
         'recognition_policy_reference',
+        'recognition_policy_version',
+        'recognition_policy_hash',
+        'recognition_policy_snapshot',
         'source_event_reference',
         'component_reference',
         'quantity',
@@ -49,7 +53,10 @@ final class CommercialBillableEvent extends Model
     protected function casts(): array
     {
         return [
+            'commercial_recognition_policy_id' => 'integer',
             'quantity' => 'integer',
+            'recognition_policy_version' => 'integer',
+            'recognition_policy_snapshot' => 'array',
             'unit_amount_minor' => 'integer',
             'total_amount_minor' => 'integer',
             'status' => CommercialBillableEventStatus::class,
@@ -62,5 +69,10 @@ final class CommercialBillableEvent extends Model
     public function sale(): BelongsTo
     {
         return $this->belongsTo(CommercialSale::class, 'commercial_sale_id');
+    }
+
+    public function recognitionPolicy(): BelongsTo
+    {
+        return $this->belongsTo(CommercialRecognitionPolicy::class, 'commercial_recognition_policy_id');
     }
 }

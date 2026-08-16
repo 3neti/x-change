@@ -16,6 +16,11 @@ use LBHurtado\XCommerce\Data\CommercialSaleSnapshotData;
 
 final class CommercialBillableEventRecorder
 {
+    public function __construct(
+        private readonly CommercialRecognitionPolicyRegistry $recognitionPolicies,
+        private readonly PersistCommercialRecognitionPolicy $persistRecognitionPolicy,
+    ) {}
+
     /**
      * @return Collection<int, CommercialBillableEvent>
      *
@@ -51,6 +56,21 @@ final class CommercialBillableEventRecorder
                 );
             }
 
+            $recognitionPolicy = $this->recognitionPolicies->resolve(
+                $component->recognitionPolicyReference,
+                $component->billableEventReference,
+            );
+            $recognitionPolicyHash = $recognitionPolicy->snapshotHash();
+
+            if ($recognitionPolicy->trigger !== 'commercial_sale.accepted'
+                || $recognitionPolicy->timing !== 'immediate') {
+                throw new CommercialSaleConflict(
+                    "Recognition policy [{$recognitionPolicy->reference}] is not supported by immediate Commercial Sale posting.",
+                );
+            }
+
+            $persistedRecognitionPolicy = $this->persistRecognitionPolicy->execute($recognitionPolicy);
+
             $payload = [
                 'commercial_sale_reference' => $sale->reference,
                 'commercial_sale_snapshot_hash' => $sale->snapshot_hash,
@@ -60,6 +80,8 @@ final class CommercialBillableEventRecorder
                 'component_reference' => $line->catalogItemReference,
                 'event_type' => $component->billableEventReference,
                 'recognition_policy_reference' => $component->recognitionPolicyReference,
+                'recognition_policy_version' => $recognitionPolicy->version,
+                'recognition_policy_hash' => $recognitionPolicyHash,
                 'quantity' => $line->quantity,
                 'unit_amount_minor' => $line->unitPriceMinor,
                 'total_amount_minor' => $line->totalPriceMinor,
@@ -97,9 +119,13 @@ final class CommercialBillableEventRecorder
 
             $events->push(CommercialBillableEvent::query()->create([
                 'commercial_sale_id' => $sale->getKey(),
+                'commercial_recognition_policy_id' => $persistedRecognitionPolicy->getKey(),
                 'event_reference' => $eventReference,
                 'event_type' => $component->billableEventReference,
                 'recognition_policy_reference' => $component->recognitionPolicyReference,
+                'recognition_policy_version' => $recognitionPolicy->version,
+                'recognition_policy_hash' => $recognitionPolicyHash,
+                'recognition_policy_snapshot' => $recognitionPolicy->toArray(),
                 'source_event_reference' => $snapshot->quoteSnapshot->sourceCommercialEventReference,
                 'component_reference' => $line->catalogItemReference,
                 'quantity' => $line->quantity,
@@ -131,7 +157,7 @@ final class CommercialBillableEventRecorder
                 throw new CommercialSaleConflict('Only a received Billable Event can be posted.');
             }
 
-            DB::table('x_change_commercial_billable_events')
+            DB::table((new CommercialBillableEvent)->getTable())
                 ->where('id', $event->getKey())
                 ->update([
                     'status' => CommercialBillableEventStatus::Posted->value,
@@ -159,7 +185,7 @@ final class CommercialBillableEventRecorder
                 throw new CommercialSaleConflict('Only a posted Billable Event can be reversed.');
             }
 
-            DB::table('x_change_commercial_billable_events')
+            DB::table((new CommercialBillableEvent)->getTable())
                 ->where('id', $event->getKey())
                 ->update([
                     'status' => CommercialBillableEventStatus::Reversed->value,

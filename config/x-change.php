@@ -1355,6 +1355,18 @@ return [
                 ],
             ],
         ],
+        'recognition_policies' => [
+            'policies' => [
+                'recognition:pay-code-issuance:v1' => [
+                    'version' => 1,
+                    'billable_event_references' => [
+                        'pay_code.issued_with_component',
+                    ],
+                    'trigger' => 'commercial_sale.accepted',
+                    'timing' => 'immediate',
+                ],
+            ],
+        ],
         'legal' => [
             'enforcement' => env('XCHANGE_COMMERCIAL_LEGAL_ENFORCEMENT', 'advisory'),
         ],

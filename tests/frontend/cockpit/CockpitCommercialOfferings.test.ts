@@ -301,6 +301,10 @@ const controls = {
           component_reference: "cash.amount",
           event_type: "pay_code.issued_with_component",
           recognition_policy_reference: "recognition:pay-code-issuance:v1",
+          recognition_policy_version: 1,
+          recognition_policy_hash:
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          recognition_timing: "immediate",
           amount_minor: 1500,
           status: "posted",
         },
@@ -409,6 +413,13 @@ const commercialGovernanceReadiness = {
       "Every external component allocation has active recipient authority.",
     designations: [],
   },
+  recognition_policies: {
+    operational: true,
+    ready_count: 1,
+    required_count: 1,
+    message: "Every Billable Event has an executable governed recognition policy.",
+    policies: [],
+  },
 };
 
 describe("Cockpit Commercial Offering administration", () => {
@@ -473,6 +484,27 @@ describe("Cockpit Commercial Offering administration", () => {
                 },
               ],
             },
+            recognition_policies: {
+              operational: true,
+              ready_count: 1,
+              required_count: 1,
+              message:
+                "Every Billable Event has an executable governed recognition policy.",
+              policies: [
+                {
+                  reference: "recognition:pay-code-issuance:v1",
+                  version: 1,
+                  billable_event_reference:
+                    "pay_code.issued_with_component",
+                  trigger: "commercial_sale.accepted",
+                  timing: "immediate",
+                  snapshot_hash: "b".repeat(64),
+                  ready: true,
+                  message:
+                    "Recognition policy is ready for immediate Commercial Sale posting.",
+                },
+              ],
+            },
             roles: {
               maker_count: 1,
               checker_count: 1,
@@ -491,6 +523,8 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("2/2 active");
     expect(wrapper.text()).toContain("Recipient Authorities");
     expect(wrapper.text()).toContain("Counterparty:3neti · authorized");
+    expect(wrapper.text()).toContain("Recognition Authority");
+    expect(wrapper.text()).toContain("Pay Code Issued With Component · v1 · Immediate");
     expect(wrapper.text()).toContain("Transaction Fee");
     expect(wrapper.text()).toContain("OTP Verification");
     expect(wrapper.text()).toContain("Submit New Version");
@@ -546,7 +580,7 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("Allocation History");
     expect(wrapper.text()).toContain("Reversed sales are excluded");
     expect(wrapper.text()).toContain("2 component events recognized");
-    expect(wrapper.text()).toContain("Cash Amount · posted");
+    expect(wrapper.text()).toContain("Cash Amount · posted · Immediate");
 
     const operationsButton = wrapper
       .findAll("button")

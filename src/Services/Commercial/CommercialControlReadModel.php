@@ -181,6 +181,9 @@ final readonly class CommercialControlReadModel
                             'component_reference' => $event->component_reference,
                             'event_type' => $event->event_type,
                             'recognition_policy_reference' => $event->recognition_policy_reference,
+                            'recognition_policy_version' => $event->recognition_policy_version,
+                            'recognition_policy_hash' => $event->recognition_policy_hash,
+                            'recognition_timing' => data_get($event->recognition_policy_snapshot, 'timing'),
                             'amount_minor' => $event->total_amount_minor,
                             'status' => $event->status->value,
                         ])

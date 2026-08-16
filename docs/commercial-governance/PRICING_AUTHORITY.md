@@ -113,6 +113,14 @@ allocation. The event records the governed component, event type, recognition
 policy, quantity, unit price, total, currency, source event, and immutable
 payload hash. It never restates a catalog price as a second authority.
 
+The recognition policy is resolved from an explicit governed registry. Every
+new Billable Event freezes the policy version, canonical snapshot, and SHA-256
+hash. The policy must expressly authorize the component's Billable Event.
+Unknown, malformed, mismatched, or deferred policies fail before any Treasury
+posting. The initial baseline recognizes on `commercial_sale.accepted`;
+deferred recognition requires a future Unearned Instruction Charge treatment
+and cannot silently fall through to immediate revenue or payable recognition.
+
 ```text
 Accepted governed quote line
     -> received Billable Event

@@ -6,6 +6,12 @@ An accepted Pay Code charge posts the governed waterfall immediately. Provider c
 
 The durable Billable Event is the recognition evidence that connects an accepted priced component to that posting. A posted Billable Event means the governed charge and allocation were recognized; it does not mean an external recipient was paid. The Commercial Controls Activity view shows these component events and their recognition status alongside each recent sale.
 
+Each new event freezes the recognition-policy version, canonical snapshot, and
+hash used at posting. Immediate recognition is allowed only when the policy
+explicitly maps the Billable Event to `commercial_sale.accepted`. Unsupported
+deferred policies stop before charge or allocation posting; issuance success
+alone can never invent recognition.
+
 ## Provider Cost
 
 Provider cost is settled only from an authoritative provider statement, invoice, or account-debit record. The operator records one period batch with `x-change:commercial:provider-cost:record`. x-change matches eligible provider-cost allocations by provider, connection, currency, and accepted-sale period.
