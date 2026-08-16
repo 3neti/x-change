@@ -10,6 +10,8 @@ use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
 use LBHurtado\XChange\Enums\ProvisioningOperatorCapability;
@@ -21,10 +23,12 @@ use LBHurtado\XChange\Models\TreasuryOperatorAuthorization;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceJournal;
 use LBHurtado\XChange\Services\Commercial\RevokeCommercialRecipientDesignation;
+use LBHurtado\XChange\Services\Commercial\TransitionCommercialRecipientDesignationEconomics;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiGovernanceJournal;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
 use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementAccountBinding;
 use LBHurtado\XProvisioning\Enums\ProvisioningProfile;
 use LBHurtado\XProvisioning\Models\ProvisioningAcceptance;
 use LBHurtado\XProvisioning\Models\ProvisioningRevision;
@@ -37,6 +41,9 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
         private PartnerApiGovernanceJournal $partnerApiJournal,
         private ActivateCommercialRecipientDesignation $activateRecipientDesignation,
         private RevokeCommercialRecipientDesignation $revokeRecipientDesignation,
+        private TransitionCommercialRecipientDesignationEconomics $transitionRecipientEconomics,
+        private WalletProvisioningContract $accounts,
+        private TreasuryPrincipalReferenceResolverContract $principalReferences,
     ) {}
 
     public function activate(
@@ -54,7 +61,11 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
 
             if ($revision->request->profile === ProvisioningProfile::CommercialRecipientDesignation) {
                 $reference = 'commercial-designation:'.$revision->request->reference.':'.$revision->snapshot_hash;
-                $designation = CommercialRecipientDesignationData::fromArray((array) $revision->snapshot);
+                $acceptedDesignation = CommercialRecipientDesignationData::fromArray((array) $revision->snapshot);
+                $designation = $this->resolveRecipientDesignation(
+                    $acceptedDesignation,
+                    $candidate,
+                );
                 $this->activateRecipientDesignation->execute(
                     designation: $designation,
                     origin: 'provisioning_offer',
@@ -67,6 +78,14 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
                     activatedBy: $checker,
                     activatedAt: CarbonImmutable::now(),
                 );
+                if ($acceptedDesignation->supersedesDesignationReference !== null) {
+                    $this->transitionRecipientEconomics->execute(
+                        designation: $designation,
+                        predecessorDesignationReference: $acceptedDesignation->supersedesDesignationReference,
+                        checker: $checker,
+                        authorizationReference: $reference,
+                    );
+                }
 
                 return $reference;
             }
@@ -99,6 +118,42 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
 
             return $reference;
         }, attempts: 3);
+    }
+
+    private function resolveRecipientDesignation(
+        CommercialRecipientDesignationData $designation,
+        Model $candidate,
+    ): CommercialRecipientDesignationData {
+        if ($designation->settlementAccountBinding !== CommercialSettlementAccountBinding::AcceptedCandidateAccount) {
+            return $designation;
+        }
+
+        $account = $this->accounts->open($candidate, [
+            'wallet' => [
+                'slug' => (string) config('x-change.onboarding.default_wallet_slug', 'platform'),
+                'name' => (string) config('x-change.onboarding.default_wallet_name', 'Platform Wallet'),
+            ],
+        ]);
+        $accountReference = trim((string) data_get($account, 'uuid'));
+
+        if ($accountReference === '') {
+            throw new DomainException('The accepted commercial recipient has no stable Account reference.');
+        }
+
+        return new CommercialRecipientDesignationData(
+            counterpartyReference: $designation->counterpartyReference,
+            commercialRole: $designation->commercialRole,
+            componentScope: $designation->componentScope,
+            agreementReference: $designation->agreementReference,
+            settlementDesignationReference: $designation->settlementDesignationReference,
+            taxProfileReference: $designation->taxProfileReference,
+            effectiveFrom: $designation->effectiveFrom,
+            effectiveUntil: $designation->effectiveUntil,
+            settlementDisposition: $designation->settlementDisposition,
+            settlementAccountReference: 'wallet:'.$accountReference,
+            settlementPrincipalReference: $this->principalReferences->resolve($candidate),
+            settlementAccountBinding: CommercialSettlementAccountBinding::ExactAccount,
+        );
     }
 
     public function revoke(

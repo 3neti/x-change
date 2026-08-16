@@ -8,6 +8,7 @@ use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Enums\ProvisioningOperatorCapability;
+use LBHurtado\XChange\Services\Provisioning\CommercialRecipientDesignationProvisioningSnapshotFactory;
 use LBHurtado\XChange\Services\Provisioning\ProvisioningOperatorAuthority;
 use LBHurtado\XProvisioning\Actions\AttachCommissioningSeatRequest;
 use LBHurtado\XProvisioning\Actions\CreateProvisioningRequest;
@@ -25,6 +26,7 @@ final readonly class CreateCockpitProvisioningRequest
         private CreateProvisioningRequest $create,
         private SubmitProvisioningRequest $submit,
         private AttachCommissioningSeatRequest $attachSeat,
+        private CommercialRecipientDesignationProvisioningSnapshotFactory $recipientDesignations,
     ) {}
 
     /** @param array<string, mixed> $input */
@@ -39,6 +41,22 @@ final readonly class CreateCockpitProvisioningRequest
 
             if ($profileConfig === []) {
                 throw new DomainException('The requested provisioning profile is unavailable.');
+            }
+
+            if ($profile === ProvisioningProfile::CommercialRecipientDesignation) {
+                if ((array) ($input['capabilities'] ?? []) !== []) {
+                    throw new DomainException('Commercial recipient provisioning does not grant operator capabilities.');
+                }
+
+                $request = $this->create->handle(
+                    profile: $profile,
+                    snapshot: $this->recipientDesignations->make((string) $input['purpose']),
+                    maker: $maker,
+                    activationMode: ProvisioningActivationMode::ReviewRequired,
+                );
+                $this->submit->handle($request, $maker);
+
+                return $request->refresh()->load('revisions');
             }
 
             $allowedCapabilities = array_values((array) ($profileConfig['capabilities'] ?? []));

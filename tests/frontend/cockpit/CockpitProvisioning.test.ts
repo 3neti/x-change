@@ -193,4 +193,50 @@ describe("Cockpit Provisioning", () => {
       }),
     );
   });
+
+  it("shows the immutable recipient Account and economics replacement to the checker", () => {
+    const governed = structuredClone(provisioning);
+    governed.profiles.push({
+      value: "commercial_recipient_designation",
+      label: "Commercial Recipient Account",
+      description: "Binds an accepted recipient Account.",
+    });
+    governed.requests.push({
+      ...structuredClone(provisioning.requests[0]),
+      reference: "REQ-RECIPIENT",
+      profile: "commercial_recipient_designation",
+      profile_label: "Commercial Recipient Account",
+      purpose: "Credit the accepted 3neti Account.",
+      capabilities: [],
+      activation_gate: "recipient_acceptance_and_economics_switch",
+      recipient_designation: {
+        counterparty_reference: "counterparty:3neti",
+        commercial_role: "service_aggregator",
+        agreement_reference: "agreement:commissioning:institution-3neti:v1",
+        settlement_designation_reference: "designation:commissioning:3neti:v2",
+        supersedes_designation_reference: "designation:commissioning:3neti:v1",
+        settlement_disposition: "internal_account_credit",
+        settlement_account_binding: "accepted_candidate_account",
+        component_scope: ["inputs.fields.kyc", "inputs.fields.otp", "rider.splash"],
+      },
+    } as (typeof governed.requests)[number]);
+
+    const wrapper = mount(Provisioning, {
+      props: {
+        provisioning: governed,
+        provisioningStoreUrl: "/x/cockpit/provisioning/requests",
+        csrfToken: "csrf",
+      },
+      global: {
+        stubs: { CockpitLayout: { template: "<main><slot /></main>" } },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Recipient authority");
+    expect(wrapper.text()).toContain("counterparty:3neti");
+    expect(wrapper.text()).toContain("internal account credit · accepted candidate Account");
+    expect(wrapper.text()).toContain("designation:commissioning:3neti:v1 → designation:commissioning:3neti:v2");
+    expect(wrapper.text()).toContain("inputs.fields.kyc");
+    expect(wrapper.text()).toContain("rider.splash");
+  });
 });

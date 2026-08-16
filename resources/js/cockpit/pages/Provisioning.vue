@@ -46,6 +46,16 @@ type ProvisioningRequest = {
   required_evidence: string[];
   capabilities?: string[];
   activation_gate?: string;
+  recipient_designation?: null | {
+    counterparty_reference: string;
+    commercial_role: string;
+    agreement_reference: string;
+    settlement_designation_reference: string;
+    supersedes_designation_reference: string;
+    settlement_disposition: string;
+    settlement_account_binding: string;
+    component_scope: string[];
+  };
   snapshot_hash: string | null;
   revision: number | null;
   submitted_at: string | null;
@@ -482,6 +492,33 @@ function formatDate(value: string | null): string {
                     class="rounded-full bg-violet-50 px-2 py-1 font-mono text-[10px] text-violet-800 dark:bg-violet-950 dark:text-violet-200"
                   >
                     {{ capability }}
+                  </span>
+                </div>
+              </div>
+              <div v-else-if="request.recipient_designation" class="mt-3 grid gap-3 rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-xs dark:border-violet-900 dark:bg-violet-950/40">
+                <div class="grid gap-1 sm:grid-cols-2">
+                  <div class="min-w-0">
+                    <p class="font-semibold text-violet-950 dark:text-violet-100">Recipient authority</p>
+                    <p class="break-all font-mono text-[11px] text-violet-800 dark:text-violet-200">{{ request.recipient_designation.counterparty_reference }}</p>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-semibold text-violet-950 dark:text-violet-100">Settlement</p>
+                    <p class="capitalize text-violet-800 dark:text-violet-200">{{ request.recipient_designation.settlement_disposition.replaceAll("_", " ") }} · accepted candidate Account</p>
+                  </div>
+                </div>
+                <div class="grid gap-1">
+                  <p class="font-semibold text-violet-950 dark:text-violet-100">Governed replacement</p>
+                  <p class="break-all font-mono text-[11px] text-violet-800 dark:text-violet-200">
+                    {{ request.recipient_designation.supersedes_designation_reference }} → {{ request.recipient_designation.settlement_designation_reference }}
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <span
+                    v-for="component in request.recipient_designation.component_scope"
+                    :key="component"
+                    class="rounded-full bg-white px-2 py-1 font-mono text-[10px] text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+                  >
+                    {{ component }}
                   </span>
                 </div>
               </div>

@@ -187,6 +187,12 @@ return [
             'scheduled_batch_size' => (int) env('XCHANGE_PROVISIONING_EXPIRY_BATCH_SIZE', 100),
         ],
         'operator_profiles' => [
+            'commercial_recipient_designation' => [
+                'label' => 'Commercial Recipient Account',
+                'description' => 'Invites the agreed recipient and binds its verified Account to automatic commercial credits.',
+                'capabilities' => [],
+                'activation_gate' => 'recipient_acceptance_and_economics_switch',
+            ],
             'institution_administrator' => [
                 'label' => 'Institution Administrator',
                 'description' => 'Oversees governed provisioning without becoming the non-interactive System Principal.',
@@ -268,6 +274,15 @@ return [
                     'partner_api.production.activate',
                 ],
             ],
+        ],
+        'commercial_recipient_designation' => [
+            'label' => '3neti Service Aggregator Account Credit',
+            'counterparty_reference' => 'counterparty:3neti',
+            'commercial_role' => 'service_aggregator',
+            'agreement_reference' => 'agreement:commissioning:institution-3neti:v1',
+            'tax_profile_reference' => null,
+            'supersedes_designation_reference' => 'designation:commissioning:3neti:v1',
+            'settlement_designation_reference' => 'designation:commissioning:3neti:v2',
         ],
         'commissioning_seats' => [
             ['key' => 'institution-administrator', 'label' => 'Institution Administrator', 'profile' => 'institution_administrator', 'required' => true],

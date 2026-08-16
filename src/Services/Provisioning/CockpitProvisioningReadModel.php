@@ -79,6 +79,18 @@ final readonly class CockpitProvisioningReadModel
                     'required_evidence' => array_values((array) data_get($revision?->snapshot, 'required_evidence', [])),
                     'capabilities' => array_values((array) data_get($revision?->snapshot, 'capabilities', [])),
                     'activation_gate' => (string) data_get($revision?->snapshot, 'activation_gate', 'operator_authority'),
+                    'recipient_designation' => $request->profile === ProvisioningProfile::CommercialRecipientDesignation
+                        ? [
+                            'counterparty_reference' => (string) data_get($revision?->snapshot, 'counterparty_reference', ''),
+                            'commercial_role' => (string) data_get($revision?->snapshot, 'commercial_role', ''),
+                            'agreement_reference' => (string) data_get($revision?->snapshot, 'agreement_reference', ''),
+                            'settlement_designation_reference' => (string) data_get($revision?->snapshot, 'settlement_designation_reference', ''),
+                            'supersedes_designation_reference' => (string) data_get($revision?->snapshot, 'supersedes_designation_reference', ''),
+                            'settlement_disposition' => (string) data_get($revision?->snapshot, 'settlement_disposition', ''),
+                            'settlement_account_binding' => (string) data_get($revision?->snapshot, 'settlement_account_binding', 'exact_account'),
+                            'component_scope' => array_values((array) data_get($revision?->snapshot, 'component_scope', [])),
+                        ]
+                        : null,
                     'snapshot_hash' => $revision?->snapshot_hash,
                     'revision' => $revision?->version,
                     'submitted_at' => $revision?->submitted_at?->toIso8601String(),
