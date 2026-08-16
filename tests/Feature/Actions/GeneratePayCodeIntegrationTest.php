@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
-use Illuminate\Support\Facades\Artisan;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -16,6 +15,7 @@ use LBHurtado\XChange\Actions\Commercial\RequestPartnerCommissionPayout;
 use LBHurtado\XChange\Actions\Commercial\SettleCommercialProviderCost;
 use LBHurtado\XChange\Actions\Commercial\SettlePartnerCommissionPayout;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
@@ -26,15 +26,31 @@ use LBHurtado\XChange\Data\Commercial\ProviderCostEvidenceData;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
+use LBHurtado\XChange\Enums\CommercialActivationAuthority;
+use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Models\CommercialAllocation;
+use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Services\Commercial\ActivateCommercialComponentEconomics;
+use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation;
+use LBHurtado\XChange\Services\Commercial\CommercialComponentEconomicsManifestCompiler;
+use LBHurtado\XChange\Services\Commercial\PersistCommercialComponentEconomicsManifest;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
+
+beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:generate-pay-code-integration');
+});
 
 it('generates a pay code end to end and debits the issuer wallet', function () {
     $user = actingAsTestUser(1_000_000);
@@ -354,6 +370,7 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
         TreasuryPositionPurpose::ProviderCostPayable,
         TreasuryPositionPurpose::ProductRevenue,
         TreasuryPositionPurpose::PartnerCommissionPayable,
+        TreasuryPositionPurpose::RoyaltyPayable,
         TreasuryPositionPurpose::CommercialRevenue,
     ])->mapWithKeys(fn (TreasuryPositionPurpose $purpose): array => [
         $purpose->value => treasuryPositionBalanceForPurpose($purpose),
@@ -369,11 +386,16 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
             'currency' => 'PHP',
             'product_reference' => 'product:pay-code',
             'recognition_policy_reference' => 'recognition:pay-code-issuance:v1',
-            'expected_provider_cost_minor' => 1_000,
+            'expected_provider_cost_minor' => 0,
         ])
         ->and($allocationTotalMinor)->toBe($commercialChargeMinor)
         ->and(CommercialAllocation::query()->where('commercial_sale_id', $sale->getKey())->count())
         ->toBe(3)
+        ->and($sale->allocations->every(
+            static fn (CommercialAllocation $allocation): bool => $allocation->category === 'service_provider_payable'
+                && data_get($allocation->metadata, 'designation_reference') === 'designation:commissioning:3neti:v1'
+                && filled(data_get($allocation->metadata, 'component_reference')),
+        ))->toBeTrue()
         ->and(treasuryPositionBalanceForPurpose(
             TreasuryPositionPurpose::ClientFunds,
             $user,
@@ -385,6 +407,10 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
         ->and(treasuryPositionBalanceForPurpose(
             TreasuryPositionPurpose::CommercialClearing,
         ))->toBe(0)
+        ->and(treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::RoyaltyPayable))
+        ->toBe($commercialChargeMinor)
+        ->and(treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::ProviderCostPayable))->toBe(0)
+        ->and(treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::PartnerCommissionPayable))->toBe(0)
         ->and((int) $commercialBalances->sum())->toBe($commercialChargeMinor)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore);
 
@@ -405,13 +431,14 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
             TreasuryPositionPurpose::ProviderCostPayable,
             TreasuryPositionPurpose::ProductRevenue,
             TreasuryPositionPurpose::PartnerCommissionPayable,
+            TreasuryPositionPurpose::RoyaltyPayable,
             TreasuryPositionPurpose::CommercialRevenue,
         ])->sum(fn (TreasuryPositionPurpose $purpose): int => treasuryPositionBalanceForPurpose($purpose)))
         ->toBe($commercialChargeMinor)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore);
 });
 
-it('settles provider costs only from exact authoritative cash-movement evidence', function () {
+it('does not infer a provider-cost settlement from service-provider royalties', function () {
     $user = actingAsTestUser(0);
     enableNetbankTreasuryForTests();
     config()->set('x-change.commercial.enabled', true);
@@ -464,121 +491,32 @@ it('settles provider costs only from exact authoritative cash-movement evidence'
         ->where('source_commercial_event_reference', 'pay-code-generation:voucher:'.$result->voucher_id)
         ->sole();
     $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
-    $providerCostBefore = treasuryPositionBalanceForPurpose(
-        TreasuryPositionPurpose::ProviderCostPayable,
-    );
-    $settlement = app(SettleCommercialProviderCost::class);
-    $mismatchEvidence = new ProviderCostEvidenceData(
+    $royaltyBefore = treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::RoyaltyPayable);
+    $evidence = new ProviderCostEvidenceData(
         commercialSaleReference: $sale->reference,
         provider: 'netbank',
         connectionReference: 'netbank-primary',
         evidenceType: 'account_debit',
-        evidenceReference: 'netbank:fee-debit:mismatch',
+        evidenceReference: 'netbank:fee-debit:not-authorized',
         cashMovementObserved: true,
-        observedAmountMinor: 900,
+        observedAmountMinor: 1_000,
         currency: 'PHP',
         observedAt: now()->toRfc3339String(),
-        idempotencyKey: 'provider-cost:mismatch',
+        idempotencyKey: 'provider-cost:not-authorized',
     );
 
-    $review = $settlement->execute($mismatchEvidence);
-    $reviewReplay = $settlement->execute($mismatchEvidence);
-
-    expect($review->status)->toBe('review_required')
-        ->and($reviewReplay->getKey())->toBe($review->getKey())
-        ->and($review->variance_amount_minor)->toBe(-100)
-        ->and(treasuryPositionBalanceForPurpose(
-            TreasuryPositionPurpose::ProviderCostPayable,
-        ))->toBe($providerCostBefore)
+    expect(fn () => app(SettleCommercialProviderCost::class)->execute($evidence))
+        ->toThrow(CommercialSaleConflict::class, 'exactly one explicit provider cost allocation')
+        ->and(CommercialProviderCostSettlement::query()->count())->toBe(0)
+        ->and(treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::ProviderCostPayable))->toBe(0)
+        ->and(treasuryPositionBalanceForPurpose(TreasuryPositionPurpose::RoyaltyPayable))->toBe($royaltyBefore)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore);
-
-    $exactEvidence = new ProviderCostEvidenceData(
-        commercialSaleReference: $sale->reference,
-        provider: 'netbank',
-        connectionReference: 'netbank-primary',
-        evidenceType: 'account_debit',
-        evidenceReference: 'netbank:fee-debit:exact',
-        cashMovementObserved: true,
-        observedAmountMinor: 1_000,
-        currency: 'PHP',
-        observedAt: now()->toRfc3339String(),
-        idempotencyKey: 'provider-cost:exact',
-    );
-    $posted = $settlement->execute($exactEvidence);
-    $postedReplay = $settlement->execute($exactEvidence);
-
-    expect($posted->status)->toBe('settled')
-        ->and($postedReplay->getKey())->toBe($posted->getKey())
-        ->and($posted->variance_amount_minor)->toBe(0)
-        ->and($posted->position_operation_reference)->not->toBeNull()
-        ->and($posted->inventory_operation_reference)->not->toBeNull()
-        ->and(treasuryPositionBalanceForPurpose(
-            TreasuryPositionPurpose::ProviderCostPayable,
-        ))->toBe($providerCostBefore - 1_000)
-        ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore - 1_000)
-        ->and(CommercialProviderCostSettlement::query()->count())->toBe(2)
-        ->and(ExecutionJournalEntry::query()
-            ->where('correlation_id', 'commercial-sale:'.$sale->reference)
-            ->where('event_type', 'like', 'commercial.provider_cost.%')
-            ->pluck('event_type')
-            ->all())->toBe([
-                'commercial.provider_cost.review_required',
-                'commercial.provider_cost.settled',
-            ])
-        ->and(fn () => $settlement->execute(new ProviderCostEvidenceData(
-            commercialSaleReference: $sale->reference,
-            provider: 'netbank',
-            connectionReference: 'netbank-primary',
-            evidenceType: 'account_debit',
-            evidenceReference: 'netbank:fee-debit:changed',
-            cashMovementObserved: true,
-            observedAmountMinor: 1_000,
-            currency: 'PHP',
-            observedAt: now()->toRfc3339String(),
-            idempotencyKey: 'provider-cost:exact',
-        )))->toThrow(CommercialSaleConflict::class, 'different evidence');
-
-    expect(fn () => $settlement->execute(new ProviderCostEvidenceData(
-        commercialSaleReference: $sale->reference,
-        provider: 'netbank',
-        connectionReference: 'netbank-primary',
-        evidenceType: 'account_debit',
-        evidenceReference: 'netbank:fee-debit:duplicate',
-        cashMovementObserved: true,
-        observedAmountMinor: 1_000,
-        currency: 'PHP',
-        observedAt: now()->toRfc3339String(),
-        idempotencyKey: 'provider-cost:duplicate',
-    )))->toThrow(CommercialSaleConflict::class, 'already settled');
-
-    expect(Artisan::call('x-change:treasury:attest-commercial-accounting', [
-        '--connection' => ['netbank-primary'],
-        '--json' => true,
-    ]))->toBe(0);
-    $balanced = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
-
-    expect($balanced['ready'])->toBeTrue()
-        ->and($balanced['issue_count'])->toBe(0)
-        ->and($balanced['connections'][0]['difference_minor'])->toBe(0);
-
-    CommercialAllocation::query()
-        ->whereKey($sale->allocations()->where('category', 'product_revenue')->sole()->getKey())
-        ->increment('amount_minor');
-
-    expect(Artisan::call('x-change:treasury:attest-commercial-accounting', [
-        '--connection' => ['netbank-primary'],
-        '--json' => true,
-    ]))->toBe(1);
-    $unbalanced = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
-
-    expect($unbalanced['ready'])->toBeFalse()
-        ->and(collect($unbalanced['issues'])->pluck('code')->all())
-        ->toContain('allocation_total_mismatch');
 });
 
 it('accrues an attributed partner commission to the partner principal', function () {
     $user = actingAsTestUser(0);
     $system = enableNetbankTreasuryForTests();
+    activatePartnerCommissionEconomicsForTest();
     config()->set('x-change.commercial.enabled', true);
     app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
         $user,
@@ -722,6 +660,101 @@ it('accrues an attributed partner commission to the partner principal', function
                 'commercial.partner_commission.settled',
             ]);
 });
+
+function activatePartnerCommissionEconomicsForTest(): void
+{
+    $offering = CommercialOfferingActivation::query()
+        ->with('offering')
+        ->where('profile', 'pay_code')
+        ->whereNull('deactivated_at')
+        ->sole()
+        ->offering;
+    $economics = app(CommercialComponentEconomicsResolverContract::class)
+        ->resolve('pay_code')
+        ->toArray();
+    $economics['version'] = 2;
+
+    foreach ($economics['components'] as &$component) {
+        if ($component['component_reference'] !== 'cash.amount') {
+            continue;
+        }
+
+        $component['allocation_schedule'] = [
+            'reference' => 'component-allocation:pay_code:cash.amount',
+            'version' => 2,
+            'currency' => 'PHP',
+            'rules' => [
+                [
+                    'reference' => '3neti-base-share',
+                    'sequence' => 10,
+                    'line_type' => 'allocation',
+                    'category' => 'service_provider_payable',
+                    'destination_kind' => 'external_recipient',
+                    'recipient_reference' => 'counterparty:3neti',
+                    'participant_role' => 'service_aggregator',
+                    'fixed_amount_minor' => 1_400,
+                    'basis_points' => null,
+                    'agreement_reference' => 'agreement:commissioning:institution-3neti:v1',
+                    'designation_reference' => 'designation:commissioning:3neti:v1',
+                    'tax_policy_reference' => null,
+                ],
+                [
+                    'reference' => 'marketing-partner-share',
+                    'sequence' => 20,
+                    'line_type' => 'allocation',
+                    'category' => 'partner_commission',
+                    'destination_kind' => 'external_recipient',
+                    'recipient_reference' => 'partner:marketing-42',
+                    'participant_role' => 'sales_partner',
+                    'fixed_amount_minor' => 100,
+                    'basis_points' => null,
+                    'agreement_reference' => 'agreement:marketing-42:v1',
+                    'designation_reference' => 'designation:marketing-42:v1',
+                    'tax_policy_reference' => null,
+                ],
+            ],
+        ];
+    }
+    unset($component);
+
+    $economicsData = CommercialComponentEconomicsSetData::fromArray($economics);
+    $manifest = app(CommercialComponentEconomicsManifestCompiler::class)->compile(
+        'pay_code',
+        $offering->offering(),
+        (string) $offering->manifest_hash,
+        $economicsData,
+    );
+    $persisted = app(PersistCommercialComponentEconomicsManifest::class)->execute(
+        offering: $offering,
+        manifest: $manifest,
+        reference: 'component-economics:pay_code',
+        version: 2,
+        origin: CommercialOfferingOrigin::MakerCheckerRevision,
+        authority: CommercialActivationAuthority::IndependentApproval,
+    );
+    app(ActivateCommercialComponentEconomics::class)->execute(
+        economics: $persisted,
+        authority: CommercialActivationAuthority::IndependentApproval,
+        activationReference: 'component-economics-test:partner-commission:v2',
+        authorizationReference: 'approval:test:partner-commission:v2',
+    );
+    $designation = new CommercialRecipientDesignationData(
+        counterpartyReference: 'partner:marketing-42',
+        commercialRole: 'sales_partner',
+        componentScope: ['cash.amount'],
+        agreementReference: 'agreement:marketing-42:v1',
+        settlementDesignationReference: 'designation:marketing-42:v1',
+        taxProfileReference: null,
+        effectiveFrom: '2026-01-01T00:00:00+00:00',
+    );
+    app(ActivateCommercialRecipientDesignation::class)->execute(
+        designation: $designation,
+        origin: 'test_governed_revision',
+        authorityReference: 'commercial-designation:test:marketing-42:v1',
+        sourceReference: 'approval:test:partner-commission:v2',
+        acceptedSnapshotHash: hash('sha256', json_encode($designation->toArray(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
+    );
+}
 
 it('characterizes that cancellation does not credit issuer wallet funds today', function () {
     $user = actingAsTestUser(1_000_000);

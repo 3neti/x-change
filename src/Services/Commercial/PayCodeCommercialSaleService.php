@@ -19,6 +19,7 @@ use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XCommerce\Data\CommercialAccountingContextData;
+use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialQuoteData;
 use LBHurtado\XCommerce\Services\DeterministicCommercialSaleFactory;
@@ -93,19 +94,11 @@ class PayCodeCommercialSaleService
         );
         $destinations = [];
 
-        foreach ((array) config('x-change.commercial.pay_code.destination_purposes', []) as $rule => $purpose) {
-            $positionPurpose = TreasuryPositionPurpose::from((string) $purpose);
+        foreach ($quote->allocationPlan->lines as $line) {
+            $positionPurpose = $this->destinationPurpose($line);
 
             if ($positionPurpose === TreasuryPositionPurpose::PartnerCommissionPayable) {
-                $commission = collect($quote->allocationPlan->lines)
-                    ->first(fn ($line): bool => $line->policyRuleReference === (string) $rule
-                        && $line->category === 'partner_commission');
-
-                if ($commission === null) {
-                    continue;
-                }
-
-                $partnerReference = $commission->recipientReference;
+                $partnerReference = $line->recipientReference;
                 $partner = $this->partners->resolve($partnerReference);
 
                 if (! $partner instanceof Model) {
@@ -114,14 +107,14 @@ class PayCodeCommercialSaleService
                     );
                 }
 
-                $destinations[(string) $rule] = $this->partnerPositions
+                $destinations[$line->policyRuleReference] = $this->partnerPositions
                     ->provision($partner, $connection)
                     ->positionReference;
 
                 continue;
             }
 
-            $destinations[(string) $rule] = $this->position(
+            $destinations[$line->policyRuleReference] = $this->position(
                 $systemPortfolio->positions,
                 $positionPurpose,
             )->positionReference;
@@ -135,6 +128,22 @@ class PayCodeCommercialSaleService
         );
 
         return $this->result($sale, $code);
+    }
+
+    private function destinationPurpose(CommercialAllocationLineData $line): TreasuryPositionPurpose
+    {
+        return match ($line->category) {
+            'provider_cost', 'provider_cost_payable' => TreasuryPositionPurpose::ProviderCostPayable,
+            'service_provider_payable', 'royalty', 'royalty_payable' => TreasuryPositionPurpose::RoyaltyPayable,
+            'partner_commission', 'partner_commission_payable' => TreasuryPositionPurpose::PartnerCommissionPayable,
+            'tax', 'tax_payable' => TreasuryPositionPurpose::TaxPayable,
+            'institution_owned_funds' => TreasuryPositionPurpose::InstitutionOwnedFunds,
+            'product_revenue' => TreasuryPositionPurpose::ProductRevenue,
+            'commercial_revenue' => TreasuryPositionPurpose::CommercialRevenue,
+            default => throw new CommercialSaleConflict(
+                "Commercial allocation category [{$line->category}] has no governed Treasury Position purpose.",
+            ),
+        };
     }
 
     private function connection(string $provider, string $currency): TreasuryProviderConnectionData

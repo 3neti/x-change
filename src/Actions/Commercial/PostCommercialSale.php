@@ -238,6 +238,17 @@ final readonly class PostCommercialSale
             'metadata' => [
                 'commercial_sale_reference' => $sale->reference,
                 'partner_governance' => $partnerAttribution,
+                'component_reference' => $line->componentReference,
+                'component_schedule_reference' => $line->componentScheduleReference,
+                'component_schedule_version' => $line->componentScheduleVersion,
+                'component_rule_reference' => $line->componentRuleReference,
+                'destination_kind' => $line->destinationKind?->value,
+                'participant_role' => $line->participantRole,
+                'agreement_reference' => $line->agreementReference,
+                'designation_reference' => $line->designationReference,
+                'tax_policy_reference' => $line->taxPolicyReference,
+                'unit_amount_minor' => $line->unitAmountMinor,
+                'quantity' => $line->quantity,
             ],
         ]);
     }

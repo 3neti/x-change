@@ -59,11 +59,19 @@ final readonly class SettleCommercialProviderCost
                 ->where('reference', $evidence->commercialSaleReference)
                 ->lockForUpdate()
                 ->firstOrFail();
-            $allocation = CommercialAllocation::query()
+            $allocations = CommercialAllocation::query()
                 ->where('commercial_sale_id', $sale->getKey())
                 ->where('category', 'provider_cost')
                 ->lockForUpdate()
-                ->sole();
+                ->get();
+
+            if ($allocations->count() !== 1) {
+                throw new CommercialSaleConflict(
+                    'Provider-cost settlement requires exactly one explicit provider cost allocation.',
+                );
+            }
+
+            $allocation = $allocations->sole();
             $settled = CommercialProviderCostSettlement::query()
                 ->where('commercial_allocation_id', $allocation->getKey())
                 ->where('status', 'settled')
