@@ -67,6 +67,27 @@ it('does not infer tax authority when both the allocation and designation omit i
     expect(CommercialTaxProfile::query()->count())->toBe(0);
 });
 
+it('fails closed when settlement disposition and Account binding disagree', function (): void {
+    $designation = CommercialRecipientDesignation::query()->firstOrFail();
+    $plan = taxAllocationPlan($designation->designation_reference, null);
+
+    $designation->forceFill([
+        'settlement_disposition' => 'internal_account_credit',
+        'settlement_account_reference' => null,
+    ])->save();
+
+    expect(fn () => app(CommercialRecipientDesignationGuard::class)->assertPlan($plan))
+        ->toThrow(DomainException::class, 'requires an internal settlement Account');
+
+    $designation->forceFill([
+        'settlement_disposition' => 'retain_payable',
+        'settlement_account_reference' => 'account:must-not-be-used',
+    ])->save();
+
+    expect(fn () => app(CommercialRecipientDesignationGuard::class)->assertPlan($plan))
+        ->toThrow(DomainException::class, 'cannot bind an Account while retaining its payable');
+});
+
 it('makes commissioning fail closed when only the designation claims tax authority', function (): void {
     CommercialRecipientDesignation::query()->firstOrFail()
         ->forceFill(['tax_profile_reference' => 'tax-profile:unilateral:v1'])

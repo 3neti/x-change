@@ -8,6 +8,7 @@ use DomainException;
 use LBHurtado\XChange\Contracts\CommercialRecipientDesignationResolverContract;
 use LBHurtado\XCommerce\Data\CommercialAllocationPlanData;
 use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 
 final readonly class CommercialRecipientDesignationGuard
 {
@@ -55,6 +56,34 @@ final readonly class CommercialRecipientDesignationGuard
                         "Commercial Tax Profile [{$ruleTaxProfile}] does not authorize currency [{$line->currency}].",
                     );
                 }
+            }
+
+            $disposition = CommercialSettlementDisposition::tryFrom(
+                (string) $designation->settlement_disposition,
+            );
+
+            if (! $disposition instanceof CommercialSettlementDisposition) {
+                throw new DomainException(
+                    "Commercial Recipient Designation [{$line->designationReference}] has an unsupported settlement disposition.",
+                );
+            }
+
+            $accountReference = filled($designation->settlement_account_reference)
+                ? trim((string) $designation->settlement_account_reference)
+                : null;
+
+            if ($disposition === CommercialSettlementDisposition::InternalAccountCredit
+                && $accountReference === null) {
+                throw new DomainException(
+                    "Commercial Recipient Designation [{$line->designationReference}] requires an internal settlement Account.",
+                );
+            }
+
+            if ($disposition === CommercialSettlementDisposition::RetainPayable
+                && $accountReference !== null) {
+                throw new DomainException(
+                    "Commercial Recipient Designation [{$line->designationReference}] cannot bind an Account while retaining its payable.",
+                );
             }
         }
     }

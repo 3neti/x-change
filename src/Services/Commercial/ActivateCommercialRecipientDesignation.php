@@ -77,6 +77,8 @@ final readonly class ActivateCommercialRecipientDesignation
                 'component_scope' => $designation->componentScope,
                 'agreement_reference' => $designation->agreementReference,
                 'settlement_designation_reference' => $designation->settlementDesignationReference,
+                'settlement_disposition' => $designation->settlementDisposition->value,
+                'settlement_account_reference' => $designation->settlementAccountReference,
                 'tax_profile_reference' => $designation->taxProfileReference,
                 'origin' => trim($origin),
                 'authority_reference' => trim($authorityReference),

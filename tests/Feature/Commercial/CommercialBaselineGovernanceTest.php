@@ -155,6 +155,10 @@ it('reports active baseline issuance while locking price changes', function (): 
             'required_count' => 1,
             'active_count' => 1,
         ])
+        ->and(data_get($status, 'recipient_designations.designations.0'))->toMatchArray([
+            'settlement_disposition' => 'retain_payable',
+            'settlement_account_bound' => false,
+        ])
         ->and($status['recognition_policies'])->toMatchArray([
             'operational' => true,
             'required_count' => 1,

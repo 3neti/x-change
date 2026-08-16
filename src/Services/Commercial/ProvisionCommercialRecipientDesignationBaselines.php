@@ -9,6 +9,7 @@ use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
 use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 
 final readonly class ProvisionCommercialRecipientDesignationBaselines
 {
@@ -55,6 +56,7 @@ final readonly class ProvisionCommercialRecipientDesignationBaselines
                 settlementDesignationReference: (string) $rule->designationReference,
                 taxProfileReference: $rule->taxPolicyReference,
                 effectiveFrom: '1970-01-01T00:00:00+00:00',
+                settlementDisposition: CommercialSettlementDisposition::RetainPayable,
             );
             $snapshotHash = hash('sha256', json_encode($designation->toArray(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
             $designations[] = $this->activate->execute(

@@ -36,6 +36,8 @@ it('projects and revokes independently approved commercial recipient designation
             'component_scope' => ['inputs.fields.kyc'],
             'agreement_reference' => 'agreement:institution-hyperverge:v1',
             'settlement_designation_reference' => 'designation:hyperverge:kyc:v1',
+            'settlement_disposition' => 'internal_account_credit',
+            'settlement_account_reference' => 'account:hyperverge:php',
             'tax_profile_reference' => 'tax-profile:hyperverge:ph:v1',
             'effective_from' => '2026-01-01T00:00:00+00:00',
         ],
@@ -64,6 +66,8 @@ it('projects and revokes independently approved commercial recipient designation
 
     expect($designation->counterparty_reference)->toBe('counterparty:hyperverge')
         ->and($designation->component_scope)->toBe(['inputs.fields.kyc'])
+        ->and($designation->settlement_disposition)->toBe('internal_account_credit')
+        ->and($designation->settlement_account_reference)->toBe('account:hyperverge:php')
         ->and($designation->representative_reference)->toBe((string) $representative->getKey())
         ->and((string) $designation->activated_by_id)->toBe((string) $checker->getKey())
         ->and($designation->revoked_at)->toBeNull();

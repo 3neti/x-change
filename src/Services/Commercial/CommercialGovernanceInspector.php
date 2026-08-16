@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Commercial;
 
+use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
@@ -22,6 +23,7 @@ use LBHurtado\XChange\Models\CommercialPartnerDestinationRevision;
 use LBHurtado\XChange\Models\CommercialPartnerRevision;
 use LBHurtado\XChange\Models\CommercialProviderCostBatch;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 use Throwable;
 
 final readonly class CommercialGovernanceInspector
@@ -145,6 +147,10 @@ final readonly class CommercialGovernanceInspector
                 && Schema::hasTable('x_change_commercial_component_economics_activations')
                 && Schema::hasTable('x_change_commercial_component_economics_heads')
                 && Schema::hasTable('x_change_commercial_recipient_designations')
+                && Schema::hasColumns('x_change_commercial_recipient_designations', [
+                    'settlement_disposition',
+                    'settlement_account_reference',
+                ])
                 && Schema::hasTable('x_change_commercial_recognition_policies')
                 && Schema::hasTable('x_change_commercial_tax_profiles');
         } catch (Throwable) {
@@ -375,11 +381,23 @@ final readonly class CommercialGovernanceInspector
         $rows = collect($requirements)->map(function (array $requirement): array {
             try {
                 $designation = $this->recipientDesignations->resolve($requirement['reference']);
+                $disposition = CommercialSettlementDisposition::tryFrom(
+                    (string) $designation->settlement_disposition,
+                );
+                $accountBound = filled($designation->settlement_account_reference);
+
+                if (! $disposition instanceof CommercialSettlementDisposition
+                    || ($disposition === CommercialSettlementDisposition::InternalAccountCredit && ! $accountBound)
+                    || ($disposition === CommercialSettlementDisposition::RetainPayable && $accountBound)) {
+                    throw new DomainException('Commercial Recipient Designation settlement disposition is incomplete.');
+                }
 
                 return [
                     ...$requirement,
                     'active' => true,
                     'authority_hash' => $designation->authority_hash,
+                    'settlement_disposition' => $designation->settlement_disposition,
+                    'settlement_account_bound' => $accountBound,
                     'origin' => $designation->origin,
                     'activated_at' => $designation->activated_at?->toIso8601String(),
                     'message' => 'Commercial Recipient Designation is active.',
@@ -389,6 +407,8 @@ final readonly class CommercialGovernanceInspector
                     ...$requirement,
                     'active' => false,
                     'authority_hash' => null,
+                    'settlement_disposition' => null,
+                    'settlement_account_bound' => false,
                     'origin' => null,
                     'activated_at' => null,
                     'message' => $exception->getMessage(),
