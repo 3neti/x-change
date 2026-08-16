@@ -50,8 +50,9 @@ import treasuryAccountGrants from '@/routes/x-change/cockpit/treasury/account-gr
 import type { NavItem } from '@/types';
 
 // X-CHANGE HOST SHELL · package-owned navigation, account controls remain host-owned.
-type XChangeNavigationItem = NavItem & {
+type XChangeNavigationItem = Omit<NavItem, 'icon'> & {
     description: string;
+    icon: NonNullable<NavItem['icon']>;
 };
 
 type XChangeWorkspaceNavigationItem = XChangeNavigationItem & {

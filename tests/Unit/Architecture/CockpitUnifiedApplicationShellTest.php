@@ -28,6 +28,8 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
             'dividerBefore: true',
             'CockpitWorkspaceNavigationItem',
             'cockpitWorkspaceGuides',
+            "type XChangeNavigationItem = Omit<NavItem, 'icon'>",
+            "icon: NonNullable<NavItem['icon']>;",
             "{ label: 'System', items: systemItems.value }",
             'system_readiness_visible',
             '<NavUser />',
