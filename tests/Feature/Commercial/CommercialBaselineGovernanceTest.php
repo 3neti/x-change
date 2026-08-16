@@ -16,6 +16,11 @@ use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
+beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+});
+
 it('commissions immutable baseline offerings without fabricating human approval', function (): void {
     config()->set(
         'x-change.commercial.offerings.governance_mode',

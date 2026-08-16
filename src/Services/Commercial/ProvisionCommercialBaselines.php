@@ -20,11 +20,14 @@ final readonly class ProvisionCommercialBaselines
         private ActivateCommercialOffering $activate,
         private CommercialGovernanceJournal $journal,
         private CommercialOfferingManifestCompiler $manifests,
+        private BackfillCommercialOfferingManifests $manifestBackfill,
     ) {}
 
     /** @return list<CommercialOfferingActivation> */
     public function provision(string $commissioningManifestReference): array
     {
+        $this->manifestBackfill->execute();
+
         $mode = CommercialGovernanceMode::from((string) config(
             'x-change.commercial.offerings.governance_mode',
             CommercialGovernanceMode::BootstrapImmutable->value,

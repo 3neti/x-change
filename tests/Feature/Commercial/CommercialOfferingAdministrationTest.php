@@ -12,6 +12,7 @@ use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialOffering;
+use LBHurtado\XChange\Services\Commercial\BackfillCommercialOfferingManifests;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -218,6 +219,80 @@ it('refuses to activate an Offering without frozen manifest evidence', function 
         CommercialActivationAuthority::IndependentApproval,
         'commercial-activation:missing-manifest',
     ))->toThrow(DomainException::class, 'requires frozen manifest evidence');
+});
+
+it('backfills legacy Offering manifests without changing governed commercial authority', function (): void {
+    $maker = actingAsTestUser();
+    $checker = actingAsTestUser();
+    grantCommercialCapability($maker, CommercialOperatorCapability::ManageOfferings);
+    grantCommercialCapability($checker, CommercialOperatorCapability::ApproveOfferings);
+    $action = app(ManageCommercialOffering::class);
+    $published = $action->publish(
+        $checker,
+        $action->submit($maker, $action->createDraft(
+            $maker,
+            'pay_code',
+            commercialOfferingVersion(1, now()->subMinute()->toIso8601String()),
+        )),
+        'pricing-approval:legacy-manifest',
+    );
+    $activation = app(ActivateCommercialOffering::class)->execute(
+        $published,
+        CommercialActivationAuthority::IndependentApproval,
+        'commercial-activation:legacy-manifest',
+    );
+    $authority = $published->only([
+        'snapshot_hash',
+        'snapshot',
+        'status',
+        'approved_by_type',
+        'approved_by_id',
+        'authorization_reference',
+    ]);
+    $effectiveAt = $published->effective_at?->toIso8601String();
+
+    $published->forceFill([
+        'manifest_schema' => null,
+        'manifest_hash' => null,
+        'manifest_yaml' => null,
+    ])->save();
+
+    $backfill = app(BackfillCommercialOfferingManifests::class);
+
+    expect($backfill->execute())->toBe(1)
+        ->and($backfill->execute())->toBe(0);
+
+    $published->refresh();
+
+    expect($published->only(array_keys($authority)))->toBe($authority)
+        ->and($published->effective_at?->toIso8601String())->toBe($effectiveAt)
+        ->and($published->manifest_schema)->toBe('3neti.x-change.commercial-offering-manifest.v1')
+        ->and($published->manifest_hash)->toHaveLength(64)
+        ->and($published->manifest_yaml)->toContain('schema: 3neti.x-change.commercial-offering-manifest.v1')
+        ->and($activation->refresh()->deactivated_at)->toBeNull();
+});
+
+it('fails closed when legacy Offering evidence is partial or conflicts with its snapshot', function (): void {
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:legacy-conflict');
+    $offering = CommercialOffering::query()->where('profile', 'pay_code')->sole();
+    $offering->forceFill([
+        'manifest_schema' => '3neti.x-change.commercial-offering-manifest.v1',
+        'manifest_hash' => null,
+        'manifest_yaml' => null,
+    ])->save();
+
+    expect(fn () => app(BackfillCommercialOfferingManifests::class)->execute())
+        ->toThrow(DomainException::class, 'has incomplete manifest evidence');
+
+    $offering->forceFill([
+        'manifest_schema' => null,
+        'snapshot_hash' => str_repeat('a', 64),
+    ])->save();
+
+    expect(fn () => app(BackfillCommercialOfferingManifests::class)->execute())
+        ->toThrow(DomainException::class, 'conflicts with its persisted snapshot')
+        ->and($offering->refresh()->manifest_hash)->toBeNull()
+        ->and($offering->manifest_yaml)->toBeNull();
 });
 
 it('fails closed for unauthorized operators and same-person approval', function (): void {
