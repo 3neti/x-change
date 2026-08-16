@@ -10,7 +10,7 @@ function option(
 ): CockpitClaimRequirementOption {
     return {
         icon: Mail,
-        category: 'common',
+        category: 'details',
         helper: `Collect ${overrides.label}.`,
         selected: false,
         locked: false,
@@ -32,15 +32,18 @@ describe('CockpitClaimRequirementsControl', () => {
         });
 
         expect(
-            wrapper.get('[data-testid="cockpit-claim-requirements-control"]')
+            wrapper
+                .get('[data-testid="cockpit-claim-requirements-control"]')
                 .exists(),
         ).toBe(true);
         expect(
-            wrapper.get('[data-testid="cockpit-claim-requirements-empty"]')
+            wrapper
+                .get('[data-testid="cockpit-claim-requirements-empty"]')
                 .text(),
         ).toBe('None selected');
         expect(
-            wrapper.get('[data-testid="cockpit-claim-requirements-trigger"]')
+            wrapper
+                .get('[data-testid="cockpit-claim-requirements-trigger"]')
                 .text(),
         ).toContain('Claim Requirements');
     });
@@ -96,11 +99,13 @@ describe('CockpitClaimRequirementsControl', () => {
 
         expect(chip.attributes('data-locked')).toBe('true');
         expect(
-            chip.find('[data-testid="cockpit-claim-requirement-chip-remove"]')
+            chip
+                .find('[data-testid="cockpit-claim-requirement-chip-remove"]')
                 .exists(),
         ).toBe(false);
         expect(
-            chip.find('[data-testid="cockpit-claim-requirement-chip-lock"]')
+            chip
+                .find('[data-testid="cockpit-claim-requirement-chip-lock"]')
                 .exists(),
         ).toBe(true);
         // The reason is carried by a static aria-label, not only by a
@@ -117,7 +122,8 @@ describe('CockpitClaimRequirementsControl', () => {
         });
 
         expect(
-            wrapper.find('[data-testid="cockpit-claim-requirements-popover"]')
+            wrapper
+                .find('[data-testid="cockpit-claim-requirements-popover"]')
                 .exists(),
         ).toBe(false);
 
@@ -126,7 +132,8 @@ describe('CockpitClaimRequirementsControl', () => {
             .trigger('click');
 
         expect(
-            wrapper.get('[data-testid="cockpit-claim-requirements-popover"]')
+            wrapper
+                .get('[data-testid="cockpit-claim-requirements-popover"]')
                 .exists(),
         ).toBe(true);
 
@@ -135,7 +142,8 @@ describe('CockpitClaimRequirementsControl', () => {
             .trigger('click');
 
         expect(
-            wrapper.find('[data-testid="cockpit-claim-requirements-popover"]')
+            wrapper
+                .find('[data-testid="cockpit-claim-requirements-popover"]')
                 .exists(),
         ).toBe(false);
 
@@ -144,7 +152,8 @@ describe('CockpitClaimRequirementsControl', () => {
             .trigger('click');
 
         expect(
-            wrapper.get('[data-testid="cockpit-claim-requirements-popover"]')
+            wrapper
+                .get('[data-testid="cockpit-claim-requirements-popover"]')
                 .exists(),
         ).toBe(true);
     });
@@ -162,9 +171,96 @@ describe('CockpitClaimRequirementsControl', () => {
             .trigger('keydown', { key: 'Escape' });
 
         expect(
-            wrapper.find('[data-testid="cockpit-claim-requirements-popover"]')
+            wrapper
+                .find('[data-testid="cockpit-claim-requirements-popover"]')
                 .exists(),
         ).toBe(false);
+    });
+
+    it('presents quick sets followed by Evidence, Verification, and Details in operational order', async () => {
+        const wrapper = mount(CockpitClaimRequirementsControl, {
+            props: {
+                options: [
+                    option({
+                        value: 'reference_code',
+                        label: 'Reference Code',
+                    }),
+                    option({
+                        value: 'otp',
+                        label: 'OTP Verification',
+                        category: 'verification',
+                    }),
+                    option({
+                        value: 'location',
+                        label: 'GPS Location',
+                        category: 'evidence',
+                    }),
+                    option({
+                        value: 'signature',
+                        label: 'Digital Signature',
+                        category: 'evidence',
+                    }),
+                    option({
+                        value: 'selfie',
+                        label: 'Selfie Photo',
+                        category: 'evidence',
+                    }),
+                    option({
+                        value: 'kyc',
+                        label: 'KYC Verification',
+                        category: 'verification',
+                    }),
+                    option({ value: 'name', label: 'Full Name' }),
+                ],
+                presets: [
+                    { key: 'proof_of_receipt', label: 'Proof of Receipt' },
+                ],
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-trigger"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-requirements-presets"]')
+                .text(),
+        ).toContain('Quick sets');
+        expect(
+            wrapper
+                .findAll('[data-testid^="cockpit-claim-requirements-group-"]')
+                .map((group) => group.attributes('data-testid')),
+        ).toEqual([
+            'cockpit-claim-requirements-group-evidence',
+            'cockpit-claim-requirements-group-verification',
+            'cockpit-claim-requirements-group-details',
+        ]);
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-claim-requirements-group-evidence"]',
+                )
+                .findAll('label')
+                .map((label) => label.attributes('data-testid')),
+        ).toEqual([
+            'cockpit-claim-requirement-option-selfie',
+            'cockpit-claim-requirement-option-signature',
+            'cockpit-claim-requirement-option-location',
+        ]);
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-claim-requirements-group-verification"]',
+                )
+                .findAll('label')
+                .map((label) => label.attributes('data-testid')),
+        ).toEqual([
+            'cockpit-claim-requirement-option-kyc',
+            'cockpit-claim-requirement-option-otp',
+        ]);
+        expect(wrapper.text()).not.toContain('Common');
+        expect(wrapper.text()).not.toContain('Biometric');
     });
 
     it('filters options by label and by a friendly alias, but always selects the canonical value', async () => {
@@ -175,7 +271,7 @@ describe('CockpitClaimRequirementsControl', () => {
                     option({
                         value: 'kyc',
                         label: 'KYC',
-                        category: 'evidence',
+                        category: 'verification',
                         helper: 'Require identity verification.',
                     }),
                 ],
@@ -230,17 +326,13 @@ describe('CockpitClaimRequirementsControl', () => {
         );
 
         expect(
-            locationOption.get('input[type="checkbox"]').attributes(
-                'disabled',
-            ),
+            locationOption.get('input[type="checkbox"]').attributes('disabled'),
         ).toBeDefined();
         expect(locationOption.text()).toContain(
             'Location services are not configured.',
         );
 
-        await locationOption
-            .get('input[type="checkbox"]')
-            .trigger('change');
+        await locationOption.get('input[type="checkbox"]').trigger('change');
 
         expect(wrapper.emitted('toggle')).toBeUndefined();
     });
@@ -269,7 +361,11 @@ describe('CockpitClaimRequirementsControl', () => {
         const wrapper = mount(CockpitClaimRequirementsControl, {
             props: {
                 options: [
-                    option({ value: 'name', label: 'Full Name', selected: true }),
+                    option({
+                        value: 'name',
+                        label: 'Full Name',
+                        selected: true,
+                    }),
                 ],
             },
         });
@@ -284,9 +380,10 @@ describe('CockpitClaimRequirementsControl', () => {
         expect(chipRow.classes()).toContain('min-w-0');
         expect(chipRow.classes()).toContain('overflow-x-auto');
         expect(
-            root.html().match(/min-w-(\d|\[)/g)?.filter(
-                (match) => match !== 'min-w-0',
-            ) ?? [],
+            root
+                .html()
+                .match(/min-w-(\d|\[)/g)
+                ?.filter((match) => match !== 'min-w-0') ?? [],
         ).toHaveLength(0);
     });
 });

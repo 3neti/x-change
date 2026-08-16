@@ -40,6 +40,53 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         ).toBe(true);
     });
 
+    it('groups Evidence before Verification and Details without changing the requirement catalog', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates },
+        });
+
+        await openClaimRequirementsPopover(wrapper);
+
+        expect(
+            wrapper
+                .findAll('[data-testid^="cockpit-claim-requirements-group-"]')
+                .map((group) => group.attributes('data-testid')),
+        ).toEqual([
+            'cockpit-claim-requirements-group-evidence',
+            'cockpit-claim-requirements-group-verification',
+            'cockpit-claim-requirements-group-details',
+        ]);
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-claim-requirements-group-evidence"]',
+                )
+                .findAll('label')
+                .map((option) => option.attributes('data-testid')),
+        ).toEqual([
+            'cockpit-claim-requirement-option-selfie',
+            'cockpit-claim-requirement-option-signature',
+            'cockpit-claim-requirement-option-location',
+        ]);
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-claim-requirements-group-verification"]',
+                )
+                .findAll('label')
+                .map((option) => option.attributes('data-testid')),
+        ).toEqual([
+            'cockpit-claim-requirement-option-kyc',
+            'cockpit-claim-requirement-option-otp',
+        ]);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-requirements-group-details"]')
+                .findAll('label'),
+        ).toHaveLength(7);
+        expect(wrapper.text()).not.toContain('Common');
+    });
+
     it('selecting a requirement in the Order card selects it in the detailed controls', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: { templates: cockpitQuickGenerateTemplates },
@@ -112,9 +159,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
 
         expect(
             wrapper
-                .get(
-                    '[data-testid="cockpit-claim-requirement-chip-signature"]',
-                )
+                .get('[data-testid="cockpit-claim-requirement-chip-signature"]')
                 .exists(),
         ).toBe(true);
     });
@@ -139,9 +184,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         expect(otpChip.attributes('data-locked')).toBe('true');
         expect(
             mobileChip
-                .find(
-                    '[data-testid="cockpit-claim-requirement-chip-remove"]',
-                )
+                .find('[data-testid="cockpit-claim-requirement-chip-remove"]')
                 .exists(),
         ).toBe(false);
         expect(mobileChip.attributes('aria-label')).toContain(
@@ -177,9 +220,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
 
         expect(
             wrapper
-                .get(
-                    '[data-testid="cockpit-claim-requirement-chip-signature"]',
-                )
+                .get('[data-testid="cockpit-claim-requirement-chip-signature"]')
                 .exists(),
         ).toBe(true);
 
@@ -272,9 +313,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         );
 
         expect(
-            locationOption.get('input[type="checkbox"]').attributes(
-                'disabled',
-            ),
+            locationOption.get('input[type="checkbox"]').attributes('disabled'),
         ).toBeDefined();
         expect(locationOption.text()).toContain(
             'Location services are not configured.',

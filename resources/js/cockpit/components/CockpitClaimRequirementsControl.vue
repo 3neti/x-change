@@ -4,7 +4,10 @@ import { computed, nextTick, ref, watch } from 'vue';
 import type { LucideIcon } from 'lucide-vue-next';
 import CockpitFieldHelp from './CockpitFieldHelp.vue';
 
-export type CockpitClaimRequirementCategory = 'common' | 'evidence';
+export type CockpitClaimRequirementCategory =
+    | 'evidence'
+    | 'verification'
+    | 'details';
 
 export type CockpitClaimRequirementOption = {
     value: string;
@@ -67,6 +70,34 @@ const searchAliases: Record<string, string[]> = {
     location: ['gps', 'geolocation'],
 };
 
+const claimRequirementGroups: Array<{
+    key: CockpitClaimRequirementCategory;
+    label: string;
+}> = [
+    { key: 'evidence', label: 'Evidence' },
+    { key: 'verification', label: 'Verification' },
+    { key: 'details', label: 'Details' },
+];
+
+const claimRequirementOptionOrder = [
+    'selfie',
+    'signature',
+    'location',
+    'kyc',
+    'otp',
+    'name',
+    'mobile',
+    'email',
+    'address',
+    'birth_date',
+    'gross_monthly_income',
+    'reference_code',
+];
+
+const claimRequirementOptionRank = new Map(
+    claimRequirementOptionOrder.map((value, index) => [value, index]),
+);
+
 const selectedChips = computed<CockpitClaimRequirementOption[]>(() =>
     props.options.filter((option) => option.selected),
 );
@@ -113,18 +144,32 @@ function matchesSearch(option: CockpitClaimRequirementOption): boolean {
 }
 
 const matchingOptions = computed<CockpitClaimRequirementOption[]>(() =>
-    props.options.filter((option) => matchesSearch(option)),
+    props.options
+        .filter((option) => matchesSearch(option))
+        .sort(
+            (left, right) =>
+                (claimRequirementOptionRank.get(left.value) ??
+                    Number.MAX_SAFE_INTEGER) -
+                (claimRequirementOptionRank.get(right.value) ??
+                    Number.MAX_SAFE_INTEGER),
+        ),
 );
 
-const commonOptions = computed<CockpitClaimRequirementOption[]>(() =>
-    matchingOptions.value.filter((option) => option.category === 'common'),
+const matchingGroups = computed(() =>
+    claimRequirementGroups
+        .map((group) => ({
+            ...group,
+            options: matchingOptions.value.filter(
+                (option) => option.category === group.key,
+            ),
+        }))
+        .filter((group) => group.options.length > 0),
 );
 
-const evidenceOptions = computed<CockpitClaimRequirementOption[]>(() =>
-    matchingOptions.value.filter((option) => option.category === 'evidence'),
-);
-
-function handleToggle(option: CockpitClaimRequirementOption, checked: boolean): void {
+function handleToggle(
+    option: CockpitClaimRequirementOption,
+    checked: boolean,
+): void {
     if (option.disabled) {
         return;
     }
@@ -198,11 +243,19 @@ function applyPreset(key: string): void {
                             ? `${chip.label} is required. ${chip.lockedReason ?? ''}`.trim()
                             : undefined
                     "
-                    :title="chip.locked ? chip.lockedReason ?? undefined : undefined"
+                    :title="
+                        chip.locked
+                            ? (chip.lockedReason ?? undefined)
+                            : undefined
+                    "
                     :data-testid="`cockpit-claim-requirement-chip-${chip.value}`"
                     :data-locked="chip.locked ? 'true' : 'false'"
                 >
-                    <component :is="chip.icon" class="size-3" aria-hidden="true" />
+                    <component
+                        :is="chip.icon"
+                        class="size-3"
+                        aria-hidden="true"
+                    />
                     {{ chip.label }}
                     <Lock
                         v-if="chip.locked"
@@ -258,7 +311,7 @@ function applyPreset(key: string): void {
             <div class="border-b border-slate-200 p-2 dark:border-slate-800">
                 <div class="relative">
                     <Search
-                        class="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-slate-400"
+                        class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400"
                         aria-hidden="true"
                     />
                     <input
@@ -277,36 +330,46 @@ function applyPreset(key: string): void {
 
             <div
                 v-if="presets.length > 0"
-                class="flex flex-wrap gap-1.5 border-b border-slate-200 p-2 dark:border-slate-800"
-                role="group"
-                aria-label="Claim requirement presets"
+                class="grid gap-1.5 border-b border-slate-200 p-2 dark:border-slate-800"
                 data-testid="cockpit-claim-requirements-presets"
             >
-                <button
-                    v-for="preset in presets"
-                    :key="preset.key"
-                    type="button"
-                    class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.7rem] font-semibold text-slate-600 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                    :data-testid="`cockpit-claim-requirements-preset-${preset.key}`"
-                    @click="applyPreset(preset.key)"
+                <p
+                    class="px-1 text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                 >
-                    {{ preset.label }}
-                </button>
+                    Quick sets
+                </p>
+                <div
+                    class="flex flex-wrap gap-1.5"
+                    role="group"
+                    aria-label="Quick claim requirement sets"
+                >
+                    <button
+                        v-for="preset in presets"
+                        :key="preset.key"
+                        type="button"
+                        class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.7rem] font-semibold text-slate-600 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                        :data-testid="`cockpit-claim-requirements-preset-${preset.key}`"
+                        @click="applyPreset(preset.key)"
+                    >
+                        {{ preset.label }}
+                    </button>
+                </div>
             </div>
 
             <div class="min-h-0 flex-1 overflow-y-auto p-2">
                 <fieldset
-                    v-if="commonOptions.length > 0"
-                    class="mb-2"
-                    data-testid="cockpit-claim-requirements-group-common"
+                    v-for="(group, index) in matchingGroups"
+                    :key="group.key"
+                    :class="index < matchingGroups.length - 1 ? 'mb-2' : ''"
+                    :data-testid="`cockpit-claim-requirements-group-${group.key}`"
                 >
                     <legend
-                        class="px-1 py-1 text-[0.68rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        class="px-1 py-1 text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                     >
-                        Common
+                        {{ group.label }}
                     </legend>
                     <label
-                        v-for="option in commonOptions"
+                        v-for="option in group.options"
                         :key="option.value"
                         class="flex items-start gap-2 rounded-lg px-1.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900"
                         :class="{
@@ -322,8 +385,7 @@ function applyPreset(key: string): void {
                             @change="
                                 handleToggle(
                                     option,
-                                    ($event.target as HTMLInputElement)
-                                        .checked,
+                                    ($event.target as HTMLInputElement).checked,
                                 )
                             "
                         />
@@ -347,68 +409,8 @@ function applyPreset(key: string): void {
                             >
                                 {{
                                     option.unavailable
-                                        ? option.unavailableReason ??
-                                          option.helper
-                                        : option.helper
-                                }}
-                            </span>
-                        </span>
-                    </label>
-                </fieldset>
-
-                <fieldset
-                    v-if="evidenceOptions.length > 0"
-                    data-testid="cockpit-claim-requirements-group-evidence"
-                >
-                    <legend
-                        class="px-1 py-1 text-[0.68rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                    >
-                        Evidence
-                    </legend>
-                    <label
-                        v-for="option in evidenceOptions"
-                        :key="option.value"
-                        class="flex items-start gap-2 rounded-lg px-1.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900"
-                        :class="{
-                            'opacity-55': option.unavailable,
-                        }"
-                        :data-testid="`cockpit-claim-requirement-option-${option.value}`"
-                    >
-                        <input
-                            type="checkbox"
-                            class="mt-0.5 rounded border-slate-300"
-                            :checked="option.selected"
-                            :disabled="option.disabled"
-                            @change="
-                                handleToggle(
-                                    option,
-                                    ($event.target as HTMLInputElement)
-                                        .checked,
-                                )
-                            "
-                        />
-                        <component
-                            :is="option.icon"
-                            class="mt-0.5 size-3.5 shrink-0"
-                            aria-hidden="true"
-                        />
-                        <span class="min-w-0 flex-1">
-                            <span class="flex items-center gap-1.5">
-                                <span>{{ option.label }}</span>
-                                <span
-                                    v-if="option.priceLabel"
-                                    class="text-[0.65rem] font-normal text-slate-400"
-                                >
-                                    {{ option.priceLabel }}
-                                </span>
-                            </span>
-                            <span
-                                class="mt-0.5 block text-[11px] font-normal text-slate-500 dark:text-slate-400"
-                            >
-                                {{
-                                    option.unavailable
-                                        ? option.unavailableReason ??
-                                          option.helper
+                                        ? (option.unavailableReason ??
+                                          option.helper)
                                         : option.helper
                                 }}
                             </span>
