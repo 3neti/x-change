@@ -378,6 +378,23 @@ const props = defineProps<{
           message: string;
         }>;
       };
+      tax_profiles: {
+        operational: boolean;
+        ready_count: number;
+        required_count: number;
+        message: string;
+        profiles: Array<{
+          reference: string;
+          version: number | null;
+          jurisdiction: string | null;
+          currency: string | null;
+          rate_basis_points: number | null;
+          collection_method: string | null;
+          snapshot_hash: string | null;
+          ready: boolean;
+          message: string;
+        }>;
+      };
       roles: {
         maker_count: number;
         checker_count: number;
@@ -822,7 +839,7 @@ function retryCommission(id: number): void {
       </section>
 
       <section
-        class="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+        class="grid gap-3 md:grid-cols-2 2xl:grid-cols-4"
         data-testid="commercial-agreement-economics-readiness"
       >
         <article
@@ -954,6 +971,46 @@ function retryCommission(id: number): void {
                   policy.version ?? "—"
                 }}
                 · {{ label(policy.timing ?? "unavailable") }}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          data-testid="commercial-tax-authority-readiness"
+        >
+          <div class="flex items-start gap-3">
+            <Percent class="mt-0.5 size-5 shrink-0 text-amber-600" />
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-sm font-semibold">Tax Authority</h2>
+                <span
+                  class="rounded-full px-2 py-0.5 text-[0.68rem] font-semibold"
+                  :class="
+                    commercialOffering.governance.tax_profiles.operational
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                  "
+                >
+                  {{ commercialOffering.governance.tax_profiles.ready_count }}/{{
+                    commercialOffering.governance.tax_profiles.required_count
+                  }}
+                  ready
+                </span>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ commercialOffering.governance.tax_profiles.message }}
+              </p>
+              <p
+                v-for="profile in commercialOffering.governance.tax_profiles
+                  .profiles"
+                :key="profile.reference"
+                class="mt-2 truncate text-xs text-slate-500"
+                :title="profile.snapshot_hash ?? profile.message"
+              >
+                {{ label(profile.reference) }} · v{{ profile.version ?? "—" }} ·
+                {{ (profile.rate_basis_points ?? 0) / 100 }}%
               </p>
             </div>
           </div>

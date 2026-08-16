@@ -420,6 +420,13 @@ const commercialGovernanceReadiness = {
     message: "Every Billable Event has an executable governed recognition policy.",
     policies: [],
   },
+  tax_profiles: {
+    operational: true,
+    ready_count: 0,
+    required_count: 0,
+    message: "No governed tax allocation is configured.",
+    profiles: [],
+  },
 };
 
 describe("Cockpit Commercial Offering administration", () => {
@@ -505,6 +512,13 @@ describe("Cockpit Commercial Offering administration", () => {
                 },
               ],
             },
+            tax_profiles: {
+              operational: true,
+              ready_count: 0,
+              required_count: 0,
+              message: "No governed tax allocation is configured.",
+              profiles: [],
+            },
             roles: {
               maker_count: 1,
               checker_count: 1,
@@ -524,6 +538,8 @@ describe("Cockpit Commercial Offering administration", () => {
     expect(wrapper.text()).toContain("Recipient Authorities");
     expect(wrapper.text()).toContain("Counterparty:3neti · authorized");
     expect(wrapper.text()).toContain("Recognition Authority");
+    expect(wrapper.text()).toContain("Tax Authority");
+    expect(wrapper.text()).toContain("No governed tax allocation is configured.");
     expect(wrapper.text()).toContain("Pay Code Issued With Component · v1 · Immediate");
     expect(wrapper.text()).toContain("Transaction Fee");
     expect(wrapper.text()).toContain("OTP Verification");

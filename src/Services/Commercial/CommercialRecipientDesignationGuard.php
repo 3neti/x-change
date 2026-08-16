@@ -11,7 +11,10 @@ use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
 
 final readonly class CommercialRecipientDesignationGuard
 {
-    public function __construct(private CommercialRecipientDesignationResolverContract $designations) {}
+    public function __construct(
+        private CommercialRecipientDesignationResolverContract $designations,
+        private CommercialTaxProfileRegistry $taxProfiles,
+    ) {}
 
     public function assertPlan(CommercialAllocationPlanData $plan): void
     {
@@ -29,6 +32,29 @@ final readonly class CommercialRecipientDesignationGuard
                 throw new DomainException(
                     "Commercial Recipient Designation [{$line->designationReference}] does not authorize component [{$line->componentReference}].",
                 );
+            }
+
+            $ruleTaxProfile = filled($line->taxPolicyReference)
+                ? (string) $line->taxPolicyReference
+                : null;
+            $designationTaxProfile = filled($designation->tax_profile_reference)
+                ? (string) $designation->tax_profile_reference
+                : null;
+
+            if ($ruleTaxProfile !== $designationTaxProfile) {
+                throw new DomainException(
+                    "Commercial Recipient Designation [{$line->designationReference}] does not authorize tax profile [{$ruleTaxProfile}].",
+                );
+            }
+
+            if ($ruleTaxProfile !== null) {
+                $profile = $this->taxProfiles->resolve($ruleTaxProfile);
+
+                if ($profile->currency !== $line->currency) {
+                    throw new DomainException(
+                        "Commercial Tax Profile [{$ruleTaxProfile}] does not authorize currency [{$line->currency}].",
+                    );
+                }
             }
         }
     }

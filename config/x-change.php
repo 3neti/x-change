@@ -1367,6 +1367,9 @@ return [
                 ],
             ],
         ],
+        'tax_profiles' => [
+            'profiles' => [],
+        ],
         'legal' => [
             'enforcement' => env('XCHANGE_COMMERCIAL_LEGAL_ENFORCEMENT', 'advisory'),
         ],

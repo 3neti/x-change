@@ -30,6 +30,7 @@ final readonly class CommercialGovernanceInspector
         private CommercialComponentEconomicsResolverContract $componentEconomics,
         private CommercialRecipientDesignationResolverContract $recipientDesignations,
         private CommercialRecognitionPolicyRegistry $recognitionPolicies,
+        private CommercialTaxProfileRegistry $taxProfiles,
     ) {}
 
     /**
@@ -96,9 +97,10 @@ final readonly class CommercialGovernanceInspector
         $componentEconomics = $this->componentEconomicsReadiness($profiles->all());
         $recipientDesignations = $this->recipientDesignationReadiness($profiles->all());
         $recognitionPolicies = $this->recognitionPolicyReadiness($profiles->all());
+        $taxProfiles = $this->taxProfileReadiness($profiles->all());
 
         $state = match (true) {
-            ! $allProfilesActive || ! $componentEconomics['operational'] || ! $recipientDesignations['operational'] || ! $recognitionPolicies['operational'] => CommercialGovernanceState::ConfigurationInvalid,
+            ! $allProfilesActive || ! $componentEconomics['operational'] || ! $recipientDesignations['operational'] || ! $recognitionPolicies['operational'] || ! $taxProfiles['operational'] => CommercialGovernanceState::ConfigurationInvalid,
             $publishedAwaitingActivation > 0 => CommercialGovernanceState::PublishedAwaitingActivation,
             $pendingApproval > 0 => CommercialGovernanceState::RevisionAwaitingApproval,
             $governedOfferingActive => CommercialGovernanceState::GovernedOfferingActive,
@@ -108,7 +110,8 @@ final readonly class CommercialGovernanceInspector
         $operational = $allProfilesActive
             && $componentEconomics['operational']
             && $recipientDesignations['operational']
-            && $recognitionPolicies['operational'];
+            && $recognitionPolicies['operational']
+            && $taxProfiles['operational'];
 
         return [
             'schema' => 'x-change.commercial-governance-status.v1',
@@ -125,6 +128,7 @@ final readonly class CommercialGovernanceInspector
             'component_economics' => $componentEconomics,
             'recipient_designations' => $recipientDesignations,
             'recognition_policies' => $recognitionPolicies,
+            'tax_profiles' => $taxProfiles,
             'partners' => $this->partnerReadiness(),
             'operations' => $this->operationsReadiness(),
             'message' => $this->message($state),
@@ -141,10 +145,126 @@ final readonly class CommercialGovernanceInspector
                 && Schema::hasTable('x_change_commercial_component_economics_activations')
                 && Schema::hasTable('x_change_commercial_component_economics_heads')
                 && Schema::hasTable('x_change_commercial_recipient_designations')
-                && Schema::hasTable('x_change_commercial_recognition_policies');
+                && Schema::hasTable('x_change_commercial_recognition_policies')
+                && Schema::hasTable('x_change_commercial_tax_profiles');
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /**
+     * @param  list<string>  $profiles
+     * @return array{operational: bool, required_count: int, ready_count: int, profiles: list<array<string, mixed>>, message: string}
+     */
+    private function taxProfileReadiness(array $profiles): array
+    {
+        $requirements = [];
+
+        foreach ($profiles as $profile) {
+            try {
+                $economics = $this->componentEconomics->resolve($profile);
+            } catch (Throwable) {
+                continue;
+            }
+
+            foreach ($economics->components as $component) {
+                foreach ($component->allocationSchedule?->rules ?? [] as $rule) {
+                    if ($rule->designationReference === null) {
+                        continue;
+                    }
+
+                    try {
+                        $designation = $this->recipientDesignations->resolve($rule->designationReference);
+                        $designationTaxProfile = filled($designation->tax_profile_reference)
+                            ? (string) $designation->tax_profile_reference
+                            : null;
+                    } catch (Throwable) {
+                        $designationTaxProfile = null;
+                    }
+
+                    if ($rule->taxPolicyReference === null && $designationTaxProfile === null) {
+                        continue;
+                    }
+
+                    $key = ($rule->taxPolicyReference ?? 'none').'|'.$rule->designationReference;
+                    $requirements[$key] = [
+                        'reference' => $rule->taxPolicyReference,
+                        'designation_reference' => $rule->designationReference,
+                        'designation_tax_profile_reference' => $designationTaxProfile,
+                    ];
+                }
+            }
+        }
+
+        $rows = collect($requirements)->map(function (array $requirement): array {
+            $reference = $requirement['reference'];
+
+            if ($reference === null
+                || $reference !== $requirement['designation_tax_profile_reference']) {
+                return [
+                    ...$requirement,
+                    'version' => null,
+                    'jurisdiction' => null,
+                    'currency' => null,
+                    'rate_basis_points' => null,
+                    'collection_method' => null,
+                    'snapshot_hash' => null,
+                    'ready' => false,
+                    'message' => 'Allocation and recipient designation tax profiles must match exactly.',
+                ];
+            }
+
+            try {
+                $profile = $this->taxProfiles->resolve($reference);
+                $effectiveFrom = new \DateTimeImmutable($profile->effectiveFrom);
+                $effectiveUntil = $profile->effectiveUntil === null
+                    ? null
+                    : new \DateTimeImmutable($profile->effectiveUntil);
+                $now = new \DateTimeImmutable('now');
+                $ready = $effectiveFrom <= $now && ($effectiveUntil === null || $effectiveUntil > $now);
+
+                return [
+                    ...$requirement,
+                    'reference' => $profile->reference,
+                    'version' => $profile->version,
+                    'jurisdiction' => $profile->jurisdiction,
+                    'currency' => $profile->currency,
+                    'rate_basis_points' => $profile->rateBasisPoints,
+                    'collection_method' => $profile->collectionMethod->value,
+                    'snapshot_hash' => $profile->snapshotHash(),
+                    'ready' => $ready,
+                    'message' => $ready
+                        ? 'Commercial Tax Profile is effective and governed.'
+                        : 'Commercial Tax Profile is outside its effective period.',
+                ];
+            } catch (Throwable $exception) {
+                return [
+                    ...$requirement,
+                    'version' => null,
+                    'jurisdiction' => null,
+                    'currency' => null,
+                    'rate_basis_points' => null,
+                    'collection_method' => null,
+                    'snapshot_hash' => null,
+                    'ready' => false,
+                    'message' => $exception->getMessage(),
+                ];
+            }
+        })->values();
+        $ready = $rows->where('ready', true)->count();
+        $operational = $requirements === [] || $ready === count($requirements);
+
+        return [
+            'operational' => $operational,
+            'required_count' => count($requirements),
+            'ready_count' => $ready,
+            'profiles' => $rows->all(),
+            'message' => $requirements === []
+                ? 'No governed tax allocation is configured.'
+                : ($operational
+                    ? 'Every referenced Commercial Tax Profile is effective and governed.'
+                    : 'Every referenced tax allocation requires an effective governed Commercial Tax Profile.'),
+        ];
     }
 
     /**

@@ -105,6 +105,25 @@ automatic at issuance; external cash settlement remains a separate,
 evidence-controlled operation. A TIN by itself never invents a tax rate or tax
 liability.
 
+## Tax Authority
+
+Tax automation is fail-closed and versioned independently from pricing. A
+Component Economics allocation may either omit tax authority together with its
+recipient designation, meaning no tax automation is configured, or reference
+the exact same governed Commercial Tax Profile as that designation.
+
+Each Commercial Tax Profile freezes its jurisdiction, currency, tax type,
+calculation basis, basis-point rate, rounding method and scope, collection
+method, recipient authority, effective period, canonical snapshot, and hash.
+Changing any term requires a new version. A TIN is identity evidence only; its
+presence never selects a profile, rate, or accounting treatment.
+
+This readiness gate does not calculate or remit tax. The following controlled
+gate must apply the frozen profile inside x-commerce before quote and sale
+snapshot hashing. Gross external allocation must equal net external payable
+plus Tax Payable, conserving integer minor units exactly. Remitting Tax Payable
+remains a later evidence-controlled settlement operation.
+
 ## Billable Event evidence
 
 Every priced quote line accepted at issuance produces one durable Billable

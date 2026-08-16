@@ -2,6 +2,12 @@
 
 Commercial allocation and cash settlement are separate events.
 
+Commercial Tax Profile activation is also separate from both events. Profile
+readiness authorizes a future calculation; it does not create Tax Payable,
+change a price, move Provider Inventory, or remit funds. Tax Payable exists
+only after the deterministic allocation gate produces and posts an explicit
+tax line under frozen policy evidence.
+
 An accepted Pay Code charge posts the governed waterfall immediately. Provider cost becomes a Provider Cost Payable Position; attributed commission becomes a Partner Commission Payable Position. Neither posting claims that cash has left the provider account.
 
 The durable Billable Event is the recognition evidence that connects an accepted priced component to that posting. A posted Billable Event means the governed charge and allocation were recognized; it does not mean an external recipient was paid. The Commercial Controls Activity view shows these component events and their recognition status alongside each recent sale.

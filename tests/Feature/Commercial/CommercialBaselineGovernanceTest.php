@@ -160,6 +160,12 @@ it('reports active baseline issuance while locking price changes', function (): 
             'required_count' => 1,
             'ready_count' => 1,
         ])
+        ->and($status['tax_profiles'])->toMatchArray([
+            'operational' => true,
+            'required_count' => 0,
+            'ready_count' => 0,
+            'message' => 'No governed tax allocation is configured.',
+        ])
         ->and(data_get($status, 'recognition_policies.policies.0'))->toMatchArray([
             'reference' => 'recognition:pay-code-issuance:v1',
             'version' => 1,
@@ -183,6 +189,10 @@ it('reports active baseline issuance while locking price changes', function (): 
 
     $this->artisan('x-change:doctor', ['--json' => true])
         ->expectsOutputToContain('"name": "commercial recognition policies"')
+        ->assertSuccessful();
+
+    $this->artisan('x-change:doctor', ['--json' => true])
+        ->expectsOutputToContain('"name": "commercial tax profiles"')
         ->assertSuccessful();
 });
 

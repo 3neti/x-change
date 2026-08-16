@@ -23,6 +23,7 @@ final readonly class ProvisionCommercialBaselines
         private BackfillCommercialOfferingManifests $manifestBackfill,
         private ProvisionCommercialComponentEconomicsBaselines $componentEconomicsBaselines,
         private ProvisionCommercialRecipientDesignationBaselines $recipientDesignationBaselines,
+        private ProvisionCommercialTaxProfiles $taxProfiles,
     ) {}
 
     /** @return list<CommercialOfferingActivation> */
@@ -59,6 +60,7 @@ final readonly class ProvisionCommercialBaselines
         if ($this->allConfiguredProfilesAreActive()) {
             $this->componentEconomicsBaselines->provision($commissioningManifestReference);
             $this->recipientDesignationBaselines->provision($commissioningManifestReference);
+            $this->taxProfiles->provision();
         }
 
         return $activations;
