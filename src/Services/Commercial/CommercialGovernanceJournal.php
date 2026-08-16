@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
@@ -49,7 +50,9 @@ final readonly class CommercialGovernanceJournal
             ),
             idempotencyKey: 'x-change:commercial-governance:'.$eventType.':'.$offering->getKey(),
             payload: [
-                'status' => $offering->status->value,
+                'status' => $eventType === 'commercial.offering.baseline_provisioned'
+                    ? CommercialOfferingStatus::Published->value
+                    : $offering->status->value,
                 'origin' => $offering->origin->value,
                 'version' => $offering->version,
                 'snapshot_hash' => $offering->snapshot_hash,

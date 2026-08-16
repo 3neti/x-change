@@ -10,6 +10,7 @@ use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
+use LBHurtado\XChange\Services\Commercial\ActivateCommercialOffering;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
@@ -61,6 +62,41 @@ it('reuses identical baseline and activation evidence idempotently', function ()
     expect($second[0]->is($first[0]))->toBeTrue()
         ->and(CommercialOffering::query()->count())->toBe(2)
         ->and(CommercialOfferingActivation::query()->count())->toBe(2);
+});
+
+it('replays baseline journal evidence after a governed revision retires the baseline', function (): void {
+    $service = app(ProvisionCommercialBaselines::class);
+    $service->provision('commissioning-manifest:first');
+    $baseline = CommercialOffering::query()->where('profile', 'pay_code')->sole();
+    $governed = CommercialOffering::query()->create([
+        ...$baseline->only([
+            'reference',
+            'profile',
+            'currency',
+            'snapshot_hash',
+            'snapshot',
+            'manifest_schema',
+            'manifest_hash',
+            'manifest_yaml',
+            'effective_at',
+        ]),
+        'version' => 2,
+        'status' => 'published',
+        'origin' => 'maker_checker_revision',
+        'authorization_reference' => 'pricing-approval:v2',
+    ]);
+
+    app(ActivateCommercialOffering::class)->execute(
+        $governed,
+        CommercialActivationAuthority::IndependentApproval,
+        'commercial-activation:v2',
+    );
+
+    expect($baseline->refresh()->status->value)->toBe('retired')
+        ->and(fn () => $service->provision('commissioning-manifest:second'))->not->toThrow(Throwable::class)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'commercial.offering.baseline_provisioned')
+            ->count())->toBe(2);
 });
 
 it('persists baselines without activating them in maker checker from start mode', function (): void {
