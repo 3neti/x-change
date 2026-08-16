@@ -1340,16 +1340,16 @@
         },
         {
             "name": "3neti/wallet",
-            "version": "v2.0.0-beta.4",
+            "version": "v2.0.0-beta.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/wallet.git",
-                "reference": "8744bd9d6fc2e15b0774db49f34265add7cb7393"
+                "reference": "49d38e022477808a122771468d60f8788cd2db35"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/wallet/zipball/8744bd9d6fc2e15b0774db49f34265add7cb7393",
-                "reference": "8744bd9d6fc2e15b0774db49f34265add7cb7393",
+                "url": "https://api.github.com/repos/3neti/wallet/zipball/49d38e022477808a122771468d60f8788cd2db35",
+                "reference": "49d38e022477808a122771468d60f8788cd2db35",
                 "shasum": ""
             },
             "require": {
@@ -1391,9 +1391,9 @@
             "description": "Custom wallet for X-Change",
             "support": {
                 "issues": "https://github.com/3neti/wallet/issues",
-                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.4"
+                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.5"
             },
-            "time": "2026-08-15T11:19:19+00:00"
+            "time": "2026-08-16T12:15:36+00:00"
         },
         {
             "name": "3neti/x-action",
@@ -1713,11 +1713,11 @@
         },
         {
             "name": "3neti/x-provisioning",
-            "version": "v1.0.0-beta.7",
+            "version": "v1.0.0-beta.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-provisioning.git",
-                "reference": "3f0a13b210d33f96a8682f5ec68a3590919b93eb"
+                "reference": "ee1732cae4a79847723d96cd9ee9c67a9fc622f7"
             },
             "require": {
                 "illuminate/contracts": "^12.0 || ^13.0",
@@ -1766,7 +1766,7 @@
                 }
             ],
             "description": "Governed provisioning requests, invitations, acceptance, and authority activation for x-change.",
-            "time": "2026-08-16T07:41:54+00:00"
+            "time": "2026-08-16T12:15:36+00:00"
         },
         {
             "name": "3neti/x-ray",
