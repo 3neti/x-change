@@ -80,6 +80,7 @@ it('claims the grant into the newly provisioned Sofia Account without changing I
         '--run-reference' => 'treasury-onboarding-grant-sofia-claim-20260730-001',
         '--json' => true,
     ]);
+
     $replay = runTreasuryOnboardingGrant([
         '--no-claim' => true,
         '--run-reference' => 'treasury-onboarding-grant-sofia-claim-20260730-001',
@@ -108,18 +109,65 @@ it('claims the grant into the newly provisioned Sofia Account without changing I
         ))->toBe(1_500)
         ->and(data_get($run, 'payload.controls.provider_calls'))->toBeFalse()
         ->and(data_get($run, 'payload.controls.provider_attempt_count'))->toBe(0)
-        ->and(data_get($run, 'payload.controls.claim_count'))->toBe(1)
+        ->and(data_get($run, 'payload.controls.claim_count'))->toBe(2)
         ->and(data_get($replay, 'payload.pay_code.claimed'))->toBeTrue()
         ->and(data_get($replay, 'payload.recipient.account_id'))->toBe($sofia->getKey())
         ->and(data_get($replay, 'payload.recipient.positions.client_funds_minor'))
         ->toBe(1_500)
-        ->and(data_get($replay, 'payload.controls.claim_count'))->toBe(1)
+        ->and(data_get($replay, 'payload.controls.claim_count'))->toBe(2)
         ->and(data_get($run, 'payload.controls.journal_events'))->toBe([
             'account_funding.pay_code.issued',
             'account_funding.pay_code.outcome_selected',
             'account_funding.pay_code.applied',
         ])
         ->and(DisbursementReconciliation::query()->count())->toBe(0);
+
+    fakePayoutProvider()->assertNoDisbursementAttempted();
+});
+
+it('funds an existing verified Account without forcing onboarding again', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestSystemAccountFundingReserve(
+        $system,
+        2_500,
+        'treasury-existing-account-grant',
+    );
+    $amelia = new User;
+    $amelia->forceFill([
+        'name' => 'Amelia Hurtado',
+        'mobile' => '639285243656',
+        'email' => 'amelia.hurtado@example.test',
+        'password' => 'not-a-login-credential',
+        'mobile_verified_at' => now(),
+        'email_verified_at' => now(),
+    ])->save();
+    $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
+
+    $run = runTreasuryOnboardingGrant([
+        '--claim-mobile' => '09285243656',
+        '--claim-name' => 'Amelia Hurtado',
+        '--claim-email' => 'amelia.hurtado@example.test',
+        '--amount' => 20,
+        '--run-reference' => 'treasury-existing-account-grant-20260817-001',
+        '--json' => true,
+    ]);
+
+    expect($run['exit_code'])->toBe(0, $run['rendered'])
+        ->and(data_get($run, 'payload.pay_code.claimed'))->toBeTrue()
+        ->and(data_get($run, 'payload.pay_code.execution_driver'))
+        ->toBeNull()
+        ->and(data_get($run, 'payload.recipient.account_id'))->toBe($amelia->getKey())
+        ->and(data_get($run, 'payload.recipient.positions.client_funds_minor'))
+        ->toBe(2_000)
+        ->and(data_get($run, 'payload.accounting.inventory_unchanged'))->toBeTrue()
+        ->and(TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBefore)
+        ->and(data_get($run, 'payload.controls.provider_calls'))->toBeFalse()
+        ->and(data_get($run, 'payload.controls.claim_count'))->toBe(1)
+        ->and(data_get($run, 'payload.controls.journal_events'))->toBe([
+            'account_funding.pay_code.issued',
+            'account_funding.pay_code.outcome_selected',
+            'account_funding.pay_code.applied',
+        ]);
 
     fakePayoutProvider()->assertNoDisbursementAttempted();
 });

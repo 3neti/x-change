@@ -13,17 +13,21 @@ use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressRequestData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingObservationRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\StandingFundingAccountReferenceResolver;
 
 beforeEach(function () {
     enableNetbankTreasuryForTests();
@@ -85,6 +89,61 @@ it('persists an immutable purpose-bound address without storing plaintext', func
         ->and($stored->reference_length)->toBe(11)
         ->and($storedQr->payload_ciphertext)
         ->not->toContain($first->providerAddress->qrCode->base64Payload);
+});
+
+it('resolves the stable Client Funds ledger instead of the legacy default wallet', function () {
+    $user = actingAsTestUser(0);
+    $legacyWallet = $user->wallet()->where('slug', 'platform')->sole();
+
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $user,
+        ['netbank-primary'],
+    );
+
+    $clientFunds = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $user)
+        ->where('provider', 'netbank')
+        ->where('currency', 'PHP')
+        ->where('purpose', TreasuryPositionPurpose::ClientFunds)
+        ->sole();
+    $resolved = app(StandingFundingAccountReferenceResolver::class)
+        ->resolve($user, 'netbank', 'PHP');
+
+    expect($resolved)
+        ->toBe('wallet:'.$clientFunds->internal_ledger_uuid)
+        ->not->toBe('wallet:'.$legacyWallet->uuid);
+});
+
+it('corrects an unused same-owner mobile binding when its old Account is orphaned', function () {
+    $provider = new StandingFundingAddressProviderFake;
+    $provider->scheme = 'netbank-mobile-v1';
+    $provider->counterZeroAddress = '9150009173011987';
+    bindStandingFundingProvider($provider);
+
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $action = app(ProvisionStandingFundingAddress::class);
+    $first = $action->handle(
+        owner: $owner,
+        accountReference: 'wallet:orphaned-ledger',
+        provider: 'netbank',
+        purpose: FundingAddressPurpose::AccountFunding,
+        recognitionMode: FundingRecognitionMode::ObserveOnly,
+    )->address;
+    $corrected = $action->handle(
+        owner: $owner,
+        accountReference: 'wallet:'.$wallet->uuid,
+        provider: 'netbank',
+        purpose: FundingAddressPurpose::AccountFunding,
+        recognitionMode: FundingRecognitionMode::ObserveOnly,
+    )->address;
+
+    expect($corrected->is($first))->toBeTrue()
+        ->and($corrected->account_reference)->toBe('wallet:'.$wallet->uuid)
+        ->and($corrected->version)->toBe(2)
+        ->and(data_get($corrected->metadata, 'binding_corrected'))->toBeTrue()
+        ->and(AccountFundingReceipt::query()->count())->toBe(0)
+        ->and(StandingFundingAddress::query()->count())->toBe(1);
 });
 
 it('recognizes settled provider evidence and credits an Account exactly once', function () {

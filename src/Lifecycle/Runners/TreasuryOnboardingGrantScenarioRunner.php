@@ -13,6 +13,7 @@ use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
+use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
@@ -20,6 +21,7 @@ use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use Throwable;
@@ -30,6 +32,7 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
         private SystemUserResolverContract $systemUsers,
         private IssueSystemAccountFundingPayCode $issuePayCode,
         private LifecycleClaimSubmitter $claimSubmitter,
+        private DispatchVoucherClaimOutcome $claimOutcomes,
         private TreasuryPrincipalReferenceResolverContract $principalReferences,
         private TreasuryPositionReadModelContract $positions,
     ) {}
@@ -88,15 +91,30 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
             );
         }
 
-        $inventoryBefore = (int) TreasuryInventory::query()
-            ->sum('balance_minor');
-        $systemBefore = $this->positionBalances($system);
         $existingIssuance = SystemAccountFundingPayCodeIssuance::query()
             ->where(
                 'idempotency_reference_hash',
                 hash('sha256', $runReference),
             )
             ->first();
+        $existingRecipient = $existingIssuance === null
+            ? $context->issuer::query()
+                ->whereIn('mobile', MobileNumber::candidates($mobile))
+                ->first()
+            : ($existingIssuance->recipient_id === null
+                ? null
+                : $context->issuer::query()->find($existingIssuance->recipient_id));
+
+        if ($existingRecipient !== null && ! $existingRecipient instanceof Authenticatable) {
+            return $this->failure(
+                $context,
+                'The existing grant recipient is not an authenticatable Account owner.',
+            );
+        }
+
+        $inventoryBefore = (int) TreasuryInventory::query()
+            ->sum('balance_minor');
+        $systemBefore = $this->positionBalances($system);
         $expiresAt = $existingIssuance?->expires_at !== null
             ? Carbon::parse($existingIssuance->expires_at)
             : Carbon::now()->addSeconds((int) data_get(
@@ -123,6 +141,7 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
                         'system-policy:onboarding-grant-v1',
                     ),
                     source: 'treasury_onboarding_grant',
+                    recipient: $existingRecipient,
                     metadata: [
                         'custom' => [
                             'onboarding_grant' => [
@@ -134,7 +153,7 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
                             ],
                         ],
                     ],
-                    onboarding: true,
+                    onboarding: $existingRecipient === null,
                 ),
             );
         } catch (Throwable $exception) {
@@ -179,17 +198,23 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
             );
         }
 
-        $verificationRequired = (bool) data_get(
-            $voucher->metadata,
-            'instructions.execution.metadata.onboarding.mobile_verification_required',
-            true,
-        );
-
         try {
-            $result = $this->claimSubmitter->submit(
-                $context,
-                $voucher,
-                [
+            if ($existingRecipient instanceof Model && $existingRecipient instanceof Authenticatable) {
+                $result = $this->claimOutcomes->handle(
+                    voucher: $voucher,
+                    requestedOutcome: 'account_funding',
+                    payload: [],
+                    claimant: $existingRecipient,
+                );
+                $claimed = $result instanceof VoucherClaim
+                    && $result->status === 'succeeded';
+            } else {
+                $verificationRequired = (bool) data_get(
+                    $voucher->metadata,
+                    'instructions.execution.metadata.onboarding.mobile_verification_required',
+                    true,
+                );
+                $result = $this->claimSubmitter->submit($context, $voucher, [
                     'mobile' => $mobile,
                     'recipient_country' => 'PH',
                     'inputs' => [
@@ -198,8 +223,10 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
                         'email' => $email,
                         'mobile' => $mobile,
                     ] + $this->verificationEvidence($verificationRequired),
-                ],
-            );
+                ]);
+                $claimed = $result instanceof SubmitPayCodeClaimResultData
+                    && $result->claimed;
+            }
         } catch (Throwable $exception) {
             return $this->failure(
                 $context,
@@ -208,7 +235,7 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
             );
         }
 
-        if (! $result instanceof SubmitPayCodeClaimResultData || ! $result->claimed) {
+        if (! $claimed) {
             return $this->failure(
                 $context,
                 'The onboarding grant did not reach a completed claim.',

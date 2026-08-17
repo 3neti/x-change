@@ -23,13 +23,15 @@ class WalletAccessService implements WalletAccessContract
             $wallet = $user->getWallet('platform');
         }
 
-        if (! $wallet && isset($user->wallet)) {
-            $wallet = $user->wallet;
+        if (! $wallet && method_exists($user, 'wallets')) {
+            $wallet = $user->wallets()->where('slug', 'platform')->first();
         }
 
-        if (! $wallet && method_exists($user, 'wallets')) {
-            $wallet = $user->wallets()->where('slug', 'platform')->first()
-                ?? $user->wallets()->first();
+        if (! $wallet && method_exists($user, 'createWallet')) {
+            $wallet = $user->createWallet([
+                'name' => 'Platform Wallet',
+                'slug' => 'platform',
+            ]);
         }
 
         if (! $wallet) {

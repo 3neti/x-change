@@ -11,19 +11,18 @@ use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
 use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
-use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingAddressData;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
+use LBHurtado\XChange\Services\Funding\StandingFundingAccountReferenceResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingDestinationResolver;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
-use RuntimeException;
 
 final class GenerateNetbankReusableFundingAddress
 {
     public function __construct(
-        private readonly WalletAccessContract $wallets,
+        private readonly StandingFundingAccountReferenceResolver $accounts,
         private readonly StandingFundingDestinationResolver $destinations,
         private readonly NetbankStandingAddressProfile $profile,
         private readonly ProvisionStandingFundingAddress $provision,
@@ -34,8 +33,7 @@ final class GenerateNetbankReusableFundingAddress
     public function handle(Model $owner): NetbankReusableFundingAddressData
     {
         $this->assertEnabled();
-        $wallet = $this->wallets->resolveForUser($owner);
-        $accountReference = $this->accountReference($wallet);
+        $accountReference = $this->accounts->resolve($owner, 'netbank', 'PHP');
         $mode = FundingRecognitionMode::tryFrom((string) config(
             'x-change.funding.standing_addresses.default_recognition_mode',
             FundingRecognitionMode::ObserveOnly->value,
@@ -88,21 +86,6 @@ final class GenerateNetbankReusableFundingAddress
             maximumAmountMinor: $address->maximum_amount_minor,
             dailyLimitMinor: $address->daily_limit_minor,
         );
-    }
-
-    private function accountReference(mixed $wallet): string
-    {
-        $uuid = data_get($wallet, 'uuid');
-
-        if (is_string($uuid) && trim($uuid) !== '') {
-            return 'wallet:'.trim($uuid);
-        }
-
-        if (is_object($wallet) && method_exists($wallet, 'getKey')) {
-            return 'wallet:'.$wallet->getKey();
-        }
-
-        throw new RuntimeException('Funding Account reference could not be resolved.');
     }
 
     private function routingReference(Model $owner, string $accountReference): ?string

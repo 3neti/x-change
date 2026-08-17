@@ -31,6 +31,7 @@ final class ProvisionStandingFundingAddress
         private readonly StandingFundingAddressProviderRegistry $providers,
         private readonly StandingFundingQrArtifactStore $qrArtifacts,
         private readonly AuditLoggerContract $audit,
+        private readonly CorrectOrphanedStandingFundingAddressBinding $bindingCorrection,
     ) {}
 
     public function handle(
@@ -207,6 +208,26 @@ final class ProvisionStandingFundingAddress
             }
 
             if (data_get($providerAddress->displayData, 'derivation_scheme') !== 'netbank-account-hmac-v2') {
+                $corrected = $this->bindingCorrection->handle(
+                    owner: $owner,
+                    accountReference: $accountReference,
+                    provider: $provider,
+                    purpose: $purpose,
+                    currency: $currency,
+                    destination: $destination,
+                    bindingKey: $bindingKey,
+                    fundingAddressHash: $fundingAddressHash,
+                );
+
+                if ($corrected instanceof StandingFundingAddress) {
+                    return $this->reopen(
+                        address: $corrected,
+                        ownerReference: $ownerReference,
+                        purpose: $purpose,
+                        qrMerchant: $qrMerchant,
+                    );
+                }
+
                 throw new InvalidArgumentException(
                     'The derived Standing Funding Address is already bound to another Account.',
                 );
