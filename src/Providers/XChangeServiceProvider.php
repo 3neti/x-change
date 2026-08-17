@@ -2016,6 +2016,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/js/pages/x-change') => resource_path('js/pages/x-change'),
             $this->packagePath('resources/js/components/x-change') => resource_path('js/components/x-change'),
             $this->packagePath('resources/js/layouts/x-change') => resource_path('js/layouts/x-change'),
+            $this->packagePath('resources/js/experience') => resource_path('js/experience'),
             $this->packagePath('resources/js/composables/useXChangeDashboardApi.ts') => resource_path('js/composables/useXChangeDashboardApi.ts'),
             $this->packagePath('resources/js/composables/usePayCodeApi.ts') => resource_path('js/composables/usePayCodeApi.ts'),
             $this->packagePath('resources/js/composables/usePayCodeForm.ts') => resource_path('js/composables/usePayCodeForm.ts'),

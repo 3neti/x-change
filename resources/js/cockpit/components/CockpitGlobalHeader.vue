@@ -2,6 +2,7 @@
 import { Eye, EyeOff } from 'lucide-vue-next';
 import { ref } from 'vue';
 import CockpitBalanceHud from './CockpitBalanceHud.vue';
+import ExperienceThemePicker from '../../components/x-change/ExperienceThemePicker.vue';
 import type { CockpitBalanceMetric } from '../types';
 
 withDefaults(
@@ -47,7 +48,7 @@ function toggleValueVisibility(): void {
 
 <template>
     <header
-        class="border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95"
+        class="border-b border-border bg-card/95 px-4 py-3 text-card-foreground backdrop-blur"
         data-testid="cockpit-global-header"
     >
         <div
@@ -55,14 +56,12 @@ function toggleValueVisibility(): void {
         >
             <div class="min-w-0">
                 <p
-                    class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400"
+                    class="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground"
                 >
                     Settlement Operating System
                 </p>
                 <div class="mt-1 flex flex-wrap items-center gap-3">
-                    <h1
-                        class="text-lg font-semibold text-slate-950 dark:text-slate-50"
-                    >
+                    <h1 class="text-lg font-semibold text-foreground">
                         {{ institution }}
                     </h1>
                     <span
@@ -94,8 +93,12 @@ function toggleValueVisibility(): void {
                         />
                         <Eye v-else class="size-4" aria-hidden="true" />
                     </button>
+                    <ExperienceThemePicker
+                        compact
+                        data-testid="cockpit-theme-picker"
+                    />
                 </div>
-                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                <p class="mt-1 text-sm text-muted-foreground">
                     Operating as: {{ operatingIdentity }}
                 </p>
             </div>

@@ -26,6 +26,8 @@ final class CorePublicationContributor implements XChangePublicationContributor
         yield $this->build('x-change.ui', '3neti/x-change', 'x-change-ui', 'Cockpit and claim frontend build inputs.', [
             resource_path('js/cockpit'),
             resource_path('js/pages/x-change'),
+            resource_path('js/experience/themes.ts'),
+            resource_path('js/experience/themes.css'),
         ]);
         yield $this->build('x-change.assets', '3neti/x-change', 'x-change-assets', 'X-Change public branding assets.', [
             public_path('vendor/x-change/favicon.svg'),

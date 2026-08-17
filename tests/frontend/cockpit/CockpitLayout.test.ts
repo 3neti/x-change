@@ -48,6 +48,9 @@ describe('Cockpit shell layout baseline', () => {
         expect(
             wrapper.find('[data-testid="cockpit-workspace"]').text(),
         ).toContain('Operator workspace');
+        expect(
+            wrapper.find('[data-testid="cockpit-theme-picker"]').exists(),
+        ).toBe(true);
     });
 
     it('uses concise task language without changing the established endpoints', () => {

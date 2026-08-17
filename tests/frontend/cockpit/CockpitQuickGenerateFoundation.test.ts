@@ -56,6 +56,26 @@ function quickGenerateEngineeringPreview(
 }
 
 describe('Cockpit Quick Generate foundation', () => {
+    it('renders the untouched Stamp canvas from the issuer theme design', () => {
+        const wrapper = mount(CockpitPayCodeCanvas, {
+            props: {
+                amount: 537,
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                riderStamp: resolveRiderStampPreview({
+                    experienceTheme: 'steampunk',
+                }),
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-front"]')
+                .classes(),
+        ).toContain('from-[#312214]');
+    });
+
     it('uses recognized Status Update chips as the feedback payload source', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
@@ -1859,8 +1879,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 source: 'youtube',
                 title: 'The Killers - I Want to Hold Your Hand',
                 description: 'YouTube',
-                image_url:
-                    'https://i.ytimg.com/vi/Hz_wdBH0fTo/hqdefault.jpg',
+                image_url: 'https://i.ytimg.com/vi/Hz_wdBH0fTo/hqdefault.jpg',
                 reference: 'YouTube',
             }),
         });
@@ -1882,9 +1901,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-url"]')
-            .setValue(
-                'https://youtu.be/Hz_wdBH0fTo?si=KnyudYHL2qXGXtb5',
-            );
+            .setValue('https://youtu.be/Hz_wdBH0fTo?si=KnyudYHL2qXGXtb5');
         await wrapper
             .find(
                 '[data-testid="cockpit-quick-generate-rider-stamp-source-url"]',
@@ -2362,6 +2379,11 @@ describe('Cockpit Quick Generate foundation', () => {
             message: 'Operator test issuance',
             message_format: 'plain',
             splash_meta: null,
+            stamp: {
+                version: 3,
+                design_id: 'x-change-default',
+                design_version: 1,
+            },
         });
         expect(payload.claim).toEqual({
             outcomes: [
@@ -2863,9 +2885,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBeUndefined();
         // The ordinary reactive description now lives in the Transfer
         // Network help tooltip instead of a resting paragraph.
-        const automaticDescription = railControl.get(
-            '[data-testid="cockpit-field-help-tooltip"]',
-        ).text();
+        const automaticDescription = railControl
+            .get('[data-testid="cockpit-field-help-tooltip"]')
+            .text();
 
         // 2. Successive clicks cycle Automatic -> InstaPay -> PESONet -> Automatic.
         await cycleButton.trigger('click');
@@ -2876,9 +2898,9 @@ describe('Cockpit Quick Generate foundation', () => {
             quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
         ).toBe('INSTAPAY');
         // 5. The displayed helper changes with the selected value.
-        const instapayDescription = railControl.get(
-            '[data-testid="cockpit-field-help-tooltip"]',
-        ).text();
+        const instapayDescription = railControl
+            .get('[data-testid="cockpit-field-help-tooltip"]')
+            .text();
 
         expect(instapayDescription).not.toBe(automaticDescription);
         // InstaPay is a PHP rail: render ₱, not the raw "PHP" currency code.
@@ -2891,9 +2913,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             quickGenerateEngineeringPreview(wrapper).cash.settlement_rail,
         ).toBe('PESONET');
-        const pesonetDescription = railControl.get(
-            '[data-testid="cockpit-field-help-tooltip"]',
-        ).text();
+        const pesonetDescription = railControl
+            .get('[data-testid="cockpit-field-help-tooltip"]')
+            .text();
 
         expect(pesonetDescription).not.toBe(instapayDescription);
         // PESONet follows the same ₱-for-PHP convention as InstaPay.

@@ -7,9 +7,39 @@ import {
     normalizeRiderArtworkUrl,
     normalizeRiderStampComposition,
     resolveRiderStampPreview,
+    resolveRiderStampDesign,
 } from '../../../resources/js/cockpit/riderStampPreview';
 
 describe('Rider Stamp preview helpers', () => {
+    it('resolves the draft Stamp design from the issuer experience theme', () => {
+        expect(resolveRiderStampDesign({ experienceTheme: 'amber' })).toEqual({
+            id: 'x-change-amber',
+            version: 1,
+        });
+        expect(
+            resolveRiderStampDesign({ experienceTheme: 'steampunk' }),
+        ).toEqual({
+            id: 'x-change-steampunk',
+            version: 1,
+        });
+    });
+
+    it('keeps an issued Stamp design fixed when personal appearance changes', () => {
+        const preview = resolveRiderStampPreview({
+            experienceTheme: 'amber',
+            designId: 'x-change-steampunk',
+            designVersion: 1,
+        });
+
+        expect(preview.design).toEqual({
+            id: 'x-change-steampunk',
+            version: 1,
+        });
+        expect(buildRiderStampPreviewDocument(preview, '')).toContain(
+            'stamp-design-x-change-steampunk',
+        );
+    });
+
     it('extracts only trusted thumbnail image schemes from Rider content', () => {
         expect(
             firstRiderArtworkImageUrl(

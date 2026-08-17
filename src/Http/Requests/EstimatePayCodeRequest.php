@@ -7,7 +7,6 @@ namespace LBHurtado\XChange\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use LBHurtado\EmiCore\Enums\SettlementRail;
-use LBHurtado\Voucher\Data\RiderStampData;
 use LBHurtado\Voucher\Enums\RiderContentFormat;
 use LBHurtado\Voucher\Enums\RiderStampArtworkSource;
 use LBHurtado\Voucher\Enums\RiderStampArtworkTreatment;
@@ -22,6 +21,7 @@ use LBHurtado\XChange\Enums\CockpitPayeeKind;
 use LBHurtado\XChange\Http\Requests\Concerns\SanitizesRiderSplashHtml;
 use LBHurtado\XChange\Http\Requests\Concerns\ValidatesCockpitPayeePolicy;
 use LBHurtado\XChange\Http\Requests\Concerns\ValidatesMinimumWithdrawalPolicy;
+use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use Propaganistas\LaravelPhone\Rules\Phone;
 
 class EstimatePayCodeRequest extends FormRequest
@@ -107,10 +107,21 @@ class EstimatePayCodeRequest extends FormRequest
             'rider.stamp.position' => ['nullable', Rule::enum(RiderStampPosition::class)],
             'rider.stamp.scrim' => ['nullable', 'integer', 'between:0,100'],
             'rider.stamp.theme' => ['nullable', Rule::enum(RiderStampTheme::class)],
-            'rider.stamp.version' => ['nullable', 'integer', Rule::in([
-                RiderStampData::LEGACY_SCHEMA_VERSION,
-                RiderStampData::SCHEMA_VERSION,
-            ])],
+            'rider.stamp.version' => ['nullable', 'integer', Rule::in(
+                RiderStampDesignRegistry::supportedStampSchemaVersions(),
+            )],
+            'rider.stamp.design_id' => [
+                'required_if:rider.stamp.version,'.RiderStampDesignRegistry::StampSchemaVersion,
+                'nullable',
+                'string',
+                Rule::in(array_keys((array) config('x-change.experience.stamp_designs', []))),
+            ],
+            'rider.stamp.design_version' => [
+                'required_if:rider.stamp.version,'.RiderStampDesignRegistry::StampSchemaVersion,
+                'nullable',
+                'integer',
+                Rule::in([1]),
+            ],
             'rider.stamp.artwork_source' => ['nullable', Rule::enum(RiderStampArtworkSource::class)],
             'rider.stamp.artwork_treatment' => ['nullable', Rule::enum(RiderStampArtworkTreatment::class)],
             'rider.stamp.copy_source' => ['nullable', Rule::enum(RiderStampCopySource::class)],

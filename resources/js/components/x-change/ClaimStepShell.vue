@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import PayCodeLogo from '@/components/x-change/PayCodeLogo.vue';
+import ExperienceThemePicker from '@/components/x-change/ExperienceThemePicker.vue';
 
 type ClaimStepTone = 'neutral' | 'success' | 'warning' | 'danger';
 type ClaimStepWidth = 'sm' | 'md' | 'lg';
@@ -67,9 +68,14 @@ const widthClass = computed(() => {
 <template>
     <main
         data-testid="claim-step-shell"
-        class="min-h-svh bg-gradient-to-b px-5 py-8 text-foreground"
+        class="x-experience-surface relative min-h-svh bg-gradient-to-b px-5 py-8 text-foreground"
         :class="toneClass"
     >
+        <ExperienceThemePicker
+            compact
+            class="absolute right-4 top-4 sm:right-6 sm:top-6"
+            data-testid="claim-theme-picker"
+        />
         <div
             class="mx-auto flex min-h-[calc(100svh-4rem)] w-full flex-col"
             :class="[widthClass, centered ? 'justify-center' : 'justify-start']"

@@ -37,6 +37,10 @@ class ShareXChangeBranding
                 'logo_light' => (string) config('x-change.branding.logo_light', '/vendor/x-change/images/brand-library/x-change/svg/x-change-logo.svg'),
                 'logo_dark' => (string) config('x-change.branding.logo_dark', '/vendor/x-change/images/brand-library/x-change/svg/x-change-light.svg'),
             ],
+            'experience' => [
+                'profile' => (array) config('x-change.experience.profile', []),
+                'themes' => (array) config('x-change.experience.themes', []),
+            ],
             'navigation' => [
                 'system_readiness_visible' => $this->systemReadinessAccess->isVisible(),
                 'commercial_controls_visible' => $request->user() instanceof Model

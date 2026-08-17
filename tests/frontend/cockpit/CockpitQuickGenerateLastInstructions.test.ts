@@ -183,7 +183,9 @@ describe('Quick Generate last instructions', () => {
                 position: 'top',
                 scrim: 12,
                 theme: 'dark',
-                version: 2,
+                version: 3,
+                design_id: 'x-change-default',
+                design_version: 1,
             },
         });
         await wrapper
@@ -224,9 +226,8 @@ describe('Quick Generate last instructions', () => {
             ).element.value,
         ).toBe('');
         expect(document.activeElement).toBe(
-            wrapper.get(
-                '[data-testid="cockpit-quick-generate-primary-amount"]',
-            ).element,
+            wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]')
+                .element,
         );
         expect(
             wrapper
@@ -260,9 +261,8 @@ describe('Quick Generate last instructions', () => {
             ).element.value,
         ).toBe('');
         expect(document.activeElement).toBe(
-            wrapper.get(
-                '[data-testid="cockpit-quick-generate-primary-amount"]',
-            ).element,
+            wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]')
+                .element,
         );
         expect(
             wrapper

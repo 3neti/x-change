@@ -19,6 +19,25 @@ it('shares the installed x-change version without host middleware', function ():
         ->toContain("...(array) Inertia::getShared('xchange', [])");
 });
 
+it('keeps appearance, branding, dictionary, and copy as separate profile references', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+    $brandingMiddleware = file_get_contents(
+        $packageRoot.'/src/Http/Middleware/ShareXChangeBranding.php',
+    );
+
+    expect(config('x-change.experience.profile'))->toMatchArray([
+        'id' => 'x-change-core',
+        'version' => 1,
+        'default_theme' => 'default',
+        'branding' => ['id' => 'x-change', 'version' => 1],
+        'dictionary' => ['id' => 'x-change-core', 'version' => 1],
+        'copy' => ['id' => 'x-change-core', 'version' => 1],
+    ])->and($brandingMiddleware)
+        ->not->toBeFalse()
+        ->toContain("'experience' => [")
+        ->toContain("config('x-change.experience.themes', [])");
+});
+
 it('treats the legacy x-change dashboard as a Cockpit compatibility route', function () {
     $system = provisionTestSystemPrincipalForCommissioning();
     config()->set('account.system_user.candidates', [

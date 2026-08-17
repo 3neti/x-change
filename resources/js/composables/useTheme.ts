@@ -1,73 +1,108 @@
-import { ref, onMounted } from 'vue';
+import { onMounted, readonly, ref } from 'vue';
+import {
+    experienceProfile,
+    experienceThemeRegistry,
+    findExperienceTheme,
+    type ExperienceThemeId,
+} from '../experience/themes';
+import '../experience/themes.css';
 
-export type ThemeId = 'default' | 'steampunk' | 'amber';
+export type ThemeId = ExperienceThemeId;
+export type ThemeOption = (typeof experienceThemeRegistry)[number];
 
-export interface ThemeOption {
-    id: ThemeId;
-    name: string;
-    description: string;
-    preview: { bg: string; accent: string; text: string };
+export const EXPERIENCE_THEME_STORAGE_KEY = 'x-change:experience-theme:v1';
+const LEGACY_STORAGE_KEY = 'pwa-theme';
+
+const currentTheme = ref<ThemeId>(experienceProfile.defaultTheme);
+
+export function resolveExperienceTheme(
+    value: string | null | undefined,
+): ThemeId {
+    return findExperienceTheme(value)?.id ?? experienceProfile.defaultTheme;
 }
 
-const STORAGE_KEY = 'pwa-theme';
-
-const availableThemes: ThemeOption[] = [
-    {
-        id: 'default',
-        name: 'Default',
-        description: 'Clean, neutral interface',
-        preview: { bg: 'bg-background', accent: 'bg-primary', text: 'text-foreground' },
-    },
-    {
-        id: 'steampunk',
-        name: 'Steampunk',
-        description: 'Warm brass & aged parchment',
-        preview: { bg: 'bg-amber-50 dark:bg-amber-950', accent: 'bg-amber-700', text: 'text-amber-900 dark:text-amber-100' },
-    },
-    {
-        id: 'amber',
-        name: 'Amber',
-        description: 'Sunlit gold, quiet warmth',
-        preview: { bg: 'bg-orange-50 dark:bg-orange-950', accent: 'bg-orange-500', text: 'text-orange-900 dark:text-orange-100' },
-    },
-];
-
-const currentTheme = ref<ThemeId>('default');
-
-function applyTheme(id: ThemeId) {
-    const html = document.documentElement;
-
-    // Remove all theme classes
-    html.classList.forEach((cls) => {
-        if (cls.startsWith('theme-')) html.classList.remove(cls);
-    });
-
-    // Apply new theme (skip for default — it uses base variables)
-    if (id !== 'default') {
-        html.classList.add(`theme-${id}`);
+export function applyExperienceTheme(value: string | null | undefined): void {
+    if (typeof document === 'undefined') {
+        return;
     }
+
+    const id = resolveExperienceTheme(value);
+    const definition = findExperienceTheme(id);
+    const root = document.documentElement;
+    root.dataset.xChangeTheme = id;
+    currentTheme.value = id;
+
+    if (definition === null) {
+        return;
+    }
+
+    let themeColor = document.head.querySelector<HTMLMetaElement>(
+        'meta[name="theme-color"]',
+    );
+
+    if (themeColor === null) {
+        themeColor = document.createElement('meta');
+        themeColor.name = 'theme-color';
+        document.head.append(themeColor);
+    }
+
+    themeColor.content = definition.browserColor;
 }
 
-export function initializeTheme() {
-    if (typeof window === 'undefined') return;
+function readStoredTheme(): ThemeId {
+    try {
+        const saved = localStorage.getItem(EXPERIENCE_THEME_STORAGE_KEY);
 
-    const saved = localStorage.getItem(STORAGE_KEY) as ThemeId | null;
-    const id = saved && availableThemes.some((t) => t.id === saved) ? saved : 'default';
+        if (saved !== null) {
+            return resolveExperienceTheme(saved);
+        }
 
-    currentTheme.value = id;
-    applyTheme(id);
+        const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+
+        if (legacy !== null && findExperienceTheme(legacy) !== null) {
+            const migrated = resolveExperienceTheme(legacy);
+            localStorage.setItem(EXPERIENCE_THEME_STORAGE_KEY, migrated);
+            localStorage.removeItem(LEGACY_STORAGE_KEY);
+
+            return migrated;
+        }
+    } catch {
+        return experienceProfile.defaultTheme;
+    }
+
+    return experienceProfile.defaultTheme;
+}
+
+export function initializeTheme(): void {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    applyExperienceTheme(readStoredTheme());
+}
+
+export function setTheme(value: string): void {
+    const id = resolveExperienceTheme(value);
+
+    try {
+        localStorage.setItem(EXPERIENCE_THEME_STORAGE_KEY, id);
+    } catch {
+        // A blocked storage API must not prevent cosmetic theme selection.
+    }
+
+    applyExperienceTheme(id);
 }
 
 export function useTheme() {
-    onMounted(() => {
-        initializeTheme();
-    });
+    onMounted(initializeTheme);
 
-    function setTheme(id: ThemeId) {
-        currentTheme.value = id;
-        localStorage.setItem(STORAGE_KEY, id);
-        applyTheme(id);
-    }
+    return {
+        currentTheme: readonly(currentTheme),
+        setTheme,
+        availableThemes: experienceThemeRegistry,
+    };
+}
 
-    return { currentTheme, setTheme, availableThemes };
+if (typeof window !== 'undefined') {
+    initializeTheme();
 }

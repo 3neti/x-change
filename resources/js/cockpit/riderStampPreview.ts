@@ -1,5 +1,11 @@
 import type { RiderContentFormat } from './riderContent';
 import { escapeRiderHtml, renderRiderContent } from './riderContent';
+import {
+    experienceThemeForStampDesign,
+    findExperienceTheme,
+    type ExperienceThemeId,
+    type RiderStampDesignReference,
+} from '../experience/themes';
 
 export type RiderStampPreviewSource = 'default' | 'message' | 'url' | 'splash';
 export type RiderStampFit = 'cover' | 'contain';
@@ -45,6 +51,7 @@ export type RiderStampPreview = {
     scrim: number;
     theme: RiderStampTheme;
     composition: RiderStampComposition;
+    design: RiderStampDesignReference;
 };
 
 /** @deprecated Use RiderStampPreviewSource. */
@@ -82,6 +89,9 @@ export type RiderStampPreviewInput = {
     showTagline?: boolean | null;
     claimMarker?: string | null;
     claimMarkerPosition?: string | null;
+    experienceTheme?: ExperienceThemeId | null;
+    designId?: string | null;
+    designVersion?: number | string | null;
 };
 
 /** @deprecated Use RiderStampPreviewInput. */
@@ -190,6 +200,7 @@ export function resolveRiderStampPreview(
         splashCta,
     });
     const artwork = resolveStampArtwork(input, composition, url);
+    const design = resolveRiderStampDesign(input);
 
     return {
         source,
@@ -200,7 +211,37 @@ export function resolveRiderStampPreview(
         imageUrl: artwork.imageUrl,
         ...presentation,
         composition,
+        design,
     };
+}
+
+export function resolveRiderStampDesign(
+    input: Pick<
+        RiderStampPreviewInput,
+        'experienceTheme' | 'designId' | 'designVersion'
+    >,
+): RiderStampDesignReference {
+    const explicitTheme = experienceThemeForStampDesign(input.designId);
+    const theme =
+        explicitTheme ??
+        findExperienceTheme(input.experienceTheme) ??
+        findExperienceTheme('default');
+    const design = theme?.stampDesign ?? {
+        id: 'x-change-default',
+        version: 1,
+    };
+    const requestedVersion = Number(input.designVersion);
+
+    if (
+        input.designVersion !== null &&
+        input.designVersion !== undefined &&
+        (!Number.isInteger(requestedVersion) ||
+            requestedVersion !== design.version)
+    ) {
+        return { id: 'x-change-default', version: 1 };
+    }
+
+    return design;
 }
 
 function resolveSplashCopy(
@@ -586,7 +627,7 @@ function splashSymbolLine(content: string): string | null {
 function buildStampMarkup(content: string, preview: RiderStampPreview): string {
     const scrimOpacity = (preview.scrim / 100).toFixed(2);
 
-    return `<div class="stamp-root stamp-theme-${preview.theme}">
+    return `<div class="stamp-root stamp-theme-${preview.theme} stamp-design-${preview.design.id}">
 <div class="stamp-content">${content}</div>
 <div class="stamp-scrim" style="opacity: ${scrimOpacity}"></div>
 </div>`;
@@ -725,7 +766,12 @@ img { max-width: 100%; height: auto; }
 .splash-canvas-artwork { position: relative; width: 100%; height: 100vh; overflow: hidden; background: #020617; }
 .splash-symbols { position: absolute; z-index: 3; top: 54%; right: 6%; max-width: 56%; margin: 0; color: #fff; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", ui-sans-serif, system-ui, sans-serif; font-size: clamp(.9rem, 3.5vw, 1.75rem); line-height: 1.2; letter-spacing: .08em; text-align: right; text-shadow: 0 2px 16px rgba(2, 6, 23, .9); }
 .stamp-abstract { width: 100%; height: 100vh; }
-.stamp-abstract-x-change { background: radial-gradient(circle at 82% 16%, rgba(16, 185, 129, .2), transparent 28%), linear-gradient(135deg, #fffaf0, #f8fafc 55%, #ecfdf5); }
+.stamp-design-x-change-default { background: #0f172a; }
+.stamp-design-x-change-default .stamp-abstract-x-change { background: radial-gradient(circle at 82% 16%, rgba(251, 146, 60, .48), transparent 30%), radial-gradient(circle at 12% 92%, rgba(16, 185, 129, .34), transparent 34%), linear-gradient(135deg, #0f172a, #213245); }
+.stamp-design-x-change-amber { background: #431407; }
+.stamp-design-x-change-amber .stamp-abstract-x-change { background: radial-gradient(circle at 82% 16%, rgba(251, 146, 60, .62), transparent 30%), radial-gradient(circle at 12% 92%, rgba(245, 158, 11, .4), transparent 34%), linear-gradient(135deg, #431407, #7c2d12); }
+.stamp-design-x-change-steampunk { background: #312214; }
+.stamp-design-x-change-steampunk .stamp-abstract-x-change { background: radial-gradient(circle at 82% 16%, rgba(202, 138, 4, .55), transparent 30%), radial-gradient(circle at 12% 92%, rgba(120, 83, 45, .54), transparent 34%), repeating-linear-gradient(100deg, transparent 0 29px, rgba(245, 230, 200, .04) 30px), linear-gradient(135deg, #312214, #5c401e); }
 .stamp-abstract-splash { background: radial-gradient(circle at 24% 22%, rgba(249, 115, 22, .55), transparent 30%), radial-gradient(circle at 82% 74%, rgba(16, 185, 129, .38), transparent 34%), linear-gradient(135deg, #0f172a, #1e293b); }
 .stamp-copy { position: absolute; z-index: 2; right: 6%; bottom: 8%; left: 6%; color: #fff; text-shadow: 0 2px 18px rgba(2, 6, 23, .9); }
 .stamp-copy h1 { margin-bottom: .35rem; font-size: clamp(1.15rem, 4vw, 2.5rem); line-height: 1.05; }

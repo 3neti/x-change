@@ -347,6 +347,76 @@ return [
         'logo_dark' => env('XCHANGE_LOGO_DARK', '/vendor/x-change/images/brand-library/x-change/svg/x-change-light.svg'),
     ],
 
+    'experience' => [
+        'profile' => [
+            'id' => 'x-change-core',
+            'version' => 1,
+            'default_theme' => 'default',
+            'branding' => ['id' => 'x-change', 'version' => 1],
+            'dictionary' => ['id' => 'x-change-core', 'version' => 1],
+            'copy' => ['id' => 'x-change-core', 'version' => 1],
+        ],
+        'themes' => [
+            'default' => [
+                'version' => 1,
+                'name' => 'Default',
+                'stamp_design' => ['id' => 'x-change-default', 'version' => 1],
+            ],
+            'amber' => [
+                'version' => 1,
+                'name' => 'Amber',
+                'stamp_design' => ['id' => 'x-change-amber', 'version' => 1],
+            ],
+            'steampunk' => [
+                'version' => 1,
+                'name' => 'Steampunk',
+                'stamp_design' => ['id' => 'x-change-steampunk', 'version' => 1],
+            ],
+        ],
+        'default_stamp_design' => 'x-change-default',
+        'stamp_designs' => [
+            'x-change-default' => [
+                'default_version' => 1,
+                'versions' => [
+                    1 => [
+                        'palette' => [
+                            'start' => [15, 23, 42],
+                            'end' => [33, 50, 69],
+                            'glow_primary' => [251, 146, 60],
+                            'glow_secondary' => [16, 185, 129],
+                        ],
+                    ],
+                ],
+            ],
+            'x-change-amber' => [
+                'default_version' => 1,
+                'versions' => [
+                    1 => [
+                        'palette' => [
+                            'start' => [67, 20, 7],
+                            'end' => [124, 45, 18],
+                            'glow_primary' => [251, 146, 60],
+                            'glow_secondary' => [245, 158, 11],
+                        ],
+                    ],
+                ],
+            ],
+            'x-change-steampunk' => [
+                'default_version' => 1,
+                'versions' => [
+                    1 => [
+                        'palette' => [
+                            'start' => [49, 34, 20],
+                            'end' => [92, 64, 30],
+                            'glow_primary' => [202, 138, 4],
+                            'glow_secondary' => [120, 83, 45],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ],
+
     'cockpit' => [
         'system_readiness' => [
             'visible' => (bool) env(

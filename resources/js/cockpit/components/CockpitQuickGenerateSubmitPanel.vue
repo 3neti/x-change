@@ -44,6 +44,7 @@ import type {
     CockpitSettlementRailCapability,
 } from '../types';
 import { usePayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
+import { useTheme } from '../../composables/useTheme';
 import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import { useRiderUrlArtworkPreview } from '../composables/useRiderUrlArtworkPreview';
 import {
@@ -117,6 +118,8 @@ const props = withDefaults(
         riderLibrary: () => [],
     },
 );
+
+const { currentTheme } = useTheme();
 
 function capabilityReadiness(
     key: string,
@@ -696,6 +699,8 @@ const riderStampFit = ref<RiderStampFit>('cover');
 const riderStampPosition = ref<RiderStampPosition>('center');
 const riderStampScrim = ref('18');
 const riderStampTheme = ref<RiderStampTheme>('automatic');
+const riderStampDesignId = ref<string | null>(null);
+const riderStampDesignVersion = ref<number | null>(null);
 const {
     preview: riderUrlArtworkPreview,
     resolving: riderUrlArtworkResolving,
@@ -949,6 +954,8 @@ function applyTemplateDefaults(templateKey: string): void {
     riderStampPosition.value = 'center';
     riderStampScrim.value = '18';
     riderStampTheme.value = 'automatic';
+    riderStampDesignId.value = null;
+    riderStampDesignVersion.value = null;
     cashType.value =
         defaults.executionDriver === 'settlement_envelope'
             ? 'settlement_cash'
@@ -1508,6 +1515,17 @@ function applyInstructionBlueprint(
         'stamp',
         'theme',
     ]);
+    riderStampDesignId.value =
+        instructionString(instructions, ['rider', 'stamp', 'design_id']) ||
+        null;
+    const hydratedStampDesignVersion = Number(
+        dataGet(instructions, ['rider', 'stamp', 'design_version']),
+    );
+    riderStampDesignVersion.value =
+        Number.isInteger(hydratedStampDesignVersion) &&
+        hydratedStampDesignVersion > 0
+            ? hydratedStampDesignVersion
+            : null;
 
     feedbackEmail.value = instructionString(instructions, [
         'feedback',
@@ -3413,6 +3431,9 @@ const riderStampPreview = computed<RiderStampPreview>(() => {
         showTagline: riderStampShowTagline.value,
         claimMarker: riderStampClaimMarker.value,
         claimMarkerPosition: riderStampClaimMarkerPosition.value,
+        experienceTheme: currentTheme.value,
+        designId: riderStampDesignId.value,
+        designVersion: riderStampDesignVersion.value,
     });
 });
 
@@ -3506,20 +3527,6 @@ const riderSummary = computed<Record<string, unknown>>(() => {
         100,
         Math.max(0, Math.round(Number(riderStampScrim.value) || 0)),
     );
-    const hasStamp =
-        riderStampArtworkSource.value !== 'x_change' ||
-        riderStampArtworkTreatment.value !== 'automatic' ||
-        riderStampCopySource.value !== 'automatic' ||
-        !riderStampShowLogo.value ||
-        !riderStampShowTagline.value ||
-        riderStampClaimMarker.value !== 'qr' ||
-        riderStampClaimMarkerPosition.value !== 'bottom_right' ||
-        stampTitle !== '' ||
-        stampDescription !== '' ||
-        riderStampFit.value !== 'cover' ||
-        riderStampPosition.value !== 'center' ||
-        scrim !== 18 ||
-        riderStampTheme.value !== 'automatic';
 
     return {
         message: message === '' ? null : message,
@@ -3547,29 +3554,28 @@ const riderSummary = computed<Record<string, unknown>>(() => {
             riderStampArtworkSource.value === 'x_change'
                 ? null
                 : riderStampArtworkSource.value,
-        stamp: hasStamp
-            ? {
-                  source:
-                      riderStampArtworkSource.value === 'x_change'
-                          ? 'automatic'
-                          : riderStampArtworkSource.value,
-                  title: stampTitle === '' ? null : stampTitle,
-                  description:
-                      stampDescription === '' ? null : stampDescription,
-                  fit: riderStampFit.value,
-                  position: riderStampPosition.value,
-                  scrim,
-                  theme: riderStampTheme.value,
-                  artwork_source: riderStampArtworkSource.value,
-                  artwork_treatment: riderStampArtworkTreatment.value,
-                  copy_source: riderStampCopySource.value,
-                  show_logo: riderStampShowLogo.value,
-                  show_tagline: riderStampShowTagline.value,
-                  claim_marker: riderStampClaimMarker.value,
-                  claim_marker_position: riderStampClaimMarkerPosition.value,
-                  version: 2,
-              }
-            : null,
+        stamp: {
+            source:
+                riderStampArtworkSource.value === 'x_change'
+                    ? 'automatic'
+                    : riderStampArtworkSource.value,
+            title: stampTitle === '' ? null : stampTitle,
+            description: stampDescription === '' ? null : stampDescription,
+            fit: riderStampFit.value,
+            position: riderStampPosition.value,
+            scrim,
+            theme: riderStampTheme.value,
+            artwork_source: riderStampArtworkSource.value,
+            artwork_treatment: riderStampArtworkTreatment.value,
+            copy_source: riderStampCopySource.value,
+            show_logo: riderStampShowLogo.value,
+            show_tagline: riderStampShowTagline.value,
+            claim_marker: riderStampClaimMarker.value,
+            claim_marker_position: riderStampClaimMarkerPosition.value,
+            design_id: riderStampPreview.value.design.id,
+            design_version: riderStampPreview.value.design.version,
+            version: 3,
+        },
     };
 });
 

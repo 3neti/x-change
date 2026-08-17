@@ -84,6 +84,17 @@ it('publishes every packaged link-preview driver as a build input', function ():
         ->and($publishedDrivers)->toBe($packagedDrivers);
 });
 
+it('publishes the versioned experience registry and theme tokens as build inputs', function (): void {
+    $build = (new PublicationCatalog([new CorePublicationContributor]))
+        ->definitions(PublicationScope::Build);
+    $definition = collect($build)->firstWhere('id', 'x-change.ui');
+
+    expect($definition?->verificationPaths ?? [])->toContain(
+        resource_path('js/experience/themes.ts'),
+        resource_path('js/experience/themes.css'),
+    );
+});
+
 it('keeps configuration overrides out of automatic build publication', function (): void {
     $catalog = new PublicationCatalog([new CorePublicationContributor]);
     $buildTargets = array_column($catalog->definitions(PublicationScope::Build), 'target');

@@ -19,6 +19,9 @@ describe('ClaimStepShell', () => {
         expect(wrapper.find('[data-testid="shell-content"]').text()).toBe(
             'Claim content',
         );
+        expect(
+            wrapper.find('[data-testid="claim-theme-picker"]').exists(),
+        ).toBe(true);
     });
 
     it('renders the Pay Code brand header by default', () => {
@@ -34,11 +37,13 @@ describe('ClaimStepShell', () => {
         expect(wrapper.find('[data-testid="claim-brand-logo"]').exists()).toBe(
             true,
         );
-        expect(wrapper.find('[data-testid="claim-brand-logo"]').attributes('src')).toBe(
-            '/vendor/x-change/images/pay-code/pay-code-mark.svg',
-        );
         expect(
-            wrapper.find('[data-testid="claim-brand-logo"]').attributes('style'),
+            wrapper.find('[data-testid="claim-brand-logo"]').attributes('src'),
+        ).toBe('/vendor/x-change/images/pay-code/pay-code-mark.svg');
+        expect(
+            wrapper
+                .find('[data-testid="claim-brand-logo"]')
+                .attributes('style'),
         ).toContain('height: 2rem');
     });
 
@@ -58,11 +63,13 @@ describe('ClaimStepShell', () => {
             wrapper.find('[data-testid="claim-brand-header"]').classes(),
         ).toContain('justify-center');
         expect(
-            wrapper.find('[data-testid="claim-brand-logo"]').attributes('style'),
+            wrapper
+                .find('[data-testid="claim-brand-logo"]')
+                .attributes('style'),
         ).toContain('height: 5rem');
-        expect(wrapper.find('[data-testid="claim-brand-logo"]').attributes('src')).toBe(
-            '/vendor/x-change/images/pay-code/pay-code-mark.svg',
-        );
+        expect(
+            wrapper.find('[data-testid="claim-brand-logo"]').attributes('src'),
+        ).toBe('/vendor/x-change/images/pay-code/pay-code-mark.svg');
     });
 
     it('can hide the brand header for embedded use', () => {

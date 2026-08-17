@@ -13,6 +13,7 @@ class VoucherIssuancePayloadNormalizer
     public function __construct(
         private readonly NamedVoucherSliceService $namedSlices,
         private readonly OnboardingVoucherInstructionPolicy $onboarding,
+        private readonly RiderStampDesignRegistry $stampDesigns,
     ) {}
 
     public function normalize(array $input): array
@@ -25,6 +26,9 @@ class VoucherIssuancePayloadNormalizer
         if (! is_array($cashValidation)) {
             Arr::set($input, 'cash.validation', []);
         }
+
+        $input = $this->stampDesigns->materialize($input);
+        $input = $this->stampDesigns->normalizeForInstalledVoucherContract($input);
 
         $flowType = Arr::get($input, 'metadata.flow_type');
 

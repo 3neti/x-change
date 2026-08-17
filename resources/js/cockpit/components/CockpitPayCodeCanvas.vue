@@ -159,6 +159,18 @@ const riderArtworkScrimClass = computed<string>(() => {
     return 'from-slate-950/70 via-slate-950/25 to-transparent';
 });
 
+const stampDesignClass = computed<string>(() => {
+    if (props.riderStamp?.design.id === 'x-change-amber') {
+        return 'border-orange-700 bg-gradient-to-br from-orange-950 via-orange-900 to-amber-800 text-white';
+    }
+
+    if (props.riderStamp?.design.id === 'x-change-steampunk') {
+        return 'border-amber-800 bg-gradient-to-br from-[#312214] via-[#49341f] to-[#78532d] text-amber-50';
+    }
+
+    return 'border-slate-700 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-700 text-white';
+});
+
 const riderArtworkFrameClass = computed<string>(() => {
     return props.riderStamp === null && props.riderDesignSource === 'message'
         ? 'opacity-60'
@@ -617,7 +629,7 @@ function stringValue(value: unknown): string | null {
             :class="
                 hasRiderDesign
                     ? 'border-slate-700 bg-slate-950 text-white'
-                    : 'border-amber-200 bg-[#fffaf0] text-slate-950 dark:border-amber-900/60 dark:bg-[#19170f] dark:text-amber-50'
+                    : stampDesignClass
             "
             data-testid="cockpit-pay-code-canvas-front"
         >

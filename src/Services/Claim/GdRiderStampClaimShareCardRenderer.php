@@ -19,12 +19,13 @@ use LBHurtado\XChange\Contracts\RiderStampRecipientResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimShareCardData;
 use LBHurtado\XChange\Data\Claim\RiderStampRecipientData;
 use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
+use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use ReflectionClass;
 use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v11';
+    private const string CacheVersion = 'v12';
 
     private const int Width = 1200;
 
@@ -38,6 +39,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         private RiderUrlArtworkPreviewResolver $urlArtwork,
         private ClaimShareCardAmountFormatter $amounts,
         private PayCodeStampIndicatorResolver $indicators,
+        private RiderStampDesignRegistry $stampDesigns,
     ) {}
 
     public function render(Voucher $voucher, string $claimUrl): ClaimShareCardData
@@ -85,9 +87,14 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
 
         imagealphablending($canvas, true);
         imagesavealpha($canvas, true);
-        $this->paintBrandBackground($canvas);
-
         $rider = $voucher->instructions->rider;
+        $palette = $this->stampDesigns->palette(
+            data_get($rider, 'stamp.design_id')
+                ?? data_get($voucher, 'metadata.instructions.metadata.custom.rider_stamp_design.id'),
+            data_get($rider, 'stamp.design_version')
+                ?? data_get($voucher, 'metadata.instructions.metadata.custom.rider_stamp_design.version'),
+        );
+        $this->paintBrandBackground($canvas, $palette);
         $artwork = $this->resolveArtwork($voucher);
 
         if ($artwork instanceof GdImage) {
@@ -143,21 +150,36 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         return $contents;
     }
 
-    private function paintBrandBackground(GdImage $canvas): void
+    /**
+     * @param  array{start: array{int, int, int}, end: array{int, int, int}, glow_primary: array{int, int, int}, glow_secondary: array{int, int, int}}  $palette
+     */
+    private function paintBrandBackground(GdImage $canvas, array $palette): void
     {
         for ($y = 0; $y < self::Height; $y++) {
             $ratio = $y / self::Height;
-            $red = (int) round(15 + (18 * $ratio));
-            $green = (int) round(23 + (27 * $ratio));
-            $blue = (int) round(42 + (27 * $ratio));
+            $red = (int) round($palette['start'][0] + (($palette['end'][0] - $palette['start'][0]) * $ratio));
+            $green = (int) round($palette['start'][1] + (($palette['end'][1] - $palette['start'][1]) * $ratio));
+            $blue = (int) round($palette['start'][2] + (($palette['end'][2] - $palette['start'][2]) * $ratio));
             $color = imagecolorallocate($canvas, $red, $green, $blue);
             imageline($canvas, 0, $y, self::Width, $y, $color);
         }
 
-        $amber = imagecolorallocatealpha($canvas, 251, 146, 60, 58);
-        $emerald = imagecolorallocatealpha($canvas, 16, 185, 129, 72);
-        imagefilledellipse($canvas, 1080, 20, 540, 540, $amber);
-        imagefilledellipse($canvas, 80, 660, 520, 430, $emerald);
+        $primary = imagecolorallocatealpha(
+            $canvas,
+            $palette['glow_primary'][0],
+            $palette['glow_primary'][1],
+            $palette['glow_primary'][2],
+            58,
+        );
+        $secondary = imagecolorallocatealpha(
+            $canvas,
+            $palette['glow_secondary'][0],
+            $palette['glow_secondary'][1],
+            $palette['glow_secondary'][2],
+            72,
+        );
+        imagefilledellipse($canvas, 1080, 20, 540, 540, $primary);
+        imagefilledellipse($canvas, 80, 660, 520, 430, $secondary);
     }
 
     private function resolveArtwork(Voucher $voucher): ?GdImage

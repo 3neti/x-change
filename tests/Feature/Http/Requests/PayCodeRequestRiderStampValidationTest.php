@@ -46,7 +46,9 @@ function validRiderStampRequestPayload(array $overrides = []): array
                 'show_tagline' => false,
                 'claim_marker' => 'both',
                 'claim_marker_position' => 'bottom_right',
-                'version' => 2,
+                'version' => 3,
+                'design_id' => 'x-change-amber',
+                'design_version' => 1,
             ],
         ],
     ], $overrides);
@@ -62,6 +64,24 @@ it('accepts typed Rider content and Stamp fields', function (string $requestClas
     'generate' => [GeneratePayCodeRequest::class],
     'estimate' => [EstimatePayCodeRequest::class],
 ]);
+
+it('continues to accept Rider Stamp v2 composition payloads', function (): void {
+    $request = new GeneratePayCodeRequest;
+    $validator = Validator::make(
+        validRiderStampRequestPayload([
+            'rider' => [
+                'stamp' => [
+                    'version' => 2,
+                    'design_id' => null,
+                    'design_version' => null,
+                ],
+            ],
+        ]),
+        $request->rules(),
+    );
+
+    expect($validator->passes())->toBeTrue();
+});
 
 it('rejects authoritative or malformed Rider Stamp values', function (
     string $field,
@@ -85,7 +105,9 @@ it('rejects authoritative or malformed Rider Stamp values', function (
     'signature-like source' => ['source', 'signature'],
     'unknown artwork fit' => ['fit', 'stretch'],
     'invalid scrim' => ['scrim', 101],
-    'unsupported contract version' => ['version', 3],
+    'unsupported contract version' => ['version', 4],
+    'unknown design identity' => ['design_id', 'outside-theme'],
+    'unknown design version' => ['design_version', 2],
     'unsafe artwork source' => ['artwork_source', 'remote_page'],
     'unsafe artwork treatment' => ['artwork_treatment', 'iframe'],
     'unsafe copy source' => ['copy_source', 'provider_payload'],

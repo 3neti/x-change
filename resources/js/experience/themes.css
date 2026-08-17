@@ -1,0 +1,149 @@
+:root,
+:root[data-x-change-theme='default'] {
+    --x-experience-canvas: hsl(210 40% 96%);
+    --x-experience-glow: hsl(24 95% 53% / 0.08);
+    --x-experience-line: hsl(215 20% 65% / 0.24);
+    --x-experience-icon-surface: hsl(210 40% 98%);
+    --x-experience-icon-ink: hsl(215 28% 17%);
+}
+
+:root[data-x-change-theme='amber'] {
+    --background: hsl(33 100% 97%);
+    --foreground: hsl(18 76% 14%);
+    --card: hsl(36 100% 98%);
+    --card-foreground: hsl(18 76% 14%);
+    --popover: hsl(36 100% 98%);
+    --popover-foreground: hsl(18 76% 14%);
+    --primary: hsl(21 90% 48%);
+    --primary-foreground: hsl(0 0% 100%);
+    --secondary: hsl(32 100% 91%);
+    --secondary-foreground: hsl(18 76% 20%);
+    --muted: hsl(31 82% 93%);
+    --muted-foreground: hsl(22 35% 38%);
+    --accent: hsl(28 100% 89%);
+    --accent-foreground: hsl(18 76% 20%);
+    --border: hsl(28 58% 80%);
+    --input: hsl(28 58% 76%);
+    --ring: hsl(21 90% 48%);
+    --sidebar-background: hsl(34 100% 95%);
+    --sidebar-foreground: hsl(18 76% 16%);
+    --sidebar-primary: hsl(21 90% 48%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(30 95% 90%);
+    --sidebar-accent-foreground: hsl(18 76% 20%);
+    --sidebar-border: hsl(28 58% 80%);
+    --x-experience-canvas: hsl(33 100% 95%);
+    --x-experience-glow: hsl(21 90% 48% / 0.16);
+    --x-experience-line: hsl(24 65% 50% / 0.2);
+    --x-experience-icon-surface: hsl(32 100% 91%);
+    --x-experience-icon-ink: hsl(21 90% 34%);
+}
+
+:root[data-x-change-theme='steampunk'] {
+    --background: hsl(39 47% 89%);
+    --foreground: hsl(30 52% 16%);
+    --card: hsl(40 55% 93%);
+    --card-foreground: hsl(30 52% 16%);
+    --popover: hsl(40 55% 93%);
+    --popover-foreground: hsl(30 52% 16%);
+    --primary: hsl(38 86% 31%);
+    --primary-foreground: hsl(42 70% 95%);
+    --secondary: hsl(38 33% 79%);
+    --secondary-foreground: hsl(30 52% 18%);
+    --muted: hsl(37 30% 83%);
+    --muted-foreground: hsl(30 28% 34%);
+    --accent: hsl(36 48% 75%);
+    --accent-foreground: hsl(30 52% 18%);
+    --border: hsl(32 30% 61%);
+    --input: hsl(32 30% 57%);
+    --ring: hsl(38 86% 31%);
+    --sidebar-background: hsl(38 38% 83%);
+    --sidebar-foreground: hsl(30 52% 16%);
+    --sidebar-primary: hsl(38 86% 31%);
+    --sidebar-primary-foreground: hsl(42 70% 95%);
+    --sidebar-accent: hsl(36 39% 75%);
+    --sidebar-accent-foreground: hsl(30 52% 18%);
+    --sidebar-border: hsl(32 30% 61%);
+    --x-experience-canvas: hsl(38 38% 84%);
+    --x-experience-glow: hsl(38 86% 31% / 0.18);
+    --x-experience-line: hsl(30 48% 29% / 0.2);
+    --x-experience-icon-surface: hsl(36 48% 75%);
+    --x-experience-icon-ink: hsl(30 52% 20%);
+}
+
+.dark[data-x-change-theme='amber'] {
+    --background: hsl(18 43% 9%);
+    --foreground: hsl(33 100% 93%);
+    --card: hsl(19 42% 12%);
+    --card-foreground: hsl(33 100% 93%);
+    --popover: hsl(19 42% 12%);
+    --popover-foreground: hsl(33 100% 93%);
+    --primary: hsl(24 94% 56%);
+    --primary-foreground: hsl(18 76% 10%);
+    --secondary: hsl(20 34% 19%);
+    --secondary-foreground: hsl(33 100% 91%);
+    --muted: hsl(20 30% 17%);
+    --muted-foreground: hsl(29 40% 68%);
+    --accent: hsl(21 38% 22%);
+    --accent-foreground: hsl(33 100% 91%);
+    --border: hsl(21 30% 25%);
+    --input: hsl(21 30% 25%);
+    --ring: hsl(24 94% 56%);
+    --x-experience-canvas: hsl(18 43% 8%);
+}
+
+.dark[data-x-change-theme='steampunk'] {
+    --background: hsl(30 37% 9%);
+    --foreground: hsl(41 48% 86%);
+    --card: hsl(30 34% 12%);
+    --card-foreground: hsl(41 48% 86%);
+    --popover: hsl(30 34% 12%);
+    --popover-foreground: hsl(41 48% 86%);
+    --primary: hsl(40 73% 49%);
+    --primary-foreground: hsl(30 52% 11%);
+    --secondary: hsl(31 26% 19%);
+    --secondary-foreground: hsl(41 48% 86%);
+    --muted: hsl(30 24% 17%);
+    --muted-foreground: hsl(36 27% 65%);
+    --accent: hsl(33 31% 23%);
+    --accent-foreground: hsl(41 48% 86%);
+    --border: hsl(31 23% 27%);
+    --input: hsl(31 23% 27%);
+    --ring: hsl(40 73% 49%);
+    --x-experience-canvas: hsl(30 37% 8%);
+}
+
+.x-experience-surface {
+    background-color: var(--x-experience-canvas);
+    background-image:
+        radial-gradient(
+            circle at 10% 4%,
+            var(--x-experience-glow),
+            transparent 28rem
+        ),
+        linear-gradient(
+            115deg,
+            transparent 0 72%,
+            var(--x-experience-line) 72% 72.08%,
+            transparent 72.08%
+        );
+}
+
+:root[data-x-change-theme='steampunk'] .x-experience-surface {
+    background-image:
+        radial-gradient(
+            circle at 12% 5%,
+            var(--x-experience-glow),
+            transparent 25rem
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent 0 31px,
+            var(--x-experience-line) 32px
+        ),
+        repeating-linear-gradient(
+            0deg,
+            transparent 0 31px,
+            var(--x-experience-line) 32px
+        );
+}

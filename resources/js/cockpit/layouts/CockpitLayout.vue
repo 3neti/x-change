@@ -45,7 +45,7 @@ const headerOperatingIdentity = computed(
 
 <template>
     <div
-        class="min-h-screen bg-slate-100 text-slate-950 dark:bg-slate-950 dark:text-slate-50"
+        class="x-experience-surface min-h-screen bg-background text-foreground"
         data-testid="cockpit-layout"
     >
         <div class="flex min-h-screen min-w-0 flex-col">
