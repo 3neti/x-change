@@ -166,14 +166,17 @@ class ClaimStartController extends Controller
         $workflow = $this->claimWorkflows->resolve($voucher);
         $authenticatedMobile = null;
 
-        if ($workflow->authentication_mode === ClaimAuthenticationMode::AuthenticatedOfficer) {
+        if (
+            $this->requiresAuthentication($workflow->key, $workflow->authentication_mode)
+            && $request->user() === null
+        ) {
+            $this->claimAuthenticationIntent->remember($request, $code, $workflow);
+
+            return redirect()->route('x-change.claim.authorization-required', ['code' => $code]);
+        }
+
+        if ($this->requiresAuthentication($workflow->key, $workflow->authentication_mode)) {
             $officer = $request->user();
-
-            if ($officer === null) {
-                $this->claimAuthenticationIntent->remember($request, $code, $workflow);
-
-                return redirect()->route('x-change.claim.authorization-required', ['code' => $code]);
-            }
 
             $authenticatedMobile = $officer->getAttribute('mobile');
 
@@ -245,6 +248,14 @@ class ClaimStartController extends Controller
         $state = $this->formFlowService->startFlow($instructions);
 
         return redirect("/form-flow/{$state['flow_id']}");
+    }
+
+    private function requiresAuthentication(
+        string $workflowKey,
+        ClaimAuthenticationMode $authenticationMode,
+    ): bool {
+        return $authenticationMode === ClaimAuthenticationMode::AuthenticatedOfficer
+            || $workflowKey === 'account-funding.v1';
     }
 
     /**

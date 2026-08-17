@@ -9,6 +9,7 @@ use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -105,10 +106,52 @@ it('routes unauthenticated campaign officer authorization to an explicit login h
         ->assertJsonPath('props.workflow.key', 'campaign.officer-authorization.v1');
 });
 
+it('requires the Account Funding claimant to sign in before starting the claim', function () {
+    $system = actingAsTestUser();
+    config()->set('account.system_user.candidates', [
+        'x-change' => [
+            'model' => User::class,
+            'identifier' => $system->email,
+            'identifier_column' => 'email',
+        ],
+    ]);
+    $voucher = issueVoucher(validVoucherInstructions(500, 'INSTAPAY', [
+        'claim' => [
+            'outcomes' => [[
+                'key' => 'account_funding',
+                'pricing_profile' => 'account-funding-v1',
+            ]],
+            'selection' => 'server',
+            'consumption' => 'one_of',
+            'default_outcome' => 'account_funding',
+            'onboarding' => ['mode' => 'if_required'],
+            'claimant' => ['mode' => 'unbound'],
+        ],
+    ]));
+    auth()->logout();
+
+    $this->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertRedirect(route('x-change.claim.authorization-required', ['code' => $voucher->code]))
+        ->assertSessionHas('url.intended', route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertSessionHas(ClaimAuthenticationIntent::SessionKey, function (array $payload) use ($voucher): bool {
+            return $payload['authentication_mode'] === 'claimant_handoff'
+                && $payload['code'] === $voucher->code
+                && $payload['workflow_key'] === 'account-funding.v1'
+                && $payload['title'] === 'Account sign-in required';
+        });
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.authorization-required', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/claim/AuthRequired')
+        ->assertJsonPath('props.intent.title', 'Account sign-in required')
+        ->assertJsonPath('props.workflow.key', 'account-funding.v1');
+});
+
 it('lets the issuer see the issuer console for their own already-claimed Pay Code', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(100));
-    \LBHurtado\XChange\Models\VoucherClaim::query()->create([
+    VoucherClaim::query()->create([
         'voucher_id' => $voucher->getKey(),
         'claim_number' => 1,
         'claim_type' => 'withdraw',

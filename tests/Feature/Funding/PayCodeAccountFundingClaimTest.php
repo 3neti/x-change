@@ -11,6 +11,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
@@ -154,10 +155,6 @@ it('moves a reserved Pay Code into claimant Client Funds exactly once without pr
         ),
     );
     $voucher = payCodeAccountFundingVoucher($issuer);
-    $token = app(PayCodeFundingInspectionStore::class)->issue(
-        $voucher,
-        $claimant,
-    );
     config()->set('broadcasting.default', 'unavailable');
     config()->set('broadcasting.connections.unavailable', [
         'driver' => 'unavailable',
@@ -180,14 +177,14 @@ it('moves a reserved Pay Code into claimant Client Funds exactly once without pr
         },
     );
 
-    $response = $this->actingAs($claimant)
-        ->post(route('x-change.cockpit.funding.pay-code-claims.store'), [
-            'inspection_token' => $token,
-        ])
-        ->assertRedirect(route('x-change.cockpit.funding.index'))
-        ->assertSessionHas('funding_notice');
+    $this->actingAs($claimant);
+    $result = app(SubmitWebPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '+639171234567',
+    ]);
 
-    expect($response)->not->toBeNull()
+    expect($result->claim_type)->toBe('account_funding')
+        ->and($result->status)->toBe('succeeded')
+        ->and($result->claimed)->toBeTrue()
         ->and(VoucherClaim::query()->count())->toBe(1)
         ->and(VoucherClaim::query()->sole()->settlement_mode)->toBe('account_funding')
         ->and(VoucherClaim::query()->sole()->meta['provider_calls'])->toBeFalse()
@@ -235,6 +232,17 @@ function payCodeAccountFundingVoucher(User $issuer): Voucher
                 'inputs' => ['fields' => []],
                 'feedback' => [],
                 'rider' => [],
+                'claim' => [
+                    'outcomes' => [[
+                        'key' => 'account_funding',
+                        'pricing_profile' => 'account-funding-v1',
+                    ]],
+                    'selection' => 'server',
+                    'consumption' => 'one_of',
+                    'default_outcome' => 'account_funding',
+                    'onboarding' => ['mode' => 'if_required'],
+                    'claimant' => ['mode' => 'unbound'],
+                ],
                 'count' => 1,
                 'prefix' => 'FUND',
                 'mask' => '****',

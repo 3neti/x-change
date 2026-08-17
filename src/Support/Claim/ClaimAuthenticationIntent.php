@@ -33,7 +33,7 @@ final class ClaimAuthenticationIntent
     ): array {
         $code = strtoupper(trim($code));
         $intendedUrl = route('x-change.claim.show', ['code' => $code]);
-        $presentation = $this->presentation($workflow->authentication_mode);
+        $presentation = $this->presentation($workflow);
 
         $payload = [
             'type' => $presentation['type'],
@@ -94,9 +94,21 @@ final class ClaimAuthenticationIntent
      *     handoff_url: callable(string): string
      * }
      */
-    private function presentation(ClaimAuthenticationMode $mode): array
+    private function presentation(ClaimWorkflowDescriptorData $workflow): array
     {
-        return match ($mode) {
+        if ($workflow->key === 'account-funding.v1') {
+            return [
+                'type' => 'onboarding_claimant_handoff',
+                'title' => 'Account sign-in required',
+                'description' => 'Sign in as the verified recipient to add this Pay Code to your Account.',
+                'handoff_url' => fn (string $code): string => route(
+                    'x-change.claim.authorization-required',
+                    ['code' => $code],
+                ),
+            ];
+        }
+
+        return match ($workflow->authentication_mode) {
             ClaimAuthenticationMode::AuthenticatedOfficer => [
                 'type' => 'campaign_authorization',
                 'title' => 'Officer authorization required',

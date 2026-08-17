@@ -13,6 +13,9 @@ use LBHurtado\XChange\Support\Claim\UseDeferredPaynamicsOtpResolver;
 it('runs web claim execution with deferred Paynamics OTP resolver', function () {
     $voucher = new Voucher;
     $voucher->code = 'WEB-CLAIM-1234';
+    $voucher->metadata = [
+        'instructions' => validVoucherInstructions(100)->toArray(),
+    ];
 
     $submit = Mockery::mock(SubmitPayCodeClaim::class);
 

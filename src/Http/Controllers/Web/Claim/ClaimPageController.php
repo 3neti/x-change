@@ -55,7 +55,7 @@ class ClaimPageController extends Controller
         $workflow = $workflows->resolve($voucher);
 
         if (
-            $workflow->authentication_mode === ClaimAuthenticationMode::AuthenticatedOfficer
+            $this->requiresAuthentication($workflow->key, $workflow->authentication_mode)
             && $request->user() === null
         ) {
             $loginIntent->remember($request, $code, $workflow);
@@ -104,6 +104,14 @@ class ClaimPageController extends Controller
         }
 
         return $this->renderEntry($responses, $shareMetadata, $shareCardUrls, $voucher, $code, $surface);
+    }
+
+    private function requiresAuthentication(
+        string $workflowKey,
+        ClaimAuthenticationMode $authenticationMode,
+    ): bool {
+        return $authenticationMode === ClaimAuthenticationMode::AuthenticatedOfficer
+            || $workflowKey === 'account-funding.v1';
     }
 
     private function renderEntry(

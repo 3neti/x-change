@@ -37,7 +37,10 @@ final class ClaimAuthorizationRequiredController extends Controller
 
         $workflow = $workflows->resolve($voucher);
 
-        if ($workflow->authentication_mode !== ClaimAuthenticationMode::AuthenticatedOfficer) {
+        if (
+            $workflow->authentication_mode !== ClaimAuthenticationMode::AuthenticatedOfficer
+            && $workflow->key !== 'account-funding.v1'
+        ) {
             return redirect()->route('x-change.claim.show', ['code' => $code]);
         }
 
