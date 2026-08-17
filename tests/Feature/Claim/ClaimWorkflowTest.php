@@ -189,6 +189,54 @@ it('compiles onboarding account provisioning without payout fields or route gues
         ->toBe('Create My Account');
 });
 
+it('compiles account funding without collecting a payout destination', function () {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'instructions' => [
+            'claim' => [
+                'outcomes' => [['key' => 'account_funding']],
+                'default_outcome' => 'account_funding',
+            ],
+        ],
+    ]);
+
+    $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
+    $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
+        FormFlowInstructionsData::from([
+            'reference_id' => 'claim-workflow-account-funding-01',
+            'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-account-funding-01'],
+            'steps' => [[
+                'handler' => 'form',
+                'config' => [
+                    'step_name' => 'wallet_info',
+                    'fields' => [
+                        ['name' => 'amount'],
+                        ['name' => 'settlement_rail'],
+                        ['name' => 'mobile'],
+                        ['name' => 'bank_code'],
+                        ['name' => 'account_number'],
+                    ],
+                ],
+            ]],
+        ]),
+        $workflow,
+        '09285243656',
+    );
+
+    $payload = $instructions->toArray();
+    $walletStep = $payload['steps'][0]['config'];
+
+    expect($workflow->key)->toBe('account-funding.v1')
+        ->and($workflow->requires_mobile)->toBeTrue()
+        ->and($workflow->requires_destination)->toBeFalse()
+        ->and($workflow->requires_amount)->toBeFalse()
+        ->and($workflow->authentication_mode)->toBe(ClaimAuthenticationMode::ClaimantHandoff)
+        ->and($workflow->required_claim_fields)->toBe(['mobile'])
+        ->and(array_column($walletStep['fields'], 'name'))->toBe(['mobile'])
+        ->and($walletStep['fields'][0]['required'])->toBeTrue()
+        ->and($payload['metadata']['claim_workflow']['confirmation_label'])->toBe('Add to My Account');
+});
+
 it('keeps destination collection for an ordinary disbursement workflow', function () {
     config()->set('x-change.claim.experience_ui.variant', 'immersive');
 

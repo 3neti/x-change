@@ -611,10 +611,22 @@ final class CommercialOperationsSimulationScenarioRunner implements ScenarioRunn
                 idempotencyKey: 'position-registration:lifecycle-commercial:'.$referenceScope,
                 reconciliationReference: 'reconciliation:'.$provider.':'.$connectionReference,
             );
-            $this->positionProvisioning->provision($principal, $definition);
             $positions[$key] = TreasuryPosition::query()
-                ->where('position_reference', $definition->positionReference)
-                ->sole();
+                ->whereMorphedTo('principal', $principal)
+                ->where('provider', $provider)
+                ->where('connection_reference', $connectionReference)
+                ->where('currency', $currency)
+                ->where('purpose', $purpose->value)
+                ->whereHas('settlementResource', static fn ($query) => $query
+                    ->where('resource_reference', $settlementResourceReference))
+                ->first();
+
+            if ($positions[$key] === null) {
+                $this->positionProvisioning->provision($principal, $definition);
+                $positions[$key] = TreasuryPosition::query()
+                    ->where('position_reference', $definition->positionReference)
+                    ->sole();
+            }
         }
 
         return $positions;

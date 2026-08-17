@@ -44,6 +44,24 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
             return $this->onboardingWorkflow($voucher);
         }
 
+        if ($this->defaultOutcome($voucher) === 'account_funding') {
+            return new ClaimWorkflowDescriptorData(
+                key: 'account-funding.v1',
+                requires_mobile: true,
+                requires_destination: false,
+                requires_amount: false,
+                title: 'Add Funds to Your Account',
+                description: 'Confirm your identity to add this Pay Code to your x-change Account.',
+                confirmation_label: 'Add to My Account',
+                authentication_mode: ClaimAuthenticationMode::ClaimantHandoff,
+                required_claim_fields: ['mobile'],
+                review: [
+                    'account_funding' => true,
+                    'completion_destination' => 'cockpit',
+                ],
+            );
+        }
+
         return new ClaimWorkflowDescriptorData(
             key: 'disbursement.v1',
             requires_mobile: true,
@@ -88,6 +106,11 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
     private function executionDriver(Voucher $voucher): ?string
     {
         return data_get($voucher->getAttribute('metadata'), 'instructions.execution.driver');
+    }
+
+    private function defaultOutcome(Voucher $voucher): ?string
+    {
+        return data_get($voucher->getAttribute('metadata'), 'instructions.claim.default_outcome');
     }
 
     private function campaignDescription(Voucher $voucher): string

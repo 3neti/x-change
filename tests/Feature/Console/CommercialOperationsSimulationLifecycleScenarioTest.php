@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use LBHurtado\XChange\Models\CommercialPartner;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
+use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -27,6 +28,7 @@ function commercialSimulationActor(string $name, string $mobile): User
 it('simulates governed commercial operations and rolls every record back', function (): void {
     Http::preventStrayRequests();
     enableNetbankTreasuryForTests();
+    app(TreasuryProvisioningService::class)->provision(['netbank-primary']);
     config()->set('x-change.lifecycle.defaults.user_model', User::class);
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:lifecycle-simulation');
     config()->set('x-change.commercial.legal_trace.profile_version', '2026-08-08.1');
