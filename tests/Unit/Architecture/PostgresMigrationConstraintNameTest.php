@@ -45,6 +45,30 @@ it('uses distinct PostgreSQL-safe constraint names for component economics heads
     }
 });
 
+it('uses distinct PostgreSQL-safe constraint names for standing funding binding revisions', function () {
+    $migrationFiles = [
+        dirname(__DIR__, 3).'/database/migrations/2026_08_17_070100_create_x_change_standing_funding_address_binding_heads_table.php',
+        dirname(__DIR__, 3).'/database/migrations/2026_08_17_070200_create_x_change_standing_funding_address_binding_migrations_table.php',
+    ];
+    $constraintNames = [
+        'xchg_standing_binding_head_revision_unique',
+        'xchg_standing_binding_head_revision_foreign',
+        'xchg_standing_binding_migration_revision_unique',
+        'xchg_standing_binding_migration_revision_foreign',
+    ];
+    $migrationSource = implode("\n", array_map(
+        static fn (string $migrationFile): string => (string) file_get_contents($migrationFile),
+        $migrationFiles,
+    ));
+
+    expect(max(array_map(strlen(...), $constraintNames)))->toBeLessThanOrEqual(63)
+        ->and(array_unique($constraintNames))->toHaveCount(count($constraintNames));
+
+    foreach ($constraintNames as $constraintName) {
+        expect($migrationSource)->toContain("'{$constraintName}'");
+    }
+});
+
 it('compiles every create migration without PostgreSQL identifier collisions', function () {
     $connection = new class(null, 'x_change_migration_audit') extends PostgresConnection
     {

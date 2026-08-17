@@ -35,8 +35,11 @@ return new class extends Migration
             $table->nullableMorphs('activated_by', 'xchg_standing_binding_migration_activated_by');
             $table->foreignId('activated_binding_revision_id')
                 ->nullable()
-                ->unique()
-                ->constrained('x_change_standing_funding_address_binding_revisions')
+                ->unique('xchg_standing_binding_migration_revision_unique')
+                ->constrained(
+                    table: 'x_change_standing_funding_address_binding_revisions',
+                    indexName: 'xchg_standing_binding_migration_revision_foreign',
+                )
                 ->restrictOnDelete();
             $table->timestampTz('activated_at')->nullable();
             $table->timestampsTz();

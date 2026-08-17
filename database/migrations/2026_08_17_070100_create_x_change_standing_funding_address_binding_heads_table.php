@@ -16,8 +16,11 @@ return new class extends Migration
                 ->constrained('x_change_standing_funding_addresses')
                 ->restrictOnDelete();
             $table->foreignId('current_binding_revision_id')
-                ->unique()
-                ->constrained('x_change_standing_funding_address_binding_revisions')
+                ->unique('xchg_standing_binding_head_revision_unique')
+                ->constrained(
+                    table: 'x_change_standing_funding_address_binding_revisions',
+                    indexName: 'xchg_standing_binding_head_revision_foreign',
+                )
                 ->restrictOnDelete();
             $table->timestampsTz();
         });
