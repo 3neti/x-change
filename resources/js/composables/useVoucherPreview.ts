@@ -6,6 +6,82 @@ interface UseVoucherPreviewOptions {
     minCodeLength?: number;
 }
 
+type XRayPreviewResponse = {
+    success?: boolean;
+    message?: string;
+    data?: {
+        xray?: {
+            status?: string | null;
+            visible?: boolean | null;
+            disclosures?: Array<{
+                key?: string | null;
+                value?: unknown;
+            }>;
+            requirements?: unknown[];
+            redactions?: unknown[];
+            next_actions?: unknown[];
+        };
+    };
+};
+
+function disclosureValue(
+    disclosures: XRayPreviewResponse['data'] extends { xray?: infer XRay }
+        ? XRay extends { disclosures?: infer Disclosures }
+            ? Disclosures
+            : never
+        : never,
+    key: string,
+): unknown {
+    if (!Array.isArray(disclosures)) {
+        return null;
+    }
+
+    return disclosures.find((disclosure) => disclosure?.key === key)?.value ?? null;
+}
+
+function previewStatusFromXRay(status: string): string {
+    if (status === 'claimable' || status === 'partially_claimable') {
+        return 'active';
+    }
+
+    if (status === 'paid') {
+        return 'redeemed';
+    }
+
+    return status;
+}
+
+function normalizeXRayPreview(
+    data: XRayPreviewResponse,
+    voucherCode: string,
+): InspectResponse | null {
+    const xray = data.data?.xray;
+
+    if (!xray || xray.status === 'not_found' || xray.visible === false) {
+        return null;
+    }
+
+    const status = previewStatusFromXRay(String(xray.status ?? 'claimable'));
+    const disclosures = xray.disclosures;
+    const amount = disclosureValue(disclosures, 'amount');
+
+    return {
+        success: true,
+        code: voucherCode,
+        status,
+        metadata: {},
+        info: xray,
+        preview: { enabled: true },
+        instructions: {
+            formatted_amount: typeof amount === 'string' ? amount : undefined,
+            requirements: xray.requirements ?? [],
+        },
+        rider: null,
+        redeemed_at: null,
+        expired_at: null,
+    };
+}
+
 export function useVoucherPreview(options: UseVoucherPreviewOptions = {}) {
     const debounceMs = options.debounceMs ?? 500;
     const minCodeLength = options.minCodeLength ?? 4;
@@ -35,33 +111,34 @@ export function useVoucherPreview(options: UseVoucherPreviewOptions = {}) {
         abortController = new AbortController();
 
         try {
-            const response = await fetch(`/api/x/v1/vouchers/code/${voucherCode}`, {
+            const response = await fetch('/api/x/v1/pay-codes/x-ray', {
+                method: 'POST',
                 signal: abortController.signal,
                 headers: {
                     Accept: 'application/json',
+                    'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
+                body: JSON.stringify({
+                    code: voucherCode,
+                    channel: 'claim',
+                }),
             });
 
-            const data = await response.json();
+            const data = (await response.json()) as XRayPreviewResponse;
 
             if (response.ok && data.success !== false) {
-                // Normalize x-change lifecycle API response to match preview shape
-                const d = data.data?.voucher ?? data.data ?? data;
+                const preview = normalizeXRayPreview(data, voucherCode);
 
-                voucherData.value = {
-                    success: true,
-                    code: d.code ?? voucherCode,
-                    status: d.status ?? 'active',
-                    metadata: d.metadata ?? {},
-                    info: d,
-                    preview: d.preview ?? undefined,
-                    instructions: d.instructions ?? null,
-                    rider: d.rider ?? null,
-                    redeemed_at: d.redeemed_at ?? null,
-                    expired_at: d.expires_at ?? null,
-                };
-                error.value = null;
+                if (preview) {
+                    voucherData.value = preview;
+                    error.value = null;
+
+                    return;
+                }
+
+                error.value = data.message || 'Voucher not found';
+                voucherData.value = null;
             } else {
                 error.value = data.message || 'Voucher not found';
                 voucherData.value = null;
