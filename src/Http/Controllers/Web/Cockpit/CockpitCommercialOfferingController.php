@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
@@ -12,6 +11,7 @@ use LBHurtado\XChange\Actions\Commercial\ManageCommercialOffering;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Http\Requests\Cockpit\StoreCommercialOfferingRequest;
 use LBHurtado\XChange\Models\CommercialOffering;
+use LBHurtado\XChange\Support\Time\UtcInstant;
 use LBHurtado\XCommerce\Data\CommercialCatalogData;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 use LBHurtado\XCommerce\Data\CommercialWaterfallPolicyData;
@@ -84,7 +84,7 @@ final class CockpitCommercialOfferingController extends Controller
             waterfallPolicy: CommercialWaterfallPolicyData::fromArray($policy),
             attributionPolicy: $active->attributionPolicy,
             legalTrace: $active->legalTrace,
-            effectiveAt: CarbonImmutable::parse((string) $validated['effective_at'])->toIso8601String(),
+            effectiveAt: UtcInstant::canonical((string) $validated['effective_at']),
         );
 
         $draft = $this->manage->createDraft($operator, $profile, $offering);

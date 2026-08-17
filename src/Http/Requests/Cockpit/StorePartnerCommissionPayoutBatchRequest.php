@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Rules\UtcDateOrTimezoneAwareInstant;
 
 final class StorePartnerCommissionPayoutBatchRequest extends FormRequest
 {
@@ -29,8 +30,8 @@ final class StorePartnerCommissionPayoutBatchRequest extends FormRequest
             'provider' => ['required', 'string', 'max:80'],
             'connection_reference' => ['required', 'string', 'max:160'],
             'currency' => ['required', 'string', 'size:3'],
-            'period_started_at' => ['required', 'date'],
-            'period_ended_at' => ['required', 'date', 'after_or_equal:period_started_at'],
+            'period_started_at' => ['required', new UtcDateOrTimezoneAwareInstant],
+            'period_ended_at' => ['required', new UtcDateOrTimezoneAwareInstant, 'after_or_equal:period_started_at'],
             'idempotency_key' => ['required', 'string', 'max:190'],
         ];
     }

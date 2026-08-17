@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Treasury;
 
-use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -17,6 +16,7 @@ use LBHurtado\XChange\Models\TreasuryReconciliationRun;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOperatorAuthority;
 use LBHurtado\XChange\Services\Treasury\TreasuryReconciliationRunJournal;
+use LBHurtado\XChange\Support\Time\UtcInstant;
 use Throwable;
 
 final readonly class ExecuteTreasuryReconciliationRun
@@ -104,7 +104,7 @@ final readonly class ExecuteTreasuryReconciliationRun
                 'position_balance_minor' => $result->positionBalanceMinor,
                 'difference_minor' => $result->differenceMinor,
                 'evidence_reference' => $result->evidenceReference,
-                'observed_at' => CarbonImmutable::parse($result->observedAt),
+                'observed_at' => UtcInstant::parseOffsetRequired($result->observedAt),
                 'inventory_operation_reference' => $result->inventoryOperationReference,
                 'position_operation_reference' => $result->positionOperationReference,
                 'reason' => $result->reason,

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Carbon\CarbonImmutable;
-use DateTimeInterface;
 use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
+use LBHurtado\XChange\Support\Time\UtcInstant;
 
 class ProviderBalanceSnapshotStore
 {
@@ -101,10 +101,6 @@ class ProviderBalanceSnapshotStore
             return null;
         }
 
-        $dateTime = $value instanceof DateTimeInterface
-            ? CarbonImmutable::instance($value)->utc()
-            : CarbonImmutable::parse((string) $value)->utc();
-
-        return $dateTime->setTimezone((string) config('app.timezone', 'UTC'));
+        return UtcInstant::parse($value);
     }
 }

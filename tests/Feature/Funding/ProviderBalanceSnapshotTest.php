@@ -31,7 +31,7 @@ it('stores a sanitized provider balance projection with separate fetch and provi
             ->and($snapshot->account_reference_masked)->toBe('********0001')
             ->and($snapshot->provider_as_of?->equalTo(CarbonImmutable::parse('2026-02-22T08:00:00+08:00')))->toBeTrue()
             ->and($snapshot->fetched_at?->equalTo(CarbonImmutable::parse('2026-07-23T17:45:00+08:00')))->toBeTrue()
-            ->and($snapshot->getRawOriginal('fetched_at'))->toBe('2026-07-23 17:45:00')
+            ->and($snapshot->getRawOriginal('fetched_at'))->toBe('2026-07-23 09:45:00.000000')
             ->and($snapshot->refresh_status)->toBe('fresh');
     } finally {
         date_default_timezone_set($originalTimezone);

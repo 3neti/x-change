@@ -9,6 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Rules\TimezoneAwareInstant;
 
 final class StoreCommercialOfferingRequest extends FormRequest
 {
@@ -30,7 +31,7 @@ final class StoreCommercialOfferingRequest extends FormRequest
     {
         return [
             'profile' => ['required', Rule::in(['pay_code', 'account_funding'])],
-            'effective_at' => ['required', 'date'],
+            'effective_at' => ['required', new TimezoneAwareInstant],
             'items' => ['required', 'array', 'min:1'],
             'items.*.reference' => ['required', 'string', 'max:160', 'distinct'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0', 'decimal:0,2'],

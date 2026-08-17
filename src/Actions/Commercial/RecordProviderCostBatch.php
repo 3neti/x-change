@@ -6,7 +6,6 @@ namespace LBHurtado\XChange\Actions\Commercial;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use JsonException;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
@@ -20,6 +19,7 @@ use LBHurtado\XChange\Models\CommercialAllocation;
 use LBHurtado\XChange\Models\CommercialProviderCostBatch;
 use LBHurtado\XChange\Models\CommercialProviderCostBatchLine;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
+use LBHurtado\XChange\Support\Time\UtcInstant;
 
 final readonly class RecordProviderCostBatch
 {
@@ -53,8 +53,8 @@ final readonly class RecordProviderCostBatch
                 return $existing;
             }
 
-            $periodStart = Carbon::parse($evidence->periodStartedAt);
-            $periodEnd = Carbon::parse($evidence->periodEndedAt);
+            $periodStart = UtcInstant::parseDateOrOffsetRequired($evidence->periodStartedAt);
+            $periodEnd = UtcInstant::parseDateOrOffsetRequired($evidence->periodEndedAt);
             $allocations = CommercialAllocation::query()
                 ->with('sale')
                 ->where('category', 'provider_cost')
@@ -106,7 +106,7 @@ final readonly class RecordProviderCostBatch
                 ],
                 'period_started_at' => $periodStart,
                 'period_ended_at' => $periodEnd,
-                'observed_at' => Carbon::parse($evidence->observedAt),
+                'observed_at' => UtcInstant::parseDateOrOffsetRequired($evidence->observedAt),
                 'settled_at' => $status === CommercialProviderCostBatchStatus::Settled ? now() : null,
             ]);
 

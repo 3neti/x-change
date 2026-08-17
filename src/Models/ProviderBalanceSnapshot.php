@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 
 class ProviderBalanceSnapshot extends Model
 {
@@ -36,9 +37,9 @@ class ProviderBalanceSnapshot extends Model
         return [
             'balance_minor' => 'integer',
             'available_balance_minor' => 'integer',
-            'provider_as_of' => 'immutable_datetime',
-            'fetched_at' => 'immutable_datetime',
-            'last_refresh_failed_at' => 'immutable_datetime',
+            'provider_as_of' => UtcImmutableDateTime::class,
+            'fetched_at' => UtcImmutableDateTime::class,
+            'last_refresh_failed_at' => UtcImmutableDateTime::class,
         ];
     }
 }

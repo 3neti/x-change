@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
 
 final class PartnerCommissionPayoutBatch extends Model
@@ -35,13 +36,13 @@ final class PartnerCommissionPayoutBatch extends Model
             'status' => PartnerCommissionPayoutBatchStatus::class,
             'destination' => 'encrypted:array',
             'metadata' => 'array',
-            'period_started_at' => 'immutable_datetime',
-            'period_ended_at' => 'immutable_datetime',
-            'requested_at' => 'immutable_datetime',
-            'approved_at' => 'immutable_datetime',
-            'submitted_at' => 'immutable_datetime',
-            'settled_at' => 'immutable_datetime',
-            'rejected_at' => 'immutable_datetime',
+            'period_started_at' => UtcImmutableDateTime::class,
+            'period_ended_at' => UtcImmutableDateTime::class,
+            'requested_at' => UtcImmutableDateTime::class,
+            'approved_at' => UtcImmutableDateTime::class,
+            'submitted_at' => UtcImmutableDateTime::class,
+            'settled_at' => UtcImmutableDateTime::class,
+            'rejected_at' => UtcImmutableDateTime::class,
         ];
     }
 

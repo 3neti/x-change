@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 use LBHurtado\XChange\Enums\CommercialProviderCostBatchStatus;
 
 final class CommercialProviderCostBatch extends Model
@@ -35,10 +36,10 @@ final class CommercialProviderCostBatch extends Model
             'variance_amount_minor' => 'integer',
             'status' => CommercialProviderCostBatchStatus::class,
             'metadata' => 'array',
-            'period_started_at' => 'immutable_datetime',
-            'period_ended_at' => 'immutable_datetime',
-            'observed_at' => 'immutable_datetime',
-            'settled_at' => 'immutable_datetime',
+            'period_started_at' => UtcImmutableDateTime::class,
+            'period_ended_at' => UtcImmutableDateTime::class,
+            'observed_at' => UtcImmutableDateTime::class,
+            'settled_at' => UtcImmutableDateTime::class,
         ];
     }
 

@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 use LBHurtado\XChange\Enums\PartnerApiClientStatus;
 
 class PartnerApiClient extends Model
@@ -40,9 +41,9 @@ class PartnerApiClient extends Model
             'status' => PartnerApiClientStatus::class,
             'scopes' => 'array',
             'mandate' => 'array',
-            'activated_at' => 'immutable_datetime',
-            'suspended_at' => 'immutable_datetime',
-            'revoked_at' => 'immutable_datetime',
+            'activated_at' => UtcImmutableDateTime::class,
+            'suspended_at' => UtcImmutableDateTime::class,
+            'revoked_at' => UtcImmutableDateTime::class,
         ];
     }
 

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
@@ -50,10 +51,10 @@ final class CommercialOffering extends Model
             'status' => CommercialOfferingStatus::class,
             'origin' => CommercialOfferingOrigin::class,
             'snapshot' => 'array',
-            'effective_at' => 'immutable_datetime',
-            'submitted_at' => 'immutable_datetime',
-            'approved_at' => 'immutable_datetime',
-            'retired_at' => 'immutable_datetime',
+            'effective_at' => UtcImmutableDateTime::class,
+            'submitted_at' => UtcImmutableDateTime::class,
+            'approved_at' => UtcImmutableDateTime::class,
+            'retired_at' => UtcImmutableDateTime::class,
         ];
     }
 

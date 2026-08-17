@@ -17,6 +17,7 @@ use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Support\Time\UtcInstant;
 
 final readonly class SettleCommercialProviderCost
 {
@@ -144,7 +145,9 @@ final readonly class SettleCommercialProviderCost
                         currency: mb_strtoupper($evidence->currency),
                         status: 'requested',
                         idempotencyKey: 'provider-cost-inventory-outflow-key:'.$scope,
-                        effectiveAt: $evidence->observedAt,
+                        effectiveAt: UtcInstant::canonical(
+                            UtcInstant::parseDateOrOffsetRequired($evidence->observedAt),
+                        ),
                         externalReference: $evidence->evidenceReference,
                         metadata: [
                             'source' => 'x_change_provider_cost_settlement',
@@ -177,7 +180,7 @@ final readonly class SettleCommercialProviderCost
                 'position_operation_reference' => $positionOperationReference,
                 'inventory_operation_reference' => $inventoryOperationReference,
                 'metadata' => $evidence->metadata,
-                'observed_at' => $evidence->observedAt,
+                'observed_at' => UtcInstant::parseDateOrOffsetRequired($evidence->observedAt),
                 'settled_at' => $status === 'settled' ? now() : null,
             ]);
 

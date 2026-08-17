@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 use LBHurtado\XChange\Enums\TreasuryReconciliationRunStatus;
 
 final class TreasuryReconciliationRun extends Model
@@ -36,12 +37,12 @@ final class TreasuryReconciliationRun extends Model
             'inventory_balance_minor' => 'integer',
             'position_balance_minor' => 'integer',
             'difference_minor' => 'integer',
-            'submitted_at' => 'immutable_datetime',
-            'approved_at' => 'immutable_datetime',
-            'last_attempt_at' => 'immutable_datetime',
-            'observed_at' => 'immutable_datetime',
-            'completed_at' => 'immutable_datetime',
-            'failed_at' => 'immutable_datetime',
+            'submitted_at' => UtcImmutableDateTime::class,
+            'approved_at' => UtcImmutableDateTime::class,
+            'last_attempt_at' => UtcImmutableDateTime::class,
+            'observed_at' => UtcImmutableDateTime::class,
+            'completed_at' => UtcImmutableDateTime::class,
+            'failed_at' => UtcImmutableDateTime::class,
         ];
     }
 

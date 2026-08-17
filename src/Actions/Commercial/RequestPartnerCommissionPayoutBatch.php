@@ -6,7 +6,6 @@ namespace LBHurtado\XChange\Actions\Commercial;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use JsonException;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
@@ -22,6 +21,7 @@ use LBHurtado\XChange\Models\CommercialPartnerRevision;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatchLine;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingJournal;
+use LBHurtado\XChange\Support\Time\UtcInstant;
 
 final readonly class RequestPartnerCommissionPayoutBatch
 {
@@ -86,8 +86,8 @@ final readonly class RequestPartnerCommissionPayoutBatch
                 return $existing;
             }
 
-            $periodStart = Carbon::parse($request->periodStartedAt);
-            $periodEnd = Carbon::parse($request->periodEndedAt);
+            $periodStart = UtcInstant::parseDateOrOffsetRequired($request->periodStartedAt);
+            $periodEnd = UtcInstant::parseDateOrOffsetRequired($request->periodEndedAt);
             $allocations = CommercialAllocation::query()
                 ->with('sale')
                 ->where('category', 'partner_commission')

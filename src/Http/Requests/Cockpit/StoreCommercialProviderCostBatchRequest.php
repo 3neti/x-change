@@ -9,6 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use InvalidArgumentException;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
+use LBHurtado\XChange\Rules\UtcDateOrTimezoneAwareInstant;
 use LBHurtado\XChange\Support\Money\MajorCurrencyAmount;
 
 final class StoreCommercialProviderCostBatchRequest extends FormRequest
@@ -49,9 +50,9 @@ final class StoreCommercialProviderCostBatchRequest extends FormRequest
             'evidence_reference' => ['required', 'string', 'max:190'],
             'observed_amount' => ['required', 'string', 'max:32'],
             'observed_amount_minor' => ['required', 'integer', 'min:0'],
-            'period_started_at' => ['required', 'date'],
-            'period_ended_at' => ['required', 'date', 'after_or_equal:period_started_at'],
-            'observed_at' => ['required', 'date'],
+            'period_started_at' => ['required', new UtcDateOrTimezoneAwareInstant],
+            'period_ended_at' => ['required', new UtcDateOrTimezoneAwareInstant, 'after_or_equal:period_started_at'],
+            'observed_at' => ['required', new UtcDateOrTimezoneAwareInstant],
             'idempotency_key' => ['required', 'string', 'max:190'],
         ];
     }

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 
 final class CommercialRecipientDesignation extends Model
 {
@@ -43,10 +44,10 @@ final class CommercialRecipientDesignation extends Model
     {
         return [
             'component_scope' => 'array',
-            'effective_from' => 'immutable_datetime',
-            'effective_until' => 'immutable_datetime',
-            'activated_at' => 'immutable_datetime',
-            'revoked_at' => 'immutable_datetime',
+            'effective_from' => UtcImmutableDateTime::class,
+            'effective_until' => UtcImmutableDateTime::class,
+            'activated_at' => UtcImmutableDateTime::class,
+            'revoked_at' => UtcImmutableDateTime::class,
         ];
     }
 

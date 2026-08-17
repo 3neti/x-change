@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 
 final class CommercialTaxProfile extends Model
 {
@@ -34,8 +35,8 @@ final class CommercialTaxProfile extends Model
         return [
             'version' => 'integer',
             'rate_basis_points' => 'integer',
-            'effective_from' => 'immutable_datetime',
-            'effective_until' => 'immutable_datetime',
+            'effective_from' => UtcImmutableDateTime::class,
+            'effective_until' => UtcImmutableDateTime::class,
             'snapshot' => 'array',
         ];
     }

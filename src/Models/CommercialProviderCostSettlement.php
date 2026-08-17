@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 
 final class CommercialProviderCostSettlement extends Model
 {
@@ -39,8 +40,8 @@ final class CommercialProviderCostSettlement extends Model
             'observed_amount_minor' => 'integer',
             'variance_amount_minor' => 'integer',
             'metadata' => 'array',
-            'observed_at' => 'immutable_datetime',
-            'settled_at' => 'immutable_datetime',
+            'observed_at' => UtcImmutableDateTime::class,
+            'settled_at' => UtcImmutableDateTime::class,
         ];
     }
 

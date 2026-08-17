@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 use LBHurtado\XChange\Enums\CommercialActivationAuthority;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
@@ -34,7 +35,7 @@ final class CommercialComponentEconomics extends Model
             'origin' => CommercialOfferingOrigin::class,
             'authority' => CommercialActivationAuthority::class,
             'snapshot' => 'array',
-            'effective_at' => 'immutable_datetime',
+            'effective_at' => UtcImmutableDateTime::class,
         ];
     }
 

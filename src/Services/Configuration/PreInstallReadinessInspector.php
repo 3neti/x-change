@@ -13,6 +13,7 @@ final readonly class PreInstallReadinessInspector
         private DeploymentConfigurationInspector $deploymentConfiguration,
         private InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private ClaimEvidenceStorageReadinessInspector $claimEvidenceStorage,
+        private TimeAuthorityInspector $timeAuthority,
     ) {}
 
     /**
@@ -33,6 +34,7 @@ final readonly class PreInstallReadinessInspector
         $liveProfile = $profile !== 'development';
         $checks = [
             $deployment,
+            $this->timeAuthorityCheck(),
             $this->systemPrincipalIdentityCheck($liveProfile),
             $this->productionApplicationSecurityCheck(),
             $this->partnerApiOAuthCheck(),
@@ -65,6 +67,21 @@ final readonly class PreInstallReadinessInspector
             'missing_variables' => $missing,
             'checks' => $checks,
         ];
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    private function timeAuthorityCheck(): array
+    {
+        $status = $this->timeAuthority->inspect();
+
+        return $this->check(
+            'time authority',
+            $status['operational'],
+            $status['message'],
+            $status,
+        );
     }
 
     /**

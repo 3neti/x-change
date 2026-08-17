@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 
@@ -68,11 +69,11 @@ class AccountFundingReceipt extends Model
             'gross_amount_minor' => 'integer',
             'fee_amount_minor' => 'integer',
             'net_amount_minor' => 'integer',
-            'observed_at' => 'immutable_datetime',
-            'verified_at' => 'immutable_datetime',
-            'settled_at' => 'immutable_datetime',
-            'suspense_at' => 'immutable_datetime',
-            'reversed_at' => 'immutable_datetime',
+            'observed_at' => UtcImmutableDateTime::class,
+            'verified_at' => UtcImmutableDateTime::class,
+            'settled_at' => UtcImmutableDateTime::class,
+            'suspense_at' => UtcImmutableDateTime::class,
+            'reversed_at' => UtcImmutableDateTime::class,
             'metadata' => 'array',
         ];
     }

@@ -9,6 +9,7 @@ use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Models\CommercialRecipientDesignation;
+use LBHurtado\XChange\Support\Time\UtcInstant;
 use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
 
 final readonly class ActivateCommercialRecipientDesignation
@@ -93,9 +94,9 @@ final readonly class ActivateCommercialRecipientDesignation
                     : null,
                 'activated_by_type' => $activatedBy?->getMorphClass(),
                 'activated_by_id' => $activatedBy?->getKey(),
-                'effective_from' => CarbonImmutable::parse($designation->effectiveFrom),
+                'effective_from' => UtcInstant::parseOffsetRequired($designation->effectiveFrom),
                 'effective_until' => $designation->effectiveUntil !== null
-                    ? CarbonImmutable::parse($designation->effectiveUntil)
+                    ? UtcInstant::parseOffsetRequired($designation->effectiveUntil)
                     : null,
                 'activated_at' => $activatedAt,
             ]);
