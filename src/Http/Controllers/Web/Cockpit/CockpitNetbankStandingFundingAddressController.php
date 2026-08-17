@@ -11,6 +11,7 @@ use LBHurtado\XChange\Actions\Funding\GenerateNetbankReusableFundingAddress;
 use LBHurtado\XChange\Actions\Funding\InspectNetbankReusableFundingAddressHistory;
 use LBHurtado\XChange\Actions\Funding\ReadNetbankReusableFundingReceiptHistory;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingObservationData;
+use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\AccessCockpitStandingFundingAddressRequest;
 
 final class CockpitNetbankStandingFundingAddressController extends Controller
@@ -20,7 +21,16 @@ final class CockpitNetbankStandingFundingAddressController extends Controller
         GenerateNetbankReusableFundingAddress $generate,
         ReadNetbankReusableFundingReceiptHistory $receipts,
     ): JsonResponse {
-        $address = $generate->handle($request->user());
+        try {
+            $address = $generate->handle($request->user());
+        } catch (StandingFundingAddressConflict $exception) {
+            return response()->json([
+                'schema' => 'x-change.cockpit.standing-funding-address-error.v1',
+                'code' => 'standing_funding_address_conflict',
+                'message' => $exception->getMessage(),
+            ], 409)->withHeaders($this->sensitiveHeaders());
+        }
+
         $history = $receipts->handle($request->user(), $address->reference);
 
         return response()->json([

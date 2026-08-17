@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\StandingFundingAddress;
@@ -144,6 +146,56 @@ it('generates an owner-stable Account Funding Address without creating or credit
         ->filter(fn (array $pair): bool => $pair[0]->url() === 'https://api.netbank.test/v1/qrph/generate')
         ->count())->toBe(1);
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/pre-transaction/'));
+});
+
+it('returns a safe conflict when a mobile-derived funding address belongs to another Account', function () {
+    enableNetbankTreasuryForTests();
+    $this->withoutMiddleware(
+        ShareXChangeBranding::class,
+    );
+    $operator = actingAsVerifiedFundingOperator();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $operator,
+        ['netbank-primary'],
+    );
+
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response([
+            'access_token' => 'access-token',
+            'expires_in' => 3600,
+        ]),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response([
+            'qr_code' => reusableFundingTestPng(),
+        ]),
+    ]);
+
+    $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertOk();
+
+    StandingFundingAddress::query()->sole()->forceFill([
+        'owner_id' => 999_999,
+        'binding_key' => hash('sha256', 'another-account-binding'),
+    ])->saveQuietly();
+
+    $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertConflict()
+        ->assertHeader('Pragma', 'no-cache')
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertJsonPath(
+            'schema',
+            'x-change.cockpit.standing-funding-address-error.v1',
+        )
+        ->assertJsonPath('code', 'standing_funding_address_conflict')
+        ->assertJsonPath(
+            'message',
+            'This QR Ph funding address is already bound to another Account. Funding is blocked until an operator reconciles the existing binding.',
+        );
+
+    expect(StandingFundingAddress::query()->count())->toBe(1);
 });
 
 it('regenerates the encrypted QR fixture when its merchant presentation changes', function () {

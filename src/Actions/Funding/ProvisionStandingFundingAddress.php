@@ -18,6 +18,7 @@ use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressProvisionData;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\Funding\StandingFundingQrArtifactStore;
@@ -228,9 +229,7 @@ final class ProvisionStandingFundingAddress
                     );
                 }
 
-                throw new InvalidArgumentException(
-                    'The derived Standing Funding Address is already bound to another Account.',
-                );
+                throw StandingFundingAddressConflict::alreadyBound();
             }
         }
 
