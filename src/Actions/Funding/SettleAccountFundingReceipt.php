@@ -18,6 +18,7 @@ use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
 use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use Throwable;
@@ -187,7 +188,7 @@ final class SettleAccountFundingReceipt
             && $receipt->purpose === FundingAddressPurpose::AccountFunding
             && $receipt->standing_funding_address_id === $address->getKey()
             && $receipt->provider_code === $address->provider_code
-            && $receipt->account_reference === $address->account_reference
+            && $this->receiptBindingMatches($address, $receipt)
             && $observation instanceof ProviderFundingObservation
             && $observation->provider_code === $address->provider_code
             && $this->recognitionPolicy->accepts($observation)
@@ -207,6 +208,26 @@ final class SettleAccountFundingReceipt
                 'authoritative provider evidence does not match the Standing Funding Address',
             );
         }
+    }
+
+    private function receiptBindingMatches(
+        StandingFundingAddress $address,
+        AccountFundingReceipt $receipt,
+    ): bool {
+        if ($receipt->standing_funding_address_binding_revision_id === null) {
+            return $receipt->account_reference === $address->account_reference;
+        }
+
+        $revision = StandingFundingAddressBindingRevision::query()
+            ->whereKey($receipt->standing_funding_address_binding_revision_id)
+            ->where('standing_funding_address_id', $address->getKey())
+            ->first();
+
+        return $revision instanceof StandingFundingAddressBindingRevision
+            && hash_equals(
+                $revision->account_reference_hash,
+                hash('sha256', $receipt->account_reference),
+            );
     }
 
     private function assertDailyLimit(

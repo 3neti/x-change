@@ -89,10 +89,13 @@ use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Feedback\ShowFeedbackHistoryCommand;
 use LBHurtado\XChange\Console\Commands\Feedback\TestFeedbackEmailCommand;
 use LBHurtado\XChange\Console\Commands\Feedback\TestFeedbackSmsCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ActivateStandingFundingAddressBindingMigrationCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ApproveFundingRequestCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ApproveStandingFundingAddressBindingMigrationCommand;
 use LBHurtado\XChange\Console\Commands\Funding\AttestAccountFundingPayCodeJournalIntegrityCommand;
 use LBHurtado\XChange\Console\Commands\Funding\BackfillAccountFundingPayCodeJournalCommand;
 use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeCommand;
+use LBHurtado\XChange\Console\Commands\Funding\MigrateStandingFundingAddressBindingCommand;
 use LBHurtado\XChange\Console\Commands\Funding\SyncStandingFundingAddressesCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyFundingRequestBackingCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
@@ -1390,8 +1393,11 @@ class XChangeServiceProvider extends ServiceProvider
                 RestoreUnsubmittedPayoutCorrectionCommand::class,
                 AttestAccountFundingPayCodeJournalIntegrityCommand::class,
                 ApproveFundingRequestCommand::class,
+                ApproveStandingFundingAddressBindingMigrationCommand::class,
+                ActivateStandingFundingAddressBindingMigrationCommand::class,
                 BackfillAccountFundingPayCodeJournalCommand::class,
                 IssueSystemAccountFundingPayCodeCommand::class,
+                MigrateStandingFundingAddressBindingCommand::class,
                 VerifyFundingRequestBackingCommand::class,
                 VerifyOpenFundingIntentsCommand::class,
                 VerifyOpenPaymentAttemptsCommand::class,

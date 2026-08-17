@@ -124,6 +124,8 @@ const standingAddressLoading = ref(false);
 const standingHistoryLoading = ref(false);
 const standingHistoryCooldownSeconds = ref(0);
 const standingAddressError = ref<string | null>(null);
+const standingAddressErrorCode = ref<string | null>(null);
+const standingAddressOperatorReference = ref<string | null>(null);
 const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
 const liquidityRefreshRunning = ref(false);
@@ -973,6 +975,8 @@ async function openStandingFundingAddress(): Promise<void> {
 
     standingAddressLoading.value = true;
     standingAddressError.value = null;
+    standingAddressErrorCode.value = null;
+    standingAddressOperatorReference.value = null;
     const route = openStandingFundingAddressRoute();
 
     try {
@@ -1001,6 +1005,12 @@ async function openStandingFundingAddress(): Promise<void> {
                 typeof body.message === 'string'
                     ? body.message
                     : 'NetBank could not open the Account Funding Address.';
+            standingAddressErrorCode.value =
+                typeof body.code === 'string' ? body.code : null;
+            standingAddressOperatorReference.value =
+                typeof body.operator_reference === 'string'
+                    ? body.operator_reference
+                    : null;
 
             return;
         }
@@ -1787,7 +1797,9 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         <button
                             v-else-if="
                                 standingAddress === null &&
-                                standing_funding_address.available === true
+                                standing_funding_address.available === true &&
+                                standingAddressErrorCode !==
+                                    'standing_funding_address_binding_migration_required'
                             "
                             type="button"
                             class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
@@ -1853,14 +1865,35 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         role="alert"
                     >
                         <span>{{ standingAddressError }}</span>
+                        <span
+                            v-if="standingAddressOperatorReference"
+                            class="text-xs font-semibold"
+                        >
+                            Operator reference:
+                            {{ standingAddressOperatorReference }}
+                        </span>
                         <button
-                            v-if="standing_funding_address.available"
+                            v-if="
+                                standing_funding_address.available &&
+                                standingAddressErrorCode !==
+                                    'standing_funding_address_binding_migration_required'
+                            "
                             type="button"
                             class="h-9 rounded-lg border border-rose-300 bg-white px-3 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-200 dark:hover:bg-rose-950"
                             @click="openStandingFundingAddress"
                         >
                             Try again
                         </button>
+                        <span
+                            v-else-if="
+                                standingAddressErrorCode ===
+                                'standing_funding_address_binding_migration_required'
+                            "
+                            class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                            data-testid="standing-funding-address-migration-required"
+                        >
+                            Binding migration required
+                        </span>
                     </div>
                 </CockpitFundingMethodPanel>
             </section>

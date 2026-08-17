@@ -1737,6 +1737,40 @@ describe('Cockpit Funding foundation', () => {
         ).toBe(false);
     });
 
+    it('shows a terminal binding-migration state without offering an endless retry', async () => {
+        const fetch = vi.fn().mockResolvedValue({
+            ok: false,
+            status: 409,
+            json: async () => ({
+                schema: 'x-change.cockpit.standing-funding-address-error.v1',
+                code: 'standing_funding_address_binding_migration_required',
+                message:
+                    'This QR Ph funding address requires an approved ledger-binding migration before it can be used again.',
+                retryable: false,
+                operator_reference: '01J-STANDING-LEGACY',
+            }),
+        });
+        vi.stubGlobal('fetch', fetch);
+
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: standingFundingAvailability,
+            },
+        });
+
+        await flushPromises();
+
+        expect(
+            wrapper
+                .get('[data-testid="standing-funding-address-migration-required"]')
+                .text(),
+        ).toContain('Binding migration required');
+        expect(wrapper.text()).toContain('01J-STANDING-LEGACY');
+        expect(wrapper.text()).not.toContain('Try again');
+        expect(fetch).toHaveBeenCalledOnce();
+    });
+
     it('restores persisted Account Funding Receipts without checking NetBank again', async () => {
         const fetch = vi.fn().mockResolvedValue({
             ok: true,

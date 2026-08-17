@@ -33,6 +33,8 @@ it('grants Treasury maker and checker authority only to separate named humans', 
             TreasuryOperatorCapability::RequestInstitutionFunds->value,
             TreasuryOperatorCapability::ViewReconciliation->value,
             TreasuryOperatorCapability::RequestReconciliation->value,
+            TreasuryOperatorCapability::ViewFundingBindings->value,
+            TreasuryOperatorCapability::RequestFundingBindings->value,
         ],
         '--authorization-reference' => 'deployment-control:treasury-maker',
     ])->assertSuccessful();
@@ -50,11 +52,14 @@ it('grants Treasury maker and checker authority only to separate named humans', 
             TreasuryOperatorCapability::ViewReconciliation->value,
             TreasuryOperatorCapability::ApproveReconciliation->value,
             TreasuryOperatorCapability::ExecuteReconciliation->value,
+            TreasuryOperatorCapability::ViewFundingBindings->value,
+            TreasuryOperatorCapability::ApproveFundingBindings->value,
+            TreasuryOperatorCapability::ExecuteFundingBindings->value,
         ],
         '--authorization-reference' => 'deployment-control:treasury-checker',
     ])->assertSuccessful();
 
-    expect(TreasuryOperatorAuthorization::query()->count())->toBe(15);
+    expect(TreasuryOperatorAuthorization::query()->count())->toBe(20);
 
     $this->artisan('x-change:treasury:authorize-operator', [
         'operator' => $maker->email,
@@ -87,5 +92,16 @@ it('grants Treasury maker and checker authority only to separate named humans', 
 
     expect(TreasuryOperatorAuthorization::query()
         ->where('authorization_reference', 'like', 'deployment-control:invalid-reconciliation-role%')
+        ->exists())->toBeFalse();
+
+    $this->artisan('x-change:treasury:authorize-operator', [
+        'operator' => $maker->email,
+        '--column' => 'email',
+        '--capability' => [TreasuryOperatorCapability::ApproveFundingBindings->value],
+        '--authorization-reference' => 'deployment-control:invalid-funding-binding-role',
+    ])->assertFailed();
+
+    expect(TreasuryOperatorAuthorization::query()
+        ->where('authorization_reference', 'like', 'deployment-control:invalid-funding-binding-role%')
         ->exists())->toBeFalse();
 });

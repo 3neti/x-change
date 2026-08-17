@@ -17,22 +17,37 @@ use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Actions\Funding\ActivateStandingFundingAddressBindingMigration;
+use LBHurtado\XChange\Actions\Funding\ApproveStandingFundingAddressBindingMigration;
+use LBHurtado\XChange\Actions\Funding\InspectStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
+use LBHurtado\XChange\Actions\Funding\RequestStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Enums\StandingFundingAddressBindingMigrationStatus;
+use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingHead;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingMigration;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
+use LBHurtado\XChange\Models\TreasuryOperatorAuthorization;
 use LBHurtado\XChange\Services\Funding\StandingFundingAccountReferenceResolver;
+use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
 
 beforeEach(function () {
     enableNetbankTreasuryForTests();
 });
+use Carbon\CarbonImmutable;
+use LBHurtado\XChange\Exceptions\StandingFundingAddressBindingTimeUnavailable;
+use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 beforeEach(function () {
     config()->set('x-change.funding.standing_addresses.limits', [
@@ -140,6 +155,8 @@ it('corrects an unused same-owner mobile binding when its old Account is orphane
 
     expect($corrected->is($first))->toBeTrue()
         ->and($corrected->account_reference)->toBe('wallet:'.$wallet->uuid)
+        ->and(app(StandingFundingAddressBindingResolver::class)
+            ->current($corrected)->accountReference)->toBe('wallet:'.$wallet->uuid)
         ->and($corrected->version)->toBe(2)
         ->and(data_get($corrected->metadata, 'binding_corrected'))->toBeTrue()
         ->and(AccountFundingReceipt::query()->count())->toBe(0)
@@ -793,6 +810,197 @@ it('fails closed when two mobile-derived bindings resolve to the same address', 
     expect(StandingFundingAddress::query()->count())->toBe(1);
 });
 
+it('migrates a receipt-bearing legacy QR binding without rewriting history or moving Inventory', function () {
+    Event::fake([FundingProjectionChanged::class]);
+    $provider = new StandingFundingAddressProviderFake;
+    $provider->scheme = 'netbank-mobile-v1';
+    bindStandingFundingProvider($provider);
+    $owner = actingAsTestUser(0);
+    $legacyWallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $address = provisionStandingAddress(
+        $owner,
+        'wallet:'.$legacyWallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    );
+
+    StandingFundingAddressBindingHead::query()->whereKey($address->getKey())->delete();
+    DB::table('x_change_standing_funding_address_binding_revisions')
+        ->where('standing_funding_address_id', $address->getKey())
+        ->delete();
+    $provider->observations = collect(range(1, 15))
+        ->map(fn (int $sequence) => standingFundingObservation(
+            $provider->fundingAddress,
+            providerTransactionId: 'legacy-provider-transaction-'.$sequence,
+            occurredAt: now()->addMinutes($sequence)->toDateTimeImmutable(),
+        ))
+        ->all();
+    app(SyncStandingFundingAddress::class)->handle($address->refresh());
+
+    $receipt = AccountFundingReceipt::query()->oldest('id')->firstOrFail();
+    $addressBefore = (array) DB::table('x_change_standing_funding_addresses')
+        ->where('id', $address->getKey())->sole();
+    $receiptsBefore = DB::table('x_change_account_funding_receipts')
+        ->orderBy('id')->get()->map(fn (object $row): array => (array) $row)->all();
+    $qrBefore = (array) DB::table('x_change_standing_funding_qr_artifacts')
+        ->where('standing_funding_address_id', $address->getKey())->sole();
+    $inventoryBefore = TreasuryInventory::query()->sole()->balance_minor;
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($owner, ['netbank-primary']);
+    $targetClientFunds = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $owner)
+        ->where('provider', 'netbank')
+        ->where('currency', 'PHP')
+        ->where('purpose', TreasuryPositionPurpose::ClientFunds)
+        ->sole();
+    $targetReference = 'wallet:'.$targetClientFunds->internal_ledger_uuid;
+
+    expect(fn () => provisionStandingAddress(
+        $owner,
+        $targetReference,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    ))->toThrow(
+        StandingFundingAddressConflict::class,
+        'requires an approved ledger-binding migration',
+    );
+    $providerRequestCount = count($provider->requests);
+    $providerObservationCount = count($provider->observationRequests);
+    $maker = actingAsTestUser(0);
+    $checker = actingAsTestUser(0);
+    grantFundingBindingCapability($maker, TreasuryOperatorCapability::ViewFundingBindings);
+    grantFundingBindingCapability($maker, TreasuryOperatorCapability::RequestFundingBindings);
+    grantFundingBindingCapability($maker, TreasuryOperatorCapability::ApproveFundingBindings);
+    grantFundingBindingCapability($checker, TreasuryOperatorCapability::ApproveFundingBindings);
+    grantFundingBindingCapability($checker, TreasuryOperatorCapability::ExecuteFundingBindings);
+
+    $effectiveAt = now()->addHours(2)->startOfSecond()->toImmutable();
+    $preview = app(InspectStandingFundingAddressBindingMigration::class)
+        ->handle($address->refresh(), $effectiveAt);
+
+    $this->artisan('x-change:funding:migrate-standing-address-binding', [
+        '--address' => $address->reference,
+        '--to-current-client-funds' => true,
+        '--effective-at' => $effectiveAt->toRfc3339String(),
+        '--operator' => $maker->getKey(),
+        '--json' => true,
+    ])->assertSuccessful();
+
+    expect($preview['safe'])->toBeTrue()
+        ->and($preview['evidence']['receipt_count'])->toBe(15)
+        ->and($preview['evidence']['provider_calls'])->toBeFalse()
+        ->and(StandingFundingAddressBindingMigration::query()->count())->toBe(0)
+        ->and(StandingFundingAddressBindingRevision::query()->count())->toBe(0);
+
+    $migration = app(RequestStandingFundingAddressBindingMigration::class)->handle(
+        $address->refresh(), $maker, 'legacy-qr-binding-cutover-1', $effectiveAt,
+    );
+    $requestReplay = app(RequestStandingFundingAddressBindingMigration::class)->handle(
+        $address->refresh(), $maker, 'legacy-qr-binding-cutover-1', $effectiveAt,
+    );
+    expect($requestReplay->getKey())->toBe($migration->getKey());
+    expect(fn () => app(RequestStandingFundingAddressBindingMigration::class)->handle(
+        $address->refresh(),
+        $maker,
+        'legacy-qr-binding-cutover-1',
+        $effectiveAt->addMinute(),
+    ))->toThrow(DomainException::class, 'idempotency key conflicts');
+    expect(fn () => app(ApproveStandingFundingAddressBindingMigration::class)->handle(
+        $migration,
+        $maker,
+        'approval:self-check-not-allowed',
+    ))->toThrow(DomainException::class, 'independent from its maker');
+    $approved = app(ApproveStandingFundingAddressBindingMigration::class)->handle(
+        $migration, $checker, 'approval:legacy-qr-binding-cutover-1',
+    );
+    $activated = app(ActivateStandingFundingAddressBindingMigration::class)
+        ->handle($approved, $checker);
+    $replayed = app(ActivateStandingFundingAddressBindingMigration::class)
+        ->handle($activated, $checker);
+
+    $bindings = app(StandingFundingAddressBindingResolver::class);
+    $beforeCutover = $bindings->at($address->refresh(), $effectiveAt->subMicrosecond());
+    $atCutover = $bindings->at($address->refresh(), $effectiveAt);
+
+    expect(fn () => $bindings->at($address->refresh(), null))
+        ->toThrow(
+            StandingFundingAddressBindingTimeUnavailable::class,
+        );
+
+    expect($activated->status)->toBe(StandingFundingAddressBindingMigrationStatus::Activated)
+        ->and($replayed->getKey())->toBe($activated->getKey())
+        ->and(StandingFundingAddressBindingRevision::query()->count())->toBe(2)
+        ->and($beforeCutover->accountReference)->toBe('wallet:'.$legacyWallet->uuid)
+        ->and($atCutover->accountReference)->toBe($targetReference)
+        ->and($receipt->refresh()->standing_funding_address_binding_revision_id)->toBeNull()
+        ->and($receipt->account_reference)->toBe('wallet:'.$legacyWallet->uuid)
+        ->and(AccountFundingReceipt::query()
+            ->whereNotNull('standing_funding_address_binding_revision_id')->count())->toBe(0)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe($inventoryBefore)
+        ->and(count($provider->requests))->toBe($providerRequestCount)
+        ->and(count($provider->observationRequests))->toBe($providerObservationCount)
+        ->and((array) DB::table('x_change_standing_funding_addresses')
+            ->where('id', $address->getKey())->sole())->toBe($addressBefore)
+        ->and(DB::table('x_change_account_funding_receipts')->orderBy('id')->get()
+            ->map(fn (object $row): array => (array) $row)->all())->toBe($receiptsBefore)
+        ->and((array) DB::table('x_change_standing_funding_qr_artifacts')
+            ->where('standing_funding_address_id', $address->getKey())->sole())->toBe($qrBefore);
+
+    $journalEntries = ExecutionJournalEntry::query()
+        ->whereIn('event_type', [
+            'funding.standing_address.binding_migration.requested',
+            'funding.standing_address.binding_migration.approved',
+            'funding.standing_address.binding_revision.activated',
+        ])
+        ->orderBy('id')
+        ->get();
+    $serializedJournal = $journalEntries->toJson();
+
+    expect($journalEntries)->toHaveCount(3)
+        ->and($serializedJournal)->not->toContain($legacyWallet->uuid)
+        ->and($serializedJournal)->not->toContain($targetClientFunds->internal_ledger_uuid);
+
+    CarbonImmutable::setTestNow($effectiveAt->addSecond());
+    expect($bindings->current($address->refresh())->accountReference)->toBe($targetReference);
+
+    $legacyBalanceBefore = $legacyWallet->refresh()->balanceInt;
+    $targetBalanceBefore = treasuryClientFundsLedger($owner)->getBalanceIntAttribute();
+    $provider->observations[] = standingFundingObservation(
+        $provider->fundingAddress,
+        providerTransactionId: 'post-cutover-provider-transaction',
+        occurredAt: $effectiveAt->addSecond()->toDateTimeImmutable(),
+    );
+    app(SyncStandingFundingAddress::class)->handle($address->refresh());
+    $postCutoverReceipt = AccountFundingReceipt::query()
+        ->where('provider_transaction_key', hash('sha256', implode("\0", [
+            'netbank',
+            'post-cutover-provider-transaction',
+        ])))
+        ->sole();
+
+    expect($postCutoverReceipt->standing_funding_address_binding_revision_id)
+        ->toBe($activated->activated_binding_revision_id)
+        ->and($postCutoverReceipt->account_reference)->toBe($targetReference)
+        ->and($legacyWallet->refresh()->balanceInt)->toBe($legacyBalanceBefore)
+        ->and(treasuryClientFundsLedger($owner)->getBalanceIntAttribute())
+        ->toBe($targetBalanceBefore + 24_950);
+    CarbonImmutable::setTestNow();
+});
+
+function grantFundingBindingCapability(
+    object $operator,
+    TreasuryOperatorCapability $capability,
+): void {
+    TreasuryOperatorAuthorization::query()->create([
+        'operator_type' => $operator->getMorphClass(),
+        'operator_id' => $operator->getKey(),
+        'capability' => $capability->value,
+        'authorization_reference' => 'test:'.$capability->value.':'.$operator->getKey(),
+        'granted_by_type' => $operator->getMorphClass(),
+        'granted_by_id' => $operator->getKey(),
+        'valid_from' => now()->subMinute(),
+    ]);
+}
+
 function bindStandingFundingProvider(StandingFundingAddressProviderFake $provider): void
 {
     app()->instance(
@@ -866,6 +1074,9 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
     /** @var list<StandingFundingAddressRequestData> */
     public array $requests = [];
 
+    /** @var list<StandingFundingObservationRequestData> */
+    public array $observationRequests = [];
+
     public function providerCode(): string
     {
         return 'netbank';
@@ -922,6 +1133,8 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
     public function observeStandingFundingAddress(
         StandingFundingObservationRequestData $request,
     ): array {
+        $this->observationRequests[] = $request;
+
         return $this->observations;
     }
 }

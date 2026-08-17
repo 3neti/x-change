@@ -15,11 +15,15 @@ use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Data\Funding\StandingFundingAddressBindingData;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressProvisionData;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingHead;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
+use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\Funding\StandingFundingQrArtifactStore;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
@@ -33,6 +37,7 @@ final class ProvisionStandingFundingAddress
         private readonly StandingFundingQrArtifactStore $qrArtifacts,
         private readonly AuditLoggerContract $audit,
         private readonly CorrectOrphanedStandingFundingAddressBinding $bindingCorrection,
+        private readonly StandingFundingAddressBindingResolver $bindings,
     ) {}
 
     public function handle(
@@ -65,7 +70,7 @@ final class ProvisionStandingFundingAddress
 
         $existing = StandingFundingAddress::query()
             ->where('binding_key', $bindingKey)
-            ->first();
+            ->first() ?? $this->bindings->findCurrentByBindingKey($bindingKey);
 
         if ($existing instanceof StandingFundingAddress) {
             return $this->reopen(
@@ -124,7 +129,7 @@ final class ProvisionStandingFundingAddress
                         return null;
                     }
 
-                    return StandingFundingAddress::query()->create([
+                    $created = StandingFundingAddress::query()->create([
                         'binding_key' => $bindingKey,
                         'owner_type' => $owner::class,
                         'owner_id' => $owner->getKey(),
@@ -168,6 +173,37 @@ final class ProvisionStandingFundingAddress
                             'classification' => 'provider-and-exact-destination',
                         ],
                     ]);
+
+                    $revision = StandingFundingAddressBindingRevision::query()->create([
+                        'standing_funding_address_id' => $created->getKey(),
+                        'binding_version' => 1,
+                        'account_reference_ciphertext' => $accountReference,
+                        'account_reference_hash' => hash('sha256', $accountReference),
+                        'binding_key' => $bindingKey,
+                        'destination_snapshot_ciphertext' => $destination === null
+                            ? null
+                            : FundingDestinationSnapshot::fromData($destination),
+                        'destination_fingerprint' => $destination?->fingerprint,
+                        'reason' => 'initial_binding',
+                        'evidence_snapshot' => [
+                            'schema' => 'x-change.funding-standing-address-binding-revision-evidence.v1',
+                            'standing_funding_address_reference' => $created->reference,
+                            'role' => 'initial_binding',
+                            'account_reference_hash' => hash('sha256', $accountReference),
+                        ],
+                        'evidence_hash' => hash('sha256', implode('|', [
+                            $created->reference,
+                            $bindingKey,
+                            hash('sha256', $accountReference),
+                        ])),
+                        'effective_at' => $created->activated_at,
+                    ]);
+                    StandingFundingAddressBindingHead::query()->create([
+                        'standing_funding_address_id' => $created->getKey(),
+                        'current_binding_revision_id' => $revision->getKey(),
+                    ]);
+
+                    return $created;
                 }, attempts: 3);
             } catch (QueryException $exception) {
                 $racedBinding = StandingFundingAddress::query()
@@ -229,6 +265,19 @@ final class ProvisionStandingFundingAddress
                     );
                 }
 
+                $legacyCollision = StandingFundingAddress::query()
+                    ->where('funding_address_hash', $fundingAddressHash)
+                    ->first();
+
+                if ($legacyCollision instanceof StandingFundingAddress
+                    && $legacyCollision->owner_type === $owner::class
+                    && (string) $legacyCollision->owner_id === (string) $owner->getKey()
+                    && $legacyCollision->receipts()->exists()) {
+                    throw StandingFundingAddressConflict::migrationRequired(
+                        $legacyCollision->reference,
+                    );
+                }
+
                 throw StandingFundingAddressConflict::alreadyBound();
             }
         }
@@ -259,16 +308,43 @@ final class ProvisionStandingFundingAddress
         FundingAddressPurpose $purpose,
         ?FundingQrMerchantData $qrMerchant,
     ): StandingFundingAddressProvisionData {
+        $lock = Cache::lock(
+            'x-change:standing-funding-address:'.$address->getKey(),
+            max(1, (int) config('x-change.funding.standing_addresses.lock_seconds', 120)),
+        );
+
+        return $lock->block(5, fn (): StandingFundingAddressProvisionData => $this->reopenLocked(
+            $address->refresh(),
+            $ownerReference,
+            $purpose,
+            $qrMerchant,
+        ));
+    }
+
+    private function reopenLocked(
+        StandingFundingAddress $address,
+        string $ownerReference,
+        FundingAddressPurpose $purpose,
+        ?FundingQrMerchantData $qrMerchant,
+    ): StandingFundingAddressProvisionData {
         if ($address->status !== FundingAddressStatus::Active) {
             throw new InvalidArgumentException('The Standing Funding Address is not active.');
         }
 
+        if (! hash_equals(
+            $address->owner_type.':'.$address->owner_id,
+            $ownerReference,
+        )) {
+            throw StandingFundingAddressConflict::alreadyBound();
+        }
+
+        $binding = $this->bindings->current($address);
         $fingerprint = $this->qrArtifacts->fingerprint($address, $qrMerchant);
         $artifact = $this->qrArtifacts->find($address, $fingerprint);
 
         if ($artifact === null) {
             $lock = Cache::lock(
-                'x-change:standing-funding-qr:'.hash('sha256', $address->binding_key),
+                'x-change:standing-funding-qr:'.hash('sha256', $binding->bindingKey),
                 max(1, (int) config(
                     'x-change.funding.standing_addresses.qr_generation_lock_seconds',
                     30,
@@ -285,6 +361,7 @@ final class ProvisionStandingFundingAddress
                     $purpose,
                     $qrMerchant,
                     $fingerprint,
+                    $binding,
                 ) {
                     $current = $this->qrArtifacts->find($address, $fingerprint);
 
@@ -292,14 +369,14 @@ final class ProvisionStandingFundingAddress
                         return $current;
                     }
 
-                    $snapshot = $address->destination_snapshot_ciphertext;
+                    $snapshot = $binding->destinationSnapshot;
                     $destination = is_array($snapshot)
                         ? FundingDestinationSnapshot::toData($snapshot)
                         : null;
                     $providerAddress = $this->providers->for($address->provider_code)
                         ->createStandingFundingAddress(new StandingFundingAddressRequestData(
                             ownerReference: $ownerReference,
-                            accountReference: $address->account_reference,
+                            accountReference: $binding->accountReference,
                             purpose: $purpose,
                             currency: $address->currency,
                             destination: $destination,
@@ -307,7 +384,7 @@ final class ProvisionStandingFundingAddress
                             existingFundingAddress: $address->funding_address_ciphertext,
                             qrMerchant: $qrMerchant,
                         ));
-                    $this->assertProviderBinding($address, $providerAddress, $purpose);
+                    $this->assertProviderBinding($address, $binding, $providerAddress, $purpose);
 
                     return $this->qrArtifacts->persist(
                         $address,
@@ -319,9 +396,9 @@ final class ProvisionStandingFundingAddress
             );
         }
 
-        $providerAddress = $this->qrArtifacts->toProviderData($address, $artifact);
+        $providerAddress = $this->qrArtifacts->toProviderData($address, $artifact, $binding);
 
-        $this->assertProviderBinding($address, $providerAddress, $purpose);
+        $this->assertProviderBinding($address, $binding, $providerAddress, $purpose);
 
         $address->last_qr_issued_at = now();
         $address->saveQuietly();
@@ -344,13 +421,14 @@ final class ProvisionStandingFundingAddress
 
     private function assertProviderBinding(
         StandingFundingAddress $address,
+        StandingFundingAddressBindingData $binding,
         StandingFundingAddressData $providerAddress,
         FundingAddressPurpose $purpose,
     ): void {
         if (! hash_equals($address->funding_address_hash, hash('sha256', $providerAddress->fundingAddress))
             || $address->purpose !== $purpose
             || $providerAddress->purpose !== $purpose
-            || $providerAddress->accountReference !== $address->account_reference
+            || $providerAddress->accountReference !== $binding->accountReference
             || $providerAddress->currency !== $address->currency) {
             throw new InvalidArgumentException(
                 'The provider could not reopen the immutable Standing Funding Address binding.',

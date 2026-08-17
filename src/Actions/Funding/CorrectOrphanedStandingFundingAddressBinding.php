@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Funding;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
@@ -13,6 +14,8 @@ use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingHead;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 
 final readonly class CorrectOrphanedStandingFundingAddressBinding
@@ -32,7 +35,19 @@ final readonly class CorrectOrphanedStandingFundingAddressBinding
         string $bindingKey,
         string $fundingAddressHash,
     ): ?StandingFundingAddress {
-        $corrected = DB::transaction(function () use (
+        $collisionId = StandingFundingAddress::query()
+            ->where('funding_address_hash', $fundingAddressHash)
+            ->value('id');
+
+        if (! is_numeric($collisionId)) {
+            return null;
+        }
+
+        $lock = Cache::lock(
+            'x-change:standing-funding-address:'.$collisionId,
+            max(1, (int) config('x-change.funding.standing_addresses.lock_seconds', 120)),
+        );
+        $corrected = $lock->block(5, fn (): ?StandingFundingAddress => DB::transaction(function () use (
             $owner,
             $accountReference,
             $provider,
@@ -61,6 +76,58 @@ final readonly class CorrectOrphanedStandingFundingAddressBinding
                 return null;
             }
 
+            $head = StandingFundingAddressBindingHead::query()
+                ->whereKey($collision->getKey())
+                ->lockForUpdate()
+                ->first();
+            $previous = $head?->currentBindingRevision()->first();
+
+            if (! $previous instanceof StandingFundingAddressBindingRevision) {
+                $previous = StandingFundingAddressBindingRevision::query()
+                    ->whereBelongsTo($collision)
+                    ->orderByDesc('binding_version')
+                    ->lockForUpdate()
+                    ->first();
+            }
+
+            $effectiveAt = now();
+
+            if ($previous instanceof StandingFundingAddressBindingRevision
+                && $effectiveAt->lessThanOrEqualTo($previous->effective_at)) {
+                $effectiveAt = $previous->effective_at->addMicrosecond();
+            }
+
+            $revision = StandingFundingAddressBindingRevision::query()->create([
+                'standing_funding_address_id' => $collision->getKey(),
+                'binding_version' => ($previous?->binding_version ?? 0) + 1,
+                'previous_binding_revision_id' => $previous?->getKey(),
+                'account_reference_ciphertext' => $accountReference,
+                'account_reference_hash' => hash('sha256', $accountReference),
+                'binding_key' => $bindingKey,
+                'destination_snapshot_ciphertext' => $destination === null
+                    ? null
+                    : FundingDestinationSnapshot::fromData($destination),
+                'destination_fingerprint' => $destination?->fingerprint,
+                'reason' => 'unused_orphan_binding_correction',
+                'evidence_snapshot' => [
+                    'schema' => 'x-change.funding-standing-address-binding-revision-evidence.v1',
+                    'standing_funding_address_reference' => $collision->reference,
+                    'role' => 'unused_orphan_binding_correction',
+                    'account_reference_hash' => hash('sha256', $accountReference),
+                ],
+                'evidence_hash' => hash('sha256', implode('|', [
+                    $collision->reference,
+                    $bindingKey,
+                    hash('sha256', $accountReference),
+                ])),
+                'effective_at' => $effectiveAt,
+            ]);
+            $head ??= new StandingFundingAddressBindingHead([
+                'standing_funding_address_id' => $collision->getKey(),
+            ]);
+            $head->current_binding_revision_id = $revision->getKey();
+            $head->saveQuietly();
+
             $collision->forceFill([
                 'binding_key' => $bindingKey,
                 'account_reference' => $accountReference,
@@ -76,7 +143,7 @@ final readonly class CorrectOrphanedStandingFundingAddressBinding
             ])->saveQuietly();
 
             return $collision->refresh();
-        }, attempts: 5);
+        }, attempts: 5));
 
         if ($corrected instanceof StandingFundingAddress) {
             $this->audit->log('funding.standing_address.binding_corrected', [

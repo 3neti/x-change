@@ -19,6 +19,7 @@ class AccountFundingReceipt extends Model
     protected $fillable = [
         'reference',
         'standing_funding_address_id',
+        'standing_funding_address_binding_revision_id',
         'provider_funding_observation_id',
         'provider_transaction_key',
         'provider_code',
@@ -84,5 +85,13 @@ class AccountFundingReceipt extends Model
     public function providerFundingObservation(): BelongsTo
     {
         return $this->belongsTo(ProviderFundingObservation::class);
+    }
+
+    public function standingFundingAddressBindingRevision(): BelongsTo
+    {
+        return $this->belongsTo(
+            StandingFundingAddressBindingRevision::class,
+            'standing_funding_address_binding_revision_id',
+        );
     }
 }

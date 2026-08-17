@@ -26,8 +26,10 @@ final class CockpitNetbankStandingFundingAddressController extends Controller
         } catch (StandingFundingAddressConflict $exception) {
             return response()->json([
                 'schema' => 'x-change.cockpit.standing-funding-address-error.v1',
-                'code' => 'standing_funding_address_conflict',
+                'code' => $exception->errorCode,
                 'message' => $exception->getMessage(),
+                'retryable' => false,
+                'operator_reference' => $exception->operatorReference,
             ], 409)->withHeaders($this->sensitiveHeaders());
         }
 

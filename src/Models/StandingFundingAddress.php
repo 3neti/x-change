@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
@@ -107,5 +108,15 @@ class StandingFundingAddress extends Model
     public function qrArtifacts(): HasMany
     {
         return $this->hasMany(StandingFundingQrArtifact::class);
+    }
+
+    public function bindingRevisions(): HasMany
+    {
+        return $this->hasMany(StandingFundingAddressBindingRevision::class);
+    }
+
+    public function bindingHead(): HasOne
+    {
+        return $this->hasOne(StandingFundingAddressBindingHead::class);
     }
 }

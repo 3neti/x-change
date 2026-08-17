@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressData;
+use LBHurtado\XChange\Data\Funding\StandingFundingAddressBindingData;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 
@@ -87,12 +88,13 @@ final class StandingFundingQrArtifactStore
     public function toProviderData(
         StandingFundingAddress $address,
         StandingFundingQrArtifact $artifact,
+        ?StandingFundingAddressBindingData $binding = null,
     ): StandingFundingAddressData {
         return new StandingFundingAddressData(
             provider: $address->provider_code,
             providerReference: $address->provider_reference,
             fundingAddress: $address->funding_address_ciphertext,
-            accountReference: $address->account_reference,
+            accountReference: $binding?->accountReference ?? $address->account_reference,
             purpose: $address->purpose,
             currency: $address->currency,
             qrCode: new FundingQrCodeData(

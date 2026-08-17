@@ -11,13 +11,16 @@ use LBHurtado\EmiCore\Data\Funding\StandingFundingObservationRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Data\Funding\StandingFundingAddressBindingData;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressSyncData;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
+use LBHurtado\XChange\Exceptions\StandingFundingAddressBindingTimeUnavailable;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
@@ -35,6 +38,7 @@ final class SyncStandingFundingAddress
         private readonly SettleAccountFundingReceipt $settle,
         private readonly OpenFundingSuspenseCase $openSuspense,
         private readonly AuditLoggerContract $audit,
+        private readonly StandingFundingAddressBindingResolver $bindings,
     ) {}
 
     public function handle(
@@ -64,13 +68,14 @@ final class SyncStandingFundingAddress
 
         $address = $this->synchronizeRecognitionMode->handle($address);
         $quarantinedCount = $this->ignorePreActivationReceipts->handle($address);
-        $destination = is_array($address->destination_snapshot_ciphertext)
-            ? FundingDestinationSnapshot::toData($address->destination_snapshot_ciphertext)
+        $currentBinding = $this->bindings->current($address);
+        $destination = is_array($currentBinding->destinationSnapshot)
+            ? FundingDestinationSnapshot::toData($currentBinding->destinationSnapshot)
             : null;
         $observations = $this->providers->for($address->provider_code)->observeStandingFundingAddress(
             new StandingFundingObservationRequestData(
                 fundingAddress: $address->funding_address_ciphertext,
-                accountReference: $address->account_reference,
+                accountReference: $currentBinding->accountReference,
                 purpose: $address->purpose,
                 currency: $address->currency,
                 verificationSource: $trigger,
@@ -124,8 +129,22 @@ final class SyncStandingFundingAddress
                 continue;
             }
 
+            try {
+                $binding = $this->bindings->at($classified, $observation->occurredAtInstant());
+            } catch (StandingFundingAddressBindingTimeUnavailable) {
+                $this->openSuspense->handle(
+                    provider: $observation->provider_code,
+                    reasonCode: 'binding_effective_time_unavailable',
+                    observation: $observation,
+                    details: ['standing_funding_address_reference' => $classified->reference],
+                );
+                $counts['suspense']++;
+
+                continue;
+            }
+
             $receipt = $this->correctNormalization->handle($classified, $observation)
-                ?? $this->recordReceipt($classified, $observation);
+                ?? $this->recordReceipt($classified, $observation, $binding);
             $wasSettled = $receipt->status === AccountFundingReceiptStatus::Settled;
 
             if ($receipt->status === AccountFundingReceiptStatus::Ready) {
@@ -176,8 +195,9 @@ final class SyncStandingFundingAddress
     private function recordReceipt(
         StandingFundingAddress $address,
         ProviderFundingObservation $observation,
+        StandingFundingAddressBindingData $binding,
     ): AccountFundingReceipt {
-        return DB::transaction(function () use ($address, $observation): AccountFundingReceipt {
+        return DB::transaction(function () use ($address, $observation, $binding): AccountFundingReceipt {
             $transactionKey = hash('sha256', implode("\0", [
                 $observation->provider_code,
                 $observation->provider_transaction_id,
@@ -223,10 +243,11 @@ final class SyncStandingFundingAddress
 
             $receipt ??= AccountFundingReceipt::query()->create([
                 'standing_funding_address_id' => $address->getKey(),
+                'standing_funding_address_binding_revision_id' => $binding->revisionId,
                 'provider_funding_observation_id' => $observation->getKey(),
                 'provider_transaction_key' => $transactionKey,
                 'provider_code' => $address->provider_code,
-                'account_reference' => $address->account_reference,
+                'account_reference' => $binding->accountReference,
                 'purpose' => $address->purpose,
                 'recognition_mode_snapshot' => $address->recognition_mode,
                 'status' => AccountFundingReceiptStatus::Observed,

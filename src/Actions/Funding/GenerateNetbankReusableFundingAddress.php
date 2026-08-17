@@ -96,7 +96,6 @@ final class GenerateNetbankReusableFundingAddress
 
         $existing = StandingFundingAddress::query()
             ->whereMorphedTo('owner', $owner)
-            ->where('account_reference', $accountReference)
             ->where('provider_code', 'netbank')
             ->where('purpose', FundingAddressPurpose::AccountFunding)
             ->where('currency', 'PHP')
