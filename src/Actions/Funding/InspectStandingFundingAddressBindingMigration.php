@@ -65,13 +65,34 @@ final readonly class InspectStandingFundingAddressBindingMigration
             AccountFundingReceiptStatus::Suspense->value,
         ];
         $inFlightReceiptCount = array_sum(Arr::only($receiptCounts, $inFlightStatuses));
-        $observationIds = AccountFundingReceipt::query()
+        $receipts = AccountFundingReceipt::query()
             ->whereBelongsTo($address)
-            ->pluck('provider_funding_observation_id');
-        $unattributedObservationCount = ProviderFundingObservation::query()
+            ->get([
+                'provider_funding_observation_id',
+                'provider_transaction_key',
+            ]);
+        $observationIds = $receipts->pluck('provider_funding_observation_id');
+        $attributedTransactionKeys = $receipts
+            ->pluck('provider_transaction_key')
+            ->filter(fn (mixed $key): bool => is_string($key) && $key !== '')
+            ->unique()
+            ->values();
+        $observedTransactionKeys = ProviderFundingObservation::query()
             ->where('provider_code', $address->provider_code)
             ->where('funding_address', 'sha256:'.$address->funding_address_hash)
-            ->whereNotIn('id', $observationIds)
+            ->distinct()
+            ->get(['provider_code', 'provider_transaction_id'])
+            ->map(fn (ProviderFundingObservation $observation): string => hash(
+                'sha256',
+                implode("\0", [
+                    $observation->provider_code,
+                    $observation->provider_transaction_id,
+                ]),
+            ))
+            ->unique()
+            ->values();
+        $unattributedObservationCount = $observedTransactionKeys
+            ->diff($attributedTransactionKeys)
             ->count();
         $openSuspenseCount = FundingSuspenseCase::query()
             ->where('status', 'open')

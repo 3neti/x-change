@@ -12,10 +12,13 @@ use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
 use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingAddressData;
+use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAccountReferenceResolver;
+use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingDestinationResolver;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 
@@ -28,12 +31,26 @@ final class GenerateNetbankReusableFundingAddress
         private readonly ProvisionStandingFundingAddress $provision,
         private readonly FundingQrMerchantProfileResolver $merchantProfiles,
         private readonly AuditLoggerContract $audit,
+        private readonly StandingFundingAddressBindingResolver $bindings,
     ) {}
 
     public function handle(Model $owner): NetbankReusableFundingAddressData
     {
         $this->assertEnabled();
         $accountReference = $this->accounts->resolve($owner, 'netbank', 'PHP');
+        $existingAddress = $this->existingAddress($owner);
+
+        if ($existingAddress instanceof StandingFundingAddress
+            && ! hash_equals(
+                $this->bindings->current($existingAddress)->accountReference,
+                $accountReference,
+            )
+            && $existingAddress->receipts()->exists()) {
+            throw StandingFundingAddressConflict::migrationRequired(
+                $existingAddress->reference,
+            );
+        }
+
         $mode = FundingRecognitionMode::tryFrom((string) config(
             'x-change.funding.standing_addresses.default_recognition_mode',
             FundingRecognitionMode::ObserveOnly->value,
@@ -46,7 +63,11 @@ final class GenerateNetbankReusableFundingAddress
             recognitionMode: $mode,
             currency: 'PHP',
             destination: $this->destinations->resolve($owner, $accountReference),
-            routingReference: $this->routingReference($owner, $accountReference),
+            routingReference: $this->routingReference(
+                $owner,
+                $accountReference,
+                $existingAddress,
+            ),
             qrMerchant: $this->merchantProfiles->resolve($owner),
         );
         $address = $provisioned->address;
@@ -88,20 +109,20 @@ final class GenerateNetbankReusableFundingAddress
         );
     }
 
-    private function routingReference(Model $owner, string $accountReference): ?string
-    {
+    private function routingReference(
+        Model $owner,
+        string $accountReference,
+        ?StandingFundingAddress $existingAddress,
+    ): ?string {
         if ($this->profile->scheme() !== NetbankStandingAddressScheme::MobileV1) {
             return null;
         }
 
-        $existing = StandingFundingAddress::query()
-            ->whereMorphedTo('owner', $owner)
-            ->where('provider_code', 'netbank')
-            ->where('purpose', FundingAddressPurpose::AccountFunding)
-            ->where('currency', 'PHP')
-            ->exists();
-
-        if ($existing) {
+        if ($existingAddress instanceof StandingFundingAddress
+            && hash_equals(
+                $this->bindings->current($existingAddress)->accountReference,
+                $accountReference,
+            )) {
             return null;
         }
 
@@ -120,6 +141,25 @@ final class GenerateNetbankReusableFundingAddress
         }
 
         return '0'.substr($mobile, 2);
+    }
+
+    private function existingAddress(Model $owner): ?StandingFundingAddress
+    {
+        $addresses = StandingFundingAddress::query()
+            ->whereMorphedTo('owner', $owner)
+            ->where('provider_code', 'netbank')
+            ->where('purpose', FundingAddressPurpose::AccountFunding)
+            ->where('currency', 'PHP')
+            ->where('status', FundingAddressStatus::Active)
+            ->where('derivation_scheme', 'netbank-mobile-v1')
+            ->limit(2)
+            ->get();
+
+        if ($addresses->count() > 1) {
+            throw StandingFundingAddressConflict::alreadyBound();
+        }
+
+        return $addresses->first();
     }
 
     private function assertEnabled(): void

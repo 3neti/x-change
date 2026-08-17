@@ -6,8 +6,13 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
+use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
+use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -146,6 +151,82 @@ it('generates an owner-stable Account Funding Address without creating or credit
         ->filter(fn (array $pair): bool => $pair[0]->url() === 'https://api.netbank.test/v1/qrph/generate')
         ->count())->toBe(1);
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/pre-transaction/'));
+});
+
+it('returns a migration-required conflict before calling NetBank for a receipt-bearing legacy binding', function () {
+    $this->withoutMiddleware(ShareXChangeBranding::class);
+    $operator = actingAsVerifiedFundingOperator();
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response([
+            'access_token' => 'access-token',
+            'expires_in' => 3600,
+        ]),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response([
+            'qr_code' => reusableFundingTestPng(),
+        ]),
+    ]);
+
+    $platformWallet = $operator->wallet()->where('slug', 'platform')->sole();
+    $address = app(ProvisionStandingFundingAddress::class)->handle(
+        owner: $operator,
+        accountReference: 'wallet:'.$platformWallet->uuid,
+        provider: 'netbank',
+        purpose: FundingAddressPurpose::AccountFunding,
+        recognitionMode: FundingRecognitionMode::ObserveOnly,
+        routingReference: '09173011987',
+    )->address;
+    $observation = ProviderFundingObservation::query()->create([
+        'observation_key' => hash('sha256', 'legacy-binding-observation'),
+        'provider_code' => 'netbank',
+        'provider_transaction_id' => 'legacy-binding-transaction',
+        'funding_address' => $address->funding_address_ciphertext,
+        'gross_amount_minor' => 100,
+        'fee_amount_minor' => 0,
+        'net_amount_minor' => 100,
+        'currency' => 'PHP',
+        'provider_status' => 'settled',
+        'occurred_at' => now(),
+        'settled_at' => now(),
+        'verification_source' => 'test',
+        'payload_hash' => hash('sha256', 'legacy-binding-payload'),
+    ]);
+    AccountFundingReceipt::query()->create([
+        'standing_funding_address_id' => $address->getKey(),
+        'provider_funding_observation_id' => $observation->getKey(),
+        'provider_transaction_key' => hash('sha256', implode("\0", [
+            'netbank',
+            'legacy-binding-transaction',
+        ])),
+        'provider_code' => 'netbank',
+        'account_reference' => $address->account_reference,
+        'purpose' => FundingAddressPurpose::AccountFunding,
+        'recognition_mode_snapshot' => FundingRecognitionMode::ObserveOnly,
+        'status' => AccountFundingReceiptStatus::Observed,
+        'gross_amount_minor' => 100,
+        'fee_amount_minor' => 0,
+        'net_amount_minor' => 100,
+        'currency' => 'PHP',
+        'observed_at' => now(),
+    ]);
+
+    enableNetbankTreasuryForTests();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $operator,
+        ['netbank-primary'],
+    );
+    $providerCallsBefore = count(Http::recorded());
+
+    $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertConflict()
+        ->assertJsonPath(
+            'code',
+            'standing_funding_address_binding_migration_required',
+        )
+        ->assertJsonPath('operator_reference', $address->reference);
+
+    expect(Http::recorded())->toHaveCount($providerCallsBefore);
 });
 
 it('returns a safe conflict when a mobile-derived funding address belongs to another Account', function () {

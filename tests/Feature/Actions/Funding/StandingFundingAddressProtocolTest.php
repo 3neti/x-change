@@ -681,6 +681,7 @@ it('quarantines previously imported pre-activation receipts without changing bal
     ];
 
     app(SyncStandingFundingAddress::class)->handle($address->refresh());
+
     $receipt = AccountFundingReceipt::query()->sole();
 
     expect($receipt->status)->toBe(AccountFundingReceiptStatus::Suspense)
@@ -837,6 +838,26 @@ it('migrates a receipt-bearing legacy QR binding without rewriting history or mo
         ->all();
     app(SyncStandingFundingAddress::class)->handle($address->refresh());
 
+    ProviderFundingObservation::query()->create([
+        'observation_key' => hash('sha256', 'legacy-provider-transaction-1:pending'),
+        'provider_code' => 'netbank',
+        'provider_transaction_id' => 'legacy-provider-transaction-1',
+        'funding_address' => 'sha256:'.$address->funding_address_hash,
+        'provider_account_reference' => 'sha256:'.hash('sha256', 'corporate-account'),
+        'gross_amount_minor' => 25_000,
+        'fee_amount_minor' => 50,
+        'net_amount_minor' => 24_950,
+        'currency' => 'PHP',
+        'provider_status' => 'pending',
+        'occurred_at' => now()->addMinute(),
+        'verification_source' => 'netbank-vca-transaction-history',
+        'payload_hash' => hash('sha256', 'legacy-provider-transaction-1:pending'),
+        'metadata' => [
+            'destination_verified' => true,
+            'address_purpose' => FundingAddressPurpose::AccountFunding->value,
+        ],
+    ]);
+
     $receipt = AccountFundingReceipt::query()->oldest('id')->firstOrFail();
     $addressBefore = (array) DB::table('x_change_standing_funding_addresses')
         ->where('id', $address->getKey())->sole();
@@ -887,6 +908,7 @@ it('migrates a receipt-bearing legacy QR binding without rewriting history or mo
 
     expect($preview['safe'])->toBeTrue()
         ->and($preview['evidence']['receipt_count'])->toBe(15)
+        ->and($preview['evidence']['unattributed_observation_count'])->toBe(0)
         ->and($preview['evidence']['provider_calls'])->toBeFalse()
         ->and(StandingFundingAddressBindingMigration::query()->count())->toBe(0)
         ->and(StandingFundingAddressBindingRevision::query()->count())->toBe(0);
@@ -983,6 +1005,34 @@ it('migrates a receipt-bearing legacy QR binding without rewriting history or mo
         ->and($legacyWallet->refresh()->balanceInt)->toBe($legacyBalanceBefore)
         ->and(treasuryClientFundsLedger($owner)->getBalanceIntAttribute())
         ->toBe($targetBalanceBefore + 24_950);
+
+    ProviderFundingObservation::query()->create([
+        'observation_key' => hash('sha256', 'unrepresented-provider-transaction'),
+        'provider_code' => 'netbank',
+        'provider_transaction_id' => 'unrepresented-provider-transaction',
+        'funding_address' => 'sha256:'.$address->funding_address_hash,
+        'provider_account_reference' => 'sha256:'.hash('sha256', 'corporate-account'),
+        'gross_amount_minor' => 25_000,
+        'fee_amount_minor' => 50,
+        'net_amount_minor' => 24_950,
+        'currency' => 'PHP',
+        'provider_status' => 'settled',
+        'occurred_at' => $effectiveAt->addMinutes(2),
+        'settled_at' => $effectiveAt->addMinutes(3),
+        'verification_source' => 'netbank-vca-transaction-history',
+        'payload_hash' => hash('sha256', 'unrepresented-provider-transaction:settled'),
+        'metadata' => [
+            'destination_verified' => true,
+            'address_purpose' => FundingAddressPurpose::AccountFunding->value,
+        ],
+    ]);
+    $unsafePreview = app(InspectStandingFundingAddressBindingMigration::class)
+        ->handle($address->refresh(), $effectiveAt->addHours(2));
+
+    expect($unsafePreview['safe'])->toBeFalse()
+        ->and($unsafePreview['evidence']['unattributed_observation_count'])->toBe(1)
+        ->and($unsafePreview['evidence']['predicates']['no_unattributed_provider_observations'])
+        ->toBeFalse();
     CarbonImmutable::setTestNow();
 });
 
