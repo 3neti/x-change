@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -81,5 +82,31 @@ final class SystemAccountFundingPayCodeIssuance extends Model
             'voucher_id',
             'voucher_id',
         )->where('claim_type', 'account_funding');
+    }
+
+    /**
+     * @param  Builder<SystemAccountFundingPayCodeIssuance>  $query
+     * @return Builder<SystemAccountFundingPayCodeIssuance>
+     */
+    public function scopeVisibleToRecipient(
+        Builder $query,
+        Model $recipient,
+    ): Builder {
+        return $query->where(function (Builder $visibility) use ($recipient): void {
+            $visibility->where(function (Builder $bound) use ($recipient): void {
+                $bound
+                    ->where('recipient_type', $recipient->getMorphClass())
+                    ->where('recipient_id', (string) $recipient->getKey());
+            })->orWhere(function (Builder $bearer) use ($recipient): void {
+                $bearer
+                    ->where('bearer', true)
+                    ->whereHas(
+                        'accountFundingClaim',
+                        fn (Builder $claim): Builder => $claim
+                            ->where('claimant_type', $recipient->getMorphClass())
+                            ->where('claimant_id', (string) $recipient->getKey()),
+                    );
+            });
+        });
     }
 }

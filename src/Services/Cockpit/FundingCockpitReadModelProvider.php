@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
@@ -19,6 +20,8 @@ use LBHurtado\XChange\Models\FundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingRecovery;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
+use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Models\VoucherClaim;
 
 class FundingCockpitReadModelProvider
 {
@@ -53,6 +56,20 @@ class FundingCockpitReadModelProvider
             )
             ->latest('settled_at')
             ->get();
+        $settledAccountFundingPayCodeClaims = $operator instanceof Model
+            ? SystemAccountFundingPayCodeIssuance::query()
+                ->with('accountFundingClaim')
+                ->visibleToRecipient($operator)
+                ->get()
+                ->reject(fn (SystemAccountFundingPayCodeIssuance $issuance): bool => filled(data_get(
+                    $issuance->metadata,
+                    'custom.reviewed_funding.request_reference',
+                )))
+                ->pluck('accountFundingClaim')
+                ->filter(fn (mixed $claim): bool => $claim instanceof VoucherClaim
+                    && $claim->isSuccessful())
+                ->values()
+            : collect();
         $openSuspenseCases = FundingSuspenseCase::query()
             ->whereIn('funding_intent_id', $intentIds)
             ->whereIn('status', ['open', 'monitoring'])
@@ -79,6 +96,7 @@ class FundingCockpitReadModelProvider
                 $operationalIntentsQuery,
                 $settlements,
                 $settledStandingReceipts,
+                $settledAccountFundingPayCodeClaims,
                 $openSuspenseCases,
                 $activeRecoveries,
             ),
@@ -126,6 +144,7 @@ class FundingCockpitReadModelProvider
      * @param  Builder<FundingIntent>  $intentsQuery
      * @param  Collection<int, FundingSettlement>  $settlements
      * @param  Collection<int, AccountFundingReceipt>  $standingReceipts
+     * @param  Collection<int, VoucherClaim>  $accountFundingPayCodeClaims
      * @param  Collection<int, FundingSuspenseCase>  $suspenseCases
      * @param  Collection<int, FundingRecovery>  $recoveries
      * @return array<string, int|string>
@@ -134,15 +153,18 @@ class FundingCockpitReadModelProvider
         Builder $intentsQuery,
         Collection $settlements,
         Collection $standingReceipts,
+        Collection $accountFundingPayCodeClaims,
         Collection $suspenseCases,
         Collection $recoveries,
     ): array {
         $currency = $this->currency(
             $settlements->first()?->currency
-                ?? $standingReceipts->first()?->currency,
+                ?? $standingReceipts->first()?->currency
+                ?? $accountFundingPayCodeClaims->first()?->currency,
         );
         $settledMinor = (int) $settlements->sum('net_amount_minor')
-            + (int) $standingReceipts->sum('net_amount_minor');
+            + (int) $standingReceipts->sum('net_amount_minor')
+            + (int) $accountFundingPayCodeClaims->sum('disbursed_amount_minor');
         $recoveryMinor = (int) $recoveries->sum('outstanding_amount_minor');
 
         return [

@@ -7,7 +7,6 @@ namespace LBHurtado\XChange\Services\Cockpit;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Number;
@@ -76,25 +75,7 @@ final readonly class FundingActivityCockpitReadModel
     {
         return SystemAccountFundingPayCodeIssuance::query()
             ->with(['voucher', 'accountFundingClaim'])
-            ->where(function (Builder $query) use ($operator): void {
-                $query->where(function (Builder $bound) use ($operator): void {
-                    $bound
-                        ->where('recipient_type', $operator->getMorphClass())
-                        ->where('recipient_id', (string) $operator->getKey());
-                })->orWhere(function (Builder $bearer) use ($operator): void {
-                    $bearer
-                        ->where('bearer', true)
-                        ->whereHas(
-                            'accountFundingClaim',
-                            fn (Builder $claim): Builder => $claim
-                                ->where('claimant_type', $operator::class)
-                                ->where(
-                                    'claimant_id',
-                                    (string) $operator->getKey(),
-                                ),
-                        );
-                });
-            })
+            ->visibleToRecipient($operator)
             ->get()
             ->reject(fn (SystemAccountFundingPayCodeIssuance $issuance): bool => filled(data_get(
                 $issuance->metadata,

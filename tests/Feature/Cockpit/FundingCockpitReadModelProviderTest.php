@@ -5,8 +5,11 @@ declare(strict_types=1);
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
+use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
+use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
@@ -156,6 +159,56 @@ it('combines settled intents and recognized reusable address receipts for the ow
 
     expect($summary['settled_funding'])->toBe('₱299.50')
         ->and(AccountFundingReceipt::query()->count())->toBe(2);
+});
+
+it('includes successful Account Funding Pay Code claims exactly once for their recipient', function () {
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    $operator = actingAsTestUser(0);
+    $otherOperator = User::query()->create([
+        'name' => 'Other Pay Code Recipient',
+        'email' => 'other-pay-code+'.Str::uuid().'@example.com',
+        'password' => bcrypt('password'),
+    ]);
+    fundTestUserWallet($otherOperator, 0);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        30_000,
+        'cockpit-settled-pay-code-summary',
+    );
+
+    foreach ([[$operator, 10_000, 'operator'], [$otherOperator, 20_000, 'other']] as [$recipient, $amountMinor, $suffix]) {
+        $issuance = app(IssueSystemAccountFundingPayCode::class)->handle(
+            new IssueSystemAccountFundingPayCodeData(
+                amountMinor: $amountMinor,
+                connectionReference: 'netbank-primary',
+                idempotencyReference: 'cockpit-settled-pay-code-'.$suffix,
+                expiresAt: now()->addDay(),
+                recipient: $recipient,
+                evidenceReference: 'test-evidence:cockpit-settled-pay-code-'.$suffix,
+                authorizationReference: 'test-authorization:cockpit-settled-pay-code-'.$suffix,
+            ),
+        );
+        app(DispatchVoucherClaimOutcome::class)->handle(
+            voucher: $issuance->voucher,
+            requestedOutcome: 'account_funding',
+            payload: [],
+            claimant: $recipient,
+        );
+    }
+
+    $operatorSummary = app(FundingCockpitReadModelProvider::class)
+        ->forOperator($operator)
+        ->toArray()['summary'];
+    $otherSummary = app(FundingCockpitReadModelProvider::class)
+        ->forOperator($otherOperator)
+        ->toArray()['summary'];
+
+    expect($operatorSummary['settled_funding'])->toBe('₱100.00')
+        ->and($otherSummary['settled_funding'])->toBe('₱200.00')
+        ->and(app(FundingCockpitReadModelProvider::class)
+            ->forOperator($operator)
+            ->toArray()['summary']['settled_funding'])->toBe('₱100.00');
 });
 
 it('exposes provider-wide Treasury oversight only to the resolved system principal', function () {
