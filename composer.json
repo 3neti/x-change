@@ -72,7 +72,7 @@
         "3neti/x-commerce": "^1.2",
         "3neti/x-feedback": "^1.0",
         "3neti/x-journal": "^1.0",
-        "3neti/x-provisioning": "^1.0@beta",
+        "3neti/x-provisioning": "^1.0.0-beta.11",
         "3neti/x-ray": "^1.0",
         "3neti/x-rider": "^1.0",
         "brick/money": "^0.10.3",

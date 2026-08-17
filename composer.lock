@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1dbb30bbaa026242f3a8e10f9bdcf894",
+    "content-hash": "e1e5ba2d2dbce1120a1f8eeb37643bde",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1713,11 +1713,11 @@
         },
         {
             "name": "3neti/x-provisioning",
-            "version": "v1.0.0-beta.10",
+            "version": "v1.0.0-beta.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-provisioning.git",
-                "reference": "0d3eb15b8e22193f174b4bd3580913feebfff80b"
+                "reference": "0b8d4cac60ff8b357bfa261d0cd120e3af9145b5"
             },
             "require": {
                 "illuminate/contracts": "^12.0 || ^13.0",
@@ -1766,7 +1766,7 @@
                 }
             ],
             "description": "Governed provisioning requests, invitations, acceptance, and authority activation for x-change.",
-            "time": "2026-08-16T14:47:36+00:00"
+            "time": "2026-08-17T03:11:31+00:00"
         },
         {
             "name": "3neti/x-ray",

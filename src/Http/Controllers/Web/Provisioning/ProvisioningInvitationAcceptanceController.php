@@ -8,9 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
-use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Http\Requests\Web\AcceptProvisioningInvitationRequest;
+use LBHurtado\XChange\Services\Provisioning\BuildProvisioningAcceptanceEvidence;
 use LBHurtado\XProvisioning\Actions\AcceptProvisioningOffer;
+use LBHurtado\XProvisioning\Models\ProvisioningOffer;
 
 final class ProvisioningInvitationAcceptanceController extends Controller
 {
@@ -18,6 +19,7 @@ final class ProvisioningInvitationAcceptanceController extends Controller
         AcceptProvisioningInvitationRequest $request,
         string $token,
         AcceptProvisioningOffer $accept,
+        BuildProvisioningAcceptanceEvidence $evidence,
     ): RedirectResponse {
         $candidate = $request->user();
         abort_unless($candidate instanceof Model, 403);
@@ -25,9 +27,6 @@ final class ProvisioningInvitationAcceptanceController extends Controller
         $candidateAttributes = $candidate->getAttributes();
         $mobileVerified = ! array_key_exists('mobile_verified_at', $candidateAttributes)
             || $candidate->getAttribute('mobile_verified_at') !== null;
-        $mobile = $candidate instanceof HasMobileChannel
-            ? $candidate->getMobileChannel()
-            : $candidate->getAttribute('mobile');
 
         if (! $mobileVerified) {
             throw ValidationException::withMessages([
@@ -35,17 +34,20 @@ final class ProvisioningInvitationAcceptanceController extends Controller
             ]);
         }
 
+        $offer = ProvisioningOffer::query()
+            ->with('revision.request')
+            ->where('claim_token_hash', hash('sha256', $token))
+            ->firstOrFail();
+
         $accept->handle(
             claimToken: $token,
             candidateType: $candidate->getMorphClass(),
             candidateReference: (string) $candidate->getKey(),
-            evidence: [
-                'name' => (string) $candidate->getAttribute('name'),
-                'email' => (string) $candidate->getAttribute('email'),
-                'mobile' => (string) $mobile,
-                'otp' => $mobileVerified,
-                'responsibility_attestation' => (bool) $request->validated('responsibility_attestation'),
-            ],
+            evidence: $evidence->build(
+                revision: $offer->revision,
+                candidate: $candidate,
+                responsibilityAttestation: (bool) $request->validated('responsibility_attestation'),
+            ),
         );
 
         return redirect()->route('x-change.provisioning.claim.show', ['token' => $token])

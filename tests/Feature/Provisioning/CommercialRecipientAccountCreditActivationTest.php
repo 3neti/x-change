@@ -14,17 +14,104 @@ use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XChange\Models\ProvisioningOperatorAuthorization;
 use LBHurtado\XChange\Services\Commercial\CommercialRecipientDesignationAuthorityVerifier;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningActorGuard;
+use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningAuthorityProjector;
+use LBHurtado\XChange\Services\Provisioning\XChangeProvisioningEvidenceVerifier;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XProvisioning\Actions\AcceptProvisioningOffer;
 use LBHurtado\XProvisioning\Actions\ActivateProvisioningAcceptance;
 use LBHurtado\XProvisioning\Actions\ApproveProvisioningRequest;
 use LBHurtado\XProvisioning\Actions\IssueProvisioningOffer;
+use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningEvidenceVerifierContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
+use LBHurtado\XProvisioning\Enums\ProvisioningRequestStatus;
 use LBHurtado\XProvisioning\Models\ProvisioningOffer;
 use LBHurtado\XProvisioning\Models\ProvisioningRequest;
+use LBHurtado\XProvisioning\XProvisioningServiceProvider;
 
 beforeEach(function (): void {
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
     config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+});
+
+it('keeps strict x-change lifecycle integrations when x-provisioning registers afterward', function (): void {
+    (new XProvisioningServiceProvider(app()))->register();
+
+    expect(app(ProvisioningActorGuardContract::class))->toBeInstanceOf(XChangeProvisioningActorGuard::class)
+        ->and(app(ProvisioningEvidenceVerifierContract::class))->toBeInstanceOf(XChangeProvisioningEvidenceVerifier::class)
+        ->and(app(ProvisioningActivatorContract::class))->toBeInstanceOf(XChangeProvisioningAuthorityProjector::class)
+        ->and(app(ProvisioningRevokerContract::class))->toBeInstanceOf(XChangeProvisioningAuthorityProjector::class);
+});
+
+it('accepts a recipient Account invitation through the authenticated web flow with semantic evidence', function (): void {
+    enableNetbankTreasuryForTests();
+    app(ProvisionCommercialBaselines::class)->provision('commissioning:recipient-http-acceptance');
+    $maker = actingAsTestUser();
+    $checker = commercialRecipientTransitionUser('Commercial Checker');
+    $recipient = commercialRecipientTransitionUser('3neti Representative');
+    $recipient->setMobileChannel('639171234587')->forceFill(['mobile_verified_at' => now()])->save();
+    fundTestUserWallet($recipient, 0);
+    authorizeRecipientProvisioning($maker, ProvisioningOperatorCapability::Request);
+
+    $request = app(CreateCockpitProvisioningRequest::class)->handle($maker, [
+        'profile' => 'commercial_recipient_designation',
+        'purpose' => 'Accept the governed recipient Account through the public invitation flow.',
+        'capabilities' => [],
+    ]);
+    app(ApproveProvisioningRequest::class)->handle($request, $checker);
+    $credential = app(IssueProvisioningOffer::class)->handle($request);
+
+    $this->actingAs($recipient)->post(
+        route('x-change.provisioning.claim.accept', ['token' => $credential->claimToken]),
+        ['responsibility_attestation' => true],
+    )->assertRedirect();
+
+    $offer = $credential->offer->refresh()->load('acceptance');
+    $snapshot = $request->revisions()->sole()->snapshot;
+
+    expect($offer->status)->toBe(ProvisioningRequestStatus::ActivationPending)
+        ->and($offer->acceptance->candidate_reference)->toBe((string) $recipient->getKey())
+        ->and($offer->acceptance->evidence)->toMatchArray([
+            'name' => $recipient->name,
+            'email' => $recipient->email,
+            'mobile' => '639171234587',
+            'otp' => true,
+            'responsibility_attestation' => true,
+            'representative' => $recipient->name,
+            'authority' => 'authenticated_candidate_responsibility_attestation',
+            'agreement' => $snapshot['agreement_reference'],
+        ]);
+});
+
+it('keeps a recipient Account invitation offered when responsibility is not accepted', function (): void {
+    enableNetbankTreasuryForTests();
+    app(ProvisionCommercialBaselines::class)->provision('commissioning:recipient-http-rejection');
+    $maker = actingAsTestUser();
+    $checker = commercialRecipientTransitionUser('Commercial Checker');
+    $recipient = commercialRecipientTransitionUser('3neti Representative');
+    $recipient->setMobileChannel('639171234586')->forceFill(['mobile_verified_at' => now()])->save();
+    authorizeRecipientProvisioning($maker, ProvisioningOperatorCapability::Request);
+
+    $request = app(CreateCockpitProvisioningRequest::class)->handle($maker, [
+        'profile' => 'commercial_recipient_designation',
+        'purpose' => 'Require an explicit responsibility attestation.',
+        'capabilities' => [],
+    ]);
+    app(ApproveProvisioningRequest::class)->handle($request, $checker);
+    $credential = app(IssueProvisioningOffer::class)->handle($request);
+
+    $this->actingAs($recipient)->post(
+        route('x-change.provisioning.claim.accept', ['token' => $credential->claimToken]),
+        ['responsibility_attestation' => false],
+    )->assertSessionHasErrors('responsibility_attestation');
+
+    expect($credential->offer->refresh()->status)->toBe(ProvisioningRequestStatus::Offered)
+        ->and($credential->offer->acceptance()->exists())->toBeFalse()
+        ->and(CommercialRecipientDesignation::query()
+            ->where('designation_reference', 'designation:commissioning:3neti:v2')
+            ->exists())->toBeFalse();
 });
 
 it('binds the accepted recipient Account and atomically switches governed economics', function (): void {
