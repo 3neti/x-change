@@ -22,6 +22,7 @@ use LBHurtado\XChange\Actions\Funding\ApproveStandingFundingAddressBindingMigrat
 use LBHurtado\XChange\Actions\Funding\InspectStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
+use LBHurtado\XChange\Actions\Funding\RepairStandingFundingAddressBindingEffectiveAt;
 use LBHurtado\XChange\Actions\Funding\RequestStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
@@ -33,6 +34,7 @@ use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingEffectiveTimeCorrection;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingHead;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
@@ -812,6 +814,7 @@ it('fails closed when two mobile-derived bindings resolve to the same address', 
 });
 
 it('migrates a receipt-bearing legacy QR binding without rewriting history or moving Inventory', function () {
+    CarbonImmutable::setTestNow('2026-08-17T18:00:00+08:00');
     Event::fake([FundingProjectionChanged::class]);
     $provider = new StandingFundingAddressProviderFake;
     $provider->scheme = 'netbank-mobile-v1';
@@ -894,7 +897,7 @@ it('migrates a receipt-bearing legacy QR binding without rewriting history or mo
     grantFundingBindingCapability($checker, TreasuryOperatorCapability::ApproveFundingBindings);
     grantFundingBindingCapability($checker, TreasuryOperatorCapability::ExecuteFundingBindings);
 
-    $effectiveAt = now()->addHours(2)->startOfSecond()->toImmutable();
+    $effectiveAt = CarbonImmutable::parse('2026-08-17T21:00:00+08:00');
     $preview = app(InspectStandingFundingAddressBindingMigration::class)
         ->handle($address->refresh(), $effectiveAt);
 
@@ -939,6 +942,28 @@ it('migrates a receipt-bearing legacy QR binding without rewriting history or mo
     $replayed = app(ActivateStandingFundingAddressBindingMigration::class)
         ->handle($activated, $checker);
 
+    $activatedRevisionId = $activated->refresh()->activated_binding_revision_id;
+    expect((string) DB::table('x_change_standing_funding_address_binding_revisions')
+        ->where('id', $activatedRevisionId)
+        ->value('effective_at'))->toStartWith('2026-08-17 13:00:00');
+
+    DB::table('x_change_standing_funding_address_binding_revisions')
+        ->where('id', $activatedRevisionId)
+        ->update(['effective_at' => '2026-08-17 21:00:00.000000']);
+    CarbonImmutable::setTestNow('2026-08-17T21:10:00+08:00');
+    $correction = app(RepairStandingFundingAddressBindingEffectiveAt::class)->handle(
+        $activated,
+        $checker,
+        'legacy-qr-binding-timezone-correction-1',
+        'user-approved:legacy-qr-binding-timezone-correction-1',
+    );
+    $correctionReplay = app(RepairStandingFundingAddressBindingEffectiveAt::class)->handle(
+        $activated,
+        $checker,
+        'legacy-qr-binding-timezone-correction-1',
+        'user-approved:legacy-qr-binding-timezone-correction-1',
+    );
+
     $bindings = app(StandingFundingAddressBindingResolver::class);
     $beforeCutover = $bindings->at($address->refresh(), $effectiveAt->subMicrosecond());
     $atCutover = $bindings->at($address->refresh(), $effectiveAt);
@@ -951,6 +976,10 @@ it('migrates a receipt-bearing legacy QR binding without rewriting history or mo
     expect($activated->status)->toBe(StandingFundingAddressBindingMigrationStatus::Activated)
         ->and($replayed->getKey())->toBe($activated->getKey())
         ->and(StandingFundingAddressBindingRevision::query()->count())->toBe(2)
+        ->and(StandingFundingAddressBindingEffectiveTimeCorrection::query()->count())->toBe(1)
+        ->and($correctionReplay->is($correction))->toBeTrue()
+        ->and($correction->original_effective_at->toRfc3339String())->toBe('2026-08-17T21:00:00+00:00')
+        ->and($correction->corrected_effective_at->toRfc3339String())->toBe('2026-08-17T13:00:00+00:00')
         ->and($beforeCutover->accountReference)->toBe('wallet:'.$legacyWallet->uuid)
         ->and($atCutover->accountReference)->toBe($targetReference)
         ->and($receipt->refresh()->standing_funding_address_binding_revision_id)->toBeNull()
@@ -972,12 +1001,13 @@ it('migrates a receipt-bearing legacy QR binding without rewriting history or mo
             'funding.standing_address.binding_migration.requested',
             'funding.standing_address.binding_migration.approved',
             'funding.standing_address.binding_revision.activated',
+            'funding.standing_address.binding_revision.effective_at_corrected',
         ])
         ->orderBy('id')
         ->get();
     $serializedJournal = $journalEntries->toJson();
 
-    expect($journalEntries)->toHaveCount(3)
+    expect($journalEntries)->toHaveCount(4)
         ->and($serializedJournal)->not->toContain($legacyWallet->uuid)
         ->and($serializedJournal)->not->toContain($targetClientFunds->internal_ledger_uuid);
 

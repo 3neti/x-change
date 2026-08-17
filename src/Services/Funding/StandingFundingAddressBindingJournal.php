@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Funding;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\XChange\Models\StandingFundingAddressBindingEffectiveTimeCorrection;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingMigration;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
@@ -23,6 +24,11 @@ final readonly class StandingFundingAddressBindingJournal
         Model $actor,
     ): void {
         $address = $migration->standingFundingAddress()->firstOrFail();
+        $correction = $eventType === 'funding.standing_address.binding_revision.effective_at_corrected'
+            ? StandingFundingAddressBindingEffectiveTimeCorrection::query()
+                ->where('standing_funding_address_binding_migration_id', $migration->getKey())
+                ->first()
+            : null;
 
         $this->recorder->record(new ExecutionJournalEntryData(
             eventType: $eventType,
@@ -60,6 +66,11 @@ final readonly class StandingFundingAddressBindingJournal
                 'provider_calls' => false,
                 'qr_regenerated' => false,
                 'provider_inventory_changed' => false,
+                ...($correction instanceof StandingFundingAddressBindingEffectiveTimeCorrection ? [
+                    'correction_hash' => $correction->correction_hash,
+                    'original_effective_at' => $correction->original_effective_at->toRfc3339String(),
+                    'corrected_effective_at' => $correction->corrected_effective_at->toRfc3339String(),
+                ] : []),
             ],
             metadata: [
                 'schema' => 'x-change.funding-standing-address-binding-journal.v1',

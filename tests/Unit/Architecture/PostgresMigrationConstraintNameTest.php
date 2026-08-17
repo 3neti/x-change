@@ -49,12 +49,17 @@ it('uses distinct PostgreSQL-safe constraint names for standing funding binding 
     $migrationFiles = [
         dirname(__DIR__, 3).'/database/migrations/2026_08_17_070100_create_x_change_standing_funding_address_binding_heads_table.php',
         dirname(__DIR__, 3).'/database/migrations/2026_08_17_070200_create_x_change_standing_funding_address_binding_migrations_table.php',
+        dirname(__DIR__, 3).'/database/migrations/2026_08_17_120000_create_x_change_standing_funding_address_binding_effective_time_corrections_table.php',
     ];
     $constraintNames = [
         'xchg_standing_binding_head_revision_unique',
         'xchg_standing_binding_head_revision_foreign',
         'xchg_standing_binding_migration_revision_unique',
         'xchg_standing_binding_migration_revision_foreign',
+        'xchg_standing_binding_time_revision_unique',
+        'xchg_standing_binding_time_revision_foreign',
+        'xchg_standing_binding_time_migration_unique',
+        'xchg_standing_binding_time_migration_foreign',
     ];
     $migrationSource = implode("\n", array_map(
         static fn (string $migrationFile): string => (string) file_get_contents($migrationFile),

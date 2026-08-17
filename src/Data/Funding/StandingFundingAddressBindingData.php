@@ -23,8 +23,10 @@ final readonly class StandingFundingAddressBindingData
         public CarbonImmutable $effectiveAt,
     ) {}
 
-    public static function fromRevision(StandingFundingAddressBindingRevision $revision): self
-    {
+    public static function fromRevision(
+        StandingFundingAddressBindingRevision $revision,
+        ?CarbonImmutable $effectiveAt = null,
+    ): self {
         return new self(
             accountReference: $revision->account_reference_ciphertext,
             bindingKey: $revision->binding_key,
@@ -33,7 +35,7 @@ final readonly class StandingFundingAddressBindingData
             revisionId: $revision->getKey(),
             revisionReference: $revision->reference,
             version: $revision->binding_version,
-            effectiveAt: $revision->effective_at,
+            effectiveAt: $effectiveAt ?? $revision->effective_at,
         );
     }
 }

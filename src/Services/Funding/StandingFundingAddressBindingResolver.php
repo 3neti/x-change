@@ -21,19 +21,25 @@ final class StandingFundingAddressBindingResolver
         }
 
         $head = StandingFundingAddressBindingHead::query()
-            ->with('currentBindingRevision')
+            ->with('currentBindingRevision.effectiveTimeCorrection')
             ->whereKey($address->getKey())
             ->first();
 
         if ($head?->currentBindingRevision instanceof StandingFundingAddressBindingRevision) {
             $revision = $head->currentBindingRevision;
+            $effectiveAt = $this->effectiveAt($revision);
 
-            if ($revision->effective_at->isFuture()) {
-                $revision = $revision->previousBindingRevision()->first();
+            if ($effectiveAt->isFuture()) {
+                $revision = $revision->previousBindingRevision()
+                    ->with('effectiveTimeCorrection')
+                    ->first();
             }
 
             if ($revision instanceof StandingFundingAddressBindingRevision) {
-                return StandingFundingAddressBindingData::fromRevision($revision);
+                return StandingFundingAddressBindingData::fromRevision(
+                    $revision,
+                    $this->effectiveAt($revision),
+                );
             }
         }
 
@@ -69,14 +75,19 @@ final class StandingFundingAddressBindingResolver
         }
 
         $revision = StandingFundingAddressBindingRevision::query()
+            ->with('effectiveTimeCorrection')
             ->whereBelongsTo($address)
-            ->where('effective_at', '<=', $occurredAt->format('Y-m-d H:i:s.u'))
-            ->orderByDesc('effective_at')
-            ->orderByDesc('binding_version')
+            ->get()
+            ->filter(fn (StandingFundingAddressBindingRevision $revision): bool => $this
+                ->effectiveAt($revision)->lessThanOrEqualTo($occurredAt->utc()))
+            ->sortByDesc(fn (StandingFundingAddressBindingRevision $revision): string => implode(':', [
+                $this->effectiveAt($revision)->format('Y-m-d H:i:s.u'),
+                str_pad((string) $revision->binding_version, 10, '0', STR_PAD_LEFT),
+            ]))
             ->first();
 
         return $revision instanceof StandingFundingAddressBindingRevision
-            ? StandingFundingAddressBindingData::fromRevision($revision)
+            ? StandingFundingAddressBindingData::fromRevision($revision, $this->effectiveAt($revision))
             : $this->legacy($address);
     }
 
@@ -106,5 +117,11 @@ final class StandingFundingAddressBindingResolver
             version: 0,
             effectiveAt: CarbonImmutable::parse($address->activated_at ?? $address->created_at),
         );
+    }
+
+    private function effectiveAt(StandingFundingAddressBindingRevision $revision): CarbonImmutable
+    {
+        return $revision->effectiveTimeCorrection?->corrected_effective_at
+            ?? $revision->effective_at;
     }
 }

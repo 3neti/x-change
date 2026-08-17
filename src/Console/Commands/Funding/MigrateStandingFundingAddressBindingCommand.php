@@ -48,9 +48,16 @@ final class MigrateStandingFundingAddressBindingCommand extends Command
 
         try {
             $authority->assertAllows($operator, TreasuryOperatorCapability::ViewFundingBindings);
-            $effectiveAt = filled($this->option('effective-at'))
-                ? CarbonImmutable::parse((string) $this->option('effective-at'))
-                : now()->addHour()->toImmutable();
+            $effectiveAtOption = trim((string) $this->option('effective-at'));
+
+            if ($effectiveAtOption !== ''
+                && ! preg_match('/(?:Z|[+-]\d{2}:\d{2})$/', $effectiveAtOption)) {
+                return $this->emitFailure('--effective-at must include Z or a numeric timezone offset.');
+            }
+
+            $effectiveAt = $effectiveAtOption !== ''
+                ? CarbonImmutable::parse($effectiveAtOption)
+                : now()->addHour()->toImmutable()->utc();
             $preview = $inspect->handle($address, $effectiveAt);
 
             if (! (bool) $this->option('commit')) {

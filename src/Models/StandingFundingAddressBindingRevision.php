@@ -6,8 +6,10 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
+use LBHurtado\XChange\Casts\UtcImmutableDateTime;
 
 final class StandingFundingAddressBindingRevision extends Model
 {
@@ -51,7 +53,7 @@ final class StandingFundingAddressBindingRevision extends Model
             'account_reference_ciphertext' => 'encrypted',
             'destination_snapshot_ciphertext' => 'encrypted:array',
             'evidence_snapshot' => 'array',
-            'effective_at' => 'immutable_datetime',
+            'effective_at' => UtcImmutableDateTime::class,
         ];
     }
 
@@ -68,5 +70,13 @@ final class StandingFundingAddressBindingRevision extends Model
     public function activatedBy(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function effectiveTimeCorrection(): HasOne
+    {
+        return $this->hasOne(
+            StandingFundingAddressBindingEffectiveTimeCorrection::class,
+            'standing_funding_address_binding_revision_id',
+        );
     }
 }

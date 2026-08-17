@@ -64,11 +64,11 @@ final readonly class ActivateStandingFundingAddressBindingMigration
                 $address = StandingFundingAddress::query()
                     ->lockForUpdate()
                     ->findOrFail($locked->standing_funding_address_id);
-                $effectiveAt = CarbonImmutable::parse(
+                $approvedEffectiveAt = CarbonImmutable::parse(
                     data_get($locked->evidence_snapshot, 'proposed_effective_at'),
                 );
 
-                if (! $effectiveAt->isFuture()) {
+                if (! $approvedEffectiveAt->isFuture()) {
                     $locked->status = StandingFundingAddressBindingMigrationStatus::ReviewRequired;
                     $locked->save();
                     $this->journal->record(
@@ -81,7 +81,7 @@ final readonly class ActivateStandingFundingAddressBindingMigration
                     return $locked->refresh();
                 }
 
-                $preview = $this->inspect->handle($address, $effectiveAt, $locked->getKey());
+                $preview = $this->inspect->handle($address, $approvedEffectiveAt, $locked->getKey());
 
                 if (! hash_equals($locked->evidence_hash, $preview['evidence_hash'])) {
                     $locked->status = StandingFundingAddressBindingMigrationStatus::ReviewRequired;
@@ -157,7 +157,7 @@ final readonly class ActivateStandingFundingAddressBindingMigration
                     'approval_reference' => $locked->approval_reference,
                     'activated_by_type' => $executor->getMorphClass(),
                     'activated_by_id' => $executor->getKey(),
-                    'effective_at' => $effectiveAt,
+                    'effective_at' => $approvedEffectiveAt->utc(),
                 ]);
 
                 $head ??= new StandingFundingAddressBindingHead([
