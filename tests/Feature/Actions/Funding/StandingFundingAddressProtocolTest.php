@@ -789,7 +789,7 @@ it('fails closed when two mobile-derived bindings resolve to the same address', 
         'wallet:'.$secondWallet->uuid,
         FundingAddressPurpose::AccountFunding,
         FundingRecognitionMode::ObserveOnly,
-    ))->toThrow(InvalidArgumentException::class, 'already bound to another Account');
+    ))->toThrow(InvalidArgumentException::class, 'already bound to a different funding ledger');
     expect(StandingFundingAddress::query()->count())->toBe(1);
 });
 
