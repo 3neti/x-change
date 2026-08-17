@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\XChange\Models\CommercialPartner;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
@@ -29,6 +31,15 @@ it('simulates governed commercial operations and rolls every record back', funct
     Http::preventStrayRequests();
     enableNetbankTreasuryForTests();
     app(TreasuryProvisioningService::class)->provision(['netbank-primary']);
+    app(TreasuryInventoryOperationContract::class)->registerInventory(new TreasuryInventoryData(
+        inventoryReference: 'inventory:netbank:vca-cash',
+        resourceType: 'cash_at_bank',
+        currency: 'PHP',
+        capacityMinor: 0,
+        status: 'requested',
+        idempotencyKey: 'commissioned-inventory-registration',
+        externalReference: 'resource:netbank:corporate-vca',
+    ));
     config()->set('x-change.lifecycle.defaults.user_model', User::class);
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:lifecycle-simulation');
     config()->set('x-change.commercial.legal_trace.profile_version', '2026-08-08.1');

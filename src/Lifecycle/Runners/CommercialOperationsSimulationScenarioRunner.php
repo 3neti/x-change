@@ -23,6 +23,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionDefinitionData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryCustodyMode;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\Commercial\ApprovePartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Actions\Commercial\ManageCommercialPartner;
@@ -641,15 +642,17 @@ final class CommercialOperationsSimulationScenarioRunner implements ScenarioRunn
         int $amountMinor,
         string $scope,
     ): void {
-        $this->inventoryOperations->registerInventory(new TreasuryInventoryData(
-            inventoryReference: $inventoryReference,
-            resourceType: 'cash_at_bank',
-            currency: $currency,
-            capacityMinor: 0,
-            status: 'requested',
-            idempotencyKey: 'lifecycle-commercial-inventory-registration:'.$scope,
-            externalReference: $settlementResourceReference,
-        ));
+        if (! TreasuryInventory::query()->where('inventory_reference', $inventoryReference)->exists()) {
+            $this->inventoryOperations->registerInventory(new TreasuryInventoryData(
+                inventoryReference: $inventoryReference,
+                resourceType: 'cash_at_bank',
+                currency: $currency,
+                capacityMinor: 0,
+                status: 'requested',
+                idempotencyKey: 'lifecycle-commercial-inventory-registration:'.$scope,
+                externalReference: $settlementResourceReference,
+            ));
+        }
         $this->inventoryOperations->recognize(new TreasuryInventoryRecognitionData(
             operationReference: 'lifecycle-commercial-inventory-recognition:'.$scope,
             inventoryReference: $inventoryReference,
