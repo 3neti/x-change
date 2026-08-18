@@ -277,6 +277,33 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 safeExample: 'x-change/claim-evidence',
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_INSTANCE_KEEPSAKE_DISK',
+                description: 'Private durable filesystem disk used for encrypted instance keepsake archives.',
+                category: 'Evidence Storage',
+                configPath: 'x-change.instance_keepsake.disk',
+                safeExample: 'local',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_INSTANCE_KEEPSAKE_DIRECTORY',
+                description: 'Reset-independent private directory prefix for encrypted instance keepsakes.',
+                category: 'Evidence Storage',
+                configPath: 'x-change.instance_keepsake.directory',
+                safeExample: 'x-change/instance-keepsakes',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_INSTANCE_KEEPSAKE_PUBLIC_KEY',
+                description: 'Base64 Sodium recipient public key; the matching private key must remain outside Cloud.',
+                category: 'Evidence Storage',
+                configPath: 'x-change.instance_keepsake.public_key',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_INSTANCE_KEEPSAKE_DOWNLOAD_TTL_MINUTES',
+                description: 'Minutes an authenticated one-time keepsake download grant remains usable.',
+                category: 'Evidence Storage',
+                configPath: 'x-change.instance_keepsake.download_ttl_minutes',
+                safeExample: '30',
+            ),
+            new EnvironmentVariableData(
                 key: 'AWS_ACCESS_KEY_ID',
                 description: 'Private object-storage access key supplied by the deployment platform.',
                 category: 'Evidence Storage',

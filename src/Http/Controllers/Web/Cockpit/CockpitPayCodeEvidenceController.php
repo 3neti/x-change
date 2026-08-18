@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use LBHurtado\SettlementEnvelope\Models\EnvelopeAttachment;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
+use LBHurtado\XChange\Services\Claim\ClaimEvidenceArtifactReader;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeEvidenceAccessJournal;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -23,6 +24,7 @@ final class CockpitPayCodeEvidenceController extends Controller
         private readonly VoucherAccessContract $vouchers,
         private readonly CockpitPayCodeDetailAccess $access,
         private readonly CockpitPayCodeEvidenceAccessJournal $journal,
+        private readonly ClaimEvidenceArtifactReader $artifactReader,
     ) {}
 
     public function __invoke(
@@ -74,42 +76,18 @@ final class CockpitPayCodeEvidenceController extends Controller
             ->where('voucher_id', $voucher->getKey())
             ->findOrFail($evidence);
 
-        abort_unless(
-            filled($item->artifact_disk)
-            && filled($item->artifact_path)
-            && filled($item->mime_type)
-            && filled($item->sha256),
-            404,
-        );
-
         try {
-            $disk = Storage::disk((string) $item->artifact_disk);
-
-            abort_unless($disk->exists((string) $item->artifact_path), 404);
-            $contents = $disk->get((string) $item->artifact_path);
+            $artifact = $this->artifactReader->stored($item);
         } catch (Throwable) {
             abort(404);
         }
 
-        abort_unless(is_string($contents), 404);
-        abort_unless(hash_equals((string) $item->sha256, hash('sha256', $contents)), 404);
-
         return [
-            $contents,
-            (string) $item->mime_type,
-            $item->requirement_key.'.'.$this->extension((string) $item->mime_type),
+            $artifact['contents'],
+            $artifact['mime_type'],
+            $item->requirement_key.'.'.$artifact['extension'],
             $item->requirement_key,
         ];
-    }
-
-    private function extension(string $mimeType): string
-    {
-        return match ($mimeType) {
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-            default => abort(404),
-        };
     }
 
     /** @return array{string, string, string, string} */
@@ -128,32 +106,18 @@ final class CockpitPayCodeEvidenceController extends Controller
 
         $value = (string) $input->getAttribute('value');
 
-        if ($name === 'location') {
-            $location = json_decode($value, true);
-
-            abort_unless(is_array($location) && is_string($location['map'] ?? null), 404);
-            $value = $location['map'];
+        try {
+            $artifact = $this->artifactReader->legacy($value, $name);
+        } catch (Throwable) {
+            abort(404);
         }
 
-        [$contents, $declaredMime] = $this->decodeImage(
-            $value,
-        );
-        $mimeType = (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents) ?: '';
-
-        abort_unless(in_array($mimeType, [
-            'image/jpeg',
-            'image/png',
-            'image/webp',
-        ], true), 404);
-        abort_unless($declaredMime === null || $declaredMime === $mimeType, 404);
-
-        $extension = match ($mimeType) {
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-        };
-
-        return [$contents, $mimeType, $name.'.'.$extension, $name];
+        return [
+            $artifact['contents'],
+            $artifact['mime_type'],
+            $name.'.'.$artifact['extension'],
+            $name,
+        ];
     }
 
     /** @return array{string, string, string, string} */
@@ -186,22 +150,5 @@ final class CockpitPayCodeEvidenceController extends Controller
             basename((string) $attachment->original_filename),
             (string) $attachment->doc_type,
         ];
-    }
-
-    /** @return array{string, string|null} */
-    private function decodeImage(string $value): array
-    {
-        $declaredMime = null;
-
-        if (preg_match('/^data:([^;]+);base64,(.+)$/s', $value, $matches) === 1) {
-            $declaredMime = $matches[1];
-            $value = $matches[2];
-        }
-
-        $contents = base64_decode(preg_replace('/\s+/', '', $value) ?? '', true);
-
-        abort_unless(is_string($contents) && $contents !== '', 404);
-
-        return [$contents, $declaredMime];
     }
 }

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/pay-codes.v1.json",
+  "title": "X-Change Historical Pay Code Snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "issued_codes_are_historical_only", "pay_codes"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.pay-codes.v1"},
+    "issued_codes_are_historical_only": {"const": true},
+    "pay_codes": {"type": "array", "items": {"type": "object", "required": ["reference", "code", "historical_only", "restorable"]}}
+  }
+}

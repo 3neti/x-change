@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/manifest.v1.json",
+  "title": "X-Change Instance Keepsake Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "plan_hash", "observed_at", "created_at", "package_version", "complete", "omission_count", "encrypted", "restoration_authority", "entries"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.manifest.v1"},
+    "plan_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "observed_at": {"type": "string"},
+    "created_at": {"type": "string"},
+    "package_version": {"type": "string"},
+    "complete": {"type": "boolean"},
+    "omission_count": {"type": "integer", "minimum": 0},
+    "encrypted": {"const": true},
+    "restoration_authority": {"const": false},
+    "entries": {"type": "array", "items": {"type": "object"}}
+  }
+}

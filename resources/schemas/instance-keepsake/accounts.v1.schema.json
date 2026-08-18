@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/accounts.v1.json",
+  "title": "X-Change Account Observation Snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "accounts"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.accounts.v1"},
+    "accounts": {"type": "array", "items": {"type": "object", "required": ["account_reference", "currency", "authority", "restorable", "reconciliation_required"]}}
+  }
+}

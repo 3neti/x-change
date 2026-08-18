@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/pay-code-templates.v1.json",
+  "title": "X-Change Inert Pay Code Template Blueprint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "inert", "original_codes_included", "templates"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.pay-code-templates.v1"},
+    "inert": {"const": true},
+    "original_codes_included": {"const": false},
+    "templates": {"type": "array", "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "account_reference", "name", "description", "base_template_key", "include_amount", "include_purpose", "instructions_included", "requires_review"],
+      "properties": {
+        "reference": {"type": "string"},
+        "account_reference": {"type": "string"},
+        "name": {"type": "string"},
+        "description": {"type": ["string", "null"]},
+        "base_template_key": {"type": "string"},
+        "include_amount": {"type": "boolean"},
+        "include_purpose": {"type": "boolean"},
+        "instructions_included": {"const": false},
+        "requires_review": {"const": true}
+      }
+    }}
+  }
+}

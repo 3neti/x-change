@@ -103,6 +103,9 @@ use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
 use LBHurtado\XChange\Console\Commands\GenerateDeploymentManifestCommand;
 use LBHurtado\XChange\Console\Commands\InspectXChangeConfigurationCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Keepsake\ExportInstanceKeepsakeCommand;
+use LBHurtado\XChange\Console\Commands\Keepsake\GenerateInstanceKeepsakeKeyCommand;
+use LBHurtado\XChange\Console\Commands\Keepsake\VerifyInstanceKeepsakeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioGroupCommand;
@@ -212,6 +215,8 @@ use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\FundingProjectionPublisherContract;
 use LBHurtado\XChange\Contracts\InstructionCapabilityContributor;
+use LBHurtado\XChange\Contracts\Keepsake\InstanceKeepsakeAccessContract;
+use LBHurtado\XChange\Contracts\Keepsake\InstanceKeepsakeContributor;
 use LBHurtado\XChange\Contracts\LifecycleScenarioContributor;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
@@ -413,6 +418,11 @@ use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
+use LBHurtado\XChange\Services\Keepsake\Contributors\AccountSnapshotKeepsakeContributor;
+use LBHurtado\XChange\Services\Keepsake\Contributors\ClaimEvidenceKeepsakeContributor;
+use LBHurtado\XChange\Services\Keepsake\Contributors\PayCodeSummaryKeepsakeContributor;
+use LBHurtado\XChange\Services\Keepsake\GrantedInstanceKeepsakeAccess;
+use LBHurtado\XChange\Services\Keepsake\InstanceKeepsakeContributorCatalog;
 use LBHurtado\XChange\Services\LinkPreview\LinkCanonicalizerRegistry;
 use LBHurtado\XChange\Services\LinkPreview\LinkPreviewDriverRepository;
 use LBHurtado\XChange\Services\LinkPreview\LinkPreviewEngine;
@@ -585,6 +595,24 @@ class XChangeServiceProvider extends ServiceProvider
             fn ($app): PublicationCatalog => new PublicationCatalog(
                 $app->tagged(XChangePublicationContributor::class),
             ),
+        );
+        $this->app->singleton(AccountSnapshotKeepsakeContributor::class);
+        $this->app->singleton(PayCodeSummaryKeepsakeContributor::class);
+        $this->app->singleton(ClaimEvidenceKeepsakeContributor::class);
+        $this->app->tag([
+            AccountSnapshotKeepsakeContributor::class,
+            PayCodeSummaryKeepsakeContributor::class,
+            ClaimEvidenceKeepsakeContributor::class,
+        ], InstanceKeepsakeContributor::class);
+        $this->app->singleton(
+            InstanceKeepsakeContributorCatalog::class,
+            fn ($app): InstanceKeepsakeContributorCatalog => new InstanceKeepsakeContributorCatalog(
+                $app->tagged(InstanceKeepsakeContributor::class),
+            ),
+        );
+        $this->app->singleton(
+            InstanceKeepsakeAccessContract::class,
+            GrantedInstanceKeepsakeAccess::class,
         );
         $this->app->singleton(CloudStateReaderContract::class, LaravelCloudCliStateReader::class);
         $this->app->singleton(CloudMutationGatewayContract::class, LaravelCloudCliMutationGateway::class);
@@ -1380,6 +1408,9 @@ class XChangeServiceProvider extends ServiceProvider
                 OnboardIssuerCommand::class,
                 OpenIssuerWalletCommand::class,
                 VerifyTestMobileCommand::class,
+                ExportInstanceKeepsakeCommand::class,
+                GenerateInstanceKeepsakeKeyCommand::class,
+                VerifyInstanceKeepsakeCommand::class,
                 GetWalletBalanceCommand::class,
                 EstimatePayCodeCostCommand::class,
                 GeneratePayCodeCommand::class,

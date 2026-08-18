@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/location.v1.json",
+  "title": "X-Change Sensitive Location Snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sensitive", "location"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.location.v1"},
+    "sensitive": {"const": true},
+    "location": {"type": "object"}
+  }
+}

@@ -2520,6 +2520,28 @@ return [
         ],
     ],
 
+    'instance_keepsake' => [
+        'disk' => env(
+            'XCHANGE_INSTANCE_KEEPSAKE_DISK',
+            env('XCHANGE_CLAIM_EVIDENCE_DISK', 'local'),
+        ),
+        'directory' => env(
+            'XCHANGE_INSTANCE_KEEPSAKE_DIRECTORY',
+            'x-change/instance-keepsakes',
+        ),
+        'public_key' => env('XCHANGE_INSTANCE_KEEPSAKE_PUBLIC_KEY'),
+        'download_ttl_minutes' => (int) env(
+            'XCHANGE_INSTANCE_KEEPSAKE_DOWNLOAD_TTL_MINUTES',
+            30,
+        ),
+        'chunk_size' => 100,
+        'max_users' => 1_000,
+        'max_pay_codes' => 10_000,
+        'max_artifacts' => 20_000,
+        'max_item_bytes' => 10 * 1024 * 1024,
+        'max_total_bytes' => 512 * 1024 * 1024,
+    ],
+
     'disbursement' => [
         'reconciliation' => [
             'scheduled_enabled' => (bool) env(

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/claim-evidence.v1.json",
+  "title": "X-Change Claim Evidence Snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "blueprint_eligible", "records", "omissions"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.claim-evidence.v1"},
+    "blueprint_eligible": {"const": false},
+    "records": {"type": "array", "items": {"type": "object", "required": ["requirement", "source", "archive_path", "mime_type", "size", "sha256"]}},
+    "omissions": {"type": "array", "items": {"type": "object"}}
+  }
+}

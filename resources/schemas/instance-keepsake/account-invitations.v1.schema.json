@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/account-invitations.v1.json",
+  "title": "X-Change Inert Account Invitation Blueprint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "inert", "importer_included", "invitations"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.account-invitations.v1"},
+    "inert": {"const": true},
+    "importer_included": {"const": false},
+    "invitations": {"type": "array", "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "profile", "desired_state", "enabled", "requires_reverification", "credentials_included", "authority_included", "financial_state_included"],
+      "properties": {
+        "reference": {"type": "string"},
+        "profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "email", "mobile"],
+          "properties": {
+            "name": {"type": ["string", "null"]},
+            "email": {"type": ["string", "null"]},
+            "mobile": {"type": ["string", "null"]}
+          }
+        },
+        "desired_state": {"const": "pending"},
+        "enabled": {"const": false},
+        "requires_reverification": {"const": true},
+        "credentials_included": {"const": false},
+        "authority_included": {"const": false},
+        "financial_state_included": {"const": false}
+      }
+    }}
+  }
+}
