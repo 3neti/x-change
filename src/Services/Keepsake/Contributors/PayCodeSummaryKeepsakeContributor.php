@@ -8,6 +8,7 @@ use BackedEnum;
 use LBHurtado\XChange\Contracts\Keepsake\InstanceKeepsakeContributor;
 use LBHurtado\XChange\Data\Keepsake\InstanceKeepsakeContext;
 use LBHurtado\XChange\Data\Keepsake\InstanceKeepsakeContribution;
+use LBHurtado\XChange\Exceptions\InstanceKeepsakeException;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Keepsake\CanonicalKeepsakeJson;
 
@@ -47,7 +48,7 @@ final readonly class PayCodeSummaryKeepsakeContributor implements InstanceKeepsa
             $payCodes[] = [
                 'reference' => $voucher['reference'],
                 'account_reference' => $this->ownerReference($context, $model),
-                'code' => (string) $model->getAttribute('code'),
+                'code_fingerprint' => $this->codeFingerprint((string) $model->getAttribute('code')),
                 'state' => $this->stringValue($model->getAttribute('state')),
                 'amount_minor' => is_numeric($amount) ? (int) round(((float) $amount) * 100) : null,
                 'currency' => is_object($cash) && filled($cash->currency ?? null)
@@ -147,5 +148,19 @@ final readonly class PayCodeSummaryKeepsakeContributor implements InstanceKeepsa
         }
 
         return is_scalar($value) ? (string) $value : null;
+    }
+
+    private function codeFingerprint(string $code): string
+    {
+        $key = (string) config('app.key');
+
+        if ($key === '') {
+            throw new InstanceKeepsakeException(
+                'encryption_unavailable',
+                'The application key is required to redact Pay Code credentials.',
+            );
+        }
+
+        return hash_hmac('sha256', 'keepsake-pay-code|'.$code, $key);
     }
 }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -46,6 +47,7 @@ it('creates downloads and independently verifies an encrypted keepsake', functio
     config()->set('x-change.instance_keepsake.disk', 'keepsakes');
     config()->set('x-change.instance_keepsake.directory', 'x-change/instance-keepsakes');
     $this->withoutMiddleware(ShareXChangeBranding::class);
+    $this->withoutMiddleware(ThrottleRequests::class);
     provisionTestSystemPrincipalForCommissioning();
     $keys = app(InstanceKeepsakeCrypto::class)->generateKeyPair();
     config()->set('x-change.instance_keepsake.public_key', $keys['public_key']);
@@ -103,17 +105,26 @@ it('creates downloads and independently verifies an encrypted keepsake', functio
     $storedArchive = Storage::disk('keepsakes')->get($archivePath);
     Storage::disk('keepsakes')->put($archivePath, 'tampered archive');
     $this->actingAs($user)
-        ->get('/x/cockpit/instance-keepsakes/before-fresh-test/download')
+        ->post('/x/cockpit/instance-keepsakes/before-fresh-test/download')
         ->assertNotFound();
     Storage::disk('keepsakes')->put($archivePath, $storedArchive);
 
     $this->actingAs($user)
         ->get('/x/cockpit/instance-keepsakes/before-fresh-test/download')
         ->assertSuccessful()
-        ->assertHeader('content-type', 'application/octet-stream');
+        ->assertSee('Download encrypted archive');
 
     $this->actingAs($user)
         ->get('/x/cockpit/instance-keepsakes/before-fresh-test/download')
+        ->assertSuccessful();
+
+    $this->actingAs($user)
+        ->post('/x/cockpit/instance-keepsakes/before-fresh-test/download')
+        ->assertSuccessful()
+        ->assertHeader('content-type', 'application/octet-stream');
+
+    $this->actingAs($user)
+        ->post('/x/cockpit/instance-keepsakes/before-fresh-test/download')
         ->assertNotFound();
 
     fakePayoutProvider()->assertNoDisbursementAttempted();
@@ -149,6 +160,21 @@ it('requires a separate acknowledgement for precise location data', function () 
         '--include' => ['claim-evidence'],
         '--include-location-data' => true,
         '--confirm-sensitive-export' => true,
+        '--json' => true,
+    ])->expectsOutputToContain('confirmation_required')
+        ->assertFailed();
+});
+
+it('requires sensitive confirmation whenever claim evidence is in scope', function () {
+    $user = User::query()->create([
+        'name' => 'Keepsake User',
+        'email' => 'keepsake@example.test',
+        'password' => 'secret',
+    ]);
+
+    $this->artisan('x-change:instance-keepsake:export', [
+        '--user' => [$user->getKey()],
+        '--include' => ['claim-evidence'],
         '--json' => true,
     ])->expectsOutputToContain('confirmation_required')
         ->assertFailed();

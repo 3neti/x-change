@@ -48,8 +48,10 @@ final class ExportInstanceKeepsakeCommand extends Command
             $allUsers = (bool) $this->option('all-users');
             $includesPersonalData = (bool) $this->option('include-personal-data');
             $includesLocationData = (bool) $this->option('include-location-data');
+            $includes = $this->includes();
+            $includesClaimEvidence = $includes === [] || in_array('claim-evidence', $includes, true);
 
-            if (($allUsers || $includesPersonalData || $includesLocationData)
+            if (($allUsers || $includesPersonalData || $includesLocationData || $includesClaimEvidence)
                 && ! (bool) $this->option('confirm-sensitive-export')) {
                 throw new InstanceKeepsakeException('confirmation_required', 'Sensitive scope requires --confirm-sensitive-export.');
             }
@@ -65,7 +67,7 @@ final class ExportInstanceKeepsakeCommand extends Command
             $plan = $planner->handle(
                 allUsers: $allUsers,
                 userIdentifiers: array_values(array_filter(array_map('strval', (array) $this->option('user')))),
-                includes: $this->includes(),
+                includes: $includes,
                 includePersonalData: $includesPersonalData,
                 includeLocationData: $includesLocationData,
                 allowIncomplete: (bool) $this->option('allow-incomplete'),

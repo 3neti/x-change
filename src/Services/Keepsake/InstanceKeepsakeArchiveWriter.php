@@ -89,7 +89,11 @@ final readonly class InstanceKeepsakeArchiveWriter
 
             chmod($zipPath, 0600);
 
-            $this->crypto->encrypt($zipPath, $encryptedPath, $publicKey);
+            try {
+                $this->crypto->encrypt($zipPath, $encryptedPath, $publicKey);
+            } finally {
+                @unlink($zipPath);
+            }
 
             return [
                 'encrypted_path' => $encryptedPath,

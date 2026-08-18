@@ -10,6 +10,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\XChange\Contracts\Keepsake\InstanceKeepsakeAccessContract;
+use LBHurtado\XChange\Enums\DeploymentRuntimeTier;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class CockpitInstanceKeepsakeDownloadController extends Controller
@@ -22,6 +23,7 @@ final class CockpitInstanceKeepsakeDownloadController extends Controller
         $directory = trim((string) config('x-change.instance_keepsake.directory', 'x-change/instance-keepsakes'), '/');
         $metadataPath = $directory.'/'.$reference.'/grant.json';
         $disk = Storage::disk($diskName);
+        $this->assertSharedLockStore();
 
         abort_unless($disk->exists($metadataPath), 404);
         $grant = json_decode((string) $disk->get($metadataPath), true);
@@ -39,31 +41,34 @@ final class CockpitInstanceKeepsakeDownloadController extends Controller
             CarbonImmutable::parse((string) ($grant['expires_at'] ?? '1970-01-01'))->isFuture(),
             404,
         );
+        $archivePath = (string) ($grant['archive_path'] ?? '');
+        $archiveHash = (string) ($grant['archive_sha256'] ?? '');
+        $integrityStream = $disk->readStream($archivePath);
+        abort_unless(is_resource($integrityStream), 404);
+        $hash = hash_init('sha256');
+        hash_update_stream($hash, $integrityStream);
+        fclose($integrityStream);
+        abort_unless(hash_equals($archiveHash, hash_final($hash)), 404);
 
         return Cache::lock('x-change:instance-keepsake-download:'.hash('sha256', $reference), 30)
-            ->block(3, function () use ($disk, $metadataPath): StreamedResponse {
+            ->block(3, function () use ($actor, $archiveHash, $archivePath, $disk, $metadataPath): StreamedResponse {
                 $fresh = json_decode((string) $disk->get($metadataPath), true);
 
                 abort_unless(
                     is_array($fresh)
                     && ($fresh['published'] ?? false) === true
-                    && blank($fresh['consumed_at'] ?? null),
+                    && blank($fresh['consumed_at'] ?? null)
+                    && $actor !== null
+                    && $this->access->canDownload($actor, $fresh)
+                    && CarbonImmutable::parse((string) ($fresh['expires_at'] ?? '1970-01-01'))->isFuture()
+                    && hash_equals($archivePath, (string) ($fresh['archive_path'] ?? ''))
+                    && hash_equals($archiveHash, (string) ($fresh['archive_sha256'] ?? '')),
                     404,
                 );
-                $archivePath = (string) $fresh['archive_path'];
-                $integrityStream = $disk->readStream($archivePath);
-                abort_unless(is_resource($integrityStream), 404);
-                $hash = hash_init('sha256');
-                hash_update_stream($hash, $integrityStream);
-                fclose($integrityStream);
-                abort_unless(
-                    hash_equals((string) ($fresh['archive_sha256'] ?? ''), hash_final($hash)),
-                    404,
-                );
-                $stream = $disk->readStream($archivePath);
-                abort_unless(is_resource($stream), 404);
                 $fresh['consumed_at'] = CarbonImmutable::now('UTC')->toIso8601String();
                 abort_unless($disk->put($metadataPath, json_encode($fresh, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)), 404);
+                $stream = $disk->readStream($archivePath);
+                abort_unless(is_resource($stream), 404);
 
                 return response()->streamDownload(
                     static function () use ($stream): void {
@@ -83,5 +88,17 @@ final class CockpitInstanceKeepsakeDownloadController extends Controller
                     ],
                 );
             });
+    }
+
+    private function assertSharedLockStore(): void
+    {
+        $runtimeTier = DeploymentRuntimeTier::resolve((string) config(
+            'x-change.deployment.runtime_tier',
+            DeploymentRuntimeTier::Local->value,
+        ));
+
+        if ($runtimeTier->requiresDurableInfrastructure()) {
+            abort_if(in_array((string) config('cache.default'), ['array', 'file', 'null'], true), 503);
+        }
     }
 }

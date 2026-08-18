@@ -79,7 +79,7 @@ final class InstanceKeepsakeSchemaValidator
     {
         $this->assertExactKeys($document, ['schema', 'issued_codes_are_historical_only', 'pay_codes']);
         $this->assertList($document['pay_codes'] ?? null, [
-            'reference', 'account_reference', 'code', 'state', 'amount_minor', 'currency',
+            'reference', 'account_reference', 'code_fingerprint', 'state', 'amount_minor', 'currency',
             'created_at', 'expires_at', 'redeemed_at', 'historical_only', 'restorable',
         ]);
 

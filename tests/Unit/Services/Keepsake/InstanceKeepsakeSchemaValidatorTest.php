@@ -67,6 +67,31 @@ it('rejects financial state in a bootstrap blueprint', function () {
     ))->toThrow(InstanceKeepsakeException::class, 'forbidden field');
 });
 
+it('rejects a raw Pay Code bearer credential', function () {
+    $contents = json_encode([
+        'schema' => 'x-change.instance-keepsake.pay-codes.v1',
+        'issued_codes_are_historical_only' => true,
+        'pay_codes' => [[
+            'reference' => 'pay-code-000001',
+            'account_reference' => 'account-000001',
+            'code' => 'ABCD',
+            'state' => 'active',
+            'amount_minor' => 100,
+            'currency' => 'PHP',
+            'created_at' => null,
+            'expires_at' => null,
+            'redeemed_at' => null,
+            'historical_only' => true,
+            'restorable' => false,
+        ]],
+    ], JSON_THROW_ON_ERROR);
+
+    expect(fn () => app(InstanceKeepsakeSchemaValidator::class)->validate(
+        'snapshot/pay-codes.json',
+        $contents,
+    ))->toThrow(InstanceKeepsakeException::class);
+});
+
 it('ships parseable versioned JSON schemas', function () {
     $schemas = glob(dirname(__DIR__, 4).'/resources/schemas/instance-keepsake/*.json') ?: [];
 

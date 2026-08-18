@@ -36,45 +36,57 @@ final class InstanceKeepsakeCrypto
             throw new InstanceKeepsakeException('storage_unavailable', 'The keepsake encryption workspace is unavailable.');
         }
 
+        $key = null;
+
         try {
-            chmod($destination, 0600);
-            $sourceSize = filesize($source);
+            try {
+                chmod($destination, 0600);
+                $sourceSize = filesize($source);
 
-            if (! is_int($sourceSize) || $sourceSize < 1) {
-                throw new InstanceKeepsakeException('storage_unavailable', 'The keepsake archive is empty or unreadable.');
-            }
-
-            $key = random_bytes(SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES);
-            [$state, $header] = sodium_crypto_secretstream_xchacha20poly1305_init_push($key);
-            $sealedKey = sodium_crypto_box_seal($key, $publicKey);
-            sodium_memzero($key);
-
-            fwrite($output, self::MAGIC);
-            fwrite($output, pack('n', strlen($sealedKey)));
-            fwrite($output, $sealedKey);
-            fwrite($output, $header);
-
-            while (! feof($input)) {
-                $chunk = fread($input, 1024 * 1024);
-
-                if (! is_string($chunk)) {
-                    throw new InstanceKeepsakeException('storage_unavailable', 'The keepsake archive could not be read for encryption.');
+                if (! is_int($sourceSize) || $sourceSize < 1) {
+                    throw new InstanceKeepsakeException('storage_unavailable', 'The keepsake archive is empty or unreadable.');
                 }
 
-                if ($chunk === '' && feof($input)) {
-                    break;
+                $key = random_bytes(SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES);
+                [$state, $header] = sodium_crypto_secretstream_xchacha20poly1305_init_push($key);
+                $sealedKey = sodium_crypto_box_seal($key, $publicKey);
+                $this->writeExactly($output, self::MAGIC);
+                $this->writeExactly($output, pack('n', strlen($sealedKey)));
+                $this->writeExactly($output, $sealedKey);
+                $this->writeExactly($output, $header);
+
+                while (! feof($input)) {
+                    $chunk = fread($input, 1024 * 1024);
+
+                    if (! is_string($chunk)) {
+                        throw new InstanceKeepsakeException('storage_unavailable', 'The keepsake archive could not be read for encryption.');
+                    }
+
+                    if ($chunk === '' && feof($input)) {
+                        break;
+                    }
+
+                    $tag = ftell($input) >= $sourceSize
+                        ? SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_FINAL
+                        : SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_MESSAGE;
+                    $ciphertext = sodium_crypto_secretstream_xchacha20poly1305_push($state, $chunk, '', $tag);
+                    $this->writeExactly($output, pack('N', strlen($ciphertext)));
+                    $this->writeExactly($output, $ciphertext);
                 }
 
-                $tag = ftell($input) >= $sourceSize
-                    ? SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_FINAL
-                    : SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_MESSAGE;
-                $ciphertext = sodium_crypto_secretstream_xchacha20poly1305_push($state, $chunk, '', $tag);
-                fwrite($output, pack('N', strlen($ciphertext)));
-                fwrite($output, $ciphertext);
+                if (! fflush($output)) {
+                    throw new InstanceKeepsakeException('storage_unavailable', 'The encrypted keepsake could not be flushed safely.');
+                }
+            } finally {
+                fclose($input);
+                fclose($output);
             }
+
+            $this->verifyEncryptedOutput($destination, $key);
         } finally {
-            fclose($input);
-            fclose($output);
+            if (is_string($key)) {
+                sodium_memzero($key);
+            }
         }
     }
 
@@ -130,7 +142,7 @@ final class InstanceKeepsakeCrypto
                 }
 
                 [$plaintext, $tag] = $opened;
-                fwrite($output, $plaintext);
+                $this->writeExactly($output, $plaintext);
                 $finalSeen = $tag === SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_FINAL;
 
                 if ($finalSeen && ! feof($input)) {
@@ -171,5 +183,85 @@ final class InstanceKeepsakeCrypto
         }
 
         return $contents;
+    }
+
+    /** @param resource $stream */
+    private function writeExactly($stream, string $contents): void
+    {
+        $written = 0;
+        $length = strlen($contents);
+
+        while ($written < $length) {
+            $bytes = fwrite($stream, substr($contents, $written));
+
+            if (! is_int($bytes) || $bytes < 1) {
+                throw new InstanceKeepsakeException('storage_unavailable', 'The keepsake archive could not be written completely.');
+            }
+
+            $written += $bytes;
+        }
+    }
+
+    private function verifyEncryptedOutput(string $path, ?string $key): void
+    {
+        if (! is_string($key)) {
+            throw new InstanceKeepsakeException('encryption_unavailable', 'The keepsake encryption key was not initialized.');
+        }
+
+        $stream = fopen($path, 'rb');
+
+        if (! is_resource($stream)) {
+            throw new InstanceKeepsakeException('storage_unavailable', 'The encrypted keepsake could not be reopened for verification.');
+        }
+
+        try {
+            if ($this->readExactly($stream, strlen(self::MAGIC)) !== self::MAGIC) {
+                throw new InstanceKeepsakeException('integrity_mismatch', 'The encrypted keepsake framing is invalid.');
+            }
+
+            $sealedKeyLength = unpack('nlength', $this->readExactly($stream, 2))['length'] ?? 0;
+            $this->readExactly($stream, $sealedKeyLength);
+            $header = $this->readExactly($stream, SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES);
+            $state = sodium_crypto_secretstream_xchacha20poly1305_init_pull($header, $key);
+            $finalSeen = false;
+
+            while (! feof($stream)) {
+                $lengthBytes = fread($stream, 4);
+
+                if ($lengthBytes === '' && feof($stream)) {
+                    break;
+                }
+
+                if (! is_string($lengthBytes) || strlen($lengthBytes) !== 4) {
+                    throw new InstanceKeepsakeException('integrity_mismatch', 'The encrypted keepsake framing is incomplete.');
+                }
+
+                $frameLength = unpack('Nlength', $lengthBytes)['length'] ?? 0;
+                $opened = sodium_crypto_secretstream_xchacha20poly1305_pull(
+                    $state,
+                    $this->readExactly($stream, $frameLength),
+                );
+
+                if (! is_array($opened)) {
+                    throw new InstanceKeepsakeException('integrity_mismatch', 'The encrypted keepsake failed authentication.');
+                }
+
+                $finalSeen = $opened[1] === SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_FINAL;
+
+                if ($finalSeen) {
+                    if (fread($stream, 1) !== '') {
+                        throw new InstanceKeepsakeException('integrity_mismatch', 'The encrypted keepsake contains data after its final frame.');
+                    }
+
+                    break;
+                }
+            }
+
+            if (! $finalSeen) {
+                throw new InstanceKeepsakeException('integrity_mismatch', 'The encrypted keepsake is missing its final frame.');
+            }
+        } finally {
+            fclose($stream);
+        }
     }
 }

@@ -61,6 +61,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestReviewCo
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransferCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadShowController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientConnectionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientController;
@@ -550,6 +551,12 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         )->name('x-change.cockpit.funding.reconciliations.approve');
         Route::get('quick-generate', CockpitQuickGeneratePageController::class)->name('x-change.cockpit.quick-generate');
         Route::get(
+            'instance-keepsakes/{reference}/download',
+            CockpitInstanceKeepsakeDownloadShowController::class,
+        )->where('reference', '[A-Za-z0-9][A-Za-z0-9._-]{5,95}')
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.instance-keepsakes.download.show');
+        Route::post(
             'instance-keepsakes/{reference}/download',
             CockpitInstanceKeepsakeDownloadController::class,
         )->where('reference', '[A-Za-z0-9][A-Za-z0-9._-]{5,95}')

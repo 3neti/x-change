@@ -8,6 +8,6 @@
   "properties": {
     "schema": {"const": "x-change.instance-keepsake.pay-codes.v1"},
     "issued_codes_are_historical_only": {"const": true},
-    "pay_codes": {"type": "array", "items": {"type": "object", "required": ["reference", "code", "historical_only", "restorable"]}}
+    "pay_codes": {"type": "array", "items": {"type": "object", "required": ["reference", "code_fingerprint", "historical_only", "restorable"]}}
   }
 }
