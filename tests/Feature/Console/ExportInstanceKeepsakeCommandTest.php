@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\XChange\Actions\Keepsake\PlanInstanceKeepsakeExport;
@@ -66,6 +67,8 @@ it('creates downloads and independently verifies an encrypted keepsake', functio
         allowIncomplete: false,
         materializeArtifacts: false,
     );
+    DB::flushQueryLog();
+    DB::enableQueryLog();
 
     $exitCode = Artisan::call('x-change:instance-keepsake:export', [
         '--all-users' => true,
@@ -81,6 +84,14 @@ it('creates downloads and independently verifies an encrypted keepsake', functio
     ]);
     expect($exitCode)->toBe(0);
     $created = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+    $granteeLookup = collect(DB::getQueryLog())
+        ->first(fn (array $query): bool => str_contains($query['query'], 'from "users"')
+            && in_array($user->email, $query['bindings'], true));
+
+    expect($granteeLookup)->not->toBeNull()
+        ->and($granteeLookup['query'])->toContain('"email" = ?')
+        ->and($granteeLookup['query'])->not->toContain('"id" = ?');
+    DB::disableQueryLog();
 
     $archivePath = 'x-change/instance-keepsakes/before-fresh-test/instance-keepsake.xck';
     Storage::disk('keepsakes')->assertExists($archivePath);

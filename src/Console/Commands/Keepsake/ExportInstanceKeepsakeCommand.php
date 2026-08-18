@@ -154,10 +154,22 @@ final class ExportInstanceKeepsakeCommand extends Command
         $instance = new $model;
         $grantee = $model::query()
             ->where(function ($query) use ($instance, $identifier): void {
-                $query->where($instance->getKeyName(), $identifier);
+                $hasLookup = false;
+
+                if ($instance->getKeyType() !== 'int' || ctype_digit($identifier)) {
+                    $query->where($instance->getKeyName(), $identifier);
+                    $hasLookup = true;
+                }
 
                 if (Schema::hasColumn($instance->getTable(), 'email')) {
-                    $query->orWhere('email', $identifier);
+                    $hasLookup
+                        ? $query->orWhere('email', $identifier)
+                        : $query->where('email', $identifier);
+                    $hasLookup = true;
+                }
+
+                if (! $hasLookup) {
+                    $query->whereRaw('1 = 0');
                 }
             })
             ->first();
