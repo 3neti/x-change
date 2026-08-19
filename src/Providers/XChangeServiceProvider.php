@@ -397,6 +397,7 @@ use LBHurtado\XChange\Services\Deployment\LaravelCloudCliStateReader;
 use LBHurtado\XChange\Services\Disbursement\LayeredPayoutDestinationValidator;
 use LBHurtado\XChange\Services\Disbursement\UnavailableProviderPayoutDestinationValidation;
 use LBHurtado\XChange\Services\EventLifecycleService;
+use LBHurtado\XChange\Services\Execution\AuthenticatedStoredValueHolderAuthority;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffPipeline;
 use LBHurtado\XChange\Services\Execution\LifecycleExecutionCashDisbursementPoller;
@@ -406,8 +407,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
-use LBHurtado\XChange\Services\Execution\UnavailableStoredValueDestinationAuthority;
-use LBHurtado\XChange\Services\Execution\UnavailableStoredValueHolderAuthority;
+use LBHurtado\XChange\Services\Execution\PartnerApiStoredValueDestinationAuthority;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
@@ -541,12 +541,12 @@ class XChangeServiceProvider extends ServiceProvider
                 $app->tagged(DeploymentEnvironmentContributor::class),
             ),
         );
-        $this->app->singleton(CoreInstructionCapabilityContributor::class);
+        $this->app->scoped(CoreInstructionCapabilityContributor::class);
         $this->app->tag(
             CoreInstructionCapabilityContributor::class,
             InstructionCapabilityContributor::class,
         );
-        $this->app->singleton(
+        $this->app->scoped(
             InstructionCapabilityReadinessRegistry::class,
             fn ($app): InstructionCapabilityReadinessRegistry => new InstructionCapabilityReadinessRegistry(
                 $app->tagged(InstructionCapabilityContributor::class),
@@ -1239,19 +1239,19 @@ class XChangeServiceProvider extends ServiceProvider
             XChangeSettlementEnvelopeExecutionGateway::class,
         );
 
-        $this->app->singleton(
+        $this->app->scoped(
             StoredValueExecutionGateway::class,
             WalletStoredValueExecutionGateway::class,
         );
 
-        $this->app->singleton(
+        $this->app->scoped(
             StoredValueDestinationAuthorityContract::class,
-            UnavailableStoredValueDestinationAuthority::class,
+            PartnerApiStoredValueDestinationAuthority::class,
         );
 
         $this->app->singleton(
             StoredValueHolderAuthorityContract::class,
-            UnavailableStoredValueHolderAuthority::class,
+            AuthenticatedStoredValueHolderAuthority::class,
         );
 
         $this->app->bind(

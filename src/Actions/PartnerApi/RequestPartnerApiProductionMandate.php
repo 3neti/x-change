@@ -13,6 +13,7 @@ use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
 use LBHurtado\XChange\Enums\PartnerApiProductionMandateStatus;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiGovernanceJournal;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiMandateValidator;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 
 final readonly class RequestPartnerApiProductionMandate
@@ -21,6 +22,7 @@ final readonly class RequestPartnerApiProductionMandate
         private PartnerApiOperatorAuthority $authority,
         private PartnerApiGovernanceJournal $journal,
         private SystemUserResolverContract $systemPrincipal,
+        private PartnerApiMandateValidator $mandates,
     ) {}
 
     /** @param list<string> $scopes @param array<string, mixed> $mandate */
@@ -31,12 +33,19 @@ final readonly class RequestPartnerApiProductionMandate
             throw new AuthorizationException('Production Partner API maker authority is required.');
         }
 
+        $resolvedScopes = array_values(array_unique($scopes));
+        $resolvedMandate = array_replace_recursive(
+            (array) config('x-change.partner_api.default_mandate', []),
+            $mandate,
+        );
+        $this->mandates->validate($resolvedScopes, $resolvedMandate);
+
         $snapshot = [
             'name' => trim($name),
             'issuer_type' => $issuer->getMorphClass(),
             'issuer_id' => (string) $issuer->getKey(),
-            'scopes' => array_values(array_unique($scopes)),
-            'mandate' => $mandate,
+            'scopes' => $resolvedScopes,
+            'mandate' => $resolvedMandate,
         ];
         $hash = hash('sha256', json_encode($snapshot, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
 

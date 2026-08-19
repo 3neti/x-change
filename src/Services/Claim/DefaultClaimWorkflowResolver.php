@@ -44,6 +44,21 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
             return $this->onboardingWorkflow($voucher);
         }
 
+        if ($driver === 'stored_value') {
+            return new ClaimWorkflowDescriptorData(
+                key: 'stored-value.activation.v1',
+                requires_mobile: true,
+                requires_destination: false,
+                requires_amount: false,
+                title: 'Activate Reusable Balance',
+                description: 'Sign in and verify your mobile number to bind this reusable balance to your Account.',
+                confirmation_label: 'Activate My Balance',
+                authentication_mode: ClaimAuthenticationMode::ClaimantHandoff,
+                required_claim_fields: ['mobile', 'otp'],
+                review: ['stored_value_activation' => true],
+            );
+        }
+
         if ($this->defaultOutcome($voucher) === 'account_funding') {
             return new ClaimWorkflowDescriptorData(
                 key: 'account-funding.v1',

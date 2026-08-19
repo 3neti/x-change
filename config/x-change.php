@@ -740,6 +740,8 @@ return [
             'pay-codes:issue' => 'Issue a Pay Code from the bound Account.',
             'pay-codes:read' => 'Inspect Pay Codes owned by the bound Account.',
             'pay-codes:cancel' => 'Cancel an eligible Pay Code owned by the bound Account.',
+            'stored-value:read' => 'Read sanitized reusable-balance transactions presented to the client.',
+            'stored-value:spend' => 'Debit a presented reusable balance into the bound merchant Account.',
         ],
         'default_scopes' => [
             'capabilities:read',
@@ -756,6 +758,12 @@ return [
             'maximum_ttl_seconds' => 604800,
             'maximum_amount_minor' => 1000000,
             'daily_principal_limit_minor' => 10000000,
+            'stored_value_spend' => [
+                'enabled' => false,
+                'currencies' => ['PHP'],
+                'maximum_amount_minor' => 0,
+                'daily_amount_minor' => 0,
+            ],
         ],
     ],
 

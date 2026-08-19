@@ -73,6 +73,22 @@ class ClaimStartController extends Controller
                 ]);
             }
 
+            $preparedWorkflow = $this->claimWorkflows->resolve($prepared->voucher);
+
+            if ($this->requiresAuthentication($preparedWorkflow->key, $preparedWorkflow->authentication_mode)
+                && $request->user() === null) {
+                return back()->withErrors([
+                    'code' => 'Sign in before activating this Pay Code.',
+                ]);
+            }
+
+            if ($preparedWorkflow->key === 'stored-value.activation.v1'
+                && $request->user()?->getAttribute('mobile_verified_at') === null) {
+                return back()->withErrors([
+                    'code' => 'Your Account needs a verified mobile number before it can activate a reusable balance.',
+                ]);
+            }
+
             if (
                 $this->voucherRequiresSecret($prepared->voucher)
                 && ! $this->claimSecretMatches($prepared->voucher, $preparedData->inputs['secret'] ?? null)
@@ -182,7 +198,14 @@ class ClaimStartController extends Controller
 
             if (! is_string($authenticatedMobile) || trim($authenticatedMobile) === '') {
                 return back()->withErrors([
-                    'code' => 'Your authenticated officer profile needs a verified mobile number before it can authorize a campaign.',
+                    'code' => 'Your authenticated profile needs a verified mobile number before it can continue.',
+                ]);
+            }
+
+            if ($workflow->key === 'stored-value.activation.v1'
+                && $officer->getAttribute('mobile_verified_at') === null) {
+                return back()->withErrors([
+                    'code' => 'Your Account needs a verified mobile number before it can activate a reusable balance.',
                 ]);
             }
         }
@@ -255,7 +278,7 @@ class ClaimStartController extends Controller
         ClaimAuthenticationMode $authenticationMode,
     ): bool {
         return $authenticationMode === ClaimAuthenticationMode::AuthenticatedOfficer
-            || $workflowKey === 'account-funding.v1';
+            || in_array($workflowKey, ['account-funding.v1', 'stored-value.activation.v1'], true);
     }
 
     /**

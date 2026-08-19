@@ -41,10 +41,14 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             '/pay-codes',
             '/pay-codes/{code}',
             '/pay-codes/{code}/cancellation',
+            '/stored-value-instruments/{instrument}/spends',
+            '/stored-value-instruments/{instrument}/transactions',
         ])
         ->and(collect(data_get($document, 'paths./pay-codes/{code}/cancellation.post.parameters'))
             ->firstWhere('name', 'Idempotency-Key'))
         ->toMatchArray(['in' => 'header', 'required' => true])
+        ->and(data_get($document, 'components.parameters.StoredValueInstrument.schema.pattern'))
+        ->toBe('^[0-9A-HJKMNP-TV-Z]{26}$')
         ->and($response->getContent())->not->toContain('/api/x/v1')
         ->not->toContain('issuer_id');
 });

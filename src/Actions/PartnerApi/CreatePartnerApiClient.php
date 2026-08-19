@@ -14,6 +14,7 @@ use LBHurtado\XChange\Data\PartnerApi\PartnerApiCredentialData;
 use LBHurtado\XChange\Enums\PartnerApiClientStatus;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiGovernanceJournal;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiMandateValidator;
 
 class CreatePartnerApiClient
 {
@@ -21,6 +22,7 @@ class CreatePartnerApiClient
         protected Application $app,
         protected ClientRepository $clients,
         protected PartnerApiGovernanceJournal $journal,
+        protected PartnerApiMandateValidator $mandates,
     ) {}
 
     /**
@@ -57,12 +59,14 @@ class CreatePartnerApiClient
             );
         }
 
-        return DB::transaction(function () use ($name, $issuer, $environment, $resolvedScopes, $mandate, $operator): PartnerApiCredentialData {
+        $resolvedMandate = array_replace_recursive(
+            (array) config('x-change.partner_api.default_mandate', []),
+            $mandate,
+        );
+        $this->mandates->validate($resolvedScopes, $resolvedMandate);
+
+        return DB::transaction(function () use ($name, $issuer, $environment, $resolvedScopes, $resolvedMandate, $operator): PartnerApiCredentialData {
             $oauthClient = $this->clients->createClientCredentialsGrantClient(trim($name));
-            $resolvedMandate = array_replace_recursive(
-                (array) config('x-change.partner_api.default_mandate', []),
-                $mandate,
-            );
 
             $partner = PartnerApiClient::query()->create([
                 'reference' => (string) Str::ulid(),

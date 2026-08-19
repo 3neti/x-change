@@ -311,6 +311,21 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         ->and($pnb)->not->toHaveKey('code');
 });
 
+it('requires authenticated mobile and otp activation for reusable balance', function (): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'instructions' => ['execution' => ['driver' => 'stored_value']],
+    ]);
+
+    $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
+
+    expect($workflow->key)->toBe('stored-value.activation.v1')
+        ->and($workflow->authentication_mode)->toBe(ClaimAuthenticationMode::ClaimantHandoff)
+        ->and($workflow->requires_destination)->toBeFalse()
+        ->and($workflow->requires_amount)->toBeFalse()
+        ->and($workflow->required_claim_fields)->toBe(['mobile', 'otp']);
+});
+
 it('uses the issuer-authoritative rail to filter claim destinations', function (string $rail, string $supportedBank, ?string $excludedBank): void {
     $voucher = Mockery::mock(Voucher::class);
     $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn(['instructions' => []]);

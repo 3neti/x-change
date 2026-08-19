@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use LBHurtado\Voucher\Data\ExecutionInstructionData;
+use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Support\Money\MajorCurrencyAmount;
 
 final class StoredValueIssuancePolicy
@@ -118,6 +119,20 @@ final class StoredValueIssuancePolicy
         }
 
         Arr::set($input, 'execution', $canonicalExecution);
+        Arr::set(
+            $input,
+            'inputs.fields',
+            collect((array) data_get($input, 'inputs.fields', []))
+                ->map(static fn (mixed $field): string => $field instanceof \BackedEnum
+                    ? (string) $field->value
+                    : (string) $field)
+                ->push(VoucherInputField::MOBILE->value, VoucherInputField::OTP->value)
+                ->unique()
+                ->values()
+                ->all(),
+        );
+        Arr::set($input, 'validation.otp.required', true);
+        Arr::set($input, 'validation.otp.on_failure', 'block');
 
         return $input;
     }

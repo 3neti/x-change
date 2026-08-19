@@ -213,6 +213,9 @@ it('compiles the typed Reusable Balance policy into execution-only stored value'
         ],
     ])->and(data_get($normalized, 'execution.metadata.stored_value.reference'))
         ->toBeNull()
+        ->and(data_get($normalized, 'inputs.fields'))->toContain('mobile', 'otp')
+        ->and(data_get($normalized, 'validation.otp.required'))->toBeTrue()
+        ->and(data_get($normalized, 'validation.otp.on_failure'))->toBe('block')
         ->and($replayed)->toBe($normalized);
 });
 

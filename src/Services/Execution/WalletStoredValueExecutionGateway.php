@@ -180,7 +180,7 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
         }
 
         return [
-            'stored_value_reference' => $binding->allocation_reference,
+            'stored_value_reference' => $binding->reference,
             'remaining_balance' => $operation->balanceAfterMinor,
             'last_spend_execution_id' => $callerExecutionId,
             'operation_reference' => $operation->operationReference,
@@ -291,7 +291,7 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
         string $executionId,
     ): array {
         return [
-            'stored_value_reference' => $binding->allocation_reference,
+            'stored_value_reference' => $binding->reference,
             'remaining_balance' => $this->read($binding)->usableAmountMinor,
             $executionKey => $executionId,
         ];

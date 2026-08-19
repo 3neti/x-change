@@ -198,7 +198,7 @@ it('draws an authorized amount using the caller identity as replay scope', funct
     );
 
     expect($result)->toMatchArray([
-        'stored_value_reference' => $binding->allocation_reference,
+        'stored_value_reference' => $binding->reference,
         'remaining_balance' => 97_500,
         'last_spend_execution_id' => 'fare-request-1',
     ]);

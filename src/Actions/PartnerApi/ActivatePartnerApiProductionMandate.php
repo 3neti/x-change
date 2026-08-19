@@ -18,6 +18,7 @@ use LBHurtado\XChange\Enums\PartnerApiProductionMandateStatus;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiGovernanceJournal;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiMandateValidator;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 
 final readonly class ActivatePartnerApiProductionMandate
@@ -27,6 +28,7 @@ final readonly class ActivatePartnerApiProductionMandate
         private ClientRepository $clients,
         private PartnerApiGovernanceJournal $journal,
         private SystemUserResolverContract $systemPrincipal,
+        private PartnerApiMandateValidator $mandates,
     ) {}
 
     public function handle(PartnerApiProductionMandate $mandate, Model $operator): PartnerApiCredentialData
@@ -44,6 +46,8 @@ final readonly class ActivatePartnerApiProductionMandate
             if ($locked->maker_type === $operator->getMorphClass() && (string) $locked->maker_id === (string) $operator->getKey()) {
                 throw new DomainException('The maker cannot activate production credentials.');
             }
+
+            $this->mandates->validate($locked->scopes, $locked->mandate);
 
             $oauthClient = $this->clients->createClientCredentialsGrantClient($locked->name);
             $client = PartnerApiClient::query()->create([

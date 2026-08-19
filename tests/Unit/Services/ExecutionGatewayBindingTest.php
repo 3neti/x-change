@@ -10,8 +10,8 @@ use LBHurtado\Voucher\Exceptions\StoredValueSpendRejectedException;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
-use LBHurtado\XChange\Services\Execution\UnavailableStoredValueDestinationAuthority;
-use LBHurtado\XChange\Services\Execution\UnavailableStoredValueHolderAuthority;
+use LBHurtado\XChange\Services\Execution\AuthenticatedStoredValueHolderAuthority;
+use LBHurtado\XChange\Services\Execution\PartnerApiStoredValueDestinationAuthority;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
@@ -21,7 +21,7 @@ it('binds voucher settlement envelope execution gateway to the x-change adapter'
         ->toBeInstanceOf(XChangeSettlementEnvelopeExecutionGateway::class);
 });
 
-it('binds voucher stored value execution gateway to the x-change adapter singleton', function () {
+it('binds voucher stored value execution gateway to the scoped x-change adapter', function () {
     $first = app(StoredValueExecutionGateway::class);
     $second = app(StoredValueExecutionGateway::class);
 
@@ -30,12 +30,12 @@ it('binds voucher stored value execution gateway to the x-change adapter singlet
         ->and($second)->toBe($first);
 });
 
-it('binds stored value holder authority to a fail closed default', function () {
+it('binds stored value holder authority to verified authenticated Accounts', function () {
     $authority = app(StoredValueHolderAuthorityContract::class);
 
     expect($authority)
-        ->toBeInstanceOf(UnavailableStoredValueHolderAuthority::class)
-        ->and($authority->isReady())->toBeFalse()
+        ->toBeInstanceOf(AuthenticatedStoredValueHolderAuthority::class)
+        ->and($authority->isReady())->toBeTrue()
         ->and(fn () => $authority->authorize(
             new ExecutionContextData(
                 contact: new Contact,
@@ -43,15 +43,15 @@ it('binds stored value holder authority to a fail closed default', function () {
             ),
         ))->toThrow(
             StoredValueSpendRejectedException::class,
-            'Stored value holder authority has not been commissioned.',
+            'requires an authenticated Account holder',
         );
 });
 
-it('binds stored value destination authority to a fail closed default', function () {
+it('binds stored value destination authority to the fail closed Partner API mandate', function () {
     $authority = app(StoredValueDestinationAuthorityContract::class);
 
     expect($authority)
-        ->toBeInstanceOf(UnavailableStoredValueDestinationAuthority::class)
+        ->toBeInstanceOf(PartnerApiStoredValueDestinationAuthority::class)
         ->and($authority->isReady())->toBeFalse()
         ->and(fn () => $authority->authorize(
             new ExecutionContextData(
@@ -61,7 +61,7 @@ it('binds stored value destination authority to a fail closed default', function
             100,
         ))->toThrow(
             StoredValueSpendRejectedException::class,
-            'Stored value destination authority has not been commissioned.',
+            'unavailable outside an authenticated Partner API request',
         );
 });
 

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "X-Change Partner API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Governed server-to-server Pay Code issuance. OAuth identity is bound to one issuer Account; server-side mandates, Account funds, Treasury controls, and idempotency remain authoritative."
   },
   "servers": [{"url": "/api/partner/v1"}],
@@ -79,6 +79,40 @@
           "422": {"$ref": "#/components/responses/ValidationError"}
         }
       }
+    },
+    "/stored-value-instruments/{instrument}/spends": {
+      "post": {
+        "operationId": "spendStoredValueInstrument",
+        "summary": "Debit a presented reusable balance into the token-bound merchant Account",
+        "security": [{"partnerOAuth": ["stored-value:spend"]}],
+        "parameters": [
+          {"$ref": "#/components/parameters/StoredValueInstrument"},
+          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
+          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["amount_minor", "currency"], "properties": {"amount_minor": {"type": "integer", "minimum": 1}, "currency": {"type": "string", "minLength": 3, "maxLength": 3}}}}}},
+        "responses": {
+          "201": {"description": "Spend committed once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "200": {"description": "Exact idempotent replay", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "404": {"description": "Unknown or unavailable instrument"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/stored-value-instruments/{instrument}/transactions": {
+      "get": {
+        "operationId": "listStoredValueInstrumentTransactions",
+        "summary": "Read sanitized client-scoped reusable-balance transactions",
+        "security": [{"partnerOAuth": ["stored-value:read"]}],
+        "parameters": [
+          {"$ref": "#/components/parameters/StoredValueInstrument"},
+          {"name": "limit", "in": "query", "required": false, "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50}}
+        ],
+        "responses": {
+          "200": {"description": "Sanitized instrument balance and this client’s transactions", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "404": {"description": "Unknown or unavailable instrument"}
+        }
+      }
     }
   },
   "components": {
@@ -93,14 +127,17 @@
               "pay-codes:estimate": "Estimate a Pay Code",
               "pay-codes:issue": "Issue a Pay Code",
               "pay-codes:read": "Inspect owned Pay Codes",
-              "pay-codes:cancel": "Cancel eligible owned Pay Codes"
+              "pay-codes:cancel": "Cancel eligible owned Pay Codes",
+              "stored-value:read": "Read sanitized reusable-balance transactions",
+              "stored-value:spend": "Debit a presented reusable balance"
             }
           }
         }
       }
     },
     "parameters": {
-      "PayCode": {"name": "code", "in": "path", "required": true, "schema": {"type": "string", "maxLength": 80}}
+      "PayCode": {"name": "code", "in": "path", "required": true, "schema": {"type": "string", "maxLength": 80}},
+      "StoredValueInstrument": {"name": "instrument", "in": "path", "required": true, "description": "Opaque ULID presented by an activated holder. Short Pay Codes and internal ledger references are not accepted.", "schema": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"}}
     },
     "schemas": {
       "PayCodeInstructions": {
