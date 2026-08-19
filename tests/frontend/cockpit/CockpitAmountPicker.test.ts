@@ -35,6 +35,16 @@ describe("CockpitAmountPicker", () => {
 
     expect(confirmButton).toBeDefined();
     expect(confirmButton!.attributes("type")).toBe("button");
+    expect(
+      wrapper.get('[data-testid="numeric-keypad-dialog"]').classes(),
+    ).toEqual(
+      expect.arrayContaining([
+        "max-h-[92dvh]",
+        "overflow-y-auto",
+        "sm:top-1/2!",
+        "sm:-translate-y-1/2!",
+      ]),
+    );
     await confirmButton!.trigger("click");
 
     expect(wrapper.emitted("update:modelValue")).toEqual([["1000.00"]]);

@@ -279,7 +279,7 @@ onBeforeUnmount(() => {
       :data-appearance="appearance"
       data-testid="numeric-keypad-dialog"
       :class="[
-        'bottom-0 top-auto max-h-[92dvh] translate-y-0 rounded-b-none sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2',
+        'bottom-0! top-auto! max-h-[92dvh] translate-y-0! overflow-y-auto rounded-b-none sm:bottom-auto! sm:top-1/2! sm:-translate-y-1/2!',
         isCockpit
           ? 'gap-4 rounded-t-3xl border-emerald-200 bg-white p-4 shadow-2xl shadow-slate-950/20 sm:max-w-sm sm:rounded-2xl sm:p-5 dark:border-emerald-900/70 dark:bg-slate-950'
           : 'sm:max-w-md sm:rounded-lg',
