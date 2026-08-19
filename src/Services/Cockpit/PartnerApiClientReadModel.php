@@ -93,6 +93,13 @@ final readonly class PartnerApiClientReadModel
                 'unbound_pay_codes' => (bool) data_get($client->mandate, 'unbound_pay_codes', false),
                 'maximum_amount' => $this->money((int) data_get($client->mandate, 'maximum_amount_minor', 0)),
                 'daily_principal_limit' => $this->money((int) data_get($client->mandate, 'daily_principal_limit_minor', 0)),
+                'voucher_profiles' => (array) data_get($client->mandate, 'voucher_profiles', []),
+                'stored_value_spend' => [
+                    'enabled' => (bool) data_get($client->mandate, 'stored_value_spend.enabled', false),
+                    'currencies' => (array) data_get($client->mandate, 'stored_value_spend.currencies', []),
+                    'maximum_amount' => $this->money((int) data_get($client->mandate, 'stored_value_spend.maximum_amount_minor', 0)),
+                    'daily_amount' => $this->money((int) data_get($client->mandate, 'stored_value_spend.daily_amount_minor', 0)),
+                ],
             ],
             'created_at' => $client->created_at?->toIso8601String(),
             'suspended_at' => $client->suspended_at?->toIso8601String(),

@@ -42,6 +42,8 @@ final class CockpitPartnerApiProductionMandateController extends Controller
                 'unbound_pay_codes' => $validated['unbound_pay_codes'],
                 'maximum_amount_minor' => $validated['maximum_amount_minor'],
                 'daily_principal_limit_minor' => $validated['daily_principal_limit_minor'],
+                'voucher_profiles' => $validated['voucher_profiles'] ?? ['disbursement'],
+                'stored_value_spend' => $validated['stored_value_spend'] ?? ['enabled' => false],
             ],
             $request->user(),
         );

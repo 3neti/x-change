@@ -37,7 +37,8 @@ describe("API Partners Cockpit", () => {
       props: {
         partnerApi,
         partnerApiStoreUrl: "/x/cockpit/api-partners/clients",
-        partnerApiProductionStoreUrl: "/x/cockpit/api-partners/production-mandates",
+        partnerApiProductionStoreUrl:
+          "/x/cockpit/api-partners/production-mandates",
         csrfToken: "token",
       },
     });
@@ -68,14 +69,18 @@ describe("API Partners Cockpit", () => {
               status: "awaiting_approval",
               snapshot_hash: "a".repeat(64),
               scopes: ["capabilities:read"],
-              issuer: { name: "Amelia Hurtado", identity: "Mobile ending 3656" },
+              issuer: {
+                name: "Amelia Hurtado",
+                identity: "Mobile ending 3656",
+              },
               submitted_at: "2026-08-16T00:00:00Z",
               actions: { approve: "/approve", activate: "/activate" },
             },
           ],
         },
         partnerApiStoreUrl: "/x/cockpit/api-partners/clients",
-        partnerApiProductionStoreUrl: "/x/cockpit/api-partners/production-mandates",
+        partnerApiProductionStoreUrl:
+          "/x/cockpit/api-partners/production-mandates",
         csrfToken: "token",
       },
     });
@@ -84,5 +89,61 @@ describe("API Partners Cockpit", () => {
     expect(wrapper.text()).toContain("Saras Production");
     expect(wrapper.text()).toContain("Approve");
     expect(wrapper.text()).not.toContain("Issue Credentials");
+  });
+
+  it("reveals an explicit bounded reusable balance mandate for stored-value scopes", async () => {
+    const wrapper = mount(ApiPartners, {
+      props: {
+        partnerApi: {
+          ...partnerApi,
+          scopes: [
+            ...partnerApi.scopes,
+            {
+              scope: "stored-value:read",
+              description: "Read reusable-balance activity.",
+            },
+            {
+              scope: "stored-value:spend",
+              description: "Debit a presented reusable balance.",
+            },
+          ],
+        },
+        partnerApiStoreUrl: "/x/cockpit/api-partners/clients",
+        partnerApiProductionStoreUrl:
+          "/x/cockpit/api-partners/production-mandates",
+        csrfToken: "token",
+      },
+    });
+
+    await wrapper.get("button").trigger("click");
+    expect(
+      wrapper.find('[data-testid="stored-value-partner-mandate"]').exists(),
+    ).toBe(false);
+
+    const spendScope = wrapper
+      .findAll("label")
+      .find((label) => label.text().includes("stored-value:spend"));
+
+    expect(spendScope).toBeDefined();
+    await spendScope!.get('input[type="checkbox"]').setValue(true);
+
+    expect(
+      wrapper.get('[data-testid="stored-value-partner-mandate"]').text(),
+    ).toContain("Reusable balance merchant mandate");
+    expect(
+      wrapper
+        .get('[data-testid="stored-value-mandate-enabled"]')
+        .attributes("type"),
+    ).toBe("checkbox");
+    expect(
+      wrapper
+        .get('[data-testid="stored-value-maximum-amount"]')
+        .attributes("inputmode"),
+    ).toBe("decimal");
+    expect(
+      wrapper
+        .get('[data-testid="stored-value-daily-amount"]')
+        .attributes("inputmode"),
+    ).toBe("decimal");
   });
 });

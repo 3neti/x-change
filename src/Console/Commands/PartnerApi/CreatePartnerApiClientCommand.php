@@ -21,6 +21,10 @@ final class CreatePartnerApiClientCommand extends Command
         {--rail=* : Allowed settlement rail; repeat for multiple rails}
         {--maximum-amount-minor= : Per-issuance principal ceiling in minor units}
         {--daily-principal-minor= : Daily aggregate principal ceiling in minor units}
+        {--voucher-profile=* : Allowed Pay Code profile; repeat for disbursement or stored_value}
+        {--stored-value-spend : Enable reusable-balance spend authority}
+        {--stored-value-maximum-amount-minor= : Per-spend reusable-balance ceiling in minor units}
+        {--stored-value-daily-amount-minor= : Daily reusable-balance spend ceiling in minor units}
         {--allow-unbound : Permit unbound Pay Codes}
         {--confirm-production : Confirm creation of production credentials}
         {--json : Emit machine-readable credentials once}';
@@ -45,6 +49,13 @@ final class CreatePartnerApiClientCommand extends Command
             'settlement_rails' => $this->stringOptions('rail'),
             'maximum_amount_minor' => $this->integerOption('maximum-amount-minor'),
             'daily_principal_limit_minor' => $this->integerOption('daily-principal-minor'),
+            'voucher_profiles' => $this->stringOptions('voucher-profile'),
+            'stored_value_spend' => [
+                'enabled' => (bool) $this->option('stored-value-spend'),
+                'currencies' => $this->option('stored-value-spend') ? ['PHP'] : [],
+                'maximum_amount_minor' => $this->integerOption('stored-value-maximum-amount-minor') ?? 0,
+                'daily_amount_minor' => $this->integerOption('stored-value-daily-amount-minor') ?? 0,
+            ],
             'unbound_pay_codes' => (bool) $this->option('allow-unbound'),
         ], static fn (mixed $value, string $key): bool => $key === 'unbound_pay_codes'
             || (is_array($value) ? $value !== [] : $value !== null), ARRAY_FILTER_USE_BOTH);

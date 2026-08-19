@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Laravel\Passport\Client;
 use Laravel\Passport\Token;
 use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\PartnerApiClientStatus;
 use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
 use LBHurtado\XChange\Models\PartnerApiClient;
@@ -39,6 +40,13 @@ function authorizePartnerApiOperator(User $operator, PartnerApiOperatorCapabilit
             'valid_from' => now()->subMinute(),
         ]);
     }
+}
+
+function allowPartnerApiIssuerWallet(): void
+{
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('resolveForUser')->andReturn((object) ['slug' => 'platform']);
+    app()->instance(WalletAccessContract::class, $wallets);
 }
 
 it('conceals API Partner administration from ordinary Account holders', function (): void {
@@ -92,6 +100,7 @@ it('shows API Partner administration and navigation to an authorized operator', 
 
 it('provisions a bounded sandbox credential and displays its secret exactly once', function (): void {
     $operator = actingAsTestUser();
+    allowPartnerApiIssuerWallet();
     authorizePartnerApiOperator(
         $operator,
         PartnerApiOperatorCapability::ViewClients,
@@ -130,6 +139,109 @@ it('provisions a bounded sandbox credential and displays its secret exactly once
         ->assertOk()
         ->assertJsonMissing([$secret])
         ->assertJsonMissing(['client_secret']);
+});
+
+it('provisions a reusable balance merchant with an explicit bounded mandate', function (): void {
+    $operator = actingAsTestUser();
+    allowPartnerApiIssuerWallet();
+    authorizePartnerApiOperator(
+        $operator,
+        PartnerApiOperatorCapability::ViewClients,
+        PartnerApiOperatorCapability::ManageSandboxClients,
+    );
+
+    $response = $this->postJson(route('x-change.cockpit.api-partners.clients.store'), [
+        'name' => 'Transit Merchant Sandbox',
+        'environment' => 'sandbox',
+        'issuer_id' => (string) $operator->getKey(),
+        'scopes' => ['stored-value:read', 'stored-value:spend'],
+        'currencies' => ['PHP'],
+        'settlement_rails' => ['automatic'],
+        'maximum_amount_minor' => 5000,
+        'daily_principal_limit_minor' => 20000,
+        'voucher_profiles' => ['disbursement'],
+        'stored_value_spend' => [
+            'enabled' => true,
+            'currencies' => ['PHP'],
+            'maximum_amount_minor' => 500,
+            'daily_amount_minor' => 2000,
+        ],
+        'unbound_pay_codes' => false,
+        'acknowledge_secret_once' => true,
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('mandate.stored_value_spend.enabled', true)
+        ->assertJsonPath('mandate.stored_value_spend.maximum_amount_minor', 500)
+        ->assertJsonPath('mandate.stored_value_spend.daily_amount_minor', 2000);
+
+    expect(data_get(PartnerApiClient::query()->sole()->mandate, 'stored_value_spend'))
+        ->toMatchArray([
+            'enabled' => true,
+            'currencies' => ['PHP'],
+            'maximum_amount_minor' => 500,
+            'daily_amount_minor' => 2000,
+        ]);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.api-partners.index'))
+        ->assertOk()
+        ->assertJsonPath('props.partner_api.clients.0.mandate.stored_value_spend.enabled', true)
+        ->assertJsonPath('props.partner_api.clients.0.mandate.stored_value_spend.maximum_amount', '₱5')
+        ->assertJsonMissing(['client_secret']);
+});
+
+it('rejects stored value scopes without an explicit bounded mandate', function (): void {
+    $operator = actingAsTestUser();
+    authorizePartnerApiOperator($operator, PartnerApiOperatorCapability::ManageSandboxClients);
+
+    $this->postJson(route('x-change.cockpit.api-partners.clients.store'), [
+        'name' => 'Unbounded Transit Merchant',
+        'environment' => 'sandbox',
+        'issuer_id' => (string) $operator->getKey(),
+        'scopes' => ['stored-value:spend'],
+        'currencies' => ['PHP'],
+        'settlement_rails' => ['automatic'],
+        'maximum_amount_minor' => 5000,
+        'daily_principal_limit_minor' => 20000,
+        'unbound_pay_codes' => false,
+        'acknowledge_secret_once' => true,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'stored_value_spend.enabled',
+            'stored_value_spend.currencies',
+            'stored_value_spend.maximum_amount_minor',
+            'stored_value_spend.daily_amount_minor',
+        ]);
+
+    expect(PartnerApiClient::query()->count())->toBe(0)
+        ->and(Client::query()->count())->toBe(0);
+});
+
+it('provisions the same bounded reusable balance mandate through the commissioning command', function (): void {
+    $issuer = actingAsTestUser();
+
+    $this->artisan('x-change:partner-api:client', [
+        'name' => 'Transit Merchant CLI',
+        '--issuer' => $issuer->email,
+        '--scope' => ['stored-value:read', 'stored-value:spend'],
+        '--currency' => ['PHP'],
+        '--rail' => ['automatic'],
+        '--maximum-amount-minor' => 5000,
+        '--daily-principal-minor' => 20000,
+        '--voucher-profile' => ['disbursement'],
+        '--stored-value-spend' => true,
+        '--stored-value-maximum-amount-minor' => 500,
+        '--stored-value-daily-amount-minor' => 2000,
+    ])->assertSuccessful();
+
+    expect(data_get(PartnerApiClient::query()->sole()->mandate, 'stored_value_spend'))
+        ->toMatchArray([
+            'enabled' => true,
+            'currencies' => ['PHP'],
+            'maximum_amount_minor' => 500,
+            'daily_amount_minor' => 2000,
+        ]);
 });
 
 it('rejects production provisioning even with the legacy confirmation switch', function (): void {
@@ -204,6 +316,7 @@ it('checks client readiness without a provider call or financial mutation', func
 
 it('creates no production credential before independent approval and reveals the secret once at activation', function (): void {
     $maker = actingAsTestUser();
+    allowPartnerApiIssuerWallet();
     $checker = User::query()->create([
         'name' => 'Independent API Checker',
         'email' => 'api-checker@example.test',

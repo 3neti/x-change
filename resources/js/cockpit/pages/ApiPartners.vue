@@ -29,6 +29,13 @@ type PartnerClient = {
     unbound_pay_codes: boolean;
     maximum_amount: string;
     daily_principal_limit: string;
+    voucher_profiles: string[];
+    stored_value_spend: {
+      enabled: boolean;
+      currencies: string[];
+      maximum_amount: string;
+      daily_amount: string;
+    };
   };
   created_at: string | null;
   actions: { check: string; suspend: string; revoke: string };
@@ -86,6 +93,10 @@ const form = reactive({
   settlement_rails: ["automatic", "INSTAPAY"],
   maximum_amount: "1000.00",
   daily_limit: "5000.00",
+  voucher_profiles: ["disbursement"],
+  stored_value_enabled: false,
+  stored_value_maximum_amount: "5.00",
+  stored_value_daily_amount: "20.00",
   unbound_pay_codes: false,
   acknowledge_secret_once: false,
 });
@@ -96,7 +107,18 @@ const canSubmit = computed(
     form.issuer_id !== "" &&
     form.scopes.length > 0 &&
     form.settlement_rails.length > 0 &&
+    (!usesStoredValueScopes.value || form.stored_value_enabled) &&
     (createMode.value === "production" || form.acknowledge_secret_once),
+);
+
+const usesStoredValueScopes = computed(() =>
+  form.scopes.some((scope) =>
+    ["stored-value:read", "stored-value:spend"].includes(scope),
+  ),
+);
+
+const canIssueStoredValue = computed(() =>
+  form.scopes.includes("pay-codes:issue"),
 );
 
 function toMinor(value: string): number | null {
@@ -109,11 +131,27 @@ function toMinor(value: string): number | null {
 async function createClient(): Promise<void> {
   const maximum = toMinor(form.maximum_amount);
   const daily = toMinor(form.daily_limit);
+  const storedValueMaximum = toMinor(form.stored_value_maximum_amount);
+  const storedValueDaily = toMinor(form.stored_value_daily_amount);
   errors.value = {};
   if (maximum === null || daily === null) {
     errors.value = {
       limits: [
         "Enter valid peso amounts with no more than two decimal places.",
+      ],
+    };
+    return;
+  }
+  if (
+    usesStoredValueScopes.value &&
+    (storedValueMaximum === null ||
+      storedValueDaily === null ||
+      storedValueMaximum < 1 ||
+      storedValueDaily < storedValueMaximum)
+  ) {
+    errors.value = {
+      stored_value_spend: [
+        "Enter a positive per-spend limit and a daily limit that covers it.",
       ],
     };
     return;
@@ -126,28 +164,40 @@ async function createClient(): Promise<void> {
         ? props.partnerApiStoreUrl
         : props.partnerApiProductionStoreUrl,
       {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "X-CSRF-TOKEN": props.csrfToken,
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": props.csrfToken,
+        },
+        body: JSON.stringify({
+          name: form.name,
+          issuer_id: form.issuer_id,
+          ...(createMode.value === "sandbox" ? { environment: "sandbox" } : {}),
+          scopes: form.scopes,
+          currencies: ["PHP"],
+          settlement_rails: form.settlement_rails,
+          maximum_amount_minor: maximum,
+          daily_principal_limit_minor: daily,
+          voucher_profiles: form.voucher_profiles,
+          ...(usesStoredValueScopes.value
+            ? {
+                stored_value_spend: {
+                  enabled: form.stored_value_enabled,
+                  currencies: ["PHP"],
+                  maximum_amount_minor: storedValueMaximum,
+                  daily_amount_minor: storedValueDaily,
+                },
+              }
+            : {}),
+          unbound_pay_codes: form.unbound_pay_codes,
+          ...(createMode.value === "sandbox"
+            ? { acknowledge_secret_once: form.acknowledge_secret_once }
+            : {}),
+        }),
       },
-      body: JSON.stringify({
-        name: form.name,
-        issuer_id: form.issuer_id,
-        ...(createMode.value === "sandbox" ? { environment: "sandbox" } : {}),
-        scopes: form.scopes,
-        currencies: ["PHP"],
-        settlement_rails: form.settlement_rails,
-        maximum_amount_minor: maximum,
-        daily_principal_limit_minor: daily,
-        unbound_pay_codes: form.unbound_pay_codes,
-        ...(createMode.value === "sandbox"
-          ? { acknowledge_secret_once: form.acknowledge_secret_once }
-          : {}),
-      }),
-    });
+    );
     const body = await response.json();
     if (!response.ok) {
       errors.value = body.errors ?? {
@@ -157,7 +207,8 @@ async function createClient(): Promise<void> {
     }
     if (createMode.value === "sandbox") credential.value = body as Credential;
     showCreate.value = false;
-    if (createMode.value === "production") router.reload({ only: ["partner_api"] });
+    if (createMode.value === "production")
+      router.reload({ only: ["partner_api"] });
   } finally {
     submitting.value = false;
   }
@@ -188,7 +239,9 @@ async function transitionProductionMandate(
   });
   const body = await response.json();
   if (!response.ok) {
-    errors.value = body.errors ?? { submission: [body.message ?? "The mandate could not be updated."] };
+    errors.value = body.errors ?? {
+      submission: [body.message ?? "The mandate could not be updated."],
+    };
     return;
   }
   if (transition === "activate") credential.value = body as Credential;
@@ -302,28 +355,79 @@ function finishCredentialCeremony(): void {
       <section class="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <div>
           <h2 class="font-semibold">Production Mandates</h2>
-          <p class="text-sm text-muted-foreground">Immutable maker requests, independent approval, then a one-time credential ceremony.</p>
+          <p class="text-sm text-muted-foreground">
+            Immutable maker requests, independent approval, then a one-time
+            credential ceremony.
+          </p>
         </div>
-        <div v-if="partnerApi.production_mandates.length" class="mt-4 grid gap-3">
-          <article v-for="mandate in partnerApi.production_mandates" :key="mandate.reference" class="rounded-xl border border-border p-4">
+        <div
+          v-if="partnerApi.production_mandates.length"
+          class="mt-4 grid gap-3"
+        >
+          <article
+            v-for="mandate in partnerApi.production_mandates"
+            :key="mandate.reference"
+            class="rounded-xl border border-border p-4"
+          >
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
                   <h3 class="font-semibold">{{ mandate.name }}</h3>
-                  <span class="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold capitalize text-violet-800 dark:bg-violet-950 dark:text-violet-200">{{ mandate.status.replaceAll("_", " ") }}</span>
+                  <span
+                    class="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold capitalize text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+                    >{{ mandate.status.replaceAll("_", " ") }}</span
+                  >
                 </div>
-                <p class="mt-1 text-sm text-muted-foreground">{{ mandate.issuer.name }} · {{ mandate.issuer.identity }}</p>
-                <p class="mt-1 break-all font-mono text-[10px] text-muted-foreground">Snapshot {{ mandate.snapshot_hash }}</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                  {{ mandate.issuer.name }} · {{ mandate.issuer.identity }}
+                </p>
+                <p
+                  class="mt-1 break-all font-mono text-[10px] text-muted-foreground"
+                >
+                  Snapshot {{ mandate.snapshot_hash }}
+                </p>
               </div>
               <div class="flex gap-2">
-                <button v-if="mandate.status === 'awaiting_approval' && partnerApi.can_approve_production" type="button" class="h-9 rounded-lg border px-3 text-sm" @click="transitionProductionMandate(mandate, 'approve')">Approve</button>
-                <button v-if="mandate.status === 'approved' && partnerApi.can_activate_production" type="button" class="h-9 rounded-lg bg-violet-600 px-3 text-sm font-semibold text-white" @click="transitionProductionMandate(mandate, 'activate')">Issue Credentials</button>
+                <button
+                  v-if="
+                    mandate.status === 'awaiting_approval' &&
+                    partnerApi.can_approve_production
+                  "
+                  type="button"
+                  class="h-9 rounded-lg border px-3 text-sm"
+                  @click="transitionProductionMandate(mandate, 'approve')"
+                >
+                  Approve
+                </button>
+                <button
+                  v-if="
+                    mandate.status === 'approved' &&
+                    partnerApi.can_activate_production
+                  "
+                  type="button"
+                  class="h-9 rounded-lg bg-violet-600 px-3 text-sm font-semibold text-white"
+                  @click="transitionProductionMandate(mandate, 'activate')"
+                >
+                  Issue Credentials
+                </button>
               </div>
             </div>
-            <div class="mt-3 flex flex-wrap gap-1.5"><span v-for="scope in mandate.scopes" :key="scope" class="rounded-md bg-muted px-2 py-1 text-xs">{{ scope }}</span></div>
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              <span
+                v-for="scope in mandate.scopes"
+                :key="scope"
+                class="rounded-md bg-muted px-2 py-1 text-xs"
+                >{{ scope }}</span
+              >
+            </div>
           </article>
         </div>
-        <div v-else class="mt-4 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No production mandate requests yet.</div>
+        <div
+          v-else
+          class="mt-4 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground"
+        >
+          No production mandate requests yet.
+        </div>
       </section>
 
       <section class="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -425,6 +529,20 @@ function finishCredentialCeremony(): void {
                 }}
               </p>
             </div>
+            <div
+              v-if="client.mandate.stored_value_spend.enabled"
+              class="mt-3 rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm dark:border-violet-800 dark:bg-violet-950/20"
+            >
+              <p class="font-medium text-violet-800 dark:text-violet-200">
+                Reusable balance merchant mandate
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground">
+                Per spend
+                {{ client.mandate.stored_value_spend.maximum_amount }} · Daily
+                {{ client.mandate.stored_value_spend.daily_amount }} ·
+                {{ client.mandate.stored_value_spend.currencies.join(", ") }}
+              </p>
+            </div>
           </article>
         </div>
         <div
@@ -447,9 +565,19 @@ function finishCredentialCeremony(): void {
       >
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h2 class="text-lg font-semibold">{{ createMode === "sandbox" ? "Provision Sandbox Client" : "Request Production Client" }}</h2>
+            <h2 class="text-lg font-semibold">
+              {{
+                createMode === "sandbox"
+                  ? "Provision Sandbox Client"
+                  : "Request Production Client"
+              }}
+            </h2>
             <p class="text-sm text-muted-foreground">
-              {{ createMode === "sandbox" ? "Bind one machine identity to one issuer Account and a bounded mandate." : "Submit an immutable mandate. No credential exists until an independent checker approves it." }}
+              {{
+                createMode === "sandbox"
+                  ? "Bind one machine identity to one issuer Account and a bounded mandate."
+                  : "Submit an immutable mandate. No credential exists until an independent checker approves it."
+              }}
             </p>
           </div>
           <button type="button" aria-label="Close" @click="showCreate = false">
@@ -511,6 +639,75 @@ function finishCredentialCeremony(): void {
             >
           </div>
         </fieldset>
+        <fieldset
+          v-if="canIssueStoredValue"
+          class="mt-5 rounded-xl border border-border p-4"
+        >
+          <legend class="px-1 text-sm font-semibold">Pay Code profiles</legend>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <label class="flex gap-2 rounded-lg border p-3 text-sm">
+              <input
+                type="checkbox"
+                :checked="form.voucher_profiles.includes('disbursement')"
+                @change="toggle(form.voucher_profiles, 'disbursement')"
+              />
+              <span>Disbursement</span>
+            </label>
+            <label class="flex gap-2 rounded-lg border p-3 text-sm">
+              <input
+                type="checkbox"
+                :checked="form.voucher_profiles.includes('stored_value')"
+                @change="toggle(form.voucher_profiles, 'stored_value')"
+              />
+              <span>Reusable balance issuance</span>
+            </label>
+          </div>
+        </fieldset>
+        <fieldset
+          v-if="usesStoredValueScopes"
+          data-testid="stored-value-partner-mandate"
+          class="mt-5 rounded-xl border border-violet-300/70 bg-violet-50/60 p-4 dark:border-violet-800 dark:bg-violet-950/20"
+        >
+          <legend
+            class="px-1 text-sm font-semibold text-violet-800 dark:text-violet-200"
+          >
+            Reusable balance merchant mandate
+          </legend>
+          <label class="flex gap-2 text-sm">
+            <input
+              v-model="form.stored_value_enabled"
+              data-testid="stored-value-mandate-enabled"
+              type="checkbox"
+            />
+            <span>
+              Enable merchant debits
+              <span class="block text-xs text-muted-foreground">
+                This client may debit a presented reusable balance only within
+                the limits below.
+              </span>
+            </span>
+          </label>
+          <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <label class="grid gap-1 text-sm">
+              Maximum per spend (₱)
+              <input
+                v-model="form.stored_value_maximum_amount"
+                data-testid="stored-value-maximum-amount"
+                inputmode="decimal"
+                class="h-10 rounded-lg border bg-background px-3"
+              />
+            </label>
+            <label class="grid gap-1 text-sm">
+              Daily spend limit (₱)
+              <input
+                v-model="form.stored_value_daily_amount"
+                data-testid="stored-value-daily-amount"
+                inputmode="decimal"
+                class="h-10 rounded-lg border bg-background px-3"
+              />
+            </label>
+          </div>
+        </fieldset>
         <fieldset class="mt-5">
           <legend class="text-sm font-semibold">Settlement rails</legend>
           <div class="mt-2 flex flex-wrap gap-2">
@@ -535,7 +732,8 @@ function finishCredentialCeremony(): void {
             ></span
           ></label
         >
-        <label v-if="createMode === 'sandbox'"
+        <label
+          v-if="createMode === 'sandbox'"
           class="mt-3 flex gap-2 rounded-lg border border-amber-300 bg-amber-50/70 p-3 text-sm dark:bg-amber-950/20"
           ><input v-model="form.acknowledge_secret_once" type="checkbox" /><span
             >I understand that the client secret is shown once and cannot be
@@ -562,7 +760,13 @@ function finishCredentialCeremony(): void {
             :disabled="!canSubmit || submitting"
             class="h-10 rounded-lg bg-emerald-600 px-4 font-semibold text-white disabled:opacity-50"
           >
-            {{ submitting ? "Working…" : (createMode === "sandbox" ? "Create Client" : "Submit Mandate") }}
+            {{
+              submitting
+                ? "Working…"
+                : createMode === "sandbox"
+                  ? "Create Client"
+                  : "Submit Mandate"
+            }}
           </button>
         </div>
       </form>
