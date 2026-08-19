@@ -10,6 +10,7 @@ use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Data\Treasury\PayCodeTerminalReleaseData;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Models\VoucherClaim;
 
 final readonly class ReleaseExpiredPayCodeReserve
@@ -51,10 +52,15 @@ final readonly class ReleaseExpiredPayCodeReserve
             );
         }
 
-        if (
+        $hasStoredValueBinding = StoredValueHolderBinding::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->where('status', 'active')
+            ->exists();
+
+        if (! $hasStoredValueBinding && (
             $voucher->redeemed_at !== null
             || VoucherClaim::query()->where('voucher_id', $voucher->getKey())->exists()
-        ) {
+        )) {
             throw new TreasuryConfigurationException(
                 "Pay Code [{$voucher->code}] has a claim and cannot return principal to Client Funds.",
             );

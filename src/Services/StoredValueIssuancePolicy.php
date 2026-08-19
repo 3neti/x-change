@@ -51,6 +51,14 @@ final class StoredValueIssuancePolicy
             'cash.amount',
         );
         $replenishable = ($policy['replenishable'] ?? false) === true;
+
+        if ($replenishable) {
+            $this->reject(
+                'stored_value.replenishable',
+                'Reusable Balance replenishment is unavailable until its funding authority is commissioned.',
+            );
+        }
+
         $maximumBalance = $this->toMinor(
             $policy['maximum_balance'] ?? data_get($input, 'cash.amount'),
             'stored_value.maximum_balance',

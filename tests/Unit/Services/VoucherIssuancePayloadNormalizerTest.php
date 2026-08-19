@@ -188,8 +188,8 @@ it('compiles the typed Reusable Balance policy into execution-only stored value'
         ],
         'stored_value' => [
             'enabled' => true,
-            'replenishable' => true,
-            'maximum_balance' => '2500.00',
+            'replenishable' => false,
+            'maximum_balance' => '1000.00',
             'otp_required_above' => '500.00',
         ],
     ];
@@ -203,8 +203,8 @@ it('compiles the typed Reusable Balance policy into execution-only stored value'
         'metadata' => [
             'stored_value' => [
                 'initial_balance' => 100_000,
-                'max_balance' => 250_000,
-                'replenishable' => true,
+                'max_balance' => 100_000,
+                'replenishable' => false,
                 'otp_required_above' => 50_000,
             ],
             'post_redemption' => [
@@ -234,6 +234,14 @@ it('rejects stored value policy conflicts and direct generic-driver bypasses', f
                 'enabled' => true,
                 'replenishable' => false,
                 'maximum_balance' => 100,
+            ],
+        ]))->toThrow(ValidationException::class)
+        ->and(fn () => $normalizer->normalize([
+            'cash' => ['amount' => 100, 'currency' => 'PHP'],
+            'stored_value' => [
+                'enabled' => true,
+                'replenishable' => true,
+                'maximum_balance' => 200,
             ],
         ]))->toThrow(ValidationException::class)
         ->and(fn () => $normalizer->normalize([

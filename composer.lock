@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e1e5ba2d2dbce1120a1f8eeb37643bde",
+    "content-hash": "aaa5fb33f95ebaed2bdf7d0137d3791b",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1259,16 +1259,16 @@
         },
         {
             "name": "3neti/voucher",
-            "version": "v1.0.0-beta.4",
+            "version": "v1.0.0-beta.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/voucher.git",
-                "reference": "7b52a2ce27923cb7b5a978e493303132a2ae3865"
+                "reference": "5a56454ebc9f629cd705b16568690360744dc931"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/voucher/zipball/7b52a2ce27923cb7b5a978e493303132a2ae3865",
-                "reference": "7b52a2ce27923cb7b5a978e493303132a2ae3865",
+                "url": "https://api.github.com/repos/3neti/voucher/zipball/5a56454ebc9f629cd705b16568690360744dc931",
+                "reference": "5a56454ebc9f629cd705b16568690360744dc931",
                 "shasum": ""
             },
             "require": {
@@ -1336,20 +1336,20 @@
                 "issues": "https://github.com/3neti/voucher/issues",
                 "source": "https://github.com/3neti/voucher"
             },
-            "time": "2026-08-12T07:05:00+00:00"
+            "time": "2026-08-19T00:11:04+00:00"
         },
         {
             "name": "3neti/wallet",
-            "version": "v2.0.0-beta.6",
+            "version": "v2.0.0-beta.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/wallet.git",
-                "reference": "901fe1f80c04c3819b0dc45fea6a11757e9b5750"
+                "reference": "a27640a62f704b2bff1a95f07951e08fbd8268f1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/wallet/zipball/901fe1f80c04c3819b0dc45fea6a11757e9b5750",
-                "reference": "901fe1f80c04c3819b0dc45fea6a11757e9b5750",
+                "url": "https://api.github.com/repos/3neti/wallet/zipball/a27640a62f704b2bff1a95f07951e08fbd8268f1",
+                "reference": "a27640a62f704b2bff1a95f07951e08fbd8268f1",
                 "shasum": ""
             },
             "require": {
@@ -1391,9 +1391,9 @@
             "description": "Custom wallet for X-Change",
             "support": {
                 "issues": "https://github.com/3neti/wallet/issues",
-                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.6"
+                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.7"
             },
-            "time": "2026-08-16T12:34:50+00:00"
+            "time": "2026-08-19T00:11:20+00:00"
         },
         {
             "name": "3neti/x-action",

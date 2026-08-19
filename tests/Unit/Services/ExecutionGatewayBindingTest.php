@@ -9,10 +9,12 @@ use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Exceptions\StoredValueSpendRejectedException;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
+use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Services\Execution\UnavailableStoredValueDestinationAuthority;
+use LBHurtado\XChange\Services\Execution\UnavailableStoredValueHolderAuthority;
+use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
-use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 
 it('binds voucher settlement envelope execution gateway to the x-change adapter', function () {
     expect(app(SettlementEnvelopeExecutionGateway::class))
@@ -24,8 +26,25 @@ it('binds voucher stored value execution gateway to the x-change adapter singlet
     $second = app(StoredValueExecutionGateway::class);
 
     expect($first)
-        ->toBeInstanceOf(XChangeStoredValueExecutionGateway::class)
+        ->toBeInstanceOf(WalletStoredValueExecutionGateway::class)
         ->and($second)->toBe($first);
+});
+
+it('binds stored value holder authority to a fail closed default', function () {
+    $authority = app(StoredValueHolderAuthorityContract::class);
+
+    expect($authority)
+        ->toBeInstanceOf(UnavailableStoredValueHolderAuthority::class)
+        ->and($authority->isReady())->toBeFalse()
+        ->and(fn () => $authority->authorize(
+            new ExecutionContextData(
+                contact: new Contact,
+                voucherCode: 'TEST',
+            ),
+        ))->toThrow(
+            StoredValueSpendRejectedException::class,
+            'Stored value holder authority has not been commissioned.',
+        );
 });
 
 it('binds stored value destination authority to a fail closed default', function () {

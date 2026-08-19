@@ -203,6 +203,7 @@ use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\EventLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\EventStoreContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
+use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
 use LBHurtado\XChange\Contracts\ExecutionResultActionHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultCockpitActivityHandoffContract;
@@ -406,9 +407,10 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJourna
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
 use LBHurtado\XChange\Services\Execution\UnavailableStoredValueDestinationAuthority;
+use LBHurtado\XChange\Services\Execution\UnavailableStoredValueHolderAuthority;
+use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
-use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
 use LBHurtado\XChange\Services\Feedback\XJournalFeedbackDeliveryWriter;
 use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
@@ -1239,12 +1241,17 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->singleton(
             StoredValueExecutionGateway::class,
-            XChangeStoredValueExecutionGateway::class,
+            WalletStoredValueExecutionGateway::class,
         );
 
         $this->app->singleton(
             StoredValueDestinationAuthorityContract::class,
             UnavailableStoredValueDestinationAuthority::class,
+        );
+
+        $this->app->singleton(
+            StoredValueHolderAuthorityContract::class,
+            UnavailableStoredValueHolderAuthority::class,
         );
 
         $this->app->bind(

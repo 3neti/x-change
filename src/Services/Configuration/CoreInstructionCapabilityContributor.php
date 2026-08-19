@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Configuration;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\XChange\Contracts\Execution\DurableStoredValueExecutionGatewayContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
+use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Contracts\InstructionCapabilityContributor;
 use LBHurtado\XChange\Data\Configuration\InstructionCapabilityReadinessData;
 
@@ -15,6 +16,7 @@ final class CoreInstructionCapabilityContributor implements InstructionCapabilit
     public function __construct(
         private readonly StoredValueExecutionGateway $storedValueGateway,
         private readonly StoredValueDestinationAuthorityContract $storedValueDestinationAuthority,
+        private readonly StoredValueHolderAuthorityContract $storedValueHolderAuthority,
     ) {}
 
     public function instructionCapabilities(): iterable
@@ -258,7 +260,8 @@ final class CoreInstructionCapabilityContributor implements InstructionCapabilit
         );
         $durable = $this->storedValueGateway instanceof DurableStoredValueExecutionGatewayContract;
         $destinationAuthorityReady = $this->storedValueDestinationAuthority->isReady();
-        $ready = $enabled && $durable && $destinationAuthorityReady;
+        $holderAuthorityReady = $this->storedValueHolderAuthority->isReady();
+        $ready = $enabled && $durable && $destinationAuthorityReady && $holderAuthorityReady;
         $missing = [];
 
         if (! $enabled) {
@@ -273,6 +276,10 @@ final class CoreInstructionCapabilityContributor implements InstructionCapabilit
             $missing[] = 'STORED_VALUE_DESTINATION_AUTHORITY';
         }
 
+        if (! $holderAuthorityReady) {
+            $missing[] = 'STORED_VALUE_HOLDER_AUTHORITY';
+        }
+
         return new InstructionCapabilityReadinessData(
             key: 'stored_value',
             label: 'Reusable Balance',
@@ -281,7 +288,7 @@ final class CoreInstructionCapabilityContributor implements InstructionCapabilit
             claimRetryable: false,
             reason: $ready
                 ? null
-                : 'Reusable Balance is unavailable until its durable wallet engine and destination authority are commissioned.',
+                : 'Reusable Balance is unavailable until its durable wallet engine and holder and destination authorities are commissioned.',
             missingConfiguration: $missing,
             source: 'wallet-stored-value',
         );
