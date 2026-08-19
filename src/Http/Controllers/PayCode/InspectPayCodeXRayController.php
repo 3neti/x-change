@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Http\Controllers\PayCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
@@ -33,8 +34,9 @@ class InspectPayCodeXRayController extends Controller
         $channel = trim((string) ($validated['channel'] ?? 'claim')) ?: 'claim';
 
         try {
-            $voucher = $vouchers->showByCode($code);
-            $projected = $projection->build($voucher);
+            $voucherSummary = $vouchers->showByCode($code);
+            $voucher = Voucher::query()->where('code', $code)->first();
+            $projected = $projection->build($voucherSummary, $voucher);
         } catch (VoucherNotFound) {
             $projected = [
                 'status' => 'not_found',

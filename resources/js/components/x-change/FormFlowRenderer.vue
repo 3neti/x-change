@@ -102,6 +102,13 @@ watch(
                     </span>
                 </label>
 
+                <p
+                    v-if="field.description"
+                    class="text-xs text-muted-foreground"
+                >
+                    {{ field.description }}
+                </p>
+
                 <div hidden data-testid="form-flow-field-preview-meta">
                     {{ fieldPresentation(field).normalizedType }} · {{ field.required ? 'required' : 'optional' }}
                 </div>

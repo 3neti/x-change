@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Claim;
 
+use LBHurtado\Voucher\Enums\VoucherSlicePlanMode;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Claim\ClaimExperienceData;
 use LBHurtado\XChange\Data\Claim\ClaimExperienceDiagnosticsData;
 use LBHurtado\XChange\Data\Claim\ClaimPhaseData;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use Spatie\LaravelData\DataCollection;
 
 class ClaimExperienceCompiler
@@ -16,6 +19,8 @@ class ClaimExperienceCompiler
     public function __construct(
         protected NamedVoucherSliceService $namedSlices,
         protected RiderContentRenderer $riderContent,
+        protected VoucherSliceExecutionCoordinator $sliceExecutions,
+        protected VoucherSlicePlanProjection $slicePlans,
     ) {}
 
     public function compile(Voucher $voucher): ClaimExperienceData
@@ -195,6 +200,24 @@ class ClaimExperienceCompiler
                 'required' => true,
                 'options' => $this->namedSlices->claimOptions($voucher),
                 'selection' => 'one_or_many',
+            ];
+        }
+
+        $plan = $this->sliceExecutions->plan($voucher);
+
+        if ($plan?->mode === VoucherSlicePlanMode::Flexible) {
+            $projection = $this->slicePlans->forVoucher($voucher);
+
+            $fields[] = [
+                'key' => 'amount',
+                'type' => 'number',
+                'label' => 'Amount to claim',
+                'description' => 'Enter an amount within the remaining flexible balance.',
+                'required' => true,
+                'inputmode' => 'decimal',
+                'min' => ((int) $plan->min_amount_minor) / 100,
+                'max' => ((int) data_get($projection, 'available_minor', 0)) / 100,
+                'step' => 0.01,
             ];
         }
 

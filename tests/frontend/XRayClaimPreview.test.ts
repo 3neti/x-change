@@ -167,7 +167,7 @@ describe('XRayClaimPreview', () => {
         });
 
         expect(wrapper.get('[data-testid="xray-slice-plan"]').text()).toContain(
-            'Choose a slice',
+            'Slices',
         );
         expect(wrapper.text()).toContain('Morning fare');
         expect(wrapper.text()).toContain('₱25.00');

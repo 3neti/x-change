@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 
@@ -167,31 +169,17 @@ it('emits no anonymous phases', function () {
 });
 
 it('emits a slice selector field for named slice vouchers', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->scheduled(
+        totalMinor: 1_000_000,
+        currency: 'PHP',
+        slices: [
+            ['id' => 'slice_1', 'label' => 'Buy Product 1', 'amount_minor' => 600_000],
+            ['id' => 'slice_2', 'label' => 'Pay for Service 1', 'amount_minor' => 400_000],
+        ],
+        selection: VoucherSliceSelectionPolicy::OneOrMany,
+    );
     $voucher = fakeClaimVoucher([
-        'cash' => [
-            'amount' => 10000,
-            'currency' => 'PHP',
-            'slice_mode' => 'open',
-            'max_slices' => 2,
-            'min_withdrawal' => 4000,
-            'validation' => [
-                'country' => 'PH',
-            ],
-        ],
-        'metadata' => [
-            'slices' => [
-                [
-                    'id' => 'slice_1',
-                    'amount' => 6000,
-                    'description' => 'Buy Product 1',
-                ],
-                [
-                    'id' => 'slice_2',
-                    'amount' => 4000,
-                    'description' => 'Pay for Service 1',
-                ],
-            ],
-        ],
+        'slice_plan' => $plan->canonicalArray(),
     ]);
 
     $experience = app(ClaimExperienceCompiler::class)
@@ -233,4 +221,30 @@ it('emits a passcode gate before payout details when issuer secret validation is
         ->and($secretField['required'])->toBeTrue()
         ->and($secretField['presentation'])->toBe('claim_secret_gate')
         ->and($experience['diagnostics']['form_flow_owner'])->toBe('claim-widget');
+});
+
+it('emits bounded amount input for canonical flexible slice plans', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->flexible(
+        totalMinor: 10_000,
+        currency: 'PHP',
+        maxSlices: 4,
+        minAmountMinor: 500,
+    );
+    $voucher = fakeClaimVoucher([
+        'slice_plan' => $plan->canonicalArray(),
+    ]);
+
+    $experience = app(ClaimExperienceCompiler::class)
+        ->compile($voucher)
+        ->toArray();
+
+    $formFlow = collect($experience['phases'])->firstWhere('key', 'form_flow');
+    $amount = collect($formFlow['fields'])->firstWhere('key', 'amount');
+
+    expect($formFlow['owner'])->toBe('claim-widget')
+        ->and($amount['type'])->toBe('number')
+        ->and($amount['required'])->toBeTrue()
+        ->and($amount['min'])->toBe(5)
+        ->and($amount['max'])->toBe(100)
+        ->and($amount['step'])->toBe(0.01);
 });

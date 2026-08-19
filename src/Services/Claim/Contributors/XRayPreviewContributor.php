@@ -41,7 +41,7 @@ final class XRayPreviewContributor implements ClaimSurfaceContributor
             return;
         }
 
-        $projected = $this->projection->build($context->voucherSummary);
+        $projected = $this->projection->build($context->voucherSummary, $context->voucher);
 
         $result = $this->inspector->handle(
             new XRayContextData(

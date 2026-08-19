@@ -8,6 +8,9 @@ export type FormFlowField = {
     inputmode?: string;
     options?: unknown[];
     selection?: string;
+    min?: number;
+    max?: number;
+    step?: number;
 };
 
 export type NormalizedFormFlow = {

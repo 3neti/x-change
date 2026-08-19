@@ -122,7 +122,12 @@ describe('FormFlowRenderer renderer delegation', () => {
                             key: 'gross_monthly_income',
                             type: 'number',
                             label: 'Gross Monthly Income',
+                            description: 'Use the amount before deductions.',
                             required: true,
+                            inputmode: 'decimal',
+                            min: 100,
+                            max: 500000,
+                            step: 0.01,
                         },
                     ],
                     stages: [],
@@ -134,6 +139,13 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="number-field-renderer-label"]').text()).toBe('Gross Monthly Income');
         expect(wrapper.find('[data-testid="number-field-renderer-kind"]').text()).toBe('number field');
         expect(wrapper.find('[data-testid="number-field-renderer-required"]').text()).toBe('required');
+        expect(wrapper.get('[data-testid="number-field-renderer-input"]').attributes()).toMatchObject({
+            inputmode: 'decimal',
+            min: '100',
+            max: '500000',
+            step: '0.01',
+        });
+        expect(wrapper.text()).toContain('Use the amount before deductions.');
 
         expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(false);

@@ -229,7 +229,7 @@ function stageText(stage: XRayStage): string {
                         <p
                             class="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground"
                         >
-                            Choose a slice
+                            Slices
                         </p>
                         <ul class="grid gap-2">
                             <li

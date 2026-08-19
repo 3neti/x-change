@@ -6,7 +6,9 @@ use Inertia\Response;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
+use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
@@ -133,6 +135,48 @@ it('starts a canonical claim flow only through the explicit post route', functio
     $this->post(route('x-change.claim.flows.store', [
         'code' => $voucher->code,
     ]))->assertRedirect('/form-flow/flow-explicit-post-test');
+});
+
+it('starts an equal slice claim with the next canonical slice amount', function () {
+    $this->withoutMiddleware();
+
+    $plan = app(VoucherSlicePlanFactory::class)->equal(7_500, 'PHP', 3);
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 75,
+        overrides: ['slice_plan' => $plan->canonicalArray()],
+    ));
+
+    mockDriverForClaimVoucher($this, $voucher, [[
+        'handler' => 'form',
+        'config' => [
+            'step_name' => 'wallet_info',
+            'title' => 'Disbursement Details',
+            'fields' => [[
+                'name' => 'amount',
+                'type' => 'number',
+                'label' => 'Amount',
+                'default' => 75,
+                'readonly' => true,
+                'required' => true,
+                'slice_mode' => null,
+                'available_balance' => 75,
+            ]],
+        ],
+    ]]);
+
+    assertClaimExperienceStartFlow($this, function (array $experience, array $payload): void {
+        $amount = collect(data_get($payload, 'steps.0.config.fields'))
+            ->firstWhere('name', 'amount');
+
+        expect(data_get($experience, 'version'))->toBe(1)
+            ->and($amount['default'])->toBe(25.0)
+            ->and($amount['readonly'])->toBeTrue()
+            ->and($amount['available_balance'])->toBe(25.0);
+    }, 'flow-equal-slice-test');
+
+    $this->post(route('x-change.claim.flows.store', [
+        'code' => $voucher->code,
+    ]))->assertRedirect('/form-flow/flow-equal-slice-test');
 });
 
 it('persists claim experience inside started form flow state', function () {
@@ -292,73 +336,22 @@ it('executes valid compiled form claim submissions through the redemption bridge
 it('starts form flow with selected named slice amount after slice selection', function () {
     $this->withoutMiddleware();
 
+    $plan = app(VoucherSlicePlanFactory::class)->scheduled(
+        totalMinor: 20_000,
+        currency: 'PHP',
+        slices: [
+            ['id' => 'slice_1', 'label' => 'Buy coffee', 'amount_minor' => 8_000],
+            ['id' => 'slice_2', 'label' => 'Buy doughnut', 'amount_minor' => 5_500],
+            ['id' => 'slice_3', 'label' => 'Taxi fare', 'amount_minor' => 6_500],
+        ],
+        selection: VoucherSliceSelectionPolicy::OneOrMany,
+    );
     $voucher = issueVoucher(validVoucherInstructions(
         amount: 200,
         overrides: [
-            'cash' => [
-                'amount' => 200,
-                'currency' => 'PHP',
-                'slice_mode' => 'open',
-                'max_slices' => 3,
-                'min_withdrawal' => 45,
-                'validation' => [
-                    'country' => 'PH',
-                ],
-            ],
-            'metadata' => [
-                'custom' => [
-                    'named_slices' => [
-                        [
-                            'id' => 'slice_1',
-                            'amount' => 80,
-                            'description' => 'Buy coffee',
-                        ],
-                        [
-                            'id' => 'slice_2',
-                            'amount' => 55,
-                            'description' => 'Buy doughnut',
-                        ],
-                        [
-                            'id' => 'slice_3',
-                            'amount' => 65,
-                            'description' => 'Taxi fare',
-                        ],
-                    ],
-                    'named_slice_policy' => [
-                        'mode' => 'named',
-                        'selection' => 'one_or_many',
-                        'enforced' => true,
-                    ],
-                ],
-            ],
+            'slice_plan' => $plan->canonicalArray(),
         ],
     ));
-
-    $metadata = $voucher->metadata ?? [];
-    data_set($metadata, 'instructions.metadata.custom.named_slices', [
-        [
-            'id' => 'slice_1',
-            'amount' => 80,
-            'description' => 'Buy coffee',
-        ],
-        [
-            'id' => 'slice_2',
-            'amount' => 55,
-            'description' => 'Buy doughnut',
-        ],
-        [
-            'id' => 'slice_3',
-            'amount' => 65,
-            'description' => 'Taxi fare',
-        ],
-    ]);
-    data_set($metadata, 'instructions.metadata.custom.named_slice_policy', [
-        'mode' => 'named',
-        'selection' => 'one_or_many',
-        'enforced' => true,
-    ]);
-    $voucher->forceFill(['metadata' => $metadata])->save();
-    $voucher->refresh();
 
     mockDriverForClaimVoucher($this, $voucher, [
         [

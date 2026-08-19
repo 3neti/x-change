@@ -10,6 +10,7 @@ use Illuminate\Routing\Controller;
 use Inertia\Response;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
+use LBHurtado\Voucher\Enums\VoucherSlicePlanMode;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaim;
 use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaimSubmission;
@@ -24,6 +25,8 @@ use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
@@ -43,6 +46,8 @@ class ClaimStartController extends Controller
         protected ClaimWorkflowResolverContract $claimWorkflows,
         protected ClaimAuthenticationIntent $claimAuthenticationIntent,
         protected PayoutDestinationRegistry $destinations,
+        protected VoucherSliceExecutionCoordinator $sliceExecutions,
+        protected VoucherSlicePlanProjection $slicePlans,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -98,10 +103,8 @@ class ClaimStartController extends Controller
                 ]);
             }
 
-            if (
-                $this->namedSlices->hasNamedSlices($prepared->voucher)
-                || $this->voucherRequiresSecret($prepared->voucher)
-            ) {
+            if ($this->sliceExecutions->plan($prepared->voucher) !== null
+                || $this->voucherRequiresSecret($prepared->voucher)) {
                 try {
                     return $this->startFormFlowForCompiledInputs(
                         voucher: $prepared->voucher,
@@ -210,8 +213,12 @@ class ClaimStartController extends Controller
             }
         }
 
-        if ($this->namedSlices->hasNamedSlices($voucher)) {
-            if ($this->namedSlices->allSlicesClaimed($voucher)) {
+        $slicePlan = $this->sliceExecutions->plan($voucher);
+
+        if ($slicePlan !== null) {
+            $sliceProjection = $this->slicePlans->forVoucher($voucher);
+
+            if ((int) data_get($sliceProjection, 'available_minor', 0) <= 0) {
                 return $this->redirectToCanonicalClaimSurface($code);
             }
 
@@ -226,16 +233,18 @@ class ClaimStartController extends Controller
                 );
             }
 
-            $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
+            if ($slicePlan->mode !== VoucherSlicePlanMode::Equal) {
+                $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
 
-            return $this->claimEntryResponse()->render(
-                initialCode: $code,
-                claimExperience: $claimExperience,
-                provisioningRequirement: null,
-            );
+                return $this->claimEntryResponse()->render(
+                    initialCode: $code,
+                    claimExperience: $claimExperience,
+                    provisioningRequirement: null,
+                );
+            }
         }
 
-        if ($voucher->redeemed_at !== null) {
+        if ($voucher->redeemed_at !== null && $slicePlan === null) {
             return $this->redirectToCanonicalClaimSurface($code);
         }
 
@@ -247,7 +256,14 @@ class ClaimStartController extends Controller
             return $this->redirectToCanonicalClaimSurface($code);
         }
 
-        $compiledFlow = $this->claimFlowCompiler->compile($voucher, $authenticatedMobile);
+        $payoutAmount = $slicePlan?->mode === VoucherSlicePlanMode::Equal
+            ? $this->nextCanonicalSliceAmount($voucher)
+            : null;
+        $compiledFlow = $this->claimFlowCompiler->compile(
+            voucher: $voucher,
+            authenticatedMobile: $authenticatedMobile,
+            payoutAmount: $payoutAmount,
+        );
         $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
 
         if ($this->claimExperienceUsesClaimWidgetFormFlow($claimExperience)) {
@@ -265,6 +281,11 @@ class ClaimStartController extends Controller
         }
 
         $instructionPayload = $this->applyClaimDestinationDefaults($instructionPayload);
+        $instructionPayload = $this->applySliceDefaults(
+            instructionPayload: $instructionPayload,
+            amount: $payoutAmount,
+            sliceIds: [],
+        );
 
         $instructions = FormFlowInstructionsData::from($instructionPayload);
 
@@ -290,13 +311,21 @@ class ClaimStartController extends Controller
         $sliceIds = $inputs['slice_ids'] ?? [];
         $amount = null;
 
-        if ($this->namedSlices->hasNamedSlices($voucher)) {
+        $plan = $this->sliceExecutions->plan($voucher);
+
+        if ($plan?->mode === VoucherSlicePlanMode::Scheduled) {
             $payload = $this->namedSlices->enrichClaimPayload($voucher, [
                 'slice_ids' => $sliceIds,
             ]);
 
             $amount = (float) data_get($payload, 'amount', 0);
             $sliceIds = data_get($payload, 'slice_ids', []);
+        } elseif ($plan?->mode === VoucherSlicePlanMode::Flexible) {
+            $amount = is_numeric($inputs['amount'] ?? null)
+                ? (float) $inputs['amount']
+                : null;
+        } elseif ($plan?->mode === VoucherSlicePlanMode::Equal) {
+            $amount = $this->nextCanonicalSliceAmount($voucher);
         }
 
         $instructions = $this->claimFlowCompiler->compile(
@@ -308,7 +337,7 @@ class ClaimStartController extends Controller
             $claimExperience,
         );
 
-        $instructionPayload = $this->applyNamedSliceDefaults(
+        $instructionPayload = $this->applySliceDefaults(
             instructionPayload: $instructionPayload,
             amount: $amount,
             sliceIds: $sliceIds,
@@ -333,7 +362,7 @@ class ClaimStartController extends Controller
      * @param  array<int, string>  $sliceIds
      * @return array<string, mixed>
      */
-    protected function applyNamedSliceDefaults(array $instructionPayload, ?float $amount, array $sliceIds, array $compiledInputs = []): array
+    protected function applySliceDefaults(array $instructionPayload, ?float $amount, array $sliceIds, array $compiledInputs = []): array
     {
         foreach ((array) data_get($instructionPayload, 'steps', []) as $stepIndex => $step) {
             if (data_get($step, 'handler') !== 'form') {
@@ -397,6 +426,16 @@ class ClaimStartController extends Controller
         }
 
         return $instructionPayload;
+    }
+
+    protected function nextCanonicalSliceAmount(Voucher $voucher): ?float
+    {
+        $row = collect((array) data_get($this->slicePlans->forVoucher($voucher), 'rows', []))
+            ->first(fn (mixed $slice): bool => is_array($slice)
+                && ($slice['status'] ?? null) === 'available'
+                && is_numeric($slice['amount_minor'] ?? null));
+
+        return is_array($row) ? ((int) $row['amount_minor']) / 100 : null;
     }
 
     /**
