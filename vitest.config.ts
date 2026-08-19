@@ -93,6 +93,11 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/cockpit-pay-code-explorer-route.ts",
         ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/StoredValueInstrumentPageController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/stored-value-instrument-route.ts",
+        ),
       "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeEngineeringPreviewController":
         path.resolve(
           import.meta.dirname,

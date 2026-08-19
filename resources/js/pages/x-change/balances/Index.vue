@@ -6,6 +6,9 @@ import BalanceOverviewCards, {
 } from '@/components/x-change/BalanceOverviewCards.vue';
 import CockpitBridgeCallout from '@/components/x-change/CockpitBridgeCallout.vue';
 import ReconciliationStatusCard from '@/components/x-change/ReconciliationStatusCard.vue';
+import ReusableBalanceCards, {
+    type ReusableBalanceSummary,
+} from '@/components/x-change/ReusableBalanceCards.vue';
 import {
     useXChangeDashboardApi,
     type DashboardStats,
@@ -24,6 +27,7 @@ defineOptions({
 const { getStats } = useXChangeDashboardApi();
 defineProps<{
     balance_overview?: BalanceOverview | null;
+    reusable_balances?: ReusableBalanceSummary[] | null;
     cockpit_bridge?: {
         status?: string | null;
         relationship?: string | null;
@@ -57,6 +61,8 @@ onMounted(async () => {
             :bridge="cockpit_bridge ?? null"
             title="Cockpit dashboard can show balance readiness"
         />
+
+        <ReusableBalanceCards :balances="reusable_balances ?? []" />
 
         <div class="grid gap-4 md:grid-cols-2">
             <BalanceOverviewCards :overview="balance_overview ?? null" />

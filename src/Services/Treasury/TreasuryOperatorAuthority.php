@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Models\TreasuryOperatorAuthorization;
+use Throwable;
 
 final readonly class TreasuryOperatorAuthority
 {
@@ -20,7 +21,11 @@ final readonly class TreasuryOperatorAuthority
             return false;
         }
 
-        $system = $this->systemUsers->resolve();
+        try {
+            $system = $this->systemUsers->resolve();
+        } catch (Throwable) {
+            return false;
+        }
 
         if ($system instanceof Model
             && $system->getMorphClass() === $operator->getMorphClass()

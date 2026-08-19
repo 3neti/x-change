@@ -2672,10 +2672,16 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function alignAccountSystemUser(): void
     {
-        $model = config(
+        $configuredModel = config(
             'x-change.onboarding.issuer_model',
             config('auth.providers.users.model', 'App\\Models\\User'),
         );
+        $authModel = config('auth.providers.users.model', 'App\\Models\\User');
+        $model = is_string($configuredModel)
+            && class_exists($configuredModel)
+            && is_subclass_of($configuredModel, Model::class)
+                ? $configuredModel
+                : $authModel;
         $identifier = config('x-change.payout.system_user_id');
         $column = config('x-change.payout.system_user_column', 'id');
 

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XChange\Enums\ProvisioningOperatorCapability;
 use LBHurtado\XChange\Models\ProvisioningOperatorAuthorization;
+use Throwable;
 
 final readonly class ProvisioningOperatorAuthority
 {
@@ -20,7 +21,11 @@ final readonly class ProvisioningOperatorAuthority
             return false;
         }
 
-        $system = $this->systemUsers->resolve();
+        try {
+            $system = $this->systemUsers->resolve();
+        } catch (Throwable) {
+            return false;
+        }
 
         if ($system instanceof Model && $operator->is($system)) {
             return false;

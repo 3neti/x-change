@@ -132,6 +132,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
+use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
 use LBHurtado\XChange\Http\Middleware\RequireVerifiedMobile;
 use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
@@ -652,6 +653,10 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
     });
 
     Route::get('balances', BalancePageController::class)->name('x-change.balances.index');
+    Route::get(
+        'balances/reusable/{instrument}',
+        StoredValueInstrumentPageController::class,
+    )->whereUlid('instrument')->name('x-change.balances.reusable.show');
     Route::post('provider-wallets/paynamics', LinkPaynamicsWalletController::class)
         ->name('x-change.provider-wallets.paynamics.store');
 });
