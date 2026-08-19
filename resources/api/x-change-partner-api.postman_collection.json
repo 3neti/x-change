@@ -9,7 +9,9 @@
     {"key": "client_id", "value": ""},
     {"key": "client_secret", "value": "", "type": "secret"},
     {"key": "access_token", "value": "", "type": "secret"},
-    {"key": "pay_code", "value": ""}
+    {"key": "pay_code", "value": ""},
+    {"key": "stored_value_instrument", "value": ""},
+    {"key": "stored_value_challenge", "value": ""}
   ],
   "item": [
     {
@@ -28,7 +30,7 @@
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}],
-            "body": {"mode": "urlencoded", "urlencoded": [{"key": "grant_type", "value": "client_credentials"}, {"key": "client_id", "value": "{{client_id}}"}, {"key": "client_secret", "value": "{{client_secret}}"}, {"key": "scope", "value": "capabilities:read pay-codes:estimate pay-codes:issue pay-codes:read pay-codes:cancel"}]},
+            "body": {"mode": "urlencoded", "urlencoded": [{"key": "grant_type", "value": "client_credentials"}, {"key": "client_id", "value": "{{client_id}}"}, {"key": "client_secret", "value": "{{client_secret}}"}, {"key": "scope", "value": "capabilities:read pay-codes:estimate pay-codes:issue pay-codes:read pay-codes:cancel stored-value:read stored-value:spend"}]},
             "url": "{{base_url}}/oauth/token"
           }
         }
@@ -50,6 +52,30 @@
         },
         {"name": "Status", "request": {"method": "GET", "url": "{{base_url}}/api/partner/v1/pay-codes/{{pay_code}}"}},
         {"name": "Cancel", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"reason\":\"Cancelled by authorized Partner API client.\"}"}, "url": "{{base_url}}/api/partner/v1/pay-codes/{{pay_code}}/cancellation"}
+        }
+      ]
+    },
+    {
+      "name": "Reusable Balance",
+      "description": "Requires an explicitly commissioned stored-value mandate. The instrument and challenge variables are opaque ULIDs; never substitute a short Pay Code.",
+      "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+      "item": [
+        {
+          "name": "Request Spend OTP",
+          "event": [{"listen": "test", "script": {"exec": ["const body = pm.response.json();", "if (body.data && body.data.reference) pm.collectionVariables.set('stored_value_challenge', body.data.reference);"]}}],
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Idempotency-Key", "value": "challenge-{{$guid}}"}], "body": {"mode": "raw", "raw": "{\n  \"amount_minor\": 2500,\n  \"currency\": \"PHP\"\n}"}, "url": "{{base_url}}/api/partner/v1/stored-value-instruments/{{stored_value_instrument}}/spend-challenges"}
+        },
+        {
+          "name": "Verify Spend OTP",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"code\": \"000000\"\n}"}, "url": "{{base_url}}/api/partner/v1/stored-value-instruments/{{stored_value_instrument}}/spend-challenges/{{stored_value_challenge}}/verification"}
+        },
+        {
+          "name": "Spend",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Idempotency-Key", "value": "fare-{{$guid}}"}], "body": {"mode": "raw", "raw": "{\n  \"amount_minor\": 2500,\n  \"currency\": \"PHP\",\n  \"otp_challenge_reference\": \"{{stored_value_challenge}}\"\n}"}, "url": "{{base_url}}/api/partner/v1/stored-value-instruments/{{stored_value_instrument}}/spends"}
+        },
+        {
+          "name": "Transactions",
+          "request": {"method": "GET", "url": "{{base_url}}/api/partner/v1/stored-value-instruments/{{stored_value_instrument}}/transactions"}
         }
       ]
     }

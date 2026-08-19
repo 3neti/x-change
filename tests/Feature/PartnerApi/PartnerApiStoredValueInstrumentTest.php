@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
+use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
 use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\ExecutionEngine;
@@ -14,7 +16,9 @@ use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Models\StoredValueSpendChallenge;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiMandateValidator;
+use LBHurtado\XChange\Tests\Fakes\FakeOtpChallengeGateway;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('requires an explicit bounded mandate for stored-value scopes', function (): void {
@@ -163,8 +167,150 @@ it('rejects an expired instrument before execution can reach Treasury', function
     expect(PartnerApiOperation::query()->count())->toBe(0);
 });
 
+it('binds a provider-verified OTP challenge to one exact above-threshold spend', function (): void {
+    [, $binding] = partnerStoredValueInstrument(1_000);
+    partnerStoredValueClient(['stored-value:spend']);
+    $otp = new FakeOtpChallengeGateway;
+    $otp->expectedCode = '197200';
+    $this->app->instance(OtpChallengeGateway::class, $otp);
+    $challengeUrl = '/api/partner/v1/stored-value-instruments/'.$binding->reference.'/spend-challenges';
+
+    $challenge = $this->postJson($challengeUrl, [
+        'amount_minor' => 2_500,
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'fare-otp-challenge-1'])
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'pending')
+        ->assertJsonMissingPath('data.mobile')
+        ->assertJsonMissingPath('data.provider_reference')
+        ->json('data');
+
+    expect($otp->request?->mobile)->toBe('+639173011987')
+        ->and($otp->request?->purpose)->toBe('stored-value.spend.v1')
+        ->and(DB::table('x_change_stored_value_spend_challenges')
+            ->value('provider_reference_ciphertext'))->not->toContain((string) $challenge['reference']);
+
+    $verificationUrl = $challengeUrl.'/'.$challenge['reference'].'/verification';
+    $this->postJson($verificationUrl, ['code' => '000000'])
+        ->assertUnprocessable();
+    $this->postJson($verificationUrl, ['code' => '197200'])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'verified')
+        ->assertJsonMissingPath('data.proof_reference');
+
+    $engine = Mockery::mock(ExecutionEngine::class);
+    $engine->shouldReceive('execute')->once()->withArgs(function ($context): bool {
+        expect($context->meta)->toBe([
+            'operation' => 'spend',
+            'amount' => 2_500,
+            'otp_verified' => true,
+        ]);
+
+        return true;
+    })->andReturn(ExecutionResultData::succeeded('stored_value', [
+        'remaining_balance' => 97_500,
+        'operation_reference' => 'treasury-operation:otp-protected',
+    ]));
+    $this->app->instance(ExecutionEngine::class, $engine);
+    $spendUrl = '/api/partner/v1/stored-value-instruments/'.$binding->reference.'/spends';
+    $spendPayload = [
+        'amount_minor' => 2_500,
+        'currency' => 'PHP',
+        'otp_challenge_reference' => $challenge['reference'],
+    ];
+    $headers = ['Idempotency-Key' => 'fare-otp-spend-1'];
+
+    $this->postJson($spendUrl, $spendPayload, $headers)
+        ->assertCreated()
+        ->assertJsonPath('data.transaction.balance_after_minor', 97_500);
+    $this->postJson($spendUrl, $spendPayload, $headers)
+        ->assertOk()
+        ->assertJsonPath('meta.idempotency.replayed', true);
+
+    $storedChallenge = StoredValueSpendChallenge::query()->sole();
+
+    expect($storedChallenge->status)->toBe('consumed')
+        ->and($storedChallenge->attempts)->toBe(1)
+        ->and($storedChallenge->proof_reference_hash)->toHaveLength(64)
+        ->and($storedChallenge->consumed_partner_api_operation_id)->toBe(
+            PartnerApiOperation::query()->sole()->getKey(),
+        )
+        ->and(DB::table('x_change_stored_value_spend_challenges')
+            ->value('idempotency_key_hash'))->not->toBe('fare-otp-challenge-1')
+        ->and(fn () => $storedChallenge->forceFill(['status' => 'pending'])->save())
+        ->toThrow(LogicException::class, 'guarded lifecycle actions')
+        ->and(fn () => $storedChallenge->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
+
+    $this->postJson($spendUrl, $spendPayload, ['Idempotency-Key' => 'fare-otp-spend-2'])
+        ->assertUnprocessable();
+});
+
+it('rejects challenge replay drift and cross-client verification', function (): void {
+    [, $binding] = partnerStoredValueInstrument(1_000);
+    partnerStoredValueClient(['stored-value:spend']);
+    $otp = new FakeOtpChallengeGateway;
+    $this->app->instance(OtpChallengeGateway::class, $otp);
+    $url = '/api/partner/v1/stored-value-instruments/'.$binding->reference.'/spend-challenges';
+
+    $reference = $this->postJson($url, [
+        'amount_minor' => 2_500,
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'challenge-exact-facts'])
+        ->assertCreated()
+        ->json('data.reference');
+
+    $this->postJson($url, [
+        'amount_minor' => 2_501,
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'challenge-exact-facts'])
+        ->assertUnprocessable();
+
+    partnerStoredValueClient(['stored-value:spend']);
+    $this->postJson($url.'/'.$reference.'/verification', ['code' => '000000'])
+        ->assertNotFound();
+
+    expect(PartnerApiOperation::query()->count())->toBe(0);
+});
+
+it('rejects unverified and mismatched OTP proof without reaching execution', function (): void {
+    [, $binding] = partnerStoredValueInstrument(1_000);
+    partnerStoredValueClient(['stored-value:spend']);
+    $otp = new FakeOtpChallengeGateway;
+    $this->app->instance(OtpChallengeGateway::class, $otp);
+    $challengeUrl = '/api/partner/v1/stored-value-instruments/'.$binding->reference.'/spend-challenges';
+    $reference = $this->postJson($challengeUrl, [
+        'amount_minor' => 2_500,
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'challenge-proof-guard'])
+        ->assertCreated()
+        ->json('data.reference');
+    $engine = Mockery::mock(ExecutionEngine::class);
+    $engine->shouldNotReceive('execute');
+    $this->app->instance(ExecutionEngine::class, $engine);
+    $spendUrl = '/api/partner/v1/stored-value-instruments/'.$binding->reference.'/spends';
+
+    $this->postJson($spendUrl, [
+        'amount_minor' => 2_500,
+        'currency' => 'PHP',
+        'otp_challenge_reference' => $reference,
+    ], ['Idempotency-Key' => 'unverified-spend'])
+        ->assertUnprocessable();
+
+    $otp->proofPurpose = 'another.purpose';
+    $this->postJson($challengeUrl.'/'.$reference.'/verification', ['code' => '000000'])
+        ->assertUnprocessable();
+    $otp->proofPurpose = 'stored-value.spend.v1';
+    $otp->proofVerifiedAt = now()->subHour()->toIso8601String();
+    $this->postJson($challengeUrl.'/'.$reference.'/verification', ['code' => '000000'])
+        ->assertUnprocessable();
+
+    expect(StoredValueSpendChallenge::query()->sole()->status)->toBe('pending')
+        ->and(PartnerApiOperation::query()->count())->toBe(0);
+});
+
 /** @return array{0: User, 1: StoredValueHolderBinding} */
-function partnerStoredValueInstrument(): array
+function partnerStoredValueInstrument(int $otpRequiredAbove = 0): array
 {
     $holder = User::query()->create([
         'name' => 'Stored Value Holder',
@@ -183,7 +329,7 @@ function partnerStoredValueInstrument(): array
                 'execution' => [
                     'schema' => 'voucher.execution.v1',
                     'driver' => 'stored_value',
-                    'metadata' => ['stored_value' => ['otp_required_above' => 0]],
+                    'metadata' => ['stored_value' => ['otp_required_above' => $otpRequiredAbove]],
                 ],
             ],
         ],

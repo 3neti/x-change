@@ -734,6 +734,14 @@ return [
         'prefix' => env('XCHANGE_PARTNER_API_PREFIX', 'api/partner/v1'),
         'token_ttl_minutes' => (int) env('XCHANGE_PARTNER_API_TOKEN_TTL_MINUTES', 15),
         'rate_limit_per_minute' => (int) env('XCHANGE_PARTNER_API_RATE_LIMIT_PER_MINUTE', 60),
+        'stored_value_otp_challenge_rate_limit_per_minute' => (int) env(
+            'XCHANGE_PARTNER_API_STORED_VALUE_OTP_CHALLENGE_RATE_LIMIT_PER_MINUTE',
+            3,
+        ),
+        'stored_value_otp_verification_rate_limit_per_minute' => (int) env(
+            'XCHANGE_PARTNER_API_STORED_VALUE_OTP_VERIFICATION_RATE_LIMIT_PER_MINUTE',
+            6,
+        ),
         'scopes' => [
             'capabilities:read' => 'Inspect the authenticated Partner API mandate.',
             'pay-codes:estimate' => 'Estimate a Pay Code without reserving funds.',
@@ -2625,6 +2633,14 @@ return [
                 'XCHANGE_STORED_VALUE_ISSUANCE_ENABLED',
                 false,
             ),
+            'otp' => [
+                'purpose' => env('XCHANGE_STORED_VALUE_OTP_PURPOSE', 'stored-value.spend.v1'),
+                'ttl_minutes' => (int) env('XCHANGE_STORED_VALUE_OTP_TTL_MINUTES', 10),
+                'proof_ttl_minutes' => (int) env('XCHANGE_STORED_VALUE_OTP_PROOF_TTL_MINUTES', 15),
+                'clock_skew_seconds' => (int) env('XCHANGE_STORED_VALUE_OTP_CLOCK_SKEW_SECONDS', 30),
+                'max_attempts' => (int) env('XCHANGE_STORED_VALUE_OTP_MAX_ATTEMPTS', 5),
+                'hash_key' => env('XCHANGE_STORED_VALUE_OTP_HASH_KEY'),
+            ],
         ],
     ],
 

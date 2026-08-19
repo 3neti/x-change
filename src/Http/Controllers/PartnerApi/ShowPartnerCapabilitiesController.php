@@ -21,7 +21,7 @@ class ShowPartnerCapabilitiesController extends Controller
         return $responses->success([
             'schema' => 'x-change.partner-capabilities.v1',
             'contract' => [
-                'version' => '1.1.0',
+                'version' => '1.2.0',
                 'sha256' => is_file($contractPath) ? hash_file('sha256', $contractPath) : null,
             ],
             'client' => [

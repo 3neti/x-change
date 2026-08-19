@@ -2276,6 +2276,29 @@ class XChangeServiceProvider extends ServiceProvider
                 (int) config('x-change.partner_api.rate_limit_per_minute', 60),
             ))->by($tokenFingerprint !== hash('sha256', '') ? $tokenFingerprint : $request->ip());
         });
+
+        RateLimiter::for('x-change-partner-stored-value-challenge', function (Request $request): Limit {
+            return Limit::perMinute(max(1, (int) config(
+                'x-change.partner_api.stored_value_otp_challenge_rate_limit_per_minute',
+                3,
+            )))->by($this->partnerApiRateLimitKey($request));
+        });
+
+        RateLimiter::for('x-change-partner-stored-value-verification', function (Request $request): Limit {
+            return Limit::perMinute(max(1, (int) config(
+                'x-change.partner_api.stored_value_otp_verification_rate_limit_per_minute',
+                6,
+            )))->by($this->partnerApiRateLimitKey($request));
+        });
+    }
+
+    private function partnerApiRateLimitKey(Request $request): string
+    {
+        $tokenFingerprint = hash('sha256', (string) $request->bearerToken());
+
+        return $tokenFingerprint !== hash('sha256', '')
+            ? $tokenFingerprint
+            : (string) $request->ip();
     }
 
     protected function bootExceptionRendering(): void

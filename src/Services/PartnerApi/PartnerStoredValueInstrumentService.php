@@ -19,6 +19,7 @@ use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Models\StoredValueSpendChallenge;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -50,7 +51,14 @@ final readonly class PartnerStoredValueInstrumentService
             $currency = strtoupper((string) $payload['currency']);
             $headers = (array) Arr::get($payload, '_partner', []);
             $idempotencyKey = trim((string) Arr::get($headers, 'idempotency_key'));
-            $requestHash = $this->requestHash($client, $binding, $amountMinor, $currency);
+            $challengeReference = trim((string) ($payload['otp_challenge_reference'] ?? ''));
+            $requestHash = $this->requestHash(
+                $client,
+                $binding,
+                $amountMinor,
+                $currency,
+                $challengeReference,
+            );
             $existing = PartnerApiOperation::query()
                 ->where('partner_api_client_id', $client->getKey())
                 ->where('operation', 'stored_value_spent')
@@ -81,6 +89,14 @@ final readonly class PartnerStoredValueInstrumentService
                 ]);
             }
 
+            $challenge = $this->verifiedChallenge(
+                client: $client,
+                binding: $binding,
+                amountMinor: $amountMinor,
+                currency: $currency,
+                challengeReference: $challengeReference,
+            );
+
             $holder = $binding->holder;
 
             if (! $holder instanceof Model) {
@@ -103,10 +119,11 @@ final readonly class PartnerStoredValueInstrumentService
                 voucher: $voucher,
                 contact: $contact,
                 voucherCode: (string) $voucher->code,
-                meta: [
+                meta: array_filter([
                     'operation' => 'spend',
                     'amount' => $amountMinor,
-                ],
+                    'otp_verified' => $challenge instanceof StoredValueSpendChallenge ? true : null,
+                ], static fn (mixed $value): bool => $value !== null),
                 correlation: ['execution_id' => $executionId],
             ));
 
@@ -146,6 +163,14 @@ final readonly class PartnerStoredValueInstrumentService
             $data = $this->transactionData($operation, $binding, $balanceAfter, $occurredAt->toIso8601String());
             $operation->response_snapshot = $data;
             $operation->save();
+
+            if ($challenge instanceof StoredValueSpendChallenge) {
+                $challenge->forceFill([
+                    'status' => 'consumed',
+                    'consumed_partner_api_operation_id' => $operation->getKey(),
+                    'consumed_at' => $occurredAt,
+                ])->saveQuietly();
+            }
 
             return ['data' => $data, 'replayed' => false];
         }, attempts: 5);
@@ -248,6 +273,7 @@ final readonly class PartnerStoredValueInstrumentService
         StoredValueHolderBinding $binding,
         int $amountMinor,
         string $currency,
+        string $challengeReference,
     ): string {
         return hash('sha256', json_encode([
             'schema' => 'x-change.partner-stored-value-spend.v1',
@@ -255,7 +281,64 @@ final readonly class PartnerStoredValueInstrumentService
             'instrument' => $binding->reference,
             'amount_minor' => $amountMinor,
             'currency' => $currency,
+            'otp_challenge_reference' => $challengeReference !== '' ? $challengeReference : null,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+    }
+
+    private function verifiedChallenge(
+        PartnerApiClient $client,
+        StoredValueHolderBinding $binding,
+        int $amountMinor,
+        string $currency,
+        string $challengeReference,
+    ): ?StoredValueSpendChallenge {
+        $threshold = (int) data_get(
+            $binding->voucher->metadata,
+            'instructions.execution.metadata.stored_value.otp_required_above',
+            0,
+        );
+        $required = $threshold > 0 && $amountMinor > $threshold;
+
+        if (! $required && $challengeReference === '') {
+            return null;
+        }
+
+        if (! $required) {
+            throw ValidationException::withMessages([
+                'otp_challenge_reference' => ['This spend does not require an OTP challenge.'],
+            ]);
+        }
+
+        if ($challengeReference === '') {
+            throw ValidationException::withMessages([
+                'otp_challenge_reference' => ['A verified OTP challenge is required for this spend.'],
+            ]);
+        }
+
+        $challenge = StoredValueSpendChallenge::query()
+            ->where('reference', $challengeReference)
+            ->where('partner_api_client_id', $client->getKey())
+            ->where('stored_value_holder_binding_id', $binding->getKey())
+            ->lockForUpdate()
+            ->first();
+
+        if (! $challenge instanceof StoredValueSpendChallenge
+            || $challenge->status !== 'verified'
+            || $challenge->consumed_at !== null
+            || $challenge->verified_at === null
+            || $challenge->expires_at === null
+            || $challenge->expires_at->isPast()
+            || $challenge->proof_reference_hash === null
+            || $challenge->amount_minor !== $amountMinor
+            || $challenge->currency !== $currency) {
+            throw ValidationException::withMessages([
+                'otp_challenge_reference' => [
+                    'The OTP challenge is not valid for this client, instrument, amount, and currency.',
+                ],
+            ]);
+        }
+
+        return $challenge;
     }
 
     /** @return array<string, mixed> */

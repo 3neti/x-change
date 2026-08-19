@@ -6,7 +6,7 @@ namespace LBHurtado\XChange\Http\Requests\PartnerApi;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-final class SpendStoredValueInstrumentRequest extends FormRequest
+final class CreateStoredValueSpendChallengeRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,7 +19,6 @@ final class SpendStoredValueInstrumentRequest extends FormRequest
         return [
             'amount_minor' => ['required', 'integer', 'min:1'],
             'currency' => ['required', 'string', 'size:3'],
-            'otp_challenge_reference' => ['nullable', 'ulid'],
             '_partner' => ['required', 'array:idempotency_key,correlation_id'],
             '_partner.idempotency_key' => ['required', 'string', 'max:160'],
             '_partner.correlation_id' => ['nullable', 'string', 'max:160'],

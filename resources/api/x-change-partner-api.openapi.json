@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "X-Change Partner API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Governed server-to-server Pay Code issuance. OAuth identity is bound to one issuer Account; server-side mandates, Account funds, Treasury controls, and idempotency remain authoritative."
   },
   "servers": [{"url": "/api/partner/v1"}],
@@ -80,6 +80,44 @@
         }
       }
     },
+    "/stored-value-instruments/{instrument}/spend-challenges": {
+      "post": {
+        "operationId": "createStoredValueSpendChallenge",
+        "summary": "Request a holder OTP bound to one exact above-threshold spend",
+        "security": [{"partnerOAuth": ["stored-value:spend"]}],
+        "parameters": [
+          {"$ref": "#/components/parameters/StoredValueInstrument"},
+          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
+          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["amount_minor", "currency"], "properties": {"amount_minor": {"type": "integer", "minimum": 1}, "currency": {"type": "string", "minLength": 3, "maxLength": 3}}}}}},
+        "responses": {
+          "201": {"description": "OTP challenge requested once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "200": {"description": "Exact idempotent challenge replay", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "404": {"description": "Unknown or unavailable instrument"},
+          "422": {"$ref": "#/components/responses/ValidationError"},
+          "429": {"description": "OTP challenge rate limit exceeded"}
+        }
+      }
+    },
+    "/stored-value-instruments/{instrument}/spend-challenges/{challenge}/verification": {
+      "post": {
+        "operationId": "verifyStoredValueSpendChallenge",
+        "summary": "Verify the holder OTP without moving money",
+        "security": [{"partnerOAuth": ["stored-value:spend"]}],
+        "parameters": [
+          {"$ref": "#/components/parameters/StoredValueInstrument"},
+          {"$ref": "#/components/parameters/StoredValueSpendChallenge"}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["code"], "properties": {"code": {"type": "string", "pattern": "^\\d{6}$"}}}}}},
+        "responses": {
+          "200": {"description": "Challenge verified; no money moved", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
+          "404": {"description": "Unknown client, instrument, or challenge"},
+          "422": {"$ref": "#/components/responses/ValidationError"},
+          "429": {"description": "OTP verification rate limit exceeded"}
+        }
+      }
+    },
     "/stored-value-instruments/{instrument}/spends": {
       "post": {
         "operationId": "spendStoredValueInstrument",
@@ -90,7 +128,7 @@
           {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
           {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
         ],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["amount_minor", "currency"], "properties": {"amount_minor": {"type": "integer", "minimum": 1}, "currency": {"type": "string", "minLength": 3, "maxLength": 3}}}}}},
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["amount_minor", "currency"], "properties": {"amount_minor": {"type": "integer", "minimum": 1}, "currency": {"type": "string", "minLength": 3, "maxLength": 3}, "otp_challenge_reference": {"type": ["string", "null"], "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "Required only when the instrument's governed OTP threshold is exceeded."}}}}}},
         "responses": {
           "201": {"description": "Spend committed once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
           "200": {"description": "Exact idempotent replay", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
@@ -137,7 +175,8 @@
     },
     "parameters": {
       "PayCode": {"name": "code", "in": "path", "required": true, "schema": {"type": "string", "maxLength": 80}},
-      "StoredValueInstrument": {"name": "instrument", "in": "path", "required": true, "description": "Opaque ULID presented by an activated holder. Short Pay Codes and internal ledger references are not accepted.", "schema": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"}}
+      "StoredValueInstrument": {"name": "instrument", "in": "path", "required": true, "description": "Opaque ULID presented by an activated holder. Short Pay Codes and internal ledger references are not accepted.", "schema": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"}},
+      "StoredValueSpendChallenge": {"name": "challenge", "in": "path", "required": true, "description": "Opaque ULID for an OTP challenge bound to the authenticated client and exact spend facts.", "schema": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"}}
     },
     "schemas": {
       "PayCodeInstructions": {

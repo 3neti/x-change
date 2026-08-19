@@ -41,6 +41,8 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             '/pay-codes',
             '/pay-codes/{code}',
             '/pay-codes/{code}/cancellation',
+            '/stored-value-instruments/{instrument}/spend-challenges',
+            '/stored-value-instruments/{instrument}/spend-challenges/{challenge}/verification',
             '/stored-value-instruments/{instrument}/spends',
             '/stored-value-instruments/{instrument}/transactions',
         ])
@@ -48,6 +50,8 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             ->firstWhere('name', 'Idempotency-Key'))
         ->toMatchArray(['in' => 'header', 'required' => true])
         ->and(data_get($document, 'components.parameters.StoredValueInstrument.schema.pattern'))
+        ->toBe('^[0-9A-HJKMNP-TV-Z]{26}$')
+        ->and(data_get($document, 'components.parameters.StoredValueSpendChallenge.schema.pattern'))
         ->toBe('^[0-9A-HJKMNP-TV-Z]{26}$')
         ->and($response->getContent())->not->toContain('/api/x/v1')
         ->not->toContain('issuer_id');

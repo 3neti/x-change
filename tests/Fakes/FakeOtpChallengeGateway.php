@@ -74,7 +74,7 @@ final class FakeOtpChallengeGateway implements OtpChallengeGateway
             reason: 'verified',
             proof: new OtpVerificationProofData(
                 reference: $this->proofReference ?? $challengeReference,
-                purpose: $this->proofPurpose ?? 'onboarding.account',
+                purpose: $this->proofPurpose ?? $this->request?->purpose ?? 'onboarding.account',
                 verified_at: $this->proofVerifiedAt ?? now()->utc()->toIso8601String(),
             ),
             attempts: 1,
