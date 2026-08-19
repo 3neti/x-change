@@ -179,8 +179,8 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         );
 
         // Mode, Amount, Pay To, Purpose, Status Updates, Claim
-        // Requirements, Transfer Network.
-        expect(glyphs.length).toBe(7);
+        // Requirements, Value Use, Transfer Network.
+        expect(glyphs.length).toBe(8);
 
         for (const glyph of glyphs) {
             const trigger = glyph.get(

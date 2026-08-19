@@ -155,6 +155,25 @@ class GeneratePayCodeRequest extends FormRequest
             'execution.fallback' => ['nullable', 'string', 'max:120'],
             'execution.visibility' => ['nullable', 'array'],
             'execution.metadata' => ['nullable', 'array'],
+            'stored_value' => [
+                'nullable',
+                'array:enabled,replenishable,maximum_balance,otp_required_above',
+            ],
+            'stored_value.enabled' => ['required_with:stored_value', 'boolean'],
+            'stored_value.replenishable' => [
+                'required_if:stored_value.enabled,true',
+                'boolean',
+            ],
+            'stored_value.maximum_balance' => [
+                'required_if:stored_value.enabled,true',
+                'numeric',
+                'min:0.01',
+            ],
+            'stored_value.otp_required_above' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
             'claim' => ['nullable', 'array'],
             'claim.outcomes' => ['required_with:claim', 'array', 'min:1'],
             'claim.outcomes.*' => ['required', 'array'],

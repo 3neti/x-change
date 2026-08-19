@@ -52,6 +52,11 @@ final class InstructionCapabilityRequirementResolver
             }
         }
 
+        if (data_get($instructions, 'execution.driver') === 'stored_value'
+            || $this->enabled(data_get($instructions, 'stored_value.enabled'))) {
+            $required[] = 'stored_value';
+        }
+
         $required = array_values(array_unique($required));
         sort($required);
 

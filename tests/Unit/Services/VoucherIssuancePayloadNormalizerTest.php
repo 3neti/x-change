@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 
@@ -176,4 +177,71 @@ it('maps only required legacy onboarding and rejects incompatible execution', fu
             InvalidArgumentException::class,
             'Onboarding Vouchers cannot use execution driver [stored-value].',
         );
+});
+
+it('compiles the typed Reusable Balance policy into execution-only stored value', function (): void {
+    $normalizer = app(VoucherIssuancePayloadNormalizer::class);
+    $input = [
+        'cash' => [
+            'amount' => '1000.00',
+            'currency' => 'PHP',
+        ],
+        'stored_value' => [
+            'enabled' => true,
+            'replenishable' => true,
+            'maximum_balance' => '2500.00',
+            'otp_required_above' => '500.00',
+        ],
+    ];
+
+    $normalized = $normalizer->normalize($input);
+    $replayed = $normalizer->normalize($normalized);
+
+    expect(data_get($normalized, 'execution'))->toBe([
+        'schema' => 'voucher.execution.v1',
+        'driver' => 'stored_value',
+        'metadata' => [
+            'stored_value' => [
+                'initial_balance' => 100_000,
+                'max_balance' => 250_000,
+                'replenishable' => true,
+                'otp_required_above' => 50_000,
+            ],
+            'post_redemption' => [
+                'mode' => 'execution_only',
+            ],
+        ],
+    ])->and(data_get($normalized, 'execution.metadata.stored_value.reference'))
+        ->toBeNull()
+        ->and($replayed)->toBe($normalized);
+});
+
+it('rejects stored value policy conflicts and direct generic-driver bypasses', function (): void {
+    $normalizer = app(VoucherIssuancePayloadNormalizer::class);
+
+    expect(fn () => $normalizer->normalize([
+        'cash' => ['amount' => 100, 'currency' => 'PHP'],
+        'execution' => ['driver' => 'stored_value'],
+    ]))->toThrow(ValidationException::class)
+        ->and(fn () => $normalizer->normalize([
+            'cash' => [
+                'amount' => 100,
+                'currency' => 'PHP',
+                'slice_mode' => 'open',
+                'max_slices' => 3,
+            ],
+            'stored_value' => [
+                'enabled' => true,
+                'replenishable' => false,
+                'maximum_balance' => 100,
+            ],
+        ]))->toThrow(ValidationException::class)
+        ->and(fn () => $normalizer->normalize([
+            'cash' => ['amount' => 100, 'currency' => 'PHP'],
+            'stored_value' => [
+                'enabled' => true,
+                'replenishable' => false,
+                'maximum_balance' => 200,
+            ],
+        ]))->toThrow(ValidationException::class);
 });

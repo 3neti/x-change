@@ -44,6 +44,7 @@ final readonly class InstructionCapabilityIssuanceGuard
             'feedback.sms' => 'feedback.mobile',
             'feedback.email' => 'feedback.email',
             'feedback.webhook' => 'feedback.webhook',
+            'stored_value' => 'stored_value.enabled',
             default => 'instructions',
         };
     }

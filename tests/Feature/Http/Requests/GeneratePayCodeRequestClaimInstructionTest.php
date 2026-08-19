@@ -110,3 +110,29 @@ it('requires opaque claimant references only for recipient-bound claims', functi
     expect($recipientBound->errors()->has('claim.claimant.reference'))->toBeTrue()
         ->and($unbound->errors()->has('claim.claimant.reference'))->toBeTrue();
 });
+
+it('accepts only the typed Reusable Balance policy at the request boundary', function (): void {
+    $payload = validClaimInstructionPayload([
+        'outcomes' => [['key' => 'provider_disbursement']],
+        'default_outcome' => 'provider_disbursement',
+    ]);
+    $payload['stored_value'] = [
+        'enabled' => true,
+        'replenishable' => false,
+        'maximum_balance' => 125,
+        'otp_required_above' => null,
+    ];
+
+    $valid = validateClaimInstructionRequest(
+        GeneratePayCodeRequest::class,
+        $payload,
+    );
+    $payload['stored_value']['unexpected'] = 'not-allowed';
+    $unknown = validateClaimInstructionRequest(
+        GeneratePayCodeRequest::class,
+        $payload,
+    );
+
+    expect($valid->errors()->all())->toBeEmpty()
+        ->and($unknown->errors()->has('stored_value'))->toBeTrue();
+});

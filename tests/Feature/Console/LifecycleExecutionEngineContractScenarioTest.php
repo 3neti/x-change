@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
+use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\Execution\DurableStoredValueExecutionGatewayContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 beforeEach(function () {
@@ -52,6 +56,38 @@ it('runs settlement envelope execution through the voucher engine and x-change g
 });
 
 it('runs stored value activation and spend through the voucher engine and x-change gateway binding', function () {
+    config()->set('x-change.execution.stored_value.issuance_enabled', true);
+    $demo = new XChangeStoredValueExecutionGateway;
+    app()->instance(
+        StoredValueExecutionGateway::class,
+        new class($demo) implements DurableStoredValueExecutionGatewayContract
+        {
+            public function __construct(
+                private readonly XChangeStoredValueExecutionGateway $demo,
+            ) {}
+
+            public function activate(ExecutionContextData $context, string $executionId): array
+            {
+                return $this->demo->activate($context, $executionId);
+            }
+
+            public function spend(ExecutionContextData $context, int $amount, string $executionId): array
+            {
+                return $this->demo->spend($context, $amount, $executionId);
+            }
+
+            public function replenish(ExecutionContextData $context, int $amount, string $executionId): array
+            {
+                return $this->demo->replenish($context, $amount, $executionId);
+            }
+
+            public function balance(ExecutionContextData $context): int
+            {
+                return $this->demo->balance($context);
+            }
+        },
+    );
+
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'execution_stored_value_contract_demo',
         '--json' => true,
@@ -77,7 +113,8 @@ it('runs stored value activation and spend through the voucher engine and x-chan
         ->and(data_get($json, 'executions.1.handoffs.action.status'))->toBe('not_wired')
         ->and(data_get($json, 'executions.1.handoffs.feedback.status'))->toBe('not_wired')
         ->and(data_get($json, 'executions.1.handoffs.cockpit_activity.status'))->toBe('not_wired')
-        ->and(data_get($json, 'execution_instruction.metadata.stored_value.reference'))->toBe('SV-LIFECYCLE-001')
+        ->and(data_get($json, 'execution_instruction.metadata.stored_value.reference'))->toBeNull()
+        ->and(data_get($json, 'execution_instruction.metadata.stored_value.initial_balance'))->toBe(10000)
         ->and(data_get($json, 'contract_boundary.wallet_side_effects'))->toBe('not-performed');
 });
 

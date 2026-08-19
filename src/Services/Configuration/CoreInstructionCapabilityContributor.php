@@ -4,11 +4,19 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Configuration;
 
+use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
+use LBHurtado\XChange\Contracts\Execution\DurableStoredValueExecutionGatewayContract;
+use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\InstructionCapabilityContributor;
 use LBHurtado\XChange\Data\Configuration\InstructionCapabilityReadinessData;
 
 final class CoreInstructionCapabilityContributor implements InstructionCapabilityContributor
 {
+    public function __construct(
+        private readonly StoredValueExecutionGateway $storedValueGateway,
+        private readonly StoredValueDestinationAuthorityContract $storedValueDestinationAuthority,
+    ) {}
+
     public function instructionCapabilities(): iterable
     {
         yield $this->location();
@@ -27,6 +35,7 @@ final class CoreInstructionCapabilityContributor implements InstructionCapabilit
         yield $this->smsFeedback();
         yield $this->emailFeedback();
         yield $this->webhookFeedback();
+        yield $this->storedValue();
     }
 
     private function location(): InstructionCapabilityReadinessData
@@ -238,6 +247,43 @@ final class CoreInstructionCapabilityContributor implements InstructionCapabilit
             issuanceAllowed: true,
             claimRetryable: true,
             source: 'x-feedback',
+        );
+    }
+
+    private function storedValue(): InstructionCapabilityReadinessData
+    {
+        $enabled = (bool) config(
+            'x-change.execution.stored_value.issuance_enabled',
+            false,
+        );
+        $durable = $this->storedValueGateway instanceof DurableStoredValueExecutionGatewayContract;
+        $destinationAuthorityReady = $this->storedValueDestinationAuthority->isReady();
+        $ready = $enabled && $durable && $destinationAuthorityReady;
+        $missing = [];
+
+        if (! $enabled) {
+            $missing[] = 'XCHANGE_STORED_VALUE_ISSUANCE_ENABLED';
+        }
+
+        if (! $durable) {
+            $missing[] = 'DURABLE_STORED_VALUE_GATEWAY';
+        }
+
+        if (! $destinationAuthorityReady) {
+            $missing[] = 'STORED_VALUE_DESTINATION_AUTHORITY';
+        }
+
+        return new InstructionCapabilityReadinessData(
+            key: 'stored_value',
+            label: 'Reusable Balance',
+            status: $ready ? 'ready' : 'unavailable',
+            issuanceAllowed: $ready,
+            claimRetryable: false,
+            reason: $ready
+                ? null
+                : 'Reusable Balance is unavailable until its durable wallet engine and destination authority are commissioned.',
+            missingConfiguration: $missing,
+            source: 'wallet-stored-value',
         );
     }
 

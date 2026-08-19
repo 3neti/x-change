@@ -35,6 +35,35 @@ it('stops the ordinary payout pipeline for execution-only Vouchers', function ()
         ->and($continued)->toBeFalse();
 });
 
+it('suppresses provider payout after stored-value activation', function (): void {
+    $voucher = (new Voucher)->forceFill([
+        'code' => 'STORE-SAFE',
+        'metadata' => [
+            'instructions' => [
+                'execution' => [
+                    'driver' => 'stored_value',
+                    'metadata' => [
+                        'post_redemption' => [
+                            'mode' => OnboardingVoucherInstructionPolicy::PostRedemptionMode,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+    $continued = false;
+
+    $result = app(ExecutionAwarePostRedemptionGate::class)->handle(
+        $voucher,
+        function () use (&$continued): void {
+            $continued = true;
+        },
+    );
+
+    expect($result)->toBe($voucher)
+        ->and($continued)->toBeFalse();
+});
+
 it('preserves the ordinary payout pipeline for ordinary Vouchers', function (): void {
     $voucher = (new Voucher)->forceFill([
         'code' => 'CASH-NORMAL',

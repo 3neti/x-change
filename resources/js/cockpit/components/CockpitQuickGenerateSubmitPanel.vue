@@ -93,6 +93,8 @@ import CockpitRiderEditorDisclosure from './CockpitRiderEditorDisclosure.vue';
 import CockpitRiderMessageEditor from './CockpitRiderMessageEditor.vue';
 import CockpitRiderLibrary from './CockpitRiderLibrary.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
+import CockpitValueUseControl from './CockpitValueUseControl.vue';
+import type { CockpitValueUseMode } from './CockpitValueUseControl.vue';
 
 const props = withDefaults(
     defineProps<{
@@ -742,6 +744,10 @@ const slices = ref('1');
 const maxSlices = ref('1');
 const minWithdrawal = ref(String(issuerDefaultMinimumWithdrawal));
 const namedClaimSlices = ref<NamedClaimSlice[]>(defaultWholeNamedClaimSlices());
+const reusableBalance = ref(false);
+const storedValueReplenishable = ref(false);
+const storedValueMaximumBalance = ref('');
+const storedValueOtpAbove = ref('');
 const voucherType = ref<'redeemable' | 'payable' | 'settlement'>('redeemable');
 const claimOutcome = ref<ClaimOutcomeMode>('provider_disbursement');
 const targetAmount = ref('');
@@ -773,6 +779,7 @@ const previewResult = ref<CockpitClaimExperiencePreviewManifest | null>(null);
 const previewDraftSnapshot = ref<string | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
+const sliceEditorElement = ref<HTMLDetailsElement | null>(null);
 const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
 const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
@@ -837,7 +844,16 @@ watch(amount, (): void => {
     }
 
     if (sliceMode.value === 'open') {
-        configureOpenAmountSlice();
+        reconcileOpenAmountSliceConstraints();
+    }
+
+    if (
+        reusableBalance.value &&
+        Number(storedValueMaximumBalance.value || 0) < normalizedPayCodeAmount()
+    ) {
+        storedValueMaximumBalance.value = formatSliceAmount(
+            normalizedPayCodeAmount(),
+        );
     }
 });
 
@@ -851,7 +867,7 @@ watch([currency, provider], (): void => {
     }
 
     if (sliceMode.value === 'open') {
-        configureOpenAmountSlice();
+        reconcileOpenAmountSliceConstraints();
     }
 });
 
@@ -872,10 +888,17 @@ watch(claimOutcome, (outcome): void => {
         return;
     }
 
+    reusableBalance.value = false;
     configureWholeAmountSlices();
     voucherType.value = 'redeemable';
     settlementRail.value = '';
     feeStrategy.value = 'absorb';
+});
+
+watch(onboardingEnabled, (enabled): void => {
+    if (enabled) {
+        reusableBalance.value = false;
+    }
 });
 
 watch(
@@ -967,6 +990,12 @@ function applyTemplateDefaults(templateKey: string): void {
             : [];
     customMandates.value = '';
     applyTemplateSliceDefaults(defaults);
+    reusableBalance.value = false;
+    storedValueReplenishable.value = false;
+    storedValueMaximumBalance.value = formatSliceAmount(
+        normalizedPayCodeAmount(),
+    );
+    storedValueOtpAbove.value = '';
     voucherType.value = defaults.voucherType;
     targetAmount.value = defaults.targetAmount;
     includeExecutionInstruction.value = defaults.includeExecutionInstruction;
@@ -1650,6 +1679,31 @@ function applyInstructionBlueprint(
         false;
 
     const execution = instructionRecord(instructions, ['execution']);
+    const storedValuePolicy = instructionRecord(instructions, ['stored_value']);
+    const compiledStoredValuePolicy = instructionRecord(execution, [
+        'metadata',
+        'stored_value',
+    ]);
+    reusableBalance.value =
+        dataGet(storedValuePolicy, ['enabled']) === true ||
+        instructionString(execution, ['driver']) === 'stored_value';
+    storedValueReplenishable.value =
+        dataGet(storedValuePolicy, ['replenishable']) === true ||
+        dataGet(compiledStoredValuePolicy, ['replenishable']) === true;
+    const rememberedMaximumBalance =
+        instructionString(storedValuePolicy, ['maximum_balance']) ||
+        minorToMajorInstructionValue(
+            dataGet(compiledStoredValuePolicy, ['max_balance']),
+        );
+    const rememberedOtpAbove =
+        instructionString(storedValuePolicy, ['otp_required_above']) ||
+        minorToMajorInstructionValue(
+            dataGet(compiledStoredValuePolicy, ['otp_required_above']),
+        );
+    storedValueMaximumBalance.value =
+        rememberedMaximumBalance ||
+        formatSliceAmount(normalizedPayCodeAmount());
+    storedValueOtpAbove.value = rememberedOtpAbove;
     includeExecutionInstruction.value = Object.keys(execution).length > 0;
     executionSchema.value = instructionString(
         execution,
@@ -1772,6 +1826,14 @@ function hydrateLastSlices(instructions: Record<string, unknown>): void {
     maxSlices.value = '1';
     minWithdrawal.value = String(issuerDefaultMinimumWithdrawal);
     namedClaimSlices.value = defaultWholeNamedClaimSlices();
+}
+
+function minorToMajorInstructionValue(value: unknown): string {
+    const minor = Number(value);
+
+    return Number.isFinite(minor) && minor >= 0
+        ? formatSliceAmount(minor / 100)
+        : '';
 }
 
 const routeUrl = computed<string | null>(() =>
@@ -1970,6 +2032,10 @@ const selectedUnavailableCapabilities = computed<
         selected.add('feedback.webhook');
     }
 
+    if (reusableBalance.value) {
+        selected.add('stored_value');
+    }
+
     return [...selected]
         .map((key) => capabilityReadiness(key))
         .filter(
@@ -1987,6 +2053,7 @@ const canSubmit = computed<boolean>(() => {
         payeePolicy.value.issuable &&
         feedbackValid.value &&
         namedClaimSliceValidationMessage.value === null &&
+        storedValuePolicyError.value === null &&
         claimRecipientError.value === null &&
         settlementRailSelectionError.value === null &&
         (!isAccountFundingClaim.value || sliceMode.value === 'whole')
@@ -2004,6 +2071,7 @@ const canGenerateClaimPreview = computed<boolean>(() => {
         payeePolicy.value.issuable &&
         feedbackValid.value &&
         namedClaimSliceValidationMessage.value === null &&
+        storedValuePolicyError.value === null &&
         claimRecipientError.value === null &&
         settlementRailSelectionError.value === null
     );
@@ -2012,6 +2080,73 @@ const canGenerateClaimPreview = computed<boolean>(() => {
 const isAccountFundingClaim = computed<boolean>(
     () => claimOutcome.value === 'account_funding',
 );
+
+const storedValueCapability = computed(() =>
+    capabilityReadiness('stored_value'),
+);
+const storedValueAvailable = computed<boolean>(() => {
+    return (
+        storedValueCapability.value?.issuance_allowed === true &&
+        !isAccountFundingClaim.value &&
+        !onboardingEnabled.value
+    );
+});
+const storedValueUnavailableReason = computed<string>(() => {
+    if (isAccountFundingClaim.value) {
+        return 'Account Funding and Reusable Balance cannot be combined.';
+    }
+
+    if (onboardingEnabled.value) {
+        return 'Invitation ownership for Reusable Balance is not commissioned yet.';
+    }
+
+    return (
+        storedValueCapability.value?.reason ??
+        'Reusable Balance is unavailable until its durable wallet engine is commissioned.'
+    );
+});
+const normalizedStoredValueMaximumBalance = computed<number>(() => {
+    const configured = Number(storedValueMaximumBalance.value);
+
+    return Number.isFinite(configured) && configured > 0
+        ? configured
+        : normalizedPayCodeAmount();
+});
+const normalizedStoredValueOtpAbove = computed<number | null>(() => {
+    if (storedValueOtpAbove.value.trim() === '') {
+        return null;
+    }
+
+    const configured = Number(storedValueOtpAbove.value);
+
+    return Number.isFinite(configured) && configured >= 0 ? configured : null;
+});
+const storedValuePolicyError = computed<string | null>(() => {
+    if (!reusableBalance.value) {
+        return null;
+    }
+
+    if (!storedValueAvailable.value) {
+        return storedValueUnavailableReason.value;
+    }
+
+    if (
+        normalizedStoredValueMaximumBalance.value + 0.0001 <
+        normalizedPayCodeAmount()
+    ) {
+        return 'Maximum balance cannot be lower than the starting balance.';
+    }
+
+    if (
+        normalizedStoredValueOtpAbove.value !== null &&
+        normalizedStoredValueOtpAbove.value >
+            normalizedStoredValueMaximumBalance.value
+    ) {
+        return 'OTP threshold cannot be higher than the maximum balance.';
+    }
+
+    return null;
+});
 
 const claimRecipientError = computed<string | null>(() => {
     if (
@@ -2416,6 +2551,10 @@ const voucherKindLabel = computed<string>(() => {
         return 'Account Invitation';
     }
 
+    if (reusableBalance.value) {
+        return 'Stored Value';
+    }
+
     const labels: Record<typeof voucherType.value, string> = {
         redeemable: 'Disburseable',
         payable: 'Payable',
@@ -2427,6 +2566,10 @@ const voucherKindLabel = computed<string>(() => {
 
 const voucherKindTone = computed<string>(() => {
     if (onboardingEnabled.value) {
+        return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-200';
+    }
+
+    if (reusableBalance.value) {
         return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-200';
     }
 
@@ -3971,7 +4114,7 @@ const settlementRulesSummary = computed<Record<string, unknown> | null>(() => {
 });
 
 const executionSummary = computed<Record<string, unknown> | null>(() => {
-    if (!includeExecutionInstruction.value) {
+    if (reusableBalance.value || !includeExecutionInstruction.value) {
         return null;
     }
 
@@ -4359,7 +4502,7 @@ function buildPayloadShape(
         validation: validationSummary.value,
     };
 
-    if (settlementRail.value.trim() !== '') {
+    if (!reusableBalance.value && settlementRail.value.trim() !== '') {
         cash.settlement_rail = settlementRail.value.trim();
     }
 
@@ -4373,12 +4516,12 @@ function buildPayloadShape(
         cash.mandates = effectiveMandates.value;
     }
 
-    if (sliceMode.value === 'fixed') {
+    if (!reusableBalance.value && sliceMode.value === 'fixed') {
         cash.slice_mode = 'fixed';
         cash.slices = Number.isFinite(normalizedSlices) ? normalizedSlices : 1;
     }
 
-    if (sliceMode.value === 'open') {
+    if (!reusableBalance.value && sliceMode.value === 'open') {
         cash.slice_mode = 'open';
         cash.max_slices = Number.isFinite(normalizedMaxSlices)
             ? normalizedMaxSlices
@@ -4388,7 +4531,7 @@ function buildPayloadShape(
             : null;
     }
 
-    if (sliceMode.value === 'named') {
+    if (!reusableBalance.value && sliceMode.value === 'named') {
         cash.slice_mode = 'open';
         cash.max_slices = normalizedNamedClaimSlices.value.length;
         cash.min_withdrawal = sliceSummary.value.min_withdrawal;
@@ -4404,6 +4547,17 @@ function buildPayloadShape(
 
     const payload: Record<string, unknown> = {
         cash,
+        ...(reusableBalance.value
+            ? {
+                  stored_value: {
+                      enabled: true,
+                      replenishable: storedValueReplenishable.value,
+                      maximum_balance:
+                          normalizedStoredValueMaximumBalance.value,
+                      otp_required_above: normalizedStoredValueOtpAbove.value,
+                  },
+              }
+            : {}),
         ...(onboardingEnabled.value ? { onboarding: true } : {}),
         ...(provider.value.trim() === ''
             ? {}
@@ -4443,7 +4597,7 @@ function buildPayloadShape(
         },
         metadata: {
             ...(campaign === null ? {} : { campaign }),
-            ...(sliceMode.value === 'open'
+            ...(!reusableBalance.value && sliceMode.value === 'open'
                 ? {
                       slice_policy: {
                           mode: 'open',
@@ -4452,7 +4606,7 @@ function buildPayloadShape(
                       },
                   }
                 : {}),
-            ...(sliceMode.value === 'named'
+            ...(!reusableBalance.value && sliceMode.value === 'named'
                 ? {
                       slices: normalizedNamedClaimSlices.value,
                       slice_policy: {
@@ -4481,7 +4635,9 @@ function buildPayloadShape(
                         explicit_secret: payeePolicy.value.explicitSecret,
                     },
                     contract_summary: contractSummaryItems.value,
-                    slice_plan: canonicalSlicePlan.value,
+                    ...(!reusableBalance.value
+                        ? { slice_plan: canonicalSlicePlan.value }
+                        : {}),
                     ...(isAccountFundingClaim.value
                         ? {
                               recipient_reference:
@@ -4805,9 +4961,22 @@ function configureWholeAmountSlices(): void {
 function configureOpenAmountSlice(): void {
     sliceMode.value = 'open';
     slices.value = '1';
-    maxSlices.value = '1';
+    maxSlices.value = String(Math.max(2, Number(maxSlices.value) || 2));
     minWithdrawal.value = formatSliceAmount(minimumWithdrawalFloor.value);
     namedClaimSlices.value = defaultOpenNamedClaimSlices();
+}
+
+function reconcileOpenAmountSliceConstraints(): void {
+    const minimum = Number(minWithdrawal.value);
+
+    if (
+        !Number.isFinite(minimum) ||
+        minimum + 0.0001 < minimumWithdrawalFloor.value
+    ) {
+        minWithdrawal.value = formatSliceAmount(minimumWithdrawalFloor.value);
+    }
+
+    maxSlices.value = String(Math.max(1, Number(maxSlices.value) || 1));
 }
 
 function fixedSliceCount(): number {
@@ -4823,6 +4992,7 @@ function applyTemplateSliceDefaults(
 ): void {
     if (defaults.sliceMode === 'open') {
         configureOpenAmountSlice();
+        maxSlices.value = String(Math.max(1, Number(defaults.maxSlices) || 1));
         minWithdrawal.value = formatSliceAmount(
             Math.max(
                 Number(defaults.minWithdrawal || 0),
@@ -4997,7 +5167,7 @@ function updateNamedClaimSlice(
     reconcileSliceModeFromNamedClaimSlices();
 }
 
-function setSliceMode(mode: string): void {
+function setSliceMode(mode: CockpitValueUseMode): void {
     if (isAccountFundingClaim.value && mode !== 'whole') {
         return;
     }
@@ -5026,6 +5196,70 @@ function setSliceMode(mode: string): void {
         if (namedClaimSlices.value.length === 0) {
             namedClaimSlices.value = defaultWholeNamedClaimSlices();
         }
+    }
+}
+
+function setFixedSliceCount(count: number): void {
+    redistributeFixedNamedClaimSlices(count);
+}
+
+function setMaximumClaims(count: number): void {
+    maxSlices.value = String(Math.max(1, count));
+}
+
+function setMinimumClaimAmount(value: number): void {
+    minWithdrawal.value = formatSliceAmount(value);
+    reconcileOpenAmountSliceConstraints();
+}
+
+function setReusableBalance(enabled: boolean): void {
+    if (enabled && !storedValueAvailable.value) {
+        return;
+    }
+
+    reusableBalance.value = enabled;
+
+    if (
+        enabled &&
+        Number(storedValueMaximumBalance.value || 0) < normalizedPayCodeAmount()
+    ) {
+        storedValueMaximumBalance.value = formatSliceAmount(
+            normalizedPayCodeAmount(),
+        );
+    }
+}
+
+function setStoredValueReplenishable(enabled: boolean): void {
+    storedValueReplenishable.value = enabled;
+
+    if (!enabled) {
+        storedValueMaximumBalance.value = formatSliceAmount(
+            normalizedPayCodeAmount(),
+        );
+    }
+}
+
+function setStoredValueMaximumBalance(value: number): void {
+    storedValueMaximumBalance.value = formatSliceAmount(
+        Math.max(normalizedPayCodeAmount(), value),
+    );
+}
+
+function setStoredValueOtpAbove(value: number | null): void {
+    storedValueOtpAbove.value =
+        value === null ? '' : formatSliceAmount(Math.max(0, value));
+}
+
+async function openScheduledSliceEditor(): Promise<void> {
+    setSliceMode('named');
+    await nextTick();
+
+    if (sliceEditorElement.value) {
+        sliceEditorElement.value.open = true;
+        sliceEditorElement.value.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+        });
     }
 }
 
@@ -5832,10 +6066,56 @@ function instructionRecord(
                             @preset="applyClaimRequirementPreset"
                         />
                     </div>
+                    <div class="min-w-0 sm:col-span-2">
+                        <CockpitValueUseControl
+                            :mode="sliceMode"
+                            :amount="normalizedPayCodeAmount()"
+                            :currency="currency"
+                            :fixed-count="fixedSliceCount()"
+                            :max-claims="Math.max(1, Number(maxSlices) || 1)"
+                            :minimum-claim="Number(minWithdrawal) || 0"
+                            :scheduled-count="namedClaimSlices.length"
+                            :reusable-balance="reusableBalance"
+                            :stored-value-available="storedValueAvailable"
+                            :stored-value-unavailable-reason="
+                                storedValueUnavailableReason
+                            "
+                            :stored-value-replenishable="
+                                storedValueReplenishable
+                            "
+                            :stored-value-maximum-balance="
+                                normalizedStoredValueMaximumBalance
+                            "
+                            :stored-value-otp-above="
+                                normalizedStoredValueOtpAbove
+                            "
+                            :disabled="processing"
+                            @mode="setSliceMode"
+                            @fixed-count="setFixedSliceCount"
+                            @max-claims="setMaximumClaims"
+                            @minimum-claim="setMinimumClaimAmount"
+                            @reusable-balance="setReusableBalance"
+                            @stored-value-replenishable="
+                                setStoredValueReplenishable
+                            "
+                            @stored-value-maximum-balance="
+                                setStoredValueMaximumBalance
+                            "
+                            @stored-value-otp-above="setStoredValueOtpAbove"
+                            @edit-scheduled="openScheduledSliceEditor"
+                        />
+                        <p
+                            v-if="storedValuePolicyError"
+                            class="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                            data-testid="cockpit-value-use-policy-error"
+                        >
+                            {{ storedValuePolicyError }}
+                        </p>
+                    </div>
                 </div>
 
                 <fieldset
-                    v-if="!isAccountFundingClaim"
+                    v-if="!isAccountFundingClaim && !reusableBalance"
                     class="mt-4 grid min-w-0 gap-1.5 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
                     data-testid="cockpit-quick-generate-primary-settlement-rail"
                 >
@@ -8807,6 +9087,8 @@ function instructionRecord(
                 </details>
 
                 <details
+                    v-if="!reusableBalance"
+                    ref="sliceEditorElement"
                     id="quick-generate-contract-slices"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
@@ -9320,6 +9602,7 @@ function instructionRecord(
                 </details>
 
                 <details
+                    v-if="!reusableBalance"
                     id="quick-generate-contract-execution"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                     data-testid="cockpit-quick-generate-advanced-contract-section"
@@ -9671,8 +9954,7 @@ function instructionRecord(
             <pre
                 class="mt-3 max-h-96 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] leading-5 text-slate-200"
                 data-testid="cockpit-quick-generate-engineering-preview-json"
-                >{{ sanitizedInstructionPayloadJson }}</pre
-            >
+                >{{ sanitizedInstructionPayloadJson }}</pre>
         </details>
 
         <p class="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-300">

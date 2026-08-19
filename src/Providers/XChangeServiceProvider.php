@@ -202,6 +202,7 @@ use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\EventLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\EventStoreContract;
+use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
 use LBHurtado\XChange\Contracts\ExecutionResultActionHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultCockpitActivityHandoffContract;
@@ -404,6 +405,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
+use LBHurtado\XChange\Services\Execution\UnavailableStoredValueDestinationAuthority;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
@@ -1238,6 +1240,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             StoredValueExecutionGateway::class,
             XChangeStoredValueExecutionGateway::class,
+        );
+
+        $this->app->singleton(
+            StoredValueDestinationAuthorityContract::class,
+            UnavailableStoredValueDestinationAuthority::class,
         );
 
         $this->app->bind(

@@ -32,7 +32,8 @@ class PartnerApiMandateGuard
         $profile = $this->voucherProfile($payload);
 
         if (! in_array($profile, (array) data_get($mandate, 'voucher_profiles', []), true)) {
-            $errors['onboarding'][] = 'The Partner API mandate does not allow this Pay Code profile.';
+            $errors[$profile === 'stored_value' ? 'stored_value.enabled' : 'onboarding'][] =
+                'The Partner API mandate does not allow this Pay Code profile.';
         }
 
         $ttlSeconds = $this->ttlSeconds(data_get($payload, 'ttl'));
@@ -109,6 +110,10 @@ class PartnerApiMandateGuard
     /** @param array<string, mixed> $payload */
     protected function voucherProfile(array $payload): string
     {
+        if ((bool) data_get($payload, 'stored_value.enabled', false)) {
+            return 'stored_value';
+        }
+
         if ((bool) data_get($payload, 'onboarding', false)) {
             return 'onboarding';
         }

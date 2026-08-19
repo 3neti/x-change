@@ -2611,6 +2611,15 @@ return [
         'drivers_path' => config_path('envelope-drivers'),
     ],
 
+    'execution' => [
+        'stored_value' => [
+            'issuance_enabled' => (bool) env(
+                'XCHANGE_STORED_VALUE_ISSUANCE_ENABLED',
+                false,
+            ),
+        ],
+    ],
+
     'rider' => [
         'outcomes' => [
             'treat_pending_with_local_disbursement_as_success' => env(

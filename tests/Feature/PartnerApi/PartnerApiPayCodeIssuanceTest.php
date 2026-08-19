@@ -211,6 +211,31 @@ it('enforces mandate amount rail and recipient binding before invoking issuance'
         ->assertJsonValidationErrors('ttl');
 });
 
+it('requires an explicit stored-value Partner API mandate profile', function (): void {
+    partnerApiIssuer(['pay-codes:issue'], [
+        'maximum_amount_minor' => 20_000,
+        'daily_principal_limit_minor' => 20_000,
+        'settlement_rails' => ['INSTAPAY'],
+        'voucher_profiles' => ['disbursement'],
+        'unbound_pay_codes' => false,
+    ]);
+    $action = Mockery::mock(GeneratePayCode::class);
+    $action->shouldNotReceive('handle');
+    $this->app->instance(GeneratePayCode::class, $action);
+    $payload = partnerApiPayCodePayload();
+    $payload['stored_value'] = [
+        'enabled' => true,
+        'replenishable' => false,
+        'maximum_balance' => 100,
+        'otp_required_above' => null,
+    ];
+
+    $this->postJson('/api/partner/v1/pay-codes', $payload, [
+        'Idempotency-Key' => 'saras-stored-value-profile',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('stored_value.enabled');
+});
+
 it('requires an idempotency key and the exact OAuth scope', function () {
     partnerApiIssuer(['pay-codes:estimate']);
 

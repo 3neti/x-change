@@ -1963,18 +1963,11 @@ return [
             'inputs' => [
                 'fields' => ['mobile'],
             ],
-            'execution' => [
-                'schema' => 'voucher.execution.v1',
-                'driver' => 'stored_value',
-                'metadata' => [
-                    'stored_value' => [
-                        'reference' => 'SV-LIFECYCLE-001',
-                        'initial_balance' => 10000,
-                        'max_balance' => 10000,
-                        'replenishable' => true,
-                        'otp_required_above' => 5000,
-                    ],
-                ],
+            'stored_value' => [
+                'enabled' => true,
+                'replenishable' => true,
+                'maximum_balance' => 100,
+                'otp_required_above' => 50,
             ],
             'execution_runtime' => [
                 'sequence' => [

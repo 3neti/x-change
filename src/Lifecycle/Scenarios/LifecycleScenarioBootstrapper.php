@@ -318,6 +318,7 @@ final class LifecycleScenarioBootstrapper
             'validation' => data_get($scenario, 'validation'),
             'metadata' => data_get($scenario, 'metadata'),
             'execution' => data_get($scenario, 'execution'),
+            'stored_value' => data_get($scenario, 'stored_value'),
             'voucher_type' => data_get($scenario, 'voucher_type'),
             'target_amount' => data_get($scenario, 'target_amount'),
             'rules' => data_get($scenario, 'rules'),

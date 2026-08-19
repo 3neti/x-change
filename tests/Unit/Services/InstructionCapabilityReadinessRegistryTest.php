@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Validation\ValidationException;
+use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
+use LBHurtado\Voucher\Data\ExecutionContextData;
+use LBHurtado\XChange\Contracts\Execution\DurableStoredValueExecutionGatewayContract;
+use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
+use LBHurtado\XChange\Data\Execution\StoredValueDestinationAuthorityData;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
@@ -105,4 +110,114 @@ it('rejects unavailable evidence before issuance can mutate state', function ():
         'cash' => ['amount' => 50, 'currency' => 'PHP'],
         'validation' => ['location' => ['required' => true]],
     ]))->toThrow(ValidationException::class);
+});
+
+it('keeps stored value unavailable until an enabled durable gateway is bound', function (): void {
+    config()->set('x-change.execution.stored_value.issuance_enabled', true);
+
+    $demoCapability = app(InstructionCapabilityReadinessRegistry::class)
+        ->find('stored_value');
+
+    expect($demoCapability)->not->toBeNull()
+        ->and($demoCapability->issuanceAllowed)->toBeFalse()
+        ->and($demoCapability->missingConfiguration)
+        ->toContain('DURABLE_STORED_VALUE_GATEWAY');
+});
+
+it('allows stored value only through the explicit durable gateway contract', function (): void {
+    config()->set('x-change.execution.stored_value.issuance_enabled', true);
+    app()->instance(
+        StoredValueExecutionGateway::class,
+        new class implements DurableStoredValueExecutionGatewayContract
+        {
+            public function activate(ExecutionContextData $context, string $executionId): array
+            {
+                return [];
+            }
+
+            public function spend(ExecutionContextData $context, int $amount, string $executionId): array
+            {
+                return [];
+            }
+
+            public function replenish(ExecutionContextData $context, int $amount, string $executionId): array
+            {
+                return [];
+            }
+
+            public function balance(ExecutionContextData $context): int
+            {
+                return 0;
+            }
+        },
+    );
+    app()->instance(
+        StoredValueDestinationAuthorityContract::class,
+        new class implements StoredValueDestinationAuthorityContract
+        {
+            public function isReady(): bool
+            {
+                return true;
+            }
+
+            public function authorize(
+                ExecutionContextData $context,
+                int $amountMinor,
+            ): StoredValueDestinationAuthorityData {
+                return new StoredValueDestinationAuthorityData(
+                    counterpartyPositionReference: 'position:merchant:client-funds',
+                    authorityReference: 'authority:stored-value:test',
+                    principalReference: 'principal:merchant:test',
+                );
+            }
+        },
+    );
+
+    $capability = app(InstructionCapabilityReadinessRegistry::class)
+        ->find('stored_value');
+    $required = app(InstructionCapabilityRequirementResolver::class)
+        ->forInstructions([
+            'stored_value' => ['enabled' => true],
+        ]);
+
+    expect($capability)->not->toBeNull()
+        ->and($capability->issuanceAllowed)->toBeTrue()
+        ->and($required)->toContain('stored_value');
+});
+
+it('keeps stored value unavailable without commissioned destination authority', function (): void {
+    config()->set('x-change.execution.stored_value.issuance_enabled', true);
+    app()->instance(
+        StoredValueExecutionGateway::class,
+        new class implements DurableStoredValueExecutionGatewayContract
+        {
+            public function activate(ExecutionContextData $context, string $executionId): array
+            {
+                return [];
+            }
+
+            public function spend(ExecutionContextData $context, int $amount, string $executionId): array
+            {
+                return [];
+            }
+
+            public function replenish(ExecutionContextData $context, int $amount, string $executionId): array
+            {
+                return [];
+            }
+
+            public function balance(ExecutionContextData $context): int
+            {
+                return 0;
+            }
+        },
+    );
+
+    $capability = app(InstructionCapabilityReadinessRegistry::class)
+        ->find('stored_value');
+
+    expect($capability)->not->toBeNull()
+        ->and($capability->issuanceAllowed)->toBeFalse()
+        ->and($capability->missingConfiguration)
+        ->toContain('STORED_VALUE_DESTINATION_AUTHORITY');
 });
