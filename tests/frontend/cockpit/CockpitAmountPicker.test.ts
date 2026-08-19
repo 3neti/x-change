@@ -34,6 +34,7 @@ describe("CockpitAmountPicker", () => {
       .find((button) => button.text().includes("Use Amount"));
 
     expect(confirmButton).toBeDefined();
+    expect(confirmButton!.attributes("type")).toBe("button");
     await confirmButton!.trigger("click");
 
     expect(wrapper.emitted("update:modelValue")).toEqual([["1000.00"]]);

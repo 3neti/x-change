@@ -369,6 +369,7 @@ onBeforeUnmount(() => {
           <Button
             v-for="digit in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
             :key="`digit-${digit}`"
+            type="button"
             @click="pressDigit(digit)"
             variant="outline"
             size="lg"
@@ -383,6 +384,7 @@ onBeforeUnmount(() => {
           </Button>
 
           <Button
+            type="button"
             @click="pressBackspace"
             variant="outline"
             size="lg"
@@ -399,6 +401,7 @@ onBeforeUnmount(() => {
           </Button>
 
           <Button
+            type="button"
             @click="pressDigit(0)"
             variant="outline"
             size="lg"
@@ -414,6 +417,7 @@ onBeforeUnmount(() => {
 
           <Button
             v-if="allowDecimal"
+            type="button"
             @click="pressDecimal"
             variant="outline"
             size="lg"
@@ -430,6 +434,7 @@ onBeforeUnmount(() => {
 
           <Button
             v-else
+            type="button"
             @click="confirm"
             variant="default"
             size="lg"
@@ -448,6 +453,7 @@ onBeforeUnmount(() => {
 
         <Button
           v-if="allowDecimal"
+          type="button"
           @click="confirm"
           variant="default"
           size="lg"
@@ -467,6 +473,7 @@ onBeforeUnmount(() => {
 
       <DialogFooter class="sm:justify-center">
         <Button
+          type="button"
           variant="ghost"
           @click="cancel"
           :class="[

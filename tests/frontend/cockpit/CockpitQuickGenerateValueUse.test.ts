@@ -41,6 +41,42 @@ function storedValueCapability() {
 }
 
 describe('Cockpit Quick Generate value use', () => {
+    it('commits a calculator amount while Reusable Balance is enabled', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                instructionCapabilities: {
+                    stored_value: storedValueCapability(),
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-value-use-reusable-balance"]')
+            .setValue(true);
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="numeric-keypad-quick-100"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="numeric-keypad-confirm"]')
+            .trigger('click');
+        await flushPromises();
+
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element.value,
+        ).toBe('100.00');
+        expect(preview(wrapper).cash.amount).toBe(100);
+        expect(preview(wrapper).stored_value).toMatchObject({
+            enabled: true,
+            maximum_balance: 100,
+        });
+    });
+
     it('preserves Flexible claim settings when amount changes', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
