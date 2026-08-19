@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Adapters;
 
 use LBHurtado\Cash\Contracts\WithdrawableInstrumentContract;
+use LBHurtado\Voucher\Data\VoucherSlicePlanData;
+use LBHurtado\Voucher\Enums\VoucherSlicePlanMode;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Models\VoucherSliceExecution;
 
 class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentContract
 {
     public function __construct(
         protected Voucher $voucher,
+        protected array $payload = [],
     ) {}
 
     public function isWithdrawable(): bool
@@ -42,6 +46,10 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function isDivisible(): bool
     {
+        if ($this->plan() !== null) {
+            return true;
+        }
+
         return method_exists($this->voucher, 'isDivisible')
             ? (bool) $this->voucher->isDivisible()
             : false;
@@ -49,6 +57,12 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function getSliceMode(): ?string
     {
+        $plan = $this->plan();
+
+        if ($plan !== null) {
+            return $plan->mode === VoucherSlicePlanMode::Equal ? 'fixed' : 'open';
+        }
+
         return method_exists($this->voucher, 'getSliceMode')
             ? $this->voucher->getSliceMode()
             : null;
@@ -56,6 +70,12 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function getSliceAmount(): ?float
     {
+        $execution = $this->execution();
+
+        if ($execution instanceof VoucherSliceExecution) {
+            return $execution->amount_minor / 100;
+        }
+
         if (! method_exists($this->voucher, 'getSliceAmount')) {
             return null;
         }
@@ -74,6 +94,12 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function getMinWithdrawal(): ?float
     {
+        $plan = $this->plan();
+
+        if ($plan?->min_amount_minor !== null) {
+            return $plan->min_amount_minor / 100;
+        }
+
         if (! method_exists($this->voucher, 'getMinWithdrawal')) {
             return null;
         }
@@ -85,6 +111,12 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function getMaxSlices(): ?int
     {
+        $plan = $this->plan();
+
+        if ($plan !== null) {
+            return $plan->max_slices ?? $plan->slices->count();
+        }
+
         if (! method_exists($this->voucher, 'getMaxSlices')) {
             return null;
         }
@@ -96,6 +128,13 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function getConsumedSlices(): int
     {
+        if ($this->plan() !== null) {
+            return VoucherSliceExecution::query()
+                ->where('voucher_id', $this->voucher->getKey())
+                ->where('status', 'succeeded')
+                ->count();
+        }
+
         return method_exists($this->voucher, 'getConsumedSlices')
             ? (int) $this->voucher->getConsumedSlices()
             : 0;
@@ -137,5 +176,31 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
         $value = data_get($this->voucher->meta, 'redeemer.id');
 
         return $value !== null ? (string) $value : null;
+    }
+
+    private function plan(): ?VoucherSlicePlanData
+    {
+        $value = data_get($this->voucher, 'instructions.slice_plan')
+            ?? data_get($this->voucher->metadata, 'instructions.slice_plan');
+
+        if ($value instanceof VoucherSlicePlanData) {
+            return $value;
+        }
+
+        return is_array($value) ? VoucherSlicePlanData::from($value) : null;
+    }
+
+    private function execution(): ?VoucherSliceExecution
+    {
+        $reference = data_get($this->payload, '_slice_execution.reference');
+
+        if (! is_string($reference) || $reference === '') {
+            return null;
+        }
+
+        return VoucherSliceExecution::query()
+            ->where('voucher_id', $this->voucher->getKey())
+            ->where('reference', $reference)
+            ->first();
     }
 }

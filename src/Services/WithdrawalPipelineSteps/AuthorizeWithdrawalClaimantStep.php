@@ -39,7 +39,7 @@ class AuthorizeWithdrawalClaimantStep implements WithdrawalPipelineStepContract
         }
 
         $this->claimantAuthorization->authorize(
-            new VoucherWithdrawableInstrumentAdapter($context->voucher),
+            new VoucherWithdrawableInstrumentAdapter($context->voucher, $context->payload),
             new ContactClaimantIdentityAdapter($context->contact),
         );
 

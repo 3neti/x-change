@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherSliceExecution;
+use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 
@@ -396,6 +399,79 @@ it('keeps a successful payout primary after the voucher expiry date', function (
             'is_terminal' => true,
             'can_claim' => false,
             'can_retry_payout' => false,
+        ]);
+});
+
+it('keeps a successful first slice partially claimed and claimable', function () {
+    $voucher = issueVoucher(validVoucherInstructions(amount: 100));
+    $plan = app(VoucherSlicePlanFactory::class)->equal(10_000, 'PHP', 2);
+    $metadata = (array) $voucher->metadata;
+    data_set($metadata, 'instructions.slice_plan', $plan->canonicalArray());
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+    $claim = VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'withdraw',
+        'status' => 'succeeded',
+        'requested_amount_minor' => 5_000,
+        'disbursed_amount_minor' => 5_000,
+        'remaining_balance_minor' => 5_000,
+        'currency' => 'PHP',
+        'completed_at' => now(),
+        'meta' => ['fully_claimed' => false],
+    ]);
+    $reference = (string) \Illuminate\Support\Str::ulid();
+    $execution = VoucherSliceExecution::query()->create([
+        'reference' => $reference,
+        'voucher_id' => $voucher->getKey(),
+        'voucher_claim_id' => $claim->getKey(),
+        'plan_fingerprint' => $plan->hash(),
+        'idempotency_key_hash' => hash('sha256', $reference),
+        'request_fingerprint' => hash('sha256', 'request-'.$reference),
+        'provider_operation_reference' => 'slice-'.$reference,
+        'claim_number' => 1,
+        'status' => 'succeeded',
+        'amount_minor' => 5_000,
+        'currency' => 'PHP',
+        'reserved_at' => now(),
+        'settled_at' => now(),
+    ]);
+    VoucherSliceExecutionItem::query()->create([
+        'execution_id' => $execution->getKey(),
+        'voucher_id' => $voucher->getKey(),
+        'slice_id' => 'slice_1',
+        'label' => 'Slice 1',
+        'sequence' => 1,
+        'amount_minor' => 5_000,
+        'status' => 'consumed',
+        'reserved_at' => now(),
+        'consumed_at' => now(),
+    ]);
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_code' => $voucher->code,
+        'claim_type' => 'withdraw',
+        'provider' => 'netbank',
+        'provider_reference' => $reference,
+        'provider_transaction_id' => 'slice-first-paid',
+        'status' => 'succeeded',
+        'internal_status' => 'finalized',
+        'amount' => 50,
+        'currency' => 'PHP',
+        'completed_at' => now(),
+    ]);
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('list')->once()->with([])->andReturn([$voucher->fresh()]);
+    $result = (new VoucherLifecycleService($access))->list([])[0];
+
+    expect($result['status'])->toBe('partially_claimed')
+        ->and($result['operational_status'])->toMatchArray([
+            'label' => 'Partially Claimed',
+            'availability_label' => 'Claimable',
+            'settlement_outcome' => 'succeeded',
+            'is_terminal' => false,
+            'can_claim' => true,
         ]);
 });
 

@@ -3,30 +3,74 @@
 declare(strict_types=1);
 
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
+use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
+use LBHurtado\XChange\Models\VoucherSliceExecution;
+use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 
 function namedSliceVoucher(array $slices): Voucher
 {
+    $totalMinor = (int) round(array_sum(array_map(
+        static fn (array $slice): float => (float) $slice['amount'],
+        $slices,
+    )) * 100);
+    $plan = app(VoucherSlicePlanFactory::class)->scheduled(
+        totalMinor: $totalMinor,
+        currency: 'PHP',
+        slices: array_map(static fn (array $slice): array => [
+            'id' => $slice['id'] ?? null,
+            'label' => $slice['description'] ?? null,
+            'amount_minor' => (int) round(((float) $slice['amount']) * 100),
+            'claim_on' => $slice['claim_on'] ?? null,
+            'claim_by' => $slice['claim_by'] ?? null,
+        ], $slices),
+        selection: VoucherSliceSelectionPolicy::OneOrMany,
+    );
+
     return Voucher::query()->create([
         'code' => 'NSLICE'.fake()->numerify('####'),
         'metadata' => [
             'instructions' => [
-                'cash' => [
-                    'amount' => array_sum(array_map(
-                        static fn (array $slice): float => (float) $slice['amount'],
-                        $slices
-                    )),
-                    'currency' => 'PHP',
-                    'slice_mode' => 'open',
-                ],
-                'metadata' => [
-                    'slices' => $slices,
-                ],
+                'slice_plan' => $plan->canonicalArray(),
             ],
         ],
     ]);
+}
+
+function consumeNamedSlices(Voucher $voucher, array $sliceIds): void
+{
+    $reference = (string) Str::ulid();
+    $execution = VoucherSliceExecution::query()->create([
+        'reference' => $reference,
+        'voucher_id' => $voucher->getKey(),
+        'plan_fingerprint' => app(\LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator::class)->plan($voucher)->hash(),
+        'idempotency_key_hash' => hash('sha256', $reference),
+        'request_fingerprint' => hash('sha256', 'request-'.$reference),
+        'provider_operation_reference' => 'slice-'.$reference,
+        'claim_number' => 1,
+        'status' => 'succeeded',
+        'amount_minor' => 1,
+        'currency' => 'PHP',
+        'reserved_at' => now(),
+        'settled_at' => now(),
+    ]);
+
+    foreach ($sliceIds as $index => $sliceId) {
+        VoucherSliceExecutionItem::query()->create([
+            'execution_id' => $execution->getKey(),
+            'voucher_id' => $voucher->getKey(),
+            'slice_id' => $sliceId,
+            'label' => 'Slice '.($index + 1),
+            'sequence' => $index + 1,
+            'amount_minor' => 1,
+            'status' => 'consumed',
+            'reserved_at' => now(),
+            'consumed_at' => now(),
+        ]);
+    }
 }
 
 it('normalizes named slices into open-slice compatible issuance metadata', function () {
@@ -51,19 +95,20 @@ it('normalizes named slices into open-slice compatible issuance metadata', funct
         ],
     ]);
 
-    expect(data_get($payload, 'cash.slice_mode'))->toBe('open')
-        ->and(data_get($payload, 'cash.max_slices'))->toBe(2)
-        ->and(data_get($payload, 'cash.min_withdrawal'))->toBe(4000)
-        ->and(data_get($payload, 'metadata.custom.named_slice_policy.mode'))->toBe('named')
-        ->and(data_get($payload, 'metadata.custom.named_slices.0.id'))->toBe('slice_1')
-        ->and(data_get($payload, 'metadata.custom.named_slices.0.description'))->toBe('Buy Product 1');
+    expect(data_get($payload, 'slice_plan.mode'))->toBe('scheduled')
+        ->and(data_get($payload, 'slice_plan.selection'))->toBe('one_or_many')
+        ->and(data_get($payload, 'slice_plan.slices.0.id'))->toBe('slice_1')
+        ->and(data_get($payload, 'slice_plan.slices.0.label'))->toBe('Buy Product 1')
+        ->and(data_get($payload, 'cash.slice_mode'))->toBeNull()
+        ->and(data_get($payload, 'metadata.slices'))->toBeNull();
 });
 
-it('leaves fixed and open slice payloads unchanged when executable named slices are absent', function (array $payload) {
+it('migrates transient fixed and open slice payloads into the canonical plan', function (array $payload, string $mode) {
     $normalized = app(NamedVoucherSliceService::class)->normalizeIssuancePayload($payload);
 
-    expect($normalized)->toBe($payload)
-        ->and(data_get($normalized, 'metadata.custom.named_slices'))->toBeNull();
+    expect(data_get($normalized, 'slice_plan.mode'))->toBe($mode)
+        ->and(data_get($normalized, 'cash.slice_mode'))->toBeNull()
+        ->and(data_get($normalized, 'metadata.slice_policy'))->toBeNull();
 })->with([
     'fixed slices' => [[
         'cash' => [
@@ -87,7 +132,7 @@ it('leaves fixed and open slice payloads unchanged when executable named slices 
                 ],
             ],
         ],
-    ]],
+    ], 'equal'],
     'open slices' => [[
         'cash' => [
             'amount' => 100,
@@ -113,7 +158,7 @@ it('leaves fixed and open slice payloads unchanged when executable named slices 
                 ],
             ],
         ],
-    ]],
+    ], 'flexible'],
 ]);
 
 it('rejects named slices that do not add up to the voucher amount', function () {
@@ -179,21 +224,14 @@ it('blocks already claimed named slices', function () {
             'amount' => 6000,
             'description' => 'Buy Product 1',
         ],
-    ]);
-
-    VoucherClaim::query()->create([
-        'voucher_id' => $voucher->getKey(),
-        'claim_number' => 1,
-        'claim_type' => 'withdraw',
-        'status' => 'succeeded',
-        'currency' => 'PHP',
-        'attempted_at' => now(),
-        'meta' => [
-            'named_slices' => [
-                'selected_ids' => ['slice_1'],
-            ],
+        [
+            'id' => 'slice_2',
+            'amount' => 1,
+            'description' => 'Buy Product 2',
         ],
     ]);
+
+    consumeNamedSlices($voucher, ['slice_1']);
 
     app(NamedVoucherSliceService::class)->enrichClaimPayload($voucher->fresh(), [
         'slice_ids' => ['slice_1'],
@@ -214,20 +252,7 @@ it('detects remaining unclaimed named slices after a partial claim', function ()
         ],
     ]);
 
-    VoucherClaim::query()->create([
-        'voucher_id' => $voucher->getKey(),
-        'claim_number' => 1,
-        'claim_type' => 'withdraw',
-        'status' => 'withdrawn',
-        'currency' => 'PHP',
-        'attempted_at' => now(),
-        'meta' => [
-            'fully_claimed' => false,
-            'named_slices' => [
-                'selected_ids' => ['slice_1'],
-            ],
-        ],
-    ]);
+    consumeNamedSlices($voucher, ['slice_1']);
 
     $service = app(NamedVoucherSliceService::class);
 
@@ -249,19 +274,7 @@ it('detects when all named slices are claimed', function () {
         ],
     ]);
 
-    VoucherClaim::query()->create([
-        'voucher_id' => $voucher->getKey(),
-        'claim_number' => 1,
-        'claim_type' => 'withdraw',
-        'status' => 'withdrawn',
-        'currency' => 'PHP',
-        'attempted_at' => now(),
-        'meta' => [
-            'named_slices' => [
-                'selected_ids' => ['slice_1', 'slice_2'],
-            ],
-        ],
-    ]);
+    consumeNamedSlices($voucher, ['slice_1', 'slice_2']);
 
     $service = app(NamedVoucherSliceService::class);
 

@@ -3325,9 +3325,14 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(preview.cash).toMatchObject({
             amount: 100,
             currency: 'PHP',
-            slice_mode: 'fixed',
-            slices: 4,
         });
+        expect(preview.slice_plan).toMatchObject({
+            schema: 'voucher.slice-plan.v1',
+            mode: 'equal',
+            selection: 'next_only',
+            total_minor: 10000,
+        });
+        expect(preview.slice_plan.slices).toHaveLength(4);
         expect(preview.metadata.slices).toBeUndefined();
         expect(slicePlan).toMatchObject({
             schema: 'x-change.cockpit.slice-plan.v1',
@@ -3403,15 +3408,18 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(preview.cash).toMatchObject({
             amount: 100,
             currency: 'PHP',
-            slice_mode: 'open',
-            max_slices: 4,
-            min_withdrawal: 25,
         });
-        expect(preview.metadata.slices[0]).toEqual({
+        expect(preview.slice_plan).toMatchObject({
+            schema: 'voucher.slice-plan.v1',
+            mode: 'scheduled',
+            selection: 'one_or_many',
+            total_minor: 10000,
+        });
+        expect(preview.slice_plan.slices[0]).toEqual({
             id: 'slice_1',
-            amount: 25,
-            description: 'Transport fare',
-            tag: 'transport',
+            amount_minor: 2500,
+            label: 'Transport fare',
+            sequence: 1,
             claim_on: null,
             claim_by: null,
         });
@@ -3438,16 +3446,14 @@ describe('Cockpit Quick Generate foundation', () => {
         const [, options] = fetchMock.mock.calls[0];
         const payload = JSON.parse(options.body);
 
-        expect(payload.cash).toMatchObject({
-            slice_mode: 'open',
-            max_slices: 4,
-            min_withdrawal: 25,
+        expect(payload.slice_plan).toMatchObject({
+            mode: 'scheduled',
+            selection: 'one_or_many',
         });
-        expect(payload.metadata.slices[0]).toMatchObject({
+        expect(payload.slice_plan.slices[0]).toMatchObject({
             id: 'slice_1',
-            amount: 25,
-            description: 'Transport fare',
-            tag: 'transport',
+            amount_minor: 2500,
+            label: 'Transport fare',
         });
         expect(payload.metadata.custom.cockpit.slice_plan.rows[0]).toEqual({
             id: 'slice_1',
@@ -3491,16 +3497,16 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(preview.cash).toMatchObject({
             amount: 100,
             currency: 'PHP',
-            slice_mode: 'open',
+        });
+        expect(preview.slice_plan).toMatchObject({
+            mode: 'flexible',
+            selection: 'flexible_amount',
             max_slices: 3,
-            min_withdrawal: 30,
+            min_amount_minor: 3000,
+            total_minor: 10000,
         });
         expect(preview.metadata.slices).toBeUndefined();
-        expect(preview.metadata.slice_policy).toEqual({
-            mode: 'open',
-            selection: 'operator',
-            enforced: false,
-        });
+        expect(preview.metadata.slice_policy).toBeUndefined();
         expect(preview.metadata.custom.cockpit.slice_plan).toMatchObject({
             mode: 'open',
             cash_mode: 'open',

@@ -51,6 +51,7 @@ class RecordVoucherClaim
 
         $attributes = [
             'voucher_id' => $voucher->getKey(),
+            'claim_number' => $this->claimNumber($voucher, $payload),
             'claim_type' => (string) ($result->claim_type ?: 'claim'),
             'status' => $this->normalizeStatus((string) $result->status),
             'requested_amount_minor' => $this->toMinorUnits($requestedAmount),
@@ -79,6 +80,10 @@ class RecordVoucherClaim
                     'selected_ids' => data_get($payload, 'slice_ids', []),
                     'selected' => data_get($payload, '_named_slices.selected', []),
                 ],
+                'slice_execution' => array_filter([
+                    'reference' => data_get($payload, '_slice_execution.reference'),
+                    'claim_number' => data_get($payload, '_slice_execution.claim_number'),
+                ], static fn (mixed $value): bool => $value !== null && $value !== ''),
             ],
         ];
 
@@ -92,7 +97,6 @@ class RecordVoucherClaim
             );
             $claim->forceFill($attributes)->save();
         } else {
-            $attributes['claim_number'] = (int) $voucher->claims()->count() + 1;
             $claim = VoucherClaim::query()->create($attributes);
         }
 
@@ -109,6 +113,18 @@ class RecordVoucherClaim
         $this->queueFeedback->handle($claim, $result);
 
         return $claim;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function claimNumber(Voucher $voucher, array $payload): int
+    {
+        $reserved = data_get($payload, '_slice_execution.claim_number');
+
+        if (is_numeric($reserved) && (int) $reserved > 0) {
+            return (int) $reserved;
+        }
+
+        return (int) $voucher->claims()->max('claim_number') + 1;
     }
 
     /** @param array<string, mixed> $payload */

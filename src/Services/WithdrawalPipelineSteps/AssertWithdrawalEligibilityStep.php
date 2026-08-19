@@ -33,7 +33,7 @@ class AssertWithdrawalEligibilityStep implements WithdrawalPipelineStepContract
     public function handle(WithdrawalPipelineContextData $context, Closure $next): mixed
     {
         $this->withdrawalEligibility->assertEligible(
-            new VoucherWithdrawableInstrumentAdapter($context->voucher),
+            new VoucherWithdrawableInstrumentAdapter($context->voucher, $context->payload),
         );
 
         return $next($context);

@@ -5,9 +5,15 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\XRay;
 
 use Illuminate\Support\Arr;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 
 class VoucherXRayProjectionBuilder
 {
+    public function __construct(private readonly VoucherSlicePlanProjection $slicePlans)
+    {
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -15,6 +21,7 @@ class VoucherXRayProjectionBuilder
     {
         $instructions = (array) data_get($voucher, 'instructions', []);
         $status = $this->xrayStatus((string) data_get($voucher, 'status', 'unknown'), $voucher);
+        $slicePlan = $voucher instanceof Voucher ? $this->slicePlans->forVoucher($voucher) : [];
 
         return [
             'status' => $status,
@@ -24,14 +31,17 @@ class VoucherXRayProjectionBuilder
             ),
             'issuer' => data_get($voucher, 'issuer_id'),
             'requirements' => $this->requirements($instructions),
-            'remaining_slices' => $this->remainingSlices($instructions),
+            'slice_plan' => $slicePlan,
+            'remaining_slices' => $voucher instanceof Voucher
+                ? data_get($slicePlan, 'rows', [])
+                : $this->remainingSlices($instructions),
             'redirect_url' => data_get($instructions, 'rider.url'),
             'stages' => $this->stages($voucher, $instructions),
             'next_actions' => $this->nextActions($status, (string) data_get($voucher, 'code', '')),
             'allow' => [
                 'amount' => false,
                 'issuer' => false,
-                'remaining_slices' => false,
+                'remaining_slices' => $slicePlan !== [],
                 'rider_preclaim' => true,
                 'redirect_url' => false,
             ],

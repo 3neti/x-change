@@ -101,11 +101,11 @@ describe('Cockpit Quick Generate value use', () => {
             .setValue('250');
         await flushPromises();
 
-        expect(preview(wrapper).cash).toMatchObject({
-            amount: 250,
-            slice_mode: 'open',
+        expect(preview(wrapper).slice_plan).toMatchObject({
+            mode: 'flexible',
             max_slices: 7,
-            min_withdrawal: 30,
+            min_amount_minor: 3000,
+            total_minor: 25000,
         });
     });
 
@@ -171,10 +171,10 @@ describe('Cockpit Quick Generate value use', () => {
             .setValue(false);
         await flushPromises();
 
-        expect(preview(wrapper).cash).toMatchObject({
-            slice_mode: 'open',
+        expect(preview(wrapper).slice_plan).toMatchObject({
+            mode: 'flexible',
             max_slices: 6,
-            min_withdrawal: 30,
+            min_amount_minor: 3000,
         });
     });
 

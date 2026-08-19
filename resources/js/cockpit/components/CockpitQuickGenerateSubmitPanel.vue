@@ -3991,6 +3991,70 @@ const canonicalSlicePlan = computed<Record<string, unknown>>(() => {
     };
 });
 
+const executableSlicePlan = computed<Record<string, unknown> | null>(() => {
+    if (reusableBalance.value || sliceMode.value === 'whole') {
+        return null;
+    }
+
+    const totalMinor = Math.round(normalizedPayCodeAmount() * 100);
+    const planBase = {
+        schema: 'voucher.slice-plan.v1',
+        total_minor: totalMinor,
+        currency: currency.value.trim().toUpperCase() || 'PHP',
+    };
+
+    if (sliceMode.value === 'fixed') {
+        const count = Math.max(2, Math.round(Number(sliceSummary.value.slices) || 2));
+        const baseMinor = Math.floor(totalMinor / count);
+        const remainder = totalMinor % count;
+
+        return {
+            ...planBase,
+            mode: 'equal',
+            selection: 'next_only',
+            slices: Array.from({ length: count }, (_, index) => ({
+                id: `slice_${index + 1}`,
+                label: `Slice ${index + 1}`,
+                amount_minor: baseMinor + (index < remainder ? 1 : 0),
+                sequence: index + 1,
+                claim_on: null,
+                claim_by: null,
+            })),
+            max_slices: null,
+            min_amount_minor: null,
+        };
+    }
+
+    if (sliceMode.value === 'named') {
+        return {
+            ...planBase,
+            mode: 'scheduled',
+            selection: 'one_or_many',
+            slices: normalizedNamedClaimSlices.value.map((slice, index) => ({
+                id: slice.id,
+                label: slice.description || `Slice ${index + 1}`,
+                amount_minor: Math.round(Number(slice.amount) * 100),
+                sequence: index + 1,
+                claim_on: slice.claim_on,
+                claim_by: slice.claim_by,
+            })),
+            max_slices: null,
+            min_amount_minor: null,
+        };
+    }
+
+    return {
+        ...planBase,
+        mode: 'flexible',
+        selection: 'flexible_amount',
+        slices: [],
+        max_slices: Math.max(1, Math.round(Number(sliceSummary.value.max_slices) || 1)),
+        min_amount_minor: Math.round(
+            (Number(sliceSummary.value.min_withdrawal) || minimumWithdrawalFloor.value) * 100,
+        ),
+    };
+});
+
 const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
     () => {
         return [
@@ -4491,9 +4555,6 @@ function buildPayloadShape(
         amountOverride === null ? Number(amount.value) : amountOverride;
     const normalizedCount = Number(count.value);
     const campaign = campaignMetadata();
-    const normalizedSlices = Number(sliceSummary.value.slices);
-    const normalizedMaxSlices = Number(sliceSummary.value.max_slices);
-    const normalizedMinWithdrawal = Number(sliceSummary.value.min_withdrawal);
     const cash: Record<string, unknown> = {
         amount: Number.isFinite(normalizedAmount)
             ? normalizedAmount
@@ -4516,27 +4577,6 @@ function buildPayloadShape(
         cash.mandates = effectiveMandates.value;
     }
 
-    if (!reusableBalance.value && sliceMode.value === 'fixed') {
-        cash.slice_mode = 'fixed';
-        cash.slices = Number.isFinite(normalizedSlices) ? normalizedSlices : 1;
-    }
-
-    if (!reusableBalance.value && sliceMode.value === 'open') {
-        cash.slice_mode = 'open';
-        cash.max_slices = Number.isFinite(normalizedMaxSlices)
-            ? normalizedMaxSlices
-            : 2;
-        cash.min_withdrawal = Number.isFinite(normalizedMinWithdrawal)
-            ? normalizedMinWithdrawal
-            : null;
-    }
-
-    if (!reusableBalance.value && sliceMode.value === 'named') {
-        cash.slice_mode = 'open';
-        cash.max_slices = normalizedNamedClaimSlices.value.length;
-        cash.min_withdrawal = sliceSummary.value.min_withdrawal;
-    }
-
     const validation = { ...validationSummary.value };
 
     if (redactSensitive && 'secret' in validation) {
@@ -4547,6 +4587,9 @@ function buildPayloadShape(
 
     const payload: Record<string, unknown> = {
         cash,
+        ...(executableSlicePlan.value === null
+            ? {}
+            : { slice_plan: executableSlicePlan.value }),
         ...(reusableBalance.value
             ? {
                   stored_value: {
@@ -4597,25 +4640,6 @@ function buildPayloadShape(
         },
         metadata: {
             ...(campaign === null ? {} : { campaign }),
-            ...(!reusableBalance.value && sliceMode.value === 'open'
-                ? {
-                      slice_policy: {
-                          mode: 'open',
-                          selection: 'operator',
-                          enforced: false,
-                      },
-                  }
-                : {}),
-            ...(!reusableBalance.value && sliceMode.value === 'named'
-                ? {
-                      slices: normalizedNamedClaimSlices.value,
-                      slice_policy: {
-                          mode: 'named',
-                          selection: 'one_or_many',
-                          enforced: true,
-                      },
-                  }
-                : {}),
             custom: {
                 cockpit: {
                     template_key: selectedTemplate.value,

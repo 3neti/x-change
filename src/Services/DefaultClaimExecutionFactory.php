@@ -71,6 +71,11 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
             return false;
         }
 
+        if (data_get($voucher, 'instructions.slice_plan') !== null
+            || data_get($voucher->metadata, 'instructions.slice_plan') !== null) {
+            return true;
+        }
+
         if ($this->isOpenSliceVoucher($voucher)) {
             return true;
         }

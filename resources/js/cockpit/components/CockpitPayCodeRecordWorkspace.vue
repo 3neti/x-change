@@ -26,6 +26,7 @@ import {
   History,
   Image,
   Landmark,
+  Layers3,
   MapPin,
   ReceiptText,
   RotateCcw,
@@ -46,6 +47,7 @@ import type {
 type WorkspaceTab =
   | "overview"
   | "instructions"
+  | "slices"
   | "claim"
   | "settlement"
   | "audit"
@@ -81,10 +83,14 @@ const engineeringCopied = ref(false);
 const overview = computed(() => record(props.voucher?.overview));
 const instructions = computed(() => record(props.voucher?.instructions));
 const claims = computed(() => record(props.voucher?.claims));
+const slices = computed(() => record(props.voucher?.slices));
+const sliceRows = computed(() => list(slices.value.rows));
+const hasSlices = computed(() => text(slices.value.schema) !== "");
 const settlement = computed(() => record(props.voucher?.settlement));
 const treasury = computed(() => record(props.voucher?.treasury));
 const backing = computed(() => record(treasury.value.backing));
 const party = computed(() => record(overview.value.party));
+const availability = computed(() => record(overview.value.availability));
 const amounts = computed(() => list(overview.value.amounts));
 const primaryAmount = computed(
   () =>
@@ -259,6 +265,16 @@ const tabs = computed(() => [
     icon: ClipboardCheck,
     count: instructionGroups.value.length,
   },
+  ...(hasSlices.value
+    ? [
+        {
+          key: "slices" as const,
+          label: "Slices",
+          icon: Layers3,
+          count: sliceRows.value.length,
+        },
+      ]
+    : []),
   {
     key: "claim" as const,
     label: "Claim & Evidence",
@@ -398,6 +414,7 @@ function workspaceTarget(): { tab: WorkspaceTab; claimId: number | null } {
   const allowedTabs: WorkspaceTab[] = [
     "overview",
     "instructions",
+    "slices",
     "claim",
     "settlement",
     "audit",
@@ -499,10 +516,10 @@ function number(value: unknown): number {
             }}</span>
           </div>
           <p class="mt-2 flex items-center gap-2 text-sm text-slate-300">
-            <UserRound class="h-4 w-4" />
-            <span>{{ text(party.label) || "Availability" }}:</span>
+            <ShieldCheck class="h-4 w-4" />
+            <span>Availability:</span>
             <strong class="text-white">{{
-              text(party.primary) || "Open claim"
+              text(availability.label) || title(status) || "Not available"
             }}</strong>
           </p>
         </div>
@@ -820,6 +837,86 @@ function number(value: unknown): number {
           >
             No instruction snapshot is available.
           </p>
+        </div>
+      </section>
+
+      <section
+        v-else-if="activeTab === 'slices'"
+        class="space-y-5"
+        data-testid="pay-code-slices-tab"
+      >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <Layers3 class="h-5 w-5 text-emerald-600" />
+              <h3 class="text-sm font-semibold text-slate-950 dark:text-white">
+                {{ text(slices.mode_label) }} Slice Plan
+              </h3>
+            </div>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Each row is a durable claim entitlement. Reserved rows remain
+              unavailable until their execution is resolved.
+            </p>
+          </div>
+          <span
+            class="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          >
+            {{ title(slices.selection) }}
+          </span>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-3">
+          <article
+            v-for="summary in [
+              { label: 'Paid', value: slices.consumed_minor, tone: 'text-emerald-700 dark:text-emerald-300' },
+              { label: 'In progress', value: slices.reserved_minor, tone: 'text-amber-700 dark:text-amber-300' },
+              { label: 'Available', value: slices.available_minor, tone: 'text-slate-950 dark:text-white' },
+            ]"
+            :key="summary.label"
+            class="min-w-0 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+          >
+            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+              {{ summary.label }}
+            </p>
+            <p :class="['mt-1 text-xl font-bold', summary.tone]">
+              {{ formatMoney(summary.value, slices.currency) }}
+            </p>
+          </article>
+        </div>
+
+        <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+          <div
+            v-for="row in sliceRows"
+            :key="text(row.id)"
+            class="grid min-w-0 gap-3 border-b border-slate-200 p-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center dark:border-slate-800"
+            data-testid="pay-code-slice-row"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-slate-950 dark:text-white">
+                {{ text(row.label) || `Slice ${number(row.sequence)}` }}
+              </p>
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <template v-if="row.claim_number">Claim {{ number(row.claim_number) }}</template>
+                <template v-else-if="row.claim_on">Available {{ formatDate(row.claim_on) }}</template>
+                <template v-else>Slice {{ number(row.sequence) }}</template>
+              </p>
+            </div>
+            <p class="text-sm font-bold text-slate-950 dark:text-white">
+              {{ formatMoney(row.amount_minor, slices.currency) }}
+            </p>
+            <span
+              :class="[
+                'w-fit rounded-full px-2.5 py-1 text-[0.65rem] font-semibold',
+                text(row.status) === 'consumed' || text(row.status) === 'succeeded'
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
+                  : text(row.status) === 'reserved' || text(row.status) === 'executing' || text(row.status) === 'indeterminate'
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
+                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+              ]"
+            >
+              {{ text(row.status_label) }}
+            </span>
+          </div>
         </div>
       </section>
 

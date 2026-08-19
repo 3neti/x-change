@@ -60,7 +60,7 @@ class DefaultWithdrawalValidationService implements WithdrawalValidationContract
             throw VoucherCannotDisburse::forVoucher($voucher, $capabilities);
         }
 
-        $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
+        $instrument = new VoucherWithdrawableInstrumentAdapter($voucher, $payload);
 
         $this->amountBounds->assertWithinBounds(
             instrument: $instrument,

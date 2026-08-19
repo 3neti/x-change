@@ -39,7 +39,7 @@ class AuthorizeWithdrawalPolicyStep implements WithdrawalPipelineStepContract
             throw new \LogicException('Withdrawal amount must be resolved before authorization policy.');
         }
 
-        $instrument = new VoucherWithdrawableInstrumentAdapter($context->voucher);
+        $instrument = new VoucherWithdrawableInstrumentAdapter($context->voucher, $context->payload);
 
         $vendor = $this->vendorRegistry->resolve(
             alias: data_get($context->payload, 'vendor_alias'),

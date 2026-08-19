@@ -62,6 +62,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 
 class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProviderContract
@@ -77,6 +79,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly ?CockpitPayCodeDetailProjection $payCodeDetails = null,
         private readonly ?CockpitPayCodeIntegrationReferenceResolver $integrationReferences = null,
         private readonly ?ClaimUrlQrRendererContract $qrRenderer = null,
+        private readonly ?VoucherSlicePlanProjection $slicePlans = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -134,6 +137,15 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         $integrationReferences = $this->integrationReferences ?? new CockpitPayCodeIntegrationReferenceResolver;
         $feedbackDeliveryIds = $integrationReferences->feedbackDeliveryIds($code);
         $voucherId = $this->nullableString($detail['voucher_id'] ?? $detail['id'] ?? null);
+        $sliceProjection = [];
+
+        if ($voucherId !== null && ctype_digit($voucherId)) {
+            $voucher = Voucher::query()->find((int) $voucherId);
+
+            if ($voucher instanceof Voucher) {
+                $sliceProjection = ($this->slicePlans ?? app(VoucherSlicePlanProjection::class))->forVoucher($voucher);
+            }
+        }
         $execution = $fallback->execution;
         $journal = $this->integrations?->journal($query, $voucherId, $feedbackDeliveryIds) ?? $fallback->journal;
         $actions = $this->integrations?->actions($query) ?? $fallback->actions;
@@ -148,6 +160,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 overview: $detailProjection->overview($detail),
                 instructions: $detailProjection->instructions($detail),
                 claims: $detailProjection->claims($detail),
+                slices: $detailProjection->slices($sliceProjection),
                 settlement: $detailProjection->settlement($detail),
                 treasury: $detailProjection->treasury($detail),
                 evidence_summary: $this->voucherEvidenceSummary(

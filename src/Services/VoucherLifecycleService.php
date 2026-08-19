@@ -24,8 +24,10 @@ use LBHurtado\XChange\Data\PayCode\PayCodeOperationalStatusData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use RuntimeException;
 use Throwable;
 
@@ -237,6 +239,10 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 ->exists()
             || DisbursementReconciliation::query()
                 ->where('voucher_id', $voucher->getKey())
+                ->exists()
+            || VoucherSliceExecution::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->whereIn('status', ['reserved', 'executing', 'indeterminate', 'succeeded'])
                 ->exists();
 
         if ($claimed) {
@@ -1091,8 +1097,11 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
     protected function isFullyClaimed(Voucher $voucher): bool
     {
-        if ($this->namedSlices()->hasNamedSlices($voucher)) {
-            return $this->namedSlices()->allSlicesClaimed($voucher);
+        $slicePlan = app(VoucherSlicePlanProjection::class)->forVoucher($voucher);
+
+        if ($slicePlan !== []) {
+            return (int) data_get($slicePlan, 'consumed_minor', 0)
+                >= (int) data_get($slicePlan, 'total_minor', 1);
         }
 
         if ($voucher->redeemed_at !== null) {

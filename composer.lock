@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "94f1ab33a4f4ca8af86792147dc2b908",
+    "content-hash": "5892a2984bceeb9436b37436aabd7a70",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1259,16 +1259,16 @@
         },
         {
             "name": "3neti/voucher",
-            "version": "v1.0.0-beta.6",
+            "version": "v1.0.0-beta.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/voucher.git",
-                "reference": "5a56454ebc9f629cd705b16568690360744dc931"
+                "reference": "2c8469f9116fcd44cd60ebec9dcc44d2993f6b1c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/voucher/zipball/5a56454ebc9f629cd705b16568690360744dc931",
-                "reference": "5a56454ebc9f629cd705b16568690360744dc931",
+                "url": "https://api.github.com/repos/3neti/voucher/zipball/2c8469f9116fcd44cd60ebec9dcc44d2993f6b1c",
+                "reference": "2c8469f9116fcd44cd60ebec9dcc44d2993f6b1c",
                 "shasum": ""
             },
             "require": {

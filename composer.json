@@ -65,7 +65,7 @@
         "3neti/money-issuer": "^1.1",
         "3neti/onboarding": "^1.0",
         "3neti/report-registry": "^1.1",
-        "3neti/voucher": "^1.0.0-beta.6",
+        "3neti/voucher": "^1.0.0-beta.7",
         "3neti/wallet": "^2.0.0-beta.8",
         "3neti/x-action": "^1.0",
         "3neti/x-campaign": "^1.0",

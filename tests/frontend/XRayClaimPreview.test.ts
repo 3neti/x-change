@@ -141,6 +141,39 @@ describe('XRayClaimPreview', () => {
         expect(wrapper.text()).toContain('Issuer preview message.');
     });
 
+    it('shows labeled slice choices on the first claim preview', () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'partially_claimable',
+                    disclosures: [
+                        {
+                            key: 'remaining_slices',
+                            label: 'Remaining Slices',
+                            value: [
+                                {
+                                    id: 'slice_1',
+                                    label: 'Morning fare',
+                                    amount_minor: 2500,
+                                    status: 'available',
+                                    status_label: 'Available',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="xray-slice-plan"]').text()).toContain(
+            'Choose a slice',
+        );
+        expect(wrapper.text()).toContain('Morning fare');
+        expect(wrapper.text()).toContain('₱25.00');
+        expect(wrapper.text()).not.toContain('[object Object]');
+    });
+
     it('does not render a disclosure-style redaction footer on the claim page', () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {

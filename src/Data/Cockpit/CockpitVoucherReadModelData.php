@@ -18,6 +18,7 @@ class CockpitVoucherReadModelData extends Data
      * @param  array<int, CockpitVoucherEvidenceSummaryData>  $evidence_summary
      * @param  array<string, mixed>  $distribution_links
      * @param  array<string, mixed>  $redactions
+     * @param  array<string, mixed>  $slices
      */
     public function __construct(
         public readonly ?string $code,
@@ -32,5 +33,6 @@ class CockpitVoucherReadModelData extends Data
         public readonly array $distribution_links = [],
         public readonly array $redactions = ['payloads' => 'not-loaded'],
         public readonly bool $authorized = false,
+        public readonly array $slices = [],
     ) {}
 }

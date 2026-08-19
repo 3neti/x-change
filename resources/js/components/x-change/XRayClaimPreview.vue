@@ -40,6 +40,14 @@ interface XRayResult {
     warnings?: string[];
 }
 
+interface XRaySliceRow {
+    id?: string | null;
+    label?: string | null;
+    amount_minor?: number | null;
+    status?: string | null;
+    status_label?: string | null;
+}
+
 const props = defineProps<{
     result?: XRayResult | null;
     loading?: boolean;
@@ -66,8 +74,29 @@ const requirements = computed(() =>
 // non-guest audience). Guests typically see nothing here, since the status
 // is already shown in the friendly header above.
 const extraDisclosures = computed(() =>
-    (props.result?.disclosures ?? []).filter((item) => item.key !== 'status'),
+    (props.result?.disclosures ?? []).filter(
+        (item) => item.key !== 'status' && item.key !== 'remaining_slices',
+    ),
 );
+const sliceRows = computed<XRaySliceRow[]>(() => {
+    const value = (props.result?.disclosures ?? []).find(
+        (item) => item.key === 'remaining_slices',
+    )?.value;
+
+    return Array.isArray(value)
+        ? value.filter(
+              (item): item is XRaySliceRow =>
+                  typeof item === 'object' && item !== null,
+          )
+        : [];
+});
+
+function formatSliceAmount(value: number | null | undefined): string {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+    }).format(Number(value ?? 0) / 100);
+}
 
 const stages = computed(() => props.result?.stages ?? []);
 const isPlainClaimable = computed(
@@ -188,6 +217,37 @@ function stageText(stage: XRayStage): string {
                                     aria-hidden="true"
                                 />
                                 <span class="truncate">{{ item.label }}</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div
+                        v-if="sliceRows.length"
+                        class="space-y-2"
+                        data-testid="xray-slice-plan"
+                    >
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+                        >
+                            Choose a slice
+                        </p>
+                        <ul class="grid gap-2">
+                            <li
+                                v-for="slice in sliceRows"
+                                :key="String(slice.id)"
+                                class="flex min-w-0 items-center justify-between gap-3 rounded-lg border bg-muted/20 px-3 py-2"
+                            >
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium text-foreground">
+                                        {{ slice.label || 'Slice' }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{ slice.status_label || 'Available' }}
+                                    </p>
+                                </div>
+                                <span class="shrink-0 text-sm font-semibold text-foreground">
+                                    {{ formatSliceAmount(slice.amount_minor) }}
+                                </span>
                             </li>
                         </ul>
                     </div>

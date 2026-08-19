@@ -49,6 +49,7 @@ class BuildWithdrawalPayoutRequestStep implements WithdrawalPipelineStepContract
         $executionContext = $this->executionContextResolver->resolve(
             $context->voucher,
             $context->bankAccount->getAccountNumber(),
+            $context->payload,
         );
 
         $context->withPayoutRequest(

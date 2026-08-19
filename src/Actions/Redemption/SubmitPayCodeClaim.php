@@ -28,6 +28,7 @@ use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\ClaimPreviewExecutionGuard;
@@ -54,6 +55,7 @@ class SubmitPayCodeClaim
         protected ?ResumeProviderProvisioningFromOnboarding $onboardingProvisioning = null,
         protected ?NamedVoucherSliceService $namedSlices = null,
         protected ?ClaimPreviewExecutionGuard $previewExecutionGuard = null,
+        protected ?VoucherSliceExecutionCoordinator $sliceExecutions = null,
     ) {}
 
     /**
@@ -75,6 +77,21 @@ class SubmitPayCodeClaim
             data_set($payload, '_meta.prepared_claim_id', $preparedClaim->getKey());
         }
 
+        $sliceReservation = $this->sliceExecutions()->reserve($voucher, $payload);
+
+        if ($sliceReservation !== null) {
+            $payload = $sliceReservation->payload;
+
+            if ($sliceReservation->replayed
+                && ! $this->isApprovalReplay($payload)) {
+                return $this->sliceExecutions()->replayResult($sliceReservation->execution);
+            }
+
+            if (! $sliceReservation->replayed) {
+                $this->sliceExecutions()->begin($sliceReservation->execution);
+            }
+        }
+
         $executor = $this->factory->make($voucher, $payload);
 
         try {
@@ -92,6 +109,10 @@ class SubmitPayCodeClaim
             );
         } catch (Throwable $e) {
             $this->markPreparedClaimExecutionFailed($preparedClaim, $e);
+
+            if ($sliceReservation !== null) {
+                $this->sliceExecutions()->indeterminate($sliceReservation->execution);
+            }
 
             if ($this->shouldReplayApprovedPaynamicsPayout($voucher, $payload, $e)) {
                 return $this->replayApprovedPaynamicsPayout($voucher, $payload);
@@ -137,7 +158,11 @@ class SubmitPayCodeClaim
             return $this->toDeferredPaynamicsOtpApprovalResult($voucher, $normalized, $payload);
         }
 
-        $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
+        $claim = $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
+
+        if ($sliceReservation !== null) {
+            $this->sliceExecutions()->succeed($sliceReservation->execution, $claim);
+        }
 
         return $normalized;
     }
@@ -168,6 +193,11 @@ class SubmitPayCodeClaim
     protected function previewExecutionGuard(): ClaimPreviewExecutionGuard
     {
         return $this->previewExecutionGuard ??= app(ClaimPreviewExecutionGuard::class);
+    }
+
+    protected function sliceExecutions(): VoucherSliceExecutionCoordinator
+    {
+        return $this->sliceExecutions ??= app(VoucherSliceExecutionCoordinator::class);
     }
 
     /**

@@ -263,6 +263,50 @@ describe("Cockpit Pay Code record workspace", () => {
     ).toContain("A legacy Cash entity is not the monetary authority.");
   });
 
+  it("renders the durable slice ledger as its own detail tab", async () => {
+    const slicedVoucher = {
+      ...structuredClone(voucher),
+      slices: {
+      schema: "x-change.cockpit.pay-code-slices.v1",
+      mode: "equal",
+      mode_label: "Equal",
+      selection: "next_only",
+      currency: "PHP",
+      total_minor: 10_000,
+      consumed_minor: 5_000,
+      reserved_minor: 0,
+      available_minor: 5_000,
+      rows: [
+        { id: "slice_1", label: "Slice 1", sequence: 1, amount_minor: 5_000, status: "consumed", status_label: "Paid", claim_number: 1 },
+        { id: "slice_2", label: "Slice 2", sequence: 2, amount_minor: 5_000, status: "available", status_label: "Available", claim_number: null },
+      ],
+      },
+    };
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "SL22",
+        status: "partially_claimed",
+        voucher: slicedVoucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Slices"))!
+      .trigger("click");
+
+    const tab = wrapper.get('[data-testid="pay-code-slices-tab"]');
+    expect(tab.text()).toContain("Equal Slice Plan");
+    expect(tab.text()).toContain("₱50.00");
+    expect(tab.text()).toContain("Slice 1");
+    expect(tab.text()).toContain("Paid");
+    expect(tab.text()).toContain("Slice 2");
+    expect(tab.text()).toContain("Available");
+    expect(wrapper.findAll('[data-testid="pay-code-slice-row"]')).toHaveLength(2);
+  });
+
   it("navigates the record without loading protected evidence until reveal", async () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {

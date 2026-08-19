@@ -7,55 +7,102 @@ namespace LBHurtado\XChange\Services;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\Voucher\Data\VoucherSliceData;
+use LBHurtado\Voucher\Data\VoucherSlicePlanData;
+use LBHurtado\Voucher\Enums\VoucherSlicePlanMode;
+use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
-use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
+use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 
 class NamedVoucherSliceService
 {
+    public function __construct(
+        private readonly VoucherSlicePlanFactory $plans,
+        private readonly VoucherSliceExecutionCoordinator $executions,
+    ) {
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     public function normalizeIssuancePayload(array $payload): array
     {
+        if (is_array(data_get($payload, 'slice_plan'))) {
+            VoucherSlicePlanData::from((array) data_get($payload, 'slice_plan'));
+
+            return $this->withoutRetiredFields($payload);
+        }
+
         $slices = data_get($payload, 'metadata.slices');
 
-        if (! is_array($slices) || $slices === []) {
-            return $payload;
+        if (is_array($slices) && $slices !== []) {
+            $normalized = $this->normalizeSlices($slices);
+            $totalMinor = $this->amountToMinor(data_get($payload, 'cash.amount'));
+            $sliceTotalMinor = array_sum(array_column($normalized, 'amount_minor'));
+
+            if ($totalMinor <= 0 || $sliceTotalMinor !== $totalMinor) {
+                throw ValidationException::withMessages([
+                    'metadata.slices' => 'Named slice amounts must equal the Pay Code amount.',
+                ]);
+            }
+
+            app(MinimumWithdrawalPolicyResolverContract::class)->assertIssuancePayload($payload);
+
+            $plan = $this->plans->scheduled(
+                totalMinor: $totalMinor,
+                currency: (string) data_get($payload, 'cash.currency', 'PHP'),
+                slices: array_map(static fn (array $slice): array => [
+                    'id' => $slice['id'],
+                    'label' => $slice['description'],
+                    'amount_minor' => $slice['amount_minor'],
+                    'claim_on' => $slice['claim_on'],
+                    'claim_by' => $slice['claim_by'],
+                ], $normalized),
+                selection: VoucherSliceSelectionPolicy::OneOrMany,
+            );
+
+            data_set($payload, 'slice_plan', $plan->canonicalArray());
+
+            return $this->withoutRetiredFields($payload);
         }
 
-        $normalized = $this->normalizeSlices($slices);
         $totalMinor = $this->amountToMinor(data_get($payload, 'cash.amount'));
-        $sliceTotalMinor = array_sum(array_column($normalized, 'amount_minor'));
+        $mode = data_get($payload, 'cash.slice_mode');
 
-        if ($totalMinor <= 0 || $sliceTotalMinor !== $totalMinor) {
-            throw ValidationException::withMessages([
-                'metadata.slices' => 'Named slice amounts must equal the Pay Code amount.',
-            ]);
+        if ($mode === 'fixed') {
+            $plan = $this->plans->equal(
+                totalMinor: $totalMinor,
+                currency: (string) data_get($payload, 'cash.currency', 'PHP'),
+                count: (int) data_get($payload, 'cash.slices'),
+            );
+            data_set($payload, 'slice_plan', $plan->canonicalArray());
+
+            return $this->withoutRetiredFields($payload);
         }
 
-        app(MinimumWithdrawalPolicyResolverContract::class)->assertIssuancePayload($payload);
+        if ($mode === 'open') {
+            app(MinimumWithdrawalPolicyResolverContract::class)->assertIssuancePayload($payload);
+            $plan = $this->plans->flexible(
+                totalMinor: $totalMinor,
+                currency: (string) data_get($payload, 'cash.currency', 'PHP'),
+                maxSlices: (int) data_get($payload, 'cash.max_slices'),
+                minAmountMinor: $this->amountToMinor(data_get($payload, 'cash.min_withdrawal')),
+            );
+            data_set($payload, 'slice_plan', $plan->canonicalArray());
 
-        data_forget($payload, 'metadata.slices');
-        data_forget($payload, 'metadata.slice_policy');
-        data_set($payload, 'metadata.custom.named_slices', $this->withoutInternalAmounts($normalized));
-        data_set($payload, 'metadata.custom.named_slice_policy', [
-            'mode' => 'named',
-            'selection' => 'one_or_many',
-            'enforced' => true,
-        ]);
-        data_set($payload, 'cash.slice_mode', 'open');
-        data_set($payload, 'cash.max_slices', count($normalized));
-        data_set($payload, 'cash.min_withdrawal', min(array_column($normalized, 'amount')));
-        data_forget($payload, 'cash.slices');
+            return $this->withoutRetiredFields($payload);
+        }
 
         return $payload;
     }
 
     public function hasNamedSlices(Voucher $voucher): bool
     {
-        return $this->slices($voucher) !== [];
+        return $this->executions->plan($voucher)?->mode === VoucherSlicePlanMode::Scheduled;
     }
 
     public function hasUnclaimedSlices(Voucher $voucher): bool
@@ -104,7 +151,9 @@ class NamedVoucherSliceService
      */
     public function enrichClaimPayload(Voucher $voucher, array $payload): array
     {
-        if (! $this->hasNamedSlices($voucher)) {
+        $plan = $this->executions->plan($voucher);
+
+        if ($plan === null || $plan->mode !== VoucherSlicePlanMode::Scheduled) {
             return $payload;
         }
 
@@ -154,14 +203,24 @@ class NamedVoucherSliceService
      */
     public function slices(Voucher $voucher): array
     {
-        $slices = data_get($voucher->metadata ?? [], 'instructions.metadata.custom.named_slices')
-            ?? data_get($voucher->metadata ?? [], 'instructions.metadata.slices');
+        $plan = $this->executions->plan($voucher);
 
-        if (! is_array($slices)) {
+        if ($plan === null || $plan->mode !== VoucherSlicePlanMode::Scheduled) {
             return [];
         }
 
-        return $this->withoutInternalAmounts($this->normalizeSlices($slices));
+        return $plan->slices->toCollection()
+            ->map(static fn (VoucherSliceData $slice): array => [
+                'id' => $slice->id,
+                'amount' => $slice->amount_minor / 100,
+                'description' => $slice->label,
+                'tag' => null,
+                'claim_on' => $slice->claim_on,
+                'claim_by' => $slice->claim_by,
+                'metadata' => [],
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -245,15 +304,32 @@ class NamedVoucherSliceService
      */
     protected function claimedSliceIds(Voucher $voucher): array
     {
-        return VoucherClaim::query()
+        return VoucherSliceExecutionItem::query()
             ->where('voucher_id', $voucher->getKey())
-            ->whereNotIn('status', ['failed'])
-            ->get()
-            ->flatMap(fn (VoucherClaim $claim) => data_get($claim->meta ?? [], 'named_slices.selected_ids', []))
-            ->filter(fn (mixed $id): bool => is_string($id) && $id !== '')
+            ->whereIn('status', ['reserved', 'consumed'])
+            ->pluck('slice_id')
             ->unique()
             ->values()
             ->all();
+    }
+
+    /** @param array<string, mixed> $payload @return array<string, mixed> */
+    private function withoutRetiredFields(array $payload): array
+    {
+        foreach ([
+            'metadata.slices',
+            'metadata.slice_policy',
+            'metadata.custom.named_slices',
+            'metadata.custom.named_slice_policy',
+            'cash.slice_mode',
+            'cash.slices',
+            'cash.max_slices',
+            'cash.min_withdrawal',
+        ] as $key) {
+            data_forget($payload, $key);
+        }
+
+        return $payload;
     }
 
     /**

@@ -158,8 +158,20 @@ describe('Quick Generate last instructions', () => {
             amount: 88.5,
             currency: 'PHP',
             fee_strategy: 'include',
-            slice_mode: 'fixed',
-            slices: 3,
+        });
+        expect(preview.cash).not.toHaveProperty('slice_mode');
+        expect(preview.cash).not.toHaveProperty('slices');
+        expect(preview.slice_plan).toMatchObject({
+            schema: 'voucher.slice-plan.v1',
+            mode: 'equal',
+            selection: 'next_only',
+            total_minor: 8850,
+            currency: 'PHP',
+            slices: [
+                { id: 'slice_1', label: 'Slice 1', amount_minor: 2950 },
+                { id: 'slice_2', label: 'Slice 2', amount_minor: 2950 },
+                { id: 'slice_3', label: 'Slice 3', amount_minor: 2950 },
+            ],
         });
         expect(preview.cash.validation).not.toHaveProperty('secret');
         expect(preview.cash.validation).not.toHaveProperty('mobile');

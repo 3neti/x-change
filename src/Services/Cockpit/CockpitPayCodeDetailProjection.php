@@ -20,6 +20,11 @@ final class CockpitPayCodeDetailProjection
             'capability' => $this->array($detail['capability'] ?? []),
             'party' => $this->array($detail['party'] ?? []),
             'amounts' => $this->list($detail['amounts'] ?? []),
+            'availability' => [
+                'key' => data_get($detail, 'operational_status.availability_key'),
+                'label' => data_get($detail, 'operational_status.availability_label'),
+                'can_claim' => data_get($detail, 'operational_status.can_claim') === true,
+            ],
             'timing' => [
                 'issued_at' => $detail['created_at'] ?? null,
                 'starts_at' => $detail['starts_at'] ?? null,
@@ -96,6 +101,37 @@ final class CockpitPayCodeDetailProjection
                 'otp_values_exposed' => false,
                 'binary_evidence_in_page_props' => false,
             ],
+        ];
+    }
+
+    /** @param array<string, mixed> $projection @return array<string, mixed> */
+    public function slices(array $projection): array
+    {
+        return $projection === [] ? [] : [
+            'schema' => 'x-change.cockpit.pay-code-slices.v1',
+            'mode' => $projection['mode'] ?? null,
+            'mode_label' => $projection['mode_label'] ?? null,
+            'selection' => $projection['selection'] ?? null,
+            'currency' => $projection['currency'] ?? null,
+            'total_minor' => $projection['total_minor'] ?? null,
+            'consumed_minor' => $projection['consumed_minor'] ?? null,
+            'reserved_minor' => $projection['reserved_minor'] ?? null,
+            'available_minor' => $projection['available_minor'] ?? null,
+            'slice_count' => $projection['slice_count'] ?? null,
+            'max_slices' => $projection['max_slices'] ?? null,
+            'min_amount_minor' => $projection['min_amount_minor'] ?? null,
+            'rows' => array_map(static fn (array $row): array => Arr::only($row, [
+                'id',
+                'label',
+                'sequence',
+                'amount_minor',
+                'status',
+                'status_label',
+                'claim_on',
+                'claim_by',
+                'claim_number',
+            ]), $this->list($projection['rows'] ?? [])),
+            'raw_payload_exposed' => false,
         ];
     }
 

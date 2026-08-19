@@ -127,6 +127,7 @@ use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
 use LBHurtado\XChange\Console\Commands\SetupXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Slices\DeliverVoucherSliceExecutionJournalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AttestCommercialAccountingCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AuthorizeTreasuryOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillCommercialAccountingJournalCommand;
@@ -343,6 +344,7 @@ use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialComponentEconomicsResolver;
@@ -810,6 +812,7 @@ class XChangeServiceProvider extends ServiceProvider
                 moneyMovementDecision: $app->make(MoneyMovementAccountingDecisionContract::class),
                 payCodeDetails: $app->make(CockpitPayCodeDetailProjection::class),
                 qrRenderer: $app->make(ClaimUrlQrRendererContract::class),
+                slicePlans: $app->make(VoucherSlicePlanProjection::class),
             );
         });
         $this->app->singleton(
@@ -1459,6 +1462,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ProvisionCommissioningSeatsCommand::class,
                 AuthorizeProvisioningOperatorCommand::class,
                 ExpireProvisioningOffersCommand::class,
+                DeliverVoucherSliceExecutionJournalCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
                 RunLifecycleScenarioCommand::class,
@@ -1620,6 +1624,15 @@ class XChangeServiceProvider extends ServiceProvider
                     ->withoutOverlapping(5);
             });
         }
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule
+                ->command('x-change:slices:deliver-journal --limit=100')
+                ->name('x-change:slices:deliver-journal')
+                ->everyMinute()
+                ->onOneServer()
+                ->withoutOverlapping(5);
+        });
 
         if ((bool) config(
             'x-change.commercial.operations.scheduled_reconciliation_enabled',

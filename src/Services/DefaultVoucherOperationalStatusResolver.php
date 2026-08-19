@@ -31,6 +31,8 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
         $internalStatus = $this->normalize($reconciliation?->internal_status);
         $voucherState = $this->normalize($voucher->state->value) ?? 'active';
         $requiresRecovery = data_get($voucher->metadata, 'disbursement.requires_recovery') === true;
+        $payoutSucceeded = in_array($payoutStatus, ['succeeded', 'completed', 'paid'], true)
+            || $internalStatus === 'finalized';
 
         if (
             $requiresRecovery
@@ -69,10 +71,7 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
             );
         }
 
-        if (
-            in_array($payoutStatus, ['succeeded', 'completed', 'paid'], true)
-            || $internalStatus === 'finalized'
-        ) {
+        if ($payoutSucceeded && $fullyClaimed) {
             return $this->status(
                 key: 'paid',
                 label: 'Paid',
@@ -130,7 +129,7 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
                     $voucherState === 'expired' || $voucher->isExpired() => 'Expired',
                     default => 'Claimable',
                 },
-                settlementOutcome: 'not_applicable',
+                settlementOutcome: $payoutSucceeded ? 'succeeded' : 'not_applicable',
                 terminal: $claimWindowClosed,
                 canClaim: ! $claimWindowClosed,
             );

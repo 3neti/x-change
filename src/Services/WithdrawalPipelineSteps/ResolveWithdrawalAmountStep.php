@@ -34,7 +34,7 @@ class ResolveWithdrawalAmountStep implements WithdrawalPipelineStepContract
 
     public function handle(WithdrawalPipelineContextData $context, Closure $next): mixed
     {
-        $instrument = new VoucherWithdrawableInstrumentAdapter($context->voucher);
+        $instrument = new VoucherWithdrawableInstrumentAdapter($context->voucher, $context->payload);
 
         $this->amountBounds->assertWithinBounds(
             instrument: $instrument,
@@ -44,7 +44,7 @@ class ResolveWithdrawalAmountStep implements WithdrawalPipelineStepContract
         $amount = data_get($context->payload, 'amount');
 
         $withdrawAmount = $this->amountResolver->resolve(
-            new VoucherWithdrawableInstrumentAdapter($context->voucher),
+            new VoucherWithdrawableInstrumentAdapter($context->voucher, $context->payload),
             $amount !== null && $amount !== '' ? (float) $amount : null,
         );
 

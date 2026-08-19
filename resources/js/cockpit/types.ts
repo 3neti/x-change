@@ -1851,6 +1851,7 @@ export type CockpitVoucherReadModel = {
     overview?: Record<string, unknown>;
     instructions?: Record<string, unknown>;
     claims?: Record<string, unknown>;
+    slices?: Record<string, unknown>;
     settlement?: Record<string, unknown>;
     treasury?: Record<string, unknown>;
     evidence_summary?: CockpitVoucherEvidenceSummary[];
