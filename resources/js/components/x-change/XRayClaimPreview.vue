@@ -46,6 +46,7 @@ interface XRaySliceRow {
     amount_minor?: number | null;
     status?: string | null;
     status_label?: string | null;
+    claimed_at?: string | null;
 }
 
 const props = defineProps<{
@@ -96,6 +97,23 @@ function formatSliceAmount(value: number | null | undefined): string {
         style: 'currency',
         currency: 'PHP',
     }).format(Number(value ?? 0) / 100);
+}
+
+function formatSliceClaimedAt(value: string | null | undefined): string | null {
+    if (!value) {
+        return null;
+    }
+
+    const instant = new Date(value);
+
+    if (Number.isNaN(instant.getTime())) {
+        return null;
+    }
+
+    return new Intl.DateTimeFormat('en-PH', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(instant);
 }
 
 const stages = computed(() => props.result?.stages ?? []);
@@ -243,6 +261,21 @@ function stageText(stage: XRayStage): string {
                                     </p>
                                     <p class="text-xs text-muted-foreground">
                                         {{ slice.status_label || 'Available' }}
+                                    </p>
+                                    <p
+                                        v-if="
+                                            formatSliceClaimedAt(
+                                                slice.claimed_at,
+                                            )
+                                        "
+                                        class="text-xs text-muted-foreground"
+                                    >
+                                        Claimed
+                                        {{
+                                            formatSliceClaimedAt(
+                                                slice.claimed_at,
+                                            )
+                                        }}
                                     </p>
                                 </div>
                                 <span class="shrink-0 text-sm font-semibold text-foreground">

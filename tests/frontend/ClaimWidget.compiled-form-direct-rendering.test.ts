@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
 
 vi.mock('@inertiajs/vue3', () => ({
+    router: {
+        visit: vi.fn(),
+    },
     useForm: () => ({
         code: '',
         processing: false,
@@ -429,7 +432,11 @@ describe('ClaimWidget direct compiled form rendering', () => {
 
         vi.stubGlobal('fetch', fetch);
 
-        const wrapper = mount(ClaimWidget);
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+            },
+        });
 
         await flushPromises();
 

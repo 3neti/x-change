@@ -15,9 +15,7 @@ use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
 
 final readonly class VoucherSlicePlanProjection
 {
-    public function __construct(private VoucherSliceExecutionCoordinator $executions)
-    {
-    }
+    public function __construct(private VoucherSliceExecutionCoordinator $executions) {}
 
     /** @return array<string, mixed> */
     public function forVoucher(Voucher $voucher): array
@@ -30,7 +28,7 @@ final readonly class VoucherSlicePlanProjection
 
         $executions = VoucherSliceExecution::query()
             ->where('voucher_id', $voucher->getKey())
-            ->with('items')
+            ->with(['items', 'claim:id,completed_at'])
             ->orderBy('claim_number')
             ->get();
         $items = $executions->flatMap(function (VoucherSliceExecution $execution) {
@@ -101,13 +99,14 @@ final readonly class VoucherSlicePlanProjection
             'claim_on' => $slice->claim_on,
             'claim_by' => $slice->claim_by,
             'claim_number' => $item?->execution?->claim_number,
+            'claimed_at' => $this->claimedAt($item?->execution),
         ];
     }
 
     /** @param array<int, VoucherSliceExecution> $executions @return array<int, array<string, mixed>> */
     private function flexibleRows(VoucherSlicePlanData $plan, array $executions, int $consumedMinor, int $reservedMinor): array
     {
-        $rows = collect($executions)->map(static fn (VoucherSliceExecution $execution): array => [
+        $rows = collect($executions)->map(fn (VoucherSliceExecution $execution): array => [
             'id' => $execution->reference,
             'label' => 'Claim '.$execution->claim_number,
             'sequence' => $execution->claim_number,
@@ -122,6 +121,7 @@ final readonly class VoucherSlicePlanProjection
             'claim_on' => null,
             'claim_by' => null,
             'claim_number' => $execution->claim_number,
+            'claimed_at' => $this->claimedAt($execution),
         ])->all();
         $available = max(0, $plan->total_minor - $consumedMinor - $reservedMinor);
 
@@ -136,10 +136,20 @@ final readonly class VoucherSlicePlanProjection
                 'claim_on' => null,
                 'claim_by' => null,
                 'claim_number' => null,
+                'claimed_at' => null,
             ];
         }
 
         return $rows;
+    }
+
+    private function claimedAt(?VoucherSliceExecution $execution): ?string
+    {
+        if ($execution?->status !== VoucherSliceExecutionStatus::Succeeded) {
+            return null;
+        }
+
+        return ($execution->settled_at ?? $execution->claim?->completed_at)?->toIso8601String();
     }
 
     private function windowStatus(VoucherSliceData $slice): string

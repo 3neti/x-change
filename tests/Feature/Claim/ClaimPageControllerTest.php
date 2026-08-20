@@ -11,6 +11,7 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -49,6 +50,60 @@ it('hydrates the initial claim page with sanitized canonical slice X-Ray rows', 
     expect($slices)->toHaveCount(4)
         ->and(collect($slices)->pluck('label')->all())
         ->toBe(['Slice 1', 'Slice 2', 'Slice 3', 'Slice 4']);
+});
+
+it('hydrates a partially claimed flexible plan with prior activity and remaining capacity', function () {
+    config()->set('x-ray.disclosure.guest.show_remaining_slices', 'if_allowed_by_voucher');
+
+    $plan = app(VoucherSlicePlanFactory::class)->flexible(
+        totalMinor: 30_000,
+        currency: 'PHP',
+        maxSlices: 3,
+        minAmountMinor: 5_000,
+    );
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 300,
+        overrides: ['slice_plan' => $plan->canonicalArray()],
+    ));
+    $coordinator = app(VoucherSliceExecutionCoordinator::class);
+    $reservation = $coordinator->reserve($voucher, [
+        'amount' => '50.00',
+        '_meta' => ['idempotency_key' => 'partial-flexible-claim'],
+    ]);
+    $claim = VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => $reservation->execution->claim_number,
+        'claim_type' => 'withdraw',
+        'status' => 'succeeded',
+        'requested_amount_minor' => 5_000,
+        'disbursed_amount_minor' => 5_000,
+        'remaining_balance_minor' => 25_000,
+        'currency' => 'PHP',
+        'completed_at' => now(),
+    ]);
+
+    $coordinator->begin($reservation->execution);
+    $coordinator->succeed($reservation->execution, $claim);
+    auth()->logout();
+
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.claim_surface.state.key', 'partially_claimed')
+        ->assertJsonPath('props.claim_surface.state.can_claim', true);
+
+    $xray = collect($response->json('props.claim_surface.components'))
+        ->firstWhere('type', 'xray_preview');
+    $slices = collect($xray['props']['disclosures'])
+        ->firstWhere('key', 'remaining_slices')['value'];
+
+    expect($slices)->toHaveCount(2)
+        ->and(data_get($slices, '0.label'))->toBe('Claim 1')
+        ->and(data_get($slices, '0.amount_minor'))->toBe(5_000)
+        ->and(data_get($slices, '0.status_label'))->toBe('Paid')
+        ->and(data_get($slices, '0.claimed_at'))->toBeString()
+        ->and(data_get($slices, '1.label'))->toBe('Remaining capacity')
+        ->and(data_get($slices, '1.amount_minor'))->toBe(25_000);
 });
 
 it('renders the public claim error page for a missing code', function () {

@@ -156,6 +156,14 @@ describe('XRayClaimPreview', () => {
                                     id: 'slice_1',
                                     label: 'Morning fare',
                                     amount_minor: 2500,
+                                    status: 'succeeded',
+                                    status_label: 'Paid',
+                                    claimed_at: '2026-08-20T06:56:25+00:00',
+                                },
+                                {
+                                    id: 'remaining_capacity',
+                                    label: 'Remaining capacity',
+                                    amount_minor: 25000,
                                     status: 'available',
                                     status_label: 'Available',
                                 },
@@ -171,6 +179,9 @@ describe('XRayClaimPreview', () => {
         );
         expect(wrapper.text()).toContain('Morning fare');
         expect(wrapper.text()).toContain('₱25.00');
+        expect(wrapper.text()).toContain('Claimed');
+        expect(wrapper.text()).toContain('Remaining capacity');
+        expect(wrapper.text()).toContain('₱250.00');
         expect(wrapper.text()).not.toContain('[object Object]');
     });
 

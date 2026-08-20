@@ -133,6 +133,10 @@ const serverResolvedXRay = computed<Record<string, unknown> | null>(() => {
     return component?.props ?? null;
 });
 
+const resolvedXRay = computed<Record<string, unknown> | null>(
+    () => serverResolvedXRay.value ?? xrayResult.value,
+);
+
 const surfaceTakesOver = computed(
     () => showIssuerConsole.value || showSurfaceOutcome.value,
 );
@@ -551,8 +555,12 @@ watch(
         </form>
 
         <XRayClaimPreview
-            v-if="serverResolvedXRay && !surfaceTakesOver"
-            :result="serverResolvedXRay"
+            v-if="
+                !surfaceTakesOver && (resolvedXRay || xrayLoading || xrayError)
+            "
+            :result="resolvedXRay"
+            :loading="xrayLoading && !resolvedXRay"
+            :error="xrayError"
             data-testid="claim-widget-server-xray"
         />
 
@@ -644,13 +652,6 @@ watch(
                         {{ voucherData.preview.message }}
                     </AlertDescription>
                 </Alert>
-
-                <XRayClaimPreview
-                    v-if="activeClaimSurface === null"
-                    :result="xrayResult"
-                    :loading="xrayLoading"
-                    :error="xrayError"
-                />
             </div>
         </div>
 

@@ -204,10 +204,13 @@ it('moves reserved evidence to consumed exactly once after settlement', function
     $coordinator->succeed($reservation->execution, $claim);
     $coordinator->succeed($reservation->execution, $claim);
 
+    $projection = app(VoucherSlicePlanProjection::class)->forVoucher($voucher);
+
     expect($reservation->execution->fresh()->status)->toBe(VoucherSliceExecutionStatus::Succeeded)
         ->and($reservation->execution->items()->value('status'))->toBe('consumed')
         ->and(VoucherSliceExecutionOutbox::query()->where('event_type', 'voucher.slice.consumed')->count())->toBe(1)
-        ->and(data_get(app(VoucherSlicePlanProjection::class)->forVoucher($voucher), 'consumed_minor'))->toBe(5_000);
+        ->and(data_get($projection, 'consumed_minor'))->toBe(5_000)
+        ->and(data_get($projection, 'rows.0.claimed_at'))->toBeString();
 });
 
 it('converts flexible slice amounts to exact minor units', function () {
