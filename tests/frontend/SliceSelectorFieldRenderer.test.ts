@@ -12,9 +12,9 @@ describe('SliceSelectorFieldRenderer', () => {
                         template: '<button type="button" @click="$emit(\'click\')"><slot /></button>',
                     },
                     Checkbox: {
-                        props: ['checked', 'disabled'],
+                        props: ['modelValue', 'disabled'],
                         emits: ['update:modelValue'],
-                        template: '<button type="button" data-testid="slice-checkbox" :disabled="disabled" @click="$emit(\'update:modelValue\', !checked)"><slot /></button>',
+                        template: '<button type="button" data-testid="slice-checkbox" :data-state="modelValue ? \'checked\' : \'unchecked\'" :disabled="disabled" @click="$emit(\'update:modelValue\', !modelValue)"><slot /></button>',
                     },
                     Badge: {
                         template: '<span><slot /></span>',
@@ -54,5 +54,19 @@ describe('SliceSelectorFieldRenderer', () => {
         expect(wrapper.emitted('update:value')?.at(-1)).toEqual([
             ['slice_1'],
         ]);
+
+        await wrapper.setProps({ value: ['slice_1'] });
+
+        expect(wrapper.get('[data-testid="slice-checkbox"]').attributes('data-state')).toBe('checked');
+        expect(wrapper.text()).toContain('Clear all');
+
+        await wrapper.findAll('button').find((button) => button.text().includes('Clear all'))?.trigger('click');
+
+        expect(wrapper.emitted('update:value')?.at(-1)).toEqual([[]]);
+
+        await wrapper.setProps({ value: [] });
+
+        expect(wrapper.get('[data-testid="slice-checkbox"]').attributes('data-state')).toBe('unchecked');
+        expect(wrapper.text()).toContain('Select all');
     });
 });

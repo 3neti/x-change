@@ -142,7 +142,7 @@ function toggleAll(): void {
                 :class="option.disabled ? 'opacity-60' : ''"
             >
                 <Checkbox
-                    :checked="selectedIds.includes(option.id)"
+                    :model-value="selectedIds.includes(option.id)"
                     :disabled="option.disabled"
                     @update:model-value="toggleSlice(option.id, $event)"
                 />
