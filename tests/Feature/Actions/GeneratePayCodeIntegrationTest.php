@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Validation\ValidationException;
+use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
@@ -111,6 +114,90 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
     expect($voucher?->code)->toBe($result->code);
     expect($voucher?->instructions)->not->toBeNull();
     expect(data_get($voucher?->instructions, 'cash.amount'))->toBe(100.0);
+});
+
+it('persists a canonical slice plan through issuance and exposes it to results and x ray', function (
+    string $presentationMode,
+    float $amount,
+    string $expectedBadge,
+    array $expectedLabels,
+) {
+    $user = actingAsTestUser(1_000_000);
+    $factory = app(VoucherSlicePlanFactory::class);
+    $plan = match ($presentationMode) {
+        'fixed' => $factory->equal(7_500, 'PHP', 3),
+        'open' => $factory->flexible(15_000, 'PHP', 4, 2_500),
+        'named' => $factory->scheduled(10_000, 'PHP', [
+            ['id' => 'morning', 'label' => 'Morning fare', 'amount_minor' => 4_000],
+            ['id' => 'evening', 'label' => 'Evening fare', 'amount_minor' => 6_000],
+        ]),
+    };
+    $payload = validPayCodePayload($amount, overrides: [
+        'issuer_id' => $user->id,
+        'slice_plan' => $plan->canonicalArray(),
+        'metadata' => [
+            'custom' => [
+                'cockpit' => [
+                    'slice_plan' => [
+                        'schema' => 'x-change.cockpit.slice-plan.v1',
+                        'mode' => $presentationMode,
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $result = app(GeneratePayCode::class)->handle($payload);
+    $voucher = Voucher::query()->findOrFail($result->voucher_id);
+    $summary = VoucherOperationalSummaryData::fromInstructions($voucher->instructions);
+
+    expect($voucher->instructions->slice_plan?->canonicalArray())
+        ->toBe($plan->canonicalArray())
+        ->and(collect($summary->instruction_badges)->pluck('label')->all())
+        ->toContain($expectedBadge);
+
+    auth()->logout();
+    config()->set('x-ray.disclosure.guest.show_remaining_slices', 'if_allowed_by_voucher');
+    $response = $this->postJson(xchangeApi('pay-codes/x-ray'), [
+        'code' => $voucher->code,
+        'channel' => 'claim',
+    ])->assertOk();
+    $sliceDisclosure = collect($response->json('data.xray.disclosures'))
+        ->firstWhere('key', 'remaining_slices');
+
+    expect($sliceDisclosure)->toBeArray()
+        ->and(collect($sliceDisclosure['value'])->pluck('label')->all())
+        ->toBe($expectedLabels);
+})->with([
+    'equal' => ['fixed', 75.0, 'Divisible · 3 slices', ['Slice 1', 'Slice 2', 'Slice 3']],
+    'flexible' => ['open', 150.0, 'Divisible · Flexible', ['Remaining capacity']],
+    'scheduled' => ['named', 100.0, 'Divisible · 2 labeled slices', ['Morning fare', 'Evening fare']],
+]);
+
+it('rejects a stale cockpit slice presentation before issuing or charging', function () {
+    $user = actingAsTestUser(1_000_000);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $balanceBefore = (float) $wallet->balance;
+    $voucherCountBefore = Voucher::query()->count();
+    $payload = validPayCodePayload(75, overrides: [
+        'issuer_id' => $user->id,
+        'metadata' => [
+            'custom' => [
+                'cockpit' => [
+                    'slice_plan' => [
+                        'schema' => 'x-change.cockpit.slice-plan.v1',
+                        'mode' => 'fixed',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    expect(fn () => app(GeneratePayCode::class)->handle($payload))
+        ->toThrow(ValidationException::class, 'outdated Quick Generate session');
+
+    expect(Voucher::query()->count())->toBe($voucherCountBefore)
+        ->and((float) $wallet->fresh()->balance)->toBe($balanceBefore);
 });
 
 it('does not emit the brick math float deprecation during voucher cash persistence', function () {

@@ -12,8 +12,8 @@ use LBHurtado\Voucher\Data\VoucherSlicePlanData;
 use LBHurtado\Voucher\Enums\VoucherSlicePlanMode;
 use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
+use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 
@@ -22,8 +22,7 @@ class NamedVoucherSliceService
     public function __construct(
         private readonly VoucherSlicePlanFactory $plans,
         private readonly VoucherSliceExecutionCoordinator $executions,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -32,7 +31,8 @@ class NamedVoucherSliceService
     public function normalizeIssuancePayload(array $payload): array
     {
         if (is_array(data_get($payload, 'slice_plan'))) {
-            VoucherSlicePlanData::from((array) data_get($payload, 'slice_plan'));
+            $plan = VoucherSlicePlanData::from((array) data_get($payload, 'slice_plan'));
+            $this->assertCockpitPlanMatchesExecutablePlan($payload, $plan);
 
             return $this->withoutRetiredFields($payload);
         }
@@ -66,6 +66,7 @@ class NamedVoucherSliceService
             );
 
             data_set($payload, 'slice_plan', $plan->canonicalArray());
+            $this->assertCockpitPlanMatchesExecutablePlan($payload, $plan);
 
             return $this->withoutRetiredFields($payload);
         }
@@ -80,6 +81,7 @@ class NamedVoucherSliceService
                 count: (int) data_get($payload, 'cash.slices'),
             );
             data_set($payload, 'slice_plan', $plan->canonicalArray());
+            $this->assertCockpitPlanMatchesExecutablePlan($payload, $plan);
 
             return $this->withoutRetiredFields($payload);
         }
@@ -93,11 +95,65 @@ class NamedVoucherSliceService
                 minAmountMinor: $this->amountToMinor(data_get($payload, 'cash.min_withdrawal')),
             );
             data_set($payload, 'slice_plan', $plan->canonicalArray());
+            $this->assertCockpitPlanMatchesExecutablePlan($payload, $plan);
 
             return $this->withoutRetiredFields($payload);
         }
 
+        $this->assertCockpitPlanMatchesExecutablePlan($payload, null);
+
         return $payload;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function assertCockpitPlanMatchesExecutablePlan(
+        array $payload,
+        ?VoucherSlicePlanData $plan,
+    ): void {
+        $presentationMode = strtolower(trim((string) data_get(
+            $payload,
+            'metadata.custom.cockpit.slice_plan.mode',
+            '',
+        )));
+
+        if ($presentationMode === '') {
+            return;
+        }
+
+        if ($presentationMode === 'whole') {
+            if ($plan === null) {
+                return;
+            }
+
+            throw ValidationException::withMessages([
+                'slice_plan' => 'Whole amount use cannot include an executable slice plan.',
+            ]);
+        }
+
+        $expectedMode = match ($presentationMode) {
+            'fixed' => VoucherSlicePlanMode::Equal,
+            'open' => VoucherSlicePlanMode::Flexible,
+            'named' => VoucherSlicePlanMode::Scheduled,
+            default => null,
+        };
+
+        if ($expectedMode === null) {
+            throw ValidationException::withMessages([
+                'metadata.custom.cockpit.slice_plan.mode' => 'The selected value-use mode is not supported.',
+            ]);
+        }
+
+        if ($plan === null) {
+            throw ValidationException::withMessages([
+                'slice_plan' => 'This slice configuration came from an outdated Quick Generate session. Refresh the page and configure the slices again.',
+            ]);
+        }
+
+        if ($plan->mode !== $expectedMode) {
+            throw ValidationException::withMessages([
+                'slice_plan.mode' => 'The executable slice plan does not match the selected Quick Generate value-use mode.',
+            ]);
+        }
     }
 
     public function hasNamedSlices(Voucher $voucher): bool

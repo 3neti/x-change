@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 
 function namedSliceVoucher(array $slices): Voucher
 {
@@ -46,7 +47,7 @@ function consumeNamedSlices(Voucher $voucher, array $sliceIds): void
     $execution = VoucherSliceExecution::query()->create([
         'reference' => $reference,
         'voucher_id' => $voucher->getKey(),
-        'plan_fingerprint' => app(\LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator::class)->plan($voucher)->hash(),
+        'plan_fingerprint' => app(VoucherSliceExecutionCoordinator::class)->plan($voucher)->hash(),
         'idempotency_key_hash' => hash('sha256', $reference),
         'request_fingerprint' => hash('sha256', 'request-'.$reference),
         'provider_operation_reference' => 'slice-'.$reference,
@@ -193,6 +194,58 @@ it('rejects named slices below the configured effective minimum withdrawal', fun
         ],
     ]);
 })->throws(ValidationException::class, 'Named slice amount must be at least PHP 25.00.');
+
+it('rejects a visual slice plan when an outdated cockpit session omits the executable plan', function () {
+    app(NamedVoucherSliceService::class)->normalizeIssuancePayload([
+        'cash' => [
+            'amount' => 75,
+            'currency' => 'PHP',
+        ],
+        'metadata' => [
+            'custom' => [
+                'cockpit' => [
+                    'slice_plan' => [
+                        'schema' => 'x-change.cockpit.slice-plan.v1',
+                        'mode' => 'fixed',
+                        'rows' => [
+                            ['id' => 'slice_1', 'amount' => 25, 'description' => 'Slice 1'],
+                            ['id' => 'slice_2', 'amount' => 25, 'description' => 'Slice 2'],
+                            ['id' => 'slice_3', 'amount' => 25, 'description' => 'Slice 3'],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+})->throws(
+    ValidationException::class,
+    'This slice configuration came from an outdated Quick Generate session. Refresh the page and configure the slices again.',
+);
+
+it('rejects disagreement between the cockpit value-use mode and executable plan', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->equal(7_500, 'PHP', 3);
+
+    app(NamedVoucherSliceService::class)->normalizeIssuancePayload([
+        'cash' => [
+            'amount' => 75,
+            'currency' => 'PHP',
+        ],
+        'slice_plan' => $plan->canonicalArray(),
+        'metadata' => [
+            'custom' => [
+                'cockpit' => [
+                    'slice_plan' => [
+                        'schema' => 'x-change.cockpit.slice-plan.v1',
+                        'mode' => 'open',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+})->throws(
+    ValidationException::class,
+    'The executable slice plan does not match the selected Quick Generate value-use mode.',
+);
 
 it('derives claim amount from selected named slices', function () {
     $voucher = namedSliceVoucher([
