@@ -16,6 +16,7 @@ use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\VoucherSliceReservationData;
 use LBHurtado\XChange\Enums\VoucherSliceExecutionStatus;
 use LBHurtado\XChange\Exceptions\VoucherSliceExecutionConflict;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
@@ -24,9 +25,7 @@ use Throwable;
 
 final readonly class VoucherSliceExecutionCoordinator
 {
-    public function __construct(private VoucherSliceExecutionJournal $journal)
-    {
-    }
+    public function __construct(private VoucherSliceExecutionJournal $journal) {}
 
     /** @param array<string, mixed> $payload */
     public function reserve(Voucher $voucher, array $payload): ?VoucherSliceReservationData
@@ -51,10 +50,12 @@ final readonly class VoucherSliceExecutionCoordinator
             $existing = VoucherSliceExecution::query()
                 ->where('voucher_id', $lockedVoucher->getKey())
                 ->where('idempotency_key_hash', $idempotencyHash)
+                ->lockForUpdate()
                 ->with(['items', 'claim'])
                 ->first();
 
             if ($existing instanceof VoucherSliceExecution) {
+                $this->reopenBeforeProviderBoundary($existing);
                 $selected = $existing->items->map(static fn (VoucherSliceExecutionItem $item): array => [
                     'id' => $item->slice_id,
                     'label' => $item->label,
@@ -191,7 +192,7 @@ final readonly class VoucherSliceExecutionCoordinator
         DB::transaction(function () use ($execution): void {
             $locked = VoucherSliceExecution::query()->lockForUpdate()->findOrFail($execution->getKey());
 
-            if ($locked->status === VoucherSliceExecutionStatus::Succeeded) {
+            if ($locked->status !== VoucherSliceExecutionStatus::Executing) {
                 return;
             }
 
@@ -204,6 +205,34 @@ final readonly class VoucherSliceExecutionCoordinator
         }, attempts: 5);
 
         $this->journal->deliverForExecution($execution->getKey());
+    }
+
+    private function reopenBeforeProviderBoundary(VoucherSliceExecution $execution): void
+    {
+        if ($execution->status !== VoucherSliceExecutionStatus::Indeterminate) {
+            return;
+        }
+
+        $providerIntentExists = DisbursementReconciliation::query()
+            ->where('voucher_id', $execution->voucher_id)
+            ->where('claim_type', 'withdraw')
+            ->where('provider_reference', $execution->provider_operation_reference)
+            ->exists();
+
+        if ($providerIntentExists) {
+            return;
+        }
+
+        $execution->forceFill([
+            'status' => VoucherSliceExecutionStatus::Reserved,
+            'version' => $execution->version + 1,
+        ])->save();
+        $this->appendEvent(
+            $execution,
+            'voucher.slice.execution_reopened',
+            'reserved',
+            false,
+        );
     }
 
     public function replayResult(VoucherSliceExecution $execution): SubmitPayCodeClaimResultData
@@ -336,11 +365,11 @@ final readonly class VoucherSliceExecutionCoordinator
                 ? $this->amountToMinor(data_get($payload, 'amount'), $plan->currency)
                 : null,
             'currency' => $plan->currency,
-                'claimant_hash' => hash_hmac(
-                    'sha256',
-                    (string) data_get($payload, 'mobile', ''),
-                    (string) config('app.key'),
-                ),
+            'claimant_hash' => hash_hmac(
+                'sha256',
+                (string) data_get($payload, 'mobile', ''),
+                (string) config('app.key'),
+            ),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
     }
 

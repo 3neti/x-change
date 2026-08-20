@@ -8,6 +8,8 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Enums\VoucherSliceExecutionStatus;
 use LBHurtado\XChange\Exceptions\VoucherSliceExecutionConflict;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
 use LBHurtado\XChange\Models\VoucherSliceExecutionOutbox;
@@ -77,6 +79,59 @@ it('rejects changed facts for a claimed idempotency key', function () {
     ]);
 })->throws(VoucherSliceExecutionConflict::class, 'different claim facts');
 
+it('reopens an indeterminate reservation only when no provider intent exists', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->equal(10_000, 'PHP', 2);
+    $voucher = voucherWithSlicePlan($plan->canonicalArray());
+    $coordinator = app(VoucherSliceExecutionCoordinator::class);
+    $payload = [
+        'mobile' => '09170000001',
+        '_meta' => ['idempotency_key' => 'pre-provider-retry'],
+    ];
+    $reservation = $coordinator->reserve($voucher, $payload);
+
+    $coordinator->begin($reservation->execution);
+    $coordinator->indeterminate($reservation->execution);
+
+    $replay = $coordinator->reserve($voucher, $payload);
+
+    expect($replay?->replayed)->toBeTrue()
+        ->and($replay?->execution->status)->toBe(VoucherSliceExecutionStatus::Reserved)
+        ->and(VoucherSliceExecutionOutbox::query()
+            ->where('event_type', 'voucher.slice.execution_reopened')
+            ->count())->toBe(1);
+});
+
+it('keeps an indeterminate reservation locked when provider intent exists', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->equal(10_000, 'PHP', 2);
+    $voucher = voucherWithSlicePlan($plan->canonicalArray());
+    $coordinator = app(VoucherSliceExecutionCoordinator::class);
+    $payload = [
+        'mobile' => '09170000001',
+        '_meta' => ['idempotency_key' => 'post-provider-retry'],
+    ];
+    $reservation = $coordinator->reserve($voucher, $payload);
+    $coordinator->begin($reservation->execution);
+    $coordinator->indeterminate($reservation->execution);
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_code' => $voucher->code,
+        'claim_type' => 'withdraw',
+        'provider' => 'unknown',
+        'provider_reference' => $reservation->execution->provider_operation_reference,
+        'amount' => 50,
+        'currency' => 'PHP',
+        'status' => 'intent',
+        'internal_status' => 'intent',
+    ]);
+
+    $replay = $coordinator->reserve($voucher, $payload);
+
+    expect($replay?->execution->status)->toBe(VoucherSliceExecutionStatus::Indeterminate)
+        ->and(VoucherSliceExecutionOutbox::query()
+            ->where('event_type', 'voucher.slice.execution_reopened')
+            ->count())->toBe(0);
+});
+
 it('makes a scheduled slice unavailable as soon as it is reserved', function () {
     $plan = app(VoucherSlicePlanFactory::class)->scheduled(
         totalMinor: 10_000,
@@ -115,7 +170,7 @@ it('moves reserved evidence to consumed exactly once after settlement', function
     $reservation = $coordinator->reserve($voucher, [
         '_meta' => ['idempotency_key' => 'settled-slice-1'],
     ]);
-    $claim = \LBHurtado\XChange\Models\VoucherClaim::query()->create([
+    $claim = VoucherClaim::query()->create([
         'voucher_id' => $voucher->getKey(),
         'claim_number' => $reservation->execution->claim_number,
         'claim_type' => 'withdraw',

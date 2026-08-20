@@ -8,6 +8,7 @@ use LBHurtado\Cash\Contracts\WithdrawableInstrumentContract;
 use LBHurtado\Voucher\Data\VoucherSlicePlanData;
 use LBHurtado\Voucher\Enums\VoucherSlicePlanMode;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Enums\VoucherSliceExecutionStatus;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 
 class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentContract
@@ -19,6 +20,18 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function isWithdrawable(): bool
     {
+        if ($this->plan() !== null) {
+            $execution = $this->execution();
+
+            return $execution instanceof VoucherSliceExecution
+                && in_array($execution->status, [
+                    VoucherSliceExecutionStatus::Reserved,
+                    VoucherSliceExecutionStatus::Executing,
+                ], true)
+                && $this->getInstrumentState() === 'active'
+                && ! $this->isExpired();
+        }
+
         /**
          * TODO (refactor): Open-slice compatibility shim
          *

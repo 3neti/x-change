@@ -22,8 +22,10 @@ use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
+use LBHurtado\XChange\Enums\VoucherSliceExecutionStatus;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
@@ -83,13 +85,12 @@ class SubmitPayCodeClaim
             $payload = $sliceReservation->payload;
 
             if ($sliceReservation->replayed
+                && $sliceReservation->execution->status !== VoucherSliceExecutionStatus::Reserved
                 && ! $this->isApprovalReplay($payload)) {
                 return $this->sliceExecutions()->replayResult($sliceReservation->execution);
             }
 
-            if (! $sliceReservation->replayed) {
-                $this->sliceExecutions()->begin($sliceReservation->execution);
-            }
+            $this->restorePreparedClaimForSafeRetry($preparedClaim, $sliceReservation->execution);
         }
 
         $executor = $this->factory->make($voucher, $payload);
@@ -181,6 +182,28 @@ class SubmitPayCodeClaim
             'status' => 'execution_failed',
             'failure_message' => 'Claim execution failed after evidence capture.',
             'completed_at' => now(),
+            'meta' => $meta,
+        ])->save();
+    }
+
+    private function restorePreparedClaimForSafeRetry(
+        ?VoucherClaim $claim,
+        VoucherSliceExecution $execution,
+    ): void {
+        if (! $claim instanceof VoucherClaim
+            || $claim->status !== 'execution_failed'
+            || $execution->status !== VoucherSliceExecutionStatus::Reserved) {
+            return;
+        }
+
+        $meta = (array) $claim->meta;
+        data_set($meta, 'evidence.execution_status', 'not_started');
+        data_forget($meta, 'evidence.execution_exception');
+
+        $claim->forceFill([
+            'status' => 'prepared',
+            'failure_message' => null,
+            'completed_at' => null,
             'meta' => $meta,
         ])->save();
     }

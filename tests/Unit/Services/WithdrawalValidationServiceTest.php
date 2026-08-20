@@ -6,10 +6,12 @@ use LBHurtado\Cash\Contracts\CashWithdrawalAmountBoundsContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalValidationContract;
 use LBHurtado\Cash\Services\DefaultCashWithdrawalAmountBoundsService;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 
 function withdrawalValidationService(): DefaultWithdrawalValidationService
 {
@@ -48,7 +50,27 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(true)->toBeTrue();
 });
 
- it('fails validation when voucher is not withdrawable', function () {
+it('passes validation for the first durably reserved canonical equal slice', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->equal(10_000, 'PHP', 2);
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 100.00,
+        settlementRail: 'INSTAPAY',
+        overrides: ['slice_plan' => $plan->canonicalArray()],
+    ));
+    $coordinator = app(VoucherSliceExecutionCoordinator::class);
+    $reservation = $coordinator->reserve($voucher, [
+        'mobile' => '09170000001',
+        '_meta' => ['idempotency_key' => 'canonical-equal-first-slice'],
+    ]);
+
+    $coordinator->begin($reservation->execution);
+
+    withdrawalValidationService()->validate($voucher->fresh(), $reservation->payload);
+
+    expect($reservation->execution->fresh()->status->value)->toBe('executing');
+});
+
+it('fails validation when voucher is not withdrawable', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
     $voucher->shouldReceive('isDivisible')->andReturnFalse();
@@ -59,9 +81,9 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(fn () => $service->validate($voucher, [
         'amount' => 100.00,
     ]))->toThrow(RuntimeException::class, 'This voucher is not withdrawable.');
- });
+});
 
- it('fails validation when open-slice amount exceeds remaining balance', function () {
+it('fails validation when open-slice amount exceeds remaining balance', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
     $voucher->shouldReceive('isDivisible')->andReturnTrue();
@@ -74,9 +96,9 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(fn () => $service->validate($voucher, [
         'amount' => 200.00,
     ]))->toThrow(InvalidArgumentException::class, 'Withdrawal amount exceeds remaining voucher balance.');
- });
+});
 
- it('fails validation when open-slice amount is below minimum withdrawal amount', function () {
+it('fails validation when open-slice amount is below minimum withdrawal amount', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
     $voucher->shouldReceive('isDivisible')->andReturnTrue();
@@ -90,9 +112,9 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(fn () => $service->validate($voucher, [
         'amount' => 25.00,
     ]))->toThrow(InvalidArgumentException::class, 'Withdrawal amount must be at least 50.');
- });
+});
 
- it('fails validation when open-slice amount is missing', function () {
+it('fails validation when open-slice amount is missing', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
     $voucher->shouldReceive('isDivisible')->andReturnTrue();
@@ -104,9 +126,9 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(fn () => $service->validate($voucher, [
         'amount' => null,
     ]))->toThrow(InvalidArgumentException::class, 'Withdrawal amount is required for open-slice vouchers.');
- });
+});
 
- it('fails validation when open-slice amount is non-numeric', function () {
+it('fails validation when open-slice amount is non-numeric', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
     $voucher->shouldReceive('isDivisible')->andReturnTrue();
@@ -118,9 +140,9 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(fn () => $service->validate($voucher, [
         'amount' => 'abc',
     ]))->toThrow(InvalidArgumentException::class, 'Withdrawal amount must be numeric.');
- });
+});
 
- it('fails validation when open-slice amount is not greater than zero', function () {
+it('fails validation when open-slice amount is not greater than zero', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
     $voucher->shouldReceive('isDivisible')->andReturnTrue();
@@ -132,9 +154,9 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(fn () => $service->validate($voucher, [
         'amount' => 0,
     ]))->toThrow(InvalidArgumentException::class, 'Withdrawal amount must be greater than zero.');
- });
+});
 
- it('fails validation when open-slice voucher is expired', function () {
+it('fails validation when open-slice voucher is expired', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
     $voucher->shouldReceive('isDivisible')->andReturnTrue();
@@ -146,9 +168,9 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(fn () => $service->validate($voucher, [
         'amount' => 100.00,
     ]))->toThrow(RuntimeException::class, 'This voucher has expired.');
- });
+});
 
- it('fails validation when open-slice voucher has no remaining slices', function () {
+it('fails validation when open-slice voucher has no remaining slices', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
     $voucher->shouldReceive('isDivisible')->andReturnTrue();
@@ -164,7 +186,7 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     expect(fn () => $service->validate($voucher, [
         'amount' => 100.00,
     ]))->toThrow(RuntimeException::class, 'This voucher has no remaining slices.');
- });
+});
 
 it('delegates open-slice amount bounds to cash package', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
@@ -181,8 +203,7 @@ it('delegates open-slice amount bounds to cash package', function () {
 
     $bounds->shouldReceive('assertWithinBounds')
         ->once()
-        ->withArgs(fn ($instrument, $amount, $minimumAmount = null) =>
-            $instrument instanceof VoucherWithdrawableInstrumentAdapter
+        ->withArgs(fn ($instrument, $amount, $minimumAmount = null) => $instrument instanceof VoucherWithdrawableInstrumentAdapter
             && $amount === 50
             && $minimumAmount === null
         );
@@ -200,21 +221,21 @@ it('delegates open-slice amount bounds to cash package', function () {
 });
 
 it('rejects collectible vouchers before cash withdrawal validation', function () {
-    $voucher = new \LBHurtado\Voucher\Models\Voucher;
+    $voucher = new Voucher;
     $voucher->setAttribute('metadata', [
         'flow_type' => 'collectible',
     ]);
 
-    $validator = Mockery::mock(\LBHurtado\Cash\Contracts\CashWithdrawalValidationContract::class);
+    $validator = Mockery::mock(CashWithdrawalValidationContract::class);
     $validator->shouldReceive('validate')->never();
 
-    $amountBounds = Mockery::mock(\LBHurtado\Cash\Contracts\CashWithdrawalAmountBoundsContract::class);
+    $amountBounds = Mockery::mock(CashWithdrawalAmountBoundsContract::class);
     $amountBounds->shouldReceive('assertWithinBounds')->never();
 
-    $service = new \LBHurtado\XChange\Services\DefaultWithdrawalValidationService(
+    $service = new DefaultWithdrawalValidationService(
         $validator,
         $amountBounds,
-        app(\LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract::class),
+        app(VoucherFlowCapabilityResolverContract::class),
     );
 
     expect(fn () => $service->validate($voucher, [
@@ -223,21 +244,21 @@ it('rejects collectible vouchers before cash withdrawal validation', function ()
 });
 
 it('allows disbursable vouchers to reach cash withdrawal validation', function () {
-    $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class)->makePartial();
+    $voucher = Mockery::mock(Voucher::class)->makePartial();
     $voucher->setAttribute('metadata', [
         'flow_type' => 'disbursable',
     ]);
 
-    $validator = Mockery::mock(\LBHurtado\Cash\Contracts\CashWithdrawalValidationContract::class);
+    $validator = Mockery::mock(CashWithdrawalValidationContract::class);
     $validator->shouldReceive('validate')->once();
 
-    $amountBounds = Mockery::mock(\LBHurtado\Cash\Contracts\CashWithdrawalAmountBoundsContract::class);
+    $amountBounds = Mockery::mock(CashWithdrawalAmountBoundsContract::class);
     $amountBounds->shouldReceive('assertWithinBounds')->once();
 
-    $service = new \LBHurtado\XChange\Services\DefaultWithdrawalValidationService(
+    $service = new DefaultWithdrawalValidationService(
         $validator,
         $amountBounds,
-        app(\LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract::class),
+        app(VoucherFlowCapabilityResolverContract::class),
     );
 
     $service->validate($voucher, [

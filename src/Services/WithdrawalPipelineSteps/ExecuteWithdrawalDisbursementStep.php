@@ -7,12 +7,14 @@ namespace LBHurtado\XChange\Services\WithdrawalPipelineSteps;
 use Closure;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
-use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
-use LBHurtado\XChange\Support\WithdrawalPipeline\HasWithdrawalPipelineStepMetadata;
-use LogicException;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
+use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
+use LBHurtado\XChange\Models\VoucherSliceExecution;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Services\WithdrawalPendingDisbursementRecorder;
+use LBHurtado\XChange\Support\WithdrawalPipeline\HasWithdrawalPipelineStepMetadata;
+use LogicException;
 
 class ExecuteWithdrawalDisbursementStep implements WithdrawalPipelineStepContract
 {
@@ -31,6 +33,7 @@ class ExecuteWithdrawalDisbursementStep implements WithdrawalPipelineStepContrac
     public function __construct(
         protected WithdrawalDisbursementExecutor $disbursementExecutor,
         protected WithdrawalPendingDisbursementRecorder $pendingDisbursementRecorder,
+        protected VoucherSliceExecutionCoordinator $sliceExecutions,
     ) {}
 
     public function handle(WithdrawalPipelineContextData $context, Closure $next): mixed
@@ -48,6 +51,16 @@ class ExecuteWithdrawalDisbursementStep implements WithdrawalPipelineStepContrac
         }
 
         try {
+            $sliceExecutionReference = data_get($context->payload, '_slice_execution.reference');
+
+            if (is_string($sliceExecutionReference) && $sliceExecutionReference !== '') {
+                $sliceExecution = VoucherSliceExecution::query()
+                    ->where('voucher_id', $context->voucher->getKey())
+                    ->where('reference', $sliceExecutionReference)
+                    ->firstOrFail();
+                $this->sliceExecutions->begin($sliceExecution);
+            }
+
             $disbursement = $this->disbursementExecutor->execute(
                 voucher: $context->voucher,
                 input: $context->payoutRequest,
