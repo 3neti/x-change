@@ -89,7 +89,7 @@ describe("Cockpit Quick Generate value use", () => {
       .trigger("submit");
     await flushPromises();
 
-    const [, options] = fetchMock.mock.calls[0];
+    const [, options] = fetchMock.mock.calls.at(-1)!;
     const payload = JSON.parse(options.body);
 
     expect(payload.slice_plan).toMatchObject({
@@ -106,6 +106,126 @@ describe("Cockpit Quick Generate value use", () => {
       "Slice 4",
     ]);
     expect(payload.metadata.custom.cockpit.slice_plan.mode).toBe("fixed");
+  });
+
+  it("edits and submits Scheduled portions without leaving the Order modal", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        status: "issued",
+        result: { code: "SCHEDULED-PLAN" },
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("crypto", {
+      randomUUID: () => "scheduled-plan-idempotency",
+    });
+
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+      props: {
+        templates: cockpitQuickGenerateTemplates,
+        mutationContract: {
+          runtime_enabled: true,
+          route: "x-change.cockpit.quick-generate.store",
+          route_url: "/x/cockpit/quick-generate",
+          allowed_methods: ["POST"],
+        },
+      },
+    });
+
+    await wrapper
+      .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+      .setValue("120");
+    await wrapper
+      .get('[data-testid="cockpit-value-use-trigger"]')
+      .trigger("click");
+    await wrapper
+      .get('[data-testid="cockpit-value-use-mode-named"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="cockpit-value-use-dialog"]').isVisible(),
+    ).toBe(true);
+    expect(
+      wrapper.findAll('[data-testid^="cockpit-scheduled-portion-"]'),
+    ).not.toHaveLength(0);
+    expect(
+      wrapper.get<HTMLInputElement>(
+        '[data-testid="cockpit-scheduled-portion-0-amount"]',
+      ).element.value,
+    ).toBe("60");
+    expect(
+      wrapper.get<HTMLInputElement>(
+        '[data-testid="cockpit-scheduled-portion-1-amount"]',
+      ).element.value,
+    ).toBe("60");
+
+    await wrapper
+      .get('[data-testid="cockpit-scheduled-portion-0-description"]')
+      .setValue("Morning fare");
+    await wrapper
+      .get('[data-testid="cockpit-scheduled-portions-add"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="cockpit-value-use-trigger"]').text(),
+    ).toContain("Scheduled · 3 portions");
+    expect(
+      wrapper.get<HTMLInputElement>(
+        '[data-testid="cockpit-scheduled-portion-0-description"]',
+      ).element.value,
+    ).toBe("Morning fare");
+    expect(preview(wrapper).slice_plan).toMatchObject({
+      schema: "voucher.slice-plan.v1",
+      mode: "scheduled",
+      selection: "one_or_many",
+      total_minor: 12000,
+    });
+    expect(preview(wrapper).slice_plan.slices).toHaveLength(3);
+
+    await wrapper
+      .get('[data-testid="cockpit-scheduled-portion-0-claim-on"]')
+      .setValue("2026-09-02");
+    await wrapper
+      .get('[data-testid="cockpit-scheduled-portion-0-claim-by"]')
+      .setValue("2026-09-01");
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="cockpit-scheduled-portions-error"]').text(),
+    ).toContain("cannot expire before");
+    expect(
+      wrapper.get<HTMLButtonElement>('[data-testid="cockpit-value-use-done"]')
+        .element.disabled,
+    ).toBe(true);
+
+    await wrapper
+      .get('[data-testid="cockpit-scheduled-portion-0-claim-by"]')
+      .setValue("2026-09-03");
+    await wrapper
+      .get('[data-testid="cockpit-value-use-done"]')
+      .trigger("click");
+    await wrapper
+      .get('[data-testid="cockpit-quick-generate-submit-panel"]')
+      .trigger("submit");
+    await flushPromises();
+
+    const [, options] = fetchMock.mock.calls.at(-1)!;
+    const payload = JSON.parse(options.body);
+
+    expect(payload.slice_plan).toMatchObject({
+      mode: "scheduled",
+      selection: "one_or_many",
+    });
+    expect(payload.slice_plan.slices[0]).toMatchObject({
+      id: "slice_1",
+      label: "Morning fare",
+      claim_on: "2026-09-02",
+      claim_by: "2026-09-03",
+    });
   });
 
   it("submits the executable flexible plan selected from Claim Experience", async () => {

@@ -93,6 +93,7 @@ import CockpitRiderEditorDisclosure from './CockpitRiderEditorDisclosure.vue';
 import CockpitRiderMessageEditor from './CockpitRiderMessageEditor.vue';
 import CockpitRiderLibrary from './CockpitRiderLibrary.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
+import type { CockpitScheduledPortion } from './CockpitScheduledPortionsEditor.vue';
 import CockpitValueUseControl from './CockpitValueUseControl.vue';
 import type { CockpitValueUseMode } from './CockpitValueUseControl.vue';
 
@@ -205,14 +206,7 @@ type SliceMode = 'whole' | 'fixed' | 'open' | 'named';
 type ClaimOutcomeMode = 'provider_disbursement' | 'account_funding';
 type RiderDesignEditor = 'appearance' | 'message' | 'link' | 'splash';
 
-type NamedClaimSlice = {
-    id: string;
-    amount: string;
-    description: string;
-    tag: string;
-    claim_on: string;
-    claim_by: string;
-};
+type NamedClaimSlice = CockpitScheduledPortion;
 
 type NormalizedNamedClaimSlice = {
     id: string;
@@ -744,6 +738,7 @@ const slices = ref('1');
 const maxSlices = ref('1');
 const minWithdrawal = ref(String(issuerDefaultMinimumWithdrawal));
 const namedClaimSlices = ref<NamedClaimSlice[]>(defaultWholeNamedClaimSlices());
+const rememberedScheduledClaimSlices = ref<NamedClaimSlice[] | null>(null);
 const reusableBalance = ref(false);
 const storedValueReplenishable = ref(false);
 const storedValueMaximumBalance = ref('');
@@ -779,7 +774,6 @@ const previewResult = ref<CockpitClaimExperiencePreviewManifest | null>(null);
 const previewDraftSnapshot = ref<string | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
-const sliceEditorElement = ref<HTMLDetailsElement | null>(null);
 const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
 const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
@@ -3800,6 +3794,18 @@ const maxValidClaimCount = computed<number>(() => {
     return Math.max(1, Math.floor(amount / minimum));
 });
 
+const scheduledPortionsUnavailableReason = computed<string | null>(() => {
+    if (normalizedPayCodeAmount() <= 0) {
+        return 'Enter a Pay Code amount before scheduling portions.';
+    }
+
+    if (maxValidClaimCount.value < 2) {
+        return `Scheduled portions require enough value for at least two ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)} claims.`;
+    }
+
+    return null;
+});
+
 const addSliceDisabledReason = computed<string | null>(() => {
     const nextCount = Math.max(2, namedClaimSlices.value.length + 1);
     const nextAmount = normalizedPayCodeAmount() / nextCount;
@@ -3854,6 +3860,17 @@ const namedClaimSliceValidationMessage = computed<string | null>(() => {
 
     if (normalizedNamedClaimSlices.value.length === 0) {
         return 'Add at least one scheduled portion.';
+    }
+
+    if (
+        normalizedNamedClaimSlices.value.some(
+            (slice) =>
+                slice.claim_on !== null &&
+                slice.claim_by !== null &&
+                slice.claim_by < slice.claim_on,
+        )
+    ) {
+        return 'A scheduled portion cannot expire before it becomes available.';
     }
 
     if (normalizedNamedClaimSlices.value.some((slice) => slice.amount <= 0)) {
@@ -4004,7 +4021,10 @@ const executableSlicePlan = computed<Record<string, unknown> | null>(() => {
     };
 
     if (sliceMode.value === 'fixed') {
-        const count = Math.max(2, Math.round(Number(sliceSummary.value.slices) || 2));
+        const count = Math.max(
+            2,
+            Math.round(Number(sliceSummary.value.slices) || 2),
+        );
         const baseMinor = Math.floor(totalMinor / count);
         const remainder = totalMinor % count;
 
@@ -4048,9 +4068,13 @@ const executableSlicePlan = computed<Record<string, unknown> | null>(() => {
         mode: 'flexible',
         selection: 'flexible_amount',
         slices: [],
-        max_slices: Math.max(1, Math.round(Number(sliceSummary.value.max_slices) || 1)),
+        max_slices: Math.max(
+            1,
+            Math.round(Number(sliceSummary.value.max_slices) || 1),
+        ),
         min_amount_minor: Math.round(
-            (Number(sliceSummary.value.min_withdrawal) || minimumWithdrawalFloor.value) * 100,
+            (Number(sliceSummary.value.min_withdrawal) ||
+                minimumWithdrawalFloor.value) * 100,
         ),
     };
 });
@@ -4958,6 +4982,58 @@ function equalFixedNamedClaimSlices(count: number): NamedClaimSlice[] {
     });
 }
 
+function cloneNamedClaimSlices(source: NamedClaimSlice[]): NamedClaimSlice[] {
+    return source.map((slice) => ({ ...slice }));
+}
+
+function defaultScheduledClaimSlices(): NamedClaimSlice[] {
+    return equalFixedNamedClaimSlices(2);
+}
+
+function rememberScheduledClaimSlices(): void {
+    if (sliceMode.value !== 'named' || namedClaimSlices.value.length === 0) {
+        return;
+    }
+
+    rememberedScheduledClaimSlices.value = cloneNamedClaimSlices(
+        namedClaimSlices.value,
+    );
+}
+
+function configureScheduledClaimSlices(): void {
+    const remembered = rememberedScheduledClaimSlices.value;
+    const current =
+        sliceMode.value === 'named' && namedClaimSlices.value.length > 0
+            ? namedClaimSlices.value
+            : null;
+
+    namedClaimSlices.value =
+        remembered !== null && remembered.length > 0
+            ? cloneNamedClaimSlices(remembered)
+            : current !== null
+              ? cloneNamedClaimSlices(current)
+              : defaultScheduledClaimSlices();
+    sliceMode.value = 'named';
+    slices.value = String(namedClaimSlices.value.length);
+    maxSlices.value = String(namedClaimSlices.value.length);
+    minWithdrawal.value = formatSliceAmount(
+        Math.min(
+            ...namedClaimSlices.value.map((slice) => Number(slice.amount)),
+        ),
+    );
+}
+
+function nextNamedClaimSliceId(): string {
+    const usedIds = new Set(namedClaimSlices.value.map((slice) => slice.id));
+    let index = 0;
+
+    while (usedIds.has(namedClaimSliceId(index))) {
+        index += 1;
+    }
+
+    return namedClaimSliceId(index);
+}
+
 function redistributeExistingNamedClaimSliceAmounts(
     existingSlices: NamedClaimSlice[],
 ): NamedClaimSlice[] {
@@ -5143,9 +5219,25 @@ function addNamedClaimSlice(): void {
         return;
     }
 
-    const nextCount = Math.max(2, namedClaimSlices.value.length + 1);
+    const nextIndex = namedClaimSlices.value.length;
+    const nextSlices = [
+        ...namedClaimSlices.value,
+        {
+            id: nextNamedClaimSliceId(),
+            amount: '0.00',
+            description: defaultFixedSliceDescription(nextIndex),
+            tag: '',
+            claim_on: '',
+            claim_by: '',
+        },
+    ];
 
-    redistributeFixedNamedClaimSlices(nextCount);
+    namedClaimSlices.value =
+        redistributeExistingNamedClaimSliceAmounts(nextSlices);
+    sliceMode.value = 'named';
+    slices.value = String(namedClaimSlices.value.length);
+    maxSlices.value = String(namedClaimSlices.value.length);
+    rememberScheduledClaimSlices();
 }
 
 function removeNamedClaimSlice(index: number): void {
@@ -5153,6 +5245,7 @@ function removeNamedClaimSlice(index: number): void {
         return;
     }
 
+    const wasScheduled = sliceMode.value === 'named';
     const wasEqualFixed = namedClaimSlicesAreEqualFixed();
 
     namedClaimSlices.value = namedClaimSlices.value
@@ -5161,6 +5254,18 @@ function removeNamedClaimSlice(index: number): void {
             ...slice,
             id: slice.id || namedClaimSliceId(sliceIndex),
         }));
+
+    if (wasScheduled) {
+        namedClaimSlices.value = redistributeExistingNamedClaimSliceAmounts(
+            namedClaimSlices.value,
+        );
+        sliceMode.value = 'named';
+        slices.value = String(namedClaimSlices.value.length);
+        maxSlices.value = String(namedClaimSlices.value.length);
+        rememberScheduledClaimSlices();
+
+        return;
+    }
 
     if (wasEqualFixed && namedClaimSlices.value.length === 1) {
         configureWholeAmountSlices();
@@ -5185,15 +5290,29 @@ function updateNamedClaimSlice(
     key: keyof NamedClaimSlice,
     value: string,
 ): void {
+    const wasScheduled = sliceMode.value === 'named';
+
     namedClaimSlices.value = namedClaimSlices.value.map((slice, sliceIndex) =>
         sliceIndex === index ? { ...slice, [key]: value } : slice,
     );
+
+    if (wasScheduled) {
+        sliceMode.value = 'named';
+        rememberScheduledClaimSlices();
+
+        return;
+    }
+
     reconcileSliceModeFromNamedClaimSlices();
 }
 
 function setSliceMode(mode: CockpitValueUseMode): void {
     if (isAccountFundingClaim.value && mode !== 'whole') {
         return;
+    }
+
+    if (sliceMode.value === 'named' && mode !== 'named') {
+        rememberScheduledClaimSlices();
     }
 
     if (mode === 'whole') {
@@ -5215,11 +5334,7 @@ function setSliceMode(mode: CockpitValueUseMode): void {
     }
 
     if (mode === 'named') {
-        sliceMode.value = 'named';
-
-        if (namedClaimSlices.value.length === 0) {
-            namedClaimSlices.value = defaultWholeNamedClaimSlices();
-        }
+        configureScheduledClaimSlices();
     }
 }
 
@@ -5272,19 +5387,6 @@ function setStoredValueMaximumBalance(value: number): void {
 function setStoredValueOtpAbove(value: number | null): void {
     storedValueOtpAbove.value =
         value === null ? '' : formatSliceAmount(Math.max(0, value));
-}
-
-async function openScheduledSliceEditor(): Promise<void> {
-    setSliceMode('named');
-    await nextTick();
-
-    if (sliceEditorElement.value) {
-        sliceEditorElement.value.open = true;
-        sliceEditorElement.value.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-        });
-    }
 }
 
 function objectValue(value: unknown): Record<string, unknown> | null {
@@ -6099,6 +6201,22 @@ function instructionRecord(
                             :max-claims="Math.max(1, Number(maxSlices) || 1)"
                             :minimum-claim="Number(minWithdrawal) || 0"
                             :scheduled-count="namedClaimSlices.length"
+                            :scheduled-portions="namedClaimSlices"
+                            :scheduled-total="namedClaimSliceTotal"
+                            :scheduled-remaining="namedClaimSliceRemaining"
+                            :scheduled-minimum-amount="minimumWithdrawalFloor"
+                            :scheduled-available="
+                                scheduledPortionsUnavailableReason === null
+                            "
+                            :scheduled-unavailable-reason="
+                                scheduledPortionsUnavailableReason
+                            "
+                            :scheduled-add-disabled-reason="
+                                addSliceDisabledReason
+                            "
+                            :scheduled-validation-message="
+                                namedClaimSliceValidationMessage
+                            "
                             :reusable-balance="reusableBalance"
                             :stored-value-available="storedValueAvailable"
                             :stored-value-unavailable-reason="
@@ -6126,7 +6244,9 @@ function instructionRecord(
                                 setStoredValueMaximumBalance
                             "
                             @stored-value-otp-above="setStoredValueOtpAbove"
-                            @edit-scheduled="openScheduledSliceEditor"
+                            @scheduled-add="addNamedClaimSlice"
+                            @scheduled-remove="removeNamedClaimSlice"
+                            @scheduled-update="updateNamedClaimSlice"
                         />
                         <p
                             v-if="storedValuePolicyError"
@@ -9112,7 +9232,6 @@ function instructionRecord(
 
                 <details
                     v-if="!reusableBalance"
-                    ref="sliceEditorElement"
                     id="quick-generate-contract-slices"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >

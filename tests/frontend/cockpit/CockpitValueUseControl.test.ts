@@ -16,6 +16,31 @@ function defaultProps() {
         maxClaims: 10,
         minimumClaim: 25,
         scheduledCount: 3,
+        scheduledPortions: [
+            {
+                id: 'slice_1',
+                amount: '500.00',
+                description: 'Slice 1',
+                tag: '',
+                claim_on: '',
+                claim_by: '',
+            },
+            {
+                id: 'slice_2',
+                amount: '500.00',
+                description: 'Slice 2',
+                tag: '',
+                claim_on: '',
+                claim_by: '',
+            },
+        ],
+        scheduledTotal: 1000,
+        scheduledRemaining: 0,
+        scheduledMinimumAmount: 25,
+        scheduledAvailable: true,
+        scheduledUnavailableReason: null,
+        scheduledAddDisabledReason: null,
+        scheduledValidationMessage: null,
         reusableBalance: false,
         storedValueAvailable: false,
         storedValueUnavailableReason:
@@ -60,6 +85,40 @@ describe('Cockpit Value Use control', () => {
             .trigger('click');
 
         expect(wrapper.emitted('mode')?.at(-1)).toEqual(['fixed']);
+    });
+
+    it('keeps Scheduled portions inside the modal and exposes row edits', async () => {
+        const wrapper = mount(CockpitValueUseControl, {
+            props: {
+                ...defaultProps(),
+                mode: 'named',
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-value-use-trigger"]')
+            .trigger('click');
+
+        expect(
+            wrapper.get('[data-testid="cockpit-value-use-dialog"]').isVisible(),
+        ).toBe(true);
+        expect(
+            wrapper.findAll('[data-testid^="cockpit-scheduled-portion-"]'),
+        ).not.toHaveLength(0);
+
+        await wrapper
+            .get('[data-testid="cockpit-scheduled-portions-add"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-scheduled-portion-0-description"]')
+            .setValue('Transport');
+
+        expect(wrapper.emitted('scheduledAdd')).toHaveLength(1);
+        expect(wrapper.emitted('scheduledUpdate')?.at(-1)).toEqual([
+            0,
+            'description',
+            'Transport',
+        ]);
     });
 
     it('fails closed when the durable stored-value engine is unavailable', () => {

@@ -2,6 +2,8 @@
 import { ChevronDown, RotateCcw, X } from 'lucide-vue-next';
 import { computed, nextTick, ref, watch } from 'vue';
 import CockpitFieldHelp from './CockpitFieldHelp.vue';
+import CockpitScheduledPortionsEditor from './CockpitScheduledPortionsEditor.vue';
+import type { CockpitScheduledPortion } from './CockpitScheduledPortionsEditor.vue';
 
 export type CockpitValueUseMode = 'whole' | 'fixed' | 'open' | 'named';
 
@@ -14,6 +16,14 @@ const props = withDefaults(
         maxClaims: number;
         minimumClaim: number;
         scheduledCount: number;
+        scheduledPortions: CockpitScheduledPortion[];
+        scheduledTotal: number;
+        scheduledRemaining: number;
+        scheduledMinimumAmount: number;
+        scheduledAvailable: boolean;
+        scheduledUnavailableReason?: string | null;
+        scheduledAddDisabledReason?: string | null;
+        scheduledValidationMessage?: string | null;
         reusableBalance: boolean;
         storedValueAvailable: boolean;
         storedValueUnavailableReason?: string | null;
@@ -24,6 +34,9 @@ const props = withDefaults(
     }>(),
     {
         storedValueUnavailableReason: null,
+        scheduledAddDisabledReason: null,
+        scheduledUnavailableReason: null,
+        scheduledValidationMessage: null,
         disabled: false,
     },
 );
@@ -37,7 +50,13 @@ const emit = defineEmits<{
     storedValueReplenishable: [enabled: boolean];
     storedValueMaximumBalance: [amount: number];
     storedValueOtpAbove: [amount: number | null];
-    editScheduled: [];
+    scheduledAdd: [];
+    scheduledRemove: [index: number];
+    scheduledUpdate: [
+        index: number,
+        key: keyof CockpitScheduledPortion,
+        value: string,
+    ];
 }>();
 
 const open = ref(false);
@@ -99,11 +118,6 @@ watch(open, async (isOpen) => {
 
 function selectMode(mode: CockpitValueUseMode): void {
     emit('mode', mode);
-
-    if (mode === 'named') {
-        emit('editScheduled');
-        closeEditor();
-    }
 }
 
 function updatePositiveInteger(event: Event, type: 'fixed' | 'maximum'): void {
@@ -289,8 +303,18 @@ function toggleReusableBalance(event: Event): void {
                             :key="option.value"
                             type="button"
                             role="radio"
+                            :disabled="
+                                disabled ||
+                                (option.value === 'named' &&
+                                    !scheduledAvailable)
+                            "
+                            :title="
+                                option.value === 'named' && !scheduledAvailable
+                                    ? (scheduledUnavailableReason ?? undefined)
+                                    : undefined
+                            "
                             :aria-checked="mode === option.value"
-                            class="rounded-xl border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                            class="rounded-xl border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
                             :class="
                                 mode === option.value
                                     ? 'border-emerald-400 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-200 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-100'
@@ -311,6 +335,18 @@ function toggleReusableBalance(event: Event): void {
                             </span>
                         </button>
                     </div>
+
+                    <p
+                        v-if="
+                            !reusableBalance &&
+                            !scheduledAvailable &&
+                            scheduledUnavailableReason
+                        "
+                        class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                        data-testid="cockpit-value-use-scheduled-unavailable"
+                    >
+                        {{ scheduledUnavailableReason }}
+                    </p>
 
                     <div
                         v-if="!reusableBalance && mode === 'fixed'"
@@ -378,6 +414,26 @@ function toggleReusableBalance(event: Event): void {
                             />
                         </label>
                     </div>
+
+                    <CockpitScheduledPortionsEditor
+                        v-if="!reusableBalance && mode === 'named'"
+                        class="mt-4"
+                        :portions="scheduledPortions"
+                        :currency="currency"
+                        :total="scheduledTotal"
+                        :remaining="scheduledRemaining"
+                        :minimum-amount="scheduledMinimumAmount"
+                        :add-disabled-reason="scheduledAddDisabledReason"
+                        :validation-message="scheduledValidationMessage"
+                        :disabled="disabled"
+                        compact
+                        @add="emit('scheduledAdd')"
+                        @remove="emit('scheduledRemove', $event)"
+                        @update="
+                            (index, key, value) =>
+                                emit('scheduledUpdate', index, key, value)
+                        "
+                    />
 
                     <div
                         v-if="reusableBalance"
@@ -463,8 +519,12 @@ function toggleReusableBalance(event: Event): void {
                     </button>
                     <button
                         type="button"
-                        class="h-9 rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                        class="h-9 rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
                         data-testid="cockpit-value-use-done"
+                        :disabled="
+                            mode === 'named' &&
+                            scheduledValidationMessage !== null
+                        "
                         @click="closeEditor"
                     >
                         Done
