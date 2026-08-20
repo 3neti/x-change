@@ -112,6 +112,7 @@ class SubmitPayCodeClaim
             $this->markPreparedClaimExecutionFailed($preparedClaim, $e);
 
             if ($sliceReservation !== null) {
+                $this->sliceExecutions()->failBeforeProvider($sliceReservation->execution);
                 $this->sliceExecutions()->indeterminate($sliceReservation->execution);
             }
 

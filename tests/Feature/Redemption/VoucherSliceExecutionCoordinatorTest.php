@@ -101,6 +101,27 @@ it('reopens an indeterminate reservation only when no provider intent exists', f
             ->count())->toBe(1);
 });
 
+it('reopens a pre-provider failure for the same facts under a fresh browser flow key', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->equal(10_000, 'PHP', 2);
+    $voucher = voucherWithSlicePlan($plan->canonicalArray());
+    $coordinator = app(VoucherSliceExecutionCoordinator::class);
+    $reservation = $coordinator->reserve($voucher, [
+        'mobile' => '09170000001',
+        '_meta' => ['idempotency_key' => 'failed-browser-flow'],
+    ]);
+
+    $coordinator->failBeforeProvider($reservation->execution);
+    $replay = $coordinator->reserve($voucher, [
+        'mobile' => '09170000001',
+        '_meta' => ['idempotency_key' => 'fresh-browser-flow'],
+    ]);
+
+    expect($replay?->replayed)->toBeTrue()
+        ->and($replay?->execution->getKey())->toBe($reservation->execution->getKey())
+        ->and($replay?->execution->status)->toBe(VoucherSliceExecutionStatus::Reserved)
+        ->and($replay?->execution->items()->value('status'))->toBe('reserved');
+});
+
 it('keeps an indeterminate reservation locked when provider intent exists', function () {
     $plan = app(VoucherSlicePlanFactory::class)->equal(10_000, 'PHP', 2);
     $voucher = voucherWithSlicePlan($plan->canonicalArray());

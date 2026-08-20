@@ -81,6 +81,49 @@ final readonly class VoucherSliceExecutionCoordinator
                 );
             }
 
+            $recoverable = VoucherSliceExecution::query()
+                ->where('voucher_id', $lockedVoucher->getKey())
+                ->whereIn('status', [
+                    VoucherSliceExecutionStatus::Failed,
+                    VoucherSliceExecutionStatus::Indeterminate,
+                ])
+                ->lockForUpdate()
+                ->with(['items', 'claim'])
+                ->get()
+                ->first(function (VoucherSliceExecution $execution) use ($lockedVoucher, $plan, $payload): bool {
+                    if ($this->providerIntentExists($execution)) {
+                        return false;
+                    }
+
+                    $selected = $execution->items->map(static fn (VoucherSliceExecutionItem $item): array => [
+                        'id' => $item->slice_id,
+                        'label' => $item->label,
+                        'sequence' => $item->sequence,
+                        'amount_minor' => $item->amount_minor,
+                    ])->all();
+
+                    return hash_equals(
+                        $execution->request_fingerprint,
+                        $this->requestFingerprint(
+                            $lockedVoucher,
+                            $plan,
+                            $selected,
+                            $execution->amount_minor,
+                            $payload,
+                        ),
+                    );
+                });
+
+            if ($recoverable instanceof VoucherSliceExecution) {
+                $this->reopenBeforeProviderBoundary($recoverable);
+
+                return new VoucherSliceReservationData(
+                    payload: $this->enrichPayload($payload, $recoverable),
+                    execution: $recoverable,
+                    replayed: true,
+                );
+            }
+
             [$selected, $amountMinor] = $this->selection($lockedVoucher, $plan, $payload);
             $requestFingerprint = $this->requestFingerprint($lockedVoucher, $plan, $selected, $amountMinor, $payload);
 
@@ -207,22 +250,47 @@ final readonly class VoucherSliceExecutionCoordinator
         $this->journal->deliverForExecution($execution->getKey());
     }
 
+    public function failBeforeProvider(VoucherSliceExecution $execution): void
+    {
+        DB::transaction(function () use ($execution): void {
+            $locked = VoucherSliceExecution::query()->lockForUpdate()->findOrFail($execution->getKey());
+
+            if ($locked->status !== VoucherSliceExecutionStatus::Reserved) {
+                return;
+            }
+
+            $locked->items()->where('status', 'reserved')->update([
+                'status' => 'failed',
+                'updated_at' => now(),
+            ]);
+            $locked->forceFill([
+                'status' => VoucherSliceExecutionStatus::Failed,
+                'failed_at' => now(),
+                'version' => $locked->version + 1,
+            ])->save();
+            $this->appendEvent($locked, 'voucher.slice.execution_failed', 'failed', false);
+        }, attempts: 5);
+
+        $this->journal->deliverForExecution($execution->getKey());
+    }
+
     private function reopenBeforeProviderBoundary(VoucherSliceExecution $execution): void
     {
-        if ($execution->status !== VoucherSliceExecutionStatus::Indeterminate) {
+        if (! in_array($execution->status, [
+            VoucherSliceExecutionStatus::Failed,
+            VoucherSliceExecutionStatus::Indeterminate,
+        ], true)) {
             return;
         }
 
-        $providerIntentExists = DisbursementReconciliation::query()
-            ->where('voucher_id', $execution->voucher_id)
-            ->where('claim_type', 'withdraw')
-            ->where('provider_reference', $execution->provider_operation_reference)
-            ->exists();
-
-        if ($providerIntentExists) {
+        if ($this->providerIntentExists($execution)) {
             return;
         }
 
+        $execution->items()->where('status', 'failed')->update([
+            'status' => 'reserved',
+            'updated_at' => now(),
+        ]);
         $execution->forceFill([
             'status' => VoucherSliceExecutionStatus::Reserved,
             'version' => $execution->version + 1,
@@ -233,6 +301,15 @@ final readonly class VoucherSliceExecutionCoordinator
             'reserved',
             false,
         );
+    }
+
+    private function providerIntentExists(VoucherSliceExecution $execution): bool
+    {
+        return DisbursementReconciliation::query()
+            ->where('voucher_id', $execution->voucher_id)
+            ->where('claim_type', 'withdraw')
+            ->where('provider_reference', $execution->provider_operation_reference)
+            ->exists();
     }
 
     public function replayResult(VoucherSliceExecution $execution): SubmitPayCodeClaimResultData
