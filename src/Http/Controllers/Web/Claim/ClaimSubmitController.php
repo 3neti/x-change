@@ -71,16 +71,28 @@ class ClaimSubmitController extends Controller
             (int) config('x-change.claim.submission_lock_seconds', 30),
         )->block(
             (int) config('x-change.claim.submission_lock_wait_seconds', 3),
-            fn (): RedirectResponse => $this->submit($state, $voucher, $code, $flowId),
+            fn (): RedirectResponse => $this->submit(
+                $state,
+                $voucher,
+                $code,
+                $flowId,
+                $lockKey,
+            ),
         );
     }
 
     /**
      * @param  array<string, mixed>  $state
      */
-    protected function submit(array $state, Voucher $voucher, string $code, mixed $flowId): RedirectResponse
-    {
+    protected function submit(
+        array $state,
+        Voucher $voucher,
+        string $code,
+        mixed $flowId,
+        string $idempotencyKey,
+    ): RedirectResponse {
         $payload = $this->payloadNormalizer->normalize($state['collected_data'] ?? []);
+        data_set($payload, '_meta.idempotency_key', $idempotencyKey);
         $onboardingReference = data_get($state, 'instructions.metadata.onboarding_reference');
 
         if (is_string($onboardingReference) && trim($onboardingReference) !== '') {

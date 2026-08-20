@@ -198,6 +198,70 @@ it('loads form-flow state by flow id when reference id is missing', function ():
     $response->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
 });
 
+it('supplies the same server-owned idempotency key when a claim flow is retried', function (): void {
+    $voucher = claimSubmitTestVoucher();
+
+    $state = [
+        'flow_id' => 'flow-stable-retry',
+        'collected_data' => [
+            'wallet_info' => [
+                'mobile' => '+639173011987',
+            ],
+        ],
+    ];
+
+    $payload = [
+        'mobile' => '+639173011987',
+        'country' => 'PH',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number' => '09173011987',
+        'inputs' => [
+            'mobile' => '+639173011987',
+        ],
+    ];
+
+    $this->formFlowService
+        ->shouldReceive('getFlowState')
+        ->twice()
+        ->with('flow-stable-retry')
+        ->andReturn($state);
+
+    $this->payloadNormalizer
+        ->shouldReceive('normalize')
+        ->twice()
+        ->with($state['collected_data'])
+        ->andReturn($payload);
+
+    $this->evidenceSynchronizer
+        ->shouldReceive('sync')
+        ->twice();
+
+    $idempotencyKeys = [];
+
+    $this->submitAction
+        ->shouldReceive('handle')
+        ->twice()
+        ->andReturnUsing(function (Voucher $receivedVoucher, array $actual) use (&$idempotencyKeys): never {
+            $idempotencyKeys[] = data_get($actual, '_meta.idempotency_key');
+
+            throw new RuntimeException('Retryable claim failure');
+        });
+
+    $this->formFlowService->shouldNotReceive('clearFlow');
+
+    $route = route('x-change.claim.submit', ['code' => $voucher->code]);
+
+    $this->post($route, ['flow_id' => 'flow-stable-retry']);
+    $this->post($route, ['flow_id' => 'flow-stable-retry']);
+
+    expect($idempotencyKeys)
+        ->toHaveCount(2)
+        ->and($idempotencyKeys[0])->toBeString()
+        ->toHaveLength(64)
+        ->and($idempotencyKeys[1])->toBe($idempotencyKeys[0])
+        ->and($idempotencyKeys[0])->not->toContain('flow-stable-retry');
+});
+
 it('redirects to claim start when form-flow state is missing', function (): void {
     $voucher = claimSubmitTestVoucher();
 
