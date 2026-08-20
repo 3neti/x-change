@@ -284,10 +284,14 @@ const compiledFormFields = computed<Record<string, unknown>[]>(() => {
     return Array.isArray(fields) ? (fields as Record<string, unknown>[]) : [];
 });
 
+const hasSliceSelector = computed(() =>
+    compiledFormFields.value.some((field) => field.type === 'slice_selector'),
+);
+
 const isSliceSelectionOnly = computed(
     () =>
         compiledFormFields.value.length === 1 &&
-        compiledFormFields.value[0]?.type === 'slice_selector',
+        hasSliceSelector.value,
 );
 
 const isSecretGateOnly = computed(
@@ -561,6 +565,7 @@ watch(
             :result="resolvedXRay"
             :loading="xrayLoading && !resolvedXRay"
             :error="xrayError"
+            :hide-slice-plan="hasSliceSelector"
             data-testid="claim-widget-server-xray"
         />
 

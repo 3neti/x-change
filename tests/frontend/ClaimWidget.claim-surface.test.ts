@@ -113,9 +113,9 @@ vi.mock('@/components/x-change/VoucherStatusStamp.vue', () => ({
 
 vi.mock('@/components/x-change/XRayClaimPreview.vue', () => ({
     default: {
-        props: ['result'],
+        props: ['result', 'hideSlicePlan'],
         template:
-            '<div data-testid="xray-claim-preview-stub">{{ result?.disclosures?.find((item) => item.key === "remaining_slices")?.value?.map((slice) => slice.label).join(",") }}</div>',
+            '<div data-testid="xray-claim-preview-stub" :data-hide-slice-plan="hideSlicePlan">{{ hideSlicePlan ? "" : result?.disclosures?.find((item) => item.key === "remaining_slices")?.value?.map((slice) => slice.label).join(",") }}</div>',
     },
 }));
 
@@ -178,6 +178,29 @@ const claimableSliceSurface = {
     actions: [],
 };
 
+const claimExperienceWithSliceSelector = {
+    phases: [
+        {
+            key: 'form_flow',
+            owner: 'claim-widget',
+            status: 'active',
+            fields: [
+                { key: 'mobile', label: 'Mobile Number', type: 'text', required: true },
+                {
+                    key: 'slice_ids',
+                    label: 'Slices to Redeem',
+                    type: 'slice_selector',
+                    required: true,
+                    options: [
+                        { id: 'slice_1', amount: 37.5, description: 'Slice 1', available: true, disabled: false },
+                        { id: 'slice_2', amount: 37.5, description: 'Slice 2', available: true, disabled: false },
+                    ],
+                },
+            ],
+        },
+    ],
+};
+
 describe('ClaimWidget claim surface gating', () => {
     beforeEach(() => {
         routerVisit.mockClear();
@@ -225,6 +248,22 @@ describe('ClaimWidget claim surface gating', () => {
 
         expect(xray.text()).toContain('Slice 1,Slice 2');
         expect(wrapper.find('form').exists()).toBe(true);
+    });
+
+    it('keeps one selectable slice set when X-Ray and the compiled selector resolve together', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: claimExperienceWithSliceSelector,
+                claimSurface: claimableSliceSurface,
+            },
+        });
+
+        const xray = wrapper.get('[data-testid="claim-widget-server-xray"]');
+
+        expect(xray.attributes('data-hide-slice-plan')).toBe('true');
+        expect(xray.text()).not.toContain('Slice 1');
+        expect(wrapper.find('[data-testid="slice-selector-field-renderer"]').exists()).toBe(true);
     });
 
     it('lets a terminal public surface take over before the client preview fetch classifies the voucher', () => {

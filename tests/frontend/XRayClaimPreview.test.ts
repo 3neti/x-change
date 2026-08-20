@@ -185,6 +185,30 @@ describe('XRayClaimPreview', () => {
         expect(wrapper.text()).not.toContain('[object Object]');
     });
 
+    it('defers slice rendering to the canonical selector when it is present', () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                hideSlicePlan: true,
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [
+                        {
+                            key: 'remaining_slices',
+                            value: [
+                                { id: 'slice_1', label: 'Morning fare', amount_minor: 2500 },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Pay Code verified');
+        expect(wrapper.find('[data-testid="xray-slice-plan"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Morning fare');
+    });
+
     it('does not render a disclosure-style redaction footer on the claim page', () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {

@@ -49,11 +49,14 @@ interface XRaySliceRow {
     claimed_at?: string | null;
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     result?: XRayResult | null;
     loading?: boolean;
     error?: string | null;
-}>();
+    hideSlicePlan?: boolean;
+}>(), {
+    hideSlicePlan: false,
+});
 
 // This is the redeemer-facing "Pay Code preview" panel. It is presentational
 // only: the underlying x-ray disclosure policy already decided what this
@@ -240,7 +243,7 @@ function stageText(stage: XRayStage): string {
                     </div>
 
                     <div
-                        v-if="sliceRows.length"
+                        v-if="sliceRows.length && !hideSlicePlan"
                         class="space-y-2"
                         data-testid="xray-slice-plan"
                     >
