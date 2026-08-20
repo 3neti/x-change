@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceResolverContract;
 use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
@@ -107,6 +108,29 @@ it('gives a guest a public preview surface for a claimable Pay Code', function (
         ->and($surface->state->key)->toBe('active')
         ->and(collect($surface->components)->pluck('type'))->toContain('xray_preview')
         ->and(collect($surface->components)->pluck('type'))->not->toContain('claim_requirement_summary');
+});
+
+it('discloses the sanitized canonical slice plan on the guest claim surface', function () {
+    config()->set('x-ray.disclosure.guest.show_remaining_slices', 'if_allowed_by_voucher');
+
+    $plan = app(VoucherSlicePlanFactory::class)->equal(15_000, 'PHP', 4);
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 150,
+        overrides: ['slice_plan' => $plan->canonicalArray()],
+    ));
+    auth()->logout();
+
+    $surface = claimSurfaceResolver()->resolve($voucher, null);
+    $xray = collect($surface->components)->firstWhere('type', 'xray_preview');
+    $slices = collect($xray['props']['disclosures'])
+        ->firstWhere('key', 'remaining_slices')['value'];
+
+    expect($surface->visibility)->toBe('public_preview')
+        ->and($slices)->toHaveCount(4)
+        ->and(collect($slices)->pluck('label')->all())
+        ->toBe(['Slice 1', 'Slice 2', 'Slice 3', 'Slice 4'])
+        ->and(collect($slices)->pluck('amount_minor')->all())
+        ->toBe([3_750, 3_750, 3_750, 3_750]);
 });
 
 it('gives the issuer an issuer console surface once their Pay Code has been claimed', function () {

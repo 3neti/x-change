@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
@@ -23,6 +24,31 @@ it('renders the canonical human claim page without exposing the experience JSON'
         ->assertJsonPath('props.initial_code', (string) $voucher->code)
         ->assertJsonPath('props.provisioning_requirement', null)
         ->assertJsonStructure(['props' => ['claim_experience']]);
+});
+
+it('hydrates the initial claim page with sanitized canonical slice X-Ray rows', function () {
+    config()->set('x-ray.disclosure.guest.show_remaining_slices', 'if_allowed_by_voucher');
+
+    $plan = app(VoucherSlicePlanFactory::class)->equal(15_000, 'PHP', 4);
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 150,
+        overrides: ['slice_plan' => $plan->canonicalArray()],
+    ));
+    auth()->logout();
+
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.claim_surface.visibility', 'public_preview');
+
+    $components = collect($response->json('props.claim_surface.components'));
+    $xray = $components->firstWhere('type', 'xray_preview');
+    $slices = collect($xray['props']['disclosures'])
+        ->firstWhere('key', 'remaining_slices')['value'];
+
+    expect($slices)->toHaveCount(4)
+        ->and(collect($slices)->pluck('label')->all())
+        ->toBe(['Slice 1', 'Slice 2', 'Slice 3', 'Slice 4']);
 });
 
 it('renders the public claim error page for a missing code', function () {

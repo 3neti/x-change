@@ -112,7 +112,11 @@ vi.mock('@/components/x-change/VoucherStatusStamp.vue', () => ({
 }));
 
 vi.mock('@/components/x-change/XRayClaimPreview.vue', () => ({
-    default: { template: '<div />' },
+    default: {
+        props: ['result'],
+        template:
+            '<div data-testid="xray-claim-preview-stub">{{ result?.disclosures?.find((item) => item.key === "remaining_slices")?.value?.map((slice) => slice.label).join(",") }}</div>',
+    },
 }));
 
 vi.mock('@/components/x-rider/RiderRuntimeSequencer.vue', () => ({
@@ -143,6 +147,33 @@ const terminalPublicSurface = {
     state: { key: 'redeemed', label: 'Redeemed', can_claim: false, terminal: true },
     components: [
         { type: 'outcome_panel', props: { status_key: 'redeemed', status_label: 'Already claimed' } },
+    ],
+    actions: [],
+};
+
+const claimableSliceSurface = {
+    visibility: 'public_preview',
+    headline: 'Ready to claim',
+    description: 'Review this Pay Code before continuing.',
+    state: { key: 'active', label: 'Active', can_claim: true, terminal: false },
+    components: [
+        {
+            type: 'xray_preview',
+            props: {
+                visible: true,
+                status: 'claimable',
+                disclosures: [
+                    {
+                        key: 'remaining_slices',
+                        label: 'Remaining Slices',
+                        value: [
+                            { id: 'slice_1', label: 'Slice 1', amount_minor: 3_750 },
+                            { id: 'slice_2', label: 'Slice 2', amount_minor: 3_750 },
+                        ],
+                    },
+                ],
+            },
+        },
     ],
     actions: [],
 };
@@ -178,6 +209,21 @@ describe('ClaimWidget claim surface gating', () => {
         });
 
         expect(wrapper.find('[data-testid="claim-widget-surface-region"]').exists()).toBe(false);
+        expect(wrapper.find('form').exists()).toBe(true);
+    });
+
+    it('renders the server-resolved slice X-Ray on the initial claim page', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: null,
+                claimSurface: claimableSliceSurface,
+            },
+        });
+
+        const xray = wrapper.get('[data-testid="claim-widget-server-xray"]');
+
+        expect(xray.text()).toContain('Slice 1,Slice 2');
         expect(wrapper.find('form').exists()).toBe(true);
     });
 

@@ -118,6 +118,21 @@ const showSurfaceOutcome = computed(
     () => !showIssuerConsole.value && Boolean(activeClaimSurface.value?.state?.terminal),
 );
 
+const serverResolvedXRay = computed<Record<string, unknown> | null>(() => {
+    if (
+        activeClaimSurface.value?.visibility !== 'public_preview' ||
+        activeClaimSurface.value.state?.terminal
+    ) {
+        return null;
+    }
+
+    const component = (activeClaimSurface.value.components ?? []).find(
+        (candidate) => candidate.type === 'xray_preview',
+    );
+
+    return component?.props ?? null;
+});
+
 const surfaceTakesOver = computed(
     () => showIssuerConsole.value || showSurfaceOutcome.value,
 );
@@ -535,6 +550,12 @@ watch(
             />
         </form>
 
+        <XRayClaimPreview
+            v-if="serverResolvedXRay && !surfaceTakesOver"
+            :result="serverResolvedXRay"
+            data-testid="claim-widget-server-xray"
+        />
+
         <ClaimSurfaceRenderer
             v-if="showSurfaceOutcome"
             :surface="activeClaimSurface"
@@ -625,6 +646,7 @@ watch(
                 </Alert>
 
                 <XRayClaimPreview
+                    v-if="activeClaimSurface === null"
                     :result="xrayResult"
                     :loading="xrayLoading"
                     :error="xrayError"
