@@ -160,6 +160,101 @@ describe('Cockpit Quick Generate foundation', () => {
         host.remove();
     });
 
+    it('keeps secondary Order options collapsed while exposing active configuration', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: [cockpitQuickGenerateTemplates[1]],
+            },
+        });
+
+        const toggle = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-options-toggle"]',
+        );
+        const panel = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-options-panel"]',
+        );
+        const orderFields = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-fields"]',
+        );
+
+        expect(toggle.element.tagName).toBe('BUTTON');
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+        expect(toggle.text()).toContain('Order options');
+        expect(toggle.text()).toContain('1');
+        expect(panel.attributes('style')).toContain('display: none');
+        expect(
+            orderFields.find('[data-testid="cockpit-claim-requirements-control"]')
+                .exists(),
+        ).toBe(false);
+
+        await toggle.trigger('click');
+
+        expect(toggle.attributes('aria-expanded')).toBe('true');
+        expect(panel.attributes('style') ?? '').not.toContain('display: none');
+        expect(
+            panel.find('[data-testid="cockpit-claim-requirements-control"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            panel.find('[data-testid="cockpit-quick-generate-primary-feedback"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            panel.find('[data-testid="cockpit-value-use-control"]').exists(),
+        ).toBe(true);
+        expect(
+            panel
+                .find(
+                    '[data-testid="cockpit-quick-generate-settlement-rail-cycle"]',
+                )
+                .exists(),
+        ).toBe(true);
+
+        expect(toggle.text()).toContain('1');
+    });
+
+    it('stacks the Order header on mobile and keeps every Claim Experience step shrinkable', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+            },
+        });
+        const orderCard = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-card"]',
+        );
+        const submitButton = orderCard.get(
+            '[data-testid="cockpit-quick-generate-submit-button"]',
+        );
+
+        expect(
+            orderCard.get('h4').element.parentElement?.parentElement?.className,
+        ).toContain('flex-col');
+        expect(submitButton.classes()).toContain('w-full');
+        expect(submitButton.classes()).toContain('sm:w-auto');
+
+        [
+            '#quick-generate-contract-money',
+            '#quick-generate-contract-inputs',
+            '#quick-generate-contract-validation',
+            '#quick-generate-contract-feedback',
+            '#quick-generate-contract-slices',
+            '#quick-generate-contract-execution',
+        ].forEach((selector) => {
+            const summary = wrapper.get(selector).get('summary');
+            const summaryCopy = wrapper.get(selector).get('summary > div');
+
+            expect(summary.classes()).toContain('min-w-0');
+            expect(summaryCopy.classes()).toContain('min-w-0');
+            expect(summaryCopy.classes()).toContain('flex-1');
+        });
+
+        const riderRow = wrapper
+            .get('#quick-generate-contract-rider')
+            .get(':scope > div');
+
+        expect(riderRow.classes()).toContain('min-w-0');
+    });
+
     it('restores immediate keyboard amount entry after every template path', async () => {
         const host = document.createElement('div');
         document.body.appendChild(host);

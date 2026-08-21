@@ -106,7 +106,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBeTruthy();
     });
 
-    it('keeps the Order title and Issue CTA on one row, separate from the Account Invitation badge and Mode control', () => {
+    it('stacks the Order title and Issue CTA on mobile, separate from the Account Invitation badge and Mode control', () => {
         const wrapper = mountPanel({
             templates: cockpitQuickGenerateTemplates,
             onboardingPreset: true,
@@ -126,11 +126,12 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         );
         const titleRow = title.element.parentElement?.parentElement;
 
-        // Title and CTA share one row; the badge no longer competes with
-        // either for that row's width.
+        // Title and CTA stack at the narrowest widths and share a row from
+        // the small breakpoint onward. The badge does not compete with them.
         expect(titleRow?.contains(submitButton.element)).toBe(true);
         expect(titleRow?.contains(badge.element)).toBe(false);
-        expect(titleRow?.classList.contains('flex-wrap')).toBe(true);
+        expect(titleRow?.classList.contains('flex-col')).toBe(true);
+        expect(titleRow?.classList.contains('sm:flex-row')).toBe(true);
 
         // The description gets its own full-width row.
         const description = orderCard.get('p');
@@ -356,6 +357,11 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     it('keeps the Claim Requirements compact/detailed synchronization unchanged', async () => {
         const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
 
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-order-options-toggle"]',
+            )
+            .trigger('click');
         await wrapper
             .get('[data-testid="cockpit-claim-requirements-trigger"]')
             .trigger('click');

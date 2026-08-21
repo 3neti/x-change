@@ -19,6 +19,14 @@ function quickGenerateEngineeringPreview(
 async function openClaimRequirementsPopover(
     wrapper: VueWrapper,
 ): Promise<void> {
+    const orderOptionsToggle = wrapper.get(
+        '[data-testid="cockpit-quick-generate-order-options-toggle"]',
+    );
+
+    if (orderOptionsToggle.attributes('aria-expanded') === 'false') {
+        await orderOptionsToggle.trigger('click');
+    }
+
     await wrapper
         .get('[data-testid="cockpit-claim-requirements-trigger"]')
         .trigger('click');

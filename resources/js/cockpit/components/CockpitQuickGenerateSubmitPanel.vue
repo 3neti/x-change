@@ -5,6 +5,7 @@ import type { RequestPayload } from '@inertiajs/core';
 import { Link, router } from '@inertiajs/vue3';
 import {
     Check,
+    ChevronDown,
     Clock3,
     FilePlus2,
     LayoutTemplate,
@@ -789,6 +790,7 @@ const startingPoint = ref<'blank' | 'last' | 'template'>(
 );
 const templatePickerOpen = ref(false);
 const saveTemplateOpen = ref(false);
+const orderOptionsOpen = ref(false);
 const saveTemplateName = ref('');
 const saveTemplateDescription = ref('');
 const saveTemplateIncludeAmount = ref(false);
@@ -3246,6 +3248,17 @@ const selectedInputFields = computed<string[]>(() => {
     }
 
     return voucherInputFieldPayloadOrder.filter((field) => fields.has(field));
+});
+
+const orderOptionsActiveCount = computed<number>(() => {
+    return [
+        selectedInputFields.value.length > 0,
+        Object.values(feedbackDestinations.value).some(
+            (destination) => destination !== '',
+        ),
+        reusableBalance.value || sliceMode.value !== 'whole',
+        settlementRail.value.trim() !== '',
+    ].filter(Boolean).length;
 });
 
 const validationSummary = computed<Record<string, unknown>>(() => {
@@ -5921,7 +5934,9 @@ function instructionRecord(
                 class="min-w-0 rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
                 data-testid="cockpit-quick-generate-order-card"
             >
-                <div class="flex flex-wrap items-start justify-between gap-3">
+                <div
+                    class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between"
+                >
                     <div class="min-w-0 flex-1">
                         <h4
                             class="text-lg font-semibold text-slate-950 dark:text-slate-50"
@@ -5931,7 +5946,7 @@ function instructionRecord(
                     </div>
                     <button
                         type="submit"
-                        class="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                        class="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-auto dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                         data-testid="cockpit-quick-generate-submit-button"
                         :disabled="!canSubmit || processing"
                     >
@@ -6163,152 +6178,200 @@ function instructionRecord(
                             :disabled="processing"
                         />
                     </label>
-                    <div
-                        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
-                        data-testid="cockpit-quick-generate-primary-feedback"
-                    >
-                        <span class="flex items-center gap-1">
-                            Status Updates
-                            <CockpitFieldHelp
-                                label="About Status Updates"
-                                tooltip="Optional email, mobile, or webhook destinations notified after the claim."
-                            />
-                        </span>
-                        <CockpitFeedbackDestinationInput
-                            v-model="feedbackDestinations"
-                            :defaults="feedbackDestinationDefaults"
-                            :unavailable="feedbackUnavailableReasons"
-                            :disabled="processing"
-                            @validation="feedbackTokenErrors = $event"
-                        />
-                    </div>
-                    <div class="min-w-0 sm:col-span-2">
-                        <CockpitClaimRequirementsControl
-                            :options="claimRequirementOptions"
-                            :presets="claimRequirementPresets"
-                            :disabled="processing"
-                            help-tooltip="Information or evidence the recipient must provide before claiming."
-                            @toggle="toggleInputField"
-                            @preset="applyClaimRequirementPreset"
-                        />
-                    </div>
-                    <div class="min-w-0 sm:col-span-2">
-                        <CockpitValueUseControl
-                            :mode="sliceMode"
-                            :amount="normalizedPayCodeAmount()"
-                            :currency="currency"
-                            :fixed-count="fixedSliceCount()"
-                            :max-claims="Math.max(1, Number(maxSlices) || 1)"
-                            :minimum-claim="Number(minWithdrawal) || 0"
-                            :scheduled-count="namedClaimSlices.length"
-                            :scheduled-portions="namedClaimSlices"
-                            :scheduled-total="namedClaimSliceTotal"
-                            :scheduled-remaining="namedClaimSliceRemaining"
-                            :scheduled-minimum-amount="minimumWithdrawalFloor"
-                            :scheduled-available="
-                                scheduledPortionsUnavailableReason === null
-                            "
-                            :scheduled-unavailable-reason="
-                                scheduledPortionsUnavailableReason
-                            "
-                            :scheduled-add-disabled-reason="
-                                addSliceDisabledReason
-                            "
-                            :scheduled-validation-message="
-                                namedClaimSliceValidationMessage
-                            "
-                            :reusable-balance="reusableBalance"
-                            :stored-value-available="storedValueAvailable"
-                            :stored-value-unavailable-reason="
-                                storedValueUnavailableReason
-                            "
-                            :stored-value-replenishable="
-                                storedValueReplenishable
-                            "
-                            :stored-value-maximum-balance="
-                                normalizedStoredValueMaximumBalance
-                            "
-                            :stored-value-otp-above="
-                                normalizedStoredValueOtpAbove
-                            "
-                            :disabled="processing"
-                            @mode="setSliceMode"
-                            @fixed-count="setFixedSliceCount"
-                            @max-claims="setMaximumClaims"
-                            @minimum-claim="setMinimumClaimAmount"
-                            @reusable-balance="setReusableBalance"
-                            @stored-value-replenishable="
-                                setStoredValueReplenishable
-                            "
-                            @stored-value-maximum-balance="
-                                setStoredValueMaximumBalance
-                            "
-                            @stored-value-otp-above="setStoredValueOtpAbove"
-                            @scheduled-add="addNamedClaimSlice"
-                            @scheduled-remove="removeNamedClaimSlice"
-                            @scheduled-update="updateNamedClaimSlice"
-                        />
-                        <p
-                            v-if="storedValuePolicyError"
-                            class="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-300"
-                            data-testid="cockpit-value-use-policy-error"
-                        >
-                            {{ storedValuePolicyError }}
-                        </p>
-                    </div>
                 </div>
 
-                <fieldset
-                    v-if="!isAccountFundingClaim && !reusableBalance"
-                    class="mt-4 grid min-w-0 gap-1.5 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
-                    data-testid="cockpit-quick-generate-primary-settlement-rail"
+                <section
+                    class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
                 >
+                    <button
+                        type="button"
+                        class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                        :aria-expanded="orderOptionsOpen"
+                        aria-controls="cockpit-quick-generate-order-options-panel"
+                        data-testid="cockpit-quick-generate-order-options-toggle"
+                        @click="orderOptionsOpen = !orderOptionsOpen"
+                    >
+                        <span class="flex min-w-0 items-center gap-2">
+                            <span class="min-w-0 truncate">Order options</span>
+                            <span
+                                class="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[0.68rem] font-bold tabular-nums text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                                aria-label="Configured order options"
+                            >
+                                {{ orderOptionsActiveCount }}
+                            </span>
+                        </span>
+                        <ChevronDown
+                            class="size-4 shrink-0 transition-transform"
+                            :class="{ 'rotate-180': orderOptionsOpen }"
+                            aria-hidden="true"
+                        />
+                    </button>
+
                     <div
-                        class="flex flex-wrap items-center justify-between gap-2"
+                        v-show="orderOptionsOpen"
+                        id="cockpit-quick-generate-order-options-panel"
+                        class="mt-3 grid min-w-0 gap-4 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+                        role="region"
+                        aria-label="Order options"
+                        data-testid="cockpit-quick-generate-order-options-panel"
                     >
-                        <div class="flex flex-wrap items-center gap-2">
-                            <legend
-                                class="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
-                            >
-                                Transfer Network
-                                <CockpitFieldHelp
-                                    label="About Transfer Network"
-                                    :tooltip="settlementRailCycleDescription"
-                                />
-                            </legend>
-                            <button
-                                type="button"
-                                class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                        <div class="min-w-0">
+                            <CockpitClaimRequirementsControl
+                                :options="claimRequirementOptions"
+                                :presets="claimRequirementPresets"
                                 :disabled="processing"
-                                :aria-label="settlementRailCycleAccessibleLabel"
-                                data-testid="cockpit-quick-generate-settlement-rail-cycle"
-                                @click="cycleSettlementRail"
-                            >
-                                <RotateCcw
-                                    class="size-3.5"
-                                    aria-hidden="true"
-                                />
-                                {{ currentSettlementRailLabel }}
-                            </button>
+                                help-tooltip="Information or evidence the recipient must provide before claiming."
+                                @toggle="toggleInputField"
+                                @preset="applyClaimRequirementPreset"
+                            />
                         </div>
-                        <p
-                            class="text-[11px] text-slate-500 dark:text-slate-400"
-                            data-testid="cockpit-quick-generate-payout-provider"
+
+                        <div
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            data-testid="cockpit-quick-generate-primary-feedback"
                         >
-                            via
-                            <span class="font-semibold">{{
-                                payoutProviderLabel
-                            }}</span>
-                        </p>
+                            <span class="flex min-w-0 items-center gap-1">
+                                <span class="min-w-0 truncate"
+                                    >Status Updates</span
+                                >
+                                <CockpitFieldHelp
+                                    label="About Status Updates"
+                                    tooltip="Optional email, mobile, or webhook destinations notified after the claim."
+                                />
+                            </span>
+                            <CockpitFeedbackDestinationInput
+                                v-model="feedbackDestinations"
+                                :defaults="feedbackDestinationDefaults"
+                                :unavailable="feedbackUnavailableReasons"
+                                :disabled="processing"
+                                @validation="feedbackTokenErrors = $event"
+                            />
+                        </div>
+
+                        <div class="min-w-0">
+                            <CockpitValueUseControl
+                                :mode="sliceMode"
+                                :amount="normalizedPayCodeAmount()"
+                                :currency="currency"
+                                :fixed-count="fixedSliceCount()"
+                                :max-claims="Math.max(1, Number(maxSlices) || 1)"
+                                :minimum-claim="Number(minWithdrawal) || 0"
+                                :scheduled-count="namedClaimSlices.length"
+                                :scheduled-portions="namedClaimSlices"
+                                :scheduled-total="namedClaimSliceTotal"
+                                :scheduled-remaining="namedClaimSliceRemaining"
+                                :scheduled-minimum-amount="minimumWithdrawalFloor"
+                                :scheduled-available="
+                                    scheduledPortionsUnavailableReason === null
+                                "
+                                :scheduled-unavailable-reason="
+                                    scheduledPortionsUnavailableReason
+                                "
+                                :scheduled-add-disabled-reason="
+                                    addSliceDisabledReason
+                                "
+                                :scheduled-validation-message="
+                                    namedClaimSliceValidationMessage
+                                "
+                                :reusable-balance="reusableBalance"
+                                :stored-value-available="storedValueAvailable"
+                                :stored-value-unavailable-reason="
+                                    storedValueUnavailableReason
+                                "
+                                :stored-value-replenishable="
+                                    storedValueReplenishable
+                                "
+                                :stored-value-maximum-balance="
+                                    normalizedStoredValueMaximumBalance
+                                "
+                                :stored-value-otp-above="
+                                    normalizedStoredValueOtpAbove
+                                "
+                                :disabled="processing"
+                                @mode="setSliceMode"
+                                @fixed-count="setFixedSliceCount"
+                                @max-claims="setMaximumClaims"
+                                @minimum-claim="setMinimumClaimAmount"
+                                @reusable-balance="setReusableBalance"
+                                @stored-value-replenishable="
+                                    setStoredValueReplenishable
+                                "
+                                @stored-value-maximum-balance="
+                                    setStoredValueMaximumBalance
+                                "
+                                @stored-value-otp-above="setStoredValueOtpAbove"
+                                @scheduled-add="addNamedClaimSlice"
+                                @scheduled-remove="removeNamedClaimSlice"
+                                @scheduled-update="updateNamedClaimSlice"
+                            />
+                            <p
+                                v-if="storedValuePolicyError"
+                                class="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                                data-testid="cockpit-value-use-policy-error"
+                            >
+                                {{ storedValuePolicyError }}
+                            </p>
+                        </div>
+
+                        <fieldset
+                            v-if="!isAccountFundingClaim && !reusableBalance"
+                            class="grid min-w-0 gap-1.5 border-t border-slate-200 pt-4 dark:border-slate-800"
+                            data-testid="cockpit-quick-generate-primary-settlement-rail"
+                        >
+                            <div
+                                class="flex min-w-0 flex-wrap items-center justify-between gap-2"
+                            >
+                                <div
+                                    class="flex min-w-0 flex-wrap items-center gap-2"
+                                >
+                                    <legend
+                                        class="flex min-w-0 items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                    >
+                                        <span class="min-w-0 truncate"
+                                            >Transfer Network</span
+                                        >
+                                        <CockpitFieldHelp
+                                            label="About Transfer Network"
+                                            :tooltip="settlementRailCycleDescription"
+                                        />
+                                    </legend>
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                                        :disabled="processing"
+                                        :aria-label="settlementRailCycleAccessibleLabel"
+                                        data-testid="cockpit-quick-generate-settlement-rail-cycle"
+                                        @click="cycleSettlementRail"
+                                    >
+                                        <RotateCcw
+                                            class="size-3.5 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <span class="min-w-0 truncate">{{
+                                            currentSettlementRailLabel
+                                        }}</span>
+                                    </button>
+                                </div>
+                                <p
+                                    class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400"
+                                    data-testid="cockpit-quick-generate-payout-provider"
+                                >
+                                    via
+                                    <span class="font-semibold">{{
+                                        payoutProviderLabel
+                                    }}</span>
+                                </p>
+                            </div>
+                            <p
+                                v-if="settlementRailSelectionError"
+                                class="text-xs font-medium text-rose-600 dark:text-rose-300"
+                                data-testid="cockpit-quick-generate-settlement-rail-error"
+                            >
+                                {{ settlementRailSelectionError }}
+                            </p>
+                        </fieldset>
                     </div>
-                    <p
-                        v-if="settlementRailSelectionError"
-                        class="text-xs font-medium text-rose-600 dark:text-rose-300"
-                        data-testid="cockpit-quick-generate-settlement-rail-error"
-                    >
-                        {{ settlementRailSelectionError }}
-                    </p>
-                </fieldset>
+                </section>
 
                 <section
                     class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
@@ -6553,8 +6616,10 @@ function instructionRecord(
             <summary
                 class="cursor-pointer list-none text-sm font-semibold text-slate-950 dark:text-slate-50"
             >
-                <span class="flex items-center justify-between gap-3">
-                    <span>
+                <span
+                    class="flex min-w-0 items-center justify-between gap-3"
+                >
+                    <span class="min-w-0">
                         Claim Experience
                         <span
                             class="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400"
@@ -6576,13 +6641,13 @@ function instructionRecord(
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <summary
-                        class="flex cursor-pointer list-none items-center gap-3"
+                        class="flex min-w-0 cursor-pointer list-none items-center gap-3"
                     >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
                             >1</span
                         >
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
@@ -7185,13 +7250,13 @@ function instructionRecord(
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <summary
-                        class="flex cursor-pointer list-none items-center gap-3"
+                        class="flex min-w-0 cursor-pointer list-none items-center gap-3"
                     >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700 dark:bg-sky-900/60 dark:text-sky-200"
                             >2</span
                         >
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
@@ -7279,13 +7344,13 @@ function instructionRecord(
                     data-testid="cockpit-quick-generate-validation-section"
                 >
                     <summary
-                        class="flex cursor-pointer list-none items-center gap-3"
+                        class="flex min-w-0 cursor-pointer list-none items-center gap-3"
                     >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-900/60 dark:text-violet-200"
                             >3</span
                         >
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
@@ -7828,13 +7893,15 @@ function instructionRecord(
                     id="quick-generate-contract-rider"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex min-w-0 items-center gap-3">
+                    <div
+                        class="flex min-w-0 items-center justify-between gap-3"
+                    >
+                        <div class="flex min-w-0 flex-1 items-center gap-3">
                             <span
                                 class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
                                 >4</span
                             >
-                            <div class="min-w-0">
+                            <div class="min-w-0 flex-1">
                                 <h4
                                     class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                                 >
@@ -8993,13 +9060,13 @@ function instructionRecord(
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <summary
-                        class="flex cursor-pointer list-none items-center gap-3"
+                        class="flex min-w-0 cursor-pointer list-none items-center gap-3"
                     >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-sm font-bold text-rose-700 dark:bg-rose-900/60 dark:text-rose-200"
                             >5</span
                         >
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
@@ -9236,13 +9303,13 @@ function instructionRecord(
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <summary
-                        class="flex cursor-pointer list-none items-center gap-3"
+                        class="flex min-w-0 cursor-pointer list-none items-center gap-3"
                     >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700 dark:bg-cyan-900/60 dark:text-cyan-200"
                             >6</span
                         >
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
@@ -9751,13 +9818,13 @@ function instructionRecord(
                     data-testid="cockpit-quick-generate-advanced-contract-section"
                 >
                     <summary
-                        class="flex cursor-pointer list-none items-center gap-3"
+                        class="flex min-w-0 cursor-pointer list-none items-center gap-3"
                     >
                         <span
                             class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-900/60 dark:text-violet-200"
                             >7</span
                         >
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >

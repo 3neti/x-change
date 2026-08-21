@@ -42,6 +42,14 @@ function storedValueCapability() {
   };
 }
 
+async function openOrderOptions(
+  wrapper: ReturnType<typeof mount>,
+): Promise<void> {
+  await wrapper
+    .get('[data-testid="cockpit-quick-generate-order-options-toggle"]')
+    .trigger("click");
+}
+
 describe("Cockpit Quick Generate value use", () => {
   it("submits the executable equal plan selected from the Order card", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
@@ -72,6 +80,7 @@ describe("Cockpit Quick Generate value use", () => {
     await wrapper
       .get('[data-testid="cockpit-quick-generate-primary-amount"]')
       .setValue("100");
+    await openOrderOptions(wrapper);
     await wrapper
       .get('[data-testid="cockpit-value-use-trigger"]')
       .trigger("click");
@@ -137,6 +146,7 @@ describe("Cockpit Quick Generate value use", () => {
     await wrapper
       .get('[data-testid="cockpit-quick-generate-primary-amount"]')
       .setValue("120");
+    await openOrderOptions(wrapper);
     await wrapper
       .get('[data-testid="cockpit-value-use-trigger"]')
       .trigger("click");
@@ -297,6 +307,7 @@ describe("Cockpit Quick Generate value use", () => {
       },
     });
 
+    await openOrderOptions(wrapper);
     await wrapper
       .get('[data-testid="cockpit-value-use-reusable-balance"]')
       .setValue(true);
@@ -330,6 +341,7 @@ describe("Cockpit Quick Generate value use", () => {
       },
     });
 
+    await openOrderOptions(wrapper);
     await wrapper
       .get('[data-testid="cockpit-value-use-trigger"]')
       .trigger("click");
@@ -365,6 +377,7 @@ describe("Cockpit Quick Generate value use", () => {
       },
     });
 
+    await openOrderOptions(wrapper);
     await wrapper
       .get('[data-testid="cockpit-value-use-trigger"]')
       .trigger("click");

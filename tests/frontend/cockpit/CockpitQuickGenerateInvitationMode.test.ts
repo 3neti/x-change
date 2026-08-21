@@ -418,6 +418,11 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         });
 
         await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-order-options-toggle"]',
+            )
+            .trigger('click');
+        await wrapper
             .get('[data-testid="cockpit-claim-requirements-trigger"]')
             .trigger('click');
         await wrapper
