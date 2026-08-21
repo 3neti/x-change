@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, ExternalLink, X } from 'lucide-vue-next';
+import { Check, ExternalLink, Minimize2, ScanQrCode, X } from 'lucide-vue-next';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import type {
@@ -56,11 +56,19 @@ const emit = defineEmits<{
 }>();
 
 const dialog = ref<HTMLElement | null>(null);
+const showStampButton = ref<HTMLButtonElement | null>(null);
+const qrExpanded = ref(false);
 let returnFocus: HTMLElement | null = null;
+let qrTriggerTestId: string | null = null;
 
 const normalizedCode = computed<string>(() => props.code?.trim() || 'Pay Code');
 const normalizedClaimUrl = computed<string | null>(() => {
     const value = props.claimUrl?.trim();
+
+    return value ? value : null;
+});
+const normalizedClaimQr = computed<string | null>(() => {
+    const value = props.claimQr?.trim();
 
     return value ? value : null;
 });
@@ -96,6 +104,8 @@ const shareContextText = computed<string>(() => {
 watch(
     () => props.open,
     async (open): Promise<void> => {
+        qrExpanded.value = false;
+
         if (!open) {
             return;
         }
@@ -111,6 +121,7 @@ watch(
 
 onBeforeUnmount((): void => {
     returnFocus = null;
+    qrTriggerTestId = null;
 });
 
 function close(): void {
@@ -120,6 +131,42 @@ function close(): void {
         returnFocus = null;
     });
 }
+
+async function showQr(): Promise<void> {
+    if (normalizedClaimQr.value) {
+        qrTriggerTestId =
+            document.activeElement instanceof HTMLElement
+                ? (document.activeElement.dataset.testid ?? null)
+                : null;
+        qrExpanded.value = true;
+        await nextTick();
+        showStampButton.value?.focus();
+    }
+}
+
+async function showStamp(): Promise<void> {
+    qrExpanded.value = false;
+    await nextTick();
+    const selector = qrTriggerTestId
+        ? `[data-testid="${qrTriggerTestId}"]`
+        : null;
+    const trigger = selector
+        ? dialog.value?.querySelector<HTMLElement>(selector)
+        : null;
+
+    trigger?.focus();
+    qrTriggerTestId = null;
+}
+
+function handleEscape(): void {
+    if (qrExpanded.value) {
+        showStamp();
+
+        return;
+    }
+
+    close();
+}
 </script>
 
 <template>
@@ -128,7 +175,7 @@ function close(): void {
             class="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6"
             data-testid="cockpit-issued-pay-code-dialog-backdrop"
             @click.self="close"
-            @keydown.esc.prevent="close"
+            @keydown.esc.prevent="handleEscape"
         >
             <section
                 ref="dialog"
@@ -149,7 +196,7 @@ function close(): void {
                         >
                             <Check class="size-5" aria-hidden="true" />
                             <p
-                                class="text-xs font-bold tracking-[0.16em] uppercase"
+                                class="text-xs font-bold uppercase tracking-[0.16em]"
                             >
                                 Issued Successfully
                             </p>
@@ -182,23 +229,104 @@ function close(): void {
                     class="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_17rem]"
                 >
                     <div
-                        v-if="normalizedShareCardUrl"
+                        v-if="qrExpanded && normalizedClaimQr"
+                        class="flex min-h-72 flex-col rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80"
+                        data-testid="cockpit-issued-pay-code-expanded-qr"
+                    >
+                        <div
+                            class="mb-3 flex items-start justify-between gap-3 px-1"
+                        >
+                            <div>
+                                <p
+                                    class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+                                >
+                                    Claim QR
+                                </p>
+                                <p
+                                    class="text-xs text-slate-600 dark:text-slate-300"
+                                >
+                                    Scan to open Pay Code {{ normalizedCode }}.
+                                </p>
+                            </div>
+                            <button
+                                ref="showStampButton"
+                                type="button"
+                                class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900"
+                                data-testid="cockpit-issued-pay-code-show-stamp"
+                                @click="showStamp"
+                            >
+                                <Minimize2
+                                    class="size-3.5"
+                                    aria-hidden="true"
+                                />
+                                Show Stamp
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            class="group grid aspect-[1200/630] min-h-0 flex-1 place-items-center overflow-hidden rounded-[1.4rem] bg-white p-5 shadow-xl shadow-slate-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:p-8"
+                            aria-label="Show finalized Stamp"
+                            aria-pressed="true"
+                            data-testid="cockpit-issued-pay-code-expanded-qr-button"
+                            @click="showStamp"
+                        >
+                            <img
+                                :src="normalizedClaimQr"
+                                :alt="`Claim QR for Pay Code ${normalizedCode}`"
+                                class="h-full max-h-[28rem] w-full object-contain"
+                                width="1024"
+                                height="1024"
+                                decoding="async"
+                                data-testid="cockpit-issued-pay-code-expanded-qr-image"
+                            />
+                        </button>
+                    </div>
+
+                    <div
+                        v-else-if="normalizedShareCardUrl"
                         class="rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80"
                         data-testid="cockpit-issued-pay-code-artifact"
                     >
                         <div class="mb-3 px-1">
                             <p
-                                class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                                class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                             >
                                 Finalized Stamp
                             </p>
                             <p
                                 class="text-xs text-slate-600 dark:text-slate-300"
                             >
-                                Exact image used when the claim link is shared.
+                                Tap the QR in the Stamp to enlarge it.
                             </p>
                         </div>
+                        <button
+                            v-if="normalizedClaimQr"
+                            type="button"
+                            class="group relative block w-full overflow-hidden rounded-[1.4rem] bg-slate-950 shadow-xl shadow-slate-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                            :aria-label="`Enlarge claim QR for Pay Code ${normalizedCode}`"
+                            aria-pressed="false"
+                            data-testid="cockpit-issued-pay-code-artifact-qr-button"
+                            @click="showQr"
+                        >
+                            <img
+                                :src="normalizedShareCardUrl"
+                                :alt="`Finalized Pay Code ${normalizedCode}`"
+                                class="aspect-[1200/630] w-full object-contain"
+                                width="1200"
+                                height="630"
+                                loading="eager"
+                                decoding="async"
+                                data-testid="cockpit-issued-pay-code-artifact-image"
+                            />
+                            <span
+                                class="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-slate-950/85 px-3 py-1.5 text-xs font-semibold text-white opacity-90 shadow-lg backdrop-blur-sm transition group-hover:bg-emerald-700 group-focus-visible:bg-emerald-700"
+                            >
+                                <ScanQrCode class="size-4" aria-hidden="true" />
+                                Enlarge QR
+                            </span>
+                        </button>
                         <img
+                            v-else
                             :src="normalizedShareCardUrl"
                             :alt="`Finalized Pay Code ${normalizedCode}`"
                             class="aspect-[1200/630] w-full rounded-[1.4rem] bg-slate-950 object-contain shadow-xl shadow-slate-900/20"
@@ -226,9 +354,11 @@ function close(): void {
                         :rider-design-document="riderDesignDocument"
                         :rider-stamp="riderStamp"
                         :claim-qr="claimQr"
+                        interactive-claim-qr
                         :cost-estimate="costEstimate"
                         :quantity="quantity"
                         presentation="finalized"
+                        @claim-qr-click="showQr"
                     />
 
                     <aside

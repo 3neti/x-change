@@ -38,6 +38,7 @@ const props = withDefaults(
         riderDesignDocument?: string;
         riderStamp?: RiderStampPreview | null;
         claimQr?: string | null;
+        interactiveClaimQr?: boolean;
         presentation?: 'live' | 'finalized';
         costEstimate?: PayCodeCostEstimate | null;
         costLoading?: boolean;
@@ -55,6 +56,7 @@ const props = withDefaults(
         riderDesignDocument: '',
         riderStamp: null,
         claimQr: null,
+        interactiveClaimQr: false,
         presentation: 'live',
         costEstimate: null,
         costLoading: false,
@@ -62,6 +64,10 @@ const props = withDefaults(
         quantity: 1,
     },
 );
+
+const emit = defineEmits<{
+    claimQrClick: [];
+}>();
 
 type PayCodeCanvasView = 'stamp' | 'design' | 'claim' | 'cost';
 
@@ -669,8 +675,23 @@ function stringValue(value: unknown): string | null {
                 :class="claimMarkerPositionClass"
                 data-testid="cockpit-pay-code-canvas-claim-marker"
             >
+                <button
+                    v-if="showClaimQr && claimQr && interactiveClaimQr"
+                    type="button"
+                    class="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
+                    :aria-label="`Enlarge claim QR for ${displayedCode}`"
+                    data-testid="cockpit-pay-code-canvas-claim-qr-button"
+                    @click="emit('claimQrClick')"
+                >
+                    <img
+                        :src="claimQr"
+                        :alt="`Claim ${displayedCode}`"
+                        class="size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg @md:size-20"
+                        data-testid="cockpit-pay-code-canvas-claim-qr"
+                    />
+                </button>
                 <img
-                    v-if="showClaimQr && claimQr"
+                    v-else-if="showClaimQr && claimQr"
                     :src="claimQr"
                     :alt="`Claim ${displayedCode}`"
                     class="size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg @md:size-20"

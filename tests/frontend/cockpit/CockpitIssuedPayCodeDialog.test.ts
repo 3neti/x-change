@@ -211,8 +211,129 @@ describe('issued Pay Code dialog', () => {
             '[data-testid="cockpit-pay-code-share-download"]',
         );
 
-        expect(download.attributes('href')).toBe('data:image/png;base64,FAKE-QR');
-        expect(download.attributes('download')).toBe('pay-code-pay-compact-1.png');
+        expect(download.attributes('href')).toBe(
+            'data:image/png;base64,FAKE-QR',
+        );
+        expect(download.attributes('download')).toBe(
+            'pay-code-pay-compact-1.png',
+        );
+    });
+
+    it('turns the finalized Stamp into a large QR and restores it without closing the dialog', async () => {
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'PAY-QR-1',
+                amount: 50,
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                claimQr: 'data:image/png;base64,LARGE-QR',
+                shareCardUrl:
+                    'https://example.test/x/claim/PAY-QR-1/share-card.png',
+            },
+            global: {
+                stubs: {
+                    Teleport: true,
+                },
+            },
+        });
+
+        const stampButton = wrapper.get(
+            '[data-testid="cockpit-issued-pay-code-artifact-qr-button"]',
+        );
+
+        expect(stampButton.element.tagName).toBe('BUTTON');
+        expect(stampButton.attributes('aria-pressed')).toBe('false');
+
+        await stampButton.trigger('click');
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-issued-pay-code-expanded-qr-image"]',
+                )
+                .attributes('src'),
+        ).toBe('data:image/png;base64,LARGE-QR');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-issued-pay-code-expanded-qr-button"]',
+                )
+                .attributes('aria-pressed'),
+        ).toBe('true');
+        expect(wrapper.emitted('close')).toBeUndefined();
+
+        await wrapper.get('[role="dialog"]').trigger('keydown.esc');
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-issued-pay-code-expanded-qr"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-issued-pay-code-artifact-image"]')
+                .exists(),
+        ).toBe(true);
+        expect(wrapper.emitted('close')).toBeUndefined();
+    });
+
+    it('enlarges the QR from the finalized canvas fallback', async () => {
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'PAY-CANVAS-QR-1',
+                amount: 50,
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                claimQr: 'data:image/png;base64,CANVAS-QR',
+                riderStamp: {
+                    source: 'default',
+                    reference: '',
+                    imageUrl: null,
+                    title: '',
+                    description: '',
+                    label: 'Rider Stamp',
+                    fit: 'cover',
+                    position: 'center',
+                    scrim: 18,
+                    theme: 'automatic',
+                    composition: {
+                        artworkSource: 'x_change',
+                        artworkTreatment: 'automatic',
+                        copySource: 'automatic',
+                        showLogo: true,
+                        showTagline: true,
+                        claimMarker: 'qr',
+                        claimMarkerPosition: 'bottom_right',
+                        version: 2,
+                    },
+                    design: {
+                        id: 'x-change-default',
+                        version: 1,
+                    },
+                },
+            },
+            global: {
+                stubs: {
+                    Teleport: true,
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-pay-code-canvas-claim-qr-button"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-issued-pay-code-expanded-qr-image"]',
+                )
+                .attributes('src'),
+        ).toBe('data:image/png;base64,CANVAS-QR');
     });
 
     it('preserves explicit rider artwork composition in the finalized canvas', () => {
