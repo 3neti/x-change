@@ -255,6 +255,13 @@ describe('Cockpit Quick Generate foundation', () => {
             .get(':scope > div');
 
         expect(riderRow.classes()).toContain('min-w-0');
+        expect(riderRow.classes()).toContain('flex-col');
+        expect(riderRow.classes()).toContain('sm:flex-row');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-open-design-button"]')
+                .classes(),
+        ).toEqual(expect.arrayContaining(['w-full', 'sm:w-auto']));
     });
 
     it('restores immediate keyboard amount entry after every template path', async () => {

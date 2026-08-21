@@ -7894,7 +7894,7 @@ function instructionRecord(
                     class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <div
-                        class="flex min-w-0 items-center justify-between gap-3"
+                        class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div class="flex min-w-0 flex-1 items-center gap-3">
                             <span
@@ -7923,7 +7923,7 @@ function instructionRecord(
                         </div>
                         <button
                             type="button"
-                            class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                            class="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100 sm:w-auto dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
                             data-testid="cockpit-quick-generate-open-design-button"
                             :disabled="processing"
                             @click="openDesignEditor"
