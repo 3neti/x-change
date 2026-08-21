@@ -262,6 +262,32 @@ describe('issued Pay Code dialog', () => {
                 )
                 .attributes('aria-pressed'),
         ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-expanded-qr"]')
+                .attributes('class'),
+        ).toContain('lg:col-span-2');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-issued-pay-code-expanded-qr-button"]',
+                )
+                .attributes('class'),
+        ).toContain('justify-center');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-issued-pay-code-expanded-qr-image"]',
+                )
+                .attributes('class'),
+        ).toContain('max-w-2xl');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-issued-pay-code-sharing-sidebar"]',
+                )
+                .exists(),
+        ).toBe(false);
         expect(wrapper.emitted('close')).toBeUndefined();
 
         await wrapper.get('[role="dialog"]').trigger('keydown.esc');
@@ -274,6 +300,13 @@ describe('issued Pay Code dialog', () => {
         expect(
             wrapper
                 .find('[data-testid="cockpit-issued-pay-code-artifact-image"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-issued-pay-code-sharing-sidebar"]',
+                )
                 .exists(),
         ).toBe(true);
         expect(wrapper.emitted('close')).toBeUndefined();

@@ -230,7 +230,7 @@ function handleEscape(): void {
                 >
                     <div
                         v-if="qrExpanded && normalizedClaimQr"
-                        class="flex min-h-72 flex-col rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80"
+                        class="flex min-h-80 flex-col rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80 sm:min-h-[38rem] lg:col-span-2"
                         data-testid="cockpit-issued-pay-code-expanded-qr"
                     >
                         <div
@@ -264,7 +264,7 @@ function handleEscape(): void {
                         </div>
                         <button
                             type="button"
-                            class="group grid aspect-[1200/630] min-h-0 flex-1 place-items-center overflow-hidden rounded-[1.4rem] bg-white p-5 shadow-xl shadow-slate-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:p-8"
+                            class="group flex min-h-80 flex-1 items-center justify-center overflow-hidden rounded-[1.4rem] bg-white p-4 shadow-xl shadow-slate-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:min-h-[34rem] sm:p-6"
                             aria-label="Show finalized Stamp"
                             aria-pressed="true"
                             data-testid="cockpit-issued-pay-code-expanded-qr-button"
@@ -273,7 +273,7 @@ function handleEscape(): void {
                             <img
                                 :src="normalizedClaimQr"
                                 :alt="`Claim QR for Pay Code ${normalizedCode}`"
-                                class="h-full max-h-[28rem] w-full object-contain"
+                                class="aspect-square w-full max-w-2xl object-contain"
                                 width="1024"
                                 height="1024"
                                 decoding="async"
@@ -362,7 +362,9 @@ function handleEscape(): void {
                     />
 
                     <aside
+                        v-if="!qrExpanded"
                         class="flex min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70"
+                        data-testid="cockpit-issued-pay-code-sharing-sidebar"
                     >
                         <CockpitPayCodeShareCard
                             :code="normalizedCode"
