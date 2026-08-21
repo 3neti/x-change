@@ -240,9 +240,11 @@ describe('Cockpit Quick Generate foundation', () => {
             '#quick-generate-contract-slices',
             '#quick-generate-contract-execution',
         ].forEach((selector) => {
+            const step = wrapper.get(selector);
             const summary = wrapper.get(selector).get('summary');
             const summaryCopy = wrapper.get(selector).get('summary > div');
 
+            expect(step.classes()).toContain('min-w-0');
             expect(summary.classes()).toContain('min-w-0');
             expect(summaryCopy.classes()).toContain('min-w-0');
             expect(summaryCopy.classes()).toContain('flex-1');

@@ -6610,7 +6610,7 @@ function instructionRecord(
 
         <details
             ref="instructionBuilderElement"
-            class="mt-5 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70"
+            class="mt-5 min-w-0 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70"
             data-testid="cockpit-voucher-instruction-builder"
         >
             <summary
@@ -6638,7 +6638,7 @@ function instructionRecord(
             <div class="mt-4 grid gap-4">
                 <details
                     id="quick-generate-contract-money"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <summary
                         class="flex min-w-0 cursor-pointer list-none items-center gap-3"
@@ -7247,7 +7247,7 @@ function instructionRecord(
 
                 <details
                     id="quick-generate-contract-inputs"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <summary
                         class="flex min-w-0 cursor-pointer list-none items-center gap-3"
@@ -7340,7 +7340,7 @@ function instructionRecord(
 
                 <details
                     id="quick-generate-contract-validation"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                     data-testid="cockpit-quick-generate-validation-section"
                 >
                     <summary
@@ -7891,7 +7891,7 @@ function instructionRecord(
 
                 <section
                     id="quick-generate-contract-rider"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <div
                         class="flex min-w-0 items-center justify-between gap-3"
@@ -9057,7 +9057,7 @@ function instructionRecord(
 
                 <details
                     id="quick-generate-contract-feedback"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <summary
                         class="flex min-w-0 cursor-pointer list-none items-center gap-3"
@@ -9300,7 +9300,7 @@ function instructionRecord(
                 <details
                     v-if="!reusableBalance"
                     id="quick-generate-contract-slices"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <summary
                         class="flex min-w-0 cursor-pointer list-none items-center gap-3"
@@ -9814,7 +9814,7 @@ function instructionRecord(
                 <details
                     v-if="!reusableBalance"
                     id="quick-generate-contract-execution"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                     data-testid="cockpit-quick-generate-advanced-contract-section"
                 >
                     <summary
