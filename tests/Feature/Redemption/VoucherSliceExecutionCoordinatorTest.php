@@ -13,6 +13,7 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
 use LBHurtado\XChange\Models\VoucherSliceExecutionOutbox;
+use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
@@ -236,3 +237,71 @@ it('converts flexible slice amounts to exact minor units', function () {
         '_meta' => ['idempotency_key' => 'flexible-exact-money'],
     ]);
 })->throws(VoucherSliceExecutionConflict::class, 'different claim facts');
+
+it('shows claim capacity and requires the final flexible claim to use the remaining balance', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->flexible(
+        totalMinor: 10_000,
+        currency: 'PHP',
+        maxSlices: 2,
+        minAmountMinor: 2_500,
+    );
+    $voucher = voucherWithSlicePlan($plan->canonicalArray());
+    $coordinator = app(VoucherSliceExecutionCoordinator::class);
+
+    $coordinator->reserve($voucher, [
+        'amount' => '25.00',
+        '_meta' => ['idempotency_key' => 'flexible-first-claim'],
+    ]);
+
+    $projection = app(VoucherSlicePlanProjection::class)->forVoucher($voucher);
+    $experience = app(ClaimExperienceCompiler::class)->compile($voucher)->toArray();
+    $amount = collect(collect($experience['phases'])->firstWhere('key', 'form_flow')['fields'])
+        ->firstWhere('key', 'amount');
+
+    expect(data_get($projection, 'claims_used'))->toBe(1)
+        ->and(data_get($projection, 'claims_remaining'))->toBe(1)
+        ->and(data_get($projection, 'is_final_claim'))->toBeTrue()
+        ->and(data_get($projection, 'rows.1.max_slices'))->toBe(2)
+        ->and(data_get($projection, 'rows.1.min_amount_minor'))->toBe(2_500)
+        ->and(data_get($projection, 'rows.1.claims_remaining'))->toBe(1)
+        ->and(data_get($projection, 'rows.1.is_final_claim'))->toBeTrue()
+        ->and($amount['label'])->toBe('Final claim · Claim 2 of 2')
+        ->and($amount['description'])->toBe('Claim the full remaining balance of ₱75.00.')
+        ->and($amount['min'])->toBe(75)
+        ->and($amount['max'])->toBe(75);
+
+    expect(fn () => $coordinator->reserve($voucher, [
+        'amount' => '50.00',
+        '_meta' => ['idempotency_key' => 'flexible-partial-final-claim'],
+    ]))->toThrow(ValidationException::class, 'final claim must use the full remaining balance');
+
+    $final = $coordinator->reserve($voucher, [
+        'amount' => '75.00',
+        '_meta' => ['idempotency_key' => 'flexible-complete-final-claim'],
+    ]);
+
+    expect($final?->execution->amount_minor)->toBe(7_500);
+});
+
+it('prevents a flexible claim from leaving an unusable residual balance', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->flexible(
+        totalMinor: 10_000,
+        currency: 'PHP',
+        maxSlices: 3,
+        minAmountMinor: 2_500,
+    );
+    $voucher = voucherWithSlicePlan($plan->canonicalArray());
+    $coordinator = app(VoucherSliceExecutionCoordinator::class);
+
+    expect(fn () => $coordinator->reserve($voucher, [
+        'amount' => '80.00',
+        '_meta' => ['idempotency_key' => 'flexible-unusable-residual'],
+    ]))->toThrow(ValidationException::class, 'no unusable balance is left behind');
+
+    $full = $coordinator->reserve($voucher, [
+        'amount' => '100.00',
+        '_meta' => ['idempotency_key' => 'flexible-full-early-claim'],
+    ]);
+
+    expect($full?->execution->amount_minor)->toBe(10_000);
+});

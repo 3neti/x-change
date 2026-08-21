@@ -103,7 +103,12 @@ it('hydrates a partially claimed flexible plan with prior activity and remaining
         ->and(data_get($slices, '0.status_label'))->toBe('Paid')
         ->and(data_get($slices, '0.claimed_at'))->toBeString()
         ->and(data_get($slices, '1.label'))->toBe('Remaining capacity')
-        ->and(data_get($slices, '1.amount_minor'))->toBe(25_000);
+        ->and(data_get($slices, '1.amount_minor'))->toBe(25_000)
+        ->and(data_get($slices, '1.max_slices'))->toBe(3)
+        ->and(data_get($slices, '1.min_amount_minor'))->toBe(5_000)
+        ->and(data_get($slices, '1.claims_used'))->toBe(1)
+        ->and(data_get($slices, '1.claims_remaining'))->toBe(2)
+        ->and(data_get($slices, '1.is_final_claim'))->toBeFalse();
 });
 
 it('renders the public claim error page for a missing code', function () {

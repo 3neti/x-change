@@ -368,12 +368,42 @@ final readonly class VoucherSliceExecutionCoordinator
                 ->where('voucher_id', $voucher->getKey())
                 ->whereIn('status', ['reserved', 'executing', 'succeeded', 'indeterminate'])
                 ->sum('amount_minor');
-            $count = VoucherSliceExecution::query()->where('voucher_id', $voucher->getKey())->count();
+            $count = VoucherSliceExecution::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->whereIn('status', [
+                    VoucherSliceExecutionStatus::Reserved,
+                    VoucherSliceExecutionStatus::Executing,
+                    VoucherSliceExecutionStatus::Succeeded,
+                    VoucherSliceExecutionStatus::Indeterminate,
+                ])
+                ->count();
+            $remainingMinor = max(0, $plan->total_minor - $reserved);
+            $claimsRemaining = max(0, (int) $plan->max_slices - $count);
 
-            if ($amountMinor < (int) $plan->min_amount_minor
-                || $reserved + $amountMinor > $plan->total_minor
-                || $count >= (int) $plan->max_slices) {
+            if ($amountMinor <= 0
+                || $amountMinor > $remainingMinor
+                || $claimsRemaining === 0) {
                 throw ValidationException::withMessages(['amount' => 'The requested flexible slice is outside the remaining capacity.']);
+            }
+
+            if ($claimsRemaining === 1 && $amountMinor !== $remainingMinor) {
+                throw ValidationException::withMessages([
+                    'amount' => 'The final claim must use the full remaining balance.',
+                ]);
+            }
+
+            if ($amountMinor < (int) $plan->min_amount_minor && $amountMinor !== $remainingMinor) {
+                throw ValidationException::withMessages([
+                    'amount' => 'The requested amount is below the minimum claim amount.',
+                ]);
+            }
+
+            $residualMinor = $remainingMinor - $amountMinor;
+
+            if ($residualMinor > 0 && $residualMinor < (int) $plan->min_amount_minor) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Claim a smaller amount or the full remaining balance so no unusable balance is left behind.',
+                ]);
             }
 
             return [[[

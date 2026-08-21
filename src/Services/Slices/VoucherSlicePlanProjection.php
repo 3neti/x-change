@@ -50,8 +50,30 @@ final readonly class VoucherSlicePlanProjection
                 true,
             ))
             ->sum('amount_minor');
+        $claimsUsed = $plan->mode === VoucherSlicePlanMode::Flexible
+            ? $executions->filter(static fn (VoucherSliceExecution $execution): bool => in_array(
+                $execution->status,
+                [
+                    VoucherSliceExecutionStatus::Reserved,
+                    VoucherSliceExecutionStatus::Executing,
+                    VoucherSliceExecutionStatus::Succeeded,
+                    VoucherSliceExecutionStatus::Indeterminate,
+                ],
+                true,
+            ))->count()
+            : null;
+        $claimsRemaining = $claimsUsed === null
+            ? null
+            : max(0, (int) $plan->max_slices - $claimsUsed);
+        $availableMinor = max(0, $plan->total_minor - $consumedMinor - $reservedMinor);
         $rows = $plan->mode === VoucherSlicePlanMode::Flexible
-            ? $this->flexibleRows($plan, $executions->all(), $consumedMinor, $reservedMinor)
+            ? $this->flexibleRows(
+                $plan,
+                $executions->all(),
+                $availableMinor,
+                $claimsUsed ?? 0,
+                $claimsRemaining ?? 0,
+            )
             : $plan->slices->toCollection()->map(
                 fn (VoucherSliceData $slice): array => $this->predefinedRow($slice, $items->get($slice->id)),
             )->values()->all();
@@ -69,10 +91,13 @@ final readonly class VoucherSlicePlanProjection
             'total_minor' => $plan->total_minor,
             'consumed_minor' => $consumedMinor,
             'reserved_minor' => $reservedMinor,
-            'available_minor' => max(0, $plan->total_minor - $consumedMinor - $reservedMinor),
+            'available_minor' => $availableMinor,
             'slice_count' => $plan->slices->count(),
             'max_slices' => $plan->max_slices,
             'min_amount_minor' => $plan->min_amount_minor,
+            'claims_used' => $claimsUsed,
+            'claims_remaining' => $claimsRemaining,
+            'is_final_claim' => $claimsRemaining === 1 && $availableMinor > 0,
             'rows' => $rows,
             'raw_payload_exposed' => false,
         ];
@@ -104,8 +129,13 @@ final readonly class VoucherSlicePlanProjection
     }
 
     /** @param array<int, VoucherSliceExecution> $executions @return array<int, array<string, mixed>> */
-    private function flexibleRows(VoucherSlicePlanData $plan, array $executions, int $consumedMinor, int $reservedMinor): array
-    {
+    private function flexibleRows(
+        VoucherSlicePlanData $plan,
+        array $executions,
+        int $availableMinor,
+        int $claimsUsed,
+        int $claimsRemaining,
+    ): array {
         $rows = collect($executions)->map(fn (VoucherSliceExecution $execution): array => [
             'id' => $execution->reference,
             'label' => 'Claim '.$execution->claim_number,
@@ -123,20 +153,23 @@ final readonly class VoucherSlicePlanProjection
             'claim_number' => $execution->claim_number,
             'claimed_at' => $this->claimedAt($execution),
         ])->all();
-        $available = max(0, $plan->total_minor - $consumedMinor - $reservedMinor);
-
-        if ($available > 0 && count($executions) < (int) $plan->max_slices) {
+        if ($availableMinor > 0 && $claimsRemaining > 0) {
             $rows[] = [
                 'id' => 'remaining_capacity',
                 'label' => 'Remaining capacity',
                 'sequence' => count($rows) + 1,
-                'amount_minor' => $available,
+                'amount_minor' => $availableMinor,
                 'status' => 'available',
                 'status_label' => 'Available',
                 'claim_on' => null,
                 'claim_by' => null,
                 'claim_number' => null,
                 'claimed_at' => null,
+                'max_slices' => (int) $plan->max_slices,
+                'min_amount_minor' => (int) $plan->min_amount_minor,
+                'claims_used' => $claimsUsed,
+                'claims_remaining' => $claimsRemaining,
+                'is_final_claim' => $claimsRemaining === 1,
             ];
         }
 

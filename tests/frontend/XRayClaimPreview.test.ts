@@ -166,6 +166,11 @@ describe('XRayClaimPreview', () => {
                                     amount_minor: 25000,
                                     status: 'available',
                                     status_label: 'Available',
+                                    max_slices: 2,
+                                    min_amount_minor: 2500,
+                                    claims_used: 1,
+                                    claims_remaining: 1,
+                                    is_final_claim: true,
                                 },
                             ],
                         },
@@ -180,8 +185,17 @@ describe('XRayClaimPreview', () => {
         expect(wrapper.text()).toContain('Morning fare');
         expect(wrapper.text()).toContain('₱25.00');
         expect(wrapper.text()).toContain('Claimed');
-        expect(wrapper.text()).toContain('Remaining capacity');
         expect(wrapper.text()).toContain('₱250.00');
+        expect(
+            wrapper.get('[data-testid="xray-flexible-plan-summary"]').text(),
+        ).toContain('Claims remaining');
+        expect(wrapper.text()).toContain('1 of 2');
+        expect(wrapper.text()).toContain('Minimum claim');
+        expect(wrapper.text()).toContain('₱25.00');
+        expect(wrapper.text()).toContain(
+            'Final claim — use the full remaining balance.',
+        );
+        expect(wrapper.text()).not.toContain('Remaining capacity');
         expect(wrapper.text()).not.toContain('[object Object]');
     });
 

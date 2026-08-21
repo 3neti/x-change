@@ -12,6 +12,7 @@ use LBHurtado\XChange\Data\Claim\ClaimPhaseData;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use NumberFormatter;
 use Spatie\LaravelData\DataCollection;
 
 class ClaimExperienceCompiler
@@ -207,16 +208,27 @@ class ClaimExperienceCompiler
 
         if ($plan?->mode === VoucherSlicePlanMode::Flexible) {
             $projection = $this->slicePlans->forVoucher($voucher);
+            $availableMinor = (int) data_get($projection, 'available_minor', 0);
+            $claimsUsed = (int) data_get($projection, 'claims_used', 0);
+            $claimsRemaining = (int) data_get($projection, 'claims_remaining', 0);
+            $maxSlices = (int) $plan->max_slices;
+            $isFinalClaim = (bool) data_get($projection, 'is_final_claim', false);
 
             $fields[] = [
                 'key' => 'amount',
                 'type' => 'number',
-                'label' => 'Amount to claim',
-                'description' => 'Enter an amount within the remaining flexible balance.',
+                'label' => $isFinalClaim
+                    ? "Final claim · Claim {$maxSlices} of {$maxSlices}"
+                    : 'Amount to claim · Claim '.($claimsUsed + 1)." of {$maxSlices}",
+                'description' => $isFinalClaim
+                    ? 'Claim the full remaining balance of '.$this->formatMoney($availableMinor, $plan->currency).'.'
+                    : "{$claimsRemaining} of {$maxSlices} claims remaining. Minimum "
+                        .$this->formatMoney((int) $plan->min_amount_minor, $plan->currency)
+                        .' per claim. You may claim the full remaining balance now.',
                 'required' => true,
                 'inputmode' => 'decimal',
-                'min' => ((int) $plan->min_amount_minor) / 100,
-                'max' => ((int) data_get($projection, 'available_minor', 0)) / 100,
+                'min' => ($isFinalClaim ? $availableMinor : (int) $plan->min_amount_minor) / 100,
+                'max' => $availableMinor / 100,
                 'step' => 0.01,
             ];
         }
@@ -227,5 +239,12 @@ class ClaimExperienceCompiler
     private function requiresClaimSecret(Voucher $voucher): bool
     {
         return filled(data_get($this->instructions($voucher), 'cash.validation.secret'));
+    }
+
+    private function formatMoney(int $amountMinor, string $currency): string
+    {
+        $formatter = new NumberFormatter('en_PH', NumberFormatter::CURRENCY);
+
+        return $formatter->formatCurrency($amountMinor / 100, $currency) ?: "{$currency} ".number_format($amountMinor / 100, 2);
     }
 }

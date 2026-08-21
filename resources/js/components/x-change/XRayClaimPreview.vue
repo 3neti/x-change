@@ -47,6 +47,11 @@ interface XRaySliceRow {
     status?: string | null;
     status_label?: string | null;
     claimed_at?: string | null;
+    max_slices?: number | null;
+    min_amount_minor?: number | null;
+    claims_used?: number | null;
+    claims_remaining?: number | null;
+    is_final_claim?: boolean | null;
 }
 
 const props = withDefaults(defineProps<{
@@ -94,6 +99,15 @@ const sliceRows = computed<XRaySliceRow[]>(() => {
           )
         : [];
 });
+const flexiblePlan = computed<XRaySliceRow | null>(
+    () =>
+        sliceRows.value.find((row) => row.id === 'remaining_capacity') ?? null,
+);
+const sliceActivityRows = computed<XRaySliceRow[]>(() =>
+    flexiblePlan.value
+        ? sliceRows.value.filter((row) => row.id !== 'remaining_capacity')
+        : sliceRows.value,
+);
 
 function formatSliceAmount(value: number | null | undefined): string {
     return new Intl.NumberFormat('en-PH', {
@@ -252,9 +266,60 @@ function stageText(stage: XRayStage): string {
                         >
                             Slices
                         </p>
-                        <ul class="grid gap-2">
+                        <div
+                            v-if="flexiblePlan"
+                            class="grid gap-2 rounded-lg border bg-muted/20 p-3 sm:grid-cols-3"
+                            data-testid="xray-flexible-plan-summary"
+                        >
+                            <div>
+                                <p class="text-xs text-muted-foreground">
+                                    Available
+                                </p>
+                                <p
+                                    class="text-sm font-semibold text-foreground"
+                                >
+                                    {{
+                                        formatSliceAmount(
+                                            flexiblePlan.amount_minor,
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted-foreground">
+                                    Claims remaining
+                                </p>
+                                <p
+                                    class="text-sm font-semibold text-foreground"
+                                >
+                                    {{ flexiblePlan.claims_remaining }} of
+                                    {{ flexiblePlan.max_slices }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted-foreground">
+                                    Minimum claim
+                                </p>
+                                <p
+                                    class="text-sm font-semibold text-foreground"
+                                >
+                                    {{
+                                        formatSliceAmount(
+                                            flexiblePlan.min_amount_minor,
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                            <p
+                                v-if="flexiblePlan.is_final_claim"
+                                class="text-xs font-medium text-foreground sm:col-span-3"
+                            >
+                                Final claim — use the full remaining balance.
+                            </p>
+                        </div>
+                        <ul v-if="sliceActivityRows.length" class="grid gap-2">
                             <li
-                                v-for="slice in sliceRows"
+                                v-for="slice in sliceActivityRows"
                                 :key="String(slice.id)"
                                 class="flex min-w-0 items-center justify-between gap-3 rounded-lg border bg-muted/20 px-3 py-2"
                             >
