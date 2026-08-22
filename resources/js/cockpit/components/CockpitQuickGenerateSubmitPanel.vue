@@ -5927,7 +5927,7 @@ function instructionRecord(
         </div>
 
         <div
-            class="grid min-w-0 gap-5 xl:grid-cols-[minmax(19rem,0.74fr)_minmax(28rem,1.26fr)]"
+            class="grid min-w-0 gap-5 xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]"
             data-testid="cockpit-quick-generate-essentials-canvas"
         >
             <div
