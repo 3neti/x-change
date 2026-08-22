@@ -48,27 +48,29 @@ function toggleValueVisibility(): void {
 
 <template>
     <header
-        class="border-b border-border bg-card/95 px-4 py-3 text-card-foreground backdrop-blur"
+        class="border-b border-border bg-card/95 px-4 py-2 text-card-foreground backdrop-blur"
         data-testid="cockpit-global-header"
     >
-        <div
-            class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"
-        >
-            <div class="min-w-0">
-                <p
-                    class="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground"
+        <div class="grid min-w-0 gap-1">
+            <div
+                class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1"
+                data-testid="cockpit-global-header-primary"
+            >
+                <h1 class="text-lg font-semibold text-foreground">
+                    {{ institution }}
+                </h1>
+                <span
+                    class="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
                 >
-                    Settlement Operating System
+                    {{ connectivity }}
+                </span>
+                <p
+                    class="min-w-0 truncate text-sm text-muted-foreground"
+                    :title="`Operating as: ${operatingIdentity}`"
+                >
+                    Operating as: {{ operatingIdentity }}
                 </p>
-                <div class="mt-1 flex flex-wrap items-center gap-3">
-                    <h1 class="text-lg font-semibold text-foreground">
-                        {{ institution }}
-                    </h1>
-                    <span
-                        class="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
-                    >
-                        {{ connectivity }}
-                    </span>
+                <div class="ml-auto flex shrink-0 items-center gap-2">
                     <button
                         type="button"
                         class="inline-flex size-8 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:outline-white"
@@ -98,15 +100,11 @@ function toggleValueVisibility(): void {
                         data-testid="cockpit-theme-picker"
                     />
                 </div>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    Operating as: {{ operatingIdentity }}
-                </p>
             </div>
 
             <CockpitBalanceHud
                 :balances="balances"
                 :values-visible="valuesVisible"
-                class="xl:min-w-[44rem]"
             />
         </div>
     </header>

@@ -198,9 +198,14 @@ describe('Cockpit shell layout baseline', () => {
         expect(wrapper.text()).not.toContain('Summary not connected');
         expect(wrapper.text()).not.toContain('Provider not connected');
         expect(wrapper.text()).toContain('Operating as: Account holder');
+        expect(wrapper.text()).not.toContain('Settlement Operating System');
+        expect(
+            wrapper.get('[data-testid="cockpit-global-header-primary"]')
+                .text(),
+        ).toContain('Operating as: Account holder');
         expect(
             wrapper.find('[data-testid="cockpit-balance-hud"]').classes(),
-        ).toContain('xl:min-w-[44rem]');
+        ).not.toContain('xl:min-w-[44rem]');
     });
 
     it('keeps the balance HUD as supplied summary text', () => {
@@ -223,7 +228,7 @@ describe('Cockpit shell layout baseline', () => {
         ).toHaveLength(1);
     });
 
-    it('keeps the three primary balance values in one prominent horizontal rail', () => {
+    it('keeps the three primary balance values in one muted inline strip', () => {
         const wrapper = mount(CockpitBalanceHud, {
             props: {
                 valuesVisible: true,
@@ -257,21 +262,33 @@ describe('Cockpit shell layout baseline', () => {
             '[data-testid="cockpit-balance-value"]',
         );
         const hud = wrapper.find('[data-testid="cockpit-balance-hud"]');
+        const strip = wrapper.find(
+            '[data-testid="cockpit-balance-strip"]',
+        );
 
         expect(labelRows).toHaveLength(3);
         expect(valueRows).toHaveLength(3);
-        expect(hud.classes()).toContain('grid-cols-3');
-        expect(hud.classes()).toContain('xl:grid-cols-3');
+        expect(hud.classes()).toContain('max-w-full');
+        expect(hud.classes()).toContain('min-w-0');
+        expect(hud.classes()).toContain('overflow-x-auto');
+        expect(hud.classes()).not.toContain('border');
+        expect(hud.classes()).not.toContain('shadow-sm');
+        expect(strip.classes()).toContain('flex');
+        expect(strip.classes()).toContain('min-w-max');
+        expect(strip.classes()).toContain('whitespace-nowrap');
+        expect(
+            wrapper.findAll('[data-testid="cockpit-balance-separator"]'),
+        ).toHaveLength(2);
         expect(wrapper.text()).toContain('₱8,241.70');
 
         for (const labelRow of labelRows) {
-            expect(labelRow.classes()).toContain('text-center');
+            expect(labelRow.classes()).toContain('font-normal');
+            expect(labelRow.classes()).toContain('text-muted-foreground');
         }
 
         for (const valueRow of valueRows) {
-            expect(valueRow.classes()).toContain('text-center');
-            expect(valueRow.classes()).toContain('whitespace-nowrap');
-            expect(valueRow.classes()).toContain('font-bold');
+            expect(valueRow.classes()).toContain('font-medium');
+            expect(valueRow.classes()).not.toContain('font-bold');
         }
     });
 
@@ -313,8 +330,9 @@ describe('Cockpit shell layout baseline', () => {
             .find((metric) => metric.text().includes('NetBank Liquidity'));
 
         expect(providerMetric).toBeDefined();
-        expect(providerMetric?.classes()).toContain('col-span-3');
-        expect(providerMetric?.classes()).toContain('xl:col-span-1');
+        expect(providerMetric?.classes()).toContain('inline-flex');
+        expect(providerMetric?.classes()).not.toContain('col-span-3');
+        expect(providerMetric?.classes()).not.toContain('xl:col-span-1');
         expect(providerMetric?.text()).not.toContain('₱9,000.00');
         expect(providerMetric?.text()).toContain('Stale · ••••••');
         expect(providerMetric?.attributes('aria-label')).not.toContain(
@@ -331,6 +349,49 @@ describe('Cockpit shell layout baseline', () => {
         expect(providerMetric?.text()).toContain('Stale · ₱9,000.00');
         expect(
             wrapper.find('[data-testid="cockpit-balance-hud"]').classes(),
-        ).toContain('xl:grid-cols-4');
+        ).not.toContain('xl:grid-cols-4');
+    });
+
+    it('contains the single-line balance strip at narrow viewport widths', () => {
+        const wrapper = mount(CockpitGlobalHeader, {
+            props: {
+                institution: 'DBP Pay Code',
+                operatingIdentity: 'Treasury Operations',
+                balances: [
+                    {
+                        key: 'internal',
+                        label: 'Client Funds',
+                        value: '₱8,241.70',
+                        amount_minor: 824_170,
+                    },
+                    {
+                        key: 'outstanding',
+                        label: 'Outstanding Pay Codes',
+                        value: '₱500.00',
+                        amount_minor: 50_000,
+                    },
+                    {
+                        key: 'issuance',
+                        label: 'Issuance Capacity',
+                        value: '₱7,741.70',
+                        amount_minor: 774_170,
+                    },
+                ],
+            },
+        });
+        const header = wrapper.get('[data-testid="cockpit-global-header"]');
+        const primary = wrapper.get(
+            '[data-testid="cockpit-global-header-primary"]',
+        );
+        const hud = wrapper.get('[data-testid="cockpit-balance-hud"]');
+
+        expect(header.classes()).toContain('px-4');
+        expect(primary.classes()).toContain('flex-wrap');
+        expect(primary.classes()).toContain('min-w-0');
+        expect(hud.classes()).toContain('max-w-full');
+        expect(hud.classes()).toContain('overflow-x-auto');
+        expect(
+            hud.get('[data-testid="cockpit-balance-strip"]').classes(),
+        ).toContain('whitespace-nowrap');
     });
 });
