@@ -7949,13 +7949,13 @@ function instructionRecord(
                             <div
                                 role="tablist"
                                 aria-label="Rider Design editor"
-                                class="sticky top-0 z-30 grid grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-white/95 p-1 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95"
+                                class="sticky top-0 z-30 grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white/95 p-1 shadow-sm backdrop-blur @sm:grid-cols-4 dark:border-slate-800 dark:bg-slate-950/95"
                                 data-testid="cockpit-quick-generate-rider-design-tabs"
                             >
                                 <button
                                     type="button"
                                     role="tab"
-                                    class="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:text-xs"
+                                    class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
                                     :class="
                                         riderDesignEditor === 'appearance'
                                             ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
@@ -7973,12 +7973,12 @@ function instructionRecord(
                                         class="size-3.5 shrink-0"
                                         aria-hidden="true"
                                     />
-                                    <span class="truncate">Appearance</span>
+                                    <span class="whitespace-nowrap">Appearance</span>
                                 </button>
                                 <button
                                     type="button"
                                     role="tab"
-                                    class="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:text-xs"
+                                    class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
                                     :class="
                                         riderDesignEditor === 'message'
                                             ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
@@ -7994,12 +7994,12 @@ function instructionRecord(
                                         class="size-3.5 shrink-0"
                                         aria-hidden="true"
                                     />
-                                    <span class="truncate">Message</span>
+                                    <span class="whitespace-nowrap">Message</span>
                                 </button>
                                 <button
                                     type="button"
                                     role="tab"
-                                    class="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:text-xs"
+                                    class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
                                     :class="
                                         riderDesignEditor === 'link'
                                             ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
@@ -8015,12 +8015,12 @@ function instructionRecord(
                                         class="size-3.5 shrink-0"
                                         aria-hidden="true"
                                     />
-                                    <span class="truncate">Link</span>
+                                    <span class="whitespace-nowrap">Link</span>
                                 </button>
                                 <button
                                     type="button"
                                     role="tab"
-                                    class="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:text-xs"
+                                    class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
                                     :class="
                                         riderDesignEditor === 'splash'
                                             ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
@@ -8036,7 +8036,7 @@ function instructionRecord(
                                         class="size-3.5 shrink-0"
                                         aria-hidden="true"
                                     />
-                                    <span class="truncate">Splash</span>
+                                    <span class="whitespace-nowrap">Splash</span>
                                 </button>
                             </div>
                             <CockpitRiderEditorDisclosure

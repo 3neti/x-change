@@ -908,7 +908,7 @@ function stringValue(value: unknown): string | null {
             :id="panelId('design')"
             role="tabpanel"
             :aria-labelledby="tabId('design')"
-            class="aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
+            class="h-[clamp(24rem,58vh,36rem)] w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 xl:h-[clamp(28rem,64vh,42rem)] 2xl:h-[clamp(28rem,64vh,38rem)] dark:border-slate-800 dark:bg-slate-900/70"
             data-testid="cockpit-pay-code-canvas-design"
         >
             <slot name="design" />
@@ -919,7 +919,7 @@ function stringValue(value: unknown): string | null {
             :id="panelId('claim')"
             role="tabpanel"
             :aria-labelledby="tabId('claim')"
-            class="aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-2 dark:border-slate-800 dark:bg-slate-900/70"
+            class="h-[clamp(24rem,58vh,36rem)] w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-2 xl:h-[clamp(28rem,64vh,42rem)] 2xl:h-[clamp(28rem,64vh,38rem)] dark:border-slate-800 dark:bg-slate-900/70"
             data-testid="cockpit-pay-code-canvas-claim"
         >
             <slot name="claim" />

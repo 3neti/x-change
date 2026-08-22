@@ -679,6 +679,11 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('[data-testid="cockpit-pay-code-canvas-front-button"]')
                 .attributes('aria-selected'),
         ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-front"]')
+                .classes(),
+        ).toContain('aspect-[1.72/1]');
 
         await wrapper
             .get('[data-testid="cockpit-pay-code-canvas-design-button"]')
@@ -690,12 +695,32 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(designPanel.attributes('role')).toBe('tabpanel');
         expect(designPanel.classes()).toContain('w-full');
+        expect(designPanel.classes()).toContain(
+            'h-[clamp(24rem,58vh,36rem)]',
+        );
+        expect(designPanel.classes()).toContain(
+            'xl:h-[clamp(28rem,64vh,42rem)]',
+        );
+        expect(designPanel.classes()).toContain(
+            '2xl:h-[clamp(28rem,64vh,38rem)]',
+        );
+        expect(designPanel.classes()).not.toContain('aspect-[1.72/1]');
         expect(designPanel.text()).toContain('Rider editor');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-canvas-design-button"]')
                 .attributes('aria-selected'),
         ).toBe('true');
+
+        await wrapper
+            .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-back"]')
+                .classes(),
+        ).toContain('aspect-[1.72/1]');
 
         const finalized = mount(CockpitPayCodeCanvas, {
             props: {
@@ -847,6 +872,17 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(designTabs.findAll('[role="tab"]')).toHaveLength(4);
+        expect(designTabs.classes()).toContain('grid-cols-2');
+        expect(designTabs.classes()).toContain('@sm:grid-cols-4');
+        expect(
+            designTabs
+                .findAll('[role="tab"]')
+                .map((tab) => tab.text().trim()),
+        ).toEqual(['Appearance', 'Message', 'Link', 'Splash']);
+        for (const tab of designTabs.findAll('[role="tab"]')) {
+            expect(tab.get('span').classes()).toContain('whitespace-nowrap');
+            expect(tab.get('span').classes()).not.toContain('truncate');
+        }
         expect(appearanceTab.attributes('aria-selected')).toBe('true');
         const appearanceLayout = wrapper.get(
             '[data-testid="cockpit-quick-generate-rider-appearance-layout"]',
@@ -4873,11 +4909,20 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).not.toContain('Claim Experience Preview');
         expect(wrapper.text()).not.toContain('Preview Only');
         expect(wrapper.text()).not.toContain('Recipient Journey');
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-pay-code-canvas-claim"]')
-                .classes(),
-        ).toContain('aspect-[1.72/1]');
+        const claimPanel = wrapper.get(
+            '[data-testid="cockpit-pay-code-canvas-claim"]',
+        );
+
+        expect(claimPanel.classes()).toContain(
+            'h-[clamp(24rem,58vh,36rem)]',
+        );
+        expect(claimPanel.classes()).toContain(
+            'xl:h-[clamp(28rem,64vh,42rem)]',
+        );
+        expect(claimPanel.classes()).toContain(
+            '2xl:h-[clamp(28rem,64vh,38rem)]',
+        );
+        expect(claimPanel.classes()).not.toContain('aspect-[1.72/1]');
         expect(
             wrapper
                 .get('[data-testid="cockpit-claim-experience-preview"]')
