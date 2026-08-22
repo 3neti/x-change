@@ -190,6 +190,15 @@ describe('Cockpit Value Use control', () => {
         expect(
             wrapper.get('[data-testid="cockpit-value-use-control"]').classes(),
         ).toContain('min-w-0');
+        expect(
+            wrapper.get('[data-testid="cockpit-value-use-control"]').classes(),
+        ).toContain('@container');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-value-use-reusable-balance"]')
+                .element.closest('label')?.textContent,
+        ).toContain('Reusable balance');
+        expect(html).not.toContain('>Reusable<');
         expect(html).not.toMatch(/min-w-(?:32|40|48|64|\[)/);
     });
 });

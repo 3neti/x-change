@@ -192,11 +192,11 @@ function applyPreset(key: string): void {
 
 <template>
     <div
-        class="relative grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+        class="@container relative grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
         data-testid="cockpit-claim-requirements-control"
     >
         <div
-            class="flex h-9 min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-1 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            class="@sm:flex @sm:h-9 @sm:flex-nowrap @sm:py-0 grid min-h-9 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1.5 gap-y-1 rounded-lg border border-slate-200 bg-white px-1 py-1 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
             <div class="flex shrink-0 items-center gap-0.5">
                 <button
@@ -218,7 +218,7 @@ function applyPreset(key: string): void {
             </div>
 
             <div
-                class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+                class="@sm:col-auto @sm:row-auto @sm:flex-1 col-span-2 row-start-2 flex min-w-0 max-w-full items-center gap-1 overflow-x-auto"
                 data-testid="cockpit-claim-requirements-chips"
             >
                 <span
@@ -279,7 +279,7 @@ function applyPreset(key: string): void {
 
             <button
                 type="button"
-                class="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:text-slate-400 dark:hover:bg-slate-800"
+                class="@sm:col-auto @sm:row-auto col-start-2 row-start-1 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:text-slate-400 dark:hover:bg-slate-800"
                 :disabled="disabled"
                 aria-label="Add claim requirement"
                 data-testid="cockpit-claim-requirements-add"

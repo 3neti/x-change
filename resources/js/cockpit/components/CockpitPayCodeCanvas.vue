@@ -524,7 +524,7 @@ function stringValue(value: unknown): string | null {
         data-testid="cockpit-pay-code-canvas"
     >
         <div
-            class="mb-4 flex flex-col gap-3 @md:flex-row @md:items-start @md:justify-between"
+            class="@md:flex-row @md:items-start @md:justify-between mb-4 flex flex-col gap-3"
             data-testid="cockpit-pay-code-canvas-header"
         >
             <div class="min-w-0">
@@ -546,7 +546,7 @@ function stringValue(value: unknown): string | null {
                 </p>
             </div>
             <div
-                class="flex w-full shrink-0 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm @md:w-auto dark:border-slate-700 dark:bg-slate-950"
+                class="@md:flex @md:w-auto grid w-full min-w-0 shrink-0 auto-cols-fr grid-flow-col rounded-full border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
                 aria-label="Pay Code view"
                 role="tablist"
                 data-testid="cockpit-pay-code-canvas-view-switch"
@@ -555,7 +555,7 @@ function stringValue(value: unknown): string | null {
                     :id="tabId('stamp')"
                     type="button"
                     role="tab"
-                    class="flex-1 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition @md:flex-none"
+                    class="@md:flex-none @md:px-3 min-w-0 rounded-full px-1.5 py-1 text-[0.7rem] font-semibold transition"
                     :class="
                         visibleView === 'stamp'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
@@ -573,7 +573,7 @@ function stringValue(value: unknown): string | null {
                     :id="tabId('design')"
                     type="button"
                     role="tab"
-                    class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition @md:flex-none"
+                    class="@xs:gap-1.5 @md:flex-none @md:px-3 inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-1.5 py-1 text-[0.7rem] font-semibold transition"
                     :class="
                         visibleView === 'design'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
@@ -584,7 +584,10 @@ function stringValue(value: unknown): string | null {
                     data-testid="cockpit-pay-code-canvas-design-button"
                     @click="visibleView = 'design'"
                 >
-                    <Palette class="size-3" aria-hidden="true" />
+                    <Palette
+                        class="@xs:block hidden size-3"
+                        aria-hidden="true"
+                    />
                     Design
                 </button>
                 <button
@@ -592,7 +595,7 @@ function stringValue(value: unknown): string | null {
                     :id="tabId('claim')"
                     type="button"
                     role="tab"
-                    class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition @md:flex-none"
+                    class="@xs:gap-1.5 @md:flex-none @md:px-3 inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-1.5 py-1 text-[0.7rem] font-semibold transition"
                     :class="
                         visibleView === 'claim'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
@@ -603,14 +606,14 @@ function stringValue(value: unknown): string | null {
                     data-testid="cockpit-pay-code-canvas-claim-button"
                     @click="visibleView = 'claim'"
                 >
-                    <Route class="size-3" aria-hidden="true" />
+                    <Route class="@xs:block hidden size-3" aria-hidden="true" />
                     Claim
                 </button>
                 <button
                     :id="tabId('cost')"
                     type="button"
                     role="tab"
-                    class="flex-1 rounded-full px-3 py-1 text-[0.7rem] font-semibold transition @md:flex-none"
+                    class="@md:flex-none @md:px-3 min-w-0 rounded-full px-1.5 py-1 text-[0.7rem] font-semibold transition"
                     :class="
                         visibleView === 'cost'
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
@@ -631,7 +634,7 @@ function stringValue(value: unknown): string | null {
             :id="panelId('stamp')"
             role="tabpanel"
             :aria-labelledby="tabId('stamp')"
-            class="relative aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10 @md:p-7"
+            class="@md:min-h-72 @md:p-7 relative flex aspect-[1.72/1] min-h-88 w-full flex-col overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10"
             :class="
                 hasRiderDesign
                     ? 'border-slate-700 bg-slate-950 text-white'
@@ -666,7 +669,7 @@ function stringValue(value: unknown): string | null {
                 aria-hidden="true"
             />
             <div
-                class="absolute -right-16 -bottom-20 size-64 rounded-full border-[2rem] border-emerald-700/5"
+                class="absolute -bottom-20 -right-16 size-64 rounded-full border-[2rem] border-emerald-700/5"
                 aria-hidden="true"
             />
             <div
@@ -686,7 +689,7 @@ function stringValue(value: unknown): string | null {
                     <img
                         :src="claimQr"
                         :alt="`Claim ${displayedCode}`"
-                        class="size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg @md:size-20"
+                        class="@md:size-20 size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg"
                         data-testid="cockpit-pay-code-canvas-claim-qr"
                     />
                 </button>
@@ -694,12 +697,12 @@ function stringValue(value: unknown): string | null {
                     v-else-if="showClaimQr && claimQr"
                     :src="claimQr"
                     :alt="`Claim ${displayedCode}`"
-                    class="size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg @md:size-20"
+                    class="@md:size-20 size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg"
                     data-testid="cockpit-pay-code-canvas-claim-qr"
                 />
                 <span
                     v-else-if="showClaimQr"
-                    class="grid size-14 place-items-center rounded-lg border border-dashed border-current bg-white/85 text-slate-400 shadow-sm @md:size-16 dark:bg-slate-950/85"
+                    class="@md:size-16 grid size-14 place-items-center rounded-lg border border-dashed border-current bg-white/85 text-slate-400 shadow-sm dark:bg-slate-950/85"
                     aria-label="Claim QR appears after issue"
                     data-testid="cockpit-pay-code-canvas-claim-qr-placeholder"
                 >
@@ -714,7 +717,9 @@ function stringValue(value: unknown): string | null {
                 </span>
             </div>
 
-            <div class="relative flex h-full flex-col justify-between gap-5">
+            <div
+                class="relative flex min-h-0 flex-1 flex-col justify-between gap-5"
+            >
                 <div class="flex items-start justify-between gap-4">
                     <div
                         v-if="showStampLogo"
@@ -724,12 +729,12 @@ function stringValue(value: unknown): string | null {
                         <img
                             :src="payCodeMarkUrl"
                             alt="Pay Code mark"
-                            class="h-12 w-auto shrink-0 object-contain @md:h-14"
+                            class="@md:h-14 h-12 w-auto shrink-0 object-contain"
                             data-testid="cockpit-pay-code-canvas-logo"
                         />
                         <div class="min-w-0">
                             <p
-                                class="text-[0.65rem] font-black tracking-[0.22em] uppercase"
+                                class="text-[0.65rem] font-black uppercase tracking-[0.22em]"
                                 :class="
                                     hasRiderDesign
                                         ? 'text-emerald-300'
@@ -740,7 +745,7 @@ function stringValue(value: unknown): string | null {
                             </p>
                             <p
                                 v-if="showStampTagline"
-                                class="mt-1 max-w-52 text-[0.62rem] leading-4 font-semibold text-balance @md:text-xs"
+                                class="@md:text-xs mt-1 max-w-52 text-balance text-[0.62rem] font-semibold leading-4"
                                 :class="
                                     hasRiderDesign
                                         ? 'text-white/80'
@@ -758,7 +763,7 @@ function stringValue(value: unknown): string | null {
                     <div v-else class="min-h-10">
                         <p
                             v-if="showStampTagline"
-                            class="max-w-52 text-[0.62rem] leading-4 font-semibold text-balance @md:text-xs"
+                            class="@md:text-xs max-w-52 text-balance text-[0.62rem] font-semibold leading-4"
                             :class="
                                 hasRiderDesign
                                     ? 'text-white/80'
@@ -790,7 +795,7 @@ function stringValue(value: unknown): string | null {
                             +{{ hiddenStampIndicators.length }}
                             <span
                                 role="tooltip"
-                                class="pointer-events-none absolute top-full right-0 z-50 mt-2 w-max max-w-52 rounded-md bg-slate-950 px-2.5 py-1.5 text-center text-[0.65rem] leading-4 font-medium text-white opacity-0 shadow-xl transition-opacity group-hover/more:opacity-100 group-focus/more:opacity-100"
+                                class="pointer-events-none absolute right-0 top-full z-50 mt-2 w-max max-w-52 rounded-md bg-slate-950 px-2.5 py-1.5 text-center text-[0.65rem] font-medium leading-4 text-white opacity-0 shadow-xl transition-opacity group-hover/more:opacity-100 group-focus/more:opacity-100"
                             >
                                 {{ hiddenStampIndicatorTooltip }}
                             </span>
@@ -805,13 +810,13 @@ function stringValue(value: unknown): string | null {
                         data-testid="cockpit-pay-code-canvas-stamp-copy"
                     >
                         <p
-                            class="line-clamp-1 text-base font-black text-balance @md:text-xl"
+                            class="@md:text-xl line-clamp-1 text-balance text-base font-black"
                         >
                             {{ riderStamp?.title }}
                         </p>
                         <p
                             v-if="riderStamp?.description"
-                            class="mt-1 line-clamp-3 text-[0.65rem] leading-4 @md:text-xs"
+                            class="@md:text-xs mt-1 line-clamp-3 text-[0.65rem] leading-4"
                             data-testid="cockpit-pay-code-canvas-stamp-description"
                             :class="
                                 hasRiderDesign
@@ -823,7 +828,7 @@ function stringValue(value: unknown): string | null {
                         </p>
                     </div>
                     <p
-                        class="text-[0.65rem] font-semibold tracking-[0.18em] uppercase"
+                        class="text-[0.65rem] font-semibold uppercase tracking-[0.18em]"
                         :class="
                             hasRiderDesign
                                 ? 'text-white/65'
@@ -833,7 +838,7 @@ function stringValue(value: unknown): string | null {
                         Value
                     </p>
                     <p
-                        class="mt-1 text-3xl font-black tracking-tight @md:text-4xl"
+                        class="@md:text-4xl mt-1 text-3xl font-black tracking-tight"
                         data-testid="cockpit-pay-code-canvas-amount"
                     >
                         {{ formattedAmount }}
@@ -879,7 +884,7 @@ function stringValue(value: unknown): string | null {
                     </div>
                     <div v-if="riderStamp === null" class="shrink-0 text-right">
                         <p
-                            class="text-[0.6rem] font-semibold tracking-[0.18em] uppercase"
+                            class="text-[0.6rem] font-semibold uppercase tracking-[0.18em]"
                             :class="
                                 hasRiderDesign
                                     ? 'text-white/65'
@@ -925,14 +930,14 @@ function stringValue(value: unknown): string | null {
             :id="panelId('cost')"
             role="tabpanel"
             :aria-labelledby="tabId('cost')"
-            class="relative aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20 @lg:p-6"
+            class="@lg:p-6 relative aspect-[1.72/1] min-h-72 w-full overflow-hidden rounded-[1.4rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20"
             data-testid="cockpit-pay-code-canvas-back"
         >
             <div class="flex h-full min-w-0 flex-col">
                 <div class="flex items-start justify-between gap-4">
                     <div class="min-w-0">
                         <p
-                            class="flex items-center gap-2 text-[0.65rem] font-bold tracking-[0.2em] text-emerald-300 uppercase"
+                            class="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-300"
                         >
                             <ReceiptText class="size-3.5" aria-hidden="true" />
                             {{
@@ -999,10 +1004,10 @@ function stringValue(value: unknown): string | null {
                             class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] content-start gap-y-1"
                             :class="[
                                 costLedgerColumnCount === 3
-                                    ? 'gap-x-1 text-[0.625rem] leading-3.5'
+                                    ? 'leading-3.5 gap-x-1 text-[0.625rem]'
                                     : costLedgerColumnCount === 2
                                       ? 'gap-x-1.5 text-[0.6875rem] leading-4'
-                                      : 'gap-x-4 text-xs @sm:text-sm',
+                                      : '@sm:text-sm gap-x-4 text-xs',
                                 costLedgerColumnCount > 1 && columnIndex > 0
                                     ? costLedgerColumnCount === 3
                                         ? 'border-l border-white/15 pl-1.5'
@@ -1020,7 +1025,7 @@ function stringValue(value: unknown): string | null {
                                     class="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-slate-300"
                                     :class="
                                         costLedgerColumnCount === 1
-                                            ? 'text-xs @sm:text-sm'
+                                            ? '@sm:text-sm text-xs'
                                             : ''
                                     "
                                     :title="item.label"
@@ -1040,7 +1045,7 @@ function stringValue(value: unknown): string | null {
                                     </span>
                                 </dt>
                                 <dd
-                                    class="text-right font-medium whitespace-nowrap text-white tabular-nums"
+                                    class="whitespace-nowrap text-right font-medium tabular-nums text-white"
                                     data-testid="cockpit-pay-code-cost-amount"
                                 >
                                     {{
@@ -1067,15 +1072,15 @@ function stringValue(value: unknown): string | null {
 
                     <dl
                         v-if="hasCostEstimate"
-                        class="mt-auto grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 border-t border-white/20 pt-2 text-[0.6875rem] leading-4 @sm:text-xs"
+                        class="@sm:text-xs mt-auto grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 border-t border-white/20 pt-2 text-[0.6875rem] leading-4"
                         data-testid="cockpit-pay-code-cost-summary"
                     >
                         <dt class="text-slate-300">Instruction Subtotal</dt>
                         <dd
-                            class="text-right font-semibold whitespace-nowrap text-white tabular-nums"
+                            class="whitespace-nowrap text-right font-semibold tabular-nums text-white"
                             :class="
                                 normalizedQuantity > 1
-                                    ? 'text-[0.625rem] @sm:text-[0.6875rem]'
+                                    ? '@sm:text-[0.6875rem] text-[0.625rem]'
                                     : ''
                             "
                             data-testid="cockpit-pay-code-cost-subtotal"
@@ -1086,7 +1091,7 @@ function stringValue(value: unknown): string | null {
 
                         <dt class="text-slate-300">Pay Code Value</dt>
                         <dd
-                            class="text-right font-semibold whitespace-nowrap text-white tabular-nums"
+                            class="whitespace-nowrap text-right font-semibold tabular-nums text-white"
                             data-testid="cockpit-pay-code-cost-pay-code-value"
                         >
                             {{
@@ -1104,7 +1109,7 @@ function stringValue(value: unknown): string | null {
                             Total Estimated Cost
                         </dt>
                         <dd
-                            class="text-right text-sm font-black whitespace-nowrap text-emerald-300 tabular-nums @sm:text-base"
+                            class="@sm:text-base whitespace-nowrap text-right text-sm font-black tabular-nums text-emerald-300"
                             data-testid="cockpit-pay-code-cost-total"
                         >
                             {{

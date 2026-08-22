@@ -5927,7 +5927,7 @@ function instructionRecord(
         </div>
 
         <div
-            class="grid min-w-0 gap-5 xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]"
+            class="grid min-w-0 gap-5 2xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]"
             data-testid="cockpit-quick-generate-essentials-canvas"
         >
             <div
@@ -6254,13 +6254,17 @@ function instructionRecord(
                                 :amount="normalizedPayCodeAmount()"
                                 :currency="currency"
                                 :fixed-count="fixedSliceCount()"
-                                :max-claims="Math.max(1, Number(maxSlices) || 1)"
+                                :max-claims="
+                                    Math.max(1, Number(maxSlices) || 1)
+                                "
                                 :minimum-claim="Number(minWithdrawal) || 0"
                                 :scheduled-count="namedClaimSlices.length"
                                 :scheduled-portions="namedClaimSlices"
                                 :scheduled-total="namedClaimSliceTotal"
                                 :scheduled-remaining="namedClaimSliceRemaining"
-                                :scheduled-minimum-amount="minimumWithdrawalFloor"
+                                :scheduled-minimum-amount="
+                                    minimumWithdrawalFloor
+                                "
                                 :scheduled-available="
                                     scheduledPortionsUnavailableReason === null
                                 "
@@ -6332,14 +6336,18 @@ function instructionRecord(
                                         >
                                         <CockpitFieldHelp
                                             label="About Transfer Network"
-                                            :tooltip="settlementRailCycleDescription"
+                                            :tooltip="
+                                                settlementRailCycleDescription
+                                            "
                                         />
                                     </legend>
                                     <button
                                         type="button"
                                         class="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                                         :disabled="processing"
-                                        :aria-label="settlementRailCycleAccessibleLabel"
+                                        :aria-label="
+                                            settlementRailCycleAccessibleLabel
+                                        "
                                         data-testid="cockpit-quick-generate-settlement-rail-cycle"
                                         @click="cycleSettlementRail"
                                     >
@@ -6392,14 +6400,14 @@ function instructionRecord(
                     </div>
 
                     <div
-                        class="mt-2 flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1"
+                        class="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-nowrap sm:items-center sm:overflow-x-auto sm:pb-1"
                         data-testid="cockpit-quick-generate-template-toolbar"
                     >
                         <button
                             type="button"
                             :aria-pressed="startingPoint === 'blank'"
                             :class="[
-                                'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600',
+                                'inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0',
                                 startingPoint === 'blank'
                                     ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
                                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
@@ -6425,7 +6433,7 @@ function instructionRecord(
                             :disabled="!lastInstructions"
                             :aria-pressed="startingPoint === 'last'"
                             :class="[
-                                'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-45',
+                                'inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto sm:shrink-0',
                                 startingPoint === 'last'
                                     ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
                                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
@@ -6448,7 +6456,7 @@ function instructionRecord(
                         </button>
                         <button
                             type="button"
-                            class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                            class="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                             data-testid="cockpit-quick-generate-choose-template"
                             @click="templatePickerOpen = true"
                         >
@@ -6460,7 +6468,7 @@ function instructionRecord(
                         </button>
                         <button
                             type="button"
-                            class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                            class="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                             data-testid="cockpit-quick-generate-save-template"
                             @click="openSaveTemplateDialog"
                         >
@@ -6473,7 +6481,7 @@ function instructionRecord(
 
             <div
                 ref="canvasSectionElement"
-                class="min-w-0 xl:sticky xl:top-4 xl:self-start"
+                class="min-w-0 2xl:sticky 2xl:top-4 2xl:self-start"
             >
                 <CockpitPayCodeCanvas
                     v-model:view="canvasView"
@@ -6616,9 +6624,7 @@ function instructionRecord(
             <summary
                 class="cursor-pointer list-none text-sm font-semibold text-slate-950 dark:text-slate-50"
             >
-                <span
-                    class="flex min-w-0 items-center justify-between gap-3"
-                >
+                <span class="flex min-w-0 items-center justify-between gap-3">
                     <span class="min-w-0">
                         Claim Experience
                         <span
@@ -10164,7 +10170,8 @@ function instructionRecord(
             <pre
                 class="mt-3 max-h-96 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] leading-5 text-slate-200"
                 data-testid="cockpit-quick-generate-engineering-preview-json"
-                >{{ sanitizedInstructionPayloadJson }}</pre>
+                >{{ sanitizedInstructionPayloadJson }}</pre
+            >
         </details>
 
         <p class="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-300">

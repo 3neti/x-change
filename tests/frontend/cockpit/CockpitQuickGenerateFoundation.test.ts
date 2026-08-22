@@ -153,7 +153,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .classes(),
         ).toContain('gap-1.5');
         expect(essentialsCanvas.classes()).toContain(
-            'xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]',
+            '2xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]',
         );
 
         wrapper.unmount();
@@ -183,7 +183,8 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.text()).toContain('1');
         expect(panel.attributes('style')).toContain('display: none');
         expect(
-            orderFields.find('[data-testid="cockpit-claim-requirements-control"]')
+            orderFields
+                .find('[data-testid="cockpit-claim-requirements-control"]')
                 .exists(),
         ).toBe(false);
 
@@ -192,11 +193,13 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.attributes('aria-expanded')).toBe('true');
         expect(panel.attributes('style') ?? '').not.toContain('display: none');
         expect(
-            panel.find('[data-testid="cockpit-claim-requirements-control"]')
+            panel
+                .find('[data-testid="cockpit-claim-requirements-control"]')
                 .exists(),
         ).toBe(true);
         expect(
-            panel.find('[data-testid="cockpit-quick-generate-primary-feedback"]')
+            panel
+                .find('[data-testid="cockpit-quick-generate-primary-feedback"]')
                 .exists(),
         ).toBe(true);
         expect(
@@ -259,7 +262,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(riderRow.classes()).toContain('sm:flex-row');
         expect(
             wrapper
-                .get('[data-testid="cockpit-quick-generate-open-design-button"]')
+                .get(
+                    '[data-testid="cockpit-quick-generate-open-design-button"]',
+                )
                 .classes(),
         ).toEqual(expect.arrayContaining(['w-full', 'sm:w-auto']));
     });
@@ -360,7 +365,7 @@ describe('Cockpit Quick Generate foundation', () => {
         host.remove();
     });
 
-    it('keeps the Templates band compact with one non-wrapping action toolbar', async () => {
+    it('keeps every Template action visible in a narrow two-column grid and preserves the wider toolbar', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -390,8 +395,11 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-template-toolbar"]',
         );
 
-        expect(toolbar.classes()).toContain('flex-nowrap');
-        expect(toolbar.classes()).toContain('overflow-x-auto');
+        expect(toolbar.classes()).toContain('grid');
+        expect(toolbar.classes()).toContain('grid-cols-2');
+        expect(toolbar.classes()).toContain('sm:flex');
+        expect(toolbar.classes()).toContain('sm:flex-nowrap');
+        expect(toolbar.classes()).toContain('sm:overflow-x-auto');
 
         const actionTestIds = [
             'cockpit-quick-generate-start-blank',
@@ -404,6 +412,7 @@ describe('Cockpit Quick Generate foundation', () => {
             const action = toolbar.get(`[data-testid="${testId}"]`);
 
             expect(action.classes()).toContain('h-9');
+            expect(action.classes()).toContain('min-w-0');
             // No Template action may compete with the filled Issue Pay Code button.
             expect(action.classes()).not.toContain('bg-emerald-600');
         });
@@ -576,6 +585,18 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-pay-code-canvas-logo"]')
                 .exists(),
         ).toBe(true);
+        const stamp = wrapper.get(
+            '[data-testid="cockpit-pay-code-canvas-front"]',
+        );
+
+        expect(stamp.classes()).toContain('flex');
+        expect(stamp.classes()).toContain('min-h-88');
+        expect(stamp.classes()).toContain('@md:min-h-72');
+        expect(
+            stamp
+                .get(':scope > .relative.flex.min-h-0.flex-1')
+                .classes(),
+        ).not.toContain('h-full');
         expect(
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-tagline"]')
@@ -647,6 +668,12 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(tabList.attributes('role')).toBe('tablist');
         expect(tabList.findAll('[role="tab"]')).toHaveLength(3);
+        expect(tabList.classes()).toContain('grid');
+        expect(tabList.classes()).toContain('grid-flow-col');
+        expect(tabList.classes()).toContain('auto-cols-fr');
+        expect(tabList.classes()).toContain('min-w-0');
+        expect(tabList.classes()).toContain('@md:flex');
+        expect(tabList.classes()).not.toContain('overflow-hidden');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-canvas-front-button"]')
@@ -4620,6 +4647,11 @@ describe('Cockpit Quick Generate foundation', () => {
                 .get('[data-testid="cockpit-pay-code-canvas-view-switch"]')
                 .classes(),
         ).toContain('w-full');
+        expect(
+            canvasHeader
+                .get('[data-testid="cockpit-pay-code-canvas-view-switch"]')
+                .findAll('[role="tab"]'),
+        ).toHaveLength(4);
         expect(quickGenerateHeader.classes()).toContain('justify-between');
         expect(quickGenerateHeader.text()).toContain('Pay Code Issuance');
         expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');

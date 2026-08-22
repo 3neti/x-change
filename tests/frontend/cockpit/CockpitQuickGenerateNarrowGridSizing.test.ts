@@ -16,7 +16,7 @@ describe('Cockpit Quick Generate narrow essentials grid sizing', () => {
         expect(grid.classes()).toContain('grid');
         expect(grid.classes()).toContain('min-w-0');
 
-        // Below xl this is a single implicit-column grid; the two elements
+        // Below 2xl this is a single implicit-column grid; the two elements
         // that are its *direct* children must each opt out of the CSS Grid
         // default min-width: auto so their intrinsic content can shrink
         // inside the narrow single-column track instead of forcing it wide.
@@ -30,15 +30,21 @@ describe('Cockpit Quick Generate narrow essentials grid sizing', () => {
         expect(orderCard.classList.contains('min-w-0')).toBe(true);
 
         expect(canvasWrapper.classList.contains('min-w-0')).toBe(true);
-        // The right canvas wrapper keeps its existing xl sticky behavior;
-        // this fix must not remove or replace it.
-        expect(canvasWrapper.classList.contains('xl:sticky')).toBe(true);
-        expect(canvasWrapper.classList.contains('xl:top-4')).toBe(true);
-        expect(canvasWrapper.classList.contains('xl:self-start')).toBe(true);
+        // The right canvas becomes sticky only when the two-column 2xl
+        // layout is active. It must remain ordinary document flow at xl.
+        expect(canvasWrapper.classList.contains('2xl:sticky')).toBe(true);
+        expect(canvasWrapper.classList.contains('2xl:top-4')).toBe(true);
+        expect(canvasWrapper.classList.contains('2xl:self-start')).toBe(true);
+        expect(canvasWrapper.classList.contains('xl:sticky')).toBe(false);
+        expect(canvasWrapper.classList.contains('xl:top-4')).toBe(false);
+        expect(canvasWrapper.classList.contains('xl:self-start')).toBe(false);
 
-        // The xl two-column tracks keep both existing floors while giving
+        // The 2xl two-column tracks keep both existing floors while giving
         // Order and the read-only preview equal desktop weight.
         expect(grid.classes()).toContain(
+            '2xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]',
+        );
+        expect(grid.classes()).not.toContain(
             'xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]',
         );
     });
@@ -105,7 +111,9 @@ describe('Cockpit Quick Generate narrow essentials grid sizing', () => {
         ).toBe(true);
         expect(
             orderCard
-                .find('[data-testid="cockpit-quick-generate-primary-recipient"]')
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-recipient"]',
+                )
                 .exists(),
         ).toBe(true);
         expect(

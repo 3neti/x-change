@@ -167,7 +167,7 @@ function toggleReusableBalance(event: Event): void {
 
 <template>
     <div
-        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+        class="@container grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
         data-testid="cockpit-value-use-control"
     >
         <div class="flex items-center gap-1">
@@ -178,7 +178,7 @@ function toggleReusableBalance(event: Event): void {
             />
         </div>
         <div
-            class="flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            class="@sm:grid-cols-[minmax(0,1fr)_auto] grid min-w-0 gap-1.5 rounded-lg border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
             <button
                 type="button"
@@ -212,8 +212,7 @@ function toggleReusableBalance(event: Event): void {
                     data-testid="cockpit-value-use-reusable-balance"
                     @change="toggleReusableBalance"
                 />
-                <span class="hidden sm:inline">Reusable balance</span>
-                <span class="sm:hidden">Reusable</span>
+                <span>Reusable balance</span>
             </label>
         </div>
         <p

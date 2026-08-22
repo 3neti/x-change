@@ -375,9 +375,20 @@ describe('CockpitClaimRequirementsControl', () => {
         const chipRow = wrapper.get(
             '[data-testid="cockpit-claim-requirements-chips"]',
         );
+        const compactControl = chipRow.element.parentElement;
 
         expect(root.classes()).toContain('min-w-0');
+        expect(root.classes()).toContain('@container');
+        expect(compactControl?.classList.contains('grid')).toBe(true);
+        expect(
+            compactControl?.classList.contains(
+                'grid-cols-[minmax(0,1fr)_auto]',
+            ),
+        ).toBe(true);
         expect(chipRow.classes()).toContain('min-w-0');
+        expect(chipRow.classes()).toContain('col-span-2');
+        expect(chipRow.classes()).toContain('row-start-2');
+        expect(chipRow.classes()).toContain('@sm:row-auto');
         expect(chipRow.classes()).toContain('overflow-x-auto');
         expect(
             root
