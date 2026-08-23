@@ -332,6 +332,50 @@ const backingExplanation = computed(() => {
   return "No authoritative monetary backing record is available in this read model.";
 });
 
+const backingClaimState = computed(() => {
+  const mode = text(backing.value.mode);
+  const status = text(backing.value.status);
+
+  if (mode === "treasury_position" && status === "settled") {
+    return {
+      heading: "Value is safely held and ready",
+      description:
+        "The principal is recorded in the governed account structure for this Pay Code.",
+    };
+  }
+
+  if (mode === "treasury_position") {
+    return {
+      heading: "Value is held under governed backing",
+      description:
+        "The principal has an account-backed record. Review its current status before relying on claim readiness.",
+    };
+  }
+
+  if (mode === "legacy_cash_entity") {
+    return {
+      heading: "This Pay Code uses an older value record",
+      description:
+        "Its backing may need additional verification before an operator relies on it.",
+    };
+  }
+
+  return {
+    heading: "Backing has not yet been verified",
+    description:
+      "The current read model does not contain enough authority evidence to confirm how the value is held.",
+  };
+});
+
+const claimantInstructionGroups = computed(() =>
+  instructionGroups.value.map((group) => ({
+    ...group,
+    facts: list(group.facts).map((fact) =>
+      claimantInstructionFact(text(group.key), fact),
+    ),
+  })),
+);
+
 const envelopeProgress = computed(() => {
   const checklist = record(envelope.value.checklist);
   const total = number(checklist.required_count);
@@ -354,6 +398,152 @@ function instructionIcon(key: unknown) {
       controls: CalendarClock,
     }[text(key)] ?? FileText
   );
+}
+
+function claimantInstructionFact(
+  groupKey: string,
+  fact: DetailRecord,
+): DetailRecord {
+  const label = text(fact.label);
+  const value = text(fact.value);
+
+  if (groupKey === "claim") {
+    if (label === "Required Inputs") {
+      return {
+        label: "What the claimant must do",
+        value: claimantRequirements(value),
+      };
+    }
+
+    if (label === "Validations") {
+      return {
+        label: "Checks during the claim",
+        value: `The claim verifies ${naturalList(splitValues(value))} before it can continue.`,
+      };
+    }
+
+    if (label === "Target Mobile") {
+      return {
+        label: "Who may claim",
+        value: `Only the verified mobile number ending in ${value.replace(/^.*\s/, "")} may claim this Pay Code.`,
+      };
+    }
+
+    if (label === "Vendor") {
+      return {
+        label: "Where the claimant receives value",
+        value: `The claimant must provide a ${value} payout account.`,
+      };
+    }
+
+    if (label === "Execution Driver") {
+      return {
+        label: "How the claim is processed",
+        value: `${title(value)} processes the completed claim.`,
+      };
+    }
+  }
+
+  if (groupKey === "experience") {
+    if (label === "Message") {
+      return {
+        label: "Message shown to the claimant",
+        value: `The claimant will see: “${value}”`,
+      };
+    }
+
+    if (label === "Action Link") {
+      return {
+        label: "Link available to the claimant",
+        value: `The claimant may follow this link: ${value}`,
+      };
+    }
+
+    if (label === "Splash") {
+      return {
+        label: "Welcome screen",
+        value:
+          "The claimant will see a configured welcome screen before continuing.",
+      };
+    }
+
+    if (label === "Stamp") {
+      return {
+        label: "Pay Code appearance",
+        value: `The claimant will see the ${value} stamp design.`,
+      };
+    }
+  }
+
+  if (groupKey === "delivery" && label === "Channels") {
+    return {
+      label: "How updates reach the claimant",
+      value: `Claim status updates may be sent through ${naturalList(splitValues(value))}.`,
+    };
+  }
+
+  if (groupKey === "value") {
+    if (label === "Amount") {
+      return {
+        label: "Value available",
+        value: `The claimant can receive ${value}.`,
+      };
+    }
+
+    if (label === "Currency") {
+      return { label: "Currency", value: `The value is issued in ${value}.` };
+    }
+
+    if (label === "Settlement Rail") {
+      return { label: "Payout route", value: `The payout will use ${value}.` };
+    }
+  }
+
+  if (groupKey === "controls" && label === "Onboarding") {
+    return {
+      label: "Account setup",
+      value: "The claimant must complete account setup during this claim.",
+    };
+  }
+
+  return { label, value };
+}
+
+function claimantRequirements(value: string): string {
+  const requirements = splitValues(value).map((requirement) => {
+    const normalized = requirement.toLowerCase();
+
+    return (
+      {
+        mobile: "verify their mobile number",
+        otp: "enter the one-time code sent to that mobile",
+        selfie: "provide a selfie for identity verification",
+        signature: "provide their signature",
+        location: "share their location",
+        kyc: "complete identity verification",
+        name: "provide their name",
+        address: "provide their address",
+        email: "provide their email address",
+      }[normalized] ?? `provide ${normalized}`
+    );
+  });
+
+  return `The claimant must ${naturalList(requirements)}.`;
+}
+
+function splitValues(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item !== "");
+}
+
+function naturalList(values: string[]): string {
+  if (values.length <= 1) {
+    return values[0] ?? "the required information";
+  }
+
+  return `${values.slice(0, -1).join(", ")} and ${values.at(-1)}`;
 }
 
 function evidenceIcon(kind: unknown) {
@@ -429,7 +619,9 @@ function workspaceTarget(): { tab: WorkspaceTab; claimId: number | null } {
         ? requestedTab
         : "overview",
     claimId:
-      requestedTab === "claim" && Number.isInteger(requestedClaim) && requestedClaim > 0
+      requestedTab === "claim" &&
+      Number.isInteger(requestedClaim) &&
+      requestedClaim > 0
         ? requestedClaim
         : null,
   };
@@ -694,26 +886,45 @@ function number(value: unknown): number {
             </article>
             <article
               class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+              data-testid="pay-code-overview-backing-card"
             >
               <div
                 class="flex items-center gap-2 text-slate-500 dark:text-slate-400"
               >
                 <ShieldCheck class="h-4 w-4" /><span
                   class="text-xs font-semibold"
-                  >Accounting Backing</span
+                  >Claim readiness</span
                 >
               </div>
               <p class="mt-2 font-semibold text-slate-950 dark:text-white">
-                {{ text(backing.label) || "Backing Unverified" }}
-              </p>
-              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {{ title(backing.mode) }} · {{ title(backing.status) }}
+                {{ backingClaimState.heading }}
               </p>
               <p
-                class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300"
               >
-                {{ backingExplanation }}
+                {{ backingClaimState.description }}
               </p>
+              <details
+                class="mt-3 border-t border-slate-200 pt-2 dark:border-slate-800"
+                data-testid="pay-code-overview-backing-details"
+              >
+                <summary
+                  class="cursor-pointer text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400"
+                >
+                  Technical backing details
+                </summary>
+                <p
+                  class="mt-2 text-xs font-medium text-slate-700 dark:text-slate-200"
+                >
+                  {{ text(backing.label) || "Backing Unverified" }} ·
+                  {{ title(backing.mode) }} · {{ title(backing.status) }}
+                </p>
+                <p
+                  class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                >
+                  {{ backingExplanation }}
+                </p>
+              </details>
             </article>
           </div>
         </div>
@@ -766,11 +977,21 @@ function number(value: unknown): number {
             recorded separately under Claim &amp; Evidence.
           </p>
         </aside>
-        <CockpitPayCodeTerminalControls
+        <div
           v-if="terminalControl"
-          :code="code"
-          :control="terminalControl"
-        />
+          class="border-t border-slate-200 pt-5 xl:col-span-2 dark:border-slate-800"
+          data-testid="pay-code-overview-actions-boundary"
+        >
+          <p
+            class="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+          >
+            Actions for this Pay Code
+          </p>
+          <CockpitPayCodeTerminalControls
+            :code="code"
+            :control="terminalControl"
+          />
+        </div>
       </section>
 
       <section
@@ -784,8 +1005,8 @@ function number(value: unknown): number {
               What This Pay Code Asks For
             </h3>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              The issued instruction snapshot, translated into operational
-              language.
+              A plain-language guide to what the claimant will provide, verify,
+              and see.
             </p>
           </div>
           <span
@@ -798,7 +1019,7 @@ function number(value: unknown): number {
           class="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
         >
           <article
-            v-for="group in instructionGroups"
+            v-for="group in claimantInstructionGroups"
             :key="text(group.key)"
             class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
           >
@@ -845,7 +1066,9 @@ function number(value: unknown): number {
         class="space-y-5"
         data-testid="pay-code-slices-tab"
       >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div
+          class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+        >
           <div>
             <div class="flex items-center gap-2">
               <Layers3 class="h-5 w-5 text-emerald-600" />
@@ -868,14 +1091,28 @@ function number(value: unknown): number {
         <div class="grid gap-3 sm:grid-cols-3">
           <article
             v-for="summary in [
-              { label: 'Paid', value: slices.consumed_minor, tone: 'text-emerald-700 dark:text-emerald-300' },
-              { label: 'In progress', value: slices.reserved_minor, tone: 'text-amber-700 dark:text-amber-300' },
-              { label: 'Available', value: slices.available_minor, tone: 'text-slate-950 dark:text-white' },
+              {
+                label: 'Paid',
+                value: slices.consumed_minor,
+                tone: 'text-emerald-700 dark:text-emerald-300',
+              },
+              {
+                label: 'In progress',
+                value: slices.reserved_minor,
+                tone: 'text-amber-700 dark:text-amber-300',
+              },
+              {
+                label: 'Available',
+                value: slices.available_minor,
+                tone: 'text-slate-950 dark:text-white',
+              },
             ]"
             :key="summary.label"
             class="min-w-0 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
           >
-            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+            <p
+              class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
+            >
               {{ summary.label }}
             </p>
             <p :class="['mt-1 text-xl font-bold', summary.tone]">
@@ -884,7 +1121,9 @@ function number(value: unknown): number {
           </article>
         </div>
 
-        <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+        <div
+          class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800"
+        >
           <div
             v-for="row in sliceRows"
             :key="text(row.id)"
@@ -892,12 +1131,18 @@ function number(value: unknown): number {
             data-testid="pay-code-slice-row"
           >
             <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-slate-950 dark:text-white">
+              <p
+                class="truncate text-sm font-semibold text-slate-950 dark:text-white"
+              >
                 {{ text(row.label) || `Slice ${number(row.sequence)}` }}
               </p>
               <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                <template v-if="row.claim_number">Claim {{ number(row.claim_number) }}</template>
-                <template v-else-if="row.claim_on">Available {{ formatDate(row.claim_on) }}</template>
+                <template v-if="row.claim_number"
+                  >Claim {{ number(row.claim_number) }}</template
+                >
+                <template v-else-if="row.claim_on"
+                  >Available {{ formatDate(row.claim_on) }}</template
+                >
                 <template v-else>Slice {{ number(row.sequence) }}</template>
               </p>
             </div>
@@ -907,9 +1152,12 @@ function number(value: unknown): number {
             <span
               :class="[
                 'w-fit rounded-full px-2.5 py-1 text-[0.65rem] font-semibold',
-                text(row.status) === 'consumed' || text(row.status) === 'succeeded'
+                text(row.status) === 'consumed' ||
+                text(row.status) === 'succeeded'
                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
-                  : text(row.status) === 'reserved' || text(row.status) === 'executing' || text(row.status) === 'indeterminate'
+                  : text(row.status) === 'reserved' ||
+                      text(row.status) === 'executing' ||
+                      text(row.status) === 'indeterminate'
                     ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
                     : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
               ]"
@@ -977,7 +1225,9 @@ function number(value: unknown): number {
                   />
                   <BankEMISelect
                     v-model="correctedBankCode"
-                    :settlement-rail="text(redemption.settlement_rail) || 'INSTAPAY'"
+                    :settlement-rail="
+                      text(redemption.settlement_rail) || 'INSTAPAY'
+                    "
                     :institutions="payoutInstitutions ?? []"
                     :disabled="processing"
                   />
@@ -1115,7 +1365,9 @@ function number(value: unknown): number {
                     ? 'border-blue-300 bg-blue-50/60 ring-2 ring-blue-100 dark:border-blue-700 dark:bg-blue-950/30 dark:ring-blue-900/40'
                     : 'border-slate-200 dark:border-slate-800',
                 ]"
-                :data-focused="focusedClaimId === number(claim.id) ? 'true' : 'false'"
+                :data-focused="
+                  focusedClaimId === number(claim.id) ? 'true' : 'false'
+                "
               >
                 <div class="flex items-start justify-between gap-3">
                   <div>
@@ -1590,7 +1842,9 @@ function number(value: unknown): number {
       </section>
 
       <section v-else class="space-y-4" data-testid="pay-code-engineering-tab">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div
+          class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+        >
           <div>
             <div class="flex items-center gap-2">
               <Braces class="h-5 w-5 text-violet-600" />
@@ -1598,7 +1852,9 @@ function number(value: unknown): number {
                 Sanitized Engineering Preview
               </h3>
             </div>
-            <p class="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">
+            <p
+              class="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400"
+            >
               Versioned operational JSON. Raw evidence, provider payloads,
               credentials, and private storage coordinates are excluded.
             </p>

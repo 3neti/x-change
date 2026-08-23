@@ -142,10 +142,12 @@ describe("Cockpit Pay Code record workspace", () => {
       "/x/cockpit/pay-codes/CAMP-CB2L/engineering-preview",
       expect.objectContaining({ credentials: "same-origin" }),
     );
-    expect(wrapper.get('[data-testid="engineering-preview-json"]').text())
-      .toContain("x-change.cockpit.pay-code-engineering-preview.v1");
-    expect(wrapper.get('[data-testid="engineering-preview-json"]').text())
-      .toContain('"binary_evidence": "excluded"');
+    expect(
+      wrapper.get('[data-testid="engineering-preview-json"]').text(),
+    ).toContain("x-change.cockpit.pay-code-engineering-preview.v1");
+    expect(
+      wrapper.get('[data-testid="engineering-preview-json"]').text(),
+    ).toContain('"binary_evidence": "excluded"');
   });
 
   it("opens and focuses the claim identified by an authenticated feedback link", () => {
@@ -193,7 +195,7 @@ describe("Cockpit Pay Code record workspace", () => {
     );
   });
 
-  it("shows the Treasury-safe terminal impact before an owner acts", () => {
+  it("shows clear Pay Code management controls before an owner acts", () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {
         code: "OPEN-200",
@@ -224,7 +226,8 @@ describe("Cockpit Pay Code record workspace", () => {
 
     const controls = wrapper.get('[data-testid="pay-code-terminal-controls"]');
 
-    expect(controls.text()).toContain("Treasury-safe terminal actions");
+    expect(controls.text()).toContain("Manage this Pay Code");
+    expect(controls.text()).not.toContain("Treasury-safe terminal actions");
     expect(controls.text()).toContain("Pay Code Reserve");
     expect(controls.text()).toContain("Client Funds · ₱200.00");
     expect(controls.text()).toContain("Provider Inventory unchanged");
@@ -238,7 +241,7 @@ describe("Cockpit Pay Code record workspace", () => {
     ).toBe("/x/cockpit/pay-codes/OPEN-200/terminal-actions");
   });
 
-  it("keeps authoritative value and accounting backing visually primary", () => {
+  it("leads with claim readiness and demotes technical backing details", () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {
         code: "CAMP-CB2L",
@@ -252,9 +255,22 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(
       wrapper.get('[data-testid="pay-code-record-workspace"]').text(),
     ).toContain("₱20.00");
-    expect(
-      wrapper.get('[data-testid="pay-code-overview-tab"]').text(),
-    ).toContain("Treasury Backing");
+    const backingCard = wrapper.get(
+      '[data-testid="pay-code-overview-backing-card"]',
+    );
+    const backingDetails = wrapper.get(
+      '[data-testid="pay-code-overview-backing-details"]',
+    );
+
+    expect(backingCard.text()).toContain("Claim readiness");
+    expect(backingCard.text()).toContain("Value is safely held and ready");
+    expect(backingCard.text()).toContain(
+      "The principal is recorded in the governed account structure",
+    );
+    expect(backingDetails.element.tagName).toBe("DETAILS");
+    expect(backingDetails.attributes("open")).toBeUndefined();
+    expect(backingDetails.text()).toContain("Technical backing details");
+    expect(backingDetails.text()).toContain("Treasury Backing");
     expect(
       wrapper.get('[data-testid="pay-code-overview-tab"]').text(),
     ).toContain("Authority: Treasury Position");
@@ -263,23 +279,92 @@ describe("Cockpit Pay Code record workspace", () => {
     ).toContain("A legacy Cash entity is not the monetary authority.");
   });
 
+  it("translates immutable instruction facts into claimant-facing language", async () => {
+    const claimantVoucher = structuredClone(voucher);
+    claimantVoucher.instructions.groups = [
+      {
+        key: "claim",
+        label: "Claim Requirements",
+        facts: [
+          { label: "Required Inputs", value: "Mobile, OTP, Selfie" },
+          { label: "Target Mobile", value: "•••• 1987" },
+          { label: "Vendor", value: "GCash" },
+        ],
+      },
+      {
+        key: "experience",
+        label: "Recipient Experience",
+        facts: [{ label: "Message", value: "Bring a valid ID" }],
+      },
+    ];
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher: claimantVoucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Instructions"))!
+      .trigger("click");
+
+    const instructions = wrapper.get(
+      '[data-testid="pay-code-instructions-tab"]',
+    );
+
+    expect(instructions.text()).toContain(
+      "The claimant must verify their mobile number, enter the one-time code sent to that mobile and provide a selfie for identity verification.",
+    );
+    expect(instructions.text()).toContain(
+      "Only the verified mobile number ending in 1987 may claim this Pay Code.",
+    );
+    expect(instructions.text()).toContain(
+      "The claimant must provide a GCash payout account.",
+    );
+    expect(instructions.text()).toContain(
+      "The claimant will see: “Bring a valid ID”",
+    );
+    expect(instructions.text()).not.toContain("Required Inputs");
+    expect(instructions.text()).not.toContain("Target Mobile");
+  });
+
   it("renders the durable slice ledger as its own detail tab", async () => {
     const slicedVoucher = {
       ...structuredClone(voucher),
       slices: {
-      schema: "x-change.cockpit.pay-code-slices.v1",
-      mode: "equal",
-      mode_label: "Equal",
-      selection: "next_only",
-      currency: "PHP",
-      total_minor: 10_000,
-      consumed_minor: 5_000,
-      reserved_minor: 0,
-      available_minor: 5_000,
-      rows: [
-        { id: "slice_1", label: "Slice 1", sequence: 1, amount_minor: 5_000, status: "consumed", status_label: "Paid", claim_number: 1 },
-        { id: "slice_2", label: "Slice 2", sequence: 2, amount_minor: 5_000, status: "available", status_label: "Available", claim_number: null },
-      ],
+        schema: "x-change.cockpit.pay-code-slices.v1",
+        mode: "equal",
+        mode_label: "Equal",
+        selection: "next_only",
+        currency: "PHP",
+        total_minor: 10_000,
+        consumed_minor: 5_000,
+        reserved_minor: 0,
+        available_minor: 5_000,
+        rows: [
+          {
+            id: "slice_1",
+            label: "Slice 1",
+            sequence: 1,
+            amount_minor: 5_000,
+            status: "consumed",
+            status_label: "Paid",
+            claim_number: 1,
+          },
+          {
+            id: "slice_2",
+            label: "Slice 2",
+            sequence: 2,
+            amount_minor: 5_000,
+            status: "available",
+            status_label: "Available",
+            claim_number: null,
+          },
+        ],
       },
     };
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
@@ -304,7 +389,9 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(tab.text()).toContain("Paid");
     expect(tab.text()).toContain("Slice 2");
     expect(tab.text()).toContain("Available");
-    expect(wrapper.findAll('[data-testid="pay-code-slice-row"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-testid="pay-code-slice-row"]')).toHaveLength(
+      2,
+    );
   });
 
   it("navigates the record without loading protected evidence until reveal", async () => {
@@ -456,8 +543,28 @@ describe("Cockpit Pay Code record workspace", () => {
           can_correct_destination: true,
         },
         payoutInstitutions: [
-          { key: "gcash", value: "GXCHPHM2XXX", name: "GCash", short_name: "GCash", category: "wallet", account_label: "GCash Mobile Number", identifier_scheme: "ph_mobile", aliases: ["G-Xchange"], commonly_used: true },
-          { key: "pnb", value: "PNBMPHMMTOD", name: "Philippine National Bank", short_name: "PNB", category: "bank", account_label: "Account Number", identifier_scheme: "account_number", aliases: ["PNB"], commonly_used: true },
+          {
+            key: "gcash",
+            value: "GXCHPHM2XXX",
+            name: "GCash",
+            short_name: "GCash",
+            category: "wallet",
+            account_label: "GCash Mobile Number",
+            identifier_scheme: "ph_mobile",
+            aliases: ["G-Xchange"],
+            commonly_used: true,
+          },
+          {
+            key: "pnb",
+            value: "PNBMPHMMTOD",
+            name: "Philippine National Bank",
+            short_name: "PNB",
+            category: "bank",
+            account_label: "Account Number",
+            identifier_scheme: "account_number",
+            aliases: ["PNB"],
+            commonly_used: true,
+          },
         ],
         distributionUrl: "/distribution",
         explorerUrl: "/pay-codes",
@@ -539,9 +646,7 @@ describe("Cockpit Pay Code record workspace", () => {
     });
 
     expect(
-      nonClaimable
-        .find('[data-testid="cockpit-pay-code-share-card"]')
-        .exists(),
+      nonClaimable.find('[data-testid="cockpit-pay-code-share-card"]').exists(),
     ).toBe(false);
   });
 
