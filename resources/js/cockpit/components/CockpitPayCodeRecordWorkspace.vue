@@ -335,8 +335,25 @@ const backingExplanation = computed(() => {
 const backingClaimState = computed(() => {
   const mode = text(backing.value.mode);
   const status = text(backing.value.status);
+  const lifecycleStatus = text(props.status).toLowerCase();
 
   if (mode === "treasury_position" && status === "settled") {
+    if (["paid", "redeemed", "completed"].includes(lifecycleStatus)) {
+      return {
+        heading: "Value was safely held and paid",
+        description:
+          "The governed account record shows that this Pay Code's principal completed its claim lifecycle.",
+      };
+    }
+
+    if (["cancelled", "expired"].includes(lifecycleStatus)) {
+      return {
+        heading: "This Pay Code is no longer claimable",
+        description:
+          "Its principal remains accounted for in the governed account structure after the Pay Code closed.",
+      };
+    }
+
     return {
       heading: "Value is safely held and ready",
       description:

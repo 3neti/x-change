@@ -263,9 +263,9 @@ describe("Cockpit Pay Code record workspace", () => {
     );
 
     expect(backingCard.text()).toContain("Claim readiness");
-    expect(backingCard.text()).toContain("Value is safely held and ready");
+    expect(backingCard.text()).toContain("Value was safely held and paid");
     expect(backingCard.text()).toContain(
-      "The principal is recorded in the governed account structure",
+      "completed its claim lifecycle",
     );
     expect(backingDetails.element.tagName).toBe("DETAILS");
     expect(backingDetails.attributes("open")).toBeUndefined();
