@@ -13,6 +13,32 @@ final class GenerateInstanceKeepsakeKeyCommand extends Command
 {
     use InteractsWithJsonOutput;
 
+    protected $help = <<<HELP
+Generate a local private/public keypair used by keepsake export and verification.
+
+Important operational guidance:
+
+- Run this locally or in secure CI.
+- Keep the generated private key outside source control and never copy it into Cloud.
+- Use the printed public key in XCHANGE_INSTANCE_KEEPSAKE_PUBLIC_KEY.
+- Keep private key files with restricted permissions (chmod 0600).
+
+Usage:
+
+php artisan x-change:instance-keepsake:keygen --help
+
+Common examples:
+
+php artisan x-change:instance-keepsake:keygen \
+  --private-key-file=/path/to/secure/.keepsake/private.key \
+  --json
+
+php artisan x-change:instance-keepsake:keygen \
+  --private-key-file=/path/to/secure/.keepsake/private.key \
+  --force \
+  --json
+HELP;
+
     protected $signature = 'x-change:instance-keepsake:keygen
         {--private-key-file= : Local destination for the private decryption key}
         {--force : Replace an existing private key file}
