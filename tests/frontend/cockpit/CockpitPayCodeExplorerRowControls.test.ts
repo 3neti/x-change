@@ -4,8 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CockpitPayCodeCopyButton from '../../../resources/js/cockpit/components/CockpitPayCodeCopyButton.vue';
 import { usePayCodeExplorerClock } from '../../../resources/js/cockpit/composables/usePayCodeExplorerClock';
 import {
-    formatPayCodeRelativeTime,
-} from '../../../resources/js/cockpit/utils/payCodeRelativeTime';
+    formatAbsoluteTime,
+    formatRelativeTime,
+} from '../../../resources/js/cockpit/utils/dateTime';
 
 describe('Cockpit Pay Code Explorer row controls', () => {
     beforeEach(() => {
@@ -45,12 +46,13 @@ describe('Cockpit Pay Code Explorer row controls', () => {
     it('formats native relative timing facts without another date library', () => {
         const now = Date.parse('2026-08-23T00:00:00Z');
 
-        expect(formatPayCodeRelativeTime('2026-08-23T00:02:00Z', now)).toBe(
+        expect(formatRelativeTime('2026-08-23T00:02:00Z', now)).toBe(
             'in 2 minutes',
         );
-        expect(formatPayCodeRelativeTime('2026-08-22T23:00:00Z', now)).toBe(
+        expect(formatRelativeTime('2026-08-22T23:00:00Z', now)).toBe(
             '1 hour ago',
         );
+        expect(formatAbsoluteTime(null)).toBe('Unavailable');
     });
 
     it('ticks the shared Explorer clock every thirty seconds only when enabled', async () => {

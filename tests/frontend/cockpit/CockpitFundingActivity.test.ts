@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import CockpitFundingActivity from '../../../resources/js/cockpit/components/CockpitFundingActivity.vue';
 import type { CockpitFundingActivityReadModel } from '../../../resources/js/cockpit/types';
 
@@ -152,5 +152,40 @@ describe('Cockpit Funding Activity', () => {
         });
 
         expect(wrapper.text()).toContain('No Funding Activity yet.');
+    });
+
+    it('keeps mobile statuses legible and pairs relative time with an absolute tooltip', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime('2026-08-06T11:00:00+08:00');
+
+        const wrapper = mount(CockpitFundingActivity, {
+            props: { activity },
+        });
+        const card = wrapper.get(
+            '[data-testid="funding-activity-card-account_funding_pay_code:01K-FUND-672P"]',
+        );
+        const status = card.get(
+            '[data-testid="funding-activity-mobile-status-account_funding_pay_code:01K-FUND-672P"]',
+        );
+        const time = card.get('time');
+
+        expect(status.text()).toBe('Recognized');
+        expect(status.classes()).toEqual(
+            expect.arrayContaining([
+                'max-w-[48%]',
+                'text-center',
+                'break-words',
+                'whitespace-normal',
+            ]),
+        );
+        expect(status.classes()).not.toContain('shrink-0');
+        expect(time.text()).toBe('1 hour ago');
+        expect(time.attributes('datetime')).toBe(
+            '2026-08-06T10:00:00+08:00',
+        );
+        expect(time.attributes('title')).toContain('Aug 6, 2026');
+
+        wrapper.unmount();
+        vi.useRealTimers();
     });
 });

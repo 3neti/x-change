@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import {
+    formatAbsoluteTime,
+    formatRelativeTime,
+} from '../utils/dateTime';
 import type {
     CockpitFundingActivityItem,
     CockpitFundingActivityReadModel,
@@ -69,14 +73,7 @@ function statusTone(status: CockpitFundingActivityItem['status']): string {
 }
 
 function displayTime(value?: string | null): string {
-    if (!value) {
-        return '—';
-    }
-
-    return new Intl.DateTimeFormat('en-PH', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
+    return formatRelativeTime(value, Date.now()) ?? '—';
 }
 
 function actionLabel(
@@ -215,7 +212,12 @@ function performAction(
                             <td
                                 class="px-4 py-3 text-slate-600 dark:text-slate-300"
                             >
-                                {{ displayTime(item.updated_at) }}
+                                <time
+                                    :datetime="item.updated_at ?? undefined"
+                                    :title="formatAbsoluteTime(item.updated_at)"
+                                >
+                                    {{ displayTime(item.updated_at) }}
+                                </time>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-wrap justify-end gap-2">
@@ -265,8 +267,9 @@ function performAction(
                             </code>
                         </div>
                         <span
-                            class="shrink-0 rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase"
+                            class="max-w-[48%] rounded-full px-2.5 py-1 text-center text-[0.625rem] leading-4 font-semibold break-words whitespace-normal uppercase"
                             :class="statusTone(item.status)"
+                            :data-testid="`funding-activity-mobile-status-${item.key}`"
                         >
                             {{ item.status_label }}
                         </span>
@@ -275,7 +278,12 @@ function performAction(
                         <div>
                             <p class="font-semibold">{{ item.amount }}</p>
                             <p class="mt-0.5 text-xs text-slate-500">
-                                {{ displayTime(item.updated_at) }}
+                                <time
+                                    :datetime="item.updated_at ?? undefined"
+                                    :title="formatAbsoluteTime(item.updated_at)"
+                                >
+                                    {{ displayTime(item.updated_at) }}
+                                </time>
                             </p>
                         </div>
                         <div class="flex flex-wrap justify-end gap-2">

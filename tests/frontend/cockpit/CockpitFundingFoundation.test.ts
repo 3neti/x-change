@@ -661,15 +661,18 @@ describe('Cockpit Funding foundation', () => {
             'funding-method-panel-bank-transfer',
             'pay-code-funding-primary',
         ]) {
-            expect(
-                wrapper.get(`[data-testid="${methodPanelTestId}"]`).classes(),
-            ).toEqual(
-                expect.arrayContaining([
-                    'min-h-[18.5rem]',
-                    'sm:min-h-[21.5rem]',
-                ]),
+            const methodPanel = wrapper.get(
+                `[data-testid="${methodPanelTestId}"]`,
+            );
+
+            expect(methodPanel.classes()).not.toContain('min-h-[18.5rem]');
+            expect(methodPanel.classes()).not.toContain(
+                'sm:min-h-[21.5rem]',
             );
         }
+        expect(methodPanelHeaders[0].classes()).toEqual(
+            expect.arrayContaining(['min-h-28', 'sm:min-h-24']),
+        );
         expect(methodPanelHeaders[1].classes()).toEqual(
             methodPanelHeaders[0].classes(),
         );
@@ -682,7 +685,7 @@ describe('Cockpit Funding foundation', () => {
             ),
             expect.stringContaining('We’ll reserve a unique transfer amount.'),
             expect.stringContaining(
-                'Check the code, review the amount, then confirm the one-time addition.',
+                'Add funds with a one-time Pay Code without a provider payout.',
             ),
         ]);
         expect(
@@ -737,6 +740,9 @@ describe('Cockpit Funding foundation', () => {
         ).toContain(
             'Funds appear in your Account only after confirmation from the bank or payment provider.',
         );
+        expect(
+            wrapper.findAll('[data-testid="funding-confirmation-notice"]'),
+        ).toHaveLength(1);
         expect(
             wrapper.get('[data-testid="cockpit-funding-header"]').text(),
         ).not.toContain('Funding workspace');
@@ -1124,12 +1130,16 @@ describe('Cockpit Funding foundation', () => {
         const panel = wrapper.get('[data-testid="cockpit-pay-code-funding"]');
 
         expect(panel.text()).toContain('Pay Code');
+        expect(panel.text()).toContain(
+            'Add funds with a one-time Pay Code without a provider payout.',
+        );
         expect(
             panel
                 .get('[data-testid="pay-code-funding-inspection-form"] input')
                 .attributes('placeholder'),
         ).toBe('Enter Pay Code');
         expect(panel.text()).toContain('Check the code');
+        expect(panel.text().match(/Check the code/g)).toHaveLength(1);
         expect(panel.text()).toContain('Check Code');
         expect(panel.text()).toContain('••••F9K2');
         expect(panel.text()).toContain('₱20,000.00');
@@ -1457,6 +1467,30 @@ describe('Cockpit Funding foundation', () => {
         const select = vi.spyOn(amount.element, 'select');
         const quickAmounts = wrapper.get(
             '[data-testid="bank-transfer-quick-amounts"]',
+        );
+        const form = wrapper.get(
+            '[data-testid="bank-transfer-funding-form"]',
+        );
+        const submit = wrapper.get(
+            '[data-testid="reserve-bank-transfer-amount"]',
+        );
+
+        expect(form.classes()).toContain('min-w-0');
+        expect(quickAmounts.classes()).toEqual(
+            expect.arrayContaining([
+                'min-w-0',
+                'grid-cols-2',
+                'min-[360px]:grid-cols-3',
+            ]),
+        );
+        expect(submit.classes()).toEqual(
+            expect.arrayContaining([
+                'w-full',
+                'min-w-0',
+                'max-w-full',
+                'whitespace-normal',
+                'sm:w-auto',
+            ]),
         );
 
         expect(

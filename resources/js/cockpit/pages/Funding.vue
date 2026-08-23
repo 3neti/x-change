@@ -1429,6 +1429,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
 
                 <p
                     class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                    data-testid="funding-confirmation-notice"
                 >
                     Funds appear in your Account only after confirmation from
                     the bank or payment provider.
@@ -1913,21 +1914,21 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 >
                     <template #action>
                         <span
-                            class="inline-flex h-9 items-center rounded-full bg-sky-50 px-3 text-[0.65rem] font-semibold text-sky-700 uppercase dark:bg-sky-950 dark:text-sky-200"
+                            class="inline-flex min-h-9 max-w-full items-center rounded-full bg-sky-50 px-3 py-1 text-center text-[0.65rem] leading-4 font-semibold whitespace-normal text-sky-700 uppercase dark:bg-sky-950 dark:text-sky-200"
                         >
                             Exact amount
                         </span>
                     </template>
 
                     <form
-                        class="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-5"
+                        class="grid min-w-0 gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-5"
                         data-testid="bank-transfer-funding-form"
                         @submit.prevent="submitBankTransferRequest"
                     >
-                        <label class="block text-xs font-semibold">
+                        <label class="block min-w-0 text-xs font-semibold">
                             Amount to add
                             <div
-                                class="mt-1.5 flex h-11 rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
+                                class="mt-1.5 flex h-11 min-w-0 overflow-hidden rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
                             >
                                 <span
                                     class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
@@ -1959,7 +1960,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </span>
                         </label>
                         <fieldset
-                            class="grid grid-cols-3 gap-2 sm:col-start-1 sm:row-start-2 sm:flex sm:flex-wrap"
+                            class="grid min-w-0 grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:col-start-1 sm:row-start-2 sm:flex sm:flex-wrap"
                             data-testid="bank-transfer-quick-amounts"
                         >
                             <legend class="sr-only">Quick amounts</legend>
@@ -1967,7 +1968,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 v-for="amountMinor in bankTransferQuickAmountsMinor"
                                 :key="amountMinor"
                                 type="button"
-                                class="min-h-9 rounded-lg border px-2.5 py-1.5 text-xs font-semibold tabular-nums transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-20"
+                                class="min-h-9 min-w-0 rounded-lg border px-2 py-1.5 text-xs leading-4 font-semibold tabular-nums transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-20 sm:px-2.5"
                                 :class="
                                     amountToMinor(fundingRequestAmount) ===
                                     amountMinor
@@ -1993,7 +1994,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </fieldset>
                         <button
                             type="submit"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50 sm:col-start-2 sm:row-start-1 sm:self-end dark:bg-sky-400 dark:text-slate-950"
+                            class="inline-flex min-h-11 w-full min-w-0 max-w-full items-center justify-center gap-2 rounded-xl bg-sky-700 px-3 py-2.5 text-center text-sm leading-5 font-semibold whitespace-normal text-white transition hover:bg-sky-800 disabled:opacity-50 sm:col-start-2 sm:row-start-1 sm:w-auto sm:self-end sm:px-5 dark:bg-sky-400 dark:text-slate-950"
                             :disabled="
                                 fundingRequestForm.processing ||
                                 !bankTransferInstructions.enabled
@@ -2220,7 +2221,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             >
                 <CockpitFundingMethodPanel
                     title="Pay Code"
-                    description="Check the code, review the amount, then confirm the one-time addition."
+                    description="Add funds with a one-time Pay Code without a provider payout."
                     test-id="pay-code-funding-primary"
                 >
                     <template #action>
