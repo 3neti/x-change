@@ -566,6 +566,18 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('The instruction that moves money.');
         expect(wrapper.text()).toContain('PAY CODE PREVIEW');
         expect(wrapper.find('canvas').exists()).toBe(false);
+        const footer = wrapper.get(
+            '[data-testid="cockpit-pay-code-canvas-stamp-footer"]',
+        );
+        expect(footer.classes()).toEqual(
+            expect.arrayContaining([
+                'min-w-0',
+                'flex-col',
+                '@sm:flex-row',
+                '@sm:justify-between',
+            ]),
+        );
+        expect(footer.classes()).not.toContain('justify-between');
     });
 
     it('keeps the Pay Code preview brand while the Pay Code is being designed', () => {
@@ -593,9 +605,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(stamp.classes()).toContain('min-h-88');
         expect(stamp.classes()).toContain('@md:min-h-72');
         expect(
-            stamp
-                .get(':scope > .relative.flex.min-h-0.flex-1')
-                .classes(),
+            stamp.get(':scope > .relative.flex.min-h-0.flex-1').classes(),
         ).not.toContain('h-full');
         expect(
             wrapper
@@ -695,9 +705,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(designPanel.attributes('role')).toBe('tabpanel');
         expect(designPanel.classes()).toContain('w-full');
-        expect(designPanel.classes()).toContain(
-            'h-[clamp(24rem,58vh,36rem)]',
-        );
+        expect(designPanel.classes()).toContain('h-[clamp(24rem,58vh,36rem)]');
         expect(designPanel.classes()).toContain(
             'xl:h-[clamp(28rem,64vh,42rem)]',
         );
@@ -875,9 +883,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(designTabs.classes()).toContain('grid-cols-2');
         expect(designTabs.classes()).toContain('@sm:grid-cols-4');
         expect(
-            designTabs
-                .findAll('[role="tab"]')
-                .map((tab) => tab.text().trim()),
+            designTabs.findAll('[role="tab"]').map((tab) => tab.text().trim()),
         ).toEqual(['Appearance', 'Message', 'Link', 'Splash']);
         for (const tab of designTabs.findAll('[role="tab"]')) {
             expect(tab.get('span').classes()).toContain('whitespace-nowrap');
@@ -4913,9 +4919,7 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-pay-code-canvas-claim"]',
         );
 
-        expect(claimPanel.classes()).toContain(
-            'h-[clamp(24rem,58vh,36rem)]',
-        );
+        expect(claimPanel.classes()).toContain('h-[clamp(24rem,58vh,36rem)]');
         expect(claimPanel.classes()).toContain(
             'xl:h-[clamp(28rem,64vh,42rem)]',
         );

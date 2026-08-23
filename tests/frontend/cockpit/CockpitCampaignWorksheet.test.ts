@@ -42,7 +42,7 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('Payment Batches');
         expect(wrapper.text()).toContain('Continue');
         expect(wrapper.text()).toContain('Add Recipient List');
-        expect(wrapper.text()).toContain('Drop A File Or Paste Rows');
+        expect(wrapper.text()).toContain('Choose A File Or Paste Rows');
         expect(wrapper.text()).toContain('Choose File');
         expect(
             wrapper
@@ -57,6 +57,25 @@ describe('Cockpit campaign worksheets', () => {
                 .exists(),
         ).toBe(false);
         expect(wrapper.text()).toContain('Start Empty');
+    });
+
+    it('shows batch updates as relative time with the exact instant available', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-07-30T12:00:00+08:00'));
+
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [worksheet],
+            },
+        });
+        const updatedAt = wrapper.get('time');
+
+        expect(updatedAt.text()).toBe('yesterday');
+        expect(updatedAt.attributes('datetime')).toBe(worksheet.updated_at);
+        expect(updatedAt.attributes('title')).not.toBe('Unavailable');
+
+        wrapper.unmount();
+        vi.useRealTimers();
     });
 
     it('requests approval from Payment Batches through the existing authorization route', async () => {
@@ -380,6 +399,11 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(bankDestination.text()).toContain('BDO');
         expect(bankDestination.text()).toContain('001234567890');
+        const amount = wrapper.get(
+            '[data-testid="campaign-worksheet-amount-beneficiary-bank-01"]',
+        );
+        expect(amount.text()).toBe('₱1,000.00');
+        expect(amount.classes()).toContain('whitespace-nowrap');
         expect(
             wrapper
                 .find(
@@ -428,6 +452,26 @@ describe('Cockpit campaign worksheets', () => {
                 .find('[data-testid="campaign-pay-code-experience"]')
                 .exists(),
         ).toBe(true);
+        const experienceWorkspace = wrapper.get(
+            '[data-testid="campaign-pay-code-experience-workspace"]',
+        );
+        expect(experienceWorkspace.classes()).toContain(
+            '2xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]',
+        );
+        expect(experienceWorkspace.classes()).not.toContain(
+            'xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]',
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-canvas-stamp-footer"]')
+                .classes(),
+        ).toEqual(
+            expect.arrayContaining([
+                'flex-col',
+                '@sm:flex-row',
+                '@sm:justify-between',
+            ]),
+        );
 
         await wrapper.get('input[maxlength="5000"]').setValue('July salary');
         const save = wrapper
@@ -642,6 +686,24 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('data-testid="campaign-approval-delivery"');
         expect(page).toContain('Send To Officer');
         expect(page).toContain('must sign in to approve this batch.');
+        expect(page).toContain('data-testid="campaign-worksheet-stats"');
+        expect(page).toContain('min-[360px]:grid-cols-3');
+        expect(page).toContain('2xl:min-w-[21rem]');
+        expect(page).not.toContain(
+            'grid grid-cols-3 gap-x-5 gap-y-2 text-left sm:text-right',
+        );
+        expect(page).toContain('2xl:grid-cols-[minmax(0,1fr)_24rem]');
+        expect(page).not.toMatch(
+            /(?:class="[^"]*\s|class=")xl:grid-cols-\[minmax\(0,1fr\)_24rem\]/,
+        );
+        expect(page).toContain('data-testid="campaign-add-recipient-panel"');
+        expect(page).toContain('whitespace-normal');
+        expect(page).toMatch(
+            /requestedRelativeTime\(\s*attempt\.requested_at,?\s*\)/,
+        );
+        expect(page).toMatch(
+            /:title="\s*formatAbsoluteTime\(\s*attempt\.requested_at,?\s*\)\s*"/,
+        );
     });
 
     it('keeps imported beneficiaries staged behind explicit review controls', () => {

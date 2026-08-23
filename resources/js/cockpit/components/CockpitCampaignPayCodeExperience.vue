@@ -344,10 +344,11 @@ function selectEditor(key: EditorKey): void {
         </header>
 
         <div
-            class="grid gap-0 xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]"
+            class="grid min-w-0 gap-0 2xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]"
+            data-testid="campaign-pay-code-experience-workspace"
         >
             <div
-                class="border-b border-slate-200 p-4 xl:border-b-0 xl:border-r dark:border-slate-800"
+                class="min-w-0 border-b border-slate-200 p-4 2xl:border-b-0 2xl:border-r dark:border-slate-800"
             >
                 <nav
                     class="mb-4 grid grid-cols-3 rounded-xl bg-slate-100 p-1 dark:bg-slate-950"
@@ -712,7 +713,7 @@ function selectEditor(key: EditorKey): void {
                 </p>
             </div>
 
-            <div class="bg-slate-50/70 p-4 dark:bg-slate-950/40">
+            <div class="min-w-0 bg-slate-50/70 p-4 dark:bg-slate-950/40">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2">
                         <Eye class="size-4 text-slate-500" />

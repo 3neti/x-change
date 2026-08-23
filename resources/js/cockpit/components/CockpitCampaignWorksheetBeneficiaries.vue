@@ -45,7 +45,7 @@ const peso = (minor: number): string =>
             v-for="row in rows"
             :key="row.reference"
             :data-testid="`campaign-worksheet-row-${row.reference}`"
-            class="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+            class="grid min-w-0 gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
         >
             <div class="min-w-0">
                 <p
@@ -67,11 +67,11 @@ const peso = (minor: number): string =>
                     <span
                         v-if="row.beneficiary.bank_account"
                         :data-testid="`campaign-worksheet-bank-destination-${row.reference}`"
-                        class="inline-flex min-w-0 items-center gap-1.5"
+                        class="inline-flex min-w-0 max-w-full items-center gap-1.5"
                     >
                         <Landmark class="size-3.5 shrink-0" />
                         <span
-                            class="font-medium text-slate-600 dark:text-slate-300"
+                            class="truncate font-medium text-slate-600 dark:text-slate-300"
                         >
                             {{
                                 row.beneficiary.institution ||
@@ -80,7 +80,8 @@ const peso = (minor: number): string =>
                             }}
                         </span>
                         <span
-                            class="font-mono text-slate-700 dark:text-slate-200"
+                            class="truncate font-mono text-slate-700 dark:text-slate-200"
+                            :title="row.beneficiary.bank_account"
                         >
                             {{ row.beneficiary.bank_account }}
                         </span>
@@ -90,7 +91,10 @@ const peso = (minor: number): string =>
                     }}</span>
                 </div>
             </div>
-            <p class="font-semibold text-slate-950 dark:text-slate-50">
+            <p
+                class="whitespace-nowrap font-semibold text-slate-950 dark:text-slate-50"
+                :data-testid="`campaign-worksheet-amount-${row.reference}`"
+            >
                 {{ peso(row.amount_minor) }}
             </p>
         </article>

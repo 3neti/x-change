@@ -26,6 +26,7 @@ import CockpitCampaignImportWorkspace, {
     type CampaignImport,
 } from '../components/CockpitCampaignImportWorkspace.vue';
 import CockpitCampaignPayCodeExperience from '../components/CockpitCampaignPayCodeExperience.vue';
+import { formatAbsoluteTime, formatRelativeTime } from '../utils/dateTime';
 import type {
     CockpitHeaderPageProps,
     CockpitInstructionCapabilityReadinessMap,
@@ -154,6 +155,8 @@ const representativeRow = computed(() => props.worksheet.rows[0]);
 const worksheetTotalMinor = computed(() =>
     props.worksheet.rows.reduce((total, row) => total + row.amount_minor, 0),
 );
+const requestedRelativeTime = (value: string | null): string =>
+    formatRelativeTime(value, Date.now()) ?? 'Time unavailable';
 const fulfillmentReadinessDescription = (): string => {
     const count = plannedCount();
 
@@ -265,7 +268,7 @@ const sendApproval = (): void => {
         :cockpit-header-read-model="props.cockpit_header_read_model"
     >
         <main
-            class="mx-auto max-w-7xl space-y-5"
+            class="mx-auto w-full min-w-0 max-w-7xl space-y-5"
             data-testid="cockpit-campaign-worksheet-page"
         >
             <section
@@ -278,9 +281,9 @@ const sendApproval = (): void => {
                         ><ArrowLeft class="size-3.5" /> Campaigns</Link
                     >
                     <div
-                        class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                        class="mt-2 flex min-w-0 flex-col gap-3 2xl:flex-row 2xl:items-end 2xl:justify-between"
                     >
-                        <div>
+                        <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span
                                     class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
@@ -305,9 +308,12 @@ const sendApproval = (): void => {
                             </h1>
                         </div>
                         <dl
-                            class="grid grid-cols-3 gap-x-5 gap-y-2 text-left sm:text-right"
+                            class="grid w-full min-w-0 grid-cols-1 gap-2 text-left min-[360px]:grid-cols-3 2xl:w-auto 2xl:min-w-[21rem] 2xl:text-right"
+                            data-testid="campaign-worksheet-stats"
                         >
-                            <div>
+                            <div
+                                class="min-w-0 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-950"
+                            >
                                 <dt
                                     class="text-[0.65rem] font-medium text-slate-500 dark:text-slate-400"
                                 >
@@ -319,7 +325,9 @@ const sendApproval = (): void => {
                                     {{ props.worksheet.rows.length }}
                                 </dd>
                             </div>
-                            <div>
+                            <div
+                                class="min-w-0 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-950"
+                            >
                                 <dt
                                     class="text-[0.65rem] font-medium text-slate-500 dark:text-slate-400"
                                 >
@@ -331,7 +339,9 @@ const sendApproval = (): void => {
                                     {{ peso(worksheetTotalMinor) }}
                                 </dd>
                             </div>
-                            <div>
+                            <div
+                                class="min-w-0 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-950"
+                            >
                                 <dt
                                     class="text-[0.65rem] font-medium text-slate-500 dark:text-slate-400"
                                 >
@@ -374,9 +384,12 @@ const sendApproval = (): void => {
                 :instruction-capabilities="props.instruction_capabilities ?? {}"
             />
 
-            <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
+            <section
+                class="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_24rem]"
+                data-testid="campaign-worksheet-recipient-workspace"
+            >
                 <div
-                    class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    class="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
                         class="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
@@ -418,7 +431,7 @@ const sendApproval = (): void => {
                                     ?.length ?? 0) > 0 ||
                                 authorizationForm.processing
                             "
-                            class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-100 dark:text-slate-950"
+                            class="inline-flex w-full min-w-0 items-center justify-center gap-2 whitespace-normal rounded-xl bg-slate-950 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto dark:bg-slate-100 dark:text-slate-950"
                             @click="authorize"
                         >
                             <LockKeyhole class="size-4" />
@@ -450,7 +463,8 @@ const sendApproval = (): void => {
 
                 <form
                     v-if="isDraft()"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="campaign-add-recipient-panel"
                     @submit.prevent="add"
                 >
                     <div class="flex items-center gap-2">
@@ -465,7 +479,7 @@ const sendApproval = (): void => {
                     </div>
                     <div class="mt-4 grid gap-3">
                         <label
-                            class="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            class="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
                             >Amount
                             <span
                                 class="flex overflow-hidden rounded-lg border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-slate-400 dark:border-slate-700 dark:bg-slate-950"
@@ -478,31 +492,31 @@ const sendApproval = (): void => {
                                     placeholder="0.00"
                                     class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-slate-950 outline-none dark:text-white" /></span></label
                         ><label
-                            class="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            class="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
                             >Name
                             <input
                                 v-model="form.name"
-                                class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label
+                                class="w-full min-w-0 rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label
                         ><label
-                            class="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            class="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
                             >Destination
                             <input
                                 v-model="form.mobile"
                                 placeholder="Mobile number"
-                                class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /><input
+                                class="w-full min-w-0 rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /><input
                                 v-model="form.bank_account"
                                 placeholder="Bank account"
-                                class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /><input
+                                class="w-full min-w-0 rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /><input
                                 v-model="form.bank_code"
                                 placeholder="Bank name or code"
-                                class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label
+                                class="w-full min-w-0 rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label
                         ><label
-                            class="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            class="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200"
                             >Remarks
                             <textarea
                                 v-model="form.remarks"
                                 rows="2"
-                                class="rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                                class="w-full min-w-0 rounded-lg border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                             />
                         </label>
                     </div>
@@ -821,6 +835,22 @@ const sendApproval = (): void => {
                                 }}<template v-if="attempt.pay_code">
                                     · {{ attempt.pay_code }}</template
                                 >
+                                <template v-if="attempt.requested_at">
+                                    ·
+                                    <time
+                                        :datetime="attempt.requested_at"
+                                        :title="
+                                            formatAbsoluteTime(
+                                                attempt.requested_at,
+                                            )
+                                        "
+                                        >{{
+                                            requestedRelativeTime(
+                                                attempt.requested_at,
+                                            )
+                                        }}</time
+                                    >
+                                </template>
                             </p>
                         </div>
                         <span

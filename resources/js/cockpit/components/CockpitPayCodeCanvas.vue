@@ -634,7 +634,7 @@ function stringValue(value: unknown): string | null {
             :id="panelId('stamp')"
             role="tabpanel"
             :aria-labelledby="tabId('stamp')"
-            class="@md:min-h-72 @md:p-7 relative flex aspect-[1.72/1] min-h-88 w-full flex-col overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10"
+            class="@md:min-h-72 @md:p-7 min-h-88 relative flex aspect-[1.72/1] w-full flex-col overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10"
             :class="
                 hasRiderDesign
                     ? 'border-slate-700 bg-slate-950 text-white'
@@ -857,7 +857,10 @@ function stringValue(value: unknown): string | null {
                     </p>
                 </div>
 
-                <div class="flex items-end justify-between gap-4">
+                <div
+                    class="@sm:flex-row @sm:items-end @sm:justify-between @sm:gap-4 flex min-w-0 flex-col items-start gap-2"
+                    data-testid="cockpit-pay-code-canvas-stamp-footer"
+                >
                     <div class="min-w-0">
                         <p
                             class="flex min-w-0 items-center gap-1.5 text-[0.65rem] font-semibold"
@@ -882,7 +885,10 @@ function stringValue(value: unknown): string | null {
                             </span>
                         </p>
                     </div>
-                    <div v-if="riderStamp === null" class="shrink-0 text-right">
+                    <div
+                        v-if="riderStamp === null"
+                        class="@sm:text-right max-w-full shrink-0 text-left"
+                    >
                         <p
                             class="text-[0.6rem] font-semibold uppercase tracking-[0.18em]"
                             :class="
@@ -894,7 +900,7 @@ function stringValue(value: unknown): string | null {
                             {{ issuedCode ? 'Issued code' : 'Preview' }}
                         </p>
                         <p
-                            class="mt-1 font-mono text-sm font-black tracking-[0.14em]"
+                            class="mt-1 break-words font-mono text-sm font-black tracking-[0.14em]"
                         >
                             {{ displayedCode }}
                         </p>

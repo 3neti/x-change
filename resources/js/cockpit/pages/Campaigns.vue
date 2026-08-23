@@ -16,6 +16,7 @@ import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
 import CockpitCampaignIntakeDialog from '../components/CockpitCampaignIntakeDialog.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
+import { formatAbsoluteTime, formatRelativeTime } from '../utils/dateTime';
 import type { CockpitHeaderPageProps } from '../types';
 
 type CampaignWorksheet = {
@@ -307,20 +308,8 @@ function batchActionLabel(worksheet: CampaignWorksheet): string {
     return 'View Results';
 }
 
-function dateTime(value: string | null): string {
-    if (!value) {
-        return '—';
-    }
-
-    const date = new Date(value);
-
-    return Number.isNaN(date.getTime())
-        ? value
-        : new Intl.DateTimeFormat('en-PH', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-          }).format(date);
-}
+const updatedRelativeTime = (value: string | null): string =>
+    formatRelativeTime(value, Date.now()) ?? 'Time unavailable';
 </script>
 
 <template>
@@ -340,7 +329,7 @@ function dateTime(value: string | null): string {
                 >
                     <div>
                         <div
-                            class="flex items-center gap-2 text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                            class="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                         >
                             <ClipboardList
                                 class="size-3.5"
@@ -404,7 +393,7 @@ function dateTime(value: string | null): string {
                     >
                         <div>
                             <p
-                                class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                                class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                             >
                                 Your Batches
                             </p>
@@ -447,7 +436,7 @@ function dateTime(value: string | null): string {
                         <article
                             v-for="worksheet in props.worksheets"
                             :key="worksheet.reference"
-                            class="@container grid gap-3 px-4 py-3 @3xl:grid-cols-[minmax(0,1fr)_auto] @3xl:items-center"
+                            class="@container @3xl:grid-cols-[minmax(0,1fr)_auto] @3xl:items-center grid gap-3 px-4 py-3"
                             :title="worksheet.reference"
                         >
                             <div class="min-w-0">
@@ -471,14 +460,29 @@ function dateTime(value: string | null): string {
                                     class="mt-1 text-xs text-slate-500 dark:text-slate-400"
                                 >
                                     {{ display(worksheet.fulfillment_mode) }} ·
-                                    updated {{ dateTime(worksheet.updated_at) }}
+                                    updated
+                                    <time
+                                        :datetime="
+                                            worksheet.updated_at ?? undefined
+                                        "
+                                        :title="
+                                            formatAbsoluteTime(
+                                                worksheet.updated_at,
+                                            )
+                                        "
+                                        >{{
+                                            updatedRelativeTime(
+                                                worksheet.updated_at,
+                                            )
+                                        }}</time
+                                    >
                                 </p>
                             </div>
                             <div
-                                class="flex flex-col gap-3 @xl:flex-row @xl:items-center @xl:justify-end"
+                                class="@xl:flex-row @xl:items-center @xl:justify-end flex flex-col gap-3"
                             >
                                 <dl
-                                    class="grid w-full grid-cols-2 gap-x-5 text-left text-xs @xl:w-auto @xl:min-w-44 @xl:text-right"
+                                    class="@xl:w-auto @xl:min-w-44 @xl:text-right grid w-full grid-cols-2 gap-x-5 text-left text-xs"
                                 >
                                     <div>
                                         <dt
@@ -508,7 +512,7 @@ function dateTime(value: string | null): string {
                                     </div>
                                 </dl>
                                 <div
-                                    class="flex w-full items-center gap-2 @xl:w-auto"
+                                    class="@xl:w-auto flex w-full items-center gap-2"
                                 >
                                     <button
                                         v-if="
@@ -519,7 +523,7 @@ function dateTime(value: string | null): string {
                                         :data-testid="`campaign-activity-create-approval-${worksheet.reference}`"
                                         :disabled="authorizationForm.processing"
                                         title="Lock this recipient list and prepare its officer Approval Pay Code."
-                                        class="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 @xl:flex-none dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+                                        class="@xl:flex-none inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
                                         @click="
                                             createApprovalPayCode(worksheet)
                                         "
@@ -538,7 +542,7 @@ function dateTime(value: string | null): string {
                                     <a
                                         v-else
                                         :href="show(worksheet.reference).url"
-                                        class="inline-flex min-w-0 flex-1 items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 @xl:flex-none dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                        class="@xl:flex-none inline-flex min-w-0 flex-1 items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                                     >
                                         {{ batchActionLabel(worksheet) }}
                                     </a>
@@ -572,7 +576,7 @@ function dateTime(value: string | null): string {
                             />
                             <div>
                                 <p
-                                    class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                                    class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                                 >
                                     New Batch
                                 </p>
@@ -586,8 +590,8 @@ function dateTime(value: string | null): string {
                         <p
                             class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300"
                         >
-                            Drop a file or paste copied rows. Review everything
-                            before creating the batch.
+                            Add CSV or XLSX recipient data, or paste copied
+                            rows. Review everything before creating the batch.
                         </p>
                         <div
                             data-testid="campaign-import-drop-zone"
@@ -623,16 +627,7 @@ function dateTime(value: string | null): string {
                                         ? 'Reading Recipients…'
                                         : isDraggingIntake
                                           ? 'Drop To Inspect'
-                                          : 'Drop A File Or Paste Rows'
-                                }}
-                            </p>
-                            <p
-                                class="mt-1 text-xs text-slate-500 dark:text-slate-400"
-                            >
-                                {{
-                                    intakeForm.processing
-                                        ? 'Preparing your review.'
-                                        : 'Press Ctrl/⌘ + V anywhere on this page'
+                                          : 'Choose A File Or Paste Rows'
                                 }}
                             </p>
                             <button
@@ -645,7 +640,7 @@ function dateTime(value: string | null): string {
                                 Choose File
                             </button>
                             <p
-                                class="mt-3 text-[0.65rem] font-semibold tracking-[0.14em] text-slate-400 uppercase dark:text-slate-500"
+                                class="mt-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500"
                             >
                                 CSV · XLSX · Copied Rows
                             </p>
@@ -679,7 +674,7 @@ function dateTime(value: string | null): string {
                                 />
                                 <div>
                                     <p
-                                        class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                                        class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                                     >
                                         Start Empty
                                     </p>
@@ -702,7 +697,7 @@ function dateTime(value: string | null): string {
                                 />
                                 <div>
                                     <p
-                                        class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                                        class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                                     >
                                         New Batch
                                     </p>
@@ -724,7 +719,7 @@ function dateTime(value: string | null): string {
                                         type="text"
                                         maxlength="160"
                                         placeholder="July payroll"
-                                        class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm transition outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                        class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
                                     />
                                     <span
                                         v-if="form.errors.name"
@@ -739,7 +734,7 @@ function dateTime(value: string | null): string {
                                     Type
                                     <select
                                         v-model="form.profile"
-                                        class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm transition outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                        class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
                                     >
                                         <option value="payroll">Payroll</option>
                                         <option value="assistance">
@@ -754,7 +749,7 @@ function dateTime(value: string | null): string {
                                     Payment Method
                                     <select
                                         v-model="form.fulfillment_mode"
-                                        class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm transition outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                        class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
                                     >
                                         <option value="pay_code_distribution">
                                             Pay Code distribution
