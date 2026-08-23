@@ -50,6 +50,7 @@ The recipe does not own:
 - destructive database resets;
 - real-money test transfers;
 - automatic promotion from staging to production.
+- migration keepsake evidence snapshots.
 
 ## Source of truth
 
@@ -67,6 +68,10 @@ The generated manifest contains:
 - runtime responsibilities;
 - recipe schema version, package version, and manifest hash;
 - enabled operations and safety gates.
+
+For evidence retention and migration preparation workflows before environment resets, use
+[instance keepsake export](../operations/INSTANCE_KEEPSAKE_EXPORT.md) through the
+keepsake command surface documented in package operations.
 
 Running generation again replaces only generated fields and preserves explicit
 host-owned metadata. Stale package versions and derived provider variable lists

@@ -18,21 +18,67 @@ final class ExportInstanceKeepsakeCommand extends Command
 {
     use InteractsWithJsonOutput;
 
+    protected $help = <<<HELP
+Preview or create an encrypted, non-restorable X-Change instance keepsake.
+
+Typical flow:
+
+1. Run a dry-run (default) to get scope, counts, and a deterministic plan hash.
+2. Run again with --create and the exact --plan-hash to generate the encrypted archive.
+3. Verify the generated archive outside of this command before deciding whether to migrate.
+
+Important behavior:
+
+- Dry runs do not mutate voucher, account, treasury, provider, or file state.
+- Create mode requires both a sensitive-operation acknowledgment and a plan hash.
+- A successful create result is non-restorable and includes a one-time authenticated download path.
+- Location evidence defaults to the claim map image only. Add precise location payload with explicit confirmation.
+- Missing artifacts or plan drift cause safe rejection unless explicitly accepted by design.
+- The command never triggers provider calls, movements of funds, or financial restoration operations.
+
+Usage:
+
+php artisan x-change:instance-keepsake:export --help
+
+Common examples:
+
+# scope one user and inspect a dry-run plan
+php artisan x-change:instance-keepsake:export --user=alice@example.test --json
+
+# run an account-only dry run with sensitive scope
+php artisan x-change:instance-keepsake:export --user=alice@example.test --include=accounts --include-personal-data --confirm-sensitive-export --json
+
+# create archive after copying the dry-run plan hash
+php artisan x-change:instance-keepsake:export \
+  --user=alice@example.test \
+  --include=accounts \
+  --include-personal-data \
+  --include-location-data \
+  --confirm-sensitive-export \
+  --confirm-location-data \
+  --create \
+  --plan-hash=<PLAN_HASH_FROM_DRY_RUN> \
+  --export-reference=<OPERATOR_UNIQUE_REFERENCE> \
+  --authorization-reference=<TICKET_OR_WORKFLOW_REFERENCE> \
+  --download-user=alice@example.test \
+  --json
+HELP;
+
     protected $signature = 'x-change:instance-keepsake:export
         {--all-users : Include every user Account}
         {--user=* : Include specific users by email or configured model key}
         {--include=* : accounts, pay-codes, claim-evidence, blueprint}
-        {--include-personal-data : Include names, emails, and mobiles in the encrypted archive}
-        {--include-location-data : Include precise location JSON sidecars in the encrypted archive}
+        {--include-personal-data : Include names, emails, and mobiles in the archive}
+        {--include-location-data : Include precise location JSON sidecars in the archive}
         {--confirm-location-data : Separately acknowledge precise location export}
         {--allow-incomplete : Permit a review-required archive with explicit omissions}
         {--confirm-incomplete-export : Acknowledge an incomplete sensitive archive}
-        {--confirm-sensitive-export : Confirm bulk access to sensitive instance data}
-        {--create : Create and privately stage the encrypted archive}
-        {--plan-hash= : Exact hash returned by the dry-run}
+        {--confirm-sensitive-export : Confirm bulk sensitive export scope}
+        {--create : Create and privately stage the encrypted archive (requires --plan-hash)}
+        {--plan-hash= : Exact plan hash from a dry-run}
         {--export-reference= : Stable immutable export reference}
-        {--authorization-reference= : Truthful external authorization reference}
-        {--download-user= : Existing authorized user that may download the archive}
+        {--authorization-reference= : External approval/ticket reference}
+        {--download-user= : Existing authorized user identifier for authenticated download}
         {--json : Emit a machine-readable result}
         {--pretty : Pretty-print JSON output}';
 
