@@ -393,6 +393,17 @@ const claimantInstructionGroups = computed(() =>
   })),
 );
 
+const instructionCurrency = computed(() => {
+  const valueGroup = instructionGroups.value.find(
+    (group) => text(group.key) === "value",
+  );
+  const currencyFact = list(valueGroup?.facts).find(
+    (fact) => text(fact.label) === "Currency",
+  );
+
+  return text(currencyFact?.value) || "PHP";
+});
+
 const envelopeProgress = computed(() => {
   const checklist = record(envelope.value.checklist);
   const total = number(checklist.required_count);
@@ -503,7 +514,7 @@ function claimantInstructionFact(
     if (label === "Amount") {
       return {
         label: "Value available",
-        value: `The claimant can receive ${value}.`,
+        value: `The claimant can receive ${formatMajorMoney(value, instructionCurrency.value)}.`,
       };
     }
 
@@ -524,6 +535,48 @@ function claimantInstructionFact(
   }
 
   return { label, value };
+}
+
+function journalSummary(entry: DetailRecord): string {
+  return (
+    text(entry.summary) ||
+    text(record(entry.payload).summary) ||
+    text(entry.description)
+  );
+}
+
+function deliveryAttempts(delivery: DetailRecord): string {
+  const attemptCount = delivery.attempt_count;
+  const maximumAttempts = delivery.max_attempts;
+
+  if (attemptCount === undefined && maximumAttempts === undefined) {
+    return "";
+  }
+
+  const attempts = number(attemptCount);
+  const maximum = number(maximumAttempts);
+
+  return maximum > 0
+    ? `Attempts: ${attempts}/${maximum}`
+    : `Attempts: ${attempts}`;
+}
+
+function claimStatusTone(status: unknown): string {
+  const normalized = text(status).toLowerCase();
+
+  if (["paid", "completed", "succeeded"].includes(normalized)) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200";
+  }
+
+  if (["rejected", "failed", "payout_rejected"].includes(normalized)) {
+    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200";
+  }
+
+  if (["pending", "processing", "awaiting"].includes(normalized)) {
+    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200";
+  }
+
+  return "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200";
 }
 
 function claimantRequirements(value: string): string {
@@ -583,6 +636,20 @@ function formatMoney(value: unknown, currency: unknown = "PHP"): string {
     currency: code,
     minimumFractionDigits: 2,
   }).format(minor / 100);
+}
+
+function formatMajorMoney(value: unknown, currency: unknown = "PHP"): string {
+  const amount = Number(text(value).replace(/,/g, ""));
+
+  if (!Number.isFinite(amount)) {
+    return text(value);
+  }
+
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: text(currency) || "PHP",
+    minimumFractionDigits: 2,
+  }).format(amount);
 }
 
 function formatDate(value: unknown): string {
@@ -944,6 +1011,38 @@ function number(value: unknown): number {
               </details>
             </article>
           </div>
+          <button
+            type="button"
+            class="group flex w-full items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left transition hover:border-blue-300 hover:bg-blue-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-blue-900 dark:bg-blue-950/30 dark:hover:border-blue-800 dark:hover:bg-blue-950/50"
+            data-testid="pay-code-overview-settlement-teaser"
+            @click="activeTab = 'settlement'"
+          >
+            <span class="flex min-w-0 items-center gap-3">
+              <span
+                class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200"
+              >
+                <Landmark class="size-4" />
+              </span>
+              <span class="min-w-0">
+                <span
+                  class="block text-xs font-semibold text-blue-950 dark:text-blue-100"
+                  >Settlement</span
+                >
+                <span
+                  class="mt-0.5 block text-xs text-blue-800 dark:text-blue-200"
+                >
+                  {{
+                    envelope.available === true
+                      ? `Settlement envelope: ${title(envelope.status) || "Available"}`
+                      : "No settlement envelope required"
+                  }}
+                </span>
+              </span>
+            </span>
+            <ChevronRight
+              class="size-4 shrink-0 text-blue-600 transition group-hover:translate-x-0.5 dark:text-blue-300"
+            />
+          </button>
         </div>
 
         <aside
@@ -1363,8 +1462,14 @@ function number(value: unknown): number {
           </span>
         </article>
 
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <div>
+        <div
+          class="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+          data-testid="pay-code-claim-evidence-grid"
+        >
+          <section
+            class="rounded-3xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
+            data-testid="pay-code-claims-panel"
+          >
             <div class="flex items-center gap-2">
               <ScanFace class="h-5 w-5 text-blue-600" />
               <h3 class="text-sm font-semibold text-slate-950 dark:text-white">
@@ -1377,7 +1482,7 @@ function number(value: unknown): number {
                 :key="number(claim.id)"
                 :id="`claim-${number(claim.id)}`"
                 :class="[
-                  'rounded-2xl border p-4 transition',
+                  'rounded-2xl border bg-white p-4 transition dark:bg-slate-900/70',
                   focusedClaimId === number(claim.id)
                     ? 'border-blue-300 bg-blue-50/60 ring-2 ring-blue-100 dark:border-blue-700 dark:bg-blue-950/30 dark:ring-blue-900/40'
                     : 'border-slate-200 dark:border-slate-800',
@@ -1394,7 +1499,7 @@ function number(value: unknown): number {
                       Claim {{ text(claim.claim_number) || "1" }}
                     </p>
                     <p
-                      class="mt-1 text-[0.7rem] text-slate-500 dark:text-slate-400"
+                      class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
                     >
                       {{ title(claim.claim_type) }} ·
                       {{ claimTimingLabel(claim) }} ·
@@ -1402,13 +1507,18 @@ function number(value: unknown): number {
                     </p>
                   </div>
                   <span
-                    class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold dark:bg-slate-800"
+                    :class="[
+                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold',
+                      claimStatusTone(claim.status),
+                    ]"
+                    data-testid="pay-code-claim-status"
+                    ><span class="size-1.5 rounded-full bg-current"></span
                     >{{ title(claim.status) }}</span
                   >
                 </div>
                 <div
                   v-if="number(record(claim.evidence).required_count) > 0"
-                  class="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-[0.7rem] dark:bg-slate-950/60"
+                  class="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-slate-950/60"
                 >
                   <span class="text-slate-500 dark:text-slate-400"
                     >Evidence</span
@@ -1474,9 +1584,12 @@ function number(value: unknown): number {
                 Not yet claimed
               </p>
             </div>
-          </div>
+          </section>
 
-          <div>
+          <section
+            class="rounded-3xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
+            data-testid="pay-code-evidence-panel"
+          >
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <FileCheck2 class="h-5 w-5 text-violet-600" />
@@ -1486,7 +1599,7 @@ function number(value: unknown): number {
                   Captured Evidence
                 </h3>
               </div>
-              <span class="text-[0.65rem] font-semibold text-slate-500"
+              <span class="text-xs font-semibold text-slate-500"
                 >{{ evidence.length }} items</span
               >
             </div>
@@ -1494,11 +1607,11 @@ function number(value: unknown): number {
               <section v-for="group in evidenceGroups" :key="group.key">
                 <div class="mb-2 flex items-center justify-between gap-3">
                   <h4
-                    class="text-[0.7rem] font-semibold uppercase tracking-[0.13em] text-slate-500 dark:text-slate-400"
+                    class="text-xs font-semibold uppercase tracking-[0.13em] text-slate-500 dark:text-slate-400"
                   >
                     {{ group.label }}
                   </h4>
-                  <span class="text-[0.65rem] text-slate-400">{{
+                  <span class="text-xs text-slate-400">{{
                     group.items.length
                   }}</span>
                 </div>
@@ -1506,7 +1619,7 @@ function number(value: unknown): number {
                   <article
                     v-for="item in group.items"
                     :key="number(item.id)"
-                    class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800"
+                    class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70"
                   >
                     <div
                       v-if="item.revealable === true"
@@ -1528,10 +1641,10 @@ function number(value: unknown): number {
                         <span class="text-xs font-semibold"
                           >Reveal {{ text(item.label) }}</span
                         >
-                        <span class="text-[0.65rem]">Access is recorded</span>
+                        <span class="text-xs">Access is recorded</span>
                       </button>
                     </div>
-                    <div class="p-3">
+                    <div class="p-4">
                       <div class="flex items-center justify-between gap-2">
                         <div class="flex min-w-0 items-center gap-2">
                           <component
@@ -1546,7 +1659,7 @@ function number(value: unknown): number {
                         </div>
                         <span
                           v-if="item.claim_number"
-                          class="shrink-0 text-[0.6rem] font-semibold text-slate-400"
+                          class="shrink-0 text-xs font-semibold text-slate-400"
                         >
                           Claim {{ text(item.claim_number) }}
                         </span>
@@ -1562,7 +1675,7 @@ function number(value: unknown): number {
                             text(item.artifact_status),
                           )
                         "
-                        class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-[0.68rem] leading-4 text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+                        class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
                       >
                         Private file unavailable. Its captured evidence record
                         and summary remain retained.
@@ -1594,7 +1707,7 @@ function number(value: unknown): number {
                 capture was enabled.
               </p>
             </div>
-          </div>
+          </section>
         </div>
       </section>
 
@@ -1650,7 +1763,8 @@ function number(value: unknown): number {
           <div class="space-y-4">
             <div class="grid gap-3 sm:grid-cols-2">
               <article
-                class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+                class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
+                data-testid="pay-code-settlement-status-card"
               >
                 <p
                   class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500"
@@ -1662,7 +1776,8 @@ function number(value: unknown): number {
                 </p>
               </article>
               <article
-                class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+                class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
+                data-testid="pay-code-settlement-version-card"
               >
                 <p
                   class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500"
@@ -1674,7 +1789,11 @@ function number(value: unknown): number {
                 </p>
               </article>
             </div>
-            <div v-if="list(envelope.gates).length">
+            <section
+              v-if="list(envelope.gates).length"
+              class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
+              data-testid="pay-code-settlement-gates"
+            >
               <h4 class="text-xs font-semibold text-slate-950 dark:text-white">
                 Readiness Gates
               </h4>
@@ -1693,8 +1812,12 @@ function number(value: unknown): number {
                   }}</span
                 >
               </div>
-            </div>
-            <div v-if="list(envelope.attachments).length">
+            </section>
+            <section
+              v-if="list(envelope.attachments).length"
+              class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
+              data-testid="pay-code-settlement-documents"
+            >
               <h4 class="text-xs font-semibold text-slate-950 dark:text-white">
                 Documents
               </h4>
@@ -1717,7 +1840,7 @@ function number(value: unknown): number {
                     }}<ChevronRight class="h-3.5 w-3.5" /></span
                 ></a>
               </div>
-            </div>
+            </section>
           </div>
         </div>
         <div
@@ -1769,24 +1892,34 @@ function number(value: unknown): number {
         data-testid="pay-code-audit-tab"
       >
         <div class="grid gap-5 xl:grid-cols-2">
-          <div>
+          <section
+            class="rounded-3xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
+            data-testid="pay-code-audit-journal"
+          >
             <div class="flex items-center gap-2">
               <Activity class="h-5 w-5 text-slate-600" />
               <h3 class="text-sm font-semibold text-slate-950 dark:text-white">
                 Journal
               </h3>
             </div>
-            <div v-if="journalEntries.length" class="mt-3 space-y-1">
+            <div v-if="journalEntries.length" class="mt-3 space-y-3">
               <article
                 v-for="(entry, index) in journalEntries"
                 :key="text(entry.id) || index"
-                class="relative border-l border-slate-200 py-3 pl-5 dark:border-slate-700"
+                class="relative rounded-2xl border border-slate-200 bg-white p-4 pl-7 dark:border-slate-800 dark:bg-slate-900/70"
               >
                 <span
-                  class="absolute -left-1 top-4 h-2 w-2 rounded-full bg-slate-400"
+                  class="absolute left-3 top-5 size-2 rounded-full bg-violet-500 ring-4 ring-violet-100 dark:ring-violet-950"
                 ></span>
                 <p class="text-xs font-semibold text-slate-950 dark:text-white">
                   {{ title(entry.event_type || entry.type || entry.event) }}
+                </p>
+                <p
+                  v-if="journalSummary(entry)"
+                  class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300"
+                  data-testid="pay-code-audit-journal-summary"
+                >
+                  {{ journalSummary(entry) }}
                 </p>
                 <p
                   class="mt-1 text-[0.7rem] text-slate-500 dark:text-slate-400"
@@ -1801,22 +1934,22 @@ function number(value: unknown): number {
             >
               No journal evidence is connected.
             </p>
-          </div>
-          <div>
+          </section>
+          <section
+            class="rounded-3xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
+            data-testid="pay-code-audit-delivery"
+          >
             <div class="flex items-center gap-2">
               <Send class="h-5 w-5 text-slate-600" />
               <h3 class="text-sm font-semibold text-slate-950 dark:text-white">
                 Delivery
               </h3>
             </div>
-            <div
-              v-if="deliveries.length"
-              class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800"
-            >
+            <div v-if="deliveries.length" class="mt-3 space-y-3">
               <article
                 v-for="(delivery, index) in deliveries"
                 :key="text(delivery.id) || index"
-                class="flex items-center justify-between gap-3 p-3"
+                class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/70"
               >
                 <div>
                   <p
@@ -1841,6 +1974,13 @@ function number(value: unknown): number {
                           formatDate(delivery.last_attempted_at)
                     }}
                   </p>
+                  <p
+                    v-if="deliveryAttempts(delivery)"
+                    class="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300"
+                    data-testid="pay-code-audit-delivery-attempts"
+                  >
+                    {{ deliveryAttempts(delivery) }}
+                  </p>
                 </div>
                 <span
                   class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold dark:bg-slate-800"
@@ -1854,7 +1994,7 @@ function number(value: unknown): number {
             >
               No delivery evidence is connected.
             </p>
-          </div>
+          </section>
         </div>
       </section>
 

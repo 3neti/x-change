@@ -264,9 +264,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     expect(backingCard.text()).toContain("Claim readiness");
     expect(backingCard.text()).toContain("Value was safely held and paid");
-    expect(backingCard.text()).toContain(
-      "completed its claim lifecycle",
-    );
+    expect(backingCard.text()).toContain("completed its claim lifecycle");
     expect(backingDetails.element.tagName).toBe("DETAILS");
     expect(backingDetails.attributes("open")).toBeUndefined();
     expect(backingDetails.text()).toContain("Technical backing details");
@@ -330,6 +328,60 @@ describe("Cockpit Pay Code record workspace", () => {
     );
     expect(instructions.text()).not.toContain("Required Inputs");
     expect(instructions.text()).not.toContain("Target Mobile");
+  });
+
+  it("formats the claimant-facing available value with its currency", async () => {
+    const valueVoucher = structuredClone(voucher);
+    valueVoucher.instructions.groups = [
+      {
+        key: "value",
+        label: "Value",
+        facts: [
+          { label: "Amount", value: "1000" },
+          { label: "Currency", value: "PHP" },
+        ],
+      },
+    ];
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher: valueVoucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Instructions"))!
+      .trigger("click");
+
+    expect(
+      wrapper.get('[data-testid="pay-code-instructions-tab"]').text(),
+    ).toContain("The claimant can receive ₱1,000.00.");
+  });
+
+  it("opens Settlement from the compact Overview teaser", async () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+    const teaser = wrapper.get(
+      '[data-testid="pay-code-overview-settlement-teaser"]',
+    );
+
+    expect(teaser.text()).toContain("Settlement envelope: Approved");
+    await teaser.trigger("click");
+
+    expect(
+      wrapper.get('[data-testid="pay-code-settlement-tab"]').exists(),
+    ).toBe(true);
   });
 
   it("renders the durable slice ledger as its own detail tab", async () => {
@@ -421,6 +473,15 @@ describe("Cockpit Pay Code record workspace", () => {
       "Selfie & Signature",
     );
     expect(wrapper.find('img[src*="/evidence/input/44"]').exists()).toBe(false);
+    expect(
+      wrapper.get('[data-testid="pay-code-claims-panel"]').classes(),
+    ).toContain("rounded-3xl");
+    expect(
+      wrapper.get('[data-testid="pay-code-evidence-panel"]').classes(),
+    ).toContain("rounded-3xl");
+    expect(
+      wrapper.get('[data-testid="pay-code-claim-status"]').classes(),
+    ).toContain("text-emerald-700");
 
     const reveal = wrapper
       .findAll("button")
@@ -493,6 +554,103 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(settlement).toContain(
       "The Settlement Envelope proves readiness. Treasury Backing proves where the money is held.",
     );
+  });
+
+  it("uses consistent cards for settlement status, gates, and documents", async () => {
+    const settlementVoucher = structuredClone(voucher);
+    settlementVoucher.settlement.envelope.gates = [
+      { key: "identity", label: "Identity verified", satisfied: true },
+    ];
+    settlementVoucher.settlement.envelope.attachments = [
+      {
+        id: 9,
+        label: "Claim receipt",
+        review_status: "approved",
+        reveal_href: "/attachments/9",
+      },
+    ];
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher: settlementVoucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Settlement"))!
+      .trigger("click");
+
+    for (const testId of [
+      "pay-code-settlement-status-card",
+      "pay-code-settlement-version-card",
+      "pay-code-settlement-gates",
+      "pay-code-settlement-documents",
+    ]) {
+      const card = wrapper.get(`[data-testid="${testId}"]`);
+      expect(card.classes()).toContain("rounded-2xl");
+      expect(card.classes()).toContain("border-slate-200");
+    }
+  });
+
+  it("enriches Journal and Delivery entries when sanitized context is available", async () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        journal: {
+          status: "available",
+          entries: [
+            {
+              id: "journal-1",
+              event_type: "voucher.claimed",
+              summary: "Claim 1 completed against the reserved principal.",
+              occurred_at: "2026-08-03T08:19:00+08:00",
+            },
+            {
+              id: "journal-2",
+              event_type: "voucher.closed",
+              occurred_at: "2026-08-03T08:20:00+08:00",
+            },
+          ],
+        },
+        feedback: {
+          status: "available",
+          deliveries: [
+            {
+              id: "delivery-1",
+              channel: "sms",
+              status: "delivered",
+              provider_status: "accepted",
+              attempt_count: 2,
+              max_attempts: 3,
+              delivered_at: "2026-08-03T08:21:00+08:00",
+            },
+          ],
+        },
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes("Audit"))!
+      .trigger("click");
+
+    expect(
+      wrapper.findAll('[data-testid="pay-code-audit-journal-summary"]'),
+    ).toHaveLength(1);
+    expect(
+      wrapper.get('[data-testid="pay-code-audit-journal"]').text(),
+    ).toContain("Claim 1 completed against the reserved principal.");
+    expect(
+      wrapper.get('[data-testid="pay-code-audit-delivery-attempts"]').text(),
+    ).toBe("Attempts: 2/3");
   });
 
   it("distinguishes lifecycle closure from payout completion", async () => {
