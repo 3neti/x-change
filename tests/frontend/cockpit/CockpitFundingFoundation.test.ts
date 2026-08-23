@@ -622,9 +622,19 @@ describe('Cockpit Funding foundation', () => {
         ).not.toContain('bg-slate-950');
         expect(
             wrapper
+                .get('[data-testid="cockpit-funding-orientation"]')
+                .classes(),
+        ).toEqual(expect.arrayContaining(['hidden', 'md:block']));
+        expect(
+            wrapper
                 .get('[data-testid="cockpit-funding-summary-strip"]')
                 .findAll('article'),
         ).toHaveLength(4);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-summary-strip"]')
+                .classes(),
+        ).not.toContain('hidden');
         expect(
             wrapper
                 .get('[data-testid="funding-mode-self_top_up"]')
@@ -666,9 +676,7 @@ describe('Cockpit Funding foundation', () => {
             );
 
             expect(methodPanel.classes()).not.toContain('min-h-[18.5rem]');
-            expect(methodPanel.classes()).not.toContain(
-                'sm:min-h-[21.5rem]',
-            );
+            expect(methodPanel.classes()).not.toContain('sm:min-h-[21.5rem]');
         }
         expect(methodPanelHeaders[0].classes()).toEqual(
             expect.arrayContaining(['min-h-28', 'sm:min-h-24']),
@@ -1468,9 +1476,7 @@ describe('Cockpit Funding foundation', () => {
         const quickAmounts = wrapper.get(
             '[data-testid="bank-transfer-quick-amounts"]',
         );
-        const form = wrapper.get(
-            '[data-testid="bank-transfer-funding-form"]',
-        );
+        const form = wrapper.get('[data-testid="bank-transfer-funding-form"]');
         const submit = wrapper.get(
             '[data-testid="reserve-bank-transfer-amount"]',
         );
@@ -1797,7 +1803,9 @@ describe('Cockpit Funding foundation', () => {
 
         expect(
             wrapper
-                .get('[data-testid="standing-funding-address-migration-required"]')
+                .get(
+                    '[data-testid="standing-funding-address-migration-required"]',
+                )
                 .text(),
         ).toContain('Binding migration required');
         expect(wrapper.text()).toContain('01J-STANDING-LEGACY');

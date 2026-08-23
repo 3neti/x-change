@@ -13,6 +13,9 @@ describe('Cockpit dashboard shell baseline', () => {
             wrapper.find('[data-testid="cockpit-page-heading"]').text(),
         ).toContain('Cockpit');
         expect(
+            wrapper.find('[data-testid="cockpit-page-heading"]').classes(),
+        ).toEqual(expect.arrayContaining(['hidden', 'md:flex']));
+        expect(
             wrapper.find('[data-testid="cockpit-controls-panel"]').text(),
         ).toContain('Choose a workspace.');
         expect(

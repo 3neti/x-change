@@ -1111,7 +1111,7 @@ function stringValue(value: unknown): string | null {
     >
         <section class="space-y-4" data-testid="cockpit-quick-generate-shell">
             <header
-                class="flex items-start justify-between gap-4 px-1"
+                class="hidden items-start justify-between gap-4 px-1 md:flex"
                 data-testid="cockpit-quick-generate-header"
             >
                 <div class="min-w-0">

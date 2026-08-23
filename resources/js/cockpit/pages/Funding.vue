@@ -1287,26 +1287,31 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-funding-header"
             >
-                <div class="flex flex-wrap items-center gap-2">
-                    <h1
-                        class="text-xl font-semibold tracking-tight text-slate-950 dark:text-white"
-                    >
-                        Account Funding
-                    </h1>
-                    <span
-                        class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-emerald-700 uppercase dark:bg-emerald-950/60 dark:text-emerald-300"
-                    >
-                        Bank verified
-                    </span>
-                </div>
-                <p
-                    class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400"
+                <div
+                    class="hidden md:block"
+                    data-testid="cockpit-funding-orientation"
                 >
-                    Add funds using QR Ph, bank transfer, or Pay Code.
-                </p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1
+                            class="text-xl font-semibold tracking-tight text-slate-950 dark:text-white"
+                        >
+                            Account Funding
+                        </h1>
+                        <span
+                            class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                        >
+                            Bank verified
+                        </span>
+                    </div>
+                    <p
+                        class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400"
+                    >
+                        Add funds using QR Ph, bank transfer, or Pay Code.
+                    </p>
+                </div>
 
                 <section
-                    class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"
+                    class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:mt-3"
                     aria-label="Funding summary"
                     data-testid="cockpit-funding-summary-strip"
                 >
@@ -1316,7 +1321,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-950/50"
                     >
                         <p
-                            class="truncate text-[0.62rem] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400"
+                            class="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
                         >
                             {{ card.label }}
                         </p>
@@ -1448,12 +1453,12 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <p
-                                class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
+                                class="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300"
                             >
                                 Treasury oversight
                             </p>
                             <span
-                                class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                                class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                             >
                                 cached projection
                             </span>
@@ -1520,7 +1525,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 refreshableProviderLiquidity
                             "
                             type="button"
-                            class="inline-flex min-h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-sky-600 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
+                            class="inline-flex min-h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-sky-600 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
                             data-testid="funding-liquidity-refresh"
                             :disabled="liquidityRefreshRunning"
                             @click="refreshLiquidity"
@@ -1544,7 +1549,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 <dl class="grid sm:grid-cols-2">
                     <div class="min-w-0 px-4 py-3">
                         <dt
-                            class="text-[0.65rem] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400"
+                            class="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
                         >
                             Provider Inventory
                         </dt>
@@ -1558,10 +1563,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </dd>
                     </div>
                     <div
-                        class="min-w-0 border-t border-slate-200 px-4 py-3 sm:border-t-0 sm:border-l dark:border-slate-800"
+                        class="min-w-0 border-t border-slate-200 px-4 py-3 sm:border-l sm:border-t-0 dark:border-slate-800"
                     >
                         <dt
-                            class="text-[0.65rem] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400"
+                            class="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
                         >
                             Position control
                         </dt>
@@ -1588,7 +1593,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     >
                         <div class="min-w-0 px-3 py-2 text-center">
                             <dt
-                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                class="text-[0.62rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                             >
                                 Authority
                             </dt>
@@ -1600,7 +1605,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </div>
                         <div class="min-w-0 px-3 py-2 text-center">
                             <dt
-                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                class="text-[0.62rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                             >
                                 Posting
                             </dt>
@@ -1612,7 +1617,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </div>
                         <div class="min-w-0 px-3 py-2 text-center">
                             <dt
-                                class="text-[0.62rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                class="text-[0.62rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                             >
                                 Manual credit
                             </dt>
@@ -1661,7 +1666,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     {{ connection.provider_label }}
                                 </p>
                                 <span
-                                    class="rounded-full bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700"
+                                    class="rounded-full bg-white px-2 py-0.5 text-[0.65rem] font-semibold uppercase text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700"
                                 >
                                     {{ displayLabel(connection.status) }}
                                 </span>
@@ -1914,7 +1919,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 >
                     <template #action>
                         <span
-                            class="inline-flex min-h-9 max-w-full items-center rounded-full bg-sky-50 px-3 py-1 text-center text-[0.65rem] leading-4 font-semibold whitespace-normal text-sky-700 uppercase dark:bg-sky-950 dark:text-sky-200"
+                            class="inline-flex min-h-9 max-w-full items-center whitespace-normal rounded-full bg-sky-50 px-3 py-1 text-center text-[0.65rem] font-semibold uppercase leading-4 text-sky-700 dark:bg-sky-950 dark:text-sky-200"
                         >
                             Exact amount
                         </span>
@@ -1968,7 +1973,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 v-for="amountMinor in bankTransferQuickAmountsMinor"
                                 :key="amountMinor"
                                 type="button"
-                                class="min-h-9 min-w-0 rounded-lg border px-2 py-1.5 text-xs leading-4 font-semibold tabular-nums transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-20 sm:px-2.5"
+                                class="min-h-9 min-w-0 rounded-lg border px-2 py-1.5 text-xs font-semibold tabular-nums leading-4 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-20 sm:px-2.5"
                                 :class="
                                     amountToMinor(fundingRequestAmount) ===
                                     amountMinor
@@ -1994,7 +1999,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </fieldset>
                         <button
                             type="submit"
-                            class="inline-flex min-h-11 w-full min-w-0 max-w-full items-center justify-center gap-2 rounded-xl bg-sky-700 px-3 py-2.5 text-center text-sm leading-5 font-semibold whitespace-normal text-white transition hover:bg-sky-800 disabled:opacity-50 sm:col-start-2 sm:row-start-1 sm:w-auto sm:self-end sm:px-5 dark:bg-sky-400 dark:text-slate-950"
+                            class="inline-flex min-h-11 w-full min-w-0 max-w-full items-center justify-center gap-2 whitespace-normal rounded-xl bg-sky-700 px-3 py-2.5 text-center text-sm font-semibold leading-5 text-white transition hover:bg-sky-800 disabled:opacity-50 sm:col-start-2 sm:row-start-1 sm:w-auto sm:self-end sm:px-5 dark:bg-sky-400 dark:text-slate-950"
                             :disabled="
                                 fundingRequestForm.processing ||
                                 !bankTransferInstructions.enabled
@@ -2060,7 +2065,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     class="rounded-2xl bg-sky-50 p-4 text-center dark:bg-sky-950/40"
                                 >
                                     <p
-                                        class="text-xs font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
+                                        class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300"
                                     >
                                         Transfer exactly
                                     </p>
@@ -2226,7 +2231,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 >
                     <template #action>
                         <span
-                            class="inline-flex h-9 items-center rounded-full bg-emerald-50 px-3 text-[0.65rem] font-semibold text-emerald-700 uppercase dark:bg-emerald-950 dark:text-emerald-200"
+                            class="inline-flex h-9 items-center rounded-full bg-emerald-50 px-3 text-[0.65rem] font-semibold uppercase text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200"
                         >
                             no provider payout
                         </span>
@@ -2257,7 +2262,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             autocapitalize="characters"
                             spellcheck="false"
                             placeholder="Enter Pay Code"
-                            class="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-semibold tracking-wide uppercase transition outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-emerald-500 dark:focus:ring-emerald-950"
+                            class="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-semibold uppercase tracking-wide outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-emerald-500 dark:focus:ring-emerald-950"
                         />
                         <button
                             type="submit"
@@ -2432,7 +2437,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </p>
                         </div>
                         <span
-                            class="rounded-full bg-slate-100 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                            class="rounded-full bg-slate-100 px-2.5 py-1 text-[0.65rem] font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                         >
                             independent review
                         </span>
@@ -2447,7 +2452,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             <div>
                                 <p
-                                    class="text-xs font-semibold tracking-[0.14em] text-emerald-700 uppercase dark:text-emerald-300"
+                                    class="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300"
                                 >
                                     Review requested
                                 </p>
@@ -2772,17 +2777,17 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <p
-                                class="text-xs font-semibold tracking-[0.16em] text-violet-700 uppercase dark:text-violet-300"
+                                class="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-300"
                             >
                                 QR Ph lifecycle lab
                             </p>
                             <span
-                                class="rounded-full bg-violet-50 px-2 py-1 text-[0.65rem] font-semibold text-violet-700 uppercase dark:bg-violet-950 dark:text-violet-200"
+                                class="rounded-full bg-violet-50 px-2 py-1 text-[0.65rem] font-semibold uppercase text-violet-700 dark:bg-violet-950 dark:text-violet-200"
                             >
                                 Rollback only
                             </span>
                             <span
-                                class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                                class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                             >
                                 No monetary value
                             </span>
@@ -2960,7 +2965,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 >
                     <div>
                         <p
-                            class="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400"
+                            class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
                         >
                             Treasury controls
                         </p>
@@ -2995,7 +3000,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             <div>
                                 <p
-                                    class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
+                                    class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                                 >
                                     Funding rails
                                 </p>
@@ -3027,7 +3032,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         {{ provider.label }}
                                     </p>
                                     <span
-                                        class="rounded-full px-2 py-1 text-[0.65rem] font-semibold tracking-wide uppercase"
+                                        class="rounded-full px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide"
                                         :class="{
                                             'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300':
                                                 provider.status === 'blocked',
@@ -3079,7 +3084,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     >
                         <p
-                            class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
+                            class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                         >
                             Safeguards
                         </p>
@@ -3110,7 +3115,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             <div>
                                 <p
-                                    class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
+                                    class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                                 >
                                     Historical provider intake
                                 </p>
@@ -3130,7 +3135,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 class="w-full min-w-[56rem] text-left text-sm"
                             >
                                 <thead
-                                    class="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase dark:bg-slate-950/40 dark:text-slate-400"
+                                    class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950/40 dark:text-slate-400"
                                 >
                                     <tr>
                                         <th class="px-5 py-3 font-semibold">
@@ -3290,7 +3295,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             <div>
                                 <p
-                                    class="text-xs font-semibold tracking-[0.16em] text-indigo-700 uppercase dark:text-indigo-300"
+                                    class="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700 dark:text-indigo-300"
                                 >
                                     Dual control
                                 </p>
@@ -3330,7 +3335,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                             }}
                                         </p>
                                         <span
-                                            class="rounded-full bg-indigo-50 px-2 py-1 text-[0.65rem] font-semibold tracking-wide text-indigo-700 uppercase dark:bg-indigo-950/50 dark:text-indigo-300"
+                                            class="rounded-full bg-indigo-50 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
                                         >
                                             {{
                                                 displayLabel(approval.provider)
@@ -3393,7 +3398,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             >
                                 <div>
                                     <p
-                                        class="text-xs font-semibold tracking-[0.16em] text-amber-700 uppercase dark:text-amber-300"
+                                        class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300"
                                     >
                                         Exception control
                                     </p>
@@ -3486,7 +3491,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             >
                                 <div>
                                     <p
-                                        class="text-xs font-semibold tracking-[0.16em] text-rose-700 uppercase dark:text-rose-300"
+                                        class="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700 dark:text-rose-300"
                                     >
                                         Issuance protection
                                     </p>

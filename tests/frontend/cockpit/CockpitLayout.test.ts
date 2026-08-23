@@ -51,6 +51,21 @@ describe('Cockpit shell layout baseline', () => {
         expect(
             wrapper.find('[data-testid="cockpit-theme-picker"]').exists(),
         ).toBe(true);
+        expect(
+            wrapper.get('[data-testid="cockpit-global-header"]').element
+                .parentElement?.classList,
+        ).toContain('md:block');
+        expect(
+            wrapper.get('[data-testid="cockpit-mobile-tab-bar"]').classes(),
+        ).toContain('md:hidden');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-mobile-tab-pay-codes"]')
+                .attributes('aria-current'),
+        ).toBe('page');
+        expect(
+            wrapper.get('[data-testid="cockpit-workspace"]').classes(),
+        ).toEqual(expect.arrayContaining(['pb-24', 'md:pb-4']));
     });
 
     it('uses concise task language without changing the established endpoints', () => {
@@ -180,6 +195,7 @@ describe('Cockpit shell layout baseline', () => {
         expect(notice.text()).toContain('Start with Funding');
         expect(notice.text()).toContain('Issuance Capacity');
         expect(notice.text()).not.toContain('₱');
+        expect(notice.classes()).not.toContain('hidden');
     });
 
     it('renders balance metrics as header HUD presentation only', () => {
@@ -200,8 +216,7 @@ describe('Cockpit shell layout baseline', () => {
         expect(wrapper.text()).toContain('Operating as: Account holder');
         expect(wrapper.text()).not.toContain('Settlement Operating System');
         expect(
-            wrapper.get('[data-testid="cockpit-global-header-primary"]')
-                .text(),
+            wrapper.get('[data-testid="cockpit-global-header-primary"]').text(),
         ).toContain('Operating as: Account holder');
         expect(
             wrapper.find('[data-testid="cockpit-balance-hud"]').classes(),
@@ -262,9 +277,7 @@ describe('Cockpit shell layout baseline', () => {
             '[data-testid="cockpit-balance-value"]',
         );
         const hud = wrapper.find('[data-testid="cockpit-balance-hud"]');
-        const strip = wrapper.find(
-            '[data-testid="cockpit-balance-strip"]',
-        );
+        const strip = wrapper.find('[data-testid="cockpit-balance-strip"]');
 
         expect(labelRows).toHaveLength(3);
         expect(valueRows).toHaveLength(3);

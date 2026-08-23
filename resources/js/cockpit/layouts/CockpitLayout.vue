@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import CockpitGlobalHeader from '../components/CockpitGlobalHeader.vue';
+import CockpitMobileTabBar from '../components/CockpitMobileTabBar.vue';
 import type {
     CockpitBalanceMetric,
     CockpitEntryNotice,
@@ -45,20 +46,22 @@ const headerOperatingIdentity = computed(
 
 <template>
     <div
-        class="x-experience-surface min-h-screen bg-background text-foreground"
+        class="x-experience-surface bg-background text-foreground min-h-screen"
         data-testid="cockpit-layout"
     >
         <div class="flex min-h-screen min-w-0 flex-col">
-            <CockpitGlobalHeader
-                :institution="institution"
-                :operating-identity="headerOperatingIdentity"
-                :connectivity="connectivity"
-                :balances="headerBalances"
-            />
+            <div class="hidden md:block">
+                <CockpitGlobalHeader
+                    :institution="institution"
+                    :operating-identity="headerOperatingIdentity"
+                    :connectivity="connectivity"
+                    :balances="headerBalances"
+                />
+            </div>
 
             <div
                 v-if="cockpitEntryNotice"
-                class="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-950 shadow-sm dark:border-orange-900/70 dark:bg-orange-950/30 dark:text-orange-100 lg:mx-6"
+                class="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-950 shadow-sm lg:mx-6 dark:border-orange-900/70 dark:bg-orange-950/30 dark:text-orange-100"
                 role="status"
                 data-testid="cockpit-entry-notice"
             >
@@ -75,11 +78,13 @@ const headerOperatingIdentity = computed(
             </div>
 
             <main
-                class="flex-1 overflow-y-auto p-4 lg:p-6"
+                class="flex-1 overflow-y-auto p-4 pb-24 md:pb-4 lg:p-6"
                 data-testid="cockpit-workspace"
             >
                 <slot />
             </main>
+
+            <CockpitMobileTabBar :active-key="activeNavigation" />
         </div>
     </div>
 </template>

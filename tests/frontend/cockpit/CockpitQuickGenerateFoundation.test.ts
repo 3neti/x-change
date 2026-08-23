@@ -4618,6 +4618,9 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(header.classes()).toContain('px-1');
+        expect(header.classes()).toEqual(
+            expect.arrayContaining(['hidden', 'md:flex']),
+        );
         expect(header.classes()).not.toContain('rounded-2xl');
         expect(headerProgress.exists()).toBe(false);
         const referenceGuide = wrapper.find(

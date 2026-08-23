@@ -809,12 +809,12 @@ function areIntegrationDetailsExpanded(key: string): boolean {
     >
         <section class="space-y-4" data-testid="cockpit-dashboard-shell">
             <header
-                class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900"
+                class="hidden flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm md:flex md:flex-row md:items-center md:justify-between dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-page-heading"
             >
                 <div>
                     <p
-                        class="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400"
+                        class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400"
                     >
                         Settlement Operations
                     </p>
@@ -956,13 +956,13 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                                 }"
                             />
                             <p
-                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                             >
                                 {{ item.label }}
                             </p>
                         </div>
                         <p
-                            class="mt-2 truncate text-xl font-semibold text-slate-950 tabular-nums dark:text-white"
+                            class="mt-2 truncate text-xl font-semibold tabular-nums text-slate-950 dark:text-white"
                         >
                             {{ item.value }}
                         </p>
@@ -1215,7 +1215,7 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                     </span>
                     <div>
                         <p
-                            class="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                            class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                         >
                             Pinned Campaign
                         </p>

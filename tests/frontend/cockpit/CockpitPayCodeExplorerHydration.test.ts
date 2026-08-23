@@ -188,16 +188,36 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
         expect(wrapper.text()).toContain('School transport allowance');
         expect(
-            wrapper.get('[data-testid="cockpit-pay-code-purpose"]').attributes('title'),
+            wrapper
+                .get('[data-testid="cockpit-pay-code-purpose"]')
+                .attributes('title'),
         ).toBe('School transport allowance');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-copy-button"]')).toHaveLength(4);
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-terminal-action-toggle"]')).toHaveLength(4);
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-quick-terminal-form"]')).toHaveLength(4);
         expect(
-            wrapper.find('[data-testid="cockpit-pay-code-quick-terminal-form"] textarea[name="reason"]').attributes('required'),
+            wrapper.findAll('[data-testid="cockpit-pay-code-copy-button"]'),
+        ).toHaveLength(4);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-pay-code-terminal-action-toggle"]',
+            ),
+        ).toHaveLength(4);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-pay-code-quick-terminal-form"]',
+            ),
+        ).toHaveLength(4);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-quick-terminal-form"] textarea[name="reason"]',
+                )
+                .attributes('required'),
         ).toBeDefined();
         expect(
-            wrapper.find('[data-testid="cockpit-pay-code-quick-terminal-form"] input[name="confirmed"]').attributes('required'),
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-quick-terminal-form"] input[name="confirmed"]',
+                )
+                .attributes('required'),
         ).toBeDefined();
         expect(wrapper.text()).toContain('Created');
         expect(wrapper.text()).toContain('Claimed');
@@ -434,6 +454,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         );
 
         expect(header.exists()).toBe(true);
+        expect(header.classes()).toEqual(
+            expect.arrayContaining(['hidden', 'md:flex']),
+        );
         expect(header.text()).toContain('Pay Code Explorer');
         expect(header.text()).toContain(
             'Search, inspect, and apply governed lifecycle controls.',
@@ -441,6 +464,13 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(header.text()).not.toContain('does not mutate vouchers');
         expect(header.text()).toContain('Create');
         expect(header.text()).toContain('Read-only');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-pay-code-explorer-primary-summary"]',
+                )
+                .classes(),
+        ).not.toContain('hidden');
         expect(facts.exists()).toBe(true);
         expect(facts.classes()).toContain('xl:w-[32rem]');
         expect(facts.findAll('div')).toHaveLength(3);

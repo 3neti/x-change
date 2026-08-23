@@ -322,7 +322,8 @@ const updatedRelativeTime = (value: string | null): string =>
             data-testid="cockpit-campaigns-page"
         >
             <section
-                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:block dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-campaigns-orientation"
             >
                 <div
                     class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"

@@ -29,6 +29,11 @@ describe('Cockpit campaign worksheets', () => {
         });
 
         expect(wrapper.text()).toContain('Batch Payments');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-campaigns-orientation"]')
+                .classes(),
+        ).toEqual(expect.arrayContaining(['hidden', 'md:block']));
         expect(wrapper.text()).toContain(
             'Prepare one approved payment batch for multiple recipients.',
         );
