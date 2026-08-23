@@ -24,8 +24,8 @@ use LBHurtado\XChange\Data\PayCode\PayCodeOperationalStatusData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
-use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
+use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use RuntimeException;
@@ -281,6 +281,9 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 'voucher_type_label' => $operational->voucher_type_label,
             ],
             'instruction_badges' => $operational->instruction_badges,
+            'purpose' => $this->nullableDisplayValue(
+                data_get($this->instructionsArray($voucher), 'rider.message'),
+            ),
             'party' => $this->partySummary($voucher),
             'timing' => [
                 'created_at' => $voucher->created_at?->toIso8601String(),

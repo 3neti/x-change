@@ -13,5 +13,6 @@ final class CockpitPayCodeTimingData extends Data
         public readonly ?string $starts_at = null,
         public readonly ?string $expires_at = null,
         public readonly ?string $redeemed_at = null,
+        public readonly ?string $terminal_at = null,
     ) {}
 }

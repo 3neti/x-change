@@ -41,7 +41,12 @@ final class CockpitPayCodeTerminalStateController extends Controller
             ),
         };
 
-        return to_route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code])
+        $previous = url()->previous();
+        $returnTo = str_starts_with($previous, url('/x/cockpit/pay-codes'))
+            ? $previous
+            : route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]);
+
+        return redirect()->to($returnTo)
             ->with('success', (string) data_get(
                 $result,
                 'messages.0',

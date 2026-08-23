@@ -30,6 +30,29 @@ it('shows Treasury-safe terminal actions for an eligible regular Pay Code', func
         ->assertJsonPath('props.terminal_control.release.issuance_charges_refunded', false);
 
     expect($issuer)->toBeInstanceOf(User::class);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index'))
+        ->assertOk()
+        ->assertJsonPath('props.pay_codes_read_model.records.0.terminal_control.can_expire', true)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.terminal_control.can_cancel', true);
+});
+
+it('returns terminal actions to the originating filtered Explorer view', function (): void {
+    [, $voucher] = terminalControlVoucher();
+    $origin = route('x-change.cockpit.pay-codes.index', [
+        'search' => $voucher->code,
+        'status' => 'active',
+    ]);
+
+    $this->from($origin)->post(route(
+        'x-change.cockpit.pay-codes.terminal-actions.store',
+        ['code' => $voucher->code],
+    ), [
+        'action' => 'expire',
+        'reason' => 'Recipient no longer needs this Pay Code.',
+        'confirmed' => true,
+    ])->assertRedirect($origin);
 });
 
 it('expires a regular Pay Code and releases its reserve to Client Funds', function (): void {
@@ -103,6 +126,13 @@ it('presents a cancelled Pay Code as terminal and does not offer cancellation ag
         ->assertJsonPath('props.read_model.voucher.distribution_links.available', false)
         ->assertJsonPath('props.terminal_control.status', 'blocked')
         ->assertJsonPath('props.terminal_control.can_cancel', false);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index'))
+        ->assertOk()
+        ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.terminal_control.can_cancel', false)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.timing.terminal_at', fn (mixed $value): bool => is_string($value) && $value !== '');
 });
 
 /**

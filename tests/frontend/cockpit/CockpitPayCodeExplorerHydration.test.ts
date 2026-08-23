@@ -70,6 +70,7 @@ const payCodesReadModel = {
         {
             code: 'PC-HYDRATED-001',
             template: 'Money Changer',
+            purpose: 'School transport allowance',
             amount: 1500.75,
             currency: 'PHP',
             status: 'issued',
@@ -97,6 +98,13 @@ const payCodesReadModel = {
                 starts_at: '2026-07-03T09:15:00+08:00',
                 expires_at: '2026-07-10T09:00:00+08:00',
                 redeemed_at: '2026-07-03T10:00:00+08:00',
+                terminal_at: '2026-07-03T10:00:00+08:00',
+            },
+            terminal_control: {
+                can_expire: true,
+                can_cancel: true,
+                blocked_reason: null,
+                status: 'available',
             },
             owner: 'Treasury Desk',
             last_activity: '2026-07-03T10:00:00+08:00',
@@ -174,10 +182,25 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         });
 
         expect(wrapper.text()).toContain(
-            'Search, filter, and open read-only Pay Code workspaces.',
+            'Search, inspect, and apply governed lifecycle controls.',
         );
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
+        expect(wrapper.text()).toContain('School transport allowance');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-purpose"]').attributes('title'),
+        ).toBe('School transport allowance');
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-copy-button"]')).toHaveLength(4);
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-terminal-action-toggle"]')).toHaveLength(4);
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-quick-terminal-form"]')).toHaveLength(4);
+        expect(
+            wrapper.find('[data-testid="cockpit-pay-code-quick-terminal-form"] textarea[name="reason"]').attributes('required'),
+        ).toBeDefined();
+        expect(
+            wrapper.find('[data-testid="cockpit-pay-code-quick-terminal-form"] input[name="confirmed"]').attributes('required'),
+        ).toBeDefined();
+        expect(wrapper.text()).toContain('Created');
+        expect(wrapper.text()).toContain('Claimed');
         expect(wrapper.text()).toContain('₱1,500.75');
         expect(wrapper.text()).toContain('ready');
         expect(
@@ -380,7 +403,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             '[data-testid="cockpit-pay-code-explorer-primary-summary-item"]',
         );
 
-        expect(summary.classes()).toContain('grid');
+        expect(summary.classes()).toContain('flex');
         expect(summary.text()).not.toContain('Voucher status summary');
         expect(summary.text()).not.toContain(
             'Focus the list by lifecycle state',
@@ -391,8 +414,8 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             'Current search and read model',
         );
         expect(summaryItems).toHaveLength(4);
-        expect(summaryItems[0].classes()).toContain('rounded-xl');
-        expect(summaryItems[0].find('dd').classes()).toContain('text-base');
+        expect(summaryItems[0].classes()).toContain('items-baseline');
+        expect(summaryItems[0].find('dd').classes()).toContain('font-semibold');
         expect(summaryItems[0].find('p').classes()).toContain('sr-only');
     });
 
@@ -413,7 +436,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(header.exists()).toBe(true);
         expect(header.text()).toContain('Pay Code Explorer');
         expect(header.text()).toContain(
-            'Search, filter, and open read-only Pay Code workspaces.',
+            'Search, inspect, and apply governed lifecycle controls.',
         );
         expect(header.text()).not.toContain('does not mutate vouchers');
         expect(header.text()).toContain('Create');
@@ -460,7 +483,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain(
             'Search and filters only change the current list view',
         );
-        expect(wrapper.text()).toContain('does not mutate vouchers');
+        expect(wrapper.text()).toContain('governed expire and cancel controls');
         expect(items).toHaveLength(4);
         expect(
             wrapper.findAll(
@@ -1249,19 +1272,15 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(guidance.exists()).toBe(true);
         expect(guidance.element.tagName.toLowerCase()).toBe('details');
         expect(guidance.text()).toContain('Row action guidance');
-        expect(guidance.text()).toContain('Links only');
+        expect(guidance.text()).toContain('Governed controls');
         expect(guidance.text()).toContain('Navigation Links');
         expect(guidance.text()).toContain('2');
         expect(guidance.text()).toContain('Blocked Actions');
         expect(guidance.text()).toContain('1');
         expect(guidance.text()).toContain('Rows');
-        expect(guidance.text()).toContain(
-            'open inspection workspaces or remain disabled',
-        );
-        expect(guidance.text()).toContain('does not execute actions');
-        expect(guidance.text()).toContain(
-            'does not execute actions, deliver feedback, mutate vouchers, or call providers',
-        );
+        expect(guidance.text()).toContain('open inspection workspaces');
+        expect(guidance.text()).toContain('established governed terminal form');
+        expect(guidance.text()).toContain('no provider is called');
         expect(items).toHaveLength(3);
     });
 

@@ -450,6 +450,7 @@ function sanitizeRecord(
     return {
         code,
         template: stringValue(record.template) ?? 'Template pending',
+        purpose: stringValue(record.purpose),
         capability: sanitizeCapability(record.capability),
         instructionBadges: sanitizeInstructionBadges(record.instruction_badges),
         amount: moneyValue(record.amount, stringValue(record.currency)),
@@ -458,6 +459,7 @@ function sanitizeRecord(
         operationalStatus: sanitizeOperationalStatus(record),
         party: sanitizeParty(record.party),
         timing: sanitizeTiming(record),
+        terminalControl: sanitizeTerminalControl(record),
         owner: stringValue(record.owner) ?? 'Redacted',
         lastActivity:
             stringValue(record.last_activity) ?? 'Read model activity pending',
@@ -593,6 +595,20 @@ function sanitizeTiming(
         expiresAt:
             stringValue(timing.expires_at) ?? stringValue(record.expires_at),
         redeemedAt: stringValue(timing.redeemed_at),
+        terminalAt: stringValue(timing.terminal_at),
+    };
+}
+
+function sanitizeTerminalControl(
+    record: CockpitPayCodeExplorerReadModelRecord,
+): CockpitPayCodeExplorerRecord['terminalControl'] {
+    const control = objectValue(record.terminal_control);
+
+    return {
+        canExpire: control.can_expire === true,
+        canCancel: control.can_cancel === true,
+        blockedReason: stringValue(control.blocked_reason),
+        status: stringValue(control.status) ?? 'blocked',
     };
 }
 
@@ -745,8 +761,7 @@ function integrationBadge(
                         <p
                             class="mt-1 text-sm text-slate-600 dark:text-slate-300"
                         >
-                            Search, filter, and open read-only Pay Code
-                            workspaces.
+                            Search, inspect, and apply governed lifecycle controls.
                         </p>
                     </div>
                     <a
@@ -760,22 +775,22 @@ function integrationBadge(
                 </div>
 
                 <dl
-                    class="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4"
+                    class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-y border-slate-100 py-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300"
                     data-testid="cockpit-pay-code-explorer-primary-summary"
                 >
                     <div
                         v-for="item in primarySummaryItems"
                         :key="item.key"
-                        class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-950/50"
+                        class="flex min-w-0 items-baseline gap-1.5"
                         data-testid="cockpit-pay-code-explorer-primary-summary-item"
                     >
                         <dt
-                            class="truncate text-[0.62rem] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400"
+                            class="truncate font-medium text-slate-500 dark:text-slate-400"
                         >
                             {{ item.label }}
                         </dt>
                         <dd
-                            class="mt-0.5 font-mono text-base font-semibold tracking-tight text-slate-950 tabular-nums dark:text-slate-50"
+                            class="font-mono font-semibold text-slate-950 tabular-nums dark:text-slate-50"
                         >
                             {{ item.value }}
                         </dd>
@@ -960,9 +975,10 @@ function integrationBadge(
                     class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300"
                 >
                     The main scan path stays focused on search and results. This
-                    Explorer does not mutate vouchers, execute drivers, approve
-                    claims, send feedback, write journal entries, call
-                    providers, or move money.
+                    Explorer exposes only the existing governed expire and
+                    cancel controls. It does not execute drivers, approve
+                    claims, send feedback, write journal entries directly,
+                    call providers, or move money itself.
                 </p>
 
                 <div class="mt-3 grid gap-3">
@@ -1053,10 +1069,10 @@ function integrationBadge(
                             class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300"
                         >
                             Search and filters only change the current list
-                            view; filtering does not mutate vouchers. Row
-                            actions remain navigation-only unless a future
-                            authorized mutation slice explicitly changes that
-                            boundary.
+                            view; filtering does not mutate vouchers. Terminal
+                            row actions require an explicit reason and
+                            confirmation and remain subject to the established
+                            lifecycle authority.
                         </p>
                     </details>
                     <details
@@ -1081,16 +1097,16 @@ function integrationBadge(
                                     class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300"
                                 >
                                     Row actions open inspection workspaces or
-                                    remain disabled when the destination is not
-                                    authorized. This page does not execute
-                                    actions, deliver feedback, mutate vouchers,
-                                    or call providers from a list row.
+                                    the established governed terminal form.
+                                    Unavailable actions remain disabled with an
+                                    authoritative reason; no provider is called
+                                    from a list row.
                                 </p>
                             </div>
                             <span
                                 class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200"
                             >
-                                Links only
+                                Governed controls
                             </span>
                         </div>
                         <dl class="mt-4 grid gap-3 text-sm md:grid-cols-3">

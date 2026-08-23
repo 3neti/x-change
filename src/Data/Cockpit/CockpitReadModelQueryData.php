@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Data\Cockpit;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Spatie\LaravelData\Data;
 
 class CockpitReadModelQueryData extends Data
@@ -17,6 +18,7 @@ class CockpitReadModelQueryData extends Data
         public readonly ?string $payCodeStatus = null,
         public readonly ?string $operatorId = null,
         public readonly ?string $operatorType = null,
+        public readonly ?Authenticatable $actor = null,
         public readonly bool $canViewAllPayCodes = false,
         public readonly array $include = [],
         public readonly ?string $correlationId = null,

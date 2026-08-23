@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Support\Cockpit;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitDistributionWorkspaceItemData;
@@ -124,6 +125,7 @@ class CockpitReadOnlyPageProps
         ?string $status = null,
         ?string $operatorId = null,
         ?string $operatorType = null,
+        ?Authenticatable $actor = null,
         bool $canViewTechnicalDetails = false,
     ): array {
         $baseProps = $this->toArray(
@@ -139,6 +141,7 @@ class CockpitReadOnlyPageProps
                 payCodeStatus: $this->optionalString($status),
                 operatorId: $this->optionalString($operatorId),
                 operatorType: $this->optionalString($operatorType),
+                actor: $actor,
                 canViewAllPayCodes: $canViewTechnicalDetails,
                 include: ['voucher', 'redeemer'],
             ))->toArray(),

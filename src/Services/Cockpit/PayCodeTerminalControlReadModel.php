@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
@@ -17,8 +18,12 @@ final readonly class PayCodeTerminalControlReadModel
     /**
      * @return array<string, mixed>
      */
-    public function forVoucher(Voucher $voucher, ?Authenticatable $actor): array
-    {
+    public function forVoucher(
+        Voucher $voucher,
+        ?Authenticatable $actor,
+        ?bool $knownHasClaim = null,
+        ?bool $knownHasPayout = null,
+    ): array {
         $reservation = data_get($voucher->metadata, 'treasury.pay_code_reservation');
         $reservation = is_array($reservation) ? $reservation : [];
         $sourcePurpose = (string) data_get(
@@ -28,10 +33,13 @@ final readonly class PayCodeTerminalControlReadModel
         );
         $reservationStatus = (string) data_get($reservation, 'status', '');
         $hasClaim = $voucher->redeemed_at !== null
-            || VoucherClaim::query()->where('voucher_id', $voucher->getKey())->exists();
-        $hasPayout = DisbursementReconciliation::query()
-            ->where('voucher_id', $voucher->getKey())
-            ->exists();
+            || $knownHasClaim
+            || ($knownHasClaim === null
+                && VoucherClaim::query()->where('voucher_id', $voucher->getKey())->exists());
+        $hasPayout = $knownHasPayout
+            ?? DisbursementReconciliation::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->exists();
         $hasProtectedRecovery = data_get($voucher->metadata, 'disbursement.requires_recovery') === true
             || in_array(
                 data_get($voucher->metadata, 'disbursement.status'),
@@ -87,6 +95,39 @@ final readonly class PayCodeTerminalControlReadModel
                 ->values()
                 ->all(),
         ];
+    }
+
+    /**
+     * @param  Collection<int|string, Voucher>  $vouchers
+     * @return array<int|string, array<string, mixed>>
+     */
+    public function forVouchers(Collection $vouchers, ?Authenticatable $actor): array
+    {
+        $ids = $vouchers->modelKeys();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $claimedVoucherIds = VoucherClaim::query()
+            ->whereIn('voucher_id', $ids)
+            ->distinct()
+            ->pluck('voucher_id')
+            ->mapWithKeys(fn (mixed $id): array => [(string) $id => true]);
+        $payoutVoucherIds = DisbursementReconciliation::query()
+            ->whereIn('voucher_id', $ids)
+            ->distinct()
+            ->pluck('voucher_id')
+            ->mapWithKeys(fn (mixed $id): array => [(string) $id => true]);
+
+        return $vouchers->mapWithKeys(fn (Voucher $voucher): array => [
+            (string) $voucher->getKey() => $this->forVoucher(
+                voucher: $voucher,
+                actor: $actor,
+                knownHasClaim: $claimedVoucherIds->has((string) $voucher->getKey()),
+                knownHasPayout: $payoutVoucherIds->has((string) $voucher->getKey()),
+            ),
+        ])->all();
     }
 
     private function blockedReason(

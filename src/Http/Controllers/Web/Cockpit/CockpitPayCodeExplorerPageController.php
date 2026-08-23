@@ -36,6 +36,7 @@ class CockpitPayCodeExplorerPageController extends Controller
             status: $this->optionalString($request->query('status')),
             operatorId: $actor instanceof Model ? (string) $actor->getKey() : null,
             operatorType: $actor instanceof Model ? $actor->getMorphClass() : null,
+            actor: $actor,
             canViewTechnicalDetails: $actor !== null
                 && $this->treasuryAccess->canViewTreasuryControls($actor),
         ));

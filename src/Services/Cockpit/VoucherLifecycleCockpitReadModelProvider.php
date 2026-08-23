@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use JsonSerializable;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
@@ -32,6 +33,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodePartyData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeRowActionData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeTerminalControlData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeTimingData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationData;
@@ -62,9 +64,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
-use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 
 class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProviderContract
 {
@@ -80,6 +81,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly ?CockpitPayCodeIntegrationReferenceResolver $integrationReferences = null,
         private readonly ?ClaimUrlQrRendererContract $qrRenderer = null,
         private readonly ?VoucherSlicePlanProjection $slicePlans = null,
+        private readonly ?PayCodeTerminalControlReadModel $terminalControls = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -1408,8 +1410,30 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 fn (array $row): bool => $this->matchesOperationalStatusFilter($row, $statusFilter)
             ))
             ->values();
+        $voucherIds = $filteredRows
+            ->map(fn (array $row): mixed => $row['voucher_id'] ?? $row['id'] ?? null)
+            ->filter(fn (mixed $id): bool => is_numeric($id))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values();
+        $vouchers = Voucher::query()
+            ->with('owner')
+            ->whereKey($voucherIds)
+            ->get()
+            ->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
+        $terminalControls = ($this->terminalControls ?? new PayCodeTerminalControlReadModel)
+            ->forVouchers($vouchers, $query->actor);
         $rows = $filteredRows
-            ->map(fn (array $row): ?CockpitPayCodeListRecordData => $this->listRecord($row))
+            ->map(function (array $row) use ($terminalControls): ?CockpitPayCodeListRecordData {
+                $voucherId = (string) ($row['voucher_id'] ?? $row['id'] ?? '');
+
+                return $this->listRecord(
+                    row: $row,
+                    terminalControl: is_array($terminalControls[$voucherId] ?? null)
+                        ? $terminalControls[$voucherId]
+                        : [],
+                );
+            })
             ->filter()
             ->values()
             ->all();
@@ -1543,8 +1567,10 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     /**
      * @param  array<string, mixed>  $row
      */
-    private function listRecord(array $row): ?CockpitPayCodeListRecordData
-    {
+    private function listRecord(
+        array $row,
+        array $terminalControl = [],
+    ): ?CockpitPayCodeListRecordData {
         $code = $this->summaryCode($row, '');
 
         if ($code === '') {
@@ -1562,8 +1588,17 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             currency: $this->nullableString($row['currency'] ?? null),
             status: $status,
             display_status: $this->stringValue($row['display_status'] ?? null, $status),
+            purpose: $this->nullableString(
+                $row['purpose'] ?? data_get($row, 'instructions.rider.message'),
+            ),
             party: $this->payCodeParty($row, $status),
-            timing: $this->payCodeTiming($row),
+            timing: $this->payCodeTiming($row, $terminalControl),
+            terminal_control: new CockpitPayCodeTerminalControlData(
+                can_expire: ($terminalControl['can_expire'] ?? false) === true,
+                can_cancel: ($terminalControl['can_cancel'] ?? false) === true,
+                blocked_reason: $this->nullableString($terminalControl['blocked_reason'] ?? null),
+                status: $this->stringValue($terminalControl['status'] ?? null, 'blocked'),
+            ),
             owner: $this->stringValue($row['owner'] ?? null, 'Redacted'),
             last_activity: $this->nullableString(
                 $row['last_activity']
@@ -1659,7 +1694,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         );
     }
 
-    private function payCodeTiming(array $row): CockpitPayCodeTimingData
+    private function payCodeTiming(array $row, array $terminalControl = []): CockpitPayCodeTimingData
     {
         $timing = is_array($row['timing'] ?? null) ? $row['timing'] : [];
 
@@ -1668,6 +1703,12 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             starts_at: $this->nullableString($timing['starts_at'] ?? $row['starts_at'] ?? null),
             expires_at: $this->nullableString($timing['expires_at'] ?? $row['expires_at'] ?? null),
             redeemed_at: $this->nullableString($timing['redeemed_at'] ?? $row['redeemed_at'] ?? null),
+            terminal_at: collect($terminalControl['history'] ?? [])
+                ->filter(fn (mixed $event): bool => is_array($event))
+                ->map(fn (array $event): ?string => $this->nullableString($event['occurred_at'] ?? null))
+                ->filter()
+                ->sort()
+                ->last(),
         );
     }
 
@@ -1759,6 +1800,8 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             data_get($row, 'operational_status.label'),
             data_get($row, 'operational_status.availability_label'),
             data_get($row, 'operational_status.settlement_outcome'),
+            $row['purpose'] ?? null,
+            data_get($row, 'instructions.rider.message'),
         ];
 
         foreach (($row['instruction_badges'] ?? []) as $badge) {
