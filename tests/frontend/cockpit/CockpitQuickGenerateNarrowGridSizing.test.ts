@@ -16,14 +16,19 @@ describe('Cockpit Quick Generate narrow essentials grid sizing', () => {
         expect(grid.classes()).toContain('grid');
         expect(grid.classes()).toContain('min-w-0');
 
-        // Below 2xl this is a single implicit-column grid; the two elements
+        // Below 2xl this is a single implicit-column grid; all three elements
         // that are its *direct* children must each opt out of the CSS Grid
         // default min-width: auto so their intrinsic content can shrink
         // inside the narrow single-column track instead of forcing it wide.
         const directChildren = Array.from(grid.element.children);
-        expect(directChildren).toHaveLength(2);
+        expect(directChildren).toHaveLength(3);
 
-        const [orderCard, canvasWrapper] = directChildren;
+        const [mobileTrigger, orderCard, canvasWrapper] = directChildren;
+        expect(mobileTrigger.getAttribute('data-testid')).toBe(
+            'cockpit-quick-generate-order-composer-trigger',
+        );
+        expect(mobileTrigger.classList.contains('min-w-0')).toBe(true);
+
         expect(orderCard.getAttribute('data-testid')).toBe(
             'cockpit-quick-generate-order-card',
         );
@@ -59,16 +64,19 @@ describe('Cockpit Quick Generate narrow essentials grid sizing', () => {
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
+        const mobileTrigger = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-composer-trigger"]',
+        );
 
-        // No fixed-width utility classes were added to the grid or its two
+        // No fixed-width utility classes were added to the grid or its three
         // direct children themselves to force the narrow layout to fit.
         // (Pre-existing, unrelated descendants such as popovers or canvas
         // artwork percentage caps are out of scope for this boundary fix.)
         const canvasWrapper = wrapper.get(
-            '[data-testid="cockpit-quick-generate-essentials-canvas"] > :nth-child(2)',
+            '[data-testid="cockpit-quick-generate-essentials-canvas"] > :nth-child(3)',
         );
 
-        [grid, orderCard, canvasWrapper].forEach((node) => {
+        [grid, mobileTrigger, orderCard, canvasWrapper].forEach((node) => {
             expect(
                 node.classes().some((className) => /^w-\[/.test(className)),
             ).toBe(false);

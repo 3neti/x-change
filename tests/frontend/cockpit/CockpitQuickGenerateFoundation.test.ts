@@ -160,6 +160,139 @@ describe('Cockpit Quick Generate foundation', () => {
         host.remove();
     });
 
+    it('presents one persistent Order form as a focus-safe mobile composer', async () => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: host,
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+            },
+        });
+
+        await flushPromises();
+
+        const orderCard = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-card"]',
+        );
+        const recipientInput = orderCard.get<HTMLInputElement>(
+            '[data-testid="cockpit-quick-generate-primary-recipient"]',
+        );
+        const recipientElement = recipientInput.element;
+        const trigger = wrapper.get<HTMLButtonElement>(
+            '[data-testid="cockpit-quick-generate-order-composer-trigger"]',
+        );
+
+        expect(trigger.classes()).toEqual(
+            expect.arrayContaining(['max-md:flex', 'md:hidden']),
+        );
+        expect(orderCard.classes()).toContain('max-md:hidden');
+        expect(orderCard.classes()).toEqual(
+            expect.arrayContaining([
+                'min-w-0',
+                'rounded-2xl',
+                'border',
+                'p-4',
+            ]),
+        );
+
+        trigger.element.focus();
+        await trigger.trigger('click');
+        await flushPromises();
+
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-order-composer-trigger"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(orderCard.classes()).toEqual(
+            expect.arrayContaining([
+                'min-w-0',
+                'rounded-2xl',
+                'border',
+                'p-4',
+                'max-md:fixed',
+                'max-md:inset-0',
+                'max-md:z-[60]',
+                'max-md:overflow-y-auto',
+            ]),
+        );
+        expect(orderCard.attributes('role')).toBe('dialog');
+        expect(orderCard.attributes('aria-modal')).toBe('true');
+        expect(document.activeElement).toBe(orderCard.element);
+        expect(document.body.style.overflow).toBe('hidden');
+
+        await orderCard
+            .get('[data-testid="cockpit-quick-generate-choose-template"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-template-picker"]')
+                .classes(),
+        ).toContain('z-[70]');
+
+        await wrapper
+            .get('[aria-label="Close template picker"]')
+            .trigger('click');
+        await orderCard
+            .get('[data-testid="cockpit-quick-generate-save-template"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-save-template-dialog"]',
+                )
+                .classes(),
+        ).toContain('z-[70]');
+
+        await wrapper
+            .get('[aria-label="Close save template dialog"]')
+            .trigger('click');
+
+        await recipientInput.setValue('CASH');
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-order-composer-close"]',
+            )
+            .trigger('click');
+        await flushPromises();
+
+        const restoredTrigger = wrapper.get<HTMLButtonElement>(
+            '[data-testid="cockpit-quick-generate-order-composer-trigger"]',
+        );
+
+        expect(orderCard.classes()).toContain('max-md:hidden');
+        expect(document.activeElement).toBe(restoredTrigger.element);
+        expect(document.body.style.overflow).toBe('');
+        expect(recipientInput.element).toBe(recipientElement);
+        expect(recipientInput.element.value).toBe('CASH');
+
+        await restoredTrigger.trigger('click');
+        await flushPromises();
+
+        expect(recipientInput.element).toBe(recipientElement);
+        expect(recipientInput.element.value).toBe('CASH');
+
+        await orderCard.trigger('keydown', { key: 'Escape' });
+        await flushPromises();
+
+        expect(orderCard.classes()).toContain('max-md:hidden');
+        expect(document.activeElement).toBe(
+            wrapper.get(
+                '[data-testid="cockpit-quick-generate-order-composer-trigger"]',
+            ).element,
+        );
+        expect(document.body.style.overflow).toBe('');
+
+        wrapper.unmount();
+        host.remove();
+    });
+
     it('keeps secondary Order options collapsed while exposing active configuration', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
@@ -2503,6 +2636,13 @@ describe('Cockpit Quick Generate foundation', () => {
         });
 
         await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-order-composer-trigger"]',
+            )
+            .trigger('click');
+        await flushPromises();
+
+        await wrapper
             .find('[data-testid="cockpit-quick-generate-submit-amount"]')
             .setValue('99.50');
         await wrapper
@@ -2511,6 +2651,7 @@ describe('Cockpit Quick Generate foundation', () => {
         await wrapper
             .find('[data-testid="cockpit-quick-generate-primary-purpose"]')
             .setValue('Operator test issuance');
+        fetchMock.mockClear();
         await wrapper
             .find('[data-testid="cockpit-quick-generate-submit-panel"]')
             .trigger('submit');
@@ -2595,6 +2736,23 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(JSON.stringify(payload)).not.toContain('wallet');
         expect(JSON.stringify(payload)).not.toContain('provider_payload');
         expect(wrapper.emitted('submitSuccess')).toHaveLength(1);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-order-card"]')
+                .classes(),
+        ).toContain('max-md:hidden');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-order-composer-trigger"]',
+                )
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-issued-pay-code-dialog"]')
+                .exists(),
+        ).toBe(true);
         expect(
             wrapper
                 .find(

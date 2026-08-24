@@ -20,7 +20,14 @@ import {
     Type,
     X,
 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
@@ -791,6 +798,11 @@ const startingPoint = ref<'blank' | 'last' | 'template'>(
 const templatePickerOpen = ref(false);
 const saveTemplateOpen = ref(false);
 const orderOptionsOpen = ref(false);
+const orderComposerOpen = ref(false);
+const orderComposerElement = ref<HTMLElement | null>(null);
+const orderComposerTriggerElement = ref<HTMLButtonElement | null>(null);
+let orderComposerReturnFocus: HTMLElement | null = null;
+let orderComposerPreviousBodyOverflow: string | null = null;
 const saveTemplateName = ref('');
 const saveTemplateDescription = ref('');
 const saveTemplateIncludeAmount = ref(false);
@@ -809,6 +821,50 @@ onMounted((): void => {
     riderDesignTeleportReady.value = true;
     void focusAmountEditor();
 });
+
+watch(orderComposerOpen, async (open): Promise<void> => {
+    if (open) {
+        orderComposerReturnFocus =
+            document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+        orderComposerPreviousBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        await nextTick();
+        orderComposerElement.value?.focus();
+
+        return;
+    }
+
+    if (orderComposerPreviousBodyOverflow !== null) {
+        document.body.style.overflow = orderComposerPreviousBodyOverflow;
+        orderComposerPreviousBodyOverflow = null;
+    }
+
+    await nextTick();
+    const focusTarget =
+        orderComposerTriggerElement.value ?? orderComposerReturnFocus;
+
+    focusTarget?.focus();
+    orderComposerReturnFocus = null;
+});
+
+onBeforeUnmount((): void => {
+    if (orderComposerPreviousBodyOverflow !== null) {
+        document.body.style.overflow = orderComposerPreviousBodyOverflow;
+    }
+
+    orderComposerPreviousBodyOverflow = null;
+    orderComposerReturnFocus = null;
+});
+
+function openOrderComposer(): void {
+    orderComposerOpen.value = true;
+}
+
+function closeOrderComposer(): void {
+    orderComposerOpen.value = false;
+}
 
 async function focusAmountEditor(): Promise<void> {
     await nextTick();
@@ -4409,6 +4465,8 @@ async function submit(): Promise<void> {
         submissionErrors.value = [];
         submissionErrorHeading.value = 'Fix these fields before issuing';
         lastResponse.value = body;
+        orderComposerOpen.value = false;
+        await nextTick();
         issuedPayCodeDialogOpen.value = resultCode.value !== null;
         emit('submitSuccess', body);
     } catch (error) {
@@ -5637,7 +5695,8 @@ function instructionRecord(
     >
         <div
             v-if="templatePickerOpen"
-            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            class="fixed inset-0 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            :class="orderComposerOpen ? 'z-[70]' : 'z-50'"
             data-testid="cockpit-quick-generate-template-picker"
             @click.self="templatePickerOpen = false"
         >
@@ -5765,7 +5824,8 @@ function instructionRecord(
 
         <div
             v-if="saveTemplateOpen"
-            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            class="fixed inset-0 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            :class="orderComposerOpen ? 'z-[70]' : 'z-50'"
             data-testid="cockpit-quick-generate-save-template-dialog"
             @click.self="saveTemplateOpen = false"
         >
@@ -5930,15 +5990,73 @@ function instructionRecord(
             class="grid min-w-0 gap-5 2xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]"
             data-testid="cockpit-quick-generate-essentials-canvas"
         >
-            <div
-                class="min-w-0 rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
-                data-testid="cockpit-quick-generate-order-card"
+            <button
+                v-if="!orderComposerOpen"
+                ref="orderComposerTriggerElement"
+                type="button"
+                class="max-md:flex md:hidden min-h-14 min-w-0 items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-white/90 px-4 py-3 text-left shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-emerald-900/70 dark:bg-slate-950/80 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/30"
+                data-testid="cockpit-quick-generate-order-composer-trigger"
+                aria-haspopup="dialog"
+                @click="openOrderComposer"
             >
+                <span class="min-w-0">
+                    <span
+                        class="block text-sm font-semibold text-slate-950 dark:text-slate-50"
+                    >
+                        New Pay Code
+                    </span>
+                    <span
+                        class="block truncate text-xs text-slate-500 dark:text-slate-400"
+                    >
+                        Compose amount, recipient, and options
+                    </span>
+                </span>
+                <span
+                    class="shrink-0 text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300"
+                >
+                    {{ formatAccountMoney(normalizedPayCodeAmount()) }}
+                </span>
+            </button>
+
+            <div
+                ref="orderComposerElement"
+                :class="[
+                    'min-w-0 rounded-2xl border border-emerald-200 bg-white/80 p-4 outline-none dark:border-emerald-900/70 dark:bg-slate-950/70',
+                    orderComposerOpen
+                        ? 'max-md:fixed max-md:inset-0 max-md:z-[60] max-md:overflow-y-auto max-md:overscroll-contain max-md:rounded-none max-md:border-0 max-md:bg-white max-md:pb-24 dark:max-md:bg-slate-950'
+                        : 'max-md:hidden',
+                ]"
+                :tabindex="orderComposerOpen ? -1 : undefined"
+                :role="orderComposerOpen ? 'dialog' : undefined"
+                :aria-modal="orderComposerOpen ? 'true' : undefined"
+                :aria-labelledby="
+                    orderComposerOpen
+                        ? 'cockpit-quick-generate-order-composer-title'
+                        : undefined
+                "
+                data-testid="cockpit-quick-generate-order-card"
+                @keydown.esc.stop.prevent="closeOrderComposer"
+            >
+                <div
+                    v-if="orderComposerOpen"
+                    class="max-md:flex md:hidden mb-2 justify-end"
+                >
+                    <button
+                        type="button"
+                        class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:hover:bg-slate-900 dark:hover:text-white"
+                        aria-label="Close Pay Code composer"
+                        data-testid="cockpit-quick-generate-order-composer-close"
+                        @click="closeOrderComposer"
+                    >
+                        <X class="size-5" aria-hidden="true" />
+                    </button>
+                </div>
                 <div
                     class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between"
                 >
                     <div class="min-w-0 flex-1">
                         <h4
+                            id="cockpit-quick-generate-order-composer-title"
                             class="text-lg font-semibold text-slate-950 dark:text-slate-50"
                         >
                             Order
