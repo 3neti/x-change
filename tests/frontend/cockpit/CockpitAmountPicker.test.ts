@@ -39,6 +39,7 @@ describe("CockpitAmountPicker", () => {
       wrapper.get('[data-testid="numeric-keypad-dialog"]').classes(),
     ).toEqual(
       expect.arrayContaining([
+        "z-[70]",
         "max-h-[92dvh]",
         "overflow-y-auto",
         "sm:top-1/2!",
