@@ -29,6 +29,11 @@ class EstimatePayCodeCost
             2,
         );
         $issueCost = round((float) ($estimate['total'] ?? 0), 2);
+        $collectsFunds = in_array(
+            data_get($input, 'voucher_type'),
+            ['payable', 'settlement'],
+            true,
+        ) || data_get($input, 'metadata.flow_type') === 'collectible';
 
         return new PricingEstimateData(
             currency: (string) ($estimate['currency'] ?? config('x-change.pricing.currency', 'PHP')),
@@ -37,7 +42,10 @@ class EstimatePayCodeCost
             total: $issueCost,
             charges: (array) ($estimate['charges'] ?? []),
             pay_code_value: $payCodeValue,
-            account_debit: round($payCodeValue + $issueCost, 2),
+            account_debit: round(
+                ($collectsFunds ? 0.0 : $payCodeValue) + $issueCost,
+                2,
+            ),
             commercial_offering_reference: is_string($estimate['commercial_offering_reference'] ?? null)
                 ? $estimate['commercial_offering_reference']
                 : null,

@@ -200,17 +200,7 @@ final class PayCodeCommercialQuoteService
     ): array {
         $selected = [];
         $count = max(1, (int) ($instructions->count ?? 1));
-
-        if ((float) ($instructions->cash?->amount ?? 0) > 0) {
-            $selected[] = 'cash.amount';
-        }
-
         $flowType = mb_strtolower(trim((string) data_get($instructions, 'metadata.flow_type', '')));
-
-        if ($flowType === 'collectible') {
-            $selected[] = 'flow_type.collectible';
-        }
-
         $voucherType = data_get($instructions, 'voucher_type', '');
 
         if ($voucherType instanceof BackedEnum) {
@@ -218,6 +208,19 @@ final class PayCodeCommercialQuoteService
         }
 
         $voucherType = mb_strtolower(trim((string) $voucherType));
+        $usesVoucherCollectionPricing = in_array(
+            $voucherType,
+            ['payable', 'settlement'],
+            true,
+        );
+
+        if ((float) ($instructions->cash?->amount ?? 0) > 0 && ! $usesVoucherCollectionPricing) {
+            $selected[] = 'cash.amount';
+        }
+
+        if ($flowType === 'collectible' && ! $usesVoucherCollectionPricing) {
+            $selected[] = 'flow_type.collectible';
+        }
 
         if ($voucherType !== '') {
             $selected[] = 'voucher_type.'.$voucherType;

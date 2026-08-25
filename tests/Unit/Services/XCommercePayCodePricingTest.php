@@ -3,11 +3,16 @@
 declare(strict_types=1);
 
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
+use LBHurtado\XChange\Contracts\CommercialRecipientDesignationResolverContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Models\CommercialRecipientDesignation;
+use LBHurtado\XChange\Services\Commercial\BootstrapCommercialComponentEconomicsFactory;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
+use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 
 beforeEach(function (): void {
@@ -25,6 +30,41 @@ beforeEach(function (): void {
             public function resolve(string $profile): CommercialOfferingData
             {
                 return $this->offerings->make($profile);
+            }
+        },
+    );
+    app()->bind(
+        CommercialComponentEconomicsResolverContract::class,
+        fn ($app): CommercialComponentEconomicsResolverContract => new class($app->make(BootstrapCommercialOfferingFactory::class), $app->make(BootstrapCommercialComponentEconomicsFactory::class)) implements CommercialComponentEconomicsResolverContract
+        {
+            public function __construct(
+                private readonly BootstrapCommercialOfferingFactory $offerings,
+                private readonly BootstrapCommercialComponentEconomicsFactory $economics,
+            ) {}
+
+            public function resolve(string $profile): CommercialComponentEconomicsSetData
+            {
+                return $this->economics->make($profile, $this->offerings->make($profile));
+            }
+        },
+    );
+    app()->bind(
+        CommercialRecipientDesignationResolverContract::class,
+        fn (): CommercialRecipientDesignationResolverContract => new class implements CommercialRecipientDesignationResolverContract
+        {
+            public function resolve(string $designationReference): CommercialRecipientDesignation
+            {
+                return new CommercialRecipientDesignation([
+                    'designation_reference' => $designationReference,
+                    'counterparty_reference' => 'counterparty:3neti',
+                    'commercial_role' => 'service_aggregator',
+                    'component_scope' => array_map(
+                        static fn ($item): string => $item->reference,
+                        app(BootstrapCommercialOfferingFactory::class)->make('pay_code')->catalog->items,
+                    ),
+                    'agreement_reference' => 'agreement:commissioning:institution-3neti:v1',
+                    'settlement_disposition' => 'retain_payable',
+                ]);
             }
         },
     );
@@ -180,6 +220,63 @@ it('prices a collectible instruction without treating its target as outbound cas
         ->and($estimate['charges'][0]['index'])->toBe('cash.amount')
         ->and($estimate['charges'][0]['catalog_item_reference'])
         ->toBe('flow_type.collectible');
+});
+
+it('prices plain collection voucher types from their specific governed catalog item', function (string $voucherType): void {
+    $catalog = config('x-commerce.catalogs.pay_code');
+    $catalog['version'] = 4;
+    $catalog['items']['voucher_type.payable']['unit_price_minor'] = 0;
+    $catalog['items']['voucher_type.settlement']['unit_price_minor'] = 0;
+    config()->set('x-commerce.catalogs.pay_code', $catalog);
+
+    $instructions = validVoucherInstructions(250, 'INSTAPAY', [
+        'voucher_type' => $voucherType,
+        'target_amount' => 250,
+        'metadata' => [],
+        'inputs' => ['fields' => []],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]);
+
+    $estimate = app(PricingServiceContract::class)->estimate($instructions);
+
+    expect($estimate['catalog_version'])->toBe(4)
+        ->and($estimate['total_minor'])->toBe(0)
+        ->and(collect($estimate['charges'])->pluck('catalog_item_reference')->all())
+        ->toBe(['voucher_type.'.$voucherType]);
+})->with(['payable', 'settlement']);
+
+it('continues to price optional features on a zero-priced payable voucher', function (): void {
+    $catalog = config('x-commerce.catalogs.pay_code');
+    $catalog['version'] = 4;
+    $catalog['items']['voucher_type.payable']['unit_price_minor'] = 0;
+    $catalog['items']['voucher_type.settlement']['unit_price_minor'] = 0;
+    config()->set('x-commerce.catalogs.pay_code', $catalog);
+
+    $instructions = validVoucherInstructions(250, 'INSTAPAY', [
+        'voucher_type' => 'payable',
+        'target_amount' => 250,
+        'metadata' => [],
+        'inputs' => ['fields' => []],
+        'feedback' => [
+            'email' => 'payer@example.test',
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]);
+
+    $estimate = app(PricingServiceContract::class)->estimate($instructions);
+    $charges = collect($estimate['charges'])->keyBy('catalog_item_reference');
+
+    expect($estimate['total_minor'])->toBe(150)
+        ->and($charges->keys()->all())->toBe([
+            'voucher_type.payable',
+            'feedback.email',
+        ])
+        ->and($charges->get('feedback.email')['price_minor'])->toBe(150);
 });
 
 it('uses a no-payout waterfall for Account Funding Pay Codes', function () {
