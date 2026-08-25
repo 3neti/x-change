@@ -1077,6 +1077,21 @@ describe('Cockpit Quick Generate foundation', () => {
         );
         expect(collectionWallet.element.value).toBe('42');
 
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+            .setValue('125.50');
+
+        expect(quickGenerateEngineeringPreview(wrapper)).toMatchObject({
+            voucher_type: 'payable',
+            target_amount: 125.5,
+            cash: {
+                amount: 125.5,
+            },
+            metadata: {
+                collection_wallet_id: '42',
+            },
+        });
+
         await collectionWallet.setValue('shared-wallet-17');
 
         await type.setValue('settlement');

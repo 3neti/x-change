@@ -4797,9 +4797,20 @@ function buildPayloadShape(
     }
 
     const normalizedTargetAmount = Number(targetAmount.value);
+    const collectionTargetAmount =
+        Number.isFinite(normalizedTargetAmount) && normalizedTargetAmount > 0
+            ? normalizedTargetAmount
+            : voucherType.value === 'payable' ||
+                voucherType.value === 'settlement'
+              ? normalizedAmount
+              : null;
 
-    if (Number.isFinite(normalizedTargetAmount) && normalizedTargetAmount > 0) {
-        payload.target_amount = normalizedTargetAmount;
+    if (
+        collectionTargetAmount !== null &&
+        Number.isFinite(collectionTargetAmount) &&
+        collectionTargetAmount > 0
+    ) {
+        payload.target_amount = collectionTargetAmount;
     }
 
     if (settlementRulesSummary.value !== null) {
