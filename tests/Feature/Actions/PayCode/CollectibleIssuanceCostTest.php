@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
@@ -81,14 +82,14 @@ it('does not debit target amount when generating collectible pay code', function
     expect($debited)->toBeLessThan(100.00);
 });
 
-it('issues a zero-fee collection voucher without issuer funding', function (string $voucherType): void {
-    $issuer = actingAsTestUser(0);
+it('requires only the commercial charge when issuing a collection voucher', function (string $voucherType): void {
+    $issuer = actingAsTestUser(150);
     $wallet = $issuer->wallet()->where('slug', 'platform')->firstOrFail();
     $payload = validPayCodePayload(250, 'INSTAPAY', [
         'voucher_type' => $voucherType,
         'target_amount' => 250,
         'feedback' => [
-            'email' => null,
+            'email' => 'payer@example.test',
             'mobile' => null,
             'webhook' => null,
         ],
@@ -103,21 +104,50 @@ it('issues a zero-fee collection voucher without issuer funding', function (stri
         ...$payload,
         'issuer_id' => $issuer->getKey(),
     ]);
+    $voucher = Voucher::query()->findOrFail($result->voucher_id);
 
     expect($result->code)->not->toBeEmpty()
-        ->and($result->cost->total)->toBe(0.0)
-        ->and($result->cost->account_debit)->toBe(0.0)
+        ->and($result->cost->pay_code_value)->toBe(0.0)
+        ->and($result->cost->total)->toBe(1.5)
+        ->and($result->cost->account_debit)->toBe(1.5)
+        ->and($voucher->instructions->target_amount)->toBe(250.0)
+        ->and($voucher->instructions->cash->amount)->toBe(0.0)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0);
 })->with(['payable', 'settlement']);
 
-it('still rejects an unfunded redeemable voucher', function (): void {
-    $issuer = actingAsTestUser(0);
+it('rejects a collection voucher when its issuer cannot cover the commercial charge', function (string $voucherType): void {
+    $issuer = actingAsTestUser(149);
+    $wallet = $issuer->wallet()->where('slug', 'platform')->firstOrFail();
+
+    expect(fn () => app(GeneratePayCode::class)->handle([
+        ...validPayCodePayload(250, 'INSTAPAY', [
+            'voucher_type' => $voucherType,
+            'target_amount' => 250,
+            'inputs' => ['fields' => []],
+            'feedback' => [
+                'email' => 'payer@example.test',
+                'mobile' => null,
+                'webhook' => null,
+            ],
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'collection_wallet_id' => (string) $wallet->getKey(),
+            ],
+        ]),
+        'issuer_id' => $issuer->getKey(),
+    ]))->toThrow(InsufficientWalletBalance::class);
+
+    expect((int) $wallet->refresh()->balanceInt)->toBe(149);
+})->with(['payable', 'settlement']);
+
+it('still requires the face value and commercial charge for a redeemable voucher', function (): void {
+    $issuer = actingAsTestUser(150);
 
     expect(fn () => app(GeneratePayCode::class)->handle([
         ...validPayCodePayload(250, 'INSTAPAY', [
             'inputs' => ['fields' => []],
             'feedback' => [
-                'email' => null,
+                'email' => 'payer@example.test',
                 'mobile' => null,
                 'webhook' => null,
             ],
