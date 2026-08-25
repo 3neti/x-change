@@ -29,8 +29,22 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         );
 
         expect(
-            wrapper
-                .findAll('details')
+            orderCard
+                .get(
+                    '[data-testid="cockpit-quick-generate-order-options-toggle"]',
+                )
+                .attributes('aria-expanded'),
+        ).toBe('false');
+        expect(
+            orderCard
+                .get(
+                    '[data-testid="cockpit-quick-generate-order-options-panel"]',
+                )
+                .attributes('style'),
+        ).toContain('display: none');
+        expect(
+            orderCard
+                .findAll(':scope > details')
                 .every((details) => details.attributes('open') === undefined),
         ).toBe(true);
         expect(modeControl.text()).toContain('Pay Code');
@@ -115,7 +129,9 @@ describe('Cockpit Quick Generate Invitation mode', () => {
                 .get('[data-testid="cockpit-quick-generate-submit-button"]')
                 .text(),
         ).toContain('Issue Pay Code');
-        expect(quickGenerateEngineeringPreview(wrapper).onboarding).toBeUndefined();
+        expect(
+            quickGenerateEngineeringPreview(wrapper).onboarding,
+        ).toBeUndefined();
     });
 
     it('keeps the explicit invitation entry in Invitation mode when the last instructions were an ordinary Pay Code', () => {
@@ -164,11 +180,12 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         expect(preview.inputs.fields).toEqual(
             expect.arrayContaining(['mobile', 'email', 'name', 'otp']),
         );
+        expect(wrapper.findAll('[data-onboarding-locked="true"]')).toHaveLength(
+            4,
+        );
         expect(
-            wrapper.findAll('[data-onboarding-locked="true"]'),
-        ).toHaveLength(4);
-        expect(
-            wrapper.get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
                 .attributes('aria-pressed'),
         ).toBe('true');
     });
@@ -188,11 +205,12 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         const preview = quickGenerateEngineeringPreview(wrapper);
 
         expect(preview.onboarding).toBeUndefined();
+        expect(wrapper.findAll('[data-onboarding-locked="true"]')).toHaveLength(
+            0,
+        );
         expect(
-            wrapper.findAll('[data-onboarding-locked="true"]'),
-        ).toHaveLength(0);
-        expect(
-            wrapper.get('[data-testid="cockpit-quick-generate-mode-paycode"]')
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
                 .attributes('aria-pressed'),
         ).toBe('true');
     });
@@ -326,9 +344,9 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         );
 
         // no field remains locked once Pay Code mode is explicit.
-        expect(
-            wrapper.findAll('[data-onboarding-locked="true"]'),
-        ).toHaveLength(0);
+        expect(wrapper.findAll('[data-onboarding-locked="true"]')).toHaveLength(
+            0,
+        );
 
         for (const field of ['name', 'email', 'mobile', 'otp']) {
             const chip = wrapper.get(
@@ -418,9 +436,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         });
 
         await wrapper
-            .get(
-                '[data-testid="cockpit-quick-generate-order-options-toggle"]',
-            )
+            .get('[data-testid="cockpit-quick-generate-order-options-toggle"]')
             .trigger('click');
         await wrapper
             .get('[data-testid="cockpit-claim-requirements-trigger"]')
@@ -485,7 +501,9 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         expect(invitationButton.attributes('aria-pressed')).toBeDefined();
         expect(
             wrapper
-                .find('[data-testid="cockpit-quick-generate-onboarding-toggle"]')
+                .find(
+                    '[data-testid="cockpit-quick-generate-onboarding-toggle"]',
+                )
                 .exists(),
         ).toBe(false);
         expect(

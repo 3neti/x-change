@@ -44,17 +44,17 @@ describe('Quick Generate Rider Library integration', () => {
                     },
                 ],
             },
-            global: {
-                stubs: {
-                    Teleport: false,
-                },
-            },
         });
 
         await nextTick();
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-open-design-button"]')
+            .get('[data-testid="cockpit-quick-generate-order-options-toggle"]')
             .trigger('click');
+        const designOption = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-option-design"]',
+        );
+        (designOption.element as HTMLDetailsElement).open = true;
+        await designOption.trigger('toggle');
         await nextTick();
 
         const libraries = wrapper.findAllComponents(CockpitRiderLibrary);
@@ -71,17 +71,17 @@ describe('Quick Generate Rider Library integration', () => {
             props: {
                 templates: cockpitQuickGenerateTemplates,
             },
-            global: {
-                stubs: {
-                    Teleport: false,
-                },
-            },
         });
 
         await nextTick();
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-open-design-button"]')
+            .get('[data-testid="cockpit-quick-generate-order-options-toggle"]')
             .trigger('click');
+        const designOption = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-option-design"]',
+        );
+        (designOption.element as HTMLDetailsElement).open = true;
+        await designOption.trigger('toggle');
         await nextTick();
         const libraries = wrapper.findAllComponents(CockpitRiderLibrary);
 

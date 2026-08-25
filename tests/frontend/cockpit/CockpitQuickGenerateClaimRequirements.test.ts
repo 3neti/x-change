@@ -426,7 +426,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         vi.useRealTimers();
     });
 
-    it('keeps Selfie-only claim requirements and the Cost face free of an implicit KYC charge', async () => {
+    it('keeps Selfie-only estimated cost free of an implicit KYC charge', async () => {
         vi.useFakeTimers();
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,
@@ -476,28 +476,31 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         await flushPromises();
         await wrapper.vm.$nextTick();
 
-        const lastCallBody = JSON.parse(
-            String(fetchMock.mock.calls.at(-1)?.[1]?.body),
-        );
+        const selfieEstimateBody = fetchMock.mock.calls
+            .map(([, options]) => JSON.parse(String(options?.body)))
+            .find((body) => body.inputs?.fields?.includes('selfie'));
 
-        expect(lastCallBody.inputs.fields).toContain('selfie');
-        expect(lastCallBody.inputs.fields).not.toContain('kyc');
+        expect(selfieEstimateBody).toBeDefined();
+        expect(selfieEstimateBody.inputs.fields).toContain('selfie');
+        expect(selfieEstimateBody.inputs.fields).not.toContain('kyc');
         expect(
             wrapper
                 .find('[data-testid="cockpit-claim-requirement-chip-kyc"]')
                 .exists(),
         ).toBe(false);
 
-        await wrapper
-            .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
-            .trigger('click');
-
-        const costLedger = wrapper.get(
-            '[data-testid="cockpit-pay-code-cost-ledger"]',
-        );
-
-        expect(costLedger.text()).toContain('Selfie Photo');
-        expect(costLedger.text()).not.toContain('KYC Verification');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-account-debit-amount"]',
+                )
+                .text(),
+        ).toBe('₱65.00');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-cost-ledger"]')
+                .exists(),
+        ).toBe(false);
 
         wrapper.unmount();
         vi.unstubAllGlobals();

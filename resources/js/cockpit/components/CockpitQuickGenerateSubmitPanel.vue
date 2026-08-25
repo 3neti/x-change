@@ -20,14 +20,7 @@ import {
     Type,
     X,
 } from 'lucide-vue-next';
-import {
-    computed,
-    nextTick,
-    onBeforeUnmount,
-    onMounted,
-    ref,
-    watch,
-} from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
@@ -93,7 +86,6 @@ import CockpitFeedbackDestinationInput from './CockpitFeedbackDestinationInput.v
 import CockpitFieldHelp from './CockpitFieldHelp.vue';
 import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
-import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
 import CockpitRiderArtworkInspector from './CockpitRiderArtworkInspector.vue';
 import CockpitRiderArtworkThumbnail from './CockpitRiderArtworkThumbnail.vue';
@@ -782,27 +774,18 @@ const previewResult = ref<CockpitClaimExperiencePreviewManifest | null>(null);
 const previewDraftSnapshot = ref<string | null>(null);
 const issuedPayCodeDialogOpen = ref(false);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
-const canvasSectionElement = ref<HTMLElement | null>(null);
-const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
 const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
     null,
 );
 const amountCalculatorPreview = ref<number | null>(null);
 const amountCalculatorEstimatePending = ref(false);
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
-const riderDesignTeleportReady = ref(false);
-const riderDesignTeleportTarget = ref<HTMLElement | null>(null);
 const startingPoint = ref<'blank' | 'last' | 'template'>(
     props.lastInstructions ? 'last' : 'template',
 );
 const templatePickerOpen = ref(false);
 const saveTemplateOpen = ref(false);
 const orderOptionsOpen = ref(false);
-const orderComposerOpen = ref(false);
-const orderComposerElement = ref<HTMLElement | null>(null);
-const orderComposerTriggerElement = ref<HTMLButtonElement | null>(null);
-let orderComposerReturnFocus: HTMLElement | null = null;
-let orderComposerPreviousBodyOverflow: string | null = null;
 const saveTemplateName = ref('');
 const saveTemplateDescription = ref('');
 const saveTemplateIncludeAmount = ref(false);
@@ -818,53 +801,8 @@ const submissionErrorHeading = ref('Fix these fields before issuing');
 hydrateLastInstructions();
 
 onMounted((): void => {
-    riderDesignTeleportReady.value = true;
     void focusAmountEditor();
 });
-
-watch(orderComposerOpen, async (open): Promise<void> => {
-    if (open) {
-        orderComposerReturnFocus =
-            document.activeElement instanceof HTMLElement
-                ? document.activeElement
-                : null;
-        orderComposerPreviousBodyOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        await nextTick();
-        orderComposerElement.value?.focus();
-
-        return;
-    }
-
-    if (orderComposerPreviousBodyOverflow !== null) {
-        document.body.style.overflow = orderComposerPreviousBodyOverflow;
-        orderComposerPreviousBodyOverflow = null;
-    }
-
-    await nextTick();
-    const focusTarget =
-        orderComposerTriggerElement.value ?? orderComposerReturnFocus;
-
-    focusTarget?.focus();
-    orderComposerReturnFocus = null;
-});
-
-onBeforeUnmount((): void => {
-    if (orderComposerPreviousBodyOverflow !== null) {
-        document.body.style.overflow = orderComposerPreviousBodyOverflow;
-    }
-
-    orderComposerPreviousBodyOverflow = null;
-    orderComposerReturnFocus = null;
-});
-
-function openOrderComposer(): void {
-    orderComposerOpen.value = true;
-}
-
-function closeOrderComposer(): void {
-    orderComposerOpen.value = false;
-}
 
 async function focusAmountEditor(): Promise<void> {
     await nextTick();
@@ -1082,15 +1020,18 @@ function selectRiderDesignEditor(editor: RiderDesignEditor): void {
     riderDesignEditor.value = editor;
 }
 
-async function openDesignEditor(): Promise<void> {
-    canvasView.value = 'design';
-    riderDesignEditor.value = 'appearance';
-    await nextTick();
+function handleClaimPreviewToggle(event: Event): void {
+    const details = event.currentTarget as HTMLDetailsElement | null;
 
-    canvasSectionElement.value?.scrollIntoView?.({
-        behavior: 'smooth',
-        block: 'center',
-    });
+    if (
+        details?.open !== true ||
+        previewStatus.value !== 'idle' ||
+        previewProcessing.value
+    ) {
+        return;
+    }
+
+    void generateClaimPreview(false);
 }
 
 function hydrateLastInstructions(): void {
@@ -3313,6 +3254,9 @@ const orderOptionsActiveCount = computed<number>(() => {
             (destination) => destination !== '',
         ),
         reusableBalance.value || sliceMode.value !== 'whole',
+        riderUrl.value.trim() !== '' ||
+            riderSplash.value.trim() !== '' ||
+            hasRiderStampCustomization.value,
         settlementRail.value.trim() !== '',
     ].filter(Boolean).length;
 });
@@ -4236,16 +4180,6 @@ const previewStale = computed<boolean>(() => {
     );
 });
 
-watch(canvasView, (view): void => {
-    if (
-        view === 'claim' &&
-        previewStatus.value === 'idle' &&
-        !previewProcessing.value
-    ) {
-        void generateClaimPreview(false);
-    }
-});
-
 const settlementRulesSummary = computed<Record<string, unknown> | null>(() => {
     const minPayment = Number(rulesMinPayment.value);
     const maxPayment = Number(rulesMaxPayment.value);
@@ -4465,7 +4399,6 @@ async function submit(): Promise<void> {
         submissionErrors.value = [];
         submissionErrorHeading.value = 'Fix these fields before issuing';
         lastResponse.value = body;
-        orderComposerOpen.value = false;
         await nextTick();
         issuedPayCodeDialogOpen.value = resultCode.value !== null;
         emit('submitSuccess', body);
@@ -5695,8 +5628,7 @@ function instructionRecord(
     >
         <div
             v-if="templatePickerOpen"
-            class="fixed inset-0 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
-            :class="orderComposerOpen ? 'z-[70]' : 'z-50'"
+            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
             data-testid="cockpit-quick-generate-template-picker"
             @click.self="templatePickerOpen = false"
         >
@@ -5824,8 +5756,7 @@ function instructionRecord(
 
         <div
             v-if="saveTemplateOpen"
-            class="fixed inset-0 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
-            :class="orderComposerOpen ? 'z-[70]' : 'z-50'"
+            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
             data-testid="cockpit-quick-generate-save-template-dialog"
             @click.self="saveTemplateOpen = false"
         >
@@ -5987,662 +5918,1629 @@ function instructionRecord(
         </div>
 
         <div
-            class="grid min-w-0 gap-5 2xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]"
-            data-testid="cockpit-quick-generate-essentials-canvas"
+            class="min-w-0 rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
+            data-testid="cockpit-quick-generate-order-card"
         >
-            <button
-                v-if="!orderComposerOpen"
-                ref="orderComposerTriggerElement"
-                type="button"
-                class="max-md:flex md:hidden min-h-14 min-w-0 items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-white/90 px-4 py-3 text-left shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-emerald-900/70 dark:bg-slate-950/80 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/30"
-                data-testid="cockpit-quick-generate-order-composer-trigger"
-                aria-haspopup="dialog"
-                @click="openOrderComposer"
-            >
-                <span class="min-w-0">
-                    <span
-                        class="block text-sm font-semibold text-slate-950 dark:text-slate-50"
-                    >
-                        New Pay Code
-                    </span>
-                    <span
-                        class="block truncate text-xs text-slate-500 dark:text-slate-400"
-                    >
-                        Compose amount, recipient, and options
-                    </span>
-                </span>
-                <span
-                    class="shrink-0 text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300"
-                >
-                    {{ formatAccountMoney(normalizedPayCodeAmount()) }}
-                </span>
-            </button>
-
             <div
-                ref="orderComposerElement"
-                :class="[
-                    'min-w-0 rounded-2xl border border-emerald-200 bg-white/80 p-4 outline-none dark:border-emerald-900/70 dark:bg-slate-950/70',
-                    orderComposerOpen
-                        ? 'max-md:fixed max-md:inset-0 max-md:z-[60] max-md:overflow-y-auto max-md:overscroll-contain max-md:rounded-none max-md:border-0 max-md:bg-white max-md:pb-24 dark:max-md:bg-slate-950'
-                        : 'max-md:hidden',
-                ]"
-                :tabindex="orderComposerOpen ? -1 : undefined"
-                :role="orderComposerOpen ? 'dialog' : undefined"
-                :aria-modal="orderComposerOpen ? 'true' : undefined"
-                :aria-labelledby="
-                    orderComposerOpen
-                        ? 'cockpit-quick-generate-order-composer-title'
-                        : undefined
-                "
-                data-testid="cockpit-quick-generate-order-card"
-                @keydown.esc.stop.prevent="closeOrderComposer"
+                class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between"
             >
-                <div
-                    v-if="orderComposerOpen"
-                    class="max-md:flex md:hidden mb-2 justify-end"
-                >
-                    <button
-                        type="button"
-                        class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:hover:bg-slate-900 dark:hover:text-white"
-                        aria-label="Close Pay Code composer"
-                        data-testid="cockpit-quick-generate-order-composer-close"
-                        @click="closeOrderComposer"
+                <div class="min-w-0 flex-1">
+                    <h4
+                        id="cockpit-quick-generate-order-composer-title"
+                        class="text-lg font-semibold text-slate-950 dark:text-slate-50"
                     >
-                        <X class="size-5" aria-hidden="true" />
-                    </button>
+                        Order
+                    </h4>
                 </div>
+                <button
+                    type="submit"
+                    class="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-auto dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                    data-testid="cockpit-quick-generate-submit-button"
+                    :disabled="!canSubmit || processing"
+                >
+                    <LoaderCircle
+                        v-if="processing"
+                        class="size-4 animate-spin"
+                        aria-hidden="true"
+                        data-testid="cockpit-quick-generate-issue-spinner"
+                    />
+                    <TicketCheck
+                        v-else
+                        class="size-4"
+                        aria-hidden="true"
+                        data-testid="cockpit-quick-generate-issue-icon"
+                    />
+                    {{
+                        processing
+                            ? 'Issuing…'
+                            : onboardingEnabled
+                              ? 'Issue Invitation'
+                              : 'Issue Pay Code'
+                    }}
+                </button>
+            </div>
+            <p class="mt-1 min-w-0 text-sm text-slate-600 dark:text-slate-300">
+                Set the value, payee, and purpose.
+            </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+                <span
+                    class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
+                    :class="voucherKindTone"
+                    data-testid="cockpit-quick-generate-voucher-kind"
+                >
+                    {{ voucherKindLabel }}
+                </span>
                 <div
-                    class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between"
+                    class="flex flex-wrap items-center gap-2"
+                    data-testid="cockpit-quick-generate-mode-control"
                 >
-                    <div class="min-w-0 flex-1">
-                        <h4
-                            id="cockpit-quick-generate-order-composer-title"
-                            class="text-lg font-semibold text-slate-950 dark:text-slate-50"
-                        >
-                            Order
-                        </h4>
-                    </div>
-                    <button
-                        type="submit"
-                        class="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-auto dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-                        data-testid="cockpit-quick-generate-submit-button"
-                        :disabled="!canSubmit || processing"
-                    >
-                        <LoaderCircle
-                            v-if="processing"
-                            class="size-4 animate-spin"
-                            aria-hidden="true"
-                            data-testid="cockpit-quick-generate-issue-spinner"
-                        />
-                        <TicketCheck
-                            v-else
-                            class="size-4"
-                            aria-hidden="true"
-                            data-testid="cockpit-quick-generate-issue-icon"
-                        />
-                        {{
-                            processing
-                                ? 'Issuing…'
-                                : onboardingEnabled
-                                  ? 'Issue Invitation'
-                                  : 'Issue Pay Code'
-                        }}
-                    </button>
-                </div>
-                <p
-                    class="mt-1 min-w-0 text-sm text-slate-600 dark:text-slate-300"
-                >
-                    Set the value, payee, and purpose.
-                </p>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
                     <span
-                        class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
-                        :class="voucherKindTone"
-                        data-testid="cockpit-quick-generate-voucher-kind"
+                        class="flex shrink-0 items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
                     >
-                        {{ voucherKindLabel }}
+                        Mode
+                        <CockpitFieldHelp
+                            label="About Mode"
+                            tooltip="Pay Code issues a claimable value. Invitation also collects the identity details needed to open or link the recipient’s Account."
+                        />
                     </span>
                     <div
-                        class="flex flex-wrap items-center gap-2"
-                        data-testid="cockpit-quick-generate-mode-control"
+                        class="inline-grid shrink-0 grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
+                        role="group"
+                        aria-label="Issuance mode"
                     >
-                        <span
-                            class="flex shrink-0 items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        <button
+                            type="button"
+                            :aria-pressed="!onboardingEnabled"
+                            :class="[
+                                'min-h-8 rounded-full px-3 text-xs font-semibold transition',
+                                !onboardingEnabled
+                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                    : 'text-slate-600 dark:text-slate-300',
+                            ]"
+                            :disabled="processing"
+                            data-testid="cockpit-quick-generate-mode-paycode"
+                            @click="setOnboardingMode(false)"
                         >
-                            Mode
-                            <CockpitFieldHelp
-                                label="About Mode"
-                                tooltip="Pay Code issues a claimable value. Invitation also collects the identity details needed to open or link the recipient’s Account."
-                            />
-                        </span>
-                        <div
-                            class="inline-grid shrink-0 grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
-                            role="group"
-                            aria-label="Issuance mode"
+                            Pay Code
+                        </button>
+                        <button
+                            type="button"
+                            :aria-pressed="onboardingEnabled"
+                            :class="[
+                                'min-h-8 rounded-full px-3 text-xs font-semibold transition',
+                                onboardingEnabled
+                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                    : 'text-slate-600 dark:text-slate-300',
+                            ]"
+                            :disabled="processing"
+                            data-testid="cockpit-quick-generate-mode-invitation"
+                            @click="setOnboardingMode(true)"
                         >
-                            <button
-                                type="button"
-                                :aria-pressed="!onboardingEnabled"
-                                :class="[
-                                    'min-h-8 rounded-full px-3 text-xs font-semibold transition',
-                                    !onboardingEnabled
-                                        ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                        : 'text-slate-600 dark:text-slate-300',
-                                ]"
-                                :disabled="processing"
-                                data-testid="cockpit-quick-generate-mode-paycode"
-                                @click="setOnboardingMode(false)"
-                            >
-                                Pay Code
-                            </button>
-                            <button
-                                type="button"
-                                :aria-pressed="onboardingEnabled"
-                                :class="[
-                                    'min-h-8 rounded-full px-3 text-xs font-semibold transition',
-                                    onboardingEnabled
-                                        ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                        : 'text-slate-600 dark:text-slate-300',
-                                ]"
-                                :disabled="processing"
-                                data-testid="cockpit-quick-generate-mode-invitation"
-                                @click="setOnboardingMode(true)"
-                            >
-                                Invitation
-                            </button>
-                        </div>
+                            Invitation
+                        </button>
                     </div>
                 </div>
+            </div>
+            <div
+                class="mt-4 grid items-start gap-3 sm:grid-cols-2"
+                data-testid="cockpit-quick-generate-order-fields"
+            >
                 <div
-                    class="mt-4 grid items-start gap-3 sm:grid-cols-2"
-                    data-testid="cockpit-quick-generate-order-fields"
+                    class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    data-testid="cockpit-quick-generate-amount-field"
                 >
-                    <div
-                        class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
-                        data-testid="cockpit-quick-generate-amount-field"
-                    >
-                        <label
-                            class="flex items-center gap-1"
-                            for="cockpit-quick-generate-primary-amount"
-                        >
-                            Amount
-                            <CockpitFieldHelp
-                                label="About Amount"
-                                tooltip="Value the recipient can claim. Select the field to open the calculator."
-                            />
-                        </label>
-                        <CockpitAmountPicker
-                            ref="amountInputElement"
-                            v-model="amount"
-                            :disabled="processing"
-                            :estimated-cost="amountCalculatorEstimatedCost"
-                            :estimate-pending="amountCalculatorEstimatePending"
-                            :estimate-affordability="
-                                liveAccountDebitAffordability
-                            "
-                            @preview="previewAmountInCalculator"
-                        />
-                        <div
-                            class="mt-1 flex min-h-5 items-baseline justify-between gap-3 px-0.5 text-[0.7rem] leading-5"
-                            data-testid="cockpit-quick-generate-account-debit"
-                            :data-affordability="liveAccountDebitAffordability"
-                            :title="
-                                liveAccountDebitExceedsClientFunds
-                                    ? 'Estimated Cost exceeds Client Funds.'
-                                    : undefined
-                            "
-                            aria-live="polite"
-                        >
-                            <button
-                                type="button"
-                                class="underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
-                                :class="
-                                    liveAccountDebitExceedsClientFunds
-                                        ? 'font-semibold text-rose-600 hover:text-rose-700 focus-visible:outline-rose-600 dark:text-rose-300 dark:hover:text-rose-200'
-                                        : 'font-medium text-slate-500 hover:text-emerald-700 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300'
-                                "
-                                data-testid="cockpit-quick-generate-account-debit-view-cost"
-                                @click="canvasView = 'cost'"
-                            >
-                                Estimated Cost
-                            </button>
-                            <span
-                                v-if="liveAccountDebit !== null"
-                                class="shrink-0 font-semibold tabular-nums"
-                                :class="
-                                    liveAccountDebitExceedsClientFunds
-                                        ? 'text-rose-600 dark:text-rose-300'
-                                        : 'text-slate-700 dark:text-slate-200'
-                                "
-                                data-testid="cockpit-quick-generate-account-debit-amount"
-                            >
-                                {{ formatAccountMoney(liveAccountDebit) }}
-                            </span>
-                            <span
-                                v-else-if="liveAccountDebitPending"
-                                class="shrink-0 text-slate-400 dark:text-slate-500"
-                                data-testid="cockpit-quick-generate-account-debit-loading"
-                            >
-                                Calculating…
-                            </span>
-                            <span
-                                v-else
-                                class="shrink-0 text-slate-400 dark:text-slate-500"
-                                data-testid="cockpit-quick-generate-account-debit-unavailable"
-                            >
-                                —
-                            </span>
-                        </div>
-                    </div>
                     <label
-                        class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
-                        data-testid="cockpit-quick-generate-recipient-field"
+                        class="flex items-center gap-1"
+                        for="cockpit-quick-generate-primary-amount"
                     >
-                        <span class="flex items-center gap-1">
-                            Pay To
-                            <CockpitFieldHelp
-                                label="About Pay To"
-                                tooltip="Leave blank or use CASH for an open claim. A mobile, email, @vendor, or quoted secret adds the matching safeguards."
-                            />
-                        </span>
-                        <input
-                            v-model="recipientReference"
-                            :type="
-                                payeeRequiresSecret && !payeeInputFocused
-                                    ? 'password'
-                                    : 'text'
-                            "
-                            class="h-12 w-full rounded-xl border bg-white px-3 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
-                            :class="
-                                payeePolicy.kind === 'invalid' ||
-                                payeePolicy.kind === 'email'
-                                    ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-950'
-                                    : 'border-slate-200 dark:border-slate-800'
-                            "
-                            data-testid="cockpit-quick-generate-primary-recipient"
-                            :disabled="processing"
-                            @focus="payeeInputFocused = true"
-                            @blur="payeeInputFocused = false"
+                        Amount
+                        <CockpitFieldHelp
+                            label="About Amount"
+                            tooltip="Value the recipient can claim. Select the field to open the calculator."
                         />
+                    </label>
+                    <CockpitAmountPicker
+                        ref="amountInputElement"
+                        v-model="amount"
+                        :disabled="processing"
+                        :estimated-cost="amountCalculatorEstimatedCost"
+                        :estimate-pending="amountCalculatorEstimatePending"
+                        :estimate-affordability="liveAccountDebitAffordability"
+                        @preview="previewAmountInCalculator"
+                    />
+                    <div
+                        class="mt-1 flex min-h-5 items-baseline justify-between gap-3 px-0.5 text-[0.7rem] leading-5"
+                        data-testid="cockpit-quick-generate-account-debit"
+                        :data-affordability="liveAccountDebitAffordability"
+                        :title="
+                            liveAccountDebitExceedsClientFunds
+                                ? 'Estimated Cost exceeds Client Funds.'
+                                : undefined
+                        "
+                        aria-live="polite"
+                    >
                         <span
-                            v-if="payeeType !== 'anyone'"
-                            class="min-h-5 px-0.5 text-[0.7rem] font-normal leading-5"
+                            class="font-medium"
                             :class="
-                                payeePolicy.kind === 'invalid' ||
-                                payeePolicy.kind === 'email'
-                                    ? 'text-rose-600 dark:text-rose-300'
+                                liveAccountDebitExceedsClientFunds
+                                    ? 'font-semibold text-rose-600 dark:text-rose-300'
                                     : 'text-slate-500 dark:text-slate-400'
                             "
-                            data-testid="cockpit-quick-generate-primary-recipient-help"
+                            data-testid="cockpit-quick-generate-account-debit-view-cost"
                         >
-                            {{ payeeHelpText }}
+                            Estimated Cost
                         </span>
-                    </label>
-                    <label
-                        class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
-                    >
-                        <span class="flex items-center gap-1">
-                            Purpose
-                            <CockpitFieldHelp
-                                label="About Purpose"
-                                tooltip="Shown to the recipient as the Rider Message."
-                            />
+                        <span
+                            v-if="liveAccountDebit !== null"
+                            class="shrink-0 font-semibold tabular-nums"
+                            :class="
+                                liveAccountDebitExceedsClientFunds
+                                    ? 'text-rose-600 dark:text-rose-300'
+                                    : 'text-slate-700 dark:text-slate-200'
+                            "
+                            data-testid="cockpit-quick-generate-account-debit-amount"
+                        >
+                            {{ formatAccountMoney(liveAccountDebit) }}
                         </span>
-                        <input
-                            v-model="purpose"
-                            type="text"
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                            data-testid="cockpit-quick-generate-primary-purpose"
-                            :disabled="processing"
-                        />
-                    </label>
+                        <span
+                            v-else-if="liveAccountDebitPending"
+                            class="shrink-0 text-slate-400 dark:text-slate-500"
+                            data-testid="cockpit-quick-generate-account-debit-loading"
+                        >
+                            Calculating…
+                        </span>
+                        <span
+                            v-else
+                            class="shrink-0 text-slate-400 dark:text-slate-500"
+                            data-testid="cockpit-quick-generate-account-debit-unavailable"
+                        >
+                            —
+                        </span>
+                    </div>
                 </div>
-
-                <section
-                    class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
+                <label
+                    class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    data-testid="cockpit-quick-generate-recipient-field"
                 >
-                    <button
-                        type="button"
-                        class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-900"
-                        :aria-expanded="orderOptionsOpen"
-                        aria-controls="cockpit-quick-generate-order-options-panel"
-                        data-testid="cockpit-quick-generate-order-options-toggle"
-                        @click="orderOptionsOpen = !orderOptionsOpen"
-                    >
-                        <span class="flex min-w-0 items-center gap-2">
-                            <span class="min-w-0 truncate">Order options</span>
-                            <span
-                                class="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[0.68rem] font-bold tabular-nums text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                                aria-label="Configured order options"
-                            >
-                                {{ orderOptionsActiveCount }}
-                            </span>
-                        </span>
-                        <ChevronDown
-                            class="size-4 shrink-0 transition-transform"
-                            :class="{ 'rotate-180': orderOptionsOpen }"
-                            aria-hidden="true"
+                    <span class="flex items-center gap-1">
+                        Pay To
+                        <CockpitFieldHelp
+                            label="About Pay To"
+                            tooltip="Leave blank or use CASH for an open claim. A mobile, email, @vendor, or quoted secret adds the matching safeguards."
                         />
-                    </button>
+                    </span>
+                    <input
+                        v-model="recipientReference"
+                        :type="
+                            payeeRequiresSecret && !payeeInputFocused
+                                ? 'password'
+                                : 'text'
+                        "
+                        class="h-12 w-full rounded-xl border bg-white px-3 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                        :class="
+                            payeePolicy.kind === 'invalid' ||
+                            payeePolicy.kind === 'email'
+                                ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-950'
+                                : 'border-slate-200 dark:border-slate-800'
+                        "
+                        data-testid="cockpit-quick-generate-primary-recipient"
+                        :disabled="processing"
+                        @focus="payeeInputFocused = true"
+                        @blur="payeeInputFocused = false"
+                    />
+                    <span
+                        v-if="payeeType !== 'anyone'"
+                        class="min-h-5 px-0.5 text-[0.7rem] font-normal leading-5"
+                        :class="
+                            payeePolicy.kind === 'invalid' ||
+                            payeePolicy.kind === 'email'
+                                ? 'text-rose-600 dark:text-rose-300'
+                                : 'text-slate-500 dark:text-slate-400'
+                        "
+                        data-testid="cockpit-quick-generate-primary-recipient-help"
+                    >
+                        {{ payeeHelpText }}
+                    </span>
+                </label>
+                <label
+                    class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
+                >
+                    <span class="flex items-center gap-1">
+                        Purpose
+                        <CockpitFieldHelp
+                            label="About Purpose"
+                            tooltip="Shown to the recipient as the Rider Message."
+                        />
+                    </span>
+                    <input
+                        v-model="purpose"
+                        type="text"
+                        class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                        data-testid="cockpit-quick-generate-primary-purpose"
+                        :disabled="processing"
+                    />
+                </label>
+            </div>
+
+            <section
+                class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
+            >
+                <button
+                    type="button"
+                    class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                    :aria-expanded="orderOptionsOpen"
+                    aria-controls="cockpit-quick-generate-order-options-panel"
+                    data-testid="cockpit-quick-generate-order-options-toggle"
+                    @click="orderOptionsOpen = !orderOptionsOpen"
+                >
+                    <span class="flex min-w-0 items-center gap-2">
+                        <span class="min-w-0 truncate">Order options</span>
+                        <span
+                            class="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[0.68rem] font-bold tabular-nums text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                            aria-label="Configured order options"
+                        >
+                            {{ orderOptionsActiveCount }}
+                        </span>
+                    </span>
+                    <ChevronDown
+                        class="size-4 shrink-0 transition-transform"
+                        :class="{ 'rotate-180': orderOptionsOpen }"
+                        aria-hidden="true"
+                    />
+                </button>
+
+                <div
+                    v-show="orderOptionsOpen"
+                    id="cockpit-quick-generate-order-options-panel"
+                    class="mt-3 grid min-w-0 gap-4 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+                    role="region"
+                    aria-label="Order options"
+                    data-testid="cockpit-quick-generate-order-options-panel"
+                >
+                    <div class="min-w-0">
+                        <CockpitClaimRequirementsControl
+                            :options="claimRequirementOptions"
+                            :presets="claimRequirementPresets"
+                            :disabled="processing"
+                            help-tooltip="Information or evidence the recipient must provide before claiming."
+                            @toggle="toggleInputField"
+                            @preset="applyClaimRequirementPreset"
+                        />
+                    </div>
 
                     <div
-                        v-show="orderOptionsOpen"
-                        id="cockpit-quick-generate-order-options-panel"
-                        class="mt-3 grid min-w-0 gap-4 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
-                        role="region"
-                        aria-label="Order options"
-                        data-testid="cockpit-quick-generate-order-options-panel"
+                        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        data-testid="cockpit-quick-generate-primary-feedback"
                     >
-                        <div class="min-w-0">
-                            <CockpitClaimRequirementsControl
-                                :options="claimRequirementOptions"
-                                :presets="claimRequirementPresets"
-                                :disabled="processing"
-                                help-tooltip="Information or evidence the recipient must provide before claiming."
-                                @toggle="toggleInputField"
-                                @preset="applyClaimRequirementPreset"
+                        <span class="flex min-w-0 items-center gap-1">
+                            <span class="min-w-0 truncate">Status Updates</span>
+                            <CockpitFieldHelp
+                                label="About Status Updates"
+                                tooltip="Optional email, mobile, or webhook destinations notified after the claim."
                             />
-                        </div>
+                        </span>
+                        <CockpitFeedbackDestinationInput
+                            v-model="feedbackDestinations"
+                            :defaults="feedbackDestinationDefaults"
+                            :unavailable="feedbackUnavailableReasons"
+                            :disabled="processing"
+                            @validation="feedbackTokenErrors = $event"
+                        />
+                    </div>
 
-                        <div
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                            data-testid="cockpit-quick-generate-primary-feedback"
+                    <div class="min-w-0">
+                        <CockpitValueUseControl
+                            :mode="sliceMode"
+                            :amount="normalizedPayCodeAmount()"
+                            :currency="currency"
+                            :fixed-count="fixedSliceCount()"
+                            :max-claims="Math.max(1, Number(maxSlices) || 1)"
+                            :minimum-claim="Number(minWithdrawal) || 0"
+                            :scheduled-count="namedClaimSlices.length"
+                            :scheduled-portions="namedClaimSlices"
+                            :scheduled-total="namedClaimSliceTotal"
+                            :scheduled-remaining="namedClaimSliceRemaining"
+                            :scheduled-minimum-amount="minimumWithdrawalFloor"
+                            :scheduled-available="
+                                scheduledPortionsUnavailableReason === null
+                            "
+                            :scheduled-unavailable-reason="
+                                scheduledPortionsUnavailableReason
+                            "
+                            :scheduled-add-disabled-reason="
+                                addSliceDisabledReason
+                            "
+                            :scheduled-validation-message="
+                                namedClaimSliceValidationMessage
+                            "
+                            :reusable-balance="reusableBalance"
+                            :stored-value-available="storedValueAvailable"
+                            :stored-value-unavailable-reason="
+                                storedValueUnavailableReason
+                            "
+                            :stored-value-replenishable="
+                                storedValueReplenishable
+                            "
+                            :stored-value-maximum-balance="
+                                normalizedStoredValueMaximumBalance
+                            "
+                            :stored-value-otp-above="
+                                normalizedStoredValueOtpAbove
+                            "
+                            :disabled="processing"
+                            @mode="setSliceMode"
+                            @fixed-count="setFixedSliceCount"
+                            @max-claims="setMaximumClaims"
+                            @minimum-claim="setMinimumClaimAmount"
+                            @reusable-balance="setReusableBalance"
+                            @stored-value-replenishable="
+                                setStoredValueReplenishable
+                            "
+                            @stored-value-maximum-balance="
+                                setStoredValueMaximumBalance
+                            "
+                            @stored-value-otp-above="setStoredValueOtpAbove"
+                            @scheduled-add="addNamedClaimSlice"
+                            @scheduled-remove="removeNamedClaimSlice"
+                            @scheduled-update="updateNamedClaimSlice"
+                        />
+                        <p
+                            v-if="storedValuePolicyError"
+                            class="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                            data-testid="cockpit-value-use-policy-error"
                         >
-                            <span class="flex min-w-0 items-center gap-1">
-                                <span class="min-w-0 truncate"
-                                    >Status Updates</span
+                            {{ storedValuePolicyError }}
+                        </p>
+                    </div>
+
+                    <details
+                        class="group min-w-0 border-t border-slate-200 pt-4 dark:border-slate-800"
+                        data-testid="cockpit-quick-generate-order-option-design"
+                    >
+                        <summary
+                            class="flex min-h-11 min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                            data-testid="cockpit-quick-generate-order-option-design-toggle"
+                        >
+                            <span class="min-w-0">
+                                <span
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                    >Design</span
                                 >
-                                <CockpitFieldHelp
-                                    label="About Status Updates"
-                                    tooltip="Optional email, mobile, or webhook destinations notified after the claim."
-                                />
+                                <span
+                                    class="block min-w-0 truncate text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                    >Appearance, Message, Link, and Splash</span
+                                >
                             </span>
-                            <CockpitFeedbackDestinationInput
-                                v-model="feedbackDestinations"
-                                :defaults="feedbackDestinationDefaults"
-                                :unavailable="feedbackUnavailableReasons"
-                                :disabled="processing"
-                                @validation="feedbackTokenErrors = $event"
+                            <ChevronDown
+                                class="size-4 shrink-0 transition-transform group-open:rotate-180"
+                                aria-hidden="true"
                             />
-                        </div>
-
-                        <div class="min-w-0">
-                            <CockpitValueUseControl
-                                :mode="sliceMode"
-                                :amount="normalizedPayCodeAmount()"
-                                :currency="currency"
-                                :fixed-count="fixedSliceCount()"
-                                :max-claims="
-                                    Math.max(1, Number(maxSlices) || 1)
-                                "
-                                :minimum-claim="Number(minWithdrawal) || 0"
-                                :scheduled-count="namedClaimSlices.length"
-                                :scheduled-portions="namedClaimSlices"
-                                :scheduled-total="namedClaimSliceTotal"
-                                :scheduled-remaining="namedClaimSliceRemaining"
-                                :scheduled-minimum-amount="
-                                    minimumWithdrawalFloor
-                                "
-                                :scheduled-available="
-                                    scheduledPortionsUnavailableReason === null
-                                "
-                                :scheduled-unavailable-reason="
-                                    scheduledPortionsUnavailableReason
-                                "
-                                :scheduled-add-disabled-reason="
-                                    addSliceDisabledReason
-                                "
-                                :scheduled-validation-message="
-                                    namedClaimSliceValidationMessage
-                                "
-                                :reusable-balance="reusableBalance"
-                                :stored-value-available="storedValueAvailable"
-                                :stored-value-unavailable-reason="
-                                    storedValueUnavailableReason
-                                "
-                                :stored-value-replenishable="
-                                    storedValueReplenishable
-                                "
-                                :stored-value-maximum-balance="
-                                    normalizedStoredValueMaximumBalance
-                                "
-                                :stored-value-otp-above="
-                                    normalizedStoredValueOtpAbove
-                                "
-                                :disabled="processing"
-                                @mode="setSliceMode"
-                                @fixed-count="setFixedSliceCount"
-                                @max-claims="setMaximumClaims"
-                                @minimum-claim="setMinimumClaimAmount"
-                                @reusable-balance="setReusableBalance"
-                                @stored-value-replenishable="
-                                    setStoredValueReplenishable
-                                "
-                                @stored-value-maximum-balance="
-                                    setStoredValueMaximumBalance
-                                "
-                                @stored-value-otp-above="setStoredValueOtpAbove"
-                                @scheduled-add="addNamedClaimSlice"
-                                @scheduled-remove="removeNamedClaimSlice"
-                                @scheduled-update="updateNamedClaimSlice"
-                            />
-                            <p
-                                v-if="storedValuePolicyError"
-                                class="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-300"
-                                data-testid="cockpit-value-use-policy-error"
-                            >
-                                {{ storedValuePolicyError }}
-                            </p>
-                        </div>
-
-                        <fieldset
-                            v-if="!isAccountFundingClaim && !reusableBalance"
-                            class="grid min-w-0 gap-1.5 border-t border-slate-200 pt-4 dark:border-slate-800"
-                            data-testid="cockpit-quick-generate-primary-settlement-rail"
+                        </summary>
+                        <div
+                            id="quick-generate-rider-design-editor"
+                            class="@container mt-3 min-w-0 rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60"
+                            data-testid="cockpit-quick-generate-rider-design-editor"
                         >
-                            <div
-                                class="flex min-w-0 flex-wrap items-center justify-between gap-2"
-                            >
+                            <div class="grid gap-3">
                                 <div
-                                    class="flex min-w-0 flex-wrap items-center gap-2"
+                                    role="tablist"
+                                    aria-label="Rider Design editor"
+                                    class="sticky top-0 z-30 grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white/95 p-1 shadow-sm backdrop-blur @sm:grid-cols-4 dark:border-slate-800 dark:bg-slate-950/95"
+                                    data-testid="cockpit-quick-generate-rider-design-tabs"
                                 >
-                                    <legend
-                                        class="flex min-w-0 items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                    >
-                                        <span class="min-w-0 truncate"
-                                            >Transfer Network</span
-                                        >
-                                        <CockpitFieldHelp
-                                            label="About Transfer Network"
-                                            :tooltip="
-                                                settlementRailCycleDescription
-                                            "
-                                        />
-                                    </legend>
                                     <button
                                         type="button"
-                                        class="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
-                                        :disabled="processing"
-                                        :aria-label="
-                                            settlementRailCycleAccessibleLabel
+                                        role="tab"
+                                        class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
+                                        :class="
+                                            riderDesignEditor === 'appearance'
+                                                ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
+                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
                                         "
-                                        data-testid="cockpit-quick-generate-settlement-rail-cycle"
-                                        @click="cycleSettlementRail"
+                                        :aria-selected="
+                                            riderDesignEditor === 'appearance'
+                                        "
+                                        data-testid="cockpit-quick-generate-rider-design-appearance-tab"
+                                        @click="
+                                            selectRiderDesignEditor(
+                                                'appearance',
+                                            )
+                                        "
                                     >
-                                        <RotateCcw
+                                        <Palette
                                             class="size-3.5 shrink-0"
                                             aria-hidden="true"
                                         />
-                                        <span class="min-w-0 truncate">{{
-                                            currentSettlementRailLabel
-                                        }}</span>
+                                        <span class="whitespace-nowrap"
+                                            >Appearance</span
+                                        >
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
+                                        :class="
+                                            riderDesignEditor === 'message'
+                                                ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
+                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
+                                        "
+                                        :aria-selected="
+                                            riderDesignEditor === 'message'
+                                        "
+                                        data-testid="cockpit-quick-generate-rider-design-message-tab"
+                                        @click="
+                                            selectRiderDesignEditor('message')
+                                        "
+                                    >
+                                        <MessageSquareText
+                                            class="size-3.5 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <span class="whitespace-nowrap"
+                                            >Message</span
+                                        >
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
+                                        :class="
+                                            riderDesignEditor === 'link'
+                                                ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
+                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
+                                        "
+                                        :aria-selected="
+                                            riderDesignEditor === 'link'
+                                        "
+                                        data-testid="cockpit-quick-generate-rider-design-link-tab"
+                                        @click="selectRiderDesignEditor('link')"
+                                    >
+                                        <Link2
+                                            class="size-3.5 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <span class="whitespace-nowrap"
+                                            >Link</span
+                                        >
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
+                                        :class="
+                                            riderDesignEditor === 'splash'
+                                                ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
+                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
+                                        "
+                                        :aria-selected="
+                                            riderDesignEditor === 'splash'
+                                        "
+                                        data-testid="cockpit-quick-generate-rider-design-splash-tab"
+                                        @click="
+                                            selectRiderDesignEditor('splash')
+                                        "
+                                    >
+                                        <Sparkles
+                                            class="size-3.5 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <span class="whitespace-nowrap"
+                                            >Splash</span
+                                        >
                                     </button>
                                 </div>
-                                <p
-                                    class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400"
-                                    data-testid="cockpit-quick-generate-payout-provider"
+                                <CockpitRiderEditorDisclosure
+                                    v-show="riderDesignEditor === 'message'"
+                                    title="Rider Message"
+                                    description="Add an optional message for the recipient."
+                                    :default-open="true"
+                                    :status="
+                                        purpose.trim() === ''
+                                            ? 'Empty'
+                                            : 'Configured'
+                                    "
+                                    :summary="riderMessageDisclosureSummary"
+                                    data-testid="cockpit-quick-generate-rider-message-editor"
                                 >
-                                    via
-                                    <span class="font-semibold">{{
-                                        payoutProviderLabel
+                                    <CockpitRiderMessageEditor
+                                        v-model:message="purpose"
+                                        v-model:format="riderMessageFormat"
+                                        :disabled="processing"
+                                    />
+                                </CockpitRiderEditorDisclosure>
+                                <CockpitRiderEditorDisclosure
+                                    v-show="riderDesignEditor === 'link'"
+                                    title="Rider URL"
+                                    description="Add an optional destination after the claim."
+                                    :default-open="true"
+                                    :status="
+                                        riderUrl.trim() === ''
+                                            ? 'Empty'
+                                            : 'Configured'
+                                    "
+                                    :summary="riderUrlDisclosureSummary"
+                                    data-testid="cockpit-quick-generate-rider-cta-section"
+                                >
+                                    <div class="grid gap-3">
+                                        <label
+                                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Link
+                                            <input
+                                                v-model="riderUrl"
+                                                type="url"
+                                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                                data-testid="cockpit-quick-generate-rider-url"
+                                                :disabled="processing"
+                                            />
+                                        </label>
+                                        <CockpitRiderLibrary
+                                            kind="url"
+                                            :entries="riderLibrary"
+                                            :current-payload="{
+                                                url: riderUrl.trim(),
+                                            }"
+                                            :disabled="processing"
+                                            @apply="applyRiderUrlLibraryPayload"
+                                        />
+                                    </div>
+                                    <div
+                                        v-if="riderUrl.trim() !== ''"
+                                        class="mt-3 rounded-xl border border-sky-200 bg-white p-3 dark:border-sky-900/60 dark:bg-slate-950"
+                                        data-testid="cockpit-quick-generate-rider-url-preview"
+                                    >
+                                        <div
+                                            class="flex flex-wrap items-center justify-between gap-2"
+                                        >
+                                            <p
+                                                class="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300"
+                                            >
+                                                Rider URL Preview
+                                            </p>
+                                            <p
+                                                class="text-[11px] text-sky-700 dark:text-sky-300"
+                                                data-testid="cockpit-quick-generate-rider-url-preview-status"
+                                            >
+                                                {{
+                                                    riderUrlArtworkResolving
+                                                        ? 'Loading Artwork…'
+                                                        : riderUrlArtworkMessage
+                                                }}
+                                            </p>
+                                        </div>
+                                        <div class="mt-2">
+                                            <CockpitRiderPreviewFrame
+                                                title="Rider URL Preview"
+                                                surface="stamp"
+                                                class="border-sky-200 dark:border-sky-900/60"
+                                                data-testid="cockpit-quick-generate-rider-url-artwork-preview"
+                                                :document="
+                                                    riderUrlPreviewDocument
+                                                "
+                                            />
+                                        </div>
+                                    </div>
+                                </CockpitRiderEditorDisclosure>
+                                <CockpitRiderEditorDisclosure
+                                    v-show="riderDesignEditor === 'splash'"
+                                    title="Rider Splash"
+                                    description="Design an optional introduction before the claim."
+                                    :default-open="true"
+                                    :status="
+                                        riderSplash.trim() === ''
+                                            ? 'Empty'
+                                            : 'Configured'
+                                    "
+                                    :summary="riderSplashDisclosureSummary"
+                                    data-testid="cockpit-quick-generate-rider-splash-builder"
+                                >
+                                    <div class="grid gap-3">
+                                        <fieldset
+                                            class="flex flex-wrap items-center gap-1"
+                                            data-testid="cockpit-quick-generate-rider-splash-format"
+                                        >
+                                            <legend class="sr-only">
+                                                Splash format
+                                            </legend>
+                                            <label
+                                                v-for="option in [
+                                                    {
+                                                        value: 'plain',
+                                                        label: 'Text',
+                                                    },
+                                                    {
+                                                        value: 'markdown',
+                                                        label: 'Markdown',
+                                                    },
+                                                    {
+                                                        value: 'html',
+                                                        label: 'HTML',
+                                                    },
+                                                ]"
+                                                :key="option.value"
+                                                class="cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-orange-600"
+                                                :class="
+                                                    riderSplashFormat ===
+                                                    option.value
+                                                        ? 'border-orange-600 bg-orange-600 text-white'
+                                                        : 'border-orange-200 bg-white text-orange-800 hover:bg-orange-50 dark:border-orange-900/60 dark:bg-slate-900 dark:text-orange-200 dark:hover:bg-orange-950/40'
+                                                "
+                                            >
+                                                <input
+                                                    v-model="riderSplashFormat"
+                                                    type="radio"
+                                                    class="sr-only"
+                                                    name="rider-splash-format"
+                                                    :value="option.value"
+                                                    :disabled="processing"
+                                                />
+                                                {{ option.label }}
+                                            </label>
+                                        </fieldset>
+                                        <label
+                                            class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                        >
+                                            Splash
+                                            <textarea
+                                                v-model="riderSplash"
+                                                rows="5"
+                                                class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                                data-testid="cockpit-quick-generate-rider-splash-body"
+                                                :disabled="processing"
+                                            />
+                                        </label>
+                                        <CockpitRiderLibrary
+                                            kind="splash"
+                                            :entries="riderLibrary"
+                                            :current-payload="{
+                                                splash: riderSplashInstructionContent,
+                                                format: riderSplashFormat,
+                                            }"
+                                            :disabled="processing"
+                                            @apply="
+                                                applyRiderSplashLibraryPayload
+                                            "
+                                        />
+                                        <div
+                                            class="rounded-xl border border-orange-200 bg-white p-3 dark:border-orange-900/60 dark:bg-slate-950"
+                                            data-testid="cockpit-quick-generate-rider-splash-preview"
+                                        >
+                                            <p
+                                                class="text-[11px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300"
+                                            >
+                                                Claim Splash Preview
+                                            </p>
+                                            <p
+                                                class="mt-1 text-[11px] leading-snug text-orange-800 dark:text-orange-200"
+                                            >
+                                                {{
+                                                    riderSplashFormat === 'html'
+                                                        ? 'Custom HTML is isolated inside this preview.'
+                                                        : 'Formatting is rendered inside an isolated preview.'
+                                                }}
+                                            </p>
+                                            <div class="mt-2">
+                                                <CockpitRiderPreviewFrame
+                                                    title="Claim Splash Preview"
+                                                    surface="splash"
+                                                    class="border-orange-200 dark:border-orange-900/60"
+                                                    data-testid="cockpit-quick-generate-rider-splash-html-preview"
+                                                    :document="
+                                                        riderSplashPreviewDocument
+                                                    "
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CockpitRiderEditorDisclosure>
+                                <CockpitRiderEditorDisclosure
+                                    v-show="riderDesignEditor === 'appearance'"
+                                    id="quick-generate-front-design"
+                                    title="Stamp Appearance"
+                                    description="Compose the Stamp from Rider content."
+                                    :default-open="true"
+                                    :status="
+                                        hasRiderStampCustomization
+                                            ? 'Configured'
+                                            : 'x-change'
+                                    "
+                                    :summary="riderStampDisclosureSummary"
+                                    data-testid="cockpit-quick-generate-rider-stamp-editor"
+                                >
+                                    <div
+                                        class="grid gap-5"
+                                        data-testid="cockpit-quick-generate-rider-appearance-layout"
+                                    >
+                                        <div class="grid min-w-0 gap-5">
+                                            <div
+                                                class="grid gap-2"
+                                                data-testid="cockpit-quick-generate-rider-artwork-picker"
+                                            >
+                                                <fieldset
+                                                    data-testid="cockpit-quick-generate-rider-stamp-source"
+                                                >
+                                                    <legend class="sr-only">
+                                                        Artwork
+                                                    </legend>
+                                                    <div
+                                                        class="grid grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-900/80"
+                                                    >
+                                                        <label
+                                                            v-for="option in riderArtworkSourceOptions"
+                                                            :key="option.value"
+                                                            class="group relative grid min-w-0 cursor-pointer place-items-center rounded-lg border p-1 transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                            :class="[
+                                                                riderStampArtworkSource ===
+                                                                option.value
+                                                                    ? 'border-sky-600 bg-sky-100 shadow-sm ring-2 ring-sky-500/25 dark:border-sky-400 dark:bg-sky-950/70'
+                                                                    : 'border-transparent bg-white hover:border-sky-300 dark:bg-slate-950 dark:hover:border-sky-800',
+                                                                (option.value ===
+                                                                    'url' &&
+                                                                    riderUrl.trim() ===
+                                                                        '' &&
+                                                                    riderStampArtworkSource !==
+                                                                        'url') ||
+                                                                (option.value ===
+                                                                    'splash' &&
+                                                                    riderSplashContent.trim() ===
+                                                                        '' &&
+                                                                    riderStampArtworkSource !==
+                                                                        'splash')
+                                                                    ? 'cursor-not-allowed opacity-40'
+                                                                    : '',
+                                                            ]"
+                                                            :title="
+                                                                option.label
+                                                            "
+                                                        >
+                                                            <input
+                                                                v-model="
+                                                                    riderStampArtworkSource
+                                                                "
+                                                                type="radio"
+                                                                class="sr-only"
+                                                                name="rider-stamp-artwork-source"
+                                                                :value="
+                                                                    option.value
+                                                                "
+                                                                :aria-label="
+                                                                    option.label
+                                                                "
+                                                                :aria-describedby="`rider-stamp-artwork-tooltip-${option.value}`"
+                                                                :data-testid="`cockpit-quick-generate-rider-stamp-source-${option.value}`"
+                                                                :disabled="
+                                                                    processing ||
+                                                                    (option.value ===
+                                                                        'url' &&
+                                                                        riderUrl.trim() ===
+                                                                            '' &&
+                                                                        riderStampArtworkSource !==
+                                                                            'url') ||
+                                                                    (option.value ===
+                                                                        'splash' &&
+                                                                        riderSplashContent.trim() ===
+                                                                            '' &&
+                                                                        riderStampArtworkSource !==
+                                                                            'splash')
+                                                                "
+                                                                @change="
+                                                                    markRiderStampArtworkSourceSelection
+                                                                "
+                                                            />
+                                                            <CockpitRiderArtworkThumbnail
+                                                                :source="
+                                                                    option.value
+                                                                "
+                                                                :image-url="
+                                                                    option.imageUrl
+                                                                "
+                                                                :title="
+                                                                    option.title
+                                                                "
+                                                                :description="
+                                                                    option.description
+                                                                "
+                                                                :resolving="
+                                                                    option.resolving
+                                                                "
+                                                            />
+                                                            <span
+                                                                v-if="
+                                                                    riderStampArtworkSource ===
+                                                                    option.value
+                                                                "
+                                                                class="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-sky-600 text-[9px] font-black text-white shadow-sm dark:bg-sky-400 dark:text-slate-950"
+                                                                aria-hidden="true"
+                                                                data-testid="cockpit-quick-generate-rider-artwork-selected"
+                                                            >
+                                                                ✓
+                                                            </span>
+                                                            <span
+                                                                :id="`rider-stamp-artwork-tooltip-${option.value}`"
+                                                                role="tooltip"
+                                                                class="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 dark:bg-white dark:text-slate-950"
+                                                            >
+                                                                {{
+                                                                    option.label
+                                                                }}
+                                                            </span>
+                                                        </label>
+                                                    </div>
+                                                </fieldset>
+                                                <CockpitRiderArtworkInspector
+                                                    class="static w-full"
+                                                    data-testid="cockpit-quick-generate-rider-artwork-inspector"
+                                                    :artwork-source="
+                                                        riderStampArtworkSource
+                                                    "
+                                                    :fit="riderStampFit"
+                                                    :position="
+                                                        riderStampPosition
+                                                    "
+                                                    :preview-document="
+                                                        riderCanvasArtworkDocument
+                                                    "
+                                                    :url-artwork-resolving="
+                                                        riderUrlArtworkResolving
+                                                    "
+                                                    :url-artwork-message="
+                                                        riderUrlArtworkMessage
+                                                    "
+                                                />
+                                            </div>
+                                            <fieldset
+                                                v-if="
+                                                    riderStampArtworkSource ===
+                                                        'url' ||
+                                                    riderStampArtworkSource ===
+                                                        'splash'
+                                                "
+                                                class="grid gap-2"
+                                                data-testid="cockpit-quick-generate-rider-stamp-artwork-treatment"
+                                            >
+                                                <legend
+                                                    class="text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                                >
+                                                    Treatment
+                                                </legend>
+                                                <div
+                                                    class="flex flex-wrap gap-1"
+                                                >
+                                                    <label
+                                                        v-for="option in [
+                                                            {
+                                                                value: 'automatic',
+                                                                label: 'Automatic',
+                                                            },
+                                                            {
+                                                                value: 'artwork',
+                                                                label: 'Artwork',
+                                                            },
+                                                            {
+                                                                value: 'text',
+                                                                label: 'Text',
+                                                            },
+                                                        ]"
+                                                        :key="option.value"
+                                                        class="cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                        :class="
+                                                            riderStampArtworkTreatment ===
+                                                            option.value
+                                                                ? 'border-sky-600 bg-sky-600 text-white'
+                                                                : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                                        "
+                                                    >
+                                                        <input
+                                                            v-model="
+                                                                riderStampArtworkTreatment
+                                                            "
+                                                            type="radio"
+                                                            class="sr-only"
+                                                            name="rider-stamp-artwork-treatment"
+                                                            :value="
+                                                                option.value
+                                                            "
+                                                            :disabled="
+                                                                processing
+                                                            "
+                                                        />
+                                                        {{ option.label }}
+                                                    </label>
+                                                </div>
+                                            </fieldset>
+                                            <fieldset
+                                                class="grid gap-2"
+                                                data-testid="cockpit-quick-generate-rider-stamp-copy-source"
+                                            >
+                                                <legend
+                                                    class="text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                                >
+                                                    Stamp Copy
+                                                </legend>
+                                                <div
+                                                    class="grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:grid-cols-3"
+                                                >
+                                                    <label
+                                                        v-for="option in [
+                                                            {
+                                                                value: 'automatic',
+                                                                label: 'Automatic',
+                                                            },
+                                                            {
+                                                                value: 'message',
+                                                                label: 'Message',
+                                                            },
+                                                            {
+                                                                value: 'url',
+                                                                label: 'Link',
+                                                            },
+                                                            {
+                                                                value: 'splash',
+                                                                label: 'Splash',
+                                                            },
+                                                            {
+                                                                value: 'custom',
+                                                                label: 'Custom',
+                                                            },
+                                                            {
+                                                                value: 'none',
+                                                                label: 'None',
+                                                            },
+                                                        ]"
+                                                        :key="option.value"
+                                                        class="cursor-pointer rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                        :class="[
+                                                            riderStampCopySource ===
+                                                            option.value
+                                                                ? 'border-sky-600 bg-sky-600 text-white'
+                                                                : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
+                                                            (option.value ===
+                                                                'message' &&
+                                                                purpose.trim() ===
+                                                                    '') ||
+                                                            (option.value ===
+                                                                'url' &&
+                                                                riderUrl.trim() ===
+                                                                    '') ||
+                                                            (option.value ===
+                                                                'splash' &&
+                                                                riderSplash.trim() ===
+                                                                    '')
+                                                                ? 'cursor-not-allowed opacity-45'
+                                                                : '',
+                                                        ]"
+                                                    >
+                                                        <input
+                                                            v-model="
+                                                                riderStampCopySource
+                                                            "
+                                                            type="radio"
+                                                            class="sr-only"
+                                                            name="rider-stamp-copy-source"
+                                                            :value="
+                                                                option.value
+                                                            "
+                                                            :disabled="
+                                                                processing ||
+                                                                (option.value ===
+                                                                    'message' &&
+                                                                    purpose.trim() ===
+                                                                        '') ||
+                                                                (option.value ===
+                                                                    'url' &&
+                                                                    riderUrl.trim() ===
+                                                                        '') ||
+                                                                (option.value ===
+                                                                    'splash' &&
+                                                                    riderSplash.trim() ===
+                                                                        '')
+                                                            "
+                                                        />
+                                                        {{ option.label }}
+                                                    </label>
+                                                </div>
+                                            </fieldset>
+                                            <div
+                                                class="grid gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50"
+                                            >
+                                                <fieldset
+                                                    class="grid gap-2"
+                                                    data-testid="cockpit-quick-generate-rider-stamp-fit"
+                                                >
+                                                    <legend
+                                                        class="text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                                    >
+                                                        Fit
+                                                    </legend>
+                                                    <div
+                                                        class="grid grid-cols-2 gap-1"
+                                                    >
+                                                        <label
+                                                            v-for="option in [
+                                                                {
+                                                                    value: 'cover',
+                                                                    label: 'Cover',
+                                                                },
+                                                                {
+                                                                    value: 'contain',
+                                                                    label: 'Contain',
+                                                                },
+                                                            ]"
+                                                            :key="option.value"
+                                                            class="cursor-pointer rounded-lg border px-2.5 py-1.5 text-center text-xs font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                            :class="
+                                                                riderStampFit ===
+                                                                option.value
+                                                                    ? 'border-sky-600 bg-sky-600 text-white'
+                                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
+                                                            "
+                                                        >
+                                                            <input
+                                                                v-model="
+                                                                    riderStampFit
+                                                                "
+                                                                type="radio"
+                                                                class="sr-only"
+                                                                name="rider-stamp-fit"
+                                                                :value="
+                                                                    option.value
+                                                                "
+                                                                :data-testid="`cockpit-quick-generate-rider-stamp-fit-${option.value}`"
+                                                                :disabled="
+                                                                    processing
+                                                                "
+                                                            />
+                                                            {{ option.label }}
+                                                        </label>
+                                                    </div>
+                                                </fieldset>
+                                                <fieldset
+                                                    class="grid gap-2"
+                                                    data-testid="cockpit-quick-generate-rider-stamp-position"
+                                                >
+                                                    <legend
+                                                        class="text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                                    >
+                                                        Position
+                                                    </legend>
+                                                    <div
+                                                        class="grid grid-cols-5 gap-1"
+                                                    >
+                                                        <label
+                                                            v-for="option in [
+                                                                {
+                                                                    value: 'top',
+                                                                    label: 'Top',
+                                                                },
+                                                                {
+                                                                    value: 'left',
+                                                                    label: 'Left',
+                                                                },
+                                                                {
+                                                                    value: 'center',
+                                                                    label: 'Center',
+                                                                },
+                                                                {
+                                                                    value: 'right',
+                                                                    label: 'Right',
+                                                                },
+                                                                {
+                                                                    value: 'bottom',
+                                                                    label: 'Bottom',
+                                                                },
+                                                            ]"
+                                                            :key="option.value"
+                                                            class="cursor-pointer rounded-lg border px-1 py-1.5 text-center text-[10px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                            :class="
+                                                                riderStampPosition ===
+                                                                option.value
+                                                                    ? 'border-sky-600 bg-sky-600 text-white'
+                                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
+                                                            "
+                                                        >
+                                                            <input
+                                                                v-model="
+                                                                    riderStampPosition
+                                                                "
+                                                                type="radio"
+                                                                class="sr-only"
+                                                                name="rider-stamp-position"
+                                                                :value="
+                                                                    option.value
+                                                                "
+                                                                :disabled="
+                                                                    processing
+                                                                "
+                                                            />
+                                                            {{ option.label }}
+                                                        </label>
+                                                    </div>
+                                                </fieldset>
+                                                <fieldset
+                                                    class="grid gap-2"
+                                                    data-testid="cockpit-quick-generate-rider-stamp-theme"
+                                                >
+                                                    <legend
+                                                        class="text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                                    >
+                                                        Theme
+                                                    </legend>
+                                                    <div
+                                                        class="grid grid-cols-3 gap-1"
+                                                    >
+                                                        <label
+                                                            v-for="option in [
+                                                                {
+                                                                    value: 'automatic',
+                                                                    label: 'Automatic',
+                                                                },
+                                                                {
+                                                                    value: 'light',
+                                                                    label: 'Light',
+                                                                },
+                                                                {
+                                                                    value: 'dark',
+                                                                    label: 'Dark',
+                                                                },
+                                                            ]"
+                                                            :key="option.value"
+                                                            class="cursor-pointer rounded-lg border px-1.5 py-1.5 text-center text-[11px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                            :class="
+                                                                riderStampTheme ===
+                                                                option.value
+                                                                    ? 'border-sky-600 bg-sky-600 text-white'
+                                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
+                                                            "
+                                                        >
+                                                            <input
+                                                                v-model="
+                                                                    riderStampTheme
+                                                                "
+                                                                type="radio"
+                                                                class="sr-only"
+                                                                name="rider-stamp-theme"
+                                                                :value="
+                                                                    option.value
+                                                                "
+                                                                :disabled="
+                                                                    processing
+                                                                "
+                                                            />
+                                                            {{ option.label }}
+                                                        </label>
+                                                    </div>
+                                                </fieldset>
+                                            </div>
+                                            <details
+                                                class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+                                                data-testid="cockpit-quick-generate-rider-stamp-more-options"
+                                            >
+                                                <summary
+                                                    class="cursor-pointer text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                                >
+                                                    More Stamp Options
+                                                </summary>
+                                                <div class="mt-4 grid gap-3">
+                                                    <label
+                                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
+                                                    >
+                                                        Front Title
+                                                        <input
+                                                            v-model="
+                                                                riderStampTitle
+                                                            "
+                                                            type="text"
+                                                            maxlength="120"
+                                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                                            data-testid="cockpit-quick-generate-rider-stamp-title"
+                                                            :disabled="
+                                                                processing
+                                                            "
+                                                            placeholder="Use the selected Rider title"
+                                                        />
+                                                    </label>
+                                                    <label
+                                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
+                                                    >
+                                                        Front Subtitle
+                                                        <input
+                                                            v-model="
+                                                                riderStampDescription
+                                                            "
+                                                            type="text"
+                                                            maxlength="240"
+                                                            class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                                            data-testid="cockpit-quick-generate-rider-stamp-description"
+                                                            :disabled="
+                                                                processing
+                                                            "
+                                                            placeholder="Use the selected Rider description"
+                                                        />
+                                                    </label>
+                                                    <label
+                                                        class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
+                                                    >
+                                                        <input
+                                                            v-model="
+                                                                riderStampShowLogo
+                                                            "
+                                                            type="checkbox"
+                                                            class="rounded border-sky-300"
+                                                            :disabled="
+                                                                processing
+                                                            "
+                                                        />
+                                                        Show x-change Logo
+                                                    </label>
+                                                    <label
+                                                        class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
+                                                    >
+                                                        <input
+                                                            v-model="
+                                                                riderStampShowTagline
+                                                            "
+                                                            type="checkbox"
+                                                            class="rounded border-sky-300"
+                                                            :disabled="
+                                                                processing
+                                                            "
+                                                        />
+                                                        Show Tagline
+                                                    </label>
+                                                    <fieldset
+                                                        class="grid gap-2"
+                                                        data-testid="cockpit-quick-generate-rider-stamp-claim-marker"
+                                                    >
+                                                        <legend
+                                                            class="text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                                        >
+                                                            Claim Marker
+                                                        </legend>
+                                                        <div
+                                                            class="grid grid-cols-4 gap-1"
+                                                        >
+                                                            <label
+                                                                v-for="option in [
+                                                                    {
+                                                                        value: 'qr',
+                                                                        label: 'QR',
+                                                                    },
+                                                                    {
+                                                                        value: 'code',
+                                                                        label: 'Code',
+                                                                    },
+                                                                    {
+                                                                        value: 'both',
+                                                                        label: 'Both',
+                                                                    },
+                                                                    {
+                                                                        value: 'none',
+                                                                        label: 'None',
+                                                                    },
+                                                                ]"
+                                                                :key="
+                                                                    option.value
+                                                                "
+                                                                class="cursor-pointer rounded-lg border px-1.5 py-1.5 text-center text-[11px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                                :class="
+                                                                    riderStampClaimMarker ===
+                                                                    option.value
+                                                                        ? 'border-sky-600 bg-sky-600 text-white'
+                                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                                                "
+                                                            >
+                                                                <input
+                                                                    v-model="
+                                                                        riderStampClaimMarker
+                                                                    "
+                                                                    type="radio"
+                                                                    class="sr-only"
+                                                                    name="rider-stamp-claim-marker"
+                                                                    :value="
+                                                                        option.value
+                                                                    "
+                                                                    :disabled="
+                                                                        processing
+                                                                    "
+                                                                />
+                                                                {{
+                                                                    option.label
+                                                                }}
+                                                            </label>
+                                                        </div>
+                                                    </fieldset>
+                                                    <fieldset
+                                                        v-if="
+                                                            riderStampClaimMarker !==
+                                                            'none'
+                                                        "
+                                                        class="grid gap-2"
+                                                        data-testid="cockpit-quick-generate-rider-stamp-claim-marker-position"
+                                                    >
+                                                        <legend
+                                                            class="text-xs font-semibold text-sky-950 dark:text-sky-100"
+                                                        >
+                                                            Marker Position
+                                                        </legend>
+                                                        <div
+                                                            class="grid grid-cols-2 gap-1"
+                                                        >
+                                                            <label
+                                                                v-for="option in [
+                                                                    {
+                                                                        value: 'top_left',
+                                                                        label: 'Top Left',
+                                                                    },
+                                                                    {
+                                                                        value: 'top_right',
+                                                                        label: 'Top Right',
+                                                                    },
+                                                                    {
+                                                                        value: 'bottom_left',
+                                                                        label: 'Bottom Left',
+                                                                    },
+                                                                    {
+                                                                        value: 'bottom_right',
+                                                                        label: 'Bottom Right',
+                                                                    },
+                                                                ]"
+                                                                :key="
+                                                                    option.value
+                                                                "
+                                                                class="cursor-pointer rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
+                                                                :class="
+                                                                    riderStampClaimMarkerPosition ===
+                                                                    option.value
+                                                                        ? 'border-sky-600 bg-sky-600 text-white'
+                                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                                                "
+                                                            >
+                                                                <input
+                                                                    v-model="
+                                                                        riderStampClaimMarkerPosition
+                                                                    "
+                                                                    type="radio"
+                                                                    class="sr-only"
+                                                                    name="rider-stamp-claim-marker-position"
+                                                                    :value="
+                                                                        option.value
+                                                                    "
+                                                                    :disabled="
+                                                                        processing
+                                                                    "
+                                                                />
+                                                                {{
+                                                                    option.label
+                                                                }}
+                                                            </label>
+                                                        </div>
+                                                    </fieldset>
+                                                    <label
+                                                        class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                                    >
+                                                        <span
+                                                            class="flex items-center justify-between gap-3"
+                                                        >
+                                                            <span
+                                                                >Contrast</span
+                                                            >
+                                                            <span
+                                                                >{{
+                                                                    riderStampScrim
+                                                                }}%</span
+                                                            >
+                                                        </span>
+                                                        <input
+                                                            v-model="
+                                                                riderStampScrim
+                                                            "
+                                                            type="range"
+                                                            min="0"
+                                                            max="100"
+                                                            step="1"
+                                                            data-testid="cockpit-quick-generate-rider-stamp-scrim"
+                                                            :disabled="
+                                                                processing
+                                                            "
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </details>
+                                        </div>
+                                    </div>
+                                </CockpitRiderEditorDisclosure>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details
+                        class="group min-w-0 border-t border-slate-200 pt-4 dark:border-slate-800"
+                        data-testid="cockpit-quick-generate-order-option-claim-preview"
+                        @toggle="handleClaimPreviewToggle"
+                    >
+                        <summary
+                            class="flex min-h-11 min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                            data-testid="cockpit-quick-generate-order-option-claim-preview-toggle"
+                        >
+                            <span class="min-w-0">
+                                <span
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                    >Preview claim experience</span
+                                >
+                                <span
+                                    class="block min-w-0 truncate text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                    >Generate a no-money walkthrough for this
+                                    order</span
+                                >
+                            </span>
+                            <ChevronDown
+                                class="size-4 shrink-0 transition-transform group-open:rotate-180"
+                                aria-hidden="true"
+                            />
+                        </summary>
+                        <div class="mt-3 min-w-0">
+                            <CockpitClaimExperiencePreview
+                                :status="previewStatus"
+                                :processing="previewProcessing"
+                                :message="previewMessage"
+                                :manifest="previewResult"
+                                :stale="previewStale"
+                                :can-generate="canGenerateClaimPreview"
+                                @generate="generateClaimPreview(false)"
+                                @refresh="generateClaimPreview(true)"
+                            />
+                        </div>
+                    </details>
+
+                    <fieldset
+                        v-if="!isAccountFundingClaim && !reusableBalance"
+                        class="grid min-w-0 gap-1.5 border-t border-slate-200 pt-4 dark:border-slate-800"
+                        data-testid="cockpit-quick-generate-primary-settlement-rail"
+                    >
+                        <div
+                            class="flex min-w-0 flex-wrap items-center justify-between gap-2"
+                        >
+                            <div
+                                class="flex min-w-0 flex-wrap items-center gap-2"
+                            >
+                                <legend
+                                    class="flex min-w-0 items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                >
+                                    <span class="min-w-0 truncate"
+                                        >Transfer Network</span
+                                    >
+                                    <CockpitFieldHelp
+                                        label="About Transfer Network"
+                                        :tooltip="
+                                            settlementRailCycleDescription
+                                        "
+                                    />
+                                </legend>
+                                <button
+                                    type="button"
+                                    class="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                                    :disabled="processing"
+                                    :aria-label="
+                                        settlementRailCycleAccessibleLabel
+                                    "
+                                    data-testid="cockpit-quick-generate-settlement-rail-cycle"
+                                    @click="cycleSettlementRail"
+                                >
+                                    <RotateCcw
+                                        class="size-3.5 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    <span class="min-w-0 truncate">{{
+                                        currentSettlementRailLabel
                                     }}</span>
-                                </p>
+                                </button>
                             </div>
                             <p
-                                v-if="settlementRailSelectionError"
-                                class="text-xs font-medium text-rose-600 dark:text-rose-300"
-                                data-testid="cockpit-quick-generate-settlement-rail-error"
+                                class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400"
+                                data-testid="cockpit-quick-generate-payout-provider"
                             >
-                                {{ settlementRailSelectionError }}
+                                via
+                                <span class="font-semibold">{{
+                                    payoutProviderLabel
+                                }}</span>
                             </p>
-                        </fieldset>
-                    </div>
-                </section>
-
-                <section
-                    class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
-                    data-testid="cockpit-quick-generate-starting-point"
-                >
-                    <div class="flex items-center justify-between gap-2">
+                        </div>
                         <p
-                            class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300"
+                            v-if="settlementRailSelectionError"
+                            class="text-xs font-medium text-rose-600 dark:text-rose-300"
+                            data-testid="cockpit-quick-generate-settlement-rail-error"
                         >
-                            Templates
+                            {{ settlementRailSelectionError }}
                         </p>
-                        <span
-                            class="min-w-0 truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                            data-testid="cockpit-quick-generate-current-template"
-                        >
-                            Current · {{ currentTemplateName }}
-                        </span>
-                    </div>
+                    </fieldset>
+                </div>
+            </section>
 
-                    <div
-                        class="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-nowrap sm:items-center sm:overflow-x-auto sm:pb-1"
-                        data-testid="cockpit-quick-generate-template-toolbar"
-                    >
-                        <button
-                            type="button"
-                            :aria-pressed="startingPoint === 'blank'"
-                            :class="[
-                                'inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0',
-                                startingPoint === 'blank'
-                                    ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
-                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
-                            ]"
-                            data-testid="cockpit-quick-generate-start-blank"
-                            @click="startBlank"
-                        >
-                            <Check
-                                v-if="startingPoint === 'blank'"
-                                class="size-3.5"
-                                aria-hidden="true"
-                                data-testid="cockpit-quick-generate-start-blank-check"
-                            />
-                            <FilePlus2
-                                v-else
-                                class="size-3.5"
-                                aria-hidden="true"
-                            />
-                            Blank
-                        </button>
-                        <button
-                            type="button"
-                            :disabled="!lastInstructions"
-                            :aria-pressed="startingPoint === 'last'"
-                            :class="[
-                                'inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto sm:shrink-0',
-                                startingPoint === 'last'
-                                    ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
-                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
-                            ]"
-                            data-testid="cockpit-quick-generate-repeat-last"
-                            @click="repeatLastDesign"
-                        >
-                            <Check
-                                v-if="startingPoint === 'last'"
-                                class="size-3.5"
-                                aria-hidden="true"
-                                data-testid="cockpit-quick-generate-repeat-last-check"
-                            />
-                            <RotateCcw
-                                v-else
-                                class="size-3.5"
-                                aria-hidden="true"
-                            />
-                            Repeat Last
-                        </button>
-                        <button
-                            type="button"
-                            class="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
-                            data-testid="cockpit-quick-generate-choose-template"
-                            @click="templatePickerOpen = true"
-                        >
-                            <LayoutTemplate
-                                class="size-3.5"
-                                aria-hidden="true"
-                            />
-                            Choose Template
-                        </button>
-                        <button
-                            type="button"
-                            class="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
-                            data-testid="cockpit-quick-generate-save-template"
-                            @click="openSaveTemplateDialog"
-                        >
-                            <Save class="size-3.5" aria-hidden="true" />
-                            Save Template
-                        </button>
-                    </div>
-                </section>
-            </div>
-
-            <div
-                ref="canvasSectionElement"
-                class="min-w-0 2xl:sticky 2xl:top-4 2xl:self-start"
+            <section
+                class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
+                data-testid="cockpit-quick-generate-starting-point"
             >
-                <CockpitPayCodeCanvas
-                    v-model:view="canvasView"
-                    :amount="amount"
-                    :currency="currency"
-                    :recipient="payeeDisplayReference"
-                    :purpose="purpose"
-                    :claim-outcome="claimOutcome"
-                    :voucher-type="voucherType"
-                    :expiry="canvasExpiryLabel"
-                    :instruction-keys="canvasInstructionKeys"
-                    :issued-code="resultCode"
-                    :has-rider-design="usesRiderArtwork"
-                    :rider-design-source="riderStampPreview.source"
-                    :rider-design-document="riderCanvasArtworkDocument"
-                    :rider-stamp="riderStampPreview"
-                    :cost-estimate="livePricingEstimate"
-                    :cost-loading="livePricingEstimating"
-                    :cost-error="livePricingEstimateError"
-                    :quantity="count"
+                <div class="flex items-center justify-between gap-2">
+                    <p
+                        class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300"
+                    >
+                        Templates
+                    </p>
+                    <span
+                        class="min-w-0 truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                        data-testid="cockpit-quick-generate-current-template"
+                    >
+                        Current · {{ currentTemplateName }}
+                    </span>
+                </div>
+
+                <div
+                    class="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-nowrap sm:items-center sm:overflow-x-auto sm:pb-1"
+                    data-testid="cockpit-quick-generate-template-toolbar"
                 >
-                    <template #design>
-                        <div
-                            ref="riderDesignTeleportTarget"
-                            id="quick-generate-rider-design-editor"
-                            class="h-full overflow-y-auto overscroll-contain pr-1"
-                            data-testid="cockpit-quick-generate-rider-design-editor"
+                    <button
+                        type="button"
+                        :aria-pressed="startingPoint === 'blank'"
+                        :class="[
+                            'inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0',
+                            startingPoint === 'blank'
+                                ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
+                                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
+                        ]"
+                        data-testid="cockpit-quick-generate-start-blank"
+                        @click="startBlank"
+                    >
+                        <Check
+                            v-if="startingPoint === 'blank'"
+                            class="size-3.5"
+                            aria-hidden="true"
+                            data-testid="cockpit-quick-generate-start-blank-check"
                         />
-                    </template>
-                    <template #claim>
-                        <CockpitClaimExperiencePreview
-                            :status="previewStatus"
-                            :processing="previewProcessing"
-                            :message="previewMessage"
-                            :manifest="previewResult"
-                            :stale="previewStale"
-                            :can-generate="canGenerateClaimPreview"
-                            @generate="generateClaimPreview(false)"
-                            @refresh="generateClaimPreview(true)"
+                        <FilePlus2 v-else class="size-3.5" aria-hidden="true" />
+                        Blank
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="!lastInstructions"
+                        :aria-pressed="startingPoint === 'last'"
+                        :class="[
+                            'inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto sm:shrink-0',
+                            startingPoint === 'last'
+                                ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900'
+                                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
+                        ]"
+                        data-testid="cockpit-quick-generate-repeat-last"
+                        @click="repeatLastDesign"
+                    >
+                        <Check
+                            v-if="startingPoint === 'last'"
+                            class="size-3.5"
+                            aria-hidden="true"
+                            data-testid="cockpit-quick-generate-repeat-last-check"
                         />
-                    </template>
-                </CockpitPayCodeCanvas>
-            </div>
+                        <RotateCcw v-else class="size-3.5" aria-hidden="true" />
+                        Repeat Last
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                        data-testid="cockpit-quick-generate-choose-template"
+                        @click="templatePickerOpen = true"
+                    >
+                        <LayoutTemplate class="size-3.5" aria-hidden="true" />
+                        Choose Template
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                        data-testid="cockpit-quick-generate-save-template"
+                        @click="openSaveTemplateDialog"
+                    >
+                        <Save class="size-3.5" aria-hidden="true" />
+                        Save Template
+                    </button>
+                </div>
+            </section>
         </div>
 
         <CockpitIssuedPayCodeDialog
@@ -8039,1008 +8937,13 @@ function instructionRecord(
                                         riderUrl.trim() !== '' ||
                                         riderSplash.trim() !== '' ||
                                         hasRiderStampCustomization
-                                            ? 'Configured in the Pay Code canvas.'
+                                            ? 'Configured in Order options.'
                                             : 'Optional message, link, artwork, and Stamp presentation.'
                                     }}
                                 </p>
                             </div>
                         </div>
-                        <button
-                            type="button"
-                            class="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100 sm:w-auto dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
-                            data-testid="cockpit-quick-generate-open-design-button"
-                            :disabled="processing"
-                            @click="openDesignEditor"
-                        >
-                            <Palette class="size-3.5" aria-hidden="true" />
-                            Open Design
-                        </button>
                     </div>
-                    <Teleport
-                        v-if="
-                            riderDesignTeleportReady &&
-                            riderDesignTeleportTarget !== null
-                        "
-                        :to="riderDesignTeleportTarget"
-                    >
-                        <div class="grid gap-3">
-                            <div
-                                role="tablist"
-                                aria-label="Rider Design editor"
-                                class="sticky top-0 z-30 grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white/95 p-1 shadow-sm backdrop-blur @sm:grid-cols-4 dark:border-slate-800 dark:bg-slate-950/95"
-                                data-testid="cockpit-quick-generate-rider-design-tabs"
-                            >
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
-                                    :class="
-                                        riderDesignEditor === 'appearance'
-                                            ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
-                                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
-                                    "
-                                    :aria-selected="
-                                        riderDesignEditor === 'appearance'
-                                    "
-                                    data-testid="cockpit-quick-generate-rider-design-appearance-tab"
-                                    @click="
-                                        selectRiderDesignEditor('appearance')
-                                    "
-                                >
-                                    <Palette
-                                        class="size-3.5 shrink-0"
-                                        aria-hidden="true"
-                                    />
-                                    <span class="whitespace-nowrap">Appearance</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
-                                    :class="
-                                        riderDesignEditor === 'message'
-                                            ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
-                                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
-                                    "
-                                    :aria-selected="
-                                        riderDesignEditor === 'message'
-                                    "
-                                    data-testid="cockpit-quick-generate-rider-design-message-tab"
-                                    @click="selectRiderDesignEditor('message')"
-                                >
-                                    <MessageSquareText
-                                        class="size-3.5 shrink-0"
-                                        aria-hidden="true"
-                                    />
-                                    <span class="whitespace-nowrap">Message</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
-                                    :class="
-                                        riderDesignEditor === 'link'
-                                            ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
-                                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
-                                    "
-                                    :aria-selected="
-                                        riderDesignEditor === 'link'
-                                    "
-                                    data-testid="cockpit-quick-generate-rider-design-link-tab"
-                                    @click="selectRiderDesignEditor('link')"
-                                >
-                                    <Link2
-                                        class="size-3.5 shrink-0"
-                                        aria-hidden="true"
-                                    />
-                                    <span class="whitespace-nowrap">Link</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    class="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[0.68rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 @sm:gap-1.5 @sm:px-2 sm:text-xs"
-                                    :class="
-                                        riderDesignEditor === 'splash'
-                                            ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
-                                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
-                                    "
-                                    :aria-selected="
-                                        riderDesignEditor === 'splash'
-                                    "
-                                    data-testid="cockpit-quick-generate-rider-design-splash-tab"
-                                    @click="selectRiderDesignEditor('splash')"
-                                >
-                                    <Sparkles
-                                        class="size-3.5 shrink-0"
-                                        aria-hidden="true"
-                                    />
-                                    <span class="whitespace-nowrap">Splash</span>
-                                </button>
-                            </div>
-                            <CockpitRiderEditorDisclosure
-                                v-show="riderDesignEditor === 'message'"
-                                title="Rider Message"
-                                description="Add an optional message for the recipient."
-                                :default-open="true"
-                                :status="
-                                    purpose.trim() === ''
-                                        ? 'Empty'
-                                        : 'Configured'
-                                "
-                                :summary="riderMessageDisclosureSummary"
-                                data-testid="cockpit-quick-generate-rider-message-editor"
-                            >
-                                <CockpitRiderMessageEditor
-                                    v-model:message="purpose"
-                                    v-model:format="riderMessageFormat"
-                                    :disabled="processing"
-                                />
-                            </CockpitRiderEditorDisclosure>
-                            <CockpitRiderEditorDisclosure
-                                v-show="riderDesignEditor === 'link'"
-                                title="Rider URL"
-                                description="Add an optional destination after the claim."
-                                :default-open="true"
-                                :status="
-                                    riderUrl.trim() === ''
-                                        ? 'Empty'
-                                        : 'Configured'
-                                "
-                                :summary="riderUrlDisclosureSummary"
-                                data-testid="cockpit-quick-generate-rider-cta-section"
-                            >
-                                <div class="grid gap-3">
-                                    <label
-                                        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                    >
-                                        Link
-                                        <input
-                                            v-model="riderUrl"
-                                            type="url"
-                                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                            data-testid="cockpit-quick-generate-rider-url"
-                                            :disabled="processing"
-                                        />
-                                    </label>
-                                    <CockpitRiderLibrary
-                                        kind="url"
-                                        :entries="riderLibrary"
-                                        :current-payload="{
-                                            url: riderUrl.trim(),
-                                        }"
-                                        :disabled="processing"
-                                        @apply="applyRiderUrlLibraryPayload"
-                                    />
-                                </div>
-                                <div
-                                    v-if="riderUrl.trim() !== ''"
-                                    class="mt-3 rounded-xl border border-sky-200 bg-white p-3 dark:border-sky-900/60 dark:bg-slate-950"
-                                    data-testid="cockpit-quick-generate-rider-url-preview"
-                                >
-                                    <div
-                                        class="flex flex-wrap items-center justify-between gap-2"
-                                    >
-                                        <p
-                                            class="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300"
-                                        >
-                                            Rider URL Preview
-                                        </p>
-                                        <p
-                                            class="text-[11px] text-sky-700 dark:text-sky-300"
-                                            data-testid="cockpit-quick-generate-rider-url-preview-status"
-                                        >
-                                            {{
-                                                riderUrlArtworkResolving
-                                                    ? 'Loading Artwork…'
-                                                    : riderUrlArtworkMessage
-                                            }}
-                                        </p>
-                                    </div>
-                                    <div class="mt-2">
-                                        <CockpitRiderPreviewFrame
-                                            title="Rider URL Preview"
-                                            surface="stamp"
-                                            class="border-sky-200 dark:border-sky-900/60"
-                                            data-testid="cockpit-quick-generate-rider-url-artwork-preview"
-                                            :document="riderUrlPreviewDocument"
-                                        />
-                                    </div>
-                                </div>
-                            </CockpitRiderEditorDisclosure>
-                            <CockpitRiderEditorDisclosure
-                                v-show="riderDesignEditor === 'splash'"
-                                title="Rider Splash"
-                                description="Design an optional introduction before the claim."
-                                :default-open="true"
-                                :status="
-                                    riderSplash.trim() === ''
-                                        ? 'Empty'
-                                        : 'Configured'
-                                "
-                                :summary="riderSplashDisclosureSummary"
-                                data-testid="cockpit-quick-generate-rider-splash-builder"
-                            >
-                                <div class="grid gap-3">
-                                    <fieldset
-                                        class="flex flex-wrap items-center gap-1"
-                                        data-testid="cockpit-quick-generate-rider-splash-format"
-                                    >
-                                        <legend class="sr-only">
-                                            Splash format
-                                        </legend>
-                                        <label
-                                            v-for="option in [
-                                                {
-                                                    value: 'plain',
-                                                    label: 'Text',
-                                                },
-                                                {
-                                                    value: 'markdown',
-                                                    label: 'Markdown',
-                                                },
-                                                {
-                                                    value: 'html',
-                                                    label: 'HTML',
-                                                },
-                                            ]"
-                                            :key="option.value"
-                                            class="cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-orange-600"
-                                            :class="
-                                                riderSplashFormat ===
-                                                option.value
-                                                    ? 'border-orange-600 bg-orange-600 text-white'
-                                                    : 'border-orange-200 bg-white text-orange-800 hover:bg-orange-50 dark:border-orange-900/60 dark:bg-slate-900 dark:text-orange-200 dark:hover:bg-orange-950/40'
-                                            "
-                                        >
-                                            <input
-                                                v-model="riderSplashFormat"
-                                                type="radio"
-                                                class="sr-only"
-                                                name="rider-splash-format"
-                                                :value="option.value"
-                                                :disabled="processing"
-                                            />
-                                            {{ option.label }}
-                                        </label>
-                                    </fieldset>
-                                    <label
-                                        class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
-                                    >
-                                        Splash
-                                        <textarea
-                                            v-model="riderSplash"
-                                            rows="5"
-                                            class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                            data-testid="cockpit-quick-generate-rider-splash-body"
-                                            :disabled="processing"
-                                        />
-                                    </label>
-                                    <CockpitRiderLibrary
-                                        kind="splash"
-                                        :entries="riderLibrary"
-                                        :current-payload="{
-                                            splash: riderSplashInstructionContent,
-                                            format: riderSplashFormat,
-                                        }"
-                                        :disabled="processing"
-                                        @apply="applyRiderSplashLibraryPayload"
-                                    />
-                                    <div
-                                        class="rounded-xl border border-orange-200 bg-white p-3 dark:border-orange-900/60 dark:bg-slate-950"
-                                        data-testid="cockpit-quick-generate-rider-splash-preview"
-                                    >
-                                        <p
-                                            class="text-[11px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300"
-                                        >
-                                            Claim Splash Preview
-                                        </p>
-                                        <p
-                                            class="mt-1 text-[11px] leading-snug text-orange-800 dark:text-orange-200"
-                                        >
-                                            {{
-                                                riderSplashFormat === 'html'
-                                                    ? 'Custom HTML is isolated inside this preview.'
-                                                    : 'Formatting is rendered inside an isolated preview.'
-                                            }}
-                                        </p>
-                                        <div class="mt-2">
-                                            <CockpitRiderPreviewFrame
-                                                title="Claim Splash Preview"
-                                                surface="splash"
-                                                class="border-orange-200 dark:border-orange-900/60"
-                                                data-testid="cockpit-quick-generate-rider-splash-html-preview"
-                                                :document="
-                                                    riderSplashPreviewDocument
-                                                "
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </CockpitRiderEditorDisclosure>
-                            <CockpitRiderEditorDisclosure
-                                v-show="riderDesignEditor === 'appearance'"
-                                id="quick-generate-front-design"
-                                title="Stamp Appearance"
-                                description="Compose the Stamp from Rider content."
-                                :default-open="true"
-                                :status="
-                                    hasRiderStampCustomization
-                                        ? 'Configured'
-                                        : 'x-change'
-                                "
-                                :summary="riderStampDisclosureSummary"
-                                data-testid="cockpit-quick-generate-rider-stamp-editor"
-                            >
-                                <div
-                                    class="grid gap-5"
-                                    data-testid="cockpit-quick-generate-rider-appearance-layout"
-                                >
-                                    <div class="grid min-w-0 gap-5">
-                                        <div
-                                            class="grid gap-2"
-                                            data-testid="cockpit-quick-generate-rider-artwork-picker"
-                                        >
-                                            <fieldset
-                                                data-testid="cockpit-quick-generate-rider-stamp-source"
-                                            >
-                                                <legend class="sr-only">
-                                                    Artwork
-                                                </legend>
-                                                <div
-                                                    class="grid grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-900/80"
-                                                >
-                                                    <label
-                                                        v-for="option in riderArtworkSourceOptions"
-                                                        :key="option.value"
-                                                        class="group relative grid min-w-0 cursor-pointer place-items-center rounded-lg border p-1 transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                        :class="[
-                                                            riderStampArtworkSource ===
-                                                            option.value
-                                                                ? 'border-sky-600 bg-sky-100 shadow-sm ring-2 ring-sky-500/25 dark:border-sky-400 dark:bg-sky-950/70'
-                                                                : 'border-transparent bg-white hover:border-sky-300 dark:bg-slate-950 dark:hover:border-sky-800',
-                                                            (option.value ===
-                                                                'url' &&
-                                                                riderUrl.trim() ===
-                                                                    '' &&
-                                                                riderStampArtworkSource !==
-                                                                    'url') ||
-                                                            (option.value ===
-                                                                'splash' &&
-                                                                riderSplashContent.trim() ===
-                                                                    '' &&
-                                                                riderStampArtworkSource !==
-                                                                    'splash')
-                                                                ? 'cursor-not-allowed opacity-40'
-                                                                : '',
-                                                        ]"
-                                                        :title="option.label"
-                                                    >
-                                                        <input
-                                                            v-model="
-                                                                riderStampArtworkSource
-                                                            "
-                                                            type="radio"
-                                                            class="sr-only"
-                                                            name="rider-stamp-artwork-source"
-                                                            :value="
-                                                                option.value
-                                                            "
-                                                            :aria-label="
-                                                                option.label
-                                                            "
-                                                            :aria-describedby="`rider-stamp-artwork-tooltip-${option.value}`"
-                                                            :data-testid="`cockpit-quick-generate-rider-stamp-source-${option.value}`"
-                                                            :disabled="
-                                                                processing ||
-                                                                (option.value ===
-                                                                    'url' &&
-                                                                    riderUrl.trim() ===
-                                                                        '' &&
-                                                                    riderStampArtworkSource !==
-                                                                        'url') ||
-                                                                (option.value ===
-                                                                    'splash' &&
-                                                                    riderSplashContent.trim() ===
-                                                                        '' &&
-                                                                    riderStampArtworkSource !==
-                                                                        'splash')
-                                                            "
-                                                            @change="
-                                                                markRiderStampArtworkSourceSelection
-                                                            "
-                                                        />
-                                                        <CockpitRiderArtworkThumbnail
-                                                            :source="
-                                                                option.value
-                                                            "
-                                                            :image-url="
-                                                                option.imageUrl
-                                                            "
-                                                            :title="
-                                                                option.title
-                                                            "
-                                                            :description="
-                                                                option.description
-                                                            "
-                                                            :resolving="
-                                                                option.resolving
-                                                            "
-                                                        />
-                                                        <span
-                                                            v-if="
-                                                                riderStampArtworkSource ===
-                                                                option.value
-                                                            "
-                                                            class="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-sky-600 text-[9px] font-black text-white shadow-sm dark:bg-sky-400 dark:text-slate-950"
-                                                            aria-hidden="true"
-                                                            data-testid="cockpit-quick-generate-rider-artwork-selected"
-                                                        >
-                                                            ✓
-                                                        </span>
-                                                        <span
-                                                            :id="`rider-stamp-artwork-tooltip-${option.value}`"
-                                                            role="tooltip"
-                                                            class="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 dark:bg-white dark:text-slate-950"
-                                                        >
-                                                            {{ option.label }}
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                            </fieldset>
-                                            <CockpitRiderArtworkInspector
-                                                class="static w-full"
-                                                data-testid="cockpit-quick-generate-rider-artwork-inspector"
-                                                :artwork-source="
-                                                    riderStampArtworkSource
-                                                "
-                                                :fit="riderStampFit"
-                                                :position="riderStampPosition"
-                                                :preview-document="
-                                                    riderCanvasArtworkDocument
-                                                "
-                                                :url-artwork-resolving="
-                                                    riderUrlArtworkResolving
-                                                "
-                                                :url-artwork-message="
-                                                    riderUrlArtworkMessage
-                                                "
-                                            />
-                                        </div>
-                                        <fieldset
-                                            v-if="
-                                                riderStampArtworkSource ===
-                                                    'url' ||
-                                                riderStampArtworkSource ===
-                                                    'splash'
-                                            "
-                                            class="grid gap-2"
-                                            data-testid="cockpit-quick-generate-rider-stamp-artwork-treatment"
-                                        >
-                                            <legend
-                                                class="text-xs font-semibold text-sky-950 dark:text-sky-100"
-                                            >
-                                                Treatment
-                                            </legend>
-                                            <div class="flex flex-wrap gap-1">
-                                                <label
-                                                    v-for="option in [
-                                                        {
-                                                            value: 'automatic',
-                                                            label: 'Automatic',
-                                                        },
-                                                        {
-                                                            value: 'artwork',
-                                                            label: 'Artwork',
-                                                        },
-                                                        {
-                                                            value: 'text',
-                                                            label: 'Text',
-                                                        },
-                                                    ]"
-                                                    :key="option.value"
-                                                    class="cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                    :class="
-                                                        riderStampArtworkTreatment ===
-                                                        option.value
-                                                            ? 'border-sky-600 bg-sky-600 text-white'
-                                                            : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
-                                                    "
-                                                >
-                                                    <input
-                                                        v-model="
-                                                            riderStampArtworkTreatment
-                                                        "
-                                                        type="radio"
-                                                        class="sr-only"
-                                                        name="rider-stamp-artwork-treatment"
-                                                        :value="option.value"
-                                                        :disabled="processing"
-                                                    />
-                                                    {{ option.label }}
-                                                </label>
-                                            </div>
-                                        </fieldset>
-                                        <fieldset
-                                            class="grid gap-2"
-                                            data-testid="cockpit-quick-generate-rider-stamp-copy-source"
-                                        >
-                                            <legend
-                                                class="text-xs font-semibold text-sky-950 dark:text-sky-100"
-                                            >
-                                                Stamp Copy
-                                            </legend>
-                                            <div
-                                                class="grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:grid-cols-3"
-                                            >
-                                                <label
-                                                    v-for="option in [
-                                                        {
-                                                            value: 'automatic',
-                                                            label: 'Automatic',
-                                                        },
-                                                        {
-                                                            value: 'message',
-                                                            label: 'Message',
-                                                        },
-                                                        {
-                                                            value: 'url',
-                                                            label: 'Link',
-                                                        },
-                                                        {
-                                                            value: 'splash',
-                                                            label: 'Splash',
-                                                        },
-                                                        {
-                                                            value: 'custom',
-                                                            label: 'Custom',
-                                                        },
-                                                        {
-                                                            value: 'none',
-                                                            label: 'None',
-                                                        },
-                                                    ]"
-                                                    :key="option.value"
-                                                    class="cursor-pointer rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                    :class="[
-                                                        riderStampCopySource ===
-                                                        option.value
-                                                            ? 'border-sky-600 bg-sky-600 text-white'
-                                                            : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
-                                                        (option.value ===
-                                                            'message' &&
-                                                            purpose.trim() ===
-                                                                '') ||
-                                                        (option.value ===
-                                                            'url' &&
-                                                            riderUrl.trim() ===
-                                                                '') ||
-                                                        (option.value ===
-                                                            'splash' &&
-                                                            riderSplash.trim() ===
-                                                                '')
-                                                            ? 'cursor-not-allowed opacity-45'
-                                                            : '',
-                                                    ]"
-                                                >
-                                                    <input
-                                                        v-model="
-                                                            riderStampCopySource
-                                                        "
-                                                        type="radio"
-                                                        class="sr-only"
-                                                        name="rider-stamp-copy-source"
-                                                        :value="option.value"
-                                                        :disabled="
-                                                            processing ||
-                                                            (option.value ===
-                                                                'message' &&
-                                                                purpose.trim() ===
-                                                                    '') ||
-                                                            (option.value ===
-                                                                'url' &&
-                                                                riderUrl.trim() ===
-                                                                    '') ||
-                                                            (option.value ===
-                                                                'splash' &&
-                                                                riderSplash.trim() ===
-                                                                    '')
-                                                        "
-                                                    />
-                                                    {{ option.label }}
-                                                </label>
-                                            </div>
-                                        </fieldset>
-                                        <div
-                                            class="grid gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50"
-                                        >
-                                            <fieldset
-                                                class="grid gap-2"
-                                                data-testid="cockpit-quick-generate-rider-stamp-fit"
-                                            >
-                                                <legend
-                                                    class="text-xs font-semibold text-sky-950 dark:text-sky-100"
-                                                >
-                                                    Fit
-                                                </legend>
-                                                <div
-                                                    class="grid grid-cols-2 gap-1"
-                                                >
-                                                    <label
-                                                        v-for="option in [
-                                                            {
-                                                                value: 'cover',
-                                                                label: 'Cover',
-                                                            },
-                                                            {
-                                                                value: 'contain',
-                                                                label: 'Contain',
-                                                            },
-                                                        ]"
-                                                        :key="option.value"
-                                                        class="cursor-pointer rounded-lg border px-2.5 py-1.5 text-center text-xs font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                        :class="
-                                                            riderStampFit ===
-                                                            option.value
-                                                                ? 'border-sky-600 bg-sky-600 text-white'
-                                                                : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
-                                                        "
-                                                    >
-                                                        <input
-                                                            v-model="
-                                                                riderStampFit
-                                                            "
-                                                            type="radio"
-                                                            class="sr-only"
-                                                            name="rider-stamp-fit"
-                                                            :value="
-                                                                option.value
-                                                            "
-                                                            :data-testid="`cockpit-quick-generate-rider-stamp-fit-${option.value}`"
-                                                            :disabled="
-                                                                processing
-                                                            "
-                                                        />
-                                                        {{ option.label }}
-                                                    </label>
-                                                </div>
-                                            </fieldset>
-                                            <fieldset
-                                                class="grid gap-2"
-                                                data-testid="cockpit-quick-generate-rider-stamp-position"
-                                            >
-                                                <legend
-                                                    class="text-xs font-semibold text-sky-950 dark:text-sky-100"
-                                                >
-                                                    Position
-                                                </legend>
-                                                <div
-                                                    class="grid grid-cols-5 gap-1"
-                                                >
-                                                    <label
-                                                        v-for="option in [
-                                                            {
-                                                                value: 'top',
-                                                                label: 'Top',
-                                                            },
-                                                            {
-                                                                value: 'left',
-                                                                label: 'Left',
-                                                            },
-                                                            {
-                                                                value: 'center',
-                                                                label: 'Center',
-                                                            },
-                                                            {
-                                                                value: 'right',
-                                                                label: 'Right',
-                                                            },
-                                                            {
-                                                                value: 'bottom',
-                                                                label: 'Bottom',
-                                                            },
-                                                        ]"
-                                                        :key="option.value"
-                                                        class="cursor-pointer rounded-lg border px-1 py-1.5 text-center text-[10px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                        :class="
-                                                            riderStampPosition ===
-                                                            option.value
-                                                                ? 'border-sky-600 bg-sky-600 text-white'
-                                                                : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
-                                                        "
-                                                    >
-                                                        <input
-                                                            v-model="
-                                                                riderStampPosition
-                                                            "
-                                                            type="radio"
-                                                            class="sr-only"
-                                                            name="rider-stamp-position"
-                                                            :value="
-                                                                option.value
-                                                            "
-                                                            :disabled="
-                                                                processing
-                                                            "
-                                                        />
-                                                        {{ option.label }}
-                                                    </label>
-                                                </div>
-                                            </fieldset>
-                                            <fieldset
-                                                class="grid gap-2"
-                                                data-testid="cockpit-quick-generate-rider-stamp-theme"
-                                            >
-                                                <legend
-                                                    class="text-xs font-semibold text-sky-950 dark:text-sky-100"
-                                                >
-                                                    Theme
-                                                </legend>
-                                                <div
-                                                    class="grid grid-cols-3 gap-1"
-                                                >
-                                                    <label
-                                                        v-for="option in [
-                                                            {
-                                                                value: 'automatic',
-                                                                label: 'Automatic',
-                                                            },
-                                                            {
-                                                                value: 'light',
-                                                                label: 'Light',
-                                                            },
-                                                            {
-                                                                value: 'dark',
-                                                                label: 'Dark',
-                                                            },
-                                                        ]"
-                                                        :key="option.value"
-                                                        class="cursor-pointer rounded-lg border px-1.5 py-1.5 text-center text-[11px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                        :class="
-                                                            riderStampTheme ===
-                                                            option.value
-                                                                ? 'border-sky-600 bg-sky-600 text-white'
-                                                                : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
-                                                        "
-                                                    >
-                                                        <input
-                                                            v-model="
-                                                                riderStampTheme
-                                                            "
-                                                            type="radio"
-                                                            class="sr-only"
-                                                            name="rider-stamp-theme"
-                                                            :value="
-                                                                option.value
-                                                            "
-                                                            :disabled="
-                                                                processing
-                                                            "
-                                                        />
-                                                        {{ option.label }}
-                                                    </label>
-                                                </div>
-                                            </fieldset>
-                                        </div>
-                                        <details
-                                            class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
-                                            data-testid="cockpit-quick-generate-rider-stamp-more-options"
-                                        >
-                                            <summary
-                                                class="cursor-pointer text-xs font-semibold text-sky-950 dark:text-sky-100"
-                                            >
-                                                More Stamp Options
-                                            </summary>
-                                            <div class="mt-4 grid gap-3">
-                                                <label
-                                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
-                                                >
-                                                    Front Title
-                                                    <input
-                                                        v-model="
-                                                            riderStampTitle
-                                                        "
-                                                        type="text"
-                                                        maxlength="120"
-                                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                                        data-testid="cockpit-quick-generate-rider-stamp-title"
-                                                        :disabled="processing"
-                                                        placeholder="Use the selected Rider title"
-                                                    />
-                                                </label>
-                                                <label
-                                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 sm:col-span-2 dark:text-sky-100"
-                                                >
-                                                    Front Subtitle
-                                                    <input
-                                                        v-model="
-                                                            riderStampDescription
-                                                        "
-                                                        type="text"
-                                                        maxlength="240"
-                                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                                        data-testid="cockpit-quick-generate-rider-stamp-description"
-                                                        :disabled="processing"
-                                                        placeholder="Use the selected Rider description"
-                                                    />
-                                                </label>
-                                                <label
-                                                    class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
-                                                >
-                                                    <input
-                                                        v-model="
-                                                            riderStampShowLogo
-                                                        "
-                                                        type="checkbox"
-                                                        class="rounded border-sky-300"
-                                                        :disabled="processing"
-                                                    />
-                                                    Show x-change Logo
-                                                </label>
-                                                <label
-                                                    class="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/60 dark:bg-slate-950 dark:text-sky-100"
-                                                >
-                                                    <input
-                                                        v-model="
-                                                            riderStampShowTagline
-                                                        "
-                                                        type="checkbox"
-                                                        class="rounded border-sky-300"
-                                                        :disabled="processing"
-                                                    />
-                                                    Show Tagline
-                                                </label>
-                                                <fieldset
-                                                    class="grid gap-2"
-                                                    data-testid="cockpit-quick-generate-rider-stamp-claim-marker"
-                                                >
-                                                    <legend
-                                                        class="text-xs font-semibold text-sky-950 dark:text-sky-100"
-                                                    >
-                                                        Claim Marker
-                                                    </legend>
-                                                    <div
-                                                        class="grid grid-cols-4 gap-1"
-                                                    >
-                                                        <label
-                                                            v-for="option in [
-                                                                {
-                                                                    value: 'qr',
-                                                                    label: 'QR',
-                                                                },
-                                                                {
-                                                                    value: 'code',
-                                                                    label: 'Code',
-                                                                },
-                                                                {
-                                                                    value: 'both',
-                                                                    label: 'Both',
-                                                                },
-                                                                {
-                                                                    value: 'none',
-                                                                    label: 'None',
-                                                                },
-                                                            ]"
-                                                            :key="option.value"
-                                                            class="cursor-pointer rounded-lg border px-1.5 py-1.5 text-center text-[11px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                            :class="
-                                                                riderStampClaimMarker ===
-                                                                option.value
-                                                                    ? 'border-sky-600 bg-sky-600 text-white'
-                                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
-                                                            "
-                                                        >
-                                                            <input
-                                                                v-model="
-                                                                    riderStampClaimMarker
-                                                                "
-                                                                type="radio"
-                                                                class="sr-only"
-                                                                name="rider-stamp-claim-marker"
-                                                                :value="
-                                                                    option.value
-                                                                "
-                                                                :disabled="
-                                                                    processing
-                                                                "
-                                                            />
-                                                            {{ option.label }}
-                                                        </label>
-                                                    </div>
-                                                </fieldset>
-                                                <fieldset
-                                                    v-if="
-                                                        riderStampClaimMarker !==
-                                                        'none'
-                                                    "
-                                                    class="grid gap-2"
-                                                    data-testid="cockpit-quick-generate-rider-stamp-claim-marker-position"
-                                                >
-                                                    <legend
-                                                        class="text-xs font-semibold text-sky-950 dark:text-sky-100"
-                                                    >
-                                                        Marker Position
-                                                    </legend>
-                                                    <div
-                                                        class="grid grid-cols-2 gap-1"
-                                                    >
-                                                        <label
-                                                            v-for="option in [
-                                                                {
-                                                                    value: 'top_left',
-                                                                    label: 'Top Left',
-                                                                },
-                                                                {
-                                                                    value: 'top_right',
-                                                                    label: 'Top Right',
-                                                                },
-                                                                {
-                                                                    value: 'bottom_left',
-                                                                    label: 'Bottom Left',
-                                                                },
-                                                                {
-                                                                    value: 'bottom_right',
-                                                                    label: 'Bottom Right',
-                                                                },
-                                                            ]"
-                                                            :key="option.value"
-                                                            class="cursor-pointer rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-600"
-                                                            :class="
-                                                                riderStampClaimMarkerPosition ===
-                                                                option.value
-                                                                    ? 'border-sky-600 bg-sky-600 text-white'
-                                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
-                                                            "
-                                                        >
-                                                            <input
-                                                                v-model="
-                                                                    riderStampClaimMarkerPosition
-                                                                "
-                                                                type="radio"
-                                                                class="sr-only"
-                                                                name="rider-stamp-claim-marker-position"
-                                                                :value="
-                                                                    option.value
-                                                                "
-                                                                :disabled="
-                                                                    processing
-                                                                "
-                                                            />
-                                                            {{ option.label }}
-                                                        </label>
-                                                    </div>
-                                                </fieldset>
-                                                <label
-                                                    class="grid min-w-0 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
-                                                >
-                                                    <span
-                                                        class="flex items-center justify-between gap-3"
-                                                    >
-                                                        <span>Contrast</span>
-                                                        <span
-                                                            >{{
-                                                                riderStampScrim
-                                                            }}%</span
-                                                        >
-                                                    </span>
-                                                    <input
-                                                        v-model="
-                                                            riderStampScrim
-                                                        "
-                                                        type="range"
-                                                        min="0"
-                                                        max="100"
-                                                        step="1"
-                                                        data-testid="cockpit-quick-generate-rider-stamp-scrim"
-                                                        :disabled="processing"
-                                                    />
-                                                </label>
-                                            </div>
-                                        </details>
-                                    </div>
-                                </div>
-                            </CockpitRiderEditorDisclosure>
-                        </div>
-                    </Teleport>
                     <details
                         class="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50"
                         data-testid="cockpit-quick-generate-rider-behavior"
