@@ -14,6 +14,46 @@ vi.mock('@inertiajs/vue3', () => ({
 }));
 
 describe('Quick Generate last instructions', () => {
+    it('restores a payable collection wallet and defaults a missing one', () => {
+        const instructions = (collectionWalletId?: string) => ({
+            schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+            saved_at: '2026-08-25T09:00:00Z',
+            instructions: {
+                voucher_type: 'payable',
+                cash: { amount: 100, currency: 'PHP' },
+                metadata: collectionWalletId
+                    ? { collection_wallet_id: collectionWalletId }
+                    : {},
+            },
+        });
+
+        const remembered = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                currentUserWalletId: 77,
+                lastInstructions: instructions('shared-wallet-9'),
+            },
+        });
+        const defaulted = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                currentUserWalletId: 77,
+                lastInstructions: instructions(),
+            },
+        });
+
+        expect(
+            remembered.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-collection-wallet"]',
+            ).element.value,
+        ).toBe('shared-wallet-9');
+        expect(
+            defaulted.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-collection-wallet"]',
+            ).element.value,
+        ).toBe('77');
+    });
+
     it('preloads the last successful design without restoring its secret', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             attachTo: document.body,

@@ -101,6 +101,7 @@ import type { CockpitValueUseMode } from './CockpitValueUseControl.vue';
 const props = withDefaults(
     defineProps<{
         clientFundsMinor?: number | null;
+        currentUserWalletId?: string | number | null;
         mutationContract?: CockpitQuickGenerateMutationContract;
         claimPreviewContract?: CockpitQuickGenerateClaimPreviewContract;
         draftContract?: CockpitQuickGenerateDraftContract;
@@ -803,7 +804,32 @@ const applyingStartingPoint = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 const submissionErrorHeading = ref('Fix these fields before issuing');
 
+const collectionWalletError = computed<string | null>(() => {
+    return (
+        submissionErrors.value.find(
+            (error) => error.field === 'metadata.collection_wallet_id',
+        )?.message ?? null
+    );
+});
+
 hydrateLastInstructions();
+
+watch(
+    voucherType,
+    (type): void => {
+        if (
+            (type === 'payable' || type === 'settlement') &&
+            metadataCollectionWalletId.value.trim() === '' &&
+            props.currentUserWalletId !== null &&
+            props.currentUserWalletId !== undefined
+        ) {
+            metadataCollectionWalletId.value = String(
+                props.currentUserWalletId,
+            );
+        }
+    },
+    { immediate: true },
+);
 
 onMounted((): void => {
     riderDesignTeleportReady.value = true;
@@ -1729,7 +1755,19 @@ function applyInstructionBlueprint(
         'flow_type',
     ]);
     metadataIssuerId.value = '';
-    metadataCollectionWalletId.value = '';
+    metadataCollectionWalletId.value = instructionString(instructions, [
+        'metadata',
+        'collection_wallet_id',
+    ]);
+
+    if (
+        metadataCollectionWalletId.value === '' &&
+        (voucherType.value === 'payable' || voucherType.value === 'settlement') &&
+        props.currentUserWalletId !== null &&
+        props.currentUserWalletId !== undefined
+    ) {
+        metadataCollectionWalletId.value = String(props.currentUserWalletId);
+    }
 
     if (clearRecipient) {
         recipientReference.value = '';
@@ -2183,6 +2221,24 @@ const cockpitDetailUrl = computed<string | null>(() => {
     return stringValue(
         dataGet(lastResponse.value, ['result', 'links', 'cockpit_detail']),
     );
+});
+
+const collectionAttemptUrl = computed<string | null>(() => {
+    return stringValue(
+        dataGet(lastResponse.value, ['result', 'links', 'collection_attempt']),
+    );
+});
+
+const publicPaymentUrl = computed<string | null>(() => {
+    const path = stringValue(
+        dataGet(lastResponse.value, ['result', 'links', 'payment']),
+    );
+
+    if (path === null || typeof window === 'undefined') {
+        return path;
+    }
+
+    return new URL(path, window.location.origin).toString();
 });
 
 const beneficiaryRedeemUrl = computed<string | null>(() => {
@@ -6178,6 +6234,38 @@ function instructionRecord(
                             :disabled="processing"
                         />
                     </label>
+                    <label
+                        v-if="voucherType === 'payable' || voucherType === 'settlement'"
+                        class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
+                    >
+                        <span class="flex items-center gap-1">
+                            Collection Wallet
+                            <CockpitFieldHelp
+                                label="About Collection Wallet"
+                                tooltip="Where payments collected against this Pay Code will be deposited. Defaults to your own wallet; change only if collecting into a shared or different wallet."
+                            />
+                        </span>
+                        <input
+                            v-model="metadataCollectionWalletId"
+                            type="text"
+                            class="w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                            :class="
+                                collectionWalletError
+                                    ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-950'
+                                    : 'border-slate-200 dark:border-slate-800'
+                            "
+                            data-testid="cockpit-quick-generate-collection-wallet"
+                            :disabled="processing"
+                            :aria-invalid="collectionWalletError ? 'true' : undefined"
+                        />
+                        <span
+                            v-if="collectionWalletError"
+                            class="text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                            data-testid="cockpit-quick-generate-collection-wallet-error"
+                        >
+                            {{ collectionWalletError }}
+                        </span>
+                    </label>
                 </div>
 
                 <section
@@ -6552,6 +6640,8 @@ function instructionRecord(
             :claim-qr="beneficiaryClaimQr"
             :share-card-url="beneficiaryShareCardUrl"
             :detail-url="cockpitDetailUrl"
+            :collection-attempt-url="collectionAttemptUrl"
+            :payment-url="publicPaymentUrl"
             @close="issuedPayCodeDialogOpen = false"
         />
 
@@ -10114,17 +10204,6 @@ function instructionRecord(
                                     Issuer Reference
                                     <input
                                         v-model="metadataIssuerId"
-                                        type="text"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        :disabled="processing"
-                                    />
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Collection Account Reference
-                                    <input
-                                        v-model="metadataCollectionWalletId"
                                         type="text"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         :disabled="processing"

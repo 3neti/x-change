@@ -374,6 +374,12 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'cockpit_distribution' => Route::has('x-change.cockpit.pay-codes.distribution')
                     ? route('x-change.cockpit.pay-codes.distribution', ['code' => $result->code], false)
                     : null,
+                'collection_attempt' => Route::has('x-change.cockpit.pay-codes.collection-attempts.store')
+                    ? route('x-change.cockpit.pay-codes.collection-attempts.store', ['code' => $result->code], false)
+                    : null,
+                'payment' => Route::has('x-change.pay.show')
+                    ? route('x-change.pay.show', ['code' => $result->code], false)
+                    : null,
             ],
         ];
     }

@@ -73,6 +73,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayou
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutReconciliationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutRetryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerCommissionPayoutSubmissionController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeCollectionAttemptController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeEngineeringPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeEvidenceController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
@@ -631,6 +632,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
                 CockpitPayCodeEngineeringPreviewController::class,
             )->middleware('throttle:30,1')
                 ->name('x-change.cockpit.pay-codes.engineering-preview.show');
+            Route::post(
+                '{code}/collection-attempts',
+                CockpitPayCodeCollectionAttemptController::class,
+            )->middleware('throttle:6,1')
+                ->name('x-change.cockpit.pay-codes.collection-attempts.store');
             Route::post(
                 '{code}/payout-corrections',
                 CockpitPayCodePayoutCorrectionController::class,

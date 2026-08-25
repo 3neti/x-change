@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Payment;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
+use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
+use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
@@ -17,6 +20,7 @@ final readonly class VoucherCollectionJournal
 {
     public function __construct(
         private ExecutionJournalRecorder $recorder,
+        private VoucherCollectionWalletResolverContract $collectionWallets,
     ) {}
 
     public function record(VoucherCollection $collection): void
@@ -99,5 +103,22 @@ final readonly class VoucherCollectionJournal
                     : 'treasury_position_operation',
             ],
         ));
+
+        if ($isSucceeded) {
+            $voucher = $collection->voucher()->firstOrFail();
+            $holder = $this->collectionWallets->resolve($voucher)->holder;
+
+            if ($holder instanceof Model) {
+                FundingProjectionChanged::dispatch(
+                    $holder::class,
+                    (string) $holder->getKey(),
+                    'voucher-collection:'.$collection->getKey(),
+                    CarbonImmutable::parse(
+                        $collection->completed_at ?? $collection->created_at,
+                    )->toIso8601String(),
+                    'voucher_collection_settled',
+                );
+            }
+        }
     }
 }

@@ -321,6 +321,7 @@ export type CockpitHeaderReadModel = {
     balances?: CockpitBalanceMetric[];
     vocabulary?: Record<string, CockpitVocabularyTerm>;
     redactions?: CockpitReadModelRedactions;
+    funding_realtime?: CockpitFundingRealtime;
 };
 
 export type CockpitVocabularyTerm = {
@@ -1598,6 +1599,7 @@ export type CockpitQuickGenerateReadModel = {
 };
 
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
+    current_user_wallet_id?: string | number | null;
     quick_generate_read_model?: CockpitQuickGenerateReadModel;
     feedback_defaults?: CockpitQuickGenerateFeedbackDefaults;
     onboarding_policy?: CockpitQuickGenerateOnboardingPolicy;
@@ -1607,6 +1609,12 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     rider_library?: CockpitRiderLibraryEntry[];
     instruction_capabilities?: CockpitInstructionCapabilityReadinessMap;
     settlement_rail_capabilities?: CockpitSettlementRailCapabilities;
+};
+
+export type CockpitFundingRealtime = {
+    enabled: boolean;
+    channel: string;
+    event: '.FundingProjectionChanged';
 };
 
 export type CockpitSettlementRailCapability = {
