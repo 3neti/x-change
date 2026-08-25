@@ -208,6 +208,7 @@ final class LifecycleScenarioEngine
             'treasury_live_basic_cash',
             'treasury_onboarding_grant',
             'feedback_delivery',
+            'payment_voucher_collection',
             'commercial_operations_simulation',
             'treasury_account_grant_simulation',
             'provisioning_governance_simulation',

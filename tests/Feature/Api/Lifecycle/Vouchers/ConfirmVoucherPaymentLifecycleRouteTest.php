@@ -14,6 +14,8 @@ beforeEach(function () {
         'x-change.lifecycle.defaults.user_model' => FakeLifecycleUser::class,
         'x-change.onboarding.issuer_model' => FakeLifecycleUser::class,
     ]);
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
 
     Artisan::call('xchange:lifecycle:prepare', [
         '--seed' => true,
@@ -213,6 +215,61 @@ it('does not double credit wallet when payment confirmation is replayed', functi
 
     expect((float) $wallet->fresh()->balanceFloat)->toBe($balanceBefore + 100.00);
     expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1);
+});
+
+it('returns conflict when provider transaction id belongs to another voucher', function () {
+    $issuer = actingAsTestUser(1_000_000);
+
+    $firstVoucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'issuer_id' => (string) $issuer->id,
+            ],
+        ],
+    ));
+    $secondVoucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'issuer_id' => (string) $issuer->id,
+            ],
+        ],
+    ));
+
+    $this->postJson(route('api.x.v1.vouchers.payment-confirmations.store', [
+        'code' => $firstVoucher->code,
+    ]), [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+        'provider' => 'manual',
+        'provider_reference' => 'REF-API-TXN-CONFLICT-1',
+        'provider_transaction_id' => 'TXN-API-CROSS-VOUCHER-1',
+        'idempotency_key' => 'api-cross-voucher-1',
+    ])->assertOk();
+
+    $response = $this->postJson(route('api.x.v1.vouchers.payment-confirmations.store', [
+        'code' => $secondVoucher->code,
+    ]), [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+        'provider' => 'manual',
+        'provider_reference' => 'REF-API-TXN-CONFLICT-2',
+        'provider_transaction_id' => 'TXN-API-CROSS-VOUCHER-1',
+        'idempotency_key' => 'api-cross-voucher-2',
+    ]);
+
+    $response->assertConflict();
+    $response->assertJsonPath('success', false);
+    $response->assertJsonPath('code', 'VOUCHER_COLLECTION_CONFLICT');
 });
 
 it('confirms collectible voucher payment without authenticated user', function () {

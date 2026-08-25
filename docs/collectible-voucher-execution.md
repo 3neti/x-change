@@ -51,7 +51,9 @@ The target amount is not debited from the issuer wallet at issuance.
 
 ```text
 issue collectible voucher
-→ generate payment QR
+→ generate Pay Code QR
+→ create Payment Attempt
+→ issue provider payment instructions / QR Ph
 → payer pays externally
 → payment confirmation received
 → issuer wallet credited
@@ -80,24 +82,26 @@ Failed payment confirmations are recorded but do not credit the wallet.
 
 Collection no longer depends on `auth()->user()`.
 
-The collection wallet is resolved from voucher metadata:
+New payable and settlement voucher instructions must include an explicit,
+immutable collection wallet at issuance:
 
 ```text
 instructions.metadata.collection_wallet_id
+```
+
+This requirement is enforced by the canonical voucher instruction validation
+boundary. `x-change` no longer silently fills the issuer wallet during generic
+Pay Code issuance.
+
+The collection-time resolver still supports this legacy fallback for vouchers
+issued before the mandatory wallet rule:
+
+```text
 instructions.metadata.issuer_id
 ```
 
-Preferred field:
-
-```text
-collection_wallet_id
-```
-
-Fallback field:
-
-```text
-issuer_id
-```
+That fallback is compatibility-only and must not be treated as a supported
+new-issuance path.
 
 This makes collection safe for:
 
@@ -105,6 +109,33 @@ This makes collection safe for:
 - provider webhooks
 - console lifecycle scenarios
 - QR-driven payment flows
+
+---
+
+## Payment QR vs Payment-Rail QR
+
+There are two distinct artifacts:
+
+```text
+Pay Code QR        identifies the collectible Pay Code route
+Payment-rail QR    comes from provider-generated Payment Attempt instructions
+```
+
+The authoritative payment-rail artifact is produced by the Payment Attempt
+flow:
+
+```text
+CreatePaymentAttempt
+→ IssuePaymentInstructions
+→ FundingProviderAdapterRegistry::createFundingInstructions()
+```
+
+`IssuePaymentInstructions` requires a provider reference, funding address, and
+provider QR code. Do not synthesize QR Ph/payment-rail artifacts from the Pay
+Code QR or from a reusable Funding standing address.
+
+The package-owned `payment_voucher_collection` lifecycle scenario proves this
+path by capturing both artifacts.
 
 ---
 
@@ -141,6 +172,7 @@ Duplicate protection applies to:
 ```text
 idempotency_key
 provider + provider_reference
+provider + provider_transaction_id
 ```
 
 Expected behavior:
@@ -151,6 +183,31 @@ Expected behavior:
 | Same idempotency key + different payload | Conflict |
 | Same provider reference + same payload | Previous result is replayed |
 | Same provider reference + different payload | Conflict |
+| Same provider transaction ID on another voucher | Conflict |
+
+Failed collection attempts are also idempotent. Replayed failed attempts return
+the original failed collection row, while mismatched retries fail with the same
+collection-conflict boundary as successful payments.
+
+Manual payment confirmation is a local/testing convenience. Outside
+`local`/`testing`, the `manual` payment provider is blocked unless
+`x-change.payment.allow_manual_provider_in_production` is deliberately enabled.
+
+---
+
+## Progress and Inspection
+
+For `x-change` payable and settlement behavior, `voucher_collections` is the
+canonical payment-progress source. The low-level `3neti/voucher` wallet-ledger
+helpers remain available for backward compatibility, but product logic should
+use:
+
+```text
+LBHurtado\XChange\Services\VoucherCollectionProgressService
+```
+
+X-Ray projection now includes collectible Pay Code status, collection progress,
+and a `Pay now` next action while there is a remaining amount to collect.
 
 ---
 

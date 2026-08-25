@@ -26,15 +26,20 @@ final readonly class VoucherCollectionJournal
             'authority',
             [],
         );
-        $eventType = $collection->execution_driver
-            === 'x_change_account_funding'
-                ? 'account_funding.pay_code.paid'
-                : 'voucher.collection.completed';
+        $isSucceeded = $collection->isSucceeded();
+        $eventType = match (true) {
+            ! $isSucceeded => 'voucher.collection.failed',
+            $collection->execution_driver === 'x_change_account_funding' => 'account_funding.pay_code.paid',
+            default => 'voucher.collection.completed',
+        };
+        $journalStatus = $isSucceeded ? 'completed' : 'failed';
 
         $this->recorder->record(new ExecutionJournalEntryData(
             eventType: $eventType,
             occurredAt: CarbonImmutable::parse(
-                $collection->completed_at ?? $collection->created_at,
+                $collection->completed_at
+                    ?? $collection->attempted_at
+                    ?? $collection->created_at,
             ),
             actor: new ExecutionActorData(
                 id: (string) ($authority['reference'] ?? ''),
@@ -58,7 +63,7 @@ final readonly class VoucherCollectionJournal
                     'provider_transaction_id' => $collection->provider_transaction_id,
                 ],
             ),
-            idempotencyKey: 'x-change:voucher-collection:completed:'
+            idempotencyKey: 'x-change:voucher-collection:'.$journalStatus.':'
                 .$collection->getKey(),
             payload: [
                 'status' => $collection->status,
@@ -78,7 +83,9 @@ final readonly class VoucherCollectionJournal
             ],
             money: new ExecutionMoneyData(
                 currency: $collection->currency,
-                minorAmount: $collection->collected_amount_minor,
+                minorAmount: $isSucceeded
+                    ? $collection->collected_amount_minor
+                    : $collection->requested_amount_minor,
             ),
             metadata: [
                 'schema' => 'x-change.voucher-collection-journal.v1',

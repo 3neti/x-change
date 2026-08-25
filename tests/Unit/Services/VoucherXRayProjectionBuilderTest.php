@@ -61,3 +61,31 @@ it('projects partially claimed vouchers as partially claimable', function (): vo
 
     expect($projection['status'])->toBe('partially_claimable');
 });
+
+it('projects payable vouchers with collection progress and pay action', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'voucher_type' => 'payable',
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
+            ],
+        ],
+    ));
+
+    $projection = app(VoucherXRayProjectionBuilder::class)->build($voucher);
+
+    expect($projection['status'])->toBe('payable')
+        ->and(data_get($projection, 'collection_progress.target_amount_minor'))->toBe(10000)
+        ->and(data_get($projection, 'collection_progress.remaining_to_collect_minor'))->toBe(10000)
+        ->and($projection['next_actions'][0])->toMatchArray([
+            'key' => 'pay',
+            'label' => 'Pay now',
+        ])
+        ->and($projection['next_actions'][0]['url'])->toContain($voucher->code);
+});

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Data\VoucherMetadataData;
@@ -31,6 +32,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
         $input = $this->withCollectionWalletContext($issuer, $input);
+        $this->assertCollectionWalletPresentForCollectible($input);
         $instructions = VoucherInstructionsData::createFromAttribs($input);
         $this->restoreCustomMetadata($instructions, $input);
         $this->restorePreparedSplashArtworkSnapshot($instructions, $input);
@@ -153,13 +155,30 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
         data_set($input, 'metadata.issuer_id', (string) $issuer->getAuthIdentifier());
 
-        $walletId = data_get($input, 'metadata.collection_wallet_id');
+        return $input;
+    }
 
-        if (! $walletId && isset($issuer->wallet)) {
-            data_set($input, 'metadata.collection_wallet_id', $issuer->wallet->id);
+    /**
+     * @param  array<string, mixed>  $input
+     *
+     * @throws ValidationException
+     */
+    protected function assertCollectionWalletPresentForCollectible(array $input): void
+    {
+        if (
+            ! in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)
+            && data_get($input, 'metadata.flow_type') !== 'collectible'
+        ) {
+            return;
         }
 
-        return $input;
+        if (filled(data_get($input, 'metadata.collection_wallet_id'))) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'metadata.collection_wallet_id' => 'A collection wallet is required for payable Pay Codes.',
+        ]);
     }
 
     /**

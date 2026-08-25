@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\XRay;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 
 class VoucherXRayProjectionBuilder
 {
-    public function __construct(private readonly VoucherSlicePlanProjection $slicePlans) {}
+    public function __construct(
+        private readonly VoucherSlicePlanProjection $slicePlans,
+        private readonly VoucherFlowCapabilityResolverContract $capabilities,
+        private readonly VoucherCollectionProgressService $progress,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -23,6 +30,12 @@ class VoucherXRayProjectionBuilder
         $slicePlan = $sliceVoucher instanceof Voucher
             ? $this->slicePlans->forVoucher($sliceVoucher)
             : [];
+        $flowCapabilities = $sliceVoucher instanceof Voucher
+            ? $this->capabilities->resolve($sliceVoucher)
+            : null;
+        $collectionProgress = $sliceVoucher instanceof Voucher && $flowCapabilities?->can_collect === true
+            ? $this->collectionProgress($sliceVoucher)
+            : null;
 
         return [
             'status' => $status,
@@ -32,13 +45,14 @@ class VoucherXRayProjectionBuilder
             ),
             'issuer' => data_get($voucher, 'issuer_id'),
             'requirements' => $this->requirements($instructions),
+            'collection_progress' => $collectionProgress,
             'slice_plan' => $slicePlan,
             'remaining_slices' => $sliceVoucher instanceof Voucher
                 ? data_get($slicePlan, 'rows', [])
                 : $this->remainingSlices($instructions),
             'redirect_url' => data_get($instructions, 'rider.url'),
             'stages' => $this->stages($voucher, $instructions),
-            'next_actions' => $this->nextActions($status, (string) data_get($voucher, 'code', '')),
+            'next_actions' => $this->nextActions($status, (string) data_get($voucher, 'code', ''), $sliceVoucher),
             'allow' => [
                 'amount' => false,
                 'issuer' => false,
@@ -51,6 +65,16 @@ class VoucherXRayProjectionBuilder
 
     protected function xrayStatus(string $status, mixed $voucher): string
     {
+        if ($voucher instanceof Voucher && $this->capabilities->canCollect($voucher)) {
+            $progress = $this->progress->compute($voucher);
+
+            if ($progress->is_fully_collected) {
+                return 'paid';
+            }
+
+            return 'payable';
+        }
+
         if ($status === 'redeemed' || (bool) data_get($voucher, 'fully_claimed', false) === true) {
             return 'redeemed';
         }
@@ -171,8 +195,22 @@ class VoucherXRayProjectionBuilder
     /**
      * @return array<int, array<string, string>>
      */
-    protected function nextActions(string $status, string $code): array
+    protected function nextActions(string $status, string $code, ?Voucher $voucher = null): array
     {
+        if (
+            $voucher instanceof Voucher
+            && $this->capabilities->canCollect($voucher)
+            && ! $this->progress->compute($voucher)->is_fully_collected
+        ) {
+            return [[
+                'key' => 'pay',
+                'label' => 'Pay now',
+                'url' => Route::has('x-change.pay.show')
+                    ? route('x-change.pay.show', ['code' => $code], false)
+                    : '/x/pay/'.rawurlencode($code),
+            ]];
+        }
+
         if ($status !== 'claimable' && $status !== 'partially_claimable') {
             return [];
         }
@@ -201,5 +239,26 @@ class VoucherXRayProjectionBuilder
             'signature' => 'Signature capture is required by the issuer.',
             default => null,
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function collectionProgress(Voucher $voucher): array
+    {
+        $progress = $this->progress->compute($voucher);
+
+        return [
+            'currency' => $progress->currency,
+            'target_amount_minor' => $progress->target_amount_minor,
+            'collected_total_minor' => $progress->collected_total_minor,
+            'remaining_to_collect_minor' => $progress->remaining_to_collect_minor,
+            'overpaid_amount_minor' => $progress->overpaid_amount_minor,
+            'is_fully_collected' => $progress->is_fully_collected,
+            'is_overpaid' => $progress->is_overpaid,
+            'target_amount' => $progress->targetAmount(),
+            'collected_total' => $progress->collectedTotal(),
+            'remaining' => $progress->remaining(),
+        ];
     }
 }
