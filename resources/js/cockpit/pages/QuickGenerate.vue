@@ -1143,6 +1143,7 @@ function stringValue(value: unknown): string | null {
             >
                 <CockpitQuickGenerateSubmitPanel
                     :client-funds-minor="clientFundsMinor"
+                    :current-user-wallet-id="props.current_user_wallet_id"
                     :mutation-contract="mutationContract"
                     :claim-preview-contract="claimPreviewContract"
                     :draft-contract="draftContract"

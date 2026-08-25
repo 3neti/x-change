@@ -1303,6 +1303,7 @@ describe('Cockpit Quick Generate foundation', () => {
     it('keeps the selected Pay Code kind visible in the Order', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
+                currentUserWalletId: 42,
                 templates: cockpitQuickGenerateTemplates,
                 mutationContract: {
                     runtime_enabled: true,
@@ -1320,15 +1321,27 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(kind.text()).toBe('Disburseable');
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-quick-generate-collection-wallet"]',
+            ).exists(),
+        ).toBe(false);
         expect(kind.classes()).toContain('font-semibold');
         expect(kind.classes()).toContain('normal-case');
         expect(kind.classes()).not.toContain('uppercase');
 
         await type.setValue('payable');
         expect(kind.text()).toBe('Payable');
+        const collectionWallet = wrapper.get<HTMLInputElement>(
+            '[data-testid="cockpit-quick-generate-collection-wallet"]',
+        );
+        expect(collectionWallet.element.value).toBe('42');
+
+        await collectionWallet.setValue('shared-wallet-17');
 
         await type.setValue('settlement');
         expect(kind.text()).toBe('Settlement');
+        expect(collectionWallet.element.value).toBe('shared-wallet-17');
     });
 
     it('shows the authoritative estimated cost beneath the Pay Code amount', async () => {

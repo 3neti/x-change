@@ -55,6 +55,7 @@ class CockpitQuickGeneratePageController extends Controller
             'rider_library' => $this->riderLibrary->for($request->user()),
             'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
             'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
+            'current_user_wallet_id' => $request->user()?->wallet?->getKey(),
         ]);
     }
 

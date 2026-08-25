@@ -15,6 +15,7 @@ it('hydrates quick generate with operator-safe feedback defaults', function (): 
         ->assertJsonPath('props.feedback_defaults.mobile', null)
         ->assertJsonPath('props.feedback_defaults.source', 'authenticated-user')
         ->assertJsonPath('props.feedback_defaults.read_only', true)
+        ->assertJsonPath('props.current_user_wallet_id', $user->wallet->getKey())
         ->assertJsonMissingPath('props.feedback_defaults.raw_payload')
         ->assertJsonMissingPath('props.feedback_defaults.provider_payload')
         ->assertJsonMissingPath('props.feedback_defaults.wallet')

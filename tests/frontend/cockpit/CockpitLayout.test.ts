@@ -1,11 +1,66 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { router } from '@inertiajs/vue3';
+import { useEcho } from '@laravel/echo-vue';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import CockpitBalanceHud from '../../../resources/js/cockpit/components/CockpitBalanceHud.vue';
 import CockpitGlobalHeader from '../../../resources/js/cockpit/components/CockpitGlobalHeader.vue';
 import CockpitLayout from '../../../resources/js/cockpit/layouts/CockpitLayout.vue';
 import { cockpitNavigationItems } from '../../../resources/js/cockpit/navigation';
 
+vi.mock('@inertiajs/vue3', () => ({
+    Link: {
+        props: ['href'],
+        template: '<a :href="href?.url ?? href"><slot /></a>',
+    },
+    router: { reload: vi.fn() },
+}));
+vi.mock('@laravel/echo-vue', () => ({
+    useEcho: vi.fn(),
+}));
+
+afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+});
+
 describe('Cockpit shell layout baseline', () => {
+    it('refreshes the shared balance after a voucher collection settles', async () => {
+        vi.useFakeTimers();
+        mount(CockpitLayout, {
+            props: {
+                cockpitHeaderReadModel: {
+                    schema: 'x-change.cockpit.header-read-model.v2',
+                    authorized: true,
+                    read_only: true,
+                    operating_identity: 'Account holder',
+                    balances: [],
+                    funding_realtime: {
+                        enabled: true,
+                        channel: 'private-balance',
+                        event: '.FundingProjectionChanged',
+                    },
+                },
+            },
+        });
+
+        const listener = vi.mocked(useEcho).mock.calls[0]?.[2] as
+            | ((event: Record<string, string>) => void)
+            | undefined;
+        expect(listener).toBeTypeOf('function');
+
+        listener?.({
+            schema: 'x-change.funding-projection-changed.v1',
+            event_id: 'event-1',
+            reason: 'voucher_collection_settled',
+            occurred_at: '2026-08-25T09:00:00Z',
+        });
+        await vi.advanceTimersByTimeAsync(151);
+
+        expect(router.reload).toHaveBeenCalledWith({
+            only: ['cockpit_header_read_model'],
+        });
+    });
+
     it('renders the operator workspace without a nested application sidebar', () => {
         const wrapper = mount(CockpitLayout, {
             props: {

@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { Check, ExternalLink, Minimize2, ScanQrCode, X } from 'lucide-vue-next';
+import {
+    Check,
+    ExternalLink,
+    LoaderCircle,
+    Minimize2,
+    ScanQrCode,
+    X,
+} from 'lucide-vue-next';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import type { PayCodeCostEstimate } from '../../composables/usePayCodeCostEstimate';
 import type {
@@ -29,6 +36,8 @@ const props = withDefaults(
         claimUrl?: string | null;
         shareCardUrl?: string | null;
         detailUrl?: string | null;
+        collectionAttemptUrl?: string | null;
+        paymentUrl?: string | null;
         costEstimate?: PayCodeCostEstimate | null;
         quantity?: string | number;
     }>(),
@@ -46,6 +55,8 @@ const props = withDefaults(
         claimUrl: null,
         shareCardUrl: null,
         detailUrl: null,
+        collectionAttemptUrl: null,
+        paymentUrl: null,
         costEstimate: null,
         quantity: 1,
     },
@@ -58,6 +69,10 @@ const emit = defineEmits<{
 const dialog = ref<HTMLElement | null>(null);
 const showStampButton = ref<HTMLButtonElement | null>(null);
 const qrExpanded = ref(false);
+const paymentQr = ref<string | null>(null);
+const paymentQrStatus = ref<'idle' | 'loading' | 'ready' | 'failed'>('idle');
+const paymentQrMessage = ref('');
+const loadedPaymentCode = ref<string | null>(null);
 let returnFocus: HTMLElement | null = null;
 let qrTriggerTestId: string | null = null;
 
@@ -100,6 +115,9 @@ const shareContextText = computed<string>(() => {
 
     return `${action} \u00b7 ${formattedAmount.value}`;
 });
+const isCollectible = computed<boolean>(() => {
+    return props.voucherType === 'payable' || props.voucherType === 'settlement';
+});
 
 watch(
     () => props.open,
@@ -116,8 +134,90 @@ watch(
                 : null;
         await nextTick();
         dialog.value?.focus();
+
+        if (isCollectible.value) {
+            void loadPaymentQr();
+        }
     },
+    { immediate: true },
 );
+
+async function loadPaymentQr(): Promise<void> {
+    if (
+        !props.collectionAttemptUrl ||
+        loadedPaymentCode.value === normalizedCode.value
+    ) {
+        return;
+    }
+
+    paymentQrStatus.value = 'loading';
+    paymentQrMessage.value = '';
+
+    try {
+        const response = await fetch(props.collectionAttemptUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...csrfHeader(),
+            },
+        });
+        const body = (await response.json().catch(() => ({}))) as Record<
+            string,
+            unknown
+        >;
+        const payload = nestedString(body, [
+            'attempt',
+            'qr_code',
+            'base64_payload',
+        ]);
+        const mimeType =
+            nestedString(body, ['attempt', 'qr_code', 'mime_type']) ??
+            'image/png';
+
+        if (!response.ok || !payload) {
+            throw new Error('Payment QR unavailable');
+        }
+
+        paymentQr.value = payload.startsWith('data:')
+            ? payload
+            : `data:${mimeType};base64,${payload}`;
+        loadedPaymentCode.value = normalizedCode.value;
+        paymentQrStatus.value = 'ready';
+    } catch {
+        paymentQrStatus.value = 'failed';
+        paymentQrMessage.value =
+            'Payment QR is temporarily unavailable. The public payment page remains available.';
+    }
+}
+
+function csrfHeader(): Record<string, string> {
+    const token = document
+        .querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+        ?.getAttribute('content');
+
+    return token ? { 'X-CSRF-TOKEN': token } : {};
+}
+
+function nestedString(
+    value: Record<string, unknown>,
+    path: string[],
+): string | null {
+    let current: unknown = value;
+
+    for (const key of path) {
+        if (typeof current !== 'object' || current === null) {
+            return null;
+        }
+
+        current = (current as Record<string, unknown>)[key];
+    }
+
+    return typeof current === 'string' && current.trim() !== ''
+        ? current.trim()
+        : null;
+}
 
 onBeforeUnmount((): void => {
     returnFocus = null;
@@ -366,6 +466,55 @@ function handleEscape(): void {
                         class="flex min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70"
                         data-testid="cockpit-issued-pay-code-sharing-sidebar"
                     >
+                        <section
+                            v-if="isCollectible"
+                            class="rounded-xl border border-sky-200 bg-sky-50 p-3 dark:border-sky-900/70 dark:bg-sky-950/30"
+                            data-testid="cockpit-issued-pay-code-payment"
+                        >
+                            <p
+                                class="text-xs font-bold uppercase tracking-[0.14em] text-sky-800 dark:text-sky-200"
+                            >
+                                Payment QR
+                            </p>
+                            <p class="mt-1 text-xs text-sky-900 dark:text-sky-100">
+                                For the payer to scan. This is separate from the claim QR.
+                            </p>
+                            <div
+                                v-if="paymentQrStatus === 'loading'"
+                                class="mt-3 flex min-h-28 items-center justify-center gap-2 text-xs text-sky-800 dark:text-sky-200"
+                                data-testid="cockpit-issued-pay-code-payment-loading"
+                            >
+                                <LoaderCircle class="size-4 animate-spin" aria-hidden="true" />
+                                Preparing QR Ph…
+                            </div>
+                            <img
+                                v-else-if="paymentQrStatus === 'ready' && paymentQr"
+                                :src="paymentQr"
+                                :alt="`Payment QR for Pay Code ${normalizedCode}`"
+                                class="mx-auto mt-3 aspect-square w-full max-w-48 rounded-xl bg-white object-contain p-2"
+                                data-testid="cockpit-issued-pay-code-payment-qr"
+                            />
+                            <p
+                                v-else-if="paymentQrStatus === 'failed'"
+                                class="mt-3 text-xs leading-5 text-amber-800 dark:text-amber-200"
+                                role="status"
+                                data-testid="cockpit-issued-pay-code-payment-error"
+                            >
+                                {{ paymentQrMessage }}
+                            </p>
+                            <a
+                                v-if="paymentUrl"
+                                :href="paymentUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-900 transition hover:bg-sky-100 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-100 dark:hover:bg-sky-950"
+                                data-testid="cockpit-issued-pay-code-payment-link"
+                            >
+                                <ExternalLink class="size-3.5" aria-hidden="true" />
+                                Open public payment page
+                            </a>
+                        </section>
+
                         <CockpitPayCodeShareCard
                             :code="normalizedCode"
                             :claim-url="normalizedClaimUrl"
