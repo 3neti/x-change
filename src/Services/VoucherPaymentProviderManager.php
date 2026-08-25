@@ -16,10 +16,28 @@ class VoucherPaymentProviderManager
         $name = $name ?: (string) config('x-change.payment.default_provider', 'manual');
 
         return match ($name) {
-            'manual' => app(ManualVoucherPaymentProvider::class),
+            'manual' => $this->manual(),
             'null' => app(NullVoucherPaymentProvider::class),
             default => $this->custom($name),
         };
+    }
+
+    protected function manual(): VoucherPaymentProviderContract
+    {
+        if (
+            ! $this->allowsManualProviderByEnvironment()
+            && ! (bool) config('x-change.payment.allow_manual_provider_in_production', false)
+        ) {
+            throw new RuntimeException('Manual voucher payment provider is disabled outside local/testing environments.');
+        }
+
+        return app(ManualVoucherPaymentProvider::class);
+    }
+
+    protected function allowsManualProviderByEnvironment(): bool
+    {
+        return app()->environment(['local', 'testing'])
+            && in_array((string) config('app.env'), ['local', 'testing'], true);
     }
 
     protected function custom(string $name): VoucherPaymentProviderContract

@@ -47,6 +47,10 @@ class DefaultVoucherCollectionWalletResolver implements VoucherCollectionWalletR
             return null;
         }
 
+        /*
+         * Legacy-only fallback for collectible vouchers issued before
+         * collection_wallet_id became mandatory at the instruction boundary.
+         */
         $issuerModel = config('x-change.lifecycle.defaults.user_model')
             ?: config('x-change.onboarding.issuer_model');
 

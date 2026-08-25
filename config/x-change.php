@@ -2587,6 +2587,13 @@ return [
     'payment' => [
         'default_provider' => env('X_CHANGE_PAYMENT_PROVIDER', 'manual'),
 
+        /*
+         * Manual confirmations are a local/testing convenience. Production
+         * must use a provider-backed payment-attempt or webhook path unless
+         * this emergency kill-switch is deliberately enabled.
+         */
+        'allow_manual_provider_in_production' => env('X_CHANGE_PAYMENT_ALLOW_MANUAL_PROVIDER_IN_PRODUCTION', false),
+
         'attempts' => [
             'enabled' => env('X_CHANGE_PAYMENT_ATTEMPTS_ENABLED', true),
             'provider' => env('X_CHANGE_PAYMENT_ATTEMPT_PROVIDER', 'netbank'),

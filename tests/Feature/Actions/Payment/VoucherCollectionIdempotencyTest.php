@@ -156,3 +156,52 @@ it('throws conflict when provider reference is reused with different payload', f
         'provider_transaction_id' => 'TXN-PROVIDER-2',
     ]);
 })->throws(VoucherCollectionConflict::class);
+
+it('throws conflict when provider transaction id already belongs to another voucher', function () {
+    $user = actingAsTestUser();
+
+    $firstVoucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
+            ],
+        ],
+    ));
+    $secondVoucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
+            ],
+        ],
+    ));
+
+    app(CollectVoucherFunds::class)->handle($firstVoucher, [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+        'provider' => 'manual',
+        'provider_reference' => 'REF-TXN-CONFLICT-1',
+        'provider_transaction_id' => 'TXN-CROSS-VOUCHER-1',
+        'idempotency_key' => 'idem-cross-voucher-1',
+    ]);
+
+    app(CollectVoucherFunds::class)->handle($secondVoucher, [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+        'provider' => 'manual',
+        'provider_reference' => 'REF-TXN-CONFLICT-2',
+        'provider_transaction_id' => 'TXN-CROSS-VOUCHER-1',
+        'idempotency_key' => 'idem-cross-voucher-2',
+    ]);
+})->throws(VoucherCollectionConflict::class, 'provider transaction conflict');

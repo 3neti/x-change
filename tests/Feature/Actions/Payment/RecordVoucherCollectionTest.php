@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\Payment\RecordVoucherCollection;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
+use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Models\VoucherCollection;
 
 it('records collection row after successful payment confirmation', function () {
@@ -89,6 +90,105 @@ it('records failed collection attempt', function () {
         ->and($collection->failure_message)->toBe('Payment failed.')
         ->and($collection->isFailed())->toBeTrue();
 });
+
+it('replays failed collection attempts idempotently', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+            ],
+        ],
+    ));
+    $action = app(RecordVoucherCollection::class);
+    $result = new VoucherPaymentResultData(
+        voucher_code: $voucher->code,
+        status: 'failed',
+        amount: 100.00,
+        currency: 'PHP',
+        provider: 'manual',
+        provider_reference: 'REF-FAILED-IDEM',
+        provider_transaction_id: 'TXN-FAILED-IDEM',
+        messages: ['Payment failed.'],
+    );
+    $payload = [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'failed',
+        'provider' => 'manual',
+        'provider_reference' => 'REF-FAILED-IDEM',
+        'provider_transaction_id' => 'TXN-FAILED-IDEM',
+        'idempotency_key' => 'idem-failed-attempt',
+    ];
+
+    $first = $action->handle($voucher, $result, $payload);
+    $replay = $action->handle($voucher, $result, $payload);
+
+    expect($replay->is($first))->toBeTrue()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->getKey())->count())->toBe(1);
+});
+
+it('throws conflict when a failed attempt idempotency key is reused with different payload', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+            ],
+        ],
+    ));
+    $action = app(RecordVoucherCollection::class);
+
+    $action->handle(
+        $voucher,
+        new VoucherPaymentResultData(
+            voucher_code: $voucher->code,
+            status: 'failed',
+            amount: 100.00,
+            currency: 'PHP',
+            provider: 'manual',
+            provider_reference: 'REF-FAILED-CONFLICT',
+            provider_transaction_id: 'TXN-FAILED-CONFLICT',
+            messages: ['Payment failed.'],
+        ),
+        [
+            'amount' => 100.00,
+            'currency' => 'PHP',
+            'status' => 'failed',
+            'provider' => 'manual',
+            'provider_reference' => 'REF-FAILED-CONFLICT',
+            'provider_transaction_id' => 'TXN-FAILED-CONFLICT',
+            'idempotency_key' => 'idem-failed-conflict',
+        ],
+    );
+
+    $action->handle(
+        $voucher,
+        new VoucherPaymentResultData(
+            voucher_code: $voucher->code,
+            status: 'failed',
+            amount: 50.00,
+            currency: 'PHP',
+            provider: 'manual',
+            provider_reference: 'REF-FAILED-CONFLICT',
+            provider_transaction_id: 'TXN-FAILED-CONFLICT',
+            messages: ['Payment failed.'],
+        ),
+        [
+            'amount' => 50.00,
+            'currency' => 'PHP',
+            'status' => 'failed',
+            'provider' => 'manual',
+            'provider_reference' => 'REF-FAILED-CONFLICT',
+            'provider_transaction_id' => 'TXN-FAILED-CONFLICT',
+            'idempotency_key' => 'idem-failed-conflict',
+        ],
+    );
+})->throws(VoucherCollectionConflict::class);
 
 it('increments collection number per voucher', function () {
     $voucher = issueVoucher(validVoucherInstructions(

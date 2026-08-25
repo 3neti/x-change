@@ -942,6 +942,24 @@ return [
             ],
         ],
 
+        'payment_voucher_collection' => [
+            'label' => 'Payment Voucher Collection',
+            'mode' => 'payment_voucher_collection',
+            'amount' => 0,
+            'target_amount' => 100,
+            'currency' => 'PHP',
+            'prefix' => 'PAY',
+            'mask' => '****',
+            'payment' => [
+                'provider' => env('X_CHANGE_PAYMENT_ATTEMPT_PROVIDER', 'netbank'),
+                'verify' => false,
+            ],
+            'meta' => [
+                'family' => 'payment',
+                'tags' => ['payable', 'collectible', 'payment-attempt', 'provider-qr'],
+            ],
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Contract-bridge lifecycle scenarios
