@@ -13,6 +13,7 @@ import {
     LoaderCircle,
     MessageSquareText,
     Palette,
+    QrCode,
     RotateCcw,
     Save,
     Sparkles,
@@ -86,6 +87,7 @@ import CockpitFeedbackDestinationInput from './CockpitFeedbackDestinationInput.v
 import CockpitFieldHelp from './CockpitFieldHelp.vue';
 import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
+import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
 import CockpitRiderArtworkInspector from './CockpitRiderArtworkInspector.vue';
 import CockpitRiderArtworkThumbnail from './CockpitRiderArtworkThumbnail.vue';
@@ -785,6 +787,9 @@ const startingPoint = ref<'blank' | 'last' | 'template'>(
 );
 const templatePickerOpen = ref(false);
 const saveTemplateOpen = ref(false);
+const stampPreviewOpen = ref(false);
+const stampPreviewCloseElement = ref<HTMLButtonElement | null>(null);
+const showStampButtonElement = ref<HTMLButtonElement | null>(null);
 const orderOptionsOpen = ref(false);
 const saveTemplateName = ref('');
 const saveTemplateDescription = ref('');
@@ -807,6 +812,20 @@ onMounted((): void => {
 async function focusAmountEditor(): Promise<void> {
     await nextTick();
     amountInputElement.value?.focus();
+}
+
+async function openStampPreview(): Promise<void> {
+    stampPreviewOpen.value = true;
+
+    await nextTick();
+    stampPreviewCloseElement.value?.focus();
+}
+
+async function closeStampPreview(): Promise<void> {
+    stampPreviewOpen.value = false;
+
+    await nextTick();
+    showStampButtonElement.value?.focus();
 }
 
 watch(
@@ -5627,6 +5646,75 @@ function instructionRecord(
         @submit.prevent="submit"
     >
         <div
+            v-if="stampPreviewOpen"
+            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            data-testid="cockpit-quick-generate-stamp-preview"
+            @click.self="closeStampPreview"
+            @keydown.esc.stop.prevent="closeStampPreview"
+        >
+            <section
+                class="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl sm:max-w-4xl sm:rounded-3xl sm:p-6 dark:bg-slate-950"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="quick-generate-stamp-preview-title"
+            >
+                <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300"
+                        >
+                            Live Preview
+                        </p>
+                        <h3
+                            id="quick-generate-stamp-preview-title"
+                            class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50"
+                        >
+                            Pay Code Stamp
+                        </h3>
+                        <p
+                            class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                        >
+                            Review the Stamp and Estimated Cost before issuing.
+                        </p>
+                    </div>
+                    <button
+                        ref="stampPreviewCloseElement"
+                        type="button"
+                        class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                        aria-label="Close Stamp preview"
+                        data-testid="cockpit-quick-generate-stamp-preview-close"
+                        @click="closeStampPreview"
+                    >
+                        <X class="size-4" aria-hidden="true" />
+                    </button>
+                </div>
+
+                <div class="mt-5 min-w-0">
+                    <CockpitPayCodeCanvas
+                        presentation="live"
+                        :amount="amount"
+                        :currency="currency"
+                        :recipient="payeeDisplayReference"
+                        :purpose="purpose"
+                        :claim-outcome="claimOutcome"
+                        :voucher-type="voucherType"
+                        :expiry="canvasExpiryLabel"
+                        :instruction-keys="canvasInstructionKeys"
+                        :issued-code="resultCode"
+                        :has-rider-design="usesRiderArtwork"
+                        :rider-design-source="riderStampPreview.source"
+                        :rider-design-document="riderCanvasArtworkDocument"
+                        :rider-stamp="riderStampPreview"
+                        :cost-estimate="livePricingEstimate"
+                        :cost-loading="livePricingEstimating"
+                        :cost-error="livePricingEstimateError"
+                        :quantity="count"
+                    />
+                </div>
+            </section>
+        </div>
+
+        <div
             v-if="templatePickerOpen"
             class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
             data-testid="cockpit-quick-generate-template-picker"
@@ -5921,47 +6009,19 @@ function instructionRecord(
             class="min-w-0 rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
             data-testid="cockpit-quick-generate-order-card"
         >
-            <div
-                class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between"
-            >
-                <div class="min-w-0 flex-1">
-                    <h4
-                        id="cockpit-quick-generate-order-composer-title"
-                        class="text-lg font-semibold text-slate-950 dark:text-slate-50"
-                    >
-                        Order
-                    </h4>
-                </div>
-                <button
-                    type="submit"
-                    class="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-auto dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-                    data-testid="cockpit-quick-generate-submit-button"
-                    :disabled="!canSubmit || processing"
+            <div class="min-w-0">
+                <h4
+                    id="cockpit-quick-generate-order-composer-title"
+                    class="text-lg font-semibold text-slate-950 dark:text-slate-50"
                 >
-                    <LoaderCircle
-                        v-if="processing"
-                        class="size-4 animate-spin"
-                        aria-hidden="true"
-                        data-testid="cockpit-quick-generate-issue-spinner"
-                    />
-                    <TicketCheck
-                        v-else
-                        class="size-4"
-                        aria-hidden="true"
-                        data-testid="cockpit-quick-generate-issue-icon"
-                    />
-                    {{
-                        processing
-                            ? 'Issuing…'
-                            : onboardingEnabled
-                              ? 'Issue Invitation'
-                              : 'Issue Pay Code'
-                    }}
-                </button>
+                    Order
+                </h4>
+                <p
+                    class="mt-1 min-w-0 text-sm text-slate-600 dark:text-slate-300"
+                >
+                    Set the value, payee, and purpose.
+                </p>
             </div>
-            <p class="mt-1 min-w-0 text-sm text-slate-600 dark:text-slate-300">
-                Set the value, payee, and purpose.
-            </p>
             <div class="mt-3 flex flex-wrap items-center gap-2">
                 <span
                     class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
@@ -6096,6 +6156,47 @@ function instructionRecord(
                         >
                             —
                         </span>
+                    </div>
+                    <div
+                        class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center"
+                        data-testid="cockpit-quick-generate-amount-actions"
+                    >
+                        <button
+                            ref="showStampButtonElement"
+                            type="button"
+                            class="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200"
+                            data-testid="cockpit-quick-generate-show-stamp"
+                            @click="openStampPreview"
+                        >
+                            <QrCode class="size-4" aria-hidden="true" />
+                            Show Stamp
+                        </button>
+                        <button
+                            type="submit"
+                            class="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-auto dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                            data-testid="cockpit-quick-generate-submit-button"
+                            :disabled="!canSubmit || processing"
+                        >
+                            <LoaderCircle
+                                v-if="processing"
+                                class="size-4 animate-spin"
+                                aria-hidden="true"
+                                data-testid="cockpit-quick-generate-issue-spinner"
+                            />
+                            <TicketCheck
+                                v-else
+                                class="size-4"
+                                aria-hidden="true"
+                                data-testid="cockpit-quick-generate-issue-icon"
+                            />
+                            {{
+                                processing
+                                    ? 'Issuing…'
+                                    : onboardingEnabled
+                                      ? 'Issue Invitation'
+                                      : 'Issue Pay Code'
+                            }}
+                        </button>
                     </div>
                 </div>
                 <label

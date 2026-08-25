@@ -263,6 +263,134 @@ describe('Cockpit Quick Generate foundation', () => {
         host.remove();
     });
 
+    it('previews the current Stamp beside Amount without changing or submitting the Order', async () => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: host,
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+            .setValue('725');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-primary-purpose"]')
+            .setValue('Airport transfer');
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-order-options-toggle"]')
+            .trigger('click');
+        await wrapper
+            .get('input[name="rider-stamp-copy-source"][value="custom"]')
+            .setValue(true);
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-rider-stamp-title"]')
+            .setValue('Priority Airport Ride');
+        await flushPromises();
+
+        const orderCard = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-card"]',
+        );
+        const actionRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-amount-actions"]',
+        );
+        const showStamp = actionRow.get(
+            '[data-testid="cockpit-quick-generate-show-stamp"]',
+        );
+
+        expect(
+            orderCard
+                .get('h4')
+                .element.parentElement?.contains(actionRow.element),
+        ).toBe(false);
+        expect(
+            actionRow
+                .find('[data-testid="cockpit-quick-generate-submit-button"]')
+                .exists(),
+        ).toBe(true);
+
+        await showStamp.trigger('click');
+        await flushPromises();
+
+        const preview = wrapper.get(
+            '[data-testid="cockpit-quick-generate-stamp-preview"]',
+        );
+        const dialog = preview.get('[role="dialog"]');
+
+        expect(dialog.attributes('aria-modal')).toBe('true');
+        expect(document.activeElement).toBe(
+            preview.get(
+                '[data-testid="cockpit-quick-generate-stamp-preview-close"]',
+            ).element,
+        );
+        expect(
+            preview
+                .get('[data-testid="cockpit-pay-code-canvas-amount"]')
+                .text(),
+        ).toBe('₱725.00');
+        expect(
+            preview
+                .get('[data-testid="cockpit-pay-code-canvas-purpose"]')
+                .text(),
+        ).toBe('Airport transfer');
+        expect(
+            preview
+                .get('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
+                .text(),
+        ).toContain('Priority Airport Ride');
+
+        await preview
+            .get('[data-testid="cockpit-pay-code-canvas-back-button"]')
+            .trigger('click');
+
+        expect(
+            preview
+                .get('[data-testid="cockpit-pay-code-canvas-back"]')
+                .isVisible(),
+        ).toBe(true);
+
+        await preview
+            .get('[data-testid="cockpit-quick-generate-stamp-preview-close"]')
+            .trigger('click');
+        await flushPromises();
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-stamp-preview"]')
+                .exists(),
+        ).toBe(false);
+        expect(document.activeElement).toBe(showStamp.element);
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element.value,
+        ).toBe('725.00');
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-purpose"]',
+            ).element.value,
+        ).toBe('Airport transfer');
+
+        await showStamp.trigger('click');
+        await flushPromises();
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-stamp-preview"]')
+            .trigger('keydown', { key: 'Escape' });
+        await flushPromises();
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-stamp-preview"]')
+                .exists(),
+        ).toBe(false);
+
+        wrapper.unmount();
+        host.remove();
+    });
+
     it('keeps secondary Order options collapsed while exposing active configuration', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
@@ -333,7 +461,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.text()).toContain('1');
     });
 
-    it('stacks the Order header on mobile and keeps every Claim Experience step shrinkable', () => {
+    it('keeps the Order header simple, places actions beside Amount, and keeps every Claim Experience step shrinkable', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -345,10 +473,15 @@ describe('Cockpit Quick Generate foundation', () => {
         const submitButton = orderCard.get(
             '[data-testid="cockpit-quick-generate-submit-button"]',
         );
+        const actionRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-amount-actions"]',
+        );
+        const titleBlock = orderCard.get('h4').element.parentElement;
 
-        expect(
-            orderCard.get('h4').element.parentElement?.parentElement?.className,
-        ).toContain('flex-col');
+        expect(titleBlock?.contains(submitButton.element)).toBe(false);
+        expect(actionRow.element.contains(submitButton.element)).toBe(true);
+        expect(actionRow.classes()).toContain('flex-col');
+        expect(actionRow.classes()).toContain('sm:flex-row');
         expect(submitButton.classes()).toContain('w-full');
         expect(submitButton.classes()).toContain('sm:w-auto');
 
