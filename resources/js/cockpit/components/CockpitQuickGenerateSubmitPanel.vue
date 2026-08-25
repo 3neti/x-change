@@ -5647,7 +5647,7 @@ function instructionRecord(
     >
         <div
             v-if="stampPreviewOpen"
-            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            class="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
             data-testid="cockpit-quick-generate-stamp-preview"
             @click.self="closeStampPreview"
             @keydown.esc.stop.prevent="closeStampPreview"
@@ -5716,7 +5716,7 @@ function instructionRecord(
 
         <div
             v-if="templatePickerOpen"
-            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            class="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
             data-testid="cockpit-quick-generate-template-picker"
             @click.self="templatePickerOpen = false"
         >
@@ -5844,7 +5844,7 @@ function instructionRecord(
 
         <div
             v-if="saveTemplateOpen"
-            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+            class="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
             data-testid="cockpit-quick-generate-save-template-dialog"
             @click.self="saveTemplateOpen = false"
         >

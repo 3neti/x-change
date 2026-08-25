@@ -225,7 +225,12 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .get('[data-testid="cockpit-quick-generate-template-picker"]')
                 .classes(),
-        ).toContain('z-50');
+        ).toContain('z-[60]');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-template-picker"]')
+                .classes(),
+        ).not.toContain('z-50');
 
         await wrapper
             .get('[aria-label="Close template picker"]')
@@ -240,7 +245,14 @@ describe('Cockpit Quick Generate foundation', () => {
                     '[data-testid="cockpit-quick-generate-save-template-dialog"]',
                 )
                 .classes(),
-        ).toContain('z-50');
+        ).toContain('z-[60]');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-save-template-dialog"]',
+                )
+                .classes(),
+        ).not.toContain('z-50');
 
         await wrapper
             .get('[aria-label="Close save template dialog"]')
@@ -320,6 +332,8 @@ describe('Cockpit Quick Generate foundation', () => {
         );
         const dialog = preview.get('[role="dialog"]');
 
+        expect(preview.classes()).toContain('z-[60]');
+        expect(preview.classes()).not.toContain('z-50');
         expect(dialog.attributes('aria-modal')).toBe('true');
         expect(document.activeElement).toBe(
             preview.get(
