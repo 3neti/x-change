@@ -3,6 +3,8 @@ import { router, useForm, usePoll } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import {
     CirclePlus,
+    Eye,
+    EyeOff,
     FileText,
     Landmark,
     QrCode,
@@ -36,6 +38,35 @@ import type {
 } from '../types';
 
 const props = defineProps<CockpitFundingPageProps>();
+const fundingBalanceValuesVisible = ref(false);
+const clientFundsMetric = computed(() =>
+    props.cockpit_header_read_model?.balances?.find(
+        (balance) => balance.key === 'internal',
+    ),
+);
+const clientFundsMinor = computed<number | null>(() => {
+    const amount = clientFundsMetric.value?.amount_minor;
+
+    return typeof amount === 'number' && Number.isFinite(amount)
+        ? Math.round(amount)
+        : null;
+});
+const clientFundsValue = computed<string>(() => {
+    if (clientFundsMinor.value === null) {
+        return 'Not available';
+    }
+
+    const formattedValue = clientFundsMetric.value?.value.trim();
+
+    return formattedValue !== undefined && formattedValue !== ''
+        ? formattedValue
+        : 'Available';
+});
+
+function toggleFundingBalanceVisibility(): void {
+    fundingBalanceValuesVisible.value = !fundingBalanceValuesVisible.value;
+}
+
 const fundingRequests = computed(
     () =>
         props.funding_requests ?? {
@@ -1287,6 +1318,57 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-funding-header"
             >
+                <section
+                    class="rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-sm md:hidden dark:bg-slate-800"
+                    aria-labelledby="cockpit-funding-balance-hero-label"
+                    data-testid="cockpit-funding-balance-hero"
+                >
+                    <div class="flex min-w-0 items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p
+                                id="cockpit-funding-balance-hero-label"
+                                class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300"
+                            >
+                                Client Funds
+                            </p>
+                            <p
+                                class="mt-1 truncate text-3xl font-bold tracking-tight tabular-nums"
+                                data-testid="cockpit-funding-balance-hero-value"
+                            >
+                                {{
+                                    fundingBalanceValuesVisible
+                                        ? clientFundsValue
+                                        : '••••••'
+                                }}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-white/20 text-slate-200 transition hover:border-white/35 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                            :aria-label="
+                                fundingBalanceValuesVisible
+                                    ? 'Hide Client Funds balance'
+                                    : 'Show Client Funds balance'
+                            "
+                            :aria-pressed="fundingBalanceValuesVisible"
+                            :title="
+                                fundingBalanceValuesVisible
+                                    ? 'Hide Client Funds balance'
+                                    : 'Show Client Funds balance'
+                            "
+                            data-testid="cockpit-funding-balance-hero-toggle"
+                            @click="toggleFundingBalanceVisibility"
+                        >
+                            <EyeOff
+                                v-if="fundingBalanceValuesVisible"
+                                class="size-5"
+                                aria-hidden="true"
+                            />
+                            <Eye v-else class="size-5" aria-hidden="true" />
+                        </button>
+                    </div>
+                </section>
+
                 <div
                     class="hidden md:block"
                     data-testid="cockpit-funding-orientation"
@@ -1311,7 +1393,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 </div>
 
                 <section
-                    class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:mt-3"
+                    class="hidden grid-cols-4 gap-2 md:mt-3 md:grid"
                     aria-label="Funding summary"
                     data-testid="cockpit-funding-summary-strip"
                 >
@@ -1431,6 +1513,45 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </div>
                     </details>
                 </div>
+
+                <details
+                    class="mt-3 border-t border-slate-200 pt-3 md:hidden dark:border-slate-800"
+                    data-testid="cockpit-funding-mobile-summary"
+                >
+                    <summary
+                        class="cursor-pointer text-xs font-semibold text-slate-500 marker:text-slate-400 dark:text-slate-400"
+                    >
+                        Funding status
+                    </summary>
+                    <section
+                        class="grid grid-cols-2 gap-2 pt-2"
+                        aria-label="Mobile funding summary"
+                        data-testid="cockpit-funding-mobile-summary-strip"
+                    >
+                        <article
+                            v-for="card in summaryCards"
+                            :key="card.key"
+                            class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-950/50"
+                        >
+                            <p
+                                class="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
+                            >
+                                {{ card.label }}
+                            </p>
+                            <p
+                                :class="[
+                                    'mt-0.5 text-base font-semibold tracking-tight',
+                                    card.tone,
+                                ]"
+                            >
+                                {{ card.value }}
+                            </p>
+                            <p class="sr-only">
+                                {{ card.helper }}
+                            </p>
+                        </article>
+                    </section>
+                </details>
 
                 <p
                     class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"

@@ -634,7 +634,9 @@ describe('Cockpit Funding foundation', () => {
             wrapper
                 .get('[data-testid="cockpit-funding-summary-strip"]')
                 .classes(),
-        ).not.toContain('hidden');
+        ).toEqual(
+            expect.arrayContaining(['hidden', 'grid-cols-4', 'md:grid']),
+        );
         expect(
             wrapper
                 .get('[data-testid="funding-mode-self_top_up"]')
@@ -921,6 +923,116 @@ describe('Cockpit Funding foundation', () => {
                 mode: 'rest',
             },
         );
+    });
+
+    it('anchors mobile Funding on masked Client Funds and keeps workflow status in a disclosure', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                cockpit_header_read_model: {
+                    schema: 'x-change.cockpit.header-read-model.v1',
+                    status: 'available',
+                    authorized: true,
+                    read_only: true,
+                    operating_identity: 'Account holder',
+                    balances: [
+                        {
+                            key: 'internal',
+                            label: 'Client Funds',
+                            value: '₱8,241.70',
+                            tone: 'healthy',
+                            amount_minor: 824_170,
+                        },
+                        {
+                            key: 'outstanding',
+                            label: 'Outstanding Pay Codes',
+                            value: '₱250.00',
+                            tone: 'neutral',
+                            amount_minor: 25_000,
+                        },
+                    ],
+                },
+                funding_read_model: fundingReadModel,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+                funding_realtime: {
+                    ...fundingRealtime,
+                    enabled: false,
+                },
+            },
+        });
+
+        const hero = wrapper.get(
+            '[data-testid="cockpit-funding-balance-hero"]',
+        );
+        const heroValue = hero.get(
+            '[data-testid="cockpit-funding-balance-hero-value"]',
+        );
+        const heroToggle = hero.get(
+            '[data-testid="cockpit-funding-balance-hero-toggle"]',
+        );
+        const desktopSummary = wrapper.get(
+            '[data-testid="cockpit-funding-summary-strip"]',
+        );
+        const mobileSummary = wrapper.get(
+            '[data-testid="cockpit-funding-mobile-summary"]',
+        );
+
+        expect(hero.classes()).toContain('md:hidden');
+        expect(heroValue.text()).toBe('••••••');
+        expect(heroToggle.attributes('aria-pressed')).toBe('false');
+        expect(heroToggle.attributes('aria-label')).toBe(
+            'Show Client Funds balance',
+        );
+
+        await heroToggle.trigger('click');
+
+        expect(heroValue.text()).toBe('₱8,241.70');
+        expect(heroToggle.attributes('aria-pressed')).toBe('true');
+        expect(heroToggle.attributes('aria-label')).toBe(
+            'Hide Client Funds balance',
+        );
+        expect(desktopSummary.classes()).toEqual(
+            expect.arrayContaining(['hidden', 'grid-cols-4', 'md:grid']),
+        );
+        expect(mobileSummary.classes()).toContain('md:hidden');
+        expect(mobileSummary.attributes('open')).toBeUndefined();
+        expect(mobileSummary.get('summary').text()).toBe('Funding status');
+        expect(
+            mobileSummary
+                .get('[data-testid="cockpit-funding-mobile-summary-strip"]')
+                .findAll('article'),
+        ).toHaveLength(4);
+        expect(mobileSummary.text()).toEqual(
+            expect.stringContaining('Awaiting Funds'),
+        );
+        expect(mobileSummary.text()).toEqual(
+            expect.stringContaining('Settled Funding'),
+        );
+        expect(mobileSummary.text()).toEqual(
+            expect.stringContaining('Open Suspense'),
+        );
+        expect(mobileSummary.text()).toEqual(
+            expect.stringContaining('Recovery'),
+        );
+
+        const headerHtml = wrapper
+            .get('[data-testid="cockpit-funding-header"]')
+            .html();
+
+        expect(
+            headerHtml.indexOf('cockpit-funding-balance-hero'),
+        ).toBeLessThan(headerHtml.indexOf('cockpit-funding-mode-switcher'));
+        expect(
+            headerHtml.indexOf('cockpit-funding-mode-switcher'),
+        ).toBeLessThan(headerHtml.indexOf('cockpit-funding-mobile-summary'));
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-mode-switcher"]')
+                .get('[role="tablist"]')
+                .classes(),
+        ).toContain('grid-cols-3');
     });
 
     it('omits Treasury oversight for an ordinary Account holder', () => {
