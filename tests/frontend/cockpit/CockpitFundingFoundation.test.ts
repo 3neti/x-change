@@ -634,9 +634,7 @@ describe('Cockpit Funding foundation', () => {
             wrapper
                 .get('[data-testid="cockpit-funding-summary-strip"]')
                 .classes(),
-        ).toEqual(
-            expect.arrayContaining(['hidden', 'grid-cols-4', 'md:grid']),
-        );
+        ).toEqual(expect.arrayContaining(['hidden', 'grid-cols-4', 'md:grid']));
         expect(
             wrapper
                 .get('[data-testid="funding-mode-self_top_up"]')
@@ -746,7 +744,7 @@ describe('Cockpit Funding foundation', () => {
             wrapper.get('[data-testid="cockpit-funding-header"]').text(),
         ).toContain('Add funds using QR Ph, bank transfer, or Pay Code.');
         expect(
-            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
+            wrapper.get('[data-testid="cockpit-funding-more-options"]').text(),
         ).toContain(
             'Funds appear in your Account only after confirmation from the bank or payment provider.',
         );
@@ -925,7 +923,7 @@ describe('Cockpit Funding foundation', () => {
         );
     });
 
-    it('anchors mobile Funding on masked Client Funds and keeps workflow status in a disclosure', async () => {
+    it('anchors mobile Funding on masked Client Funds and orders the active method before merged options', async () => {
         const wrapper = mount(Funding, {
             props: {
                 cockpit_header_read_model: {
@@ -978,6 +976,17 @@ describe('Cockpit Funding foundation', () => {
         const mobileSummary = wrapper.get(
             '[data-testid="cockpit-funding-mobile-summary"]',
         );
+        const page = wrapper.get('[data-testid="cockpit-funding-page"]');
+        const headerShell = wrapper.get(
+            '[data-testid="cockpit-funding-header-shell"]',
+        );
+        const header = wrapper.get('[data-testid="cockpit-funding-header"]');
+        const moreOptions = wrapper.get(
+            '[data-testid="cockpit-funding-more-options"]',
+        );
+        const advancedPaths = moreOptions.get(
+            '[data-testid="funding-advanced-paths"]',
+        );
 
         expect(hero.classes()).toContain('md:hidden');
         expect(heroValue.text()).toBe('••••••');
@@ -997,8 +1006,8 @@ describe('Cockpit Funding foundation', () => {
             expect.arrayContaining(['hidden', 'grid-cols-4', 'md:grid']),
         );
         expect(mobileSummary.classes()).toContain('md:hidden');
-        expect(mobileSummary.attributes('open')).toBeUndefined();
-        expect(mobileSummary.get('summary').text()).toBe('Funding status');
+        expect(mobileSummary.text()).toContain('Funding status');
+        expect(advancedPaths.attributes('open')).toBeUndefined();
         expect(
             mobileSummary
                 .get('[data-testid="cockpit-funding-mobile-summary-strip"]')
@@ -1017,16 +1026,50 @@ describe('Cockpit Funding foundation', () => {
             expect.stringContaining('Recovery'),
         );
 
-        const headerHtml = wrapper
-            .get('[data-testid="cockpit-funding-header"]')
-            .html();
+        const headerHtml = header.html();
 
-        expect(
-            headerHtml.indexOf('cockpit-funding-balance-hero'),
-        ).toBeLessThan(headerHtml.indexOf('cockpit-funding-mode-switcher'));
-        expect(
+        expect(headerHtml.indexOf('cockpit-funding-balance-hero')).toBeLessThan(
             headerHtml.indexOf('cockpit-funding-mode-switcher'),
-        ).toBeLessThan(headerHtml.indexOf('cockpit-funding-mobile-summary'));
+        );
+        expect(headerHtml).not.toContain('funding-advanced-paths');
+        expect(moreOptions.text()).toContain('Other funding options');
+        expect(moreOptions.text()).toContain('Funding status');
+        expect(page.classes()).toEqual(
+            expect.arrayContaining([
+                'flex',
+                'flex-col',
+                'gap-5',
+                'md:block',
+                'md:space-y-5',
+            ]),
+        );
+        expect(headerShell.classes()).toEqual(
+            expect.arrayContaining(['contents', 'md:block']),
+        );
+        expect(header.classes()).toEqual(
+            expect.arrayContaining(['-order-3', 'md:order-none']),
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-standing-funding-address"]')
+                .classes(),
+        ).toEqual(expect.arrayContaining(['-order-2', 'md:order-none']));
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-bank-transfer-funding"]')
+                .classes(),
+        ).toEqual(expect.arrayContaining(['-order-2', 'md:order-none']));
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-funding"]').classes(),
+        ).toEqual(expect.arrayContaining(['-order-2', 'md:order-none']));
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-reviewed-value-funding"]')
+                .classes(),
+        ).toEqual(expect.arrayContaining(['-order-2', 'md:order-none']));
+        expect(moreOptions.classes()).toEqual(
+            expect.arrayContaining(['-order-1', 'md:order-none']),
+        );
         expect(
             wrapper
                 .get('[data-testid="cockpit-funding-mode-switcher"]')

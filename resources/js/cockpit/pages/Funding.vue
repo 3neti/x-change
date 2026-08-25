@@ -1304,173 +1304,185 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
         :cockpit-entry-notice="cockpit_entry_notice"
     >
         <div
-            class="mx-auto max-w-7xl space-y-5"
+            class="mx-auto flex max-w-7xl flex-col gap-5 md:block md:space-y-5"
             data-testid="cockpit-funding-page"
         >
             <div
                 v-if="funding_notice"
-                class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
+                class="-order-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 md:order-none dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
                 role="status"
             >
                 {{ funding_notice }}
             </div>
-            <section
-                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-funding-header"
+            <div
+                class="contents md:block md:rounded-2xl md:border md:border-slate-200 md:bg-white md:px-4 md:py-3 md:shadow-sm md:dark:border-slate-800 md:dark:bg-slate-900"
+                data-testid="cockpit-funding-header-shell"
             >
                 <section
-                    class="rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-sm md:hidden dark:bg-slate-800"
-                    aria-labelledby="cockpit-funding-balance-hero-label"
-                    data-testid="cockpit-funding-balance-hero"
+                    class="-order-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm md:order-none md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none dark:border-slate-800 dark:bg-slate-900 md:dark:bg-transparent"
+                    data-testid="cockpit-funding-header"
                 >
-                    <div class="flex min-w-0 items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p
-                                id="cockpit-funding-balance-hero-label"
-                                class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300"
-                            >
-                                Client Funds
-                            </p>
-                            <p
-                                class="mt-1 truncate text-3xl font-bold tracking-tight tabular-nums"
-                                data-testid="cockpit-funding-balance-hero-value"
-                            >
-                                {{
-                                    fundingBalanceValuesVisible
-                                        ? clientFundsValue
-                                        : '••••••'
-                                }}
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-white/20 text-slate-200 transition hover:border-white/35 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                            :aria-label="
-                                fundingBalanceValuesVisible
-                                    ? 'Hide Client Funds balance'
-                                    : 'Show Client Funds balance'
-                            "
-                            :aria-pressed="fundingBalanceValuesVisible"
-                            :title="
-                                fundingBalanceValuesVisible
-                                    ? 'Hide Client Funds balance'
-                                    : 'Show Client Funds balance'
-                            "
-                            data-testid="cockpit-funding-balance-hero-toggle"
-                            @click="toggleFundingBalanceVisibility"
+                    <section
+                        class="rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-sm md:hidden dark:bg-slate-800"
+                        aria-labelledby="cockpit-funding-balance-hero-label"
+                        data-testid="cockpit-funding-balance-hero"
+                    >
+                        <div
+                            class="flex min-w-0 items-start justify-between gap-3"
                         >
-                            <EyeOff
-                                v-if="fundingBalanceValuesVisible"
-                                class="size-5"
-                                aria-hidden="true"
-                            />
-                            <Eye v-else class="size-5" aria-hidden="true" />
-                        </button>
+                            <div class="min-w-0">
+                                <p
+                                    id="cockpit-funding-balance-hero-label"
+                                    class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300"
+                                >
+                                    Client Funds
+                                </p>
+                                <p
+                                    class="mt-1 truncate text-3xl font-bold tabular-nums tracking-tight"
+                                    data-testid="cockpit-funding-balance-hero-value"
+                                >
+                                    {{
+                                        fundingBalanceValuesVisible
+                                            ? clientFundsValue
+                                            : '••••••'
+                                    }}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-white/20 text-slate-200 transition hover:border-white/35 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                                :aria-label="
+                                    fundingBalanceValuesVisible
+                                        ? 'Hide Client Funds balance'
+                                        : 'Show Client Funds balance'
+                                "
+                                :aria-pressed="fundingBalanceValuesVisible"
+                                :title="
+                                    fundingBalanceValuesVisible
+                                        ? 'Hide Client Funds balance'
+                                        : 'Show Client Funds balance'
+                                "
+                                data-testid="cockpit-funding-balance-hero-toggle"
+                                @click="toggleFundingBalanceVisibility"
+                            >
+                                <EyeOff
+                                    v-if="fundingBalanceValuesVisible"
+                                    class="size-5"
+                                    aria-hidden="true"
+                                />
+                                <Eye v-else class="size-5" aria-hidden="true" />
+                            </button>
+                        </div>
+                    </section>
+
+                    <div
+                        class="hidden md:block"
+                        data-testid="cockpit-funding-orientation"
+                    >
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h1
+                                class="text-xl font-semibold tracking-tight text-slate-950 dark:text-white"
+                            >
+                                Account Funding
+                            </h1>
+                            <span
+                                class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            >
+                                Bank verified
+                            </span>
+                        </div>
+                        <p
+                            class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400"
+                        >
+                            Add funds using QR Ph, bank transfer, or Pay Code.
+                        </p>
+                    </div>
+
+                    <section
+                        class="hidden grid-cols-4 gap-2 md:mt-3 md:grid"
+                        aria-label="Funding summary"
+                        data-testid="cockpit-funding-summary-strip"
+                    >
+                        <article
+                            v-for="card in summaryCards"
+                            :key="card.key"
+                            class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-950/50"
+                        >
+                            <p
+                                class="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
+                            >
+                                {{ card.label }}
+                            </p>
+                            <p
+                                :class="[
+                                    'mt-0.5 text-base font-semibold tracking-tight',
+                                    card.tone,
+                                ]"
+                            >
+                                {{ card.value }}
+                            </p>
+                            <p class="sr-only">
+                                {{ card.helper }}
+                            </p>
+                        </article>
+                    </section>
+
+                    <div
+                        class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800"
+                        data-testid="cockpit-funding-mode-switcher"
+                    >
+                        <div
+                            class="grid grid-cols-3 gap-2"
+                            role="tablist"
+                            aria-label="Funding workspace mode"
+                        >
+                            <button
+                                v-for="mode in primaryFundingWorkspaceModes"
+                                :id="`funding-mode-${mode.key}`"
+                                :key="mode.key"
+                                type="button"
+                                role="tab"
+                                class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-2 py-2 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                                :class="
+                                    activeFundingMode === mode.key
+                                        ? 'bg-slate-950 text-white shadow-sm dark:bg-sky-300 dark:text-slate-950'
+                                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+                                "
+                                :aria-selected="activeFundingMode === mode.key"
+                                :aria-controls="`funding-panel-${mode.key}`"
+                                :data-testid="`funding-mode-${mode.key}`"
+                                @click="activeFundingMode = mode.key"
+                            >
+                                <QrCode
+                                    v-if="mode.key === 'self_top_up'"
+                                    class="size-4 shrink-0"
+                                    aria-hidden="true"
+                                    data-testid="funding-mode-icon-self_top_up"
+                                />
+                                <Landmark
+                                    v-else-if="mode.key === 'bank_transfer'"
+                                    class="size-4 shrink-0"
+                                    aria-hidden="true"
+                                    data-testid="funding-mode-icon-bank_transfer"
+                                />
+                                <TicketCheck
+                                    v-else
+                                    class="size-4 shrink-0"
+                                    aria-hidden="true"
+                                    data-testid="funding-mode-icon-pay_code"
+                                />
+                                <span>{{ mode.label }}</span>
+                            </button>
+                        </div>
                     </div>
                 </section>
-
-                <div
-                    class="hidden md:block"
-                    data-testid="cockpit-funding-orientation"
-                >
-                    <div class="flex flex-wrap items-center gap-2">
-                        <h1
-                            class="text-xl font-semibold tracking-tight text-slate-950 dark:text-white"
-                        >
-                            Account Funding
-                        </h1>
-                        <span
-                            class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
-                        >
-                            Bank verified
-                        </span>
-                    </div>
-                    <p
-                        class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400"
-                    >
-                        Add funds using QR Ph, bank transfer, or Pay Code.
-                    </p>
-                </div>
 
                 <section
-                    class="hidden grid-cols-4 gap-2 md:mt-3 md:grid"
-                    aria-label="Funding summary"
-                    data-testid="cockpit-funding-summary-strip"
+                    class="-order-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm md:order-none md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none dark:border-slate-800 dark:bg-slate-900 md:dark:bg-transparent"
+                    data-testid="cockpit-funding-more-options"
                 >
-                    <article
-                        v-for="card in summaryCards"
-                        :key="card.key"
-                        class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-950/50"
-                    >
-                        <p
-                            class="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
-                        >
-                            {{ card.label }}
-                        </p>
-                        <p
-                            :class="[
-                                'mt-0.5 text-base font-semibold tracking-tight',
-                                card.tone,
-                            ]"
-                        >
-                            {{ card.value }}
-                        </p>
-                        <p class="sr-only">
-                            {{ card.helper }}
-                        </p>
-                    </article>
-                </section>
-
-                <div
-                    class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800"
-                    data-testid="cockpit-funding-mode-switcher"
-                >
-                    <div
-                        class="grid grid-cols-3 gap-2"
-                        role="tablist"
-                        aria-label="Funding workspace mode"
-                    >
-                        <button
-                            v-for="mode in primaryFundingWorkspaceModes"
-                            :id="`funding-mode-${mode.key}`"
-                            :key="mode.key"
-                            type="button"
-                            role="tab"
-                            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-2 py-2 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-                            :class="
-                                activeFundingMode === mode.key
-                                    ? 'bg-slate-950 text-white shadow-sm dark:bg-sky-300 dark:text-slate-950'
-                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
-                            "
-                            :aria-selected="activeFundingMode === mode.key"
-                            :aria-controls="`funding-panel-${mode.key}`"
-                            :data-testid="`funding-mode-${mode.key}`"
-                            @click="activeFundingMode = mode.key"
-                        >
-                            <QrCode
-                                v-if="mode.key === 'self_top_up'"
-                                class="size-4 shrink-0"
-                                aria-hidden="true"
-                                data-testid="funding-mode-icon-self_top_up"
-                            />
-                            <Landmark
-                                v-else-if="mode.key === 'bank_transfer'"
-                                class="size-4 shrink-0"
-                                aria-hidden="true"
-                                data-testid="funding-mode-icon-bank_transfer"
-                            />
-                            <TicketCheck
-                                v-else
-                                class="size-4 shrink-0"
-                                aria-hidden="true"
-                                data-testid="funding-mode-icon-pay_code"
-                            />
-                            <span>{{ mode.label }}</span>
-                        </button>
-                    </div>
-
                     <details
-                        class="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800"
+                        class="md:mt-2 md:border-t md:border-slate-200 md:pt-2 md:dark:border-slate-800"
                         data-testid="funding-advanced-paths"
                         :open="
                             activeFundingMode === 'reviewed_value' ||
@@ -1511,56 +1523,56 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 Lifecycle simulation
                             </button>
                         </div>
-                    </details>
-                </div>
 
-                <details
-                    class="mt-3 border-t border-slate-200 pt-3 md:hidden dark:border-slate-800"
-                    data-testid="cockpit-funding-mobile-summary"
-                >
-                    <summary
-                        class="cursor-pointer text-xs font-semibold text-slate-500 marker:text-slate-400 dark:text-slate-400"
-                    >
-                        Funding status
-                    </summary>
-                    <section
-                        class="grid grid-cols-2 gap-2 pt-2"
-                        aria-label="Mobile funding summary"
-                        data-testid="cockpit-funding-mobile-summary-strip"
-                    >
-                        <article
-                            v-for="card in summaryCards"
-                            :key="card.key"
-                            class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-950/50"
+                        <section
+                            class="mt-3 border-t border-slate-200 pt-3 md:hidden dark:border-slate-800"
+                            data-testid="cockpit-funding-mobile-summary"
                         >
                             <p
-                                class="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
+                                class="text-xs font-semibold text-slate-500 dark:text-slate-400"
                             >
-                                {{ card.label }}
+                                Funding status
                             </p>
-                            <p
-                                :class="[
-                                    'mt-0.5 text-base font-semibold tracking-tight',
-                                    card.tone,
-                                ]"
+                            <div
+                                class="grid grid-cols-2 gap-2 pt-2"
+                                aria-label="Mobile funding summary"
+                                data-testid="cockpit-funding-mobile-summary-strip"
                             >
-                                {{ card.value }}
-                            </p>
-                            <p class="sr-only">
-                                {{ card.helper }}
-                            </p>
-                        </article>
-                    </section>
-                </details>
+                                <article
+                                    v-for="card in summaryCards"
+                                    :key="card.key"
+                                    class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-950/50"
+                                >
+                                    <p
+                                        class="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{ card.label }}
+                                    </p>
+                                    <p
+                                        :class="[
+                                            'mt-0.5 text-base font-semibold tracking-tight',
+                                            card.tone,
+                                        ]"
+                                    >
+                                        {{ card.value }}
+                                    </p>
+                                    <p class="sr-only">
+                                        {{ card.helper }}
+                                    </p>
+                                </article>
+                            </div>
+                        </section>
+                    </details>
 
-                <p
-                    class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
-                    data-testid="funding-confirmation-notice"
-                >
-                    Funds appear in your Account only after confirmation from
-                    the bank or payment provider.
-                </p>
-            </section>
+                    <p
+                        class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                        data-testid="funding-confirmation-notice"
+                    >
+                        Funds appear in your Account only after confirmation
+                        from the bank or payment provider.
+                    </p>
+                </section>
+            </div>
 
             <details
                 v-if="canViewTreasuryControls && treasuryPortfolio"
@@ -1906,6 +1918,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 id="funding-panel-self_top_up"
                 role="tabpanel"
                 aria-labelledby="funding-mode-self_top_up"
+                class="-order-2 md:order-none"
                 data-testid="cockpit-standing-funding-address"
             >
                 <CockpitFundingMethodPanel
@@ -2030,7 +2043,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 id="funding-panel-bank_transfer"
                 role="tabpanel"
                 aria-labelledby="funding-mode-bank_transfer"
-                class="space-y-4"
+                class="-order-2 space-y-4 md:order-none"
                 data-testid="cockpit-bank-transfer-funding"
             >
                 <CockpitFundingMethodPanel
@@ -2342,7 +2355,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 id="funding-panel-pay_code"
                 role="tabpanel"
                 aria-labelledby="funding-mode-pay_code"
-                class="space-y-4"
+                class="-order-2 space-y-4 md:order-none"
                 data-testid="cockpit-pay-code-funding"
             >
                 <CockpitFundingMethodPanel
@@ -2536,7 +2549,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 id="funding-panel-reviewed_value"
                 role="tabpanel"
                 aria-labelledby="funding-mode-reviewed_value"
-                class="space-y-4"
+                class="-order-2 space-y-4 md:order-none"
                 data-testid="cockpit-reviewed-value-funding"
             >
                 <article
