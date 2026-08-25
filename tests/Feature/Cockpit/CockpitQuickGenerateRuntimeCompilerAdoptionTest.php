@@ -66,11 +66,17 @@ it('uses the quick generate draft factory validator and compiler before existing
             'rider' => [
                 'message' => 'Wave 10B compiler adoption',
             ],
+            'voucher_type' => 'payable',
             'metadata' => [
+                'collection_wallet_id' => 'platform-wallet-12',
                 'custom' => [
                     'cockpit' => [
                         'template_key' => 'money-changer',
                         'source' => 'cockpit.quick-generate',
+                        'payee' => [
+                            'kind' => 'open',
+                            'explicit_secret' => false,
+                        ],
                     ],
                 ],
             ],
@@ -91,6 +97,8 @@ it('uses the quick generate draft factory validator and compiler before existing
         ->and(data_get($fakeGeneratePayCode->payloads[0], 'inputs.fields'))->toBe([])
         ->and(data_get($fakeGeneratePayCode->payloads[0], 'count'))->toBe(1)
         ->and(data_get($fakeGeneratePayCode->payloads[0], 'feedback.mobile'))->toBe('09173011987')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'voucher_type'))->toBe('payable')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'metadata.collection_wallet_id'))->toBe('platform-wallet-12')
         ->and(data_get($fakeGeneratePayCode->payloads[0], 'metadata.custom.cockpit.template_key'))->toBe('money-changer')
         ->and(data_get($fakeGeneratePayCode->payloads[0], '_meta.source'))->toBe('cockpit.quick-generate')
         ->and(data_get($fakeGeneratePayCode->payloads[0], '_meta.idempotency_key'))->toBe('idem-wave-10b')

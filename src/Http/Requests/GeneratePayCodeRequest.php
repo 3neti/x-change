@@ -222,6 +222,7 @@ class GeneratePayCodeRequest extends FormRequest
             'slice_plan.max_slices' => ['nullable', 'integer', 'min:1'],
             'slice_plan.min_amount_minor' => ['nullable', 'integer', 'min:1'],
             'metadata' => ['nullable', 'array'],
+            'metadata.collection_wallet_id' => ['nullable', 'string', 'max:190'],
             'metadata.campaign' => ['nullable', 'array'],
             'metadata.campaign.planning_key' => ['nullable', 'string', 'max:120'],
             'metadata.campaign.execution_id' => ['nullable', 'string', 'max:120'],
