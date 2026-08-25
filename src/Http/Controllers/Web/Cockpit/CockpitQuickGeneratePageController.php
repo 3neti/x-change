@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Cockpit\RiderLibraryReadModel;
@@ -24,6 +25,7 @@ class CockpitQuickGeneratePageController extends Controller
         private readonly RiderLibraryReadModel $riderLibrary,
         private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private readonly SettlementRailCapabilityRegistryContract $settlementRails,
+        private readonly WalletAccessContract $wallets,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -55,8 +57,19 @@ class CockpitQuickGeneratePageController extends Controller
             'rider_library' => $this->riderLibrary->for($request->user()),
             'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
             'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
-            'current_user_wallet_id' => $request->user()?->wallet?->getKey(),
+            'current_user_wallet_id' => $this->currentUserWalletId($request),
         ]);
+    }
+
+    private function currentUserWalletId(Request $request): string|int|null
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        return $this->wallets->resolveForUser($user)->getKey();
     }
 
     /**
