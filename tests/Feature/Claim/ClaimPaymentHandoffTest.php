@@ -17,7 +17,8 @@ it('hands a collectible Pay Code from the canonical claim page to the payment pa
         ->assertJsonPath('component', 'x-change/claim/PaymentHandoff')
         ->assertJsonPath('props.code', (string) $voucher->code)
         ->assertJsonPath('props.payment_url', route('x-change.pay.show', ['code' => $voucher->code]))
-        ->assertJsonPath('props.is_fully_collected', false);
+        ->assertJsonPath('props.is_fully_collected', false)
+        ->assertJsonPath('props.receipt_summary', null);
 
     expect(VoucherClaim::query()->count())->toBe(0)
         ->and(PaymentAttempt::query()->count())->toBe(0);
@@ -51,7 +52,12 @@ it('shows a fully paid collectible Pay Code variant without a payment call to ac
         ->assertJsonPath('component', 'x-change/claim/PaymentHandoff')
         ->assertJsonPath('props.code', (string) $voucher->code)
         ->assertJsonPath('props.payment_url', null)
-        ->assertJsonPath('props.is_fully_collected', true);
+        ->assertJsonPath('props.is_fully_collected', true)
+        ->assertJsonPath('props.receipt_summary.amount_paid_minor', 10000)
+        ->assertJsonPath('props.receipt_summary.currency', 'PHP')
+        ->assertJson(fn ($json) => $json
+            ->whereType('props.receipt_summary.completed_at', 'string')
+            ->etc());
 });
 
 it('keeps redeemable Pay Codes on the canonical claim experience', function (): void {

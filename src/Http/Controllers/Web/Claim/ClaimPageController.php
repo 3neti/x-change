@@ -19,6 +19,7 @@ use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimSurfaceData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
+use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 
@@ -36,6 +37,7 @@ class ClaimPageController extends Controller
         ClaimShareCardUrlResolverContract $shareCardUrls,
         ClaimEntryResponseFactory $responses,
         ClaimSurfaceResolverContract $claimSurfaces,
+        PaymentReceiptReadModel $receipts,
     ): Response|RedirectResponse {
         $code = strtoupper(trim($code));
         $voucher = Voucher::query()->where('code', $code)->first();
@@ -51,10 +53,15 @@ class ClaimPageController extends Controller
 
         if (! $flowCapabilities->can_disburse) {
             if ($flowCapabilities->can_collect) {
+                $collection = $collectionProgress->compute($voucher);
+
                 return $responses->paymentHandoff(
                     code: $code,
                     paymentUrl: route('x-change.pay.show', ['code' => $code]),
-                    isFullyCollected: $collectionProgress->compute($voucher)->is_fully_collected,
+                    isFullyCollected: $collection->is_fully_collected,
+                    receiptSummary: $collection->is_fully_collected
+                        ? $receipts->summaryForVoucher($voucher, $collection->currency)
+                        : null,
                 );
             }
 

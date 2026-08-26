@@ -42,19 +42,25 @@ describe('PaymentHandoff page', () => {
             },
         });
 
-        expect(wrapper.get('[data-testid="claim-step-shell"]').attributes('data-tone')).toBe(
-            'neutral',
+        expect(
+            wrapper
+                .get('[data-testid="claim-step-shell"]')
+                .attributes('data-tone'),
+        ).toBe('neutral');
+        expect(wrapper.get('[data-testid="credit-card-icon"]').exists()).toBe(
+            true,
         );
-        expect(wrapper.get('[data-testid="credit-card-icon"]').exists()).toBe(true);
-        expect(wrapper.get('[data-testid="payment-handoff-title"]').text()).toBe(
-            'This Pay Code is for payment',
-        );
-        expect(wrapper.get('[data-testid="payment-handoff-page"]').text()).toContain(
-            'PAY1',
-        );
-        expect(wrapper.get('[data-testid="payment-handoff-open-payment"] a').attributes('href')).toBe(
-            '/x/pay/PAY1',
-        );
+        expect(
+            wrapper.get('[data-testid="payment-handoff-title"]').text(),
+        ).toBe('This Pay Code is for payment');
+        expect(
+            wrapper.get('[data-testid="payment-handoff-page"]').text(),
+        ).toContain('PAY1');
+        expect(
+            wrapper
+                .get('[data-testid="payment-handoff-open-payment"] a')
+                .attributes('href'),
+        ).toBe('/x/pay/PAY1');
     });
 
     it('hides the payment action for a fully paid collectible Pay Code', () => {
@@ -63,18 +69,56 @@ describe('PaymentHandoff page', () => {
                 code: 'PAID1',
                 payment_url: null,
                 is_fully_collected: true,
+                receipt_summary: {
+                    amount_paid_minor: 10000,
+                    currency: 'PHP',
+                    completed_at: '2026-08-26T08:30:00+08:00',
+                },
             },
         });
 
-        expect(wrapper.get('[data-testid="claim-step-shell"]').attributes('data-tone')).toBe(
-            'success',
-        );
-        expect(wrapper.get('[data-testid="check-circle-icon"]').exists()).toBe(true);
-        expect(wrapper.get('[data-testid="payment-handoff-title"]').text()).toBe(
-            'This Pay Code has already been fully paid',
+        expect(
+            wrapper
+                .get('[data-testid="claim-step-shell"]')
+                .attributes('data-tone'),
+        ).toBe('success');
+        expect(wrapper.get('[data-testid="check-circle-icon"]').exists()).toBe(
+            true,
         );
         expect(
-            wrapper.find('[data-testid="payment-handoff-open-payment"]').exists(),
+            wrapper.get('[data-testid="payment-handoff-title"]').text(),
+        ).toBe('This Pay Code has already been fully paid');
+        expect(
+            wrapper
+                .find('[data-testid="payment-handoff-open-payment"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .get('[data-testid="payment-handoff-receipt-summary"]')
+                .text(),
+        ).toContain('₱100.00');
+        expect(
+            wrapper
+                .get('[data-testid="payment-handoff-receipt-completed"]')
+                .text(),
+        ).toContain('Completed');
+    });
+
+    it('does not invent receipt details when no summary is available', () => {
+        const wrapper = mount(PaymentHandoff, {
+            props: {
+                code: 'PAID2',
+                payment_url: null,
+                is_fully_collected: true,
+                receipt_summary: null,
+            },
+        });
+
+        expect(
+            wrapper
+                .find('[data-testid="payment-handoff-receipt-summary"]')
+                .exists(),
         ).toBe(false);
     });
 });

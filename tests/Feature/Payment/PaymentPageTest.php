@@ -23,6 +23,7 @@ beforeEach(function (): void {
     config()->set('x-change.funding.providers.netbank.enabled', true);
     config()->set('x-change.payment.attempts.enabled', true);
     config()->set('x-change.payment.attempts.provider', 'netbank');
+    config()->set('x-change.payment.attempts.ui_refresh_interval_milliseconds', 750);
 
     $this->paymentAdapter = new FakeFundingProviderAdapter;
     $this->app->instance(FakeFundingProviderAdapter::class, $this->paymentAdapter);
@@ -45,6 +46,7 @@ it('renders a read-only collectible payment page without sensitive instructions'
         ->assertJsonPath('props.payment.amount_due_minor', 10000)
         ->assertJsonPath('props.payment.provider', 'netbank')
         ->assertJsonPath('props.payment.can_create_attempt', true)
+        ->assertJsonPath('props.payment.poll_interval_ms', 1000)
         ->assertJsonPath('props.payment.attempt', null)
         ->assertJsonPath('props.payment.receipt', null);
 });

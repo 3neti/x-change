@@ -1,6 +1,26 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, router, usePoll } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
+import {
+    CheckCircle2,
+    CreditCard,
+    Loader2,
+    Printer,
+    ReceiptText,
+    RefreshCw,
+    ScanLine,
+} from 'lucide-vue-next';
 import { store as createPaymentAttempt } from '@/routes/x-change/pay/attempts';
 import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/checks';
 
@@ -51,6 +71,7 @@ type PaymentReadModel = {
     provider: string;
     provider_available: boolean;
     can_create_attempt: boolean;
+    poll_interval_ms: number;
     attempt: PaymentAttempt | null;
     receipt: PaymentReceipt | null;
 };
@@ -59,7 +80,6 @@ const props = defineProps<{
     payment: PaymentReadModel;
     notice?: string | null;
 }>();
-
 const creating = ref(false);
 const checking = ref(false);
 const selectedMethod = ref<'qr' | null>(props.payment.attempt ? 'qr' : null);
@@ -74,17 +94,34 @@ function money(amountMinor: number, currency: string): string {
 const amountDue = computed(() =>
     money(props.payment.amount_due_minor, props.payment.currency),
 );
-
 const attemptAmount = computed(() =>
     money(
         props.payment.attempt?.amount_minor ?? 0,
         props.payment.attempt?.currency ?? props.payment.currency,
     ),
 );
+const shouldPoll = computed(
+    () =>
+        props.payment.attempt !== null &&
+        props.payment.attempt.can_check === true &&
+        !props.payment.is_fully_paid,
+);
+const { start: startPaymentPoll, stop: stopPaymentPoll } = usePoll(
+    Math.max(1000, props.payment.poll_interval_ms ?? 5000),
+    { only: ['payment', 'notice'] },
+    { autoStart: shouldPoll.value, mode: 'rest' },
+);
+
+watch(shouldPoll, (poll) => {
+    if (poll) {
+        startPaymentPoll();
+        return;
+    }
+    stopPaymentPoll();
+});
 
 const qrSource = computed(() => {
     const qr = props.payment.attempt?.qr_code;
-
     if (
         qr?.mime_type !== 'image/png' ||
         typeof qr.base64_payload !== 'string' ||
@@ -92,7 +129,6 @@ const qrSource = computed(() => {
     ) {
         return null;
     }
-
     return `data:image/png;base64,${qr.base64_payload}`;
 });
 
@@ -100,7 +136,6 @@ const expiresAt = computed(() => {
     if (!props.payment.attempt?.expires_at) {
         return null;
     }
-
     return new Intl.DateTimeFormat('en-PH', {
         dateStyle: 'medium',
         timeStyle: 'short',
@@ -111,7 +146,6 @@ function dateTime(value: string | null): string {
     if (!value) {
         return 'Not recorded';
     }
-
     return new Intl.DateTimeFormat('en-PH', {
         dateStyle: 'medium',
         timeStyle: 'short',
@@ -132,7 +166,6 @@ function startPayment(): void {
     ) {
         return;
     }
-
     creating.value = true;
     router.post(
         createPaymentAttempt.url(props.payment.pay_code),
@@ -148,11 +181,9 @@ function startPayment(): void {
 
 function checkPaymentStatus(): void {
     const attempt = props.payment.attempt;
-
     if (!attempt?.can_check || checking.value) {
         return;
     }
-
     checking.value = true;
     router.post(
         checkPaymentAttempt.url({
@@ -177,384 +208,407 @@ function printReceipt(): void {
 
 <template>
     <Head :title="`Pay ${payment.pay_code}`" />
-
-    <main
-        class="min-h-svh bg-gradient-to-b from-emerald-950 via-slate-950 to-slate-950 px-4 py-8 text-slate-100 print:bg-white print:px-0 print:py-0 print:text-slate-950 sm:px-6 sm:py-12"
+    <ClaimStepShell
+        :tone="payment.is_fully_paid ? 'success' : 'neutral'"
+        width="lg"
+        :centered="false"
     >
-        <div class="mx-auto w-full max-w-lg space-y-4">
+        <div class="space-y-5">
             <header class="space-y-2 text-center print:hidden">
                 <p
-                    class="text-xs font-semibold tracking-[0.24em] text-emerald-300 uppercase"
+                    class="text-xs font-semibold tracking-[0.2em] text-primary uppercase"
                 >
                     Secure Pay Code payment
                 </p>
                 <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">
                     Pay {{ payment.pay_code }}
                 </h1>
-                <p class="text-sm text-slate-400">
+                <p class="text-sm text-muted-foreground">
                     Review the purpose and invoice before choosing how to pay.
                 </p>
             </header>
 
             <div
                 v-if="notice"
-                class="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-center text-sm text-emerald-100 print:hidden"
+                class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-center text-sm text-foreground print:hidden"
                 role="status"
             >
                 {{ notice }}
             </div>
 
-            <section
+            <Card
                 data-testid="payer-xray-step"
-                class="rounded-3xl border border-white/10 bg-white/[0.06] px-5 py-5 shadow-xl shadow-black/20 backdrop-blur print:hidden sm:px-6"
+                class="border-primary/10 shadow-none print:hidden"
             >
-                <p
-                    class="text-xs font-semibold tracking-[0.18em] text-emerald-300 uppercase"
-                >
-                    1 · X-Ray
-                </p>
-                <h2 class="mt-2 text-lg font-semibold">
-                    What this payment is for
-                </h2>
-                <p
-                    v-if="payment.rider_message"
-                    class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-200"
-                >
-                    {{ payment.rider_message }}
-                </p>
-                <p v-else class="mt-3 text-sm leading-6 text-slate-400">
-                    The issuer did not include a payment message.
-                </p>
-            </section>
-
-            <section
-                data-testid="payer-invoice-step"
-                class="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/30 backdrop-blur print:hidden"
-            >
-                <div class="border-b border-white/10 px-5 py-4 sm:px-6">
+                <CardHeader>
+                    <div class="flex items-center gap-3">
+                        <ReceiptText class="h-8 w-8 text-primary" />
+                        <div>
+                            <CardDescription>1 · X-Ray</CardDescription
+                            ><CardTitle>What this payment is for</CardTitle>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
                     <p
-                        class="text-xs font-semibold tracking-[0.18em] text-emerald-300 uppercase"
+                        v-if="payment.rider_message"
+                        class="whitespace-pre-line text-sm leading-6 text-foreground"
                     >
-                        2 · Invoice
+                        {{ payment.rider_message }}
                     </p>
-                    <h2 class="mt-2 text-lg font-semibold">
-                        Pay Code {{ payment.pay_code }}
-                    </h2>
-                </div>
+                    <p v-else class="text-sm leading-6 text-muted-foreground">
+                        The issuer did not include a payment message.
+                    </p>
+                </CardContent>
+            </Card>
 
-                <dl class="space-y-3 px-5 py-5 text-sm sm:px-6">
-                    <div class="flex items-center justify-between gap-4">
-                        <dt class="text-slate-400">Target amount</dt>
-                        <dd class="font-medium tabular-nums">
-                            {{
-                                money(
-                                    payment.target_amount_minor,
-                                    payment.currency,
-                                )
-                            }}
-                        </dd>
+            <Card
+                data-testid="payer-invoice-step"
+                class="border-primary/10 shadow-none print:hidden"
+            >
+                <CardHeader>
+                    <div class="flex items-center gap-3">
+                        <CreditCard class="h-8 w-8 text-primary" />
+                        <div>
+                            <CardDescription>2 · Invoice</CardDescription
+                            ><CardTitle
+                                >Pay Code {{ payment.pay_code }}</CardTitle
+                            >
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between gap-4">
-                        <dt class="text-slate-400">Already collected</dt>
-                        <dd class="font-medium tabular-nums">
-                            {{
-                                money(
-                                    payment.collected_amount_minor,
-                                    payment.currency,
-                                )
-                            }}
-                        </dd>
-                    </div>
-                    <div
-                        class="flex items-end justify-between gap-4 border-t border-white/10 pt-4"
-                    >
-                        <dt class="font-medium">Amount due</dt>
-                        <dd
-                            class="text-2xl font-semibold tabular-nums text-emerald-300"
+                </CardHeader>
+                <CardContent>
+                    <div class="rounded-lg bg-muted p-4 text-center">
+                        <p class="text-sm text-muted-foreground">Amount due</p>
+                        <p
+                            class="mt-1 text-3xl font-bold tracking-tight text-foreground tabular-nums"
                         >
                             {{ amountDue }}
-                        </dd>
+                        </p>
+                        <Badge variant="outline" class="mt-2">{{
+                            payment.pay_code
+                        }}</Badge>
                     </div>
-                </dl>
+                    <dl class="mt-5 space-y-3 text-sm">
+                        <div class="flex items-center justify-between gap-4">
+                            <dt class="text-muted-foreground">Target amount</dt>
+                            <dd class="font-medium tabular-nums">
+                                {{
+                                    money(
+                                        payment.target_amount_minor,
+                                        payment.currency,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-4">
+                            <dt class="text-muted-foreground">
+                                Already collected
+                            </dt>
+                            <dd class="font-medium tabular-nums">
+                                {{
+                                    money(
+                                        payment.collected_amount_minor,
+                                        payment.currency,
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                    </dl>
+                </CardContent>
+            </Card>
 
-                <div
-                    v-if="!payment.is_fully_paid"
-                    data-testid="payer-funding-methods-step"
-                    class="border-t border-white/10 px-5 py-5 sm:px-6"
-                >
-                    <p
-                        class="text-xs font-semibold tracking-[0.18em] text-emerald-300 uppercase"
-                    >
-                        3 · Funding method
-                    </p>
-                    <h2 class="mt-2 text-lg font-semibold">
-                        Choose how to pay
-                    </h2>
-                    <div class="mt-4 grid gap-3 sm:grid-cols-3">
-                        <button
+            <Card
+                v-if="!payment.is_fully_paid"
+                data-testid="payer-funding-methods-step"
+                class="border-primary/10 shadow-none print:hidden"
+            >
+                <CardHeader>
+                    <div class="flex items-center gap-3">
+                        <ScanLine class="h-8 w-8 text-primary" />
+                        <div>
+                            <CardDescription>3 · Funding method</CardDescription
+                            ><CardTitle>Choose how to pay</CardTitle>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent class="space-y-5">
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <Button
                             type="button"
                             data-testid="payer-method-qr"
-                            class="min-h-24 rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+                            variant="outline"
+                            class="h-auto min-h-24 justify-start whitespace-normal p-4 text-left"
                             :class="
                                 selectedMethod === 'qr'
-                                    ? 'border-emerald-300 bg-emerald-300/15'
-                                    : 'border-white/10 bg-black/20 hover:border-emerald-300/50'
+                                    ? 'border-primary bg-primary/5'
+                                    : ''
                             "
                             :disabled="!payment.provider_available"
                             :aria-pressed="selectedMethod === 'qr'"
                             @click="selectQr"
                         >
-                            <span class="block font-semibold">QR Code</span>
-                            <span class="mt-1 block text-xs text-slate-400">
-                                {{
-                                    payment.provider_available
-                                        ? 'QR Ph'
-                                        : 'Unavailable'
-                                }}
-                            </span>
-                        </button>
-                        <button
+                            <span
+                                ><span class="block font-semibold">QR Code</span
+                                ><span
+                                    class="mt-1 block text-xs text-muted-foreground"
+                                    >{{
+                                        payment.provider_available
+                                            ? 'QR Ph'
+                                            : 'Unavailable'
+                                    }}</span
+                                ></span
+                            >
+                        </Button>
+                        <Button
                             type="button"
                             data-testid="payer-method-bank"
-                            class="min-h-24 cursor-not-allowed rounded-2xl border border-white/10 bg-black/20 p-4 text-left opacity-55"
+                            variant="outline"
+                            class="h-auto min-h-24 cursor-not-allowed justify-start whitespace-normal p-4 text-left"
                             disabled
                         >
-                            <span class="block font-semibold"
-                                >Bank Transfer</span
+                            <span
+                                ><span class="block font-semibold"
+                                    >Bank Transfer</span
+                                ><span
+                                    class="mt-1 block text-xs text-muted-foreground"
+                                    >Not yet available</span
+                                ></span
                             >
-                            <span class="mt-1 block text-xs text-slate-400"
-                                >Not yet available</span
-                            >
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="button"
                             data-testid="payer-method-pay-code"
-                            class="min-h-24 cursor-not-allowed rounded-2xl border border-white/10 bg-black/20 p-4 text-left opacity-55"
+                            variant="outline"
+                            class="h-auto min-h-24 cursor-not-allowed justify-start whitespace-normal p-4 text-left"
                             disabled
                         >
-                            <span class="block font-semibold">Pay Code</span>
-                            <span class="mt-1 block text-xs text-slate-400"
-                                >Not yet available</span
+                            <span
+                                ><span class="block font-semibold"
+                                    >Pay Code</span
+                                ><span
+                                    class="mt-1 block text-xs text-muted-foreground"
+                                    >Not yet available</span
+                                ></span
                             >
-                        </button>
+                        </Button>
                     </div>
-                </div>
 
-                <div
-                    v-if="payment.attempt && !payment.is_fully_paid"
-                    class="space-y-5 px-5 py-5 sm:px-6 sm:py-6"
-                >
-                    <div
-                        class="flex flex-wrap items-center justify-between gap-2"
-                    >
-                        <div>
-                            <p class="text-xs text-slate-400">
-                                One-time payment
+                    <template v-if="payment.attempt">
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-2"
+                        >
+                            <div>
+                                <p class="text-xs text-muted-foreground">
+                                    One-time payment
+                                </p>
+                                <p class="font-semibold tabular-nums">
+                                    {{ attemptAmount }}
+                                </p>
+                            </div>
+                            <Badge variant="secondary">{{
+                                payment.attempt.status.replaceAll('_', ' ')
+                            }}</Badge>
+                        </div>
+                        <div
+                            v-if="qrSource"
+                            class="mx-auto w-fit rounded-xl border border-border bg-white p-4 shadow-sm"
+                        >
+                            <img
+                                :src="qrSource"
+                                :alt="`QR Ph code for ${attemptAmount}`"
+                                class="size-64 max-w-full"
+                            />
+                        </div>
+                        <div
+                            v-else
+                            class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-5 text-center text-sm text-foreground"
+                        >
+                            The provider did not return a usable QR image.
+                        </div>
+                        <div
+                            class="rounded-lg border border-border bg-muted p-4"
+                        >
+                            <p class="text-sm font-medium">
+                                Scan with any QR Ph app
                             </p>
-                            <p class="font-semibold tabular-nums">
-                                {{ attemptAmount }}
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Pay exactly {{ attemptAmount }}. The QR is bound
+                                to this Pay Code and cannot fund your x-change
+                                Account.
+                            </p>
+                            <p
+                                v-if="expiresAt"
+                                class="mt-2 text-xs text-muted-foreground"
+                            >
+                                Expires {{ expiresAt }}
                             </p>
                         </div>
-                        <span
-                            class="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-medium text-amber-200"
+                        <Button
+                            type="button"
+                            data-testid="payer-check-status"
+                            variant="outline"
+                            class="w-full"
+                            size="lg"
+                            :disabled="!payment.attempt.can_check || checking"
+                            @click="checkPaymentStatus"
                         >
-                            {{ payment.attempt.status.replaceAll('_', ' ') }}
-                        </span>
-                    </div>
+                            <Loader2
+                                v-if="checking"
+                                class="mr-2 h-4 w-4 animate-spin"
+                            /><RefreshCw v-else class="mr-2 h-4 w-4" />{{
+                                checking
+                                    ? 'Checking payment status…'
+                                    : 'Check payment status'
+                            }}
+                        </Button>
+                    </template>
 
-                    <div
-                        v-if="qrSource"
-                        class="mx-auto w-fit rounded-3xl bg-white p-4 shadow-xl shadow-black/25"
-                    >
-                        <img
-                            :src="qrSource"
-                            :alt="`QR Ph code for ${attemptAmount}`"
-                            class="size-64 max-w-full"
-                        />
-                    </div>
-
-                    <div
-                        v-else
-                        class="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-5 text-center text-sm text-amber-100"
-                    >
-                        The provider did not return a usable QR image.
-                    </div>
-
-                    <div
-                        class="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm"
-                    >
-                        <p class="font-medium">Scan with any QR Ph app</p>
-                        <p class="mt-1 text-slate-400">
-                            Pay exactly {{ attemptAmount }}. The QR is bound to
-                            this Pay Code and cannot fund your x-change Account.
+                    <template v-else>
+                        <div
+                            v-if="!payment.provider_available"
+                            class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-foreground"
+                        >
+                            QR Code payment is not available in this
+                            environment.
+                        </div>
+                        <Button
+                            v-if="selectedMethod === 'qr'"
+                            type="button"
+                            data-testid="payer-create-qr"
+                            class="w-full"
+                            size="lg"
+                            :disabled="!payment.can_create_attempt || creating"
+                            @click="startPayment"
+                        >
+                            <Loader2
+                                v-if="creating"
+                                class="mr-2 h-4 w-4 animate-spin"
+                            />{{
+                                creating
+                                    ? 'Preparing secure QR…'
+                                    : 'Create exact QR Ph payment'
+                            }}
+                        </Button>
+                        <p class="text-center text-xs text-muted-foreground">
+                            Creating instructions does not mark this Pay Code
+                            paid. Authoritative provider history must confirm
+                            settlement.
                         </p>
-                        <p v-if="expiresAt" class="mt-2 text-xs text-slate-500">
-                            Expires {{ expiresAt }}
-                        </p>
-                    </div>
+                    </template>
+                </CardContent>
+            </Card>
 
-                    <button
-                        type="button"
-                        data-testid="payer-check-status"
-                        class="min-h-12 w-full rounded-2xl border border-emerald-300/30 bg-emerald-300/10 px-5 py-3 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
-                        :disabled="!payment.attempt.can_check || checking"
-                        @click="checkPaymentStatus"
-                    >
-                        {{
-                            checking
-                                ? 'Checking payment status…'
-                                : 'Check payment status'
-                        }}
-                    </button>
-                </div>
-
-                <div
-                    v-else-if="!payment.is_fully_paid"
-                    class="space-y-4 px-5 py-6 sm:px-6"
-                >
-                    <div
-                        v-if="!payment.provider_available"
-                        class="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100"
-                    >
-                        QR Code payment is not available in this environment.
-                    </div>
-
-                    <button
-                        v-if="selectedMethod === 'qr'"
-                        type="button"
-                        data-testid="payer-create-qr"
-                        class="min-h-12 w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
-                        :disabled="!payment.can_create_attempt || creating"
-                        @click="startPayment"
-                    >
-                        {{
-                            creating
-                                ? 'Preparing secure QR…'
-                                : 'Create exact QR Ph payment'
-                        }}
-                    </button>
-                    <p class="text-center text-xs text-slate-500">
-                        Creating instructions does not mark this Pay Code paid.
-                        Authoritative provider history must confirm settlement.
-                    </p>
-                </div>
-            </section>
-
-            <section
+            <Card
                 v-if="payment.is_fully_paid"
                 data-testid="payer-receipt"
-                class="rounded-3xl border border-emerald-300/20 bg-white/[0.07] px-5 py-6 shadow-2xl shadow-black/30 print:rounded-none print:border-0 print:bg-white print:px-8 print:py-8 print:shadow-none sm:px-6"
+                class="border-primary/20 shadow-none print:border-0 print:shadow-none"
             >
-                <p
-                    class="text-xs font-semibold tracking-[0.18em] text-emerald-300 uppercase print:text-slate-600"
-                >
-                    4 · Payment confirmation
-                </p>
-                <h2
-                    class="mt-2 text-2xl font-semibold text-emerald-300 print:text-slate-950"
-                >
-                    Payment complete
-                </h2>
-
-                <template v-if="payment.receipt">
-                    <dl class="mt-6 space-y-3 text-sm">
-                        <div class="flex justify-between gap-4">
-                            <dt class="text-slate-400 print:text-slate-600">
-                                Pay Code
-                            </dt>
-                            <dd class="font-semibold">
-                                {{ payment.receipt.pay_code }}
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-4">
-                            <dt class="text-slate-400 print:text-slate-600">
+                <CardHeader class="text-center">
+                    <CheckCircle2
+                        class="mx-auto h-14 w-14 text-primary"
+                        aria-hidden="true"
+                    />
+                    <CardTitle class="mt-3 text-2xl"
+                        >Payment received</CardTitle
+                    >
+                    <CardDescription
+                        >This Pay Code has been paid in full.</CardDescription
+                    >
+                </CardHeader>
+                <CardContent>
+                    <template v-if="payment.receipt">
+                        <div class="rounded-lg bg-muted p-5 text-center">
+                            <p class="text-sm text-muted-foreground">
                                 Amount paid
-                            </dt>
-                            <dd class="font-semibold tabular-nums">
+                            </p>
+                            <p
+                                class="mt-1 text-3xl font-bold tracking-tight text-foreground tabular-nums"
+                            >
                                 {{
                                     money(
                                         payment.receipt.amount_paid_minor,
                                         payment.receipt.currency,
                                     )
                                 }}
-                            </dd>
+                            </p>
+                            <Badge variant="outline" class="mt-2">{{
+                                payment.receipt.pay_code
+                            }}</Badge>
                         </div>
-                        <div class="flex justify-between gap-4">
-                            <dt class="text-slate-400 print:text-slate-600">
-                                Currency
-                            </dt>
-                            <dd>{{ payment.receipt.currency }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-4">
-                            <dt class="text-slate-400 print:text-slate-600">
-                                Completed
-                            </dt>
-                            <dd class="text-right">
-                                {{ dateTime(payment.receipt.completed_at) }}
-                            </dd>
-                        </div>
-                    </dl>
-
-                    <div
-                        class="mt-6 space-y-3 border-t border-white/10 pt-5 print:border-slate-200"
-                    >
-                        <article
-                            v-for="receiptPayment in payment.receipt.payments"
-                            :key="receiptPayment.receipt_reference"
-                            class="rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-sm print:border-slate-200 print:bg-white"
+                        <p
+                            v-if="payment.rider_message"
+                            class="mt-5 whitespace-pre-line rounded-lg border border-primary/10 bg-primary/5 p-4 text-center text-sm leading-6 text-foreground"
                         >
+                            {{ payment.rider_message }}
+                        </p>
+                        <dl class="mt-5 space-y-3 text-sm">
                             <div class="flex justify-between gap-4">
-                                <span class="font-medium">
-                                    {{ receiptPayment.provider }}
-                                </span>
-                                <span class="tabular-nums">
-                                    {{
+                                <dt class="text-muted-foreground">Currency</dt>
+                                <dd>{{ payment.receipt.currency }}</dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-muted-foreground">Completed</dt>
+                                <dd class="text-right">
+                                    {{ dateTime(payment.receipt.completed_at) }}
+                                </dd>
+                            </div>
+                        </dl>
+                        <div class="mt-5 space-y-3 border-t border-border pt-5">
+                            <article
+                                v-for="receiptPayment in payment.receipt
+                                    .payments"
+                                :key="receiptPayment.receipt_reference"
+                                class="rounded-lg border border-border bg-muted/50 p-4 text-sm"
+                            >
+                                <div class="flex justify-between gap-4">
+                                    <span class="font-medium">{{
+                                        receiptPayment.provider
+                                    }}</span
+                                    ><span class="tabular-nums">{{
                                         money(
                                             receiptPayment.amount_paid_minor,
                                             payment.receipt.currency,
                                         )
-                                    }}
-                                </span>
-                            </div>
-                            <p
-                                class="mt-2 break-all text-xs text-slate-400 print:text-slate-600"
-                            >
-                                Receipt reference
-                                {{ receiptPayment.receipt_reference }}
-                            </p>
-                            <p
-                                class="mt-1 text-xs text-slate-500 print:text-slate-600"
-                            >
-                                {{ dateTime(receiptPayment.completed_at) }}
-                            </p>
-                        </article>
-                    </div>
-
-                    <button
+                                    }}</span>
+                                </div>
+                                <p
+                                    class="mt-2 break-all text-xs text-muted-foreground"
+                                >
+                                    Receipt reference
+                                    {{ receiptPayment.receipt_reference }}
+                                </p>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    {{ dateTime(receiptPayment.completed_at) }}
+                                </p>
+                            </article>
+                        </div>
+                    </template>
+                    <p v-else class="text-center text-sm text-muted-foreground">
+                        The payment is complete. Receipt evidence is being
+                        reconciled.
+                    </p>
+                </CardContent>
+                <CardFooter v-if="payment.receipt" class="print:hidden">
+                    <Button
                         type="button"
                         data-testid="payer-print-receipt"
-                        class="mt-6 min-h-12 w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300 print:hidden"
+                        class="w-full"
+                        size="lg"
                         @click="printReceipt"
+                        ><Printer class="mr-2 h-4 w-4" />Print / Save as
+                        PDF</Button
                     >
-                        Print / Save as PDF
-                    </button>
-                </template>
-                <p
-                    v-else
-                    class="mt-4 text-sm text-slate-400 print:text-slate-600"
-                >
-                    The payment is complete. Receipt evidence is being
-                    reconciled.
-                </p>
-            </section>
+                </CardFooter>
+            </Card>
 
             <p
-                class="px-4 text-center text-xs leading-5 text-slate-500 print:hidden"
+                class="px-4 text-center text-xs leading-5 text-muted-foreground print:hidden"
             >
                 Payment attempts are session-bound and expire. Payer mobile
                 numbers are evidence only and never select the receiving
                 Account.
             </p>
         </div>
-    </main>
+    </ClaimStepShell>
 </template>

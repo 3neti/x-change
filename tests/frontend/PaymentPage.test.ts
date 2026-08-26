@@ -2,8 +2,11 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PaymentPage from '../../resources/js/pages/x-change/claim/Payment.vue';
 
-const { routerPost } = vi.hoisted(() => ({
+const { routerPost, pollStart, pollStop, usePoll } = vi.hoisted(() => ({
     routerPost: vi.fn(),
+    pollStart: vi.fn(),
+    pollStop: vi.fn(),
+    usePoll: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -13,6 +16,7 @@ vi.mock('@inertiajs/vue3', () => ({
     router: {
         post: routerPost,
     },
+    usePoll,
 }));
 
 const pendingPayment = {
@@ -26,6 +30,7 @@ const pendingPayment = {
     provider: 'netbank',
     provider_available: true,
     can_create_attempt: true,
+    poll_interval_ms: 5000,
     attempt: null,
     receipt: null,
 };
@@ -33,6 +38,10 @@ const pendingPayment = {
 describe('PaymentPage', () => {
     beforeEach(() => {
         routerPost.mockReset();
+        pollStart.mockReset();
+        pollStop.mockReset();
+        usePoll.mockReset();
+        usePoll.mockReturnValue({ start: pollStart, stop: pollStop });
     });
 
     it('starts one exact payment attempt through the generated route', async () => {
@@ -98,12 +107,77 @@ describe('PaymentPage', () => {
             },
         });
 
-        expect(wrapper.get('img').attributes('src')).toBe(
+        expect(wrapper.get('img[alt^="QR Ph code"]').attributes('src')).toBe(
             'data:image/png;base64,iVBORw0KGgo=',
         );
         expect(wrapper.text()).toContain('Pay exactly ₱75.00');
         expect(wrapper.text()).toContain('cannot fund your x-change Account');
         expect(wrapper.text()).toContain('Check payment status');
+        expect(usePoll).toHaveBeenCalledWith(
+            5000,
+            { only: ['payment', 'notice'] },
+            { autoStart: true, mode: 'rest' },
+        );
+    });
+
+    it('stops passive polling once the payment becomes fully paid', async () => {
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    attempt: {
+                        reference: '01JTEST',
+                        status: 'awaiting_payment',
+                        provider: 'netbank',
+                        amount_minor: 7500,
+                        currency: 'PHP',
+                        expires_at: null,
+                        last_checked_at: null,
+                        can_check: true,
+                        qr_code: null,
+                    },
+                },
+            },
+        });
+
+        await wrapper.setProps({
+            payment: {
+                ...pendingPayment,
+                amount_due_minor: 0,
+                is_fully_paid: true,
+                can_create_attempt: false,
+                attempt: null,
+            },
+        });
+
+        expect(pollStop).toHaveBeenCalledOnce();
+    });
+
+    it('starts passive polling when a checkable attempt becomes available', async () => {
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: pendingPayment,
+            },
+        });
+
+        await wrapper.setProps({
+            payment: {
+                ...pendingPayment,
+                attempt: {
+                    reference: '01JNEW',
+                    status: 'awaiting_payment',
+                    provider: 'netbank',
+                    amount_minor: 7500,
+                    currency: 'PHP',
+                    expires_at: null,
+                    last_checked_at: null,
+                    can_check: true,
+                    qr_code: null,
+                },
+            },
+        });
+
+        expect(pollStart).toHaveBeenCalledOnce();
     });
 
     it('checks authoritative NetBank history for the current attempt', async () => {
@@ -233,7 +307,7 @@ describe('PaymentPage', () => {
 
         const receipt = wrapper.get('[data-testid="payer-receipt"]');
 
-        expect(receipt.text()).toContain('Payment complete');
+        expect(receipt.text()).toContain('Payment received');
         expect(receipt.text()).toContain('₱100.00');
         expect(receipt.text()).toContain('netbank');
         expect(receipt.text()).toContain('PAY-PAY-1234-01');
