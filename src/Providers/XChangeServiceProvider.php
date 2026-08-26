@@ -279,6 +279,7 @@ use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
+use LBHurtado\XChange\Exceptions\ExternalReferenceConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Exceptions\FundingProviderUnavailable;
@@ -2494,6 +2495,19 @@ class XChangeServiceProvider extends ServiceProvider
             return $this->apiResponses()->errorFromThrowable(
                 $e,
                 'IDEMPOTENCY_CONFLICT',
+                [],
+                409,
+            );
+        });
+
+        $exceptions->renderable(function (ExternalReferenceConflict $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'EXTERNAL_REFERENCE_CONFLICT',
                 [],
                 409,
             );

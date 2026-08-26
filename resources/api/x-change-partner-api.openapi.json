@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "X-Change Partner API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Governed server-to-server Pay Code issuance. OAuth identity is bound to one issuer Account; server-side mandates, Account funds, Treasury controls, and idempotency remain authoritative."
   },
   "servers": [{"url": "/api/partner/v1"}],
@@ -39,7 +39,7 @@
           {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
           {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
         ],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeInstructions"}}}},
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeIssuanceRequest"}}}},
         "responses": {
           "201": {"description": "Pay Code issued once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeIssuanceSuccessEnvelope"}}}},
           "200": {"description": "Idempotent replay of the original result", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeIssuanceSuccessEnvelope"}}}},
@@ -47,6 +47,18 @@
           "403": {"$ref": "#/components/responses/Forbidden"},
           "409": {"description": "Idempotency key reused with changed input"},
           "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/pay-codes/by-reference/{externalReference}": {
+      "get": {
+        "operationId": "showPartnerPayCodeByReference",
+        "summary": "Inspect a sanitized Pay Code by the caller's business reference",
+        "security": [{"partnerOAuth": ["pay-codes:read"]}],
+        "parameters": [{"$ref": "#/components/parameters/ExternalReference"}],
+        "responses": {
+          "200": {"description": "Owned Pay Code status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PartnerPayCodeSuccessEnvelope"}}}},
+          "404": {"description": "Unknown or not owned by this client"}
         }
       }
     },
@@ -199,6 +211,7 @@
     },
     "parameters": {
       "PayCode": {"name": "code", "in": "path", "required": true, "schema": {"type": "string", "maxLength": 80}},
+      "ExternalReference": {"name": "externalReference", "in": "path", "required": true, "schema": {"type": "string", "minLength": 1, "maxLength": 190, "pattern": "^[A-Za-z0-9_.:-]+$"}},
       "StoredValueInstrument": {"name": "instrument", "in": "path", "required": true, "description": "Opaque ULID presented by an activated holder. Short Pay Codes and internal ledger references are not accepted.", "schema": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"}},
       "StoredValueSpendChallenge": {"name": "challenge", "in": "path", "required": true, "description": "Opaque ULID for an OTP challenge bound to the authenticated client and exact spend facts.", "schema": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"}}
     },
@@ -224,6 +237,12 @@
           "ttl": {"type": ["integer", "string", "null"]}
         },
         "additionalProperties": true
+      },
+      "PayCodeIssuanceRequest": {
+        "allOf": [
+          {"$ref": "#/components/schemas/PayCodeInstructions"},
+          {"type": "object", "required": ["external_reference"], "properties": {"external_reference": {"type": "string", "minLength": 1, "maxLength": 190, "pattern": "^[A-Za-z0-9_.:-]+$"}}}
+        ]
       },
       "PayCodeLinks": {
         "type": "object",
@@ -275,21 +294,22 @@
       "PayCodeIssuanceSuccessEnvelope": {
         "allOf": [
           {"$ref": "#/components/schemas/SuccessEnvelope"},
-          {"type": "object", "properties": {"data": {"type": "object", "properties": {"links": {"$ref": "#/components/schemas/PayCodeLinks"}}}}}
+          {"type": "object", "properties": {"data": {"type": "object", "required": ["external_reference", "consumer_status"], "properties": {"external_reference": {"type": "string"}, "consumer_status": {"$ref": "#/components/schemas/ConsumerStatus"}, "links": {"$ref": "#/components/schemas/PayCodeLinks"}}}}}
         ]
       },
       "PartnerPayCodeSuccessEnvelope": {
         "allOf": [
           {"$ref": "#/components/schemas/SuccessEnvelope"},
-          {"type": "object", "properties": {"data": {"type": "object", "properties": {"links": {"$ref": "#/components/schemas/PayCodeLinks"}, "collection": {"$ref": "#/components/schemas/CollectionProgress"}, "receipt": {"$ref": "#/components/schemas/PaymentReceipt"}}}}}
+          {"type": "object", "properties": {"data": {"type": "object", "required": ["external_reference", "consumer_status"], "properties": {"external_reference": {"type": ["string", "null"]}, "consumer_status": {"$ref": "#/components/schemas/ConsumerStatus"}, "links": {"$ref": "#/components/schemas/PayCodeLinks"}, "collection": {"$ref": "#/components/schemas/CollectionProgress"}, "receipt": {"$ref": "#/components/schemas/PaymentReceipt"}}}}}
         ]
       },
       "PaymentAttemptSuccessEnvelope": {
         "allOf": [
           {"$ref": "#/components/schemas/SuccessEnvelope"},
-          {"type": "object", "properties": {"data": {"type": "object", "required": ["schema", "code", "pay_url", "attempt"], "properties": {"schema": {"const": "x-change.partner-payment-attempt.v1"}, "code": {"type": "string"}, "pay_url": {"type": ["string", "null"], "format": "uri"}, "attempt": {"$ref": "#/components/schemas/PaymentAttempt"}}}}}
+          {"type": "object", "properties": {"data": {"type": "object", "required": ["schema", "code", "external_reference", "consumer_status", "pay_url", "attempt"], "properties": {"schema": {"const": "x-change.partner-payment-attempt.v1"}, "code": {"type": "string"}, "external_reference": {"type": ["string", "null"]}, "consumer_status": {"$ref": "#/components/schemas/ConsumerStatus"}, "pay_url": {"type": ["string", "null"], "format": "uri"}, "attempt": {"$ref": "#/components/schemas/PaymentAttempt"}}}}}
         ]
       },
+      "ConsumerStatus": {"type": "string", "enum": ["pending", "payable", "processing", "paid", "expired", "cancelled", "failed"]},
       "SuccessEnvelope": {"type": "object", "required": ["success", "data", "meta"], "properties": {"success": {"const": true}, "data": {}, "meta": {"type": "object"}}},
       "ErrorEnvelope": {"type": "object", "required": ["success", "message", "code", "errors"], "properties": {"success": {"const": false}, "message": {"type": "string"}, "code": {"type": "string"}, "errors": {"type": ["object", "array"]}}}
     },

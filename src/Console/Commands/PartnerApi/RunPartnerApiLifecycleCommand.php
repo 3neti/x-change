@@ -88,7 +88,9 @@ final class RunPartnerApiLifecycleCommand extends Command
         $payload = $this->payload();
         $idempotencyKey = 'partner-acceptance-'.Str::lower((string) Str::ulid());
         $correlationId = 'partner-acceptance-'.Str::uuid();
+        $externalReference = 'partner-acceptance-'.Str::lower((string) Str::ulid());
         $estimate = $api->post('/pay-code-estimates', $payload)->throw()->json('data');
+        $payload['external_reference'] = $externalReference;
         $issued = $api->withHeaders([
             'Idempotency-Key' => $idempotencyKey,
             'X-Correlation-ID' => $correlationId,

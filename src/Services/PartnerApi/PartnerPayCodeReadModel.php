@@ -21,6 +21,8 @@ class PartnerPayCodeReadModel
         protected VoucherCollectionProgressService $progress,
         protected PaymentReceiptReadModel $receipts,
         protected PayCodePaymentLinkResolver $paymentLinks,
+        protected PartnerPayCodeReferenceService $references,
+        protected PartnerPayCodeConsumerStatusResolver $consumerStatuses,
     ) {}
 
     /** @return array<string, mixed> */
@@ -50,6 +52,8 @@ class PartnerPayCodeReadModel
         return [
             'schema' => 'x-change.partner-pay-code.v1',
             'code' => (string) data_get($detail, 'code'),
+            'external_reference' => $this->references->externalReference($voucher),
+            'consumer_status' => $this->consumerStatuses->resolve($voucher),
             'amount_minor' => Money::of((string) data_get($detail, 'amount', 0), $currency)
                 ->getMinorAmount()
                 ->toInt(),

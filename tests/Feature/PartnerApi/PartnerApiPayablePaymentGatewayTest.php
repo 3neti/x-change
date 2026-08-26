@@ -39,6 +39,8 @@ it('creates payable payment instructions once and replays a durable response', f
         ->assertHeader('X-Correlation-ID', 'gateway-run-001')
         ->assertJsonPath('data.schema', 'x-change.partner-payment-attempt.v1')
         ->assertJsonPath('data.code', 'GATE-PAY')
+        ->assertJsonPath('data.external_reference', 'BPLS-GATE-PAY')
+        ->assertJsonPath('data.consumer_status', 'processing')
         ->assertJsonPath('data.attempt.status', 'awaiting_payment')
         ->assertJsonPath('data.attempt.amount_minor', 10000)
         ->assertJsonPath('data.attempt.currency', 'PHP')
@@ -184,6 +186,9 @@ function partnerPayableGatewayVoucher(User $issuer, string $code): Voucher
             'instructions' => [
                 'cash' => ['amount' => 0.0, 'currency' => 'PHP'],
                 'target_amount' => 100.0,
+                'metadata' => [
+                    'custom' => ['external_reference' => 'BPLS-'.$code],
+                ],
             ],
             'flow_type' => 'collectible',
             'issuer_id' => (string) $issuer->getKey(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Hash;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
@@ -51,15 +52,32 @@ function partnerApiPayCodePayload(float $amount = 100.00): array
     ])->toArray();
 
     unset($payload['slice_plan']);
+    $payload['external_reference'] = 'test-obligation-'.str()->lower((string) str()->ulid());
 
     return $payload;
 }
 
-function partnerApiIssueResult(int|string $issuerId): GeneratePayCodeResultData
+function partnerApiIssueResult(int|string $issuerId, string $externalReference): GeneratePayCodeResultData
 {
+    $issuer = User::query()->findOrFail($issuerId);
+    $voucher = new Voucher([
+        'code' => 'SARS-1234',
+        'metadata' => [
+            'instructions' => [
+                'cash' => ['amount' => 100.0, 'currency' => 'PHP'],
+                'metadata' => [
+                    'custom' => ['external_reference' => $externalReference],
+                ],
+            ],
+        ],
+        'state' => 'active',
+    ]);
+    $voucher->owner()->associate($issuer);
+    $voucher->save();
+
     return new GeneratePayCodeResultData(
-        voucher_id: 99,
-        code: 'SARS-1234',
+        voucher_id: $voucher->getKey(),
+        code: (string) $voucher->code,
         amount: 100.0,
         currency: 'PHP',
         issuer: new IssuerData(id: $issuerId),
@@ -105,7 +123,8 @@ it('estimates through the production pricing action with token-bound issuer iden
 
 it('issues idempotently and never accepts caller-controlled issuer identity', function () {
     [$issuer] = partnerApiIssuer(['pay-codes:issue']);
-    $result = partnerApiIssueResult($issuer->getKey());
+    $payload = partnerApiPayCodePayload();
+    $result = partnerApiIssueResult($issuer->getKey(), (string) $payload['external_reference']);
     $action = Mockery::mock(GeneratePayCode::class);
     $action->shouldReceive('handle')->once()->with(Mockery::on(function (array $payload) use ($issuer): bool {
         expect(data_get($payload, 'metadata.issuer_id'))->toBe((string) $issuer->getKey())
@@ -116,7 +135,6 @@ it('issues idempotently and never accepts caller-controlled issuer identity', fu
     }))->andReturn($result);
     $this->app->instance(GeneratePayCode::class, $action);
 
-    $payload = partnerApiPayCodePayload();
     $headers = ['Idempotency-Key' => 'saras-issue-001', 'X-Correlation-ID' => 'saras-run-001'];
 
     $this->postJson('/api/partner/v1/pay-codes', $payload, $headers)
@@ -125,6 +143,8 @@ it('issues idempotently and never accepts caller-controlled issuer identity', fu
         ->assertJsonPath('data.code', 'SARS-1234')
         ->assertJsonPath('data.links.pay', 'https://example.test/x/pay/SARS-1234')
         ->assertJsonPath('data.links.pay_path', '/x/pay/SARS-1234')
+        ->assertJsonPath('data.external_reference', $payload['external_reference'])
+        ->assertJsonPath('data.consumer_status', 'payable')
         ->assertJsonPath('meta.correlation_id', 'saras-run-001')
         ->assertJsonPath('meta.idempotency.replayed', false);
 

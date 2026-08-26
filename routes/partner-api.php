@@ -10,6 +10,7 @@ use LBHurtado\XChange\Http\Controllers\PartnerApi\EstimatePartnerPayCodeControll
 use LBHurtado\XChange\Http\Controllers\PartnerApi\IssuePartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ListStoredValueInstrumentTransactionsController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerCapabilitiesController;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerPayCodeByReferenceController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\SpendStoredValueInstrumentController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\VerifyStoredValueSpendChallengeController;
@@ -32,6 +33,11 @@ Route::prefix($prefix)
         Route::middleware(EnsurePartnerApiClient::using('pay-codes:issue'))
             ->post('/pay-codes', IssuePartnerPayCodeController::class)
             ->name('pay-codes.store');
+
+        Route::middleware(EnsurePartnerApiClient::using('pay-codes:read'))
+            ->get('/pay-codes/by-reference/{externalReference}', ShowPartnerPayCodeByReferenceController::class)
+            ->where('externalReference', '[A-Za-z0-9_.:-]{1,190}')
+            ->name('pay-codes.by-reference.show');
 
         Route::middleware(EnsurePartnerApiClient::using('pay-codes:read'))
             ->get('/pay-codes/{code}', ShowPartnerPayCodeController::class)

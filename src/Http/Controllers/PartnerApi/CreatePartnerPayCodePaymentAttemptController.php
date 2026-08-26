@@ -20,6 +20,8 @@ use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\IdempotencyService;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
+use LBHurtado\XChange\Services\PartnerApi\PartnerPayCodeConsumerStatusResolver;
+use LBHurtado\XChange\Services\PartnerApi\PartnerPayCodeReferenceService;
 use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
@@ -39,6 +41,8 @@ class CreatePartnerPayCodePaymentAttemptController extends Controller
         IssuePaymentInstructions $issueInstructions,
         PaymentAttemptPresenter $presenter,
         PayCodePaymentLinkResolver $paymentLinks,
+        PartnerPayCodeReferenceService $references,
+        PartnerPayCodeConsumerStatusResolver $consumerStatuses,
         IdempotencyService $idempotency,
         ApiResponseFactory $responses,
     ): JsonResponse {
@@ -101,6 +105,8 @@ class CreatePartnerPayCodePaymentAttemptController extends Controller
         $data = [
             'schema' => 'x-change.partner-payment-attempt.v1',
             'code' => strtoupper((string) $voucher->code),
+            'external_reference' => $references->externalReference($voucher),
+            'consumer_status' => $consumerStatuses->resolve($voucher),
             'pay_url' => $paymentLinks->forVoucher($voucher)['pay'],
             'attempt' => $presenter->present($attempt),
         ];

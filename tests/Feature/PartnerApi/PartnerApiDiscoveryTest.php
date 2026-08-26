@@ -39,6 +39,7 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             '/capabilities',
             '/pay-code-estimates',
             '/pay-codes',
+            '/pay-codes/by-reference/{externalReference}',
             '/pay-codes/{code}',
             '/pay-codes/{code}/payment-attempts',
             '/pay-codes/{code}/cancellation',
@@ -52,6 +53,10 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
         ->toMatchArray(['in' => 'header', 'required' => true])
         ->and(data_get($document, 'paths./pay-codes/{code}/payment-attempts.post.security.0.partnerOAuth'))
         ->toBe(['pay-codes:pay'])
+        ->and(data_get($document, 'paths./pay-codes.post.requestBody.content.application/json.schema.$ref'))
+        ->toBe('#/components/schemas/PayCodeIssuanceRequest')
+        ->and(data_get($document, 'paths./pay-code-estimates.post.requestBody.content.application/json.schema.$ref'))
+        ->toBe('#/components/schemas/PayCodeInstructions')
         ->and(data_get($document, 'components.schemas.PaymentAttemptSuccessEnvelope.allOf.1.properties.data.properties.attempt.$ref'))
         ->toBe('#/components/schemas/PaymentAttempt')
         ->and(data_get($document, 'components.parameters.StoredValueInstrument.schema.pattern'))
