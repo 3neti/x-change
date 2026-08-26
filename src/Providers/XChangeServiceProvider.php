@@ -44,6 +44,7 @@ use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
 use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
+use LBHurtado\Voucher\Contracts\PayableCollectionExecutionGateway;
 use LBHurtado\Voucher\Contracts\SettlementEnvelopeExecutionGateway;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
@@ -344,7 +345,6 @@ use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
-use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialComponentEconomicsResolver;
@@ -410,6 +410,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJourna
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
 use LBHurtado\XChange\Services\Execution\PartnerApiStoredValueDestinationAuthority;
+use LBHurtado\XChange\Services\Execution\WalletPayableCollectionExecutionGateway;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
@@ -458,6 +459,7 @@ use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\Treasury\AdvisoryTreasuryVocabularyReadModel;
@@ -1240,6 +1242,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             SettlementEnvelopeExecutionGateway::class,
             XChangeSettlementEnvelopeExecutionGateway::class,
+        );
+
+        $this->app->bind(
+            PayableCollectionExecutionGateway::class,
+            WalletPayableCollectionExecutionGateway::class,
         );
 
         $this->app->scoped(

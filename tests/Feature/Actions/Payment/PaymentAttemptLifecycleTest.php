@@ -7,9 +7,11 @@ use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Actions\Payment\RecordVoucherCollection;
+use LBHurtado\XChange\Actions\Payment\SettleVerifiedPaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
@@ -163,9 +165,52 @@ it('settles one exact provider observation into one voucher collection', functio
         ->and($settled->voucher_collection_id)->not->toBeNull()
         ->and($replay->status)->toBe(PaymentAttemptStatus::Settled)
         ->and(VoucherCollection::query()->where('voucher_id', $voucher->getKey())->count())->toBe(1)
+        ->and(VoucherCollection::query()->findOrFail($settled->voucher_collection_id)->only([
+            'status',
+            'collected_amount_minor',
+            'currency',
+            'provider',
+            'idempotency_key',
+        ]))->toBe([
+            'status' => 'collected',
+            'collected_amount_minor' => 10000,
+            'currency' => 'PHP',
+            'provider' => 'netbank',
+            'idempotency_key' => 'payment-attempt:'.$settled->reference,
+        ])
         ->and((float) $user->wallet->fresh()->balanceFloat)->toBe($balanceBefore + 100.00)
         ->and(DB::table('x_change_funding_intents')->count())->toBe(0)
         ->and(DB::table('x_change_account_funding_receipts')->count())->toBe(0);
+});
+
+it('replays an already-settled Payment Attempt without executing another collection', function (): void {
+    $user = actingAsTestUser();
+    $voucher = paymentAttemptCollectibleVoucherForUser($user);
+    $balanceBefore = (float) $user->wallet->balanceFloat;
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+
+    $settled = app(VerifyPaymentAttempt::class)->handle(
+        $attempt,
+        PaymentVerificationTrigger::Payer,
+    );
+    $balanceAfterSettlement = (float) $user->wallet->fresh()->balanceFloat;
+    $eventCount = $settled->events()->count();
+    $engine = Mockery::mock(ExecutionEngine::class);
+    $engine->shouldNotReceive('execute');
+    app()->instance(ExecutionEngine::class, $engine);
+
+    $replay = app(SettleVerifiedPaymentAttempt::class)->handle(
+        $settled,
+        PaymentVerificationTrigger::Payer,
+    );
+
+    expect($replay->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($replay->voucher_collection_id)->toBe($settled->voucher_collection_id)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->getKey())->count())->toBe(1)
+        ->and($replay->events()->count())->toBe($eventCount)
+        ->and($balanceAfterSettlement)->toBe($balanceBefore + 100.00)
+        ->and((float) $user->wallet->fresh()->balanceFloat)->toBe($balanceAfterSettlement);
 });
 
 it('keeps pending provider history awaiting payment without collection', function (): void {
