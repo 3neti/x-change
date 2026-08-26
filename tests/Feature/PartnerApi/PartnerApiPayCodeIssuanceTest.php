@@ -41,7 +41,7 @@ function partnerApiIssuer(array $scopes, array $mandate = []): array
 
 function partnerApiPayCodePayload(float $amount = 100.00): array
 {
-    return validVoucherInstructions($amount, 'INSTAPAY', [
+    $payload = validVoucherInstructions($amount, 'INSTAPAY', [
         'cash' => [
             'validation' => [
                 'mobile' => '09171234567',
@@ -49,6 +49,10 @@ function partnerApiPayCodePayload(float $amount = 100.00): array
         ],
         'metadata' => [],
     ])->toArray();
+
+    unset($payload['slice_plan']);
+
+    return $payload;
 }
 
 function partnerApiIssueResult(int|string $issuerId): GeneratePayCodeResultData
@@ -69,6 +73,8 @@ function partnerApiIssueResult(int|string $issuerId): GeneratePayCodeResultData
         links: new PayCodeLinksData(
             redeem: 'https://example.test/x/claim/SARS-1234',
             redeem_path: '/x/claim/SARS-1234',
+            pay: 'https://example.test/x/pay/SARS-1234',
+            pay_path: '/x/pay/SARS-1234',
         ),
     );
 }
@@ -117,6 +123,8 @@ it('issues idempotently and never accepts caller-controlled issuer identity', fu
         ->assertCreated()
         ->assertHeader('X-Correlation-ID', 'saras-run-001')
         ->assertJsonPath('data.code', 'SARS-1234')
+        ->assertJsonPath('data.links.pay', 'https://example.test/x/pay/SARS-1234')
+        ->assertJsonPath('data.links.pay_path', '/x/pay/SARS-1234')
         ->assertJsonPath('meta.correlation_id', 'saras-run-001')
         ->assertJsonPath('meta.idempotency.replayed', false);
 

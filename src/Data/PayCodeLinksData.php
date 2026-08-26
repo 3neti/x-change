@@ -11,5 +11,7 @@ class PayCodeLinksData extends Data
     public function __construct(
         public string $redeem,
         public string $redeem_path,
+        public ?string $pay = null,
+        public ?string $pay_path = null,
     ) {}
 }

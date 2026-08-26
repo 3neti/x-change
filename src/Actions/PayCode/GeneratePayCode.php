@@ -172,6 +172,8 @@ class GeneratePayCode
                 links: new PayCodeLinksData(
                     redeem: (string) data_get($issued, 'links.redeem'),
                     redeem_path: (string) data_get($issued, 'links.redeem_path'),
+                    pay: data_get($issued, 'links.pay'),
+                    pay_path: data_get($issued, 'links.pay_path'),
                 ),
                 allocations: $allocation['allocations'] ?? [],
             );

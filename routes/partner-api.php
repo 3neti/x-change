@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CancelPartnerPayCodeController;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\CreatePartnerPayCodePaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CreateStoredValueSpendChallengeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\EstimatePartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\IssuePartnerPayCodeController;
@@ -35,6 +36,10 @@ Route::prefix($prefix)
         Route::middleware(EnsurePartnerApiClient::using('pay-codes:read'))
             ->get('/pay-codes/{code}', ShowPartnerPayCodeController::class)
             ->name('pay-codes.show');
+
+        Route::middleware(EnsurePartnerApiClient::using('pay-codes:pay'))
+            ->post('/pay-codes/{code}/payment-attempts', CreatePartnerPayCodePaymentAttemptController::class)
+            ->name('pay-codes.payment-attempts.store');
 
         Route::middleware(EnsurePartnerApiClient::using('pay-codes:cancel'))
             ->post('/pay-codes/{code}/cancellation', CancelPartnerPayCodeController::class)

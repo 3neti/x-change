@@ -16,12 +16,14 @@ use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
 
 class PayCodeIssuanceService implements PayCodeIssuanceContract
 {
     public function __construct(
         protected RiderSplashArtworkSnapshotterContract $splashArtwork,
         protected RiderStampArtifactStoreContract $stampArtifacts,
+        protected PayCodePaymentLinkResolver $paymentLinks,
     ) {}
 
     public function issue(mixed $issuer, array $input): array
@@ -57,6 +59,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                 $redeemPath = $this->redeemPath($code);
                 $redeemUrl = $this->redeemUrl($redeemPath);
                 $this->stampArtifacts->materialize($issued, $redeemUrl);
+                $paymentLinks = $this->paymentLinks->forVoucher($issued);
 
                 return [
                     'voucher_id' => $issued->id,
@@ -67,6 +70,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                     'links' => [
                         'redeem' => $redeemUrl,
                         'redeem_path' => $redeemPath,
+                        ...$paymentLinks,
                     ],
                     'metadata' => $issued->metadata ?? null,
                 ];

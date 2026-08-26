@@ -40,6 +40,7 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             '/pay-code-estimates',
             '/pay-codes',
             '/pay-codes/{code}',
+            '/pay-codes/{code}/payment-attempts',
             '/pay-codes/{code}/cancellation',
             '/stored-value-instruments/{instrument}/spend-challenges',
             '/stored-value-instruments/{instrument}/spend-challenges/{challenge}/verification',
@@ -49,6 +50,10 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
         ->and(collect(data_get($document, 'paths./pay-codes/{code}/cancellation.post.parameters'))
             ->firstWhere('name', 'Idempotency-Key'))
         ->toMatchArray(['in' => 'header', 'required' => true])
+        ->and(data_get($document, 'paths./pay-codes/{code}/payment-attempts.post.security.0.partnerOAuth'))
+        ->toBe(['pay-codes:pay'])
+        ->and(data_get($document, 'components.schemas.PaymentAttemptSuccessEnvelope.allOf.1.properties.data.properties.attempt.$ref'))
+        ->toBe('#/components/schemas/PaymentAttempt')
         ->and(data_get($document, 'components.parameters.StoredValueInstrument.schema.pattern'))
         ->toBe('^[0-9A-HJKMNP-TV-Z]{26}$')
         ->and(data_get($document, 'components.parameters.StoredValueSpendChallenge.schema.pattern'))

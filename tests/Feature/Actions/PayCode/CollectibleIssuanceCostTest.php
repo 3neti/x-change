@@ -107,6 +107,8 @@ it('requires only the commercial charge when issuing a collection voucher', func
     $voucher = Voucher::query()->findOrFail($result->voucher_id);
 
     expect($result->code)->not->toBeEmpty()
+        ->and($result->links->pay_path)->toBe(route('x-change.pay.show', ['code' => $result->code], false))
+        ->and($result->links->pay)->toBe(route('x-change.pay.show', ['code' => $result->code]))
         ->and($result->cost->pay_code_value)->toBe(0.0)
         ->and($result->cost->total)->toBe(1.5)
         ->and($result->cost->account_debit)->toBe(1.5)

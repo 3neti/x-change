@@ -747,6 +747,7 @@ return [
             'pay-codes:estimate' => 'Estimate a Pay Code without reserving funds.',
             'pay-codes:issue' => 'Issue a Pay Code from the bound Account.',
             'pay-codes:read' => 'Inspect Pay Codes owned by the bound Account.',
+            'pay-codes:pay' => 'Create payer instructions for payable Pay Codes owned by the bound Account.',
             'pay-codes:cancel' => 'Cancel an eligible Pay Code owned by the bound Account.',
             'stored-value:read' => 'Read sanitized reusable-balance transactions presented to the client.',
             'stored-value:spend' => 'Debit a presented reusable balance into the bound merchant Account.',
@@ -756,6 +757,7 @@ return [
             'pay-codes:estimate',
             'pay-codes:issue',
             'pay-codes:read',
+            'pay-codes:pay',
             'pay-codes:cancel',
         ],
         'default_mandate' => [
