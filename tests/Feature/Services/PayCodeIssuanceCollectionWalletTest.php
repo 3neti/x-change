@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-use Illuminate\Validation\ValidationException;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 
-it('does not silently supply a collection wallet for payable vouchers', function (): void {
+it('freezes the authenticated issuer platform wallet for payable vouchers', function (): void {
     $issuer = actingAsTestUser();
+    $wallet = $issuer->wallet()->where('slug', 'platform')->sole();
 
-    app(PayCodeIssuanceContract::class)->issue($issuer, [
+    $result = app(PayCodeIssuanceContract::class)->issue($issuer, [
         'cash' => [
             'amount' => 0,
             'currency' => 'PHP',
@@ -26,5 +27,11 @@ it('does not silently supply a collection wallet for payable vouchers', function
             'flow_type' => 'collectible',
         ],
     ]);
-})->throws(ValidationException::class);
 
+    $voucher = Voucher::query()->findOrFail($result['voucher_id']);
+
+    expect(data_get($voucher->metadata, 'instructions.metadata.issuer_id'))
+        ->toBe((string) $issuer->getAuthIdentifier())
+        ->and(data_get($voucher->metadata, 'instructions.metadata.collection_wallet_id'))
+        ->toBe((string) $wallet->getKey());
+});

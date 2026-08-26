@@ -8,6 +8,7 @@ use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 
 class DefaultVoucherCollectionWalletResolver implements VoucherCollectionWalletResolverContract
@@ -34,10 +35,44 @@ class DefaultVoucherCollectionWalletResolver implements VoucherCollectionWalletR
             return null;
         }
 
-        return Wallet::query()->find($walletId);
+        $wallet = Wallet::query()->find($walletId);
+
+        if (! $wallet instanceof Wallet) {
+            return null;
+        }
+
+        $issuer = $this->resolveIssuerModel($voucher);
+
+        if (! $issuer instanceof Model) {
+            return $wallet;
+        }
+
+        return $wallet->holder_type === $issuer->getMorphClass()
+            && (string) $wallet->holder_id === (string) $issuer->getKey()
+                ? $wallet
+                : null;
     }
 
     protected function resolveIssuerWallet(Voucher $voucher): ?Wallet
+    {
+        $issuer = $this->resolveIssuerModel($voucher);
+
+        if (! $issuer instanceof Model) {
+            return null;
+        }
+
+        try {
+            $wallet = app(WalletAccessContract::class)->resolveForUser($issuer);
+        } catch (PayCodeWalletNotResolved) {
+            return null;
+        }
+
+        return $wallet instanceof Wallet
+            ? $wallet
+            : null;
+    }
+
+    private function resolveIssuerModel(Voucher $voucher): ?Model
     {
         $issuerId = data_get($voucher->metadata, 'instructions.metadata.issuer_id')
             ?? data_get($voucher->metadata, 'instructions.metadata.metadata.issuer_id')
@@ -48,8 +83,8 @@ class DefaultVoucherCollectionWalletResolver implements VoucherCollectionWalletR
         }
 
         /*
-         * Legacy-only fallback for collectible vouchers issued before
-         * collection_wallet_id became mandatory at the instruction boundary.
+         * Issuer evidence authorizes explicit collection-wallet ownership and
+         * supports legacy vouchers issued before that wallet became mandatory.
          */
         $issuerModel = config('x-change.lifecycle.defaults.user_model')
             ?: config('x-change.onboarding.issuer_model');
@@ -64,10 +99,6 @@ class DefaultVoucherCollectionWalletResolver implements VoucherCollectionWalletR
             return null;
         }
 
-        $wallet = $issuer->wallet;
-
-        return $wallet instanceof Wallet
-            ? $wallet
-            : null;
+        return $issuer;
     }
 }

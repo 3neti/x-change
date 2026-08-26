@@ -15,6 +15,7 @@ use LBHurtado\Voucher\Data\VoucherMetadataData;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
 
@@ -24,6 +25,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         protected RiderSplashArtworkSnapshotterContract $splashArtwork,
         protected RiderStampArtifactStoreContract $stampArtifacts,
         protected PayCodePaymentLinkResolver $paymentLinks,
+        protected WalletAccessContract $wallets,
     ) {}
 
     public function issue(mixed $issuer, array $input): array
@@ -151,13 +153,16 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
     protected function withCollectionWalletContext(Authenticatable $issuer, array $input): array
     {
-        $flowType = data_get($input, 'metadata.flow_type');
-
-        if ($flowType !== 'collectible') {
+        if (! $this->requiresCollectionWallet($input)) {
             return $input;
         }
 
         data_set($input, 'metadata.issuer_id', (string) $issuer->getAuthIdentifier());
+        data_set(
+            $input,
+            'metadata.collection_wallet_id',
+            (string) $this->wallets->resolveForUser($issuer)->getKey(),
+        );
 
         return $input;
     }
@@ -169,10 +174,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
      */
     protected function assertCollectionWalletPresentForCollectible(array $input): void
     {
-        if (
-            ! in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)
-            && data_get($input, 'metadata.flow_type') !== 'collectible'
-        ) {
+        if (! $this->requiresCollectionWallet($input)) {
             return;
         }
 
@@ -183,6 +185,15 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         throw ValidationException::withMessages([
             'metadata.collection_wallet_id' => 'A collection wallet is required for payable Pay Codes.',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function requiresCollectionWallet(array $input): bool
+    {
+        return in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)
+            || data_get($input, 'metadata.flow_type') === 'collectible';
     }
 
     /**
