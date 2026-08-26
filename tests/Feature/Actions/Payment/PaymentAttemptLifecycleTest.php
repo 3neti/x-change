@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
@@ -90,6 +92,55 @@ it('issues encrypted provider QR instructions once without Account funding', fun
         ->and($this->paymentAdapter->instructionCalls)->toBe(1)
         ->and(DB::table('x_change_funding_intents')->count())->toBe(0)
         ->and(DB::table('x_change_account_funding_receipts')->count())->toBe(0);
+});
+
+it('issues a provisional NetBank payer QR with one provider call and no VCA registration', function (): void {
+    config()->set('payment-gateway.netbank.funding.reference_key', 'test-payment-reference-key');
+    config()->set('payment-gateway.netbank.funding.pre_transaction_validation_enabled', true);
+    config()->set('payment-gateway.netbank.funding.exact_limits_enabled', true);
+    $qrPayload = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lDoLpwAAAABJRU5ErkJggg==';
+    $client = Mockery::mock(NetbankFundingApiClient::class);
+    $client->shouldNotReceive('generateAliasToken');
+    $client->shouldNotReceive('registerPreTransactionReference');
+    $client->shouldNotReceive('createExactLimit');
+    $client->shouldReceive('generateQrCode')
+        ->once()
+        ->withArgs(fn (string $vcaNumber, int $amountMinor, string $currency): bool => preg_match('/\A91500\d{16}\z/', $vcaNumber) === 1
+            && $amountMinor === 10000
+            && $currency === 'PHP')
+        ->andReturn($qrPayload);
+
+    $this->app->instance(NetbankFundingApiClient::class, $client);
+    $this->app->instance(
+        FundingProviderAdapterRegistry::class,
+        new FundingProviderAdapterRegistry([
+            new NetbankFundingProviderAdapter($client),
+        ]),
+    );
+
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(CreatePaymentAttempt::class)->handle(
+        $voucher,
+        'netbank',
+        'payer-session-provisional',
+        'request-provisional',
+    );
+
+    $issued = app(IssuePaymentInstructions::class)->handle($attempt);
+
+    expect($issued->status)->toBe(PaymentAttemptStatus::AwaitingPayment)
+        ->and($issued->expected_amount_minor)->toBe(10000)
+        ->and($issued->currency)->toBe('PHP')
+        ->and($issued->provider_request_id_ciphertext)->toMatch('/\A91500\d{16}\z/')
+        ->and($issued->funding_address_ciphertext)->toBe($issued->provider_request_id_ciphertext)
+        ->and($issued->instructions_ciphertext['qr_code'])->toMatchArray([
+            'mime_type' => 'image/png',
+            'base64_payload' => $qrPayload,
+            'qr_mode' => 'dynamic',
+            'transaction_type' => 'p2m',
+            'embedded_amount' => true,
+            'provider_generated' => true,
+        ]);
 });
 
 it('settles one exact provider observation into one voucher collection', function (): void {

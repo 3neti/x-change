@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Exceptions;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\PaymentGateway\Exceptions\NetbankFundingRequestFailed;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
@@ -98,6 +102,7 @@ it('sanitizes provider instruction failures and safely retries the same attempt'
     $this->paymentAdapter->instructionException = new RuntimeException(
         'secret provider response and credentials',
     );
+    Exceptions::fake();
 
     $this->post(route('x-change.pay.attempts.store', [
         'code' => $voucher->code,
@@ -115,8 +120,11 @@ it('sanitizes provider instruction failures and safely retries the same attempt'
         ->and($failure->metadata)->toBe([
             'provider' => 'netbank',
             'retryable' => true,
+            'failure_stage' => 'unknown',
         ])
         ->and(json_encode($failure->metadata))->not->toContain('secret provider response');
+
+    Exceptions::assertReported(RuntimeException::class);
 
     $this->paymentAdapter->instructionException = null;
 
@@ -126,6 +134,55 @@ it('sanitizes provider instruction failures and safely retries the same attempt'
 
     expect(PaymentAttempt::query()->count())->toBe(1)
         ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::AwaitingPayment);
+});
+
+it('reports a provisional NetBank QR failure without exposing it to the payer', function (): void {
+    config()->set('payment-gateway.netbank.funding.reference_key', 'test-payment-reference-key');
+    config()->set('payment-gateway.netbank.funding.pre_transaction_validation_enabled', true);
+    config()->set('payment-gateway.netbank.funding.exact_limits_enabled', true);
+    $voucher = publicPaymentVoucher();
+    $providerFailure = NetbankFundingRequestFailed::forOperation('generate-qrph', 503);
+    $client = Mockery::mock(NetbankFundingApiClient::class);
+    $client->shouldNotReceive('generateAliasToken');
+    $client->shouldNotReceive('registerPreTransactionReference');
+    $client->shouldNotReceive('createExactLimit');
+    $client->shouldReceive('generateQrCode')
+        ->once()
+        ->andThrow($providerFailure);
+
+    $this->app->instance(NetbankFundingApiClient::class, $client);
+    $this->app->instance(
+        FundingProviderAdapterRegistry::class,
+        new FundingProviderAdapterRegistry([
+            new NetbankFundingProviderAdapter($client),
+        ]),
+    );
+    Exceptions::fake();
+
+    $this->post(route('x-change.pay.attempts.store', [
+        'code' => $voucher->code,
+    ]))
+        ->assertRedirect(route('x-change.pay.show', ['code' => $voucher->code]))
+        ->assertSessionHas(
+            'payment_notice',
+            'NetBank could not create payment instructions. No payment was recorded. Please try again.',
+        );
+
+    $attempt = PaymentAttempt::query()->sole();
+    $failure = $attempt->events()->where('event_type', 'provider_instruction_failed')->sole();
+
+    expect($attempt->status)->toBe(PaymentAttemptStatus::PendingInstructions)
+        ->and($attempt->provider_reference_hash)->toBeNull()
+        ->and($attempt->funding_address_hash)->toBeNull()
+        ->and($attempt->instructions_ciphertext)->toBeNull()
+        ->and($failure->metadata)->toBe([
+            'provider' => 'netbank',
+            'retryable' => true,
+            'failure_stage' => 'generate-qrph',
+        ])
+        ->and(json_encode($failure->metadata))->not->toContain('503');
+
+    Exceptions::assertReported(fn (NetbankFundingRequestFailed $exception): bool => $exception === $providerFailure);
 });
 
 it('conceals a Payment Attempt owned by another browser session', function (): void {

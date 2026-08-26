@@ -10,10 +10,14 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\PaymentGateway\Exceptions\NetbankFundingConfigurationException;
+use LBHurtado\PaymentGateway\Exceptions\NetbankFundingRequestFailed;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Payment\ProvisionalNetbankPayerInstructionIssuer;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LogicException;
 use RuntimeException;
@@ -24,6 +28,7 @@ class IssuePaymentInstructions
     public function __construct(
         private readonly FundingProviderAdapterRegistry $providers,
         private readonly FundingDestinationResolverContract $destinations,
+        private readonly ProvisionalNetbankPayerInstructionIssuer $provisionalNetbankIssuer,
     ) {}
 
     public function handle(PaymentAttempt $attempt): PaymentAttempt
@@ -55,28 +60,40 @@ class IssuePaymentInstructions
                 'voucher:'.$current->voucher_id,
             );
 
-            $instructions = $this->providers
-                ->for($current->provider_code)
-                ->createFundingInstructions(new FundingInstructionRequestData(
-                    provider: $current->provider_code,
-                    fundingReference: $current->reference,
-                    amountMinor: $current->expected_amount_minor,
-                    currency: $current->currency,
-                    accountReference: 'voucher:'.$current->voucher_id,
-                    expiresAt: $current->expires_at === null
-                        ? null
-                        : DateTimeImmutable::createFromInterface($current->expires_at),
-                    metadata: [
-                        'purpose' => 'voucher_payment',
-                        'payment_attempt_reference' => $current->reference,
-                        'voucher_code' => (string) $current->voucher->code,
-                    ],
-                    destination: $destination,
-                ));
+            $request = new FundingInstructionRequestData(
+                provider: $current->provider_code,
+                fundingReference: $current->reference,
+                amountMinor: $current->expected_amount_minor,
+                currency: $current->currency,
+                accountReference: 'voucher:'.$current->voucher_id,
+                expiresAt: $current->expires_at === null
+                    ? null
+                    : DateTimeImmutable::createFromInterface($current->expires_at),
+                metadata: [
+                    'purpose' => 'voucher_payment',
+                    'payment_attempt_reference' => $current->reference,
+                    'voucher_code' => (string) $current->voucher->code,
+                ],
+                destination: $destination,
+            );
+            $provider = $this->providers->for($current->provider_code);
+
+            /*
+             * Provisional payer-only simplification: issue one dynamic QR call
+             * without alias registration or an exact VCA limit until NetBank
+             * confirms that this shape is honored in a real scan-to-pay flow.
+             */
+            $instructions = $provider instanceof NetbankFundingProviderAdapter
+                ? $this->provisionalNetbankIssuer->create($request)
+                : $provider->createFundingInstructions($request);
 
             $this->assertInstructionsMatch($current, $instructions);
         } catch (Throwable $exception) {
-            $this->recordInstructionFailure($current);
+            report($exception);
+            $this->recordInstructionFailure(
+                $current,
+                $this->failureStage($exception),
+            );
 
             throw new RuntimeException(
                 'Payment instructions are temporarily unavailable.',
@@ -178,9 +195,18 @@ class IssuePaymentInstructions
         return hash_hmac('sha256', $value, $key);
     }
 
-    private function recordInstructionFailure(PaymentAttempt $attempt): void
+    private function failureStage(Throwable $exception): string
     {
-        DB::transaction(function () use ($attempt): void {
+        return match (true) {
+            $exception instanceof NetbankFundingRequestFailed => $exception->operation,
+            $exception instanceof NetbankFundingConfigurationException => 'configuration',
+            default => 'unknown',
+        };
+    }
+
+    private function recordInstructionFailure(PaymentAttempt $attempt, string $failureStage): void
+    {
+        DB::transaction(function () use ($attempt, $failureStage): void {
             $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($attempt->getKey());
 
             if ($locked->status !== PaymentAttemptStatus::PendingInstructions) {
@@ -202,6 +228,7 @@ class IssuePaymentInstructions
                 'metadata' => [
                     'provider' => $locked->provider_code,
                     'retryable' => true,
+                    'failure_stage' => $failureStage,
                 ],
                 'occurred_at' => now(),
             ]);
