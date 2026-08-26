@@ -27,6 +27,7 @@ use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
@@ -48,6 +49,7 @@ class ClaimStartController extends Controller
         protected PayoutDestinationRegistry $destinations,
         protected VoucherSliceExecutionCoordinator $sliceExecutions,
         protected VoucherSlicePlanProjection $slicePlans,
+        protected VoucherCollectionProgressService $collectionProgress,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -175,7 +177,17 @@ class ClaimStartController extends Controller
             );
         }
 
-        if (! $this->capabilities->resolve($voucher)->can_disburse) {
+        $flowCapabilities = $this->capabilities->resolve($voucher);
+
+        if (! $flowCapabilities->can_disburse) {
+            if ($flowCapabilities->can_collect) {
+                return $this->claimEntryResponse()->paymentHandoff(
+                    code: $code,
+                    paymentUrl: route('x-change.pay.show', ['code' => $code]),
+                    isFullyCollected: $this->collectionProgress->compute($voucher)->is_fully_collected,
+                );
+            }
+
             return $this->claimEntryResponse()->error(
                 message: 'This Pay Code accepts payment and cannot be claimed.',
                 code: $code,

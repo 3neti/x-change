@@ -159,14 +159,16 @@ it('checks NetBank history and applies an exact settled payment once', function 
         ->and((float) $user->wallet->fresh()->balanceFloat)->toBe($balanceBefore + 100.00);
 });
 
-it('does not expose collectible payment on the outward claim route', function (): void {
+it('hands collectible payment from the outward claim route to the payment page', function (): void {
     $voucher = publicPaymentVoucher();
 
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.claim.show', ['code' => $voucher->code]))
         ->assertOk()
-        ->assertJsonPath('component', 'x-change/claim/Error')
-        ->assertJsonPath('props.message', 'This Pay Code accepts payment and cannot be claimed.');
+        ->assertJsonPath('component', 'x-change/claim/PaymentHandoff')
+        ->assertJsonPath('props.code', (string) $voucher->code)
+        ->assertJsonPath('props.payment_url', route('x-change.pay.show', ['code' => $voucher->code]))
+        ->assertJsonPath('props.is_fully_collected', false);
 });
 
 function publicPaymentVoucher(): Voucher

@@ -42,4 +42,13 @@ class ClaimEntryResponseFactory
             'code' => $code,
         ])->rootView('x-change::claim-root');
     }
+
+    public function paymentHandoff(string $code, string $paymentUrl, bool $isFullyCollected): Response
+    {
+        return Inertia::render('x-change/claim/PaymentHandoff', [
+            'code' => $code,
+            'payment_url' => $isFullyCollected ? null : $paymentUrl,
+            'is_fully_collected' => $isFullyCollected,
+        ])->rootView('x-change::claim-root');
+    }
 }

@@ -19,6 +19,7 @@ use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimSurfaceData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 
 class ClaimPageController extends Controller
@@ -28,6 +29,7 @@ class ClaimPageController extends Controller
         string $code,
         ValidateCompiledClaimVoucher $validator,
         VoucherFlowCapabilityResolverContract $capabilities,
+        VoucherCollectionProgressService $collectionProgress,
         ClaimWorkflowResolverContract $workflows,
         ClaimAuthenticationIntent $loginIntent,
         ClaimShareMetadataResolverContract $shareMetadata,
@@ -45,7 +47,17 @@ class ClaimPageController extends Controller
             );
         }
 
-        if (! $capabilities->resolve($voucher)->can_disburse) {
+        $flowCapabilities = $capabilities->resolve($voucher);
+
+        if (! $flowCapabilities->can_disburse) {
+            if ($flowCapabilities->can_collect) {
+                return $responses->paymentHandoff(
+                    code: $code,
+                    paymentUrl: route('x-change.pay.show', ['code' => $code]),
+                    isFullyCollected: $collectionProgress->compute($voucher)->is_fully_collected,
+                );
+            }
+
             return $responses->error(
                 message: 'This Pay Code accepts payment and cannot be claimed.',
                 code: $code,
