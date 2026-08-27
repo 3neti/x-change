@@ -40,7 +40,7 @@ it('issues a payable POS sale and prepares its operator-safe QR Ph attempt', fun
         'Idempotency-Key' => 'cockpit-pos-sale-1042',
     ])->postJson(
         route('x-change.cockpit.quick-generate.store'),
-        cockpitPosPayload((string) $operator->wallet()->where('slug', 'platform')->sole()->getKey()),
+        cockpitPosPayload(),
     )->assertCreated()
         ->assertJsonPath('result.amount', 50)
         ->assertJsonPath('result.currency', 'PHP')
@@ -85,6 +85,45 @@ it('issues a payable POS sale and prepares its operator-safe QR Ph attempt', fun
         ->assertJsonPath('props.pos_voucher.collection.is_fully_collected', false);
 });
 
+it('overrides a manipulated foreign collection wallet with the operator wallet', function (): void {
+    $operator = actingAsTestUser();
+    $operatorWallet = $operator->wallet()->where('slug', 'platform')->sole();
+    $foreignOwner = User::query()->create([
+        'name' => 'Foreign POS Owner',
+        'email' => 'foreign-pos-owner@example.com',
+        'password' => 'not-a-login-credential',
+    ]);
+    $foreignWallet = $foreignOwner->wallet()->firstOrCreate([
+        'slug' => 'platform',
+    ], [
+        'name' => 'Foreign Platform Account',
+    ]);
+    $payload = cockpitPosPayload();
+    data_set(
+        $payload,
+        'metadata.collection_wallet_id',
+        (string) $foreignWallet->getKey(),
+    );
+
+    $issuance = $this->withHeaders([
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'cockpit-pos-foreign-wallet',
+    ])->postJson(
+        route('x-change.cockpit.quick-generate.store'),
+        $payload,
+    )->assertCreated();
+
+    $voucher = Voucher::query()
+        ->where('code', $issuance->json('result.code'))
+        ->sole();
+
+    expect(data_get(
+        $voucher->metadata,
+        'instructions.metadata.collection_wallet_id',
+    ))->toBe((string) $operatorWallet->getKey())
+        ->not->toBe((string) $foreignWallet->getKey());
+});
+
 it('conceals a foreign POS status projection', function (): void {
     $owner = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(
@@ -111,7 +150,7 @@ it('conceals a foreign POS status projection', function (): void {
 /**
  * @return array<string, mixed>
  */
-function cockpitPosPayload(string $collectionWalletId): array
+function cockpitPosPayload(): array
 {
     return [
         'cash' => [
@@ -142,7 +181,6 @@ function cockpitPosPayload(string $collectionWalletId): array
         'voucher_type' => 'payable',
         'target_amount' => 50,
         'metadata' => [
-            'collection_wallet_id' => $collectionWalletId,
             'custom' => [
                 'external_reference' => 'ORDER-1042 · Snacks',
                 'cockpit' => [

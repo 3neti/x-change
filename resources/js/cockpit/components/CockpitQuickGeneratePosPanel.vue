@@ -18,12 +18,10 @@ const props = withDefaults(
     defineProps<{
         mutationContract?: CockpitQuickGenerateMutationContract;
         posVoucher?: CockpitVoucherReadModel | null;
-        currentUserWalletId?: string | number | null;
     }>(),
     {
         mutationContract: undefined,
         posVoucher: null,
-        currentUserWalletId: null,
     },
 );
 
@@ -55,8 +53,6 @@ const normalizedAmount = computed<number>(() => Number(amount.value));
 const canGenerate = computed<boolean>(() => {
     return (
         routeUrl.value !== null &&
-        props.currentUserWalletId !== null &&
-        props.currentUserWalletId !== undefined &&
         Number.isFinite(normalizedAmount.value) &&
         normalizedAmount.value > 0 &&
         externalReference.value.trim() !== '' &&
@@ -268,7 +264,6 @@ function issuancePayload(): Record<string, unknown> {
         voucher_type: 'payable',
         target_amount: normalizedAmount.value,
         metadata: {
-            collection_wallet_id: props.currentUserWalletId,
             custom: {
                 external_reference: externalReference.value.trim(),
                 cockpit: {
@@ -366,6 +361,20 @@ function responseMessage(
     body: Record<string, unknown>,
     fallback: string,
 ): string {
+    const errors = nestedRecord(body, ['errors']);
+
+    if (errors !== null) {
+        for (const messages of Object.values(errors)) {
+            const candidates = Array.isArray(messages) ? messages : [messages];
+
+            for (const message of candidates) {
+                if (typeof message === 'string' && message.trim() !== '') {
+                    return message.trim();
+                }
+            }
+        }
+    }
+
     return nestedString(body, ['message']) ?? fallback;
 }
 </script>

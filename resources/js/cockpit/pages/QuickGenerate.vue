@@ -1223,7 +1223,6 @@ function stringValue(value: unknown): string | null {
                     v-else
                     :mutation-contract="mutationContract"
                     :pos-voucher="props.pos_voucher"
-                    :current-user-wallet-id="props.current_user_wallet_id"
                 />
             </div>
         </section>

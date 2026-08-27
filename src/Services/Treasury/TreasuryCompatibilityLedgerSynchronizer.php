@@ -153,7 +153,8 @@ final readonly class TreasuryCompatibilityLedgerSynchronizer
 
     private function usesTreasuryPositions(FundingDecisionData $funding): bool
     {
-        return $funding->authority === 'local_ledger'
+        return $funding->required_minor > 0
+            && $funding->authority === 'local_ledger'
             && data_get($funding->meta, 'topology') === 'ledger_pooled'
             && (bool) config('x-change.commercial.enabled', true);
     }

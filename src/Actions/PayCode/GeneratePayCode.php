@@ -114,6 +114,7 @@ class GeneratePayCode
 
         $input = $this->splashArtwork()->prepare($input);
         $wallet = $this->resolveIssuanceWallet($issuer, $input);
+        $input = $this->withAuthoritativeCollectionWallet($input, $wallet);
         $estimate = $this->estimatePayCodeCost->handle($input);
         $this->assertAcceptedPricing($input, $estimate);
         $funding = $this->fundingPolicy()->assertCanIssue(
@@ -219,6 +220,31 @@ class GeneratePayCode
                 'name' => 'Lifecycle Scenario Funds',
                 'slug' => 'lifecycle',
             ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function withAuthoritativeCollectionWallet(array $input, mixed $wallet): array
+    {
+        $requiresCollectionWallet = in_array(
+            data_get($input, 'voucher_type'),
+            ['payable', 'settlement'],
+            true,
+        ) || data_get($input, 'metadata.flow_type') === 'collectible';
+
+        if (! $requiresCollectionWallet) {
+            return $input;
+        }
+
+        data_set(
+            $input,
+            'metadata.collection_wallet_id',
+            (string) $wallet->getKey(),
+        );
+
+        return $input;
     }
 
     protected function splashArtwork(): RiderSplashArtworkSnapshotterContract

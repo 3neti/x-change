@@ -122,7 +122,7 @@ describe('Cockpit Quick Generate POS mode', () => {
         vi.stubGlobal('fetch', fetchMock);
 
         const wrapper = mount(CockpitQuickGeneratePosPanel, {
-            props: { mutationContract, currentUserWalletId: 42 },
+            props: { mutationContract },
         });
 
         await wrapper
@@ -152,7 +152,6 @@ describe('Cockpit Quick Generate POS mode', () => {
             target_amount: 50.75,
             count: 1,
             metadata: {
-                collection_wallet_id: 42,
                 custom: {
                     external_reference: 'ORDER-2048 · Merienda',
                     cockpit: {
@@ -166,6 +165,7 @@ describe('Cockpit Quick Generate POS mode', () => {
                 },
             },
         });
+        expect(payload.metadata).not.toHaveProperty('collection_wallet_id');
         expect((issuanceRequest[1] as RequestInit).headers).toMatchObject({
             Accept: 'application/json',
             'Idempotency-Key': expect.any(String),
@@ -256,7 +256,7 @@ describe('Cockpit Quick Generate POS mode', () => {
         );
 
         const wrapper = mount(CockpitQuickGeneratePosPanel, {
-            props: { mutationContract, currentUserWalletId: 42 },
+            props: { mutationContract },
         });
 
         await wrapper.get('[data-testid="cockpit-pos-amount"]').setValue('50');
@@ -277,5 +277,42 @@ describe('Cockpit Quick Generate POS mode', () => {
                 .attributes('href'),
         ).toBe('/x/pay/SAFE');
         expect(poll.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the first Laravel field error instead of the generic validation message', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValueOnce({
+                ok: false,
+                json: vi.fn().mockResolvedValue({
+                    message: 'The given data was invalid.',
+                    errors: {
+                        target_amount: [
+                            'The amount to collect must be greater than zero.',
+                        ],
+                    },
+                }),
+            }),
+        );
+
+        const wrapper = mount(CockpitQuickGeneratePosPanel, {
+            props: { mutationContract },
+        });
+
+        await wrapper.get('[data-testid="cockpit-pos-amount"]').setValue('50');
+        await wrapper
+            .get('[data-testid="cockpit-pos-reference"]')
+            .setValue('FIELD-ERROR');
+        await wrapper
+            .get('[data-testid="cockpit-pos-generate"]')
+            .trigger('submit');
+        await flushPromises();
+
+        expect(
+            wrapper.get('[data-testid="cockpit-pos-error"]').text(),
+        ).toContain('The amount to collect must be greater than zero.');
+        expect(
+            wrapper.get('[data-testid="cockpit-pos-error"]').text(),
+        ).not.toContain('The given data was invalid.');
     });
 });

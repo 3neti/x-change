@@ -136,6 +136,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\BackfillDisbursementSettlementJo
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillStandingFundingPositionsCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\CapitalizeTreasuryOpeningBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\CorrectLegacyPayCodeFeePostingCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\CorrectVoucherCollectionTreasuryPostingCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\MigrateLegacyAccountBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionSystemPrincipalCommand;
@@ -1495,6 +1496,7 @@ class XChangeServiceProvider extends ServiceProvider
                 BackfillStandingFundingPositionsCommand::class,
                 CapitalizeTreasuryOpeningBalanceCommand::class,
                 CorrectLegacyPayCodeFeePostingCommand::class,
+                CorrectVoucherCollectionTreasuryPostingCommand::class,
                 MigrateLegacyAccountBalanceCommand::class,
                 PreflightTreasuryCommand::class,
                 RedactTreasurySensitiveMetadataCommand::class,
