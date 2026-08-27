@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\Voucher\Enums\RiderContentFormat;
 use LBHurtado\Voucher\Enums\RiderStampArtworkSource;
@@ -45,6 +46,36 @@ class GeneratePayCodeRequest extends FormRequest
         return [
             ...$this->minimumWithdrawalPolicyValidators(),
             ...$this->cockpitPayeePolicyValidators(),
+            function (Validator $validator): void {
+                if ($this->isPayable()) {
+                    $targetAmount = $this->input('target_amount')
+                        ?? $this->input('cash.target_amount')
+                        ?? $this->input('cash.amount')
+                        ?? $this->input('amount');
+
+                    if (is_numeric($targetAmount) && (float) $targetAmount > 0) {
+                        return;
+                    }
+
+                    $validator->errors()->add(
+                        'cash.amount',
+                        'The amount to collect must be greater than zero for a payable Pay Code.',
+                    );
+
+                    return;
+                }
+
+                if ($this->input('voucher_type') === 'settlement') {
+                    $targetAmount = $this->input('target_amount');
+
+                    if (! is_numeric($targetAmount) || (float) $targetAmount <= 0) {
+                        $validator->errors()->add(
+                            'target_amount',
+                            'The target value must be greater than zero for a settlement Pay Code.',
+                        );
+                    }
+                }
+            },
         ];
     }
 
@@ -55,7 +86,11 @@ class GeneratePayCodeRequest extends FormRequest
     {
         return [
             'cash' => ['required', 'array'],
-            'cash.amount' => ['required', 'numeric', 'min:0.01'],
+            'cash.amount' => [
+                'required',
+                'numeric',
+                Rule::when($this->isPayable(), ['min:0'], ['min:0.01']),
+            ],
             'cash.currency' => ['required', 'string', 'max:10'],
             'cash.settlement_rail' => ['nullable', Rule::enum(SettlementRail::class)],
             'cash.slice_mode' => ['nullable', 'string', 'in:fixed,open'],
@@ -306,5 +341,10 @@ class GeneratePayCodeRequest extends FormRequest
             ->filter(static fn (mixed $key): bool => is_string($key) && $key !== '')
             ->values()
             ->all();
+    }
+
+    private function isPayable(): bool
+    {
+        return $this->input('voucher_type') === 'payable';
     }
 }

@@ -1337,11 +1337,32 @@ function applyInstructionBlueprint(
         applyingStartingPoint.value = false;
     }
 
-    amount.value = instructionString(
+    const rememberedVoucherType = instructionString(
+        instructions,
+        ['voucher_type'],
+        'redeemable',
+    );
+
+    if (
+        rememberedVoucherType === 'redeemable' ||
+        rememberedVoucherType === 'payable' ||
+        rememberedVoucherType === 'settlement'
+    ) {
+        voucherType.value = rememberedVoucherType;
+    }
+
+    const rememberedCashAmount = instructionString(
         instructions,
         ['cash', 'amount'],
         amount.value,
     );
+    const rememberedTargetAmount = instructionString(instructions, [
+        'target_amount',
+    ]);
+    amount.value =
+        voucherType.value === 'payable'
+            ? rememberedTargetAmount || rememberedCashAmount
+            : rememberedCashAmount;
     currency.value = instructionString(
         instructions,
         ['cash', 'currency'],
@@ -1659,20 +1680,6 @@ function applyInstructionBlueprint(
 
     hydrateLastSlices(instructions);
 
-    const rememberedVoucherType = instructionString(
-        instructions,
-        ['voucher_type'],
-        'redeemable',
-    );
-
-    if (
-        rememberedVoucherType === 'redeemable' ||
-        rememberedVoucherType === 'payable' ||
-        rememberedVoucherType === 'settlement'
-    ) {
-        voucherType.value = rememberedVoucherType;
-    }
-
     const rememberedClaimOutcome = instructionString(instructions, [
         'claim',
         'default_outcome',
@@ -1685,7 +1692,7 @@ function applyInstructionBlueprint(
         claimOutcome.value = rememberedClaimOutcome;
     }
 
-    targetAmount.value = instructionString(instructions, ['target_amount']);
+    targetAmount.value = rememberedTargetAmount;
     rulesMinPayment.value = instructionString(instructions, [
         'rules',
         'min_payment',
@@ -2079,6 +2086,16 @@ const selectedUnavailableCapabilities = computed<
 });
 
 const canSubmit = computed<boolean>(() => {
+    const normalizedAmount = Number(amount.value);
+    const payableAmountIsValid =
+        voucherType.value !== 'payable' ||
+        (Number.isFinite(normalizedAmount) && normalizedAmount > 0);
+    const normalizedTargetAmount = Number(targetAmount.value);
+    const settlementTargetIsValid =
+        voucherType.value !== 'settlement' ||
+        (Number.isFinite(normalizedTargetAmount) &&
+            normalizedTargetAmount > 0);
+
     return (
         props.mutationContract?.runtime_enabled === true &&
         routeUrl.value !== null &&
@@ -2090,6 +2107,8 @@ const canSubmit = computed<boolean>(() => {
         storedValuePolicyError.value === null &&
         claimRecipientError.value === null &&
         settlementRailSelectionError.value === null &&
+        payableAmountIsValid &&
+        settlementTargetIsValid &&
         (!isAccountFundingClaim.value || sliceMode.value === 'whole')
     );
 });
@@ -2634,6 +2653,43 @@ const voucherKindTone = computed<string>(() => {
     }
 
     return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200';
+});
+
+const isPayableVoucher = computed<boolean>(
+    () => voucherType.value === 'payable',
+);
+const isSettlementVoucher = computed<boolean>(
+    () => voucherType.value === 'settlement',
+);
+const amountFieldLabel = computed<string>(() =>
+    isPayableVoucher.value ? 'Amount to Collect' : 'Amount',
+);
+const amountFieldHelp = computed<string>(() =>
+    isPayableVoucher.value
+        ? 'Amount to be collected from the payer. Not funded upfront.'
+        : 'Value the recipient can claim. Select the field to open the calculator.',
+);
+const amountFieldError = computed<string | null>(() => {
+    if (!isPayableVoucher.value) {
+        return null;
+    }
+
+    const normalizedAmount = Number(amount.value);
+
+    return Number.isFinite(normalizedAmount) && normalizedAmount > 0
+        ? null
+        : 'The amount to collect must be greater than zero.';
+});
+const targetAmountError = computed<string | null>(() => {
+    if (!isSettlementVoucher.value) {
+        return null;
+    }
+
+    const normalizedTargetAmount = Number(targetAmount.value);
+
+    return Number.isFinite(normalizedTargetAmount) && normalizedTargetAmount > 0
+        ? null
+        : 'The target value must be greater than zero.';
 });
 
 const onboardingOtpEnforced = computed<boolean>(() => {
@@ -4797,13 +4853,11 @@ function buildPayloadShape(
     }
 
     const normalizedTargetAmount = Number(targetAmount.value);
-    const collectionTargetAmount =
-        Number.isFinite(normalizedTargetAmount) && normalizedTargetAmount > 0
-            ? normalizedTargetAmount
-            : voucherType.value === 'payable' ||
-                voucherType.value === 'settlement'
-              ? normalizedAmount
-              : null;
+    const collectionTargetAmount = isPayableVoucher.value
+        ? normalizedAmount
+        : isSettlementVoucher.value
+          ? normalizedTargetAmount
+          : null;
 
     if (
         collectionTargetAmount !== null &&
@@ -6106,6 +6160,21 @@ function instructionRecord(
                     class="mt-4 grid items-start gap-3 sm:grid-cols-2"
                     data-testid="cockpit-quick-generate-order-fields"
                 >
+                    <label
+                        class="grid min-w-0 gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
+                        Pay Code Type
+                        <select
+                            v-model="voucherType"
+                            class="h-12 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                            data-testid="cockpit-quick-generate-voucher-type"
+                            :disabled="processing"
+                        >
+                            <option value="redeemable">Redeemable</option>
+                            <option value="payable">Payable</option>
+                            <option value="settlement">Settlement</option>
+                        </select>
+                    </label>
                     <div
                         class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-amount-field"
@@ -6114,10 +6183,10 @@ function instructionRecord(
                             class="flex items-center gap-1"
                             for="cockpit-quick-generate-primary-amount"
                         >
-                            Amount
+                            {{ amountFieldLabel }}
                             <CockpitFieldHelp
-                                label="About Amount"
-                                tooltip="Value the recipient can claim. Select the field to open the calculator."
+                                :label="`About ${amountFieldLabel}`"
+                                :tooltip="amountFieldHelp"
                             />
                         </label>
                         <CockpitAmountPicker
@@ -6131,6 +6200,13 @@ function instructionRecord(
                             "
                             @preview="previewAmountInCalculator"
                         />
+                        <span
+                            v-if="amountFieldError"
+                            class="text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                            data-testid="cockpit-quick-generate-amount-error"
+                        >
+                            {{ amountFieldError }}
+                        </span>
                         <div
                             class="mt-1 flex min-h-5 items-baseline justify-between gap-3 px-0.5 text-[0.7rem] leading-5"
                             data-testid="cockpit-quick-generate-account-debit"
@@ -6183,6 +6259,41 @@ function instructionRecord(
                             </span>
                         </div>
                     </div>
+                    <label
+                        v-if="isSettlementVoucher"
+                        class="grid min-w-0 gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        data-testid="cockpit-quick-generate-target-amount-field"
+                    >
+                        <span class="flex items-center gap-1">
+                            Target Value
+                            <CockpitFieldHelp
+                                label="About Target Value"
+                                tooltip="Collection target tracked independently from the redeemable settlement amount."
+                            />
+                        </span>
+                        <input
+                            v-model="targetAmount"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="h-12 w-full min-w-0 rounded-xl border bg-white px-3 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                            :class="
+                                targetAmountError
+                                    ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-950'
+                                    : 'border-slate-200 dark:border-slate-800'
+                            "
+                            data-testid="cockpit-quick-generate-target-amount"
+                            :disabled="processing"
+                            :aria-invalid="targetAmountError ? 'true' : undefined"
+                        />
+                        <span
+                            v-if="targetAmountError"
+                            class="text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                            data-testid="cockpit-quick-generate-target-amount-error"
+                        >
+                            {{ targetAmountError }}
+                        </span>
+                    </label>
                     <label
                         class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-recipient-field"
@@ -9958,42 +10069,6 @@ function instructionRecord(
                             <div
                                 class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
                             >
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Pay Code Type
-                                    <select
-                                        v-model="voucherType"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-voucher-type"
-                                        :disabled="processing"
-                                    >
-                                        <option value="redeemable">
-                                            Redeemable
-                                        </option>
-                                        <option value="payable">Payable</option>
-                                        <option value="settlement">
-                                            Settlement
-                                        </option>
-                                    </select>
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Target Value
-                                    <input
-                                        v-model="targetAmount"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-target-amount"
-                                        :disabled="
-                                            processing ||
-                                            voucherType === 'redeemable'
-                                        "
-                                    />
-                                </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >

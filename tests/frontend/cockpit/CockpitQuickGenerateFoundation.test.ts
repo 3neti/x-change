@@ -1060,6 +1060,17 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-voucher-type"]',
         );
 
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-order-fields"]')
+                .find('[data-testid="cockpit-quick-generate-voucher-type"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-quick-generate-target-amount"]',
+            ).exists(),
+        ).toBe(false);
         expect(kind.text()).toBe('Disburseable');
         expect(
             wrapper.find(
@@ -1072,6 +1083,24 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await type.setValue('payable');
         expect(kind.text()).toBe('Payable');
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-quick-generate-target-amount"]',
+            ).exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-amount-field"]')
+                .text(),
+        ).toContain('Amount to Collect');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-amount-field"]')
+                .findComponent({ name: 'CockpitFieldHelp' })
+                .props('tooltip'),
+        ).toBe(
+            'Amount to be collected from the payer. Not funded upfront.',
+        );
         const collectionWallet = wrapper.get<HTMLInputElement>(
             '[data-testid="cockpit-quick-generate-collection-wallet"]',
         );
@@ -1079,7 +1108,25 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+            .setValue('0');
+        expect(
+            wrapper.get('[data-testid="cockpit-quick-generate-amount-error"]')
+                .text(),
+        ).toContain('greater than zero');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-submit-button"]')
+                .attributes('disabled'),
+        ).toBeDefined();
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-primary-amount"]')
             .setValue('125.50');
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-quick-generate-amount-error"]',
+            ).exists(),
+        ).toBe(false);
 
         expect(quickGenerateEngineeringPreview(wrapper)).toMatchObject({
             voucher_type: 'payable',
@@ -1097,6 +1144,22 @@ describe('Cockpit Quick Generate foundation', () => {
         await type.setValue('settlement');
         expect(kind.text()).toBe('Settlement');
         expect(collectionWallet.element.value).toBe('shared-wallet-17');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-amount-field"]')
+                .text(),
+        ).toContain('Amount');
+        const settlementTarget = wrapper.get<HTMLInputElement>(
+            '[data-testid="cockpit-quick-generate-target-amount"]',
+        );
+        await settlementTarget.setValue('250');
+        expect(quickGenerateEngineeringPreview(wrapper)).toMatchObject({
+            voucher_type: 'settlement',
+            target_amount: 250,
+            cash: {
+                amount: 125.5,
+            },
+        });
     });
 
     it('shows the authoritative estimated cost beneath the Pay Code amount', async () => {

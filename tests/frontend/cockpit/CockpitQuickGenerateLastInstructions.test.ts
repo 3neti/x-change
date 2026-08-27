@@ -54,6 +54,72 @@ describe('Quick Generate last instructions', () => {
         ).toBe('77');
     });
 
+    it('hydrates the payable amount from the canonical target with a legacy cash fallback', () => {
+        const instructions = (targetAmount?: number) => ({
+            schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+            saved_at: '2026-08-26T09:00:00Z',
+            instructions: {
+                voucher_type: 'payable',
+                target_amount: targetAmount,
+                cash: {
+                    amount: targetAmount === undefined ? 62.5 : 0,
+                    currency: 'PHP',
+                },
+            },
+        });
+        const mountWith = (targetAmount?: number) =>
+            mount(CockpitQuickGenerateSubmitPanel, {
+                props: {
+                    templates: cockpitQuickGenerateTemplates,
+                    currentUserWalletId: 77,
+                    lastInstructions: instructions(targetAmount),
+                },
+            });
+
+        expect(
+            mountWith(125).get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element.value,
+        ).toBe('125.00');
+        expect(
+            mountWith().get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element.value,
+        ).toBe('62.50');
+    });
+
+    it('hydrates settlement cash and target values independently', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                currentUserWalletId: 77,
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-26T09:00:00Z',
+                    instructions: {
+                        voucher_type: 'settlement',
+                        target_amount: 900,
+                        cash: {
+                            amount: 300,
+                            currency: 'PHP',
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-primary-amount"]',
+            ).element.value,
+        ).toBe('300.00');
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-quick-generate-target-amount"]',
+            ).element.value,
+        ).toBe('900');
+    });
+
     it('preloads the last successful design without restoring its secret', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             attachTo: document.body,

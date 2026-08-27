@@ -263,6 +263,11 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         $approval = $this->approvalSummary($voucher);
         $status = $this->operationalStatus($voucher, $approval);
         $operational = $this->operationalSummary($voucher);
+        $instructions = $this->instructionsArray($voucher);
+        $rawExternalReference = data_get($instructions, 'metadata.custom.external_reference');
+        $externalReference = is_string($rawExternalReference)
+            ? $this->nullableDisplayValue($rawExternalReference)
+            : null;
 
         return [
             'id' => $voucher->id,
@@ -282,7 +287,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ],
             'instruction_badges' => $operational->instruction_badges,
             'purpose' => $this->nullableDisplayValue(
-                data_get($this->instructionsArray($voucher), 'rider.message'),
+                $externalReference ?? data_get($instructions, 'rider.message'),
             ),
             'party' => $this->partySummary($voucher),
             'timing' => [

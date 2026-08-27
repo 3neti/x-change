@@ -1801,6 +1801,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             data_get($row, 'operational_status.availability_label'),
             data_get($row, 'operational_status.settlement_outcome'),
             $row['purpose'] ?? null,
+            data_get($row, 'instructions.metadata.custom.external_reference'),
             data_get($row, 'instructions.rider.message'),
         ];
 

@@ -119,6 +119,12 @@ it('projects capability instructions target and timing without raw instruction p
         'rider' => [
             'message' => 'School transport allowance',
         ],
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+            'custom' => [
+                'external_reference' => 'BPLS-TRANSPORT-2026-0042',
+            ],
+        ],
     ]));
 
     $record = collect(app(VoucherLifecycleServiceContract::class)->list([
@@ -150,7 +156,7 @@ it('projects capability instructions target and timing without raw instruction p
             'secondary' => null,
             'masked' => false,
         ],
-        'purpose' => 'School transport allowance',
+        'purpose' => 'BPLS-TRANSPORT-2026-0042',
     ])
         ->and($record['timing']['created_at'])->not->toBeNull()
         ->and(collect($record['instruction_badges'])->pluck('label')->duplicates())->toBeEmpty()
@@ -159,9 +165,26 @@ it('projects capability instructions target and timing without raw instruction p
 
     $this->actingAs($issuer)
         ->withHeader('X-Inertia', 'true')
-        ->get(route('x-change.cockpit.pay-codes.index', ['search' => 'transport allowance']))
+        ->get(route('x-change.cockpit.pay-codes.index', ['search' => 'bpls-transport-2026-0042']))
         ->assertOk()
         ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
-        ->assertJsonPath('props.pay_codes_read_model.records.0.purpose', 'School transport allowance')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.purpose', 'BPLS-TRANSPORT-2026-0042')
         ->assertJsonPath('props.pay_codes_read_model.records.0.terminal_control.status', 'blocked');
+});
+
+it('falls back to the rider message when no external reference is present', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Community snacks collection',
+        ],
+    ]));
+
+    $record = collect(app(VoucherLifecycleServiceContract::class)->list([
+        'issuer_id' => $issuer->getKey(),
+        'issuer_type' => $issuer->getMorphClass(),
+    ]))->sole();
+
+    expect($record['code'])->toBe($voucher->code)
+        ->and($record['purpose'])->toBe('Community snacks collection');
 });

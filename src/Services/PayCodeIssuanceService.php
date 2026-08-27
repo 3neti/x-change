@@ -67,7 +67,10 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                     'voucher_id' => $issued->id,
                     'code' => $code,
                     'issued_at' => $issued->created_at?->toRfc3339String() ?? now()->toRfc3339String(),
-                    'amount' => data_get($instructions->toArray(), 'cash.amount'),
+                    'amount' => (data_get($input, 'voucher_type') === 'payable'
+                        || data_get($input, 'metadata.flow_type') === 'collectible')
+                        ? data_get($instructions->toArray(), 'target_amount')
+                        : data_get($instructions->toArray(), 'cash.amount'),
                     'currency' => data_get($instructions->toArray(), 'cash.currency'),
                     'links' => [
                         'redeem' => $redeemUrl,
