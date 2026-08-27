@@ -7,22 +7,16 @@ namespace LBHurtado\XChange\Services\PartnerApi;
 use Brick\Money\Money;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
-use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 
 class PartnerPayCodeReadModel
 {
     public function __construct(
         protected VoucherLifecycleServiceContract $vouchers,
-        protected VoucherFlowCapabilityResolverContract $capabilities,
-        protected VoucherCollectionProgressService $progress,
         protected PaymentReceiptReadModel $receipts,
         protected PayCodePaymentLinkResolver $paymentLinks,
-        protected PartnerPayCodeReferenceService $references,
-        protected PartnerPayCodeConsumerStatusResolver $consumerStatuses,
     ) {}
 
     /** @return array<string, mixed> */
@@ -35,16 +29,13 @@ class PartnerPayCodeReadModel
             ->firstOrFail();
         $detail = (array) $this->vouchers->show((string) $voucher->getKey());
         $currency = strtoupper((string) data_get($detail, 'currency', 'PHP'));
-        $capabilities = $this->capabilities->resolve($voucher);
-        $collection = null;
+        $collection = data_get($detail, 'collection');
         $receipt = null;
 
-        if ($capabilities->can_collect) {
-            $progress = $this->progress->compute($voucher);
-            $currency = strtoupper($progress->currency);
-            $collection = $progress->toArray();
+        if (is_array($collection)) {
+            $currency = strtoupper((string) data_get($collection, 'currency', $currency));
 
-            if ($progress->is_fully_collected) {
+            if (data_get($collection, 'is_fully_collected') === true) {
                 $receipt = $this->receipts->forVoucher($voucher, $currency);
             }
         }
@@ -52,8 +43,8 @@ class PartnerPayCodeReadModel
         return [
             'schema' => 'x-change.partner-pay-code.v1',
             'code' => (string) data_get($detail, 'code'),
-            'external_reference' => $this->references->externalReference($voucher),
-            'consumer_status' => $this->consumerStatuses->resolve($voucher),
+            'external_reference' => data_get($detail, 'external_reference'),
+            'consumer_status' => data_get($detail, 'consumer_status'),
             'amount_minor' => Money::of((string) data_get($detail, 'amount', 0), $currency)
                 ->getMinorAmount()
                 ->toInt(),

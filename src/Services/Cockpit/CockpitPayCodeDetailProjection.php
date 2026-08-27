@@ -13,6 +13,33 @@ final class CockpitPayCodeDetailProjection
      * @param  array<string, mixed>  $detail
      * @return array<string, mixed>
      */
+    public function collection(array $detail): array
+    {
+        $collection = data_get($detail, 'collection');
+
+        if (! is_array($collection)) {
+            return [];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-collection.v1',
+            'consumer_status' => data_get($detail, 'consumer_status'),
+            ...Arr::only($collection, [
+                'currency',
+                'target_amount_minor',
+                'collected_total_minor',
+                'remaining_to_collect_minor',
+                'is_fully_collected',
+                'is_overpaid',
+                'overpaid_amount_minor',
+            ]),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $detail
+     * @return array<string, mixed>
+     */
     public function overview(array $detail): array
     {
         return [

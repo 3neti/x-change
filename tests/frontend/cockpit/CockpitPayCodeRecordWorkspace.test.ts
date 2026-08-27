@@ -854,4 +854,40 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(audit).toContain("Accepted");
     expect(audit).toContain("Delivered");
   });
+
+  it("renders canonical collection progress for a collectible Pay Code", () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "processing",
+        voucher: {
+          ...voucher,
+          collection: {
+            schema: "x-change.cockpit.pay-code-collection.v1",
+            consumer_status: "processing",
+            currency: "PHP",
+            target_amount_minor: 10_000,
+            collected_total_minor: 4_000,
+            remaining_to_collect_minor: 6_000,
+            is_fully_collected: false,
+            is_overpaid: false,
+            overpaid_amount_minor: 0,
+          },
+        },
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    const progress = wrapper.get(
+      '[data-testid="pay-code-overview-collection-progress"]',
+    );
+
+    expect(progress.text()).toContain("Collection Progress");
+    expect(progress.text()).toContain("₱100.00");
+    expect(progress.text()).toContain("₱40.00");
+    expect(progress.text()).toContain("₱60.00");
+    expect(wrapper.text()).toContain("Collection status:");
+    expect(wrapper.text()).toContain("Processing");
+  });
 });

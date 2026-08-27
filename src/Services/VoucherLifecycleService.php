@@ -18,6 +18,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Treasury\ReleasePayCodeTerminalReserve;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VoucherOperationalStatusResolverContract;
 use LBHurtado\XChange\Data\PayCode\PayCodeOperationalStatusData;
@@ -39,6 +40,9 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         protected ?NamedVoucherSliceService $namedSlices = null,
         protected ?ReleasePayCodeTerminalReserve $terminalReleases = null,
         protected ?VoucherOperationalStatusResolverContract $operationalStatuses = null,
+        protected ?VoucherFlowCapabilityResolverContract $flowCapabilities = null,
+        protected ?VoucherCollectionProgressService $collectionProgress = null,
+        protected ?VoucherConsumerStatusResolver $consumerStatuses = null,
     ) {}
 
     public function list(array $filters = []): array
@@ -264,10 +268,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         $status = $this->operationalStatus($voucher, $approval);
         $operational = $this->operationalSummary($voucher);
         $instructions = $this->instructionsArray($voucher);
-        $rawExternalReference = data_get($instructions, 'metadata.custom.external_reference');
-        $externalReference = is_string($rawExternalReference)
-            ? $this->nullableDisplayValue($rawExternalReference)
-            : null;
+        $externalReference = $this->externalReference($voucher, $instructions);
+        $collectibleFacts = $this->collectibleFacts($voucher);
 
         return [
             'id' => $voucher->id,
@@ -298,6 +300,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ],
             'attention' => $this->payoutAttention($voucher),
             'approval' => $approval,
+            'external_reference' => $externalReference,
+            ...$collectibleFacts,
         ];
     }
 
@@ -471,6 +475,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         $approval = $this->approvalSummary($voucher);
         $status = $this->operationalStatus($voucher, $approval);
         $operational = $this->operationalSummary($voucher);
+        $instructions = $this->instructionsArray($voucher);
+        $collectibleFacts = $this->collectibleFacts($voucher);
 
         return [
             'id' => $voucher->id,
@@ -496,7 +502,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ],
             'party' => $this->partySummary($voucher),
             'amounts' => $this->amountFacts($voucher),
-            'instructions' => $this->instructionsArray($voucher),
+            'instructions' => $instructions,
             'claims' => $this->claimsArray($voucher),
             'claim_evidence' => $this->claimEvidenceArray($voucher),
             'redemption' => $this->redemptionSummary($voucher),
@@ -504,7 +510,42 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'backing' => $this->backingSummary($voucher),
             'settlement_envelope' => $this->settlementEnvelopeSummary($voucher),
             'approval' => $approval,
+            'external_reference' => $this->externalReference($voucher, $instructions),
+            ...$collectibleFacts,
         ];
+    }
+
+    /**
+     * @return array{consumer_status: string|null, collection: array<string, mixed>|null}
+     */
+    protected function collectibleFacts(Voucher $voucher): array
+    {
+        if (! $this->flowCapabilitiesResolver()->resolve($voucher)->can_collect) {
+            return [
+                'consumer_status' => null,
+                'collection' => null,
+            ];
+        }
+
+        $progress = $this->collectionProgressService()->compute($voucher);
+
+        return [
+            'consumer_status' => $this->consumerStatusResolver()->resolveFromProgress($voucher, $progress),
+            'collection' => $progress->toArray(),
+        ];
+    }
+
+    /** @param array<string, mixed>|null $instructions */
+    protected function externalReference(Voucher $voucher, ?array $instructions = null): ?string
+    {
+        $rawExternalReference = data_get(
+            $instructions ?? $this->instructionsArray($voucher),
+            'metadata.custom.external_reference',
+        );
+
+        return is_string($rawExternalReference)
+            ? $this->nullableDisplayValue($rawExternalReference)
+            : null;
     }
 
     /**
@@ -1095,6 +1136,24 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
     {
         return $this->operationalStatuses
             ?? app(VoucherOperationalStatusResolverContract::class);
+    }
+
+    protected function flowCapabilitiesResolver(): VoucherFlowCapabilityResolverContract
+    {
+        return $this->flowCapabilities
+            ?? app(VoucherFlowCapabilityResolverContract::class);
+    }
+
+    protected function collectionProgressService(): VoucherCollectionProgressService
+    {
+        return $this->collectionProgress
+            ?? app(VoucherCollectionProgressService::class);
+    }
+
+    protected function consumerStatusResolver(): VoucherConsumerStatusResolver
+    {
+        return $this->consumerStatuses
+            ?? app(VoucherConsumerStatusResolver::class);
     }
 
     protected function isClaimed(Voucher $voucher): bool

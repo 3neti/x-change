@@ -2,18 +2,54 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
+use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
+
+function canonicalLifecyclePayableVoucher(string $code): Voucher
+{
+    $issuer = actingAsTestUser();
+
+    return issueVoucher(validVoucherInstructions(overrides: [
+        'voucher_type' => 'payable',
+        'target_amount' => 100,
+        'metadata' => [
+            'flow_type' => 'collectible',
+            'issuer_id' => (string) $issuer->getKey(),
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+            'custom' => ['external_reference' => $code.'-ORDER'],
+        ],
+    ]));
+}
+
+function canonicalLifecyclePaymentAttempt(Voucher $voucher): PaymentAttempt
+{
+    $key = (string) str()->uuid();
+
+    return PaymentAttempt::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'provider_code' => 'netbank',
+        'expected_amount_minor' => 10000,
+        'currency' => 'PHP',
+        'status' => PaymentAttemptStatus::AwaitingPayment,
+        'session_key_hash' => hash('sha256', 'session-'.$key),
+        'idempotency_key_hash' => hash('sha256', 'idempotency-'.$key),
+        'idempotency_fingerprint' => hash('sha256', 'fingerprint-'.$key),
+    ]);
+}
 
 it('lists vouchers as lifecycle summaries', function () {
     $voucher = issueVoucher();
@@ -32,6 +68,59 @@ it('lists vouchers as lifecycle summaries', function () {
         ->and($result[0]['voucher_id'])->toBe($voucher->id)
         ->and($result[0]['code'])->toBe($voucher->code)
         ->and($result[0]['currency'])->toBe((string) data_get($voucher, 'cash.currency', 'PHP'));
+});
+
+it('projects canonical collection facts in lifecycle summary and detail', function (string $consumerStatus): void {
+    $voucher = canonicalLifecyclePayableVoucher('CANONICAL-'.strtoupper($consumerStatus));
+
+    if ($consumerStatus === 'processing') {
+        canonicalLifecyclePaymentAttempt($voucher);
+    }
+
+    if ($consumerStatus === 'paid') {
+        VoucherCollection::query()->create([
+            'voucher_id' => $voucher->getKey(),
+            'collection_number' => 1,
+            'status' => 'collected',
+            'requested_amount_minor' => 10000,
+            'collected_amount_minor' => 10000,
+            'currency' => 'PHP',
+            'provider' => 'netbank',
+            'provider_reference' => 'canonical-'.$voucher->code,
+            'provider_transaction_id' => 'canonical-'.$voucher->code,
+            'idempotency_key' => 'canonical-'.$voucher->code,
+            'completed_at' => now(),
+        ]);
+    }
+
+    $service = app(VoucherLifecycleService::class);
+    $summary = collect($service->list())->firstWhere('id', $voucher->getKey());
+    $detail = $service->show((string) $voucher->getKey());
+
+    foreach ([$summary, $detail] as $facts) {
+        expect($facts)
+            ->toBeArray()
+            ->and($facts['external_reference'])->toBe('CANONICAL-'.strtoupper($consumerStatus).'-ORDER')
+            ->and($facts['consumer_status'])->toBe($consumerStatus)
+            ->and($facts['collection'])->toMatchArray([
+                'currency' => 'PHP',
+                'target_amount_minor' => 10000,
+                'collected_total_minor' => $consumerStatus === 'paid' ? 10000 : 0,
+                'remaining_to_collect_minor' => $consumerStatus === 'paid' ? 0 : 10000,
+                'is_fully_collected' => $consumerStatus === 'paid',
+                'is_overpaid' => false,
+                'overpaid_amount_minor' => 0,
+            ]);
+    }
+})->with(['payable', 'processing', 'paid']);
+
+it('projects null collection facts for a non-collectible voucher', function (): void {
+    $voucher = issueVoucher();
+    $detail = app(VoucherLifecycleService::class)->show((string) $voucher->getKey());
+
+    expect($detail['consumer_status'])->toBeNull()
+        ->and($detail['collection'])->toBeNull()
+        ->and($detail['external_reference'])->toBeNull();
 });
 
 it('uses immutable instructions for treasury-backed voucher face value', function () {
@@ -420,7 +509,7 @@ it('keeps a successful first slice partially claimed and claimable', function ()
         'completed_at' => now(),
         'meta' => ['fully_claimed' => false],
     ]);
-    $reference = (string) \Illuminate\Support\Str::ulid();
+    $reference = (string) Str::ulid();
     $execution = VoucherSliceExecution::query()->create([
         'reference' => $reference,
         'voucher_id' => $voucher->getKey(),

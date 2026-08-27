@@ -829,6 +829,33 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(statusBadges[4].classes()).not.toContain('bg-rose-50');
     });
 
+    it('prefers canonical consumer status for collectible Pay Codes', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: {
+                    ...payCodesReadModel,
+                    records: [
+                        {
+                            ...payCodesReadModel.records[0],
+                            consumer_status: 'processing',
+                            collection: {
+                                currency: 'PHP',
+                                target_amount_minor: 10000,
+                                collected_total_minor: 2500,
+                                remaining_to_collect_minor: 7500,
+                                is_fully_collected: false,
+                            },
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-status-badge"]').text(),
+        ).toBe('Processing');
+    });
+
     it('keeps a rejected payout primary while surfacing destination attention', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

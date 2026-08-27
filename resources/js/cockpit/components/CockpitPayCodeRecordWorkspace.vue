@@ -88,6 +88,9 @@ const sliceRows = computed(() => list(slices.value.rows));
 const hasSlices = computed(() => text(slices.value.schema) !== "");
 const settlement = computed(() => record(props.voucher?.settlement));
 const treasury = computed(() => record(props.voucher?.treasury));
+const collection = computed(() => record(props.voucher?.collection));
+const hasCollection = computed(() => text(collection.value.schema) !== "");
+const consumerStatus = computed(() => text(collection.value.consumer_status));
 const backing = computed(() => record(treasury.value.backing));
 const party = computed(() => record(overview.value.party));
 const availability = computed(() => record(overview.value.availability));
@@ -793,9 +796,12 @@ function number(value: unknown): number {
           </div>
           <p class="mt-2 flex items-center gap-2 text-sm text-slate-300">
             <ShieldCheck class="h-4 w-4" />
-            <span>Availability:</span>
+            <span>{{ hasCollection ? "Collection status:" : "Availability:" }}</span>
             <strong class="text-white">{{
-              text(availability.label) || title(status) || "Not available"
+              (consumerStatus && title(consumerStatus)) ||
+              text(availability.label) ||
+              title(status) ||
+              "Not available"
             }}</strong>
           </p>
         </div>
@@ -944,6 +950,49 @@ function number(value: unknown): number {
                   Authority: {{ title(amount.authority) }}
                 </p>
               </article>
+            </div>
+            <div
+              v-if="hasCollection"
+              class="mt-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/30"
+              data-testid="pay-code-overview-collection-progress"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sky-800 dark:text-sky-200">
+                  Collection Progress
+                </h4>
+                <span
+                  v-if="collection.is_overpaid === true"
+                  class="rounded-full bg-amber-100 px-2 py-1 text-[0.65rem] font-semibold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200"
+                >
+                  Overpaid
+                </span>
+              </div>
+              <dl class="mt-3 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <dt class="text-[0.65rem] text-slate-500 dark:text-slate-400">Target</dt>
+                  <dd class="mt-1 font-semibold text-slate-950 dark:text-white">
+                    {{ formatMoney(collection.target_amount_minor, collection.currency) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-[0.65rem] text-slate-500 dark:text-slate-400">Collected</dt>
+                  <dd class="mt-1 font-semibold text-slate-950 dark:text-white">
+                    {{ formatMoney(collection.collected_total_minor, collection.currency) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-[0.65rem] text-slate-500 dark:text-slate-400">Remaining</dt>
+                  <dd class="mt-1 font-semibold text-slate-950 dark:text-white">
+                    {{ formatMoney(collection.remaining_to_collect_minor, collection.currency) }}
+                  </dd>
+                </div>
+              </dl>
+              <p
+                v-if="collection.is_overpaid === true"
+                class="mt-3 text-xs text-amber-800 dark:text-amber-200"
+              >
+                Overpaid by {{ formatMoney(collection.overpaid_amount_minor, collection.currency) }}
+              </p>
             </div>
           </div>
 

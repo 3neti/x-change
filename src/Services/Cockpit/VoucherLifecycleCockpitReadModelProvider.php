@@ -165,6 +165,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 slices: $detailProjection->slices($sliceProjection),
                 settlement: $detailProjection->settlement($detail),
                 treasury: $detailProjection->treasury($detail),
+                collection: $detailProjection->collection($detail),
                 evidence_summary: $this->voucherEvidenceSummary(
                     summary: $summary,
                     executionStatus: $execution->status,
@@ -1559,6 +1560,8 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'voucher_status' => $detail['voucher_status'] ?? null,
             'operational_status' => $detail['operational_status'] ?? null,
             'attention' => $detail['attention'] ?? null,
+            'external_reference' => $detail['external_reference'] ?? null,
+            'consumer_status' => $detail['consumer_status'] ?? null,
         ])
             ->filter(fn (mixed $value, string $key): bool => $key === 'redeemed_at' || $value !== null)
             ->all();
@@ -1609,6 +1612,8 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ),
             attention: $this->payCodeAttention($row),
             actions: $this->payCodeRowActions($code, $this->canDistributePayCode($row, $status)),
+            consumer_status: $this->nullableString($row['consumer_status'] ?? null),
+            collection: is_array($row['collection'] ?? null) ? $row['collection'] : [],
         );
     }
 

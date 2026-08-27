@@ -144,7 +144,9 @@ function displayStatus(status: string): string {
 }
 
 function statusLabel(record: CockpitPayCodeExplorerRecord): string {
-    return record.operationalStatus.label || displayStatus(record.status);
+    return record.consumerStatus
+        ? displayStatus(record.consumerStatus)
+        : record.operationalStatus.label || displayStatus(record.status);
 }
 
 function statusBadgeClass(status: string): string {

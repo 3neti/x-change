@@ -92,6 +92,8 @@ function bplsIssuanceResult(
 /** @return array<string, mixed> */
 function bplsLifecycleDetail(Voucher $voucher, float $amount = 100.00): array
 {
+    $externalReference = data_get($voucher->metadata, 'instructions.metadata.custom.external_reference');
+
     return [
         'code' => $voucher->code,
         'amount' => $amount,
@@ -106,6 +108,9 @@ function bplsLifecycleDetail(Voucher $voucher, float $amount = 100.00): array
         'claimed' => false,
         'fully_claimed' => false,
         'attention' => null,
+        'external_reference' => $externalReference,
+        'consumer_status' => 'payable',
+        'collection' => null,
     ];
 }
 

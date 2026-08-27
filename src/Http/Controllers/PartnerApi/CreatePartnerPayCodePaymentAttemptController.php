@@ -20,12 +20,12 @@ use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\IdempotencyService;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
-use LBHurtado\XChange\Services\PartnerApi\PartnerPayCodeConsumerStatusResolver;
 use LBHurtado\XChange\Services\PartnerApi\PartnerPayCodeReferenceService;
 use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
+use LBHurtado\XChange\Services\VoucherConsumerStatusResolver;
 use RuntimeException;
 
 class CreatePartnerPayCodePaymentAttemptController extends Controller
@@ -42,7 +42,7 @@ class CreatePartnerPayCodePaymentAttemptController extends Controller
         PaymentAttemptPresenter $presenter,
         PayCodePaymentLinkResolver $paymentLinks,
         PartnerPayCodeReferenceService $references,
-        PartnerPayCodeConsumerStatusResolver $consumerStatuses,
+        VoucherConsumerStatusResolver $consumerStatuses,
         IdempotencyService $idempotency,
         ApiResponseFactory $responses,
     ): JsonResponse {

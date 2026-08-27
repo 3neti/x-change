@@ -146,6 +146,38 @@ describe("Cockpit Voucher Detail hydration", () => {
     expect(wrapper.text()).not.toContain("raw_payload");
   });
 
+  it("prefers canonical consumer status on collectible detail", () => {
+    const wrapper = mount(VoucherDetail, {
+      props: {
+        context: { code: "PC-HYDRATED-001" },
+        read_model: {
+          ...readModel,
+          voucher: {
+            ...readModel.voucher,
+            collection: {
+              schema: "x-change.cockpit.pay-code-collection.v1",
+              consumer_status: "processing",
+              currency: "PHP",
+              target_amount_minor: 150075,
+              collected_total_minor: 50000,
+              remaining_to_collect_minor: 100075,
+              is_fully_collected: false,
+              is_overpaid: false,
+              overpaid_amount_minor: 0,
+            },
+          },
+        },
+      },
+    });
+
+    expect(wrapper.get('[data-testid="pay-code-record-workspace"]').text()).toContain(
+      "Processing",
+    );
+    expect(
+      wrapper.get('[data-testid="pay-code-overview-collection-progress"]').text(),
+    ).toContain("₱1,000.75");
+  });
+
   it("leads Overview with plain-language claim readiness", () => {
     const wrapper = mount(VoucherDetail, {
       props: { read_model: readModel },

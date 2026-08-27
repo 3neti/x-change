@@ -157,6 +157,16 @@ it('projects capability instructions target and timing without raw instruction p
             'masked' => false,
         ],
         'purpose' => 'BPLS-TRANSPORT-2026-0042',
+        'consumer_status' => 'payable',
+        'collection' => [
+            'currency' => 'PHP',
+            'target_amount_minor' => 25000,
+            'collected_total_minor' => 0,
+            'remaining_to_collect_minor' => 25000,
+            'is_fully_collected' => false,
+            'is_overpaid' => false,
+            'overpaid_amount_minor' => 0,
+        ],
     ])
         ->and($record['timing']['created_at'])->not->toBeNull()
         ->and(collect($record['instruction_badges'])->pluck('label')->duplicates())->toBeEmpty()
@@ -169,7 +179,17 @@ it('projects capability instructions target and timing without raw instruction p
         ->assertOk()
         ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
         ->assertJsonPath('props.pay_codes_read_model.records.0.purpose', 'BPLS-TRANSPORT-2026-0042')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.consumer_status', 'payable')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.collection.remaining_to_collect_minor', 25000)
         ->assertJsonPath('props.pay_codes_read_model.records.0.terminal_control.status', 'blocked');
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.collection.schema', 'x-change.cockpit.pay-code-collection.v1')
+        ->assertJsonPath('props.read_model.voucher.collection.consumer_status', 'payable')
+        ->assertJsonPath('props.read_model.voucher.collection.target_amount_minor', 25000);
 });
 
 it('falls back to the rider message when no external reference is present', function (): void {

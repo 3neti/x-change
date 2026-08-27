@@ -144,6 +144,17 @@ it('enriches payable reads with payment links progress and a completed receipt',
         'capability' => ['key' => 'collection'],
         'claimed' => false,
         'fully_claimed' => false,
+        'external_reference' => 'BPLS-GATE-READ',
+        'consumer_status' => 'paid',
+        'collection' => [
+            'currency' => 'PHP',
+            'target_amount_minor' => 10000,
+            'collected_total_minor' => 10000,
+            'remaining_to_collect_minor' => 0,
+            'is_fully_collected' => true,
+            'is_overpaid' => false,
+            'overpaid_amount_minor' => 0,
+        ],
     ]);
     $this->app->instance(VoucherLifecycleServiceContract::class, $lifecycle);
 

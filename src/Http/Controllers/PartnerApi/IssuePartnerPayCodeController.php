@@ -19,8 +19,8 @@ use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\IdempotencyService;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiMandateGuard;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
-use LBHurtado\XChange\Services\PartnerApi\PartnerPayCodeConsumerStatusResolver;
 use LBHurtado\XChange\Services\PartnerApi\PartnerPayCodeReferenceService;
+use LBHurtado\XChange\Services\VoucherConsumerStatusResolver;
 use LogicException;
 
 class IssuePartnerPayCodeController extends Controller
@@ -32,7 +32,7 @@ class IssuePartnerPayCodeController extends Controller
         GeneratePayCode $issue,
         IdempotencyService $idempotency,
         PartnerPayCodeReferenceService $references,
-        PartnerPayCodeConsumerStatusResolver $consumerStatuses,
+        VoucherConsumerStatusResolver $consumerStatuses,
         ApiResponseFactory $responses,
     ): JsonResponse {
         $payload = $request->validated();
