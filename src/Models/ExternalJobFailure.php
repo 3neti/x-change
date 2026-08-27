@@ -18,6 +18,7 @@ final class ExternalJobFailure extends Model
         'provider_code',
         'trigger',
         'failure_type',
+        'metadata',
         'failed_at',
     ];
 
@@ -40,6 +41,7 @@ final class ExternalJobFailure extends Model
     {
         return [
             'failed_at' => 'immutable_datetime',
+            'metadata' => 'array',
         ];
     }
 }

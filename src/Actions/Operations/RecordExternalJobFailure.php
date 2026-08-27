@@ -16,6 +16,7 @@ final class RecordExternalJobFailure
         Throwable $failure,
         ?string $providerCode = null,
         ?string $trigger = null,
+        array $metadata = [],
     ): ExternalJobFailure {
         return ExternalJobFailure::query()->create([
             'job_type' => $jobType,
@@ -24,6 +25,7 @@ final class RecordExternalJobFailure
             'provider_code' => $providerCode,
             'trigger' => $trigger,
             'failure_type' => class_basename($failure),
+            'metadata' => $metadata,
             'failed_at' => now(),
         ]);
     }

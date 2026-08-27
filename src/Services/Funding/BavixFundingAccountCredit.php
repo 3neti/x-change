@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Funding;
 use Bavix\Wallet\Models\Transaction;
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Data\Funding\FundingAccountRecoveryData;
@@ -27,16 +28,15 @@ class BavixFundingAccountCredit implements FundingAccountCreditContract, Funding
             throw FundingSettlementDenied::because('the Account wallet reference is invalid');
         }
 
-        $wallet = $walletModel::query()
-            ->where('uuid', $identifier)
-            ->when(
-                ctype_digit($identifier),
-                fn ($query) => $query->orWhere(
-                    $query->getModel()->getQualifiedKeyName(),
-                    (int) $identifier,
-                ),
-            )
-            ->first();
+        if (ctype_digit($identifier)) {
+            $wallet = $walletModel::query()->find((int) $identifier);
+        } else {
+            if (! Str::isUuid($identifier)) {
+                throw FundingSettlementDenied::because('the Account wallet reference is invalid');
+            }
+
+            $wallet = $walletModel::query()->where('uuid', $identifier)->first();
+        }
 
         if (! $wallet instanceof Model || ! method_exists($wallet, 'deposit')) {
             throw FundingSettlementDenied::because('the Account wallet could not be resolved');

@@ -118,6 +118,7 @@ use LBHurtado\XChange\Console\Commands\PartnerApi\CreatePartnerApiClientCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
+use LBHurtado\XChange\Console\Commands\Payment\ResumeVerifiedPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\AuthorizeProvisioningOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\ExpireProvisioningOffersCommand;
@@ -1460,6 +1461,7 @@ class XChangeServiceProvider extends ServiceProvider
                 VerifyFundingRequestBackingCommand::class,
                 VerifyOpenFundingIntentsCommand::class,
                 VerifyOpenPaymentAttemptsCommand::class,
+                ResumeVerifiedPaymentAttemptsCommand::class,
                 SyncStandingFundingAddressesCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
                 TestFeedbackEmailCommand::class,

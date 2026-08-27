@@ -10,6 +10,7 @@ use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
@@ -24,6 +25,7 @@ class VerifyPaymentAttempt
         private readonly RecordProviderFundingObservation $recordObservation,
         private readonly TransitionPaymentAttempt $transition,
         private readonly SettleVerifiedPaymentAttempt $settle,
+        private readonly RecordExternalJobFailure $failures,
     ) {}
 
     public function handle(
@@ -48,6 +50,10 @@ class VerifyPaymentAttempt
     ): PaymentAttempt {
         if ($attempt->status === PaymentAttemptStatus::Settled) {
             return $attempt->load('events');
+        }
+
+        if ($attempt->status === PaymentAttemptStatus::Verified) {
+            return $this->settleVerified($attempt, $trigger, false);
         }
 
         $expiryBoundary = $attempt->expires_at?->addSeconds(
@@ -142,7 +148,51 @@ class VerifyPaymentAttempt
             ['provider_status' => $observation->provider_status],
         );
 
-        return $this->settle->handle($verified, $trigger);
+        return $this->settleVerified($verified, $trigger, true);
+    }
+
+    private function settleVerified(
+        PaymentAttempt $attempt,
+        PaymentVerificationTrigger $trigger,
+        bool $providerCalls,
+    ): PaymentAttempt {
+        try {
+            return $this->settle->handle($attempt, $trigger);
+        } catch (Throwable $exception) {
+            $providerTransactionId = trim((string) $attempt->provider_transaction_id);
+
+            try {
+                $this->failures->handle(
+                    jobType: 'VerifyPaymentAttemptSettlement',
+                    subjectType: 'payment_attempt',
+                    subjectId: $attempt->getKey(),
+                    failure: $exception,
+                    providerCode: $attempt->provider_code,
+                    trigger: $trigger->value,
+                    metadata: [
+                        'payment_attempt_reference' => (string) $attempt->reference,
+                        'voucher_reference' => 'voucher:'.$attempt->voucher_id,
+                        'provider' => $attempt->provider_code,
+                        'provider_observation_id' => $attempt->matched_observation_id,
+                        'provider_transaction_hash' => $providerTransactionId === ''
+                            ? null
+                            : hash('sha256', $providerTransactionId),
+                        'failure_type' => class_basename($exception),
+                        'state' => PaymentAttemptStatus::Verified->value,
+                        'retry_eligible' => true,
+                        'provider_calls' => $providerCalls,
+                        'provider_inventory_changed' => false,
+                        'treasury_position_changed' => false,
+                        'voucher_collection_changed' => false,
+                        'compatibility_wallet_changed' => false,
+                    ],
+                );
+            } catch (Throwable $recordingFailure) {
+                report($recordingFailure);
+            }
+
+            throw $exception;
+        }
     }
 
     private function matches(

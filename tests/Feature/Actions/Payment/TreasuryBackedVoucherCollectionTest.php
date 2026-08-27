@@ -8,6 +8,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
+use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Models\VoucherCollection;
@@ -69,6 +70,26 @@ it('recognizes a Treasury-backed collection without directly crediting its compa
     expect((int) $wallet->refresh()->balanceInt)->toBe(10_000)
         ->and(treasuryClientFundsLedger($issuer)->getBalanceIntAttribute())->toBe(10_000)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(10_000);
+});
+
+it('uses the collection wallet uuid as the Treasury account reference', function (): void {
+    $issuer = actingAsTestUser(0);
+    $wallet = $issuer->wallet()->where('slug', 'platform')->sole();
+    $accounts = Mockery::mock(FundingAccountCreditContract::class);
+    $accounts->shouldReceive('resolve')
+        ->once()
+        ->with('wallet:'.$wallet->uuid)
+        ->andReturn($wallet);
+    $this->app->instance(FundingAccountCreditContract::class, $accounts);
+    $voucher = treasuryBackedCollectionVoucher($issuer);
+
+    app(CollectVoucherFunds::class)->collectConfirmed(
+        $voucher,
+        treasuryBackedCollectionResult($voucher),
+        treasuryBackedCollectionPayload(),
+    );
+
+    expect(VoucherCollection::query()->count())->toBe(1);
 });
 
 /**

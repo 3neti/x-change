@@ -49,6 +49,7 @@ class VerifyOpenPaymentAttemptsCommand extends Command
             ->whereIn('status', [
                 PaymentAttemptStatus::AwaitingPayment,
                 PaymentAttemptStatus::Verifying,
+                PaymentAttemptStatus::Verified,
             ])
             ->oldest('expires_at')
             ->oldest('id')

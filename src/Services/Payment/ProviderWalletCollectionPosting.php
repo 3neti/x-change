@@ -57,6 +57,10 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
 
         $connection = $connections->sole();
         $wallet = $this->wallets->resolve($voucher);
+        $walletUuid = data_get($wallet, 'uuid');
+        $accountReference = is_string($walletUuid) && trim($walletUuid) !== ''
+            ? 'wallet:'.trim($walletUuid)
+            : 'wallet:'.$wallet->getKey();
         $providerTransactionId = trim((string) (
             $collection->providerTransactionId
             ?? $collection->providerReference
@@ -108,7 +112,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             ),
         );
         $allocation = $this->allocations->allocate(
-            accountReference: 'wallet:'.$wallet->getKey(),
+            accountReference: $accountReference,
             provider: $provider,
             amountMinor: $collection->amountMinor,
             currency: $currency,
