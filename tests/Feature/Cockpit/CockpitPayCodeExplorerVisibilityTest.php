@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Models\PosSaleReference;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTerminalControlReadModel;
 
 it('shows an account holder only their own Pay Codes', function () {
@@ -207,4 +208,65 @@ it('falls back to the rider message when no external reference is present', func
 
     expect($record['code'])->toBe($voucher->code)
         ->and($record['purpose'])->toBe('Community snacks collection');
+});
+
+it('searches and displays canonical POS sale facts from the lookup table', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'voucher_type' => 'payable',
+        'target_amount' => 75,
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+            'custom' => [
+                'cockpit' => ['builder' => 'pos', 'source' => 'cockpit.quick-generate'],
+            ],
+        ],
+    ]));
+    PosSaleReference::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'sale_reference' => 'POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ',
+        'order_reference' => 'ORDER-REPEATABLE-42',
+        'purpose' => 'Snacks',
+        'operator_type' => $issuer->getMorphClass(),
+        'operator_id' => $issuer->getKey(),
+    ]);
+
+    foreach (['POS-20260828-01HZZZ', 'ORDER-REPEATABLE-42'] as $search) {
+        $this->actingAs($issuer)
+            ->withHeader('X-Inertia', 'true')
+            ->get(route('x-change.cockpit.pay-codes.index', ['search' => $search]))
+            ->assertOk()
+            ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+            ->assertJsonPath('props.pay_codes_read_model.records.0.pos_reference.sale_reference', 'POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ')
+            ->assertJsonPath('props.pay_codes_read_model.records.0.pos_reference.order_reference', 'ORDER-REPEATABLE-42');
+    }
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.pos_reference.reference_kind', 'canonical')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.sale_reference', 'POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.order_reference', 'ORDER-REPEATABLE-42')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.purpose', 'Snacks');
+});
+
+it('labels an old POS external reference as legacy without fabricating a sale reference', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'metadata' => [
+            'custom' => [
+                'external_reference' => 'OLD-POS-SNACKS',
+                'cockpit' => ['builder' => 'pos', 'source' => 'cockpit.quick-generate'],
+            ],
+        ],
+    ]));
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.pos_reference.reference_kind', 'legacy')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.legacy_reference', 'OLD-POS-SNACKS')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.sale_reference', null);
 });

@@ -396,6 +396,15 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                 </div>
 
                 <p
+                    v-if="record.posReference?.sale_reference"
+                    class="truncate font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+                    :title="String(record.posReference?.sale_reference)"
+                    data-testid="cockpit-pay-code-mobile-sale-reference"
+                >
+                    {{ record.posReference?.sale_reference }}
+                </p>
+
+                <p
                     v-if="record.purpose"
                     class="truncate text-xs text-slate-600 dark:text-slate-300"
                     :title="record.purpose"
@@ -578,6 +587,14 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                             class="min-w-0 px-4 py-2.5"
                             data-testid="cockpit-pay-code-row-identity"
                         >
+                            <p
+                                v-if="record.posReference?.sale_reference"
+                                class="mt-0.5 truncate font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+                                :title="String(record.posReference?.sale_reference)"
+                                data-testid="cockpit-pay-code-sale-reference"
+                            >
+                                {{ record.posReference?.sale_reference }}
+                            </p>
                             <p
                                 class="truncate font-mono font-semibold text-slate-950 dark:text-slate-50"
                             >

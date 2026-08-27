@@ -13,6 +13,7 @@ import type {
     CockpitQuickGenerateMutationContract,
     CockpitVoucherReadModel,
 } from '../types';
+import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 
 const props = withDefaults(
     defineProps<{
@@ -33,13 +34,17 @@ type PosStage =
     | 'paid';
 
 const amount = ref('');
-const externalReference = ref('');
+const purpose = ref('');
+const orderReference = ref('');
 const stage = ref<PosStage>('entry');
 const errorMessage = ref<string | null>(null);
 const issuedCode = ref<string | null>(null);
 const paymentUrl = ref<string | null>(null);
 const qrSource = ref<string | null>(null);
 const confirmedAt = ref<string | null>(null);
+const saleReference = ref<string | null>(null);
+const issuedPurpose = ref<string | null>(null);
+const issuedOrderReference = ref<string | null>(null);
 
 const routeUrl = computed<string | null>(() => {
     const value = props.mutationContract?.route_url;
@@ -55,7 +60,6 @@ const canGenerate = computed<boolean>(() => {
         routeUrl.value !== null &&
         Number.isFinite(normalizedAmount.value) &&
         normalizedAmount.value > 0 &&
-        externalReference.value.trim() !== '' &&
         stage.value === 'entry'
     );
 });
@@ -163,6 +167,21 @@ async function generateQr(): Promise<void> {
             'links',
             'payment',
         ]);
+        saleReference.value = nestedString(issuance, [
+            'result',
+            'pos_reference',
+            'sale_reference',
+        ]);
+        issuedOrderReference.value = nestedString(issuance, [
+            'result',
+            'pos_reference',
+            'order_reference',
+        ]);
+        issuedPurpose.value = nestedString(issuance, [
+            'result',
+            'pos_reference',
+            'purpose',
+        ]);
 
         if (code === null || collectionAttemptUrl === null) {
             throw new Error(
@@ -225,11 +244,15 @@ async function generateQr(): Promise<void> {
 function newSale(): void {
     stopStatusPoll();
     amount.value = '';
-    externalReference.value = '';
+    purpose.value = '';
+    orderReference.value = '';
     issuedCode.value = null;
     paymentUrl.value = null;
     qrSource.value = null;
     confirmedAt.value = null;
+    saleReference.value = null;
+    issuedPurpose.value = null;
+    issuedOrderReference.value = null;
     errorMessage.value = null;
     stage.value = 'entry';
 }
@@ -265,10 +288,11 @@ function issuancePayload(): Record<string, unknown> {
         target_amount: normalizedAmount.value,
         metadata: {
             custom: {
-                external_reference: externalReference.value.trim(),
                 cockpit: {
                     source: 'cockpit.quick-generate',
                     builder: 'pos',
+                    purpose: purpose.value.trim() || null,
+                    order_reference: orderReference.value.trim() || null,
                     payee: {
                         kind: 'open',
                         explicit_secret: false,
@@ -400,8 +424,8 @@ function responseMessage(
                     New sale
                 </h3>
                 <p class="text-sm text-slate-600 dark:text-slate-300">
-                    Enter the amount and your order reference. The customer pays
-                    by QR Ph.
+                    Enter the amount, with an optional purpose or merchant order
+                    number. X-Change assigns the canonical sale reference.
                 </p>
             </header>
 
@@ -432,15 +456,30 @@ function responseMessage(
                 <label
                     class="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
                 >
-                    Reference or description
+                    Purpose or description
                     <input
-                        v-model="externalReference"
+                        v-model="purpose"
+                        type="text"
+                        maxlength="255"
+                        autocomplete="off"
+                        class="h-14 w-full rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-950 shadow-sm transition outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus:ring-emerald-950"
+                        placeholder="Snacks"
+                        data-testid="cockpit-pos-purpose"
+                    />
+                </label>
+
+                <label
+                    class="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
+                >
+                    Order number <span class="font-normal text-slate-500">(optional)</span>
+                    <input
+                        v-model="orderReference"
                         type="text"
                         maxlength="190"
                         autocomplete="off"
                         class="h-14 w-full rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-950 shadow-sm transition outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus:ring-emerald-950"
-                        placeholder="Order 1042 · Snacks"
-                        data-testid="cockpit-pos-reference"
+                        placeholder="ORDER-1042"
+                        data-testid="cockpit-pos-order-reference"
                     />
                 </label>
 
@@ -485,9 +524,11 @@ function responseMessage(
                 >
                     {{ saleAmount }}
                 </h3>
-                <p class="text-sm text-slate-500 dark:text-slate-400">
-                    {{ externalReference }}
-                </p>
+                <div class="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+                    <p v-if="saleReference" class="font-mono font-semibold text-emerald-700 dark:text-emerald-300" data-testid="cockpit-pos-sale-reference">{{ saleReference }}</p>
+                    <p v-if="issuedOrderReference" data-testid="cockpit-pos-issued-order-reference">Order {{ issuedOrderReference }}</p>
+                    <p v-if="issuedPurpose" data-testid="cockpit-pos-issued-purpose">{{ issuedPurpose }}</p>
+                </div>
             </header>
 
             <div
@@ -521,6 +562,12 @@ function responseMessage(
                     ></span>
                 </span>
                 Waiting for payment · {{ consumerStatus }}
+            </div>
+
+            <div v-if="saleReference" class="flex flex-wrap justify-center gap-2">
+                <CockpitManualCopyButton :value="saleReference" label="Copy sale reference" />
+                <CockpitManualCopyButton v-if="issuedOrderReference" :value="issuedOrderReference" label="Copy order number" />
+                <CockpitManualCopyButton v-if="issuedPurpose" :value="issuedPurpose" label="Copy purpose" />
             </div>
 
             <p
@@ -562,9 +609,9 @@ function responseMessage(
                 >
                     {{ collectedAmount }}
                 </h3>
-                <p class="text-base text-slate-600 dark:text-slate-300">
-                    {{ externalReference }}
-                </p>
+                <p v-if="saleReference" class="font-mono text-base font-semibold text-emerald-700 dark:text-emerald-300" data-testid="cockpit-pos-paid-sale-reference">{{ saleReference }}</p>
+                <p v-if="issuedOrderReference" class="text-base text-slate-600 dark:text-slate-300">Order {{ issuedOrderReference }}</p>
+                <p v-if="issuedPurpose" class="text-base text-slate-600 dark:text-slate-300">{{ issuedPurpose }}</p>
                 <p
                     v-if="confirmationTime"
                     class="text-xs text-slate-500 dark:text-slate-400"

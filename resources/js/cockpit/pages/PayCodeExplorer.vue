@@ -449,17 +449,20 @@ function sanitizeRecord(
 
     const operationalStatus = sanitizeOperationalStatus(record);
     const consumerStatus = stringValue(record.consumer_status);
+    const posReference = objectValue(record.pos_reference);
 
     return {
         code,
         template: stringValue(record.template) ?? 'Template pending',
-        purpose: stringValue(record.purpose),
+        purpose:
+            stringValue(posReference.purpose) ?? stringValue(record.purpose),
         capability: sanitizeCapability(record.capability),
         instructionBadges: sanitizeInstructionBadges(record.instruction_badges),
         amount: moneyValue(record.amount, stringValue(record.currency)),
         status: consumerStatus ?? operationalStatus.key,
         consumerStatus,
         collection: objectValue(record.collection),
+        posReference,
         voucherStatus: stringValue(record.voucher_status),
         operationalStatus,
         party: sanitizeParty(record.party),

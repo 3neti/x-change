@@ -71,6 +71,14 @@ const payCodesReadModel = {
             code: 'PC-HYDRATED-001',
             template: 'Money Changer',
             purpose: 'School transport allowance',
+            pos_reference: {
+                schema: 'x-change.cockpit.pos-sale-reference.v1',
+                sale_reference: 'POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ',
+                order_reference: 'ORDER-42',
+                purpose: 'Snacks',
+                legacy_reference: null,
+                reference_kind: 'canonical',
+            },
             amount: 1500.75,
             currency: 'PHP',
             status: 'issued',
@@ -186,12 +194,13 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         );
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
-        expect(wrapper.text()).toContain('School transport allowance');
+        expect(wrapper.text()).toContain('Snacks');
+        expect(wrapper.text()).toContain('POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-purpose"]')
                 .attributes('title'),
-        ).toBe('School transport allowance');
+        ).toBe('Snacks');
         expect(
             wrapper.findAll('[data-testid="cockpit-pay-code-copy-button"]'),
         ).toHaveLength(4);

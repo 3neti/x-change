@@ -9,6 +9,27 @@ use Illuminate\Support\Str;
 
 final class CockpitPayCodeDetailProjection
 {
+    /** @param array<string, mixed> $detail @return array<string, mixed> */
+    public function posReference(array $detail): array
+    {
+        $reference = data_get($detail, 'pos_reference');
+
+        if (! is_array($reference)) {
+            return [];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.pos-sale-reference.v1',
+            ...Arr::only($reference, [
+                'sale_reference',
+                'order_reference',
+                'purpose',
+                'legacy_reference',
+                'reference_kind',
+            ]),
+        ];
+    }
+
     /**
      * @param  array<string, mixed>  $detail
      * @return array<string, mixed>

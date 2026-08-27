@@ -91,6 +91,11 @@ describe('Cockpit Quick Generate POS mode', () => {
                     status: 'issued',
                     result: {
                         code: 'POS5',
+                        pos_reference: {
+                            sale_reference: 'POS-20260827-01HZZZZZZZZZZZZZZZZZZZZZZZ',
+                            order_reference: 'ORDER-2048',
+                            purpose: 'Merienda',
+                        },
                         links: {
                             collection_attempt:
                                 '/x/cockpit/pay-codes/POS5/collection-attempts',
@@ -129,8 +134,11 @@ describe('Cockpit Quick Generate POS mode', () => {
             .get('[data-testid="cockpit-pos-amount"]')
             .setValue('50.75');
         await wrapper
-            .get('[data-testid="cockpit-pos-reference"]')
-            .setValue('ORDER-2048 · Merienda');
+            .get('[data-testid="cockpit-pos-purpose"]')
+            .setValue('Merienda');
+        await wrapper
+            .get('[data-testid="cockpit-pos-order-reference"]')
+            .setValue('ORDER-2048');
         await wrapper
             .get('[data-testid="cockpit-pos-generate"]')
             .trigger('submit');
@@ -153,10 +161,11 @@ describe('Cockpit Quick Generate POS mode', () => {
             count: 1,
             metadata: {
                 custom: {
-                    external_reference: 'ORDER-2048 · Merienda',
                     cockpit: {
                         source: 'cockpit.quick-generate',
                         builder: 'pos',
+                        purpose: 'Merienda',
+                        order_reference: 'ORDER-2048',
                         payee: {
                             kind: 'open',
                             explicit_secret: false,
@@ -165,6 +174,8 @@ describe('Cockpit Quick Generate POS mode', () => {
                 },
             },
         });
+        expect(payload.metadata.custom).not.toHaveProperty('external_reference');
+        expect(payload.metadata.custom.cockpit).not.toHaveProperty('sale_reference');
         expect(payload.metadata).not.toHaveProperty('collection_wallet_id');
         expect((issuanceRequest[1] as RequestInit).headers).toMatchObject({
             Accept: 'application/json',
@@ -178,6 +189,9 @@ describe('Cockpit Quick Generate POS mode', () => {
                 .get('[data-testid="cockpit-pos-payment-qr"]')
                 .attributes('src'),
         ).toBe('data:image/png;base64,POSQR');
+        expect(wrapper.get('[data-testid="cockpit-pos-sale-reference"]').text()).toContain('POS-20260827');
+        expect(wrapper.get('[data-testid="cockpit-pos-issued-order-reference"]').text()).toContain('ORDER-2048');
+        expect(wrapper.get('[data-testid="cockpit-pos-issued-purpose"]').text()).toBe('Merienda');
         expect(poll.start).toHaveBeenCalledTimes(1);
         expect(poll.usePoll).toHaveBeenCalledWith(5000, expect.any(Function), {
             autoStart: false,
@@ -221,7 +235,12 @@ describe('Cockpit Quick Generate POS mode', () => {
         ).toBe('');
         expect(
             wrapper.get<HTMLInputElement>(
-                '[data-testid="cockpit-pos-reference"]',
+                '[data-testid="cockpit-pos-purpose"]',
+            ).element.value,
+        ).toBe('');
+        expect(
+            wrapper.get<HTMLInputElement>(
+                '[data-testid="cockpit-pos-order-reference"]',
             ).element.value,
         ).toBe('');
         expect(
@@ -261,9 +280,6 @@ describe('Cockpit Quick Generate POS mode', () => {
 
         await wrapper.get('[data-testid="cockpit-pos-amount"]').setValue('50');
         await wrapper
-            .get('[data-testid="cockpit-pos-reference"]')
-            .setValue('SAFE-1');
-        await wrapper
             .get('[data-testid="cockpit-pos-generate"]')
             .trigger('submit');
         await flushPromises();
@@ -300,9 +316,6 @@ describe('Cockpit Quick Generate POS mode', () => {
         });
 
         await wrapper.get('[data-testid="cockpit-pos-amount"]').setValue('50');
-        await wrapper
-            .get('[data-testid="cockpit-pos-reference"]')
-            .setValue('FIELD-ERROR');
         await wrapper
             .get('[data-testid="cockpit-pos-generate"]')
             .trigger('submit');

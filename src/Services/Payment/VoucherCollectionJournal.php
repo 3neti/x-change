@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionMoneyData;
@@ -21,6 +22,7 @@ final readonly class VoucherCollectionJournal
     public function __construct(
         private ExecutionJournalRecorder $recorder,
         private VoucherCollectionWalletResolverContract $collectionWallets,
+        private CockpitPosSaleReferenceService $posSaleReferences,
     ) {}
 
     public function record(VoucherCollection $collection): void
@@ -37,6 +39,7 @@ final readonly class VoucherCollectionJournal
             default => 'voucher.collection.completed',
         };
         $journalStatus = $isSucceeded ? 'completed' : 'failed';
+        $saleReference = $this->posSaleReferences->saleReferenceForVoucherId($collection->voucher_id);
 
         $this->recorder->record(new ExecutionJournalEntryData(
             eventType: $eventType,
@@ -65,6 +68,7 @@ final readonly class VoucherCollectionJournal
                     'execution_driver' => $collection->execution_driver,
                     'treasury_operation_reference' => $collection->treasury_operation_reference,
                     'provider_transaction_id' => $collection->provider_transaction_id,
+                    'sale_reference' => $saleReference,
                 ],
             ),
             idempotencyKey: 'x-change:voucher-collection:'.$journalStatus.':'
@@ -84,6 +88,7 @@ final readonly class VoucherCollectionJournal
                     'posting.provider_inventory_changed',
                     false,
                 ),
+                'sale_reference' => $saleReference,
             ],
             money: new ExecutionMoneyData(
                 currency: $collection->currency,

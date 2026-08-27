@@ -11,9 +11,11 @@ use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
+use LBHurtado\XChange\Models\PosSaleReference;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Treasury\TreasuryCompatibilityLedgerSynchronizer;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 beforeEach(function (): void {
     config()->set('x-change.onboarding.issuer_model', User::class);
@@ -51,6 +53,14 @@ it('recognizes a Treasury-backed collection without directly crediting its compa
         ->and($collection->treasury_operation_reference)->not->toBeNull()
         ->and(data_get($collection->meta, 'posting.provider_inventory_changed'))->toBeTrue()
         ->and(data_get($collection->meta, 'posting.treasury_position_allocation_reference'))->not->toBeNull();
+    $journal = ExecutionJournalEntry::query()
+        ->where('event_type', 'voucher.collection.completed')
+        ->sole();
+
+    expect(data_get($collection->meta, 'posting.sale_reference'))->toBe('POS-20260828-01HYYYYYYYYYYYYYYYYYYYYYYY')
+        ->and(data_get($journal->references, 'metadata.sale_reference'))->toBe('POS-20260828-01HYYYYYYYYYYYYYYYYYYYYYYY')
+        ->and(data_get($journal->payload, 'sale_reference'))->toBe('POS-20260828-01HYYYYYYYYYYYYYYYYYYYYYYY')
+        ->and(json_encode($journal->toArray()))->not->toContain('09173011987');
 
     app(TreasuryCompatibilityLedgerSynchronizer::class)->synchronize(
         $issuer,
@@ -97,7 +107,7 @@ it('uses the collection wallet uuid as the Treasury account reference', function
  */
 function treasuryBackedCollectionVoucher($issuer): Voucher
 {
-    return GenerateVouchers::run(validVoucherInstructions(
+    $voucher = GenerateVouchers::run(validVoucherInstructions(
         amount: 0,
         overrides: [
             'voucher_type' => 'payable',
@@ -109,6 +119,17 @@ function treasuryBackedCollectionVoucher($issuer): Voucher
             ],
         ],
     ))->sole();
+
+    PosSaleReference::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'sale_reference' => 'POS-20260828-01HYYYYYYYYYYYYYYYYYYYYYYY',
+        'order_reference' => 'ORDER-42',
+        'purpose' => 'Snacks',
+        'operator_type' => $issuer->getMorphClass(),
+        'operator_id' => $issuer->getKey(),
+    ]);
+
+    return $voucher;
 }
 
 function treasuryBackedCollectionResult(Voucher $voucher): VoucherPaymentResultData

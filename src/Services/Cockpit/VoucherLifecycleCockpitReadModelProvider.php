@@ -82,6 +82,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly ?ClaimUrlQrRendererContract $qrRenderer = null,
         private readonly ?VoucherSlicePlanProjection $slicePlans = null,
         private readonly ?PayCodeTerminalControlReadModel $terminalControls = null,
+        private readonly ?CockpitPosSaleReferenceService $posSaleReferences = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -134,7 +135,6 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             include: $query->include,
             correlationId: $query->correlationId,
         ));
-        $summary = $this->summary($detail, $code);
         $detailProjection = $this->payCodeDetails ?? new CockpitPayCodeDetailProjection;
         $integrationReferences = $this->integrationReferences ?? new CockpitPayCodeIntegrationReferenceResolver;
         $feedbackDeliveryIds = $integrationReferences->feedbackDeliveryIds($code);
@@ -146,8 +146,10 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
             if ($voucher instanceof Voucher) {
                 $sliceProjection = ($this->slicePlans ?? app(VoucherSlicePlanProjection::class))->forVoucher($voucher);
+                $detail['pos_reference'] = $this->posSaleReferenceService()->forVoucher($voucher);
             }
         }
+        $summary = $this->summary($detail, $code);
         $execution = $fallback->execution;
         $journal = $this->integrations?->journal($query, $voucherId, $feedbackDeliveryIds) ?? $fallback->journal;
         $actions = $this->integrations?->actions($query) ?? $fallback->actions;
@@ -166,6 +168,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 settlement: $detailProjection->settlement($detail),
                 treasury: $detailProjection->treasury($detail),
                 collection: $detailProjection->collection($detail),
+                pos_reference: $detailProjection->posReference($detail),
                 evidence_summary: $this->voucherEvidenceSummary(
                     summary: $summary,
                     executionStatus: $execution->status,
@@ -1403,6 +1406,26 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->map(fn (mixed $row): array => $this->toArray($row))
             ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
             ->values();
+        $sourceVoucherIds = $sourceRows
+            ->map(fn (array $row): mixed => $row['voucher_id'] ?? $row['id'] ?? null)
+            ->filter(fn (mixed $id): bool => is_numeric($id))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values();
+        $sourceVouchers = Voucher::query()
+            ->with('owner')
+            ->whereKey($sourceVoucherIds)
+            ->get()
+            ->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
+        $posReferences = $this->posSaleReferenceService()->forVouchers($sourceVouchers);
+        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences): array {
+            $voucherId = (string) ($row['voucher_id'] ?? $row['id'] ?? '');
+            $row['pos_reference'] = is_array($posReferences[$voucherId] ?? null)
+                ? $posReferences[$voucherId]
+                : [];
+
+            return $row;
+        });
         $filteredRows = $sourceRows
             ->when($search !== null, fn ($rows) => $rows->filter(
                 fn (array $row): bool => $this->matchesPayCodeSearch($row, $search)
@@ -1417,11 +1440,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->map(fn (mixed $id): int => (int) $id)
             ->unique()
             ->values();
-        $vouchers = Voucher::query()
-            ->with('owner')
-            ->whereKey($voucherIds)
-            ->get()
-            ->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
+        $vouchers = $sourceVouchers->only($voucherIds->map(fn (int $id): string => (string) $id)->all());
         $terminalControls = ($this->terminalControls ?? new PayCodeTerminalControlReadModel)
             ->forVouchers($vouchers, $query->actor);
         $rows = $filteredRows
@@ -1454,6 +1473,11 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 'excluded' => $this->excludedPayloadKeys(),
             ],
         );
+    }
+
+    private function posSaleReferenceService(): CockpitPosSaleReferenceService
+    {
+        return $this->posSaleReferences ?? app(CockpitPosSaleReferenceService::class);
     }
 
     /**
@@ -1562,6 +1586,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'attention' => $detail['attention'] ?? null,
             'external_reference' => $detail['external_reference'] ?? null,
             'consumer_status' => $detail['consumer_status'] ?? null,
+            'pos_reference' => $detail['pos_reference'] ?? null,
         ])
             ->filter(fn (mixed $value, string $key): bool => $key === 'redeemed_at' || $value !== null)
             ->all();
@@ -1614,6 +1639,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             actions: $this->payCodeRowActions($code, $this->canDistributePayCode($row, $status)),
             consumer_status: $this->nullableString($row['consumer_status'] ?? null),
             collection: is_array($row['collection'] ?? null) ? $row['collection'] : [],
+            pos_reference: is_array($row['pos_reference'] ?? null) ? $row['pos_reference'] : [],
         );
     }
 
@@ -1807,6 +1833,10 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             data_get($row, 'operational_status.settlement_outcome'),
             $row['purpose'] ?? null,
             data_get($row, 'instructions.metadata.custom.external_reference'),
+            data_get($row, 'pos_reference.sale_reference'),
+            data_get($row, 'pos_reference.order_reference'),
+            data_get($row, 'pos_reference.purpose'),
+            data_get($row, 'pos_reference.legacy_reference'),
             data_get($row, 'instructions.rider.message'),
         ];
 

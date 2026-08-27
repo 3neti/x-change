@@ -25,6 +25,7 @@ use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
+use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\IdempotencyService;
@@ -35,6 +36,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
     public function __construct(
         private readonly ClaimUrlQrRendererContract $claimUrlQrRenderer,
         private readonly ClaimShareCardUrlResolverContract $shareCardUrls,
+        private readonly CockpitPosSaleReferenceService $posSaleReferences,
     ) {}
 
     public function __invoke(
@@ -51,7 +53,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         QuickGenerateLastInstructionsStore $lastInstructions,
         RememberRiderLibraryUsage $rememberRiderLibraryUsage,
     ): JsonResponse {
-        $payload = $request->validated();
+        $payload = $this->posSaleReferences->sanitizeBrowserPayload($request->validated());
         $payload = $this->normalizePayloadForIssuance($payload);
         $validatedPayload = $payload;
         $key = $idempotency->extractKey($request);
@@ -77,8 +79,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             data_set($payload, 'metadata.issuer_id', (string) $issuerId);
         }
 
+        $payload = $this->posSaleReferences->sanitizeBrowserPayload($payload);
+        $idempotencyPayload = $payload;
+
         if (is_string($key)) {
-            $recalled = $idempotency->recallOrValidate($key, $payload);
+            $recalled = $idempotency->recallOrValidate($key, $idempotencyPayload);
 
             if (is_array($recalled)) {
                 data_set($recalled, 'idempotency.replayed', true);
@@ -93,6 +98,8 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             }
         }
 
+        $payload = $this->posSaleReferences->attachCanonicalReference($payload);
+
         $pricingPreflight = $this->pricingPreflight($payload, $estimatePayCodeCost);
         $fundingPreflight = $this->fundingPreflight($request, $balanceOverview);
         $result = $generatePayCode->handle($payload);
@@ -100,7 +107,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $this->processOperatorIssuanceActivity($request, $response, $key, $operatorIssuanceActivityHandoffPipeline);
 
         if (is_string($key)) {
-            $idempotency->remember($key, $payload, $response);
+            $idempotency->remember($key, $idempotencyPayload, $response);
         }
 
         $this->rememberLastInstructions(
@@ -347,6 +354,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
     ): array {
         $claimOutcome = $this->claimOutcome($payload);
         $voucher = Voucher::query()->find($result->voucher_id);
+        $posReference = $voucher instanceof Voucher
+            ? $this->posSaleReferences->forVoucher($voucher)
+            : null;
 
         return [
             'code' => $result->code,
@@ -361,6 +371,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'provider_payout' => $claimOutcome !== 'account_funding',
                 'account_funding' => $claimOutcome === 'account_funding',
             ],
+            'pos_reference' => $posReference,
             'links' => [
                 'redeem' => $result->links->redeem,
                 'redeem_path' => $result->links->redeem_path,

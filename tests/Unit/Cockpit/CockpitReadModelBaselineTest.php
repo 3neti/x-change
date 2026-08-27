@@ -194,6 +194,7 @@ it('serializes cockpit read model placeholders without broad payload exposure', 
             'authorized' => false,
             'slices' => [],
             'collection' => [],
+            'pos_reference' => [],
         ],
         'execution' => [
             'execution_id' => null,
@@ -1414,6 +1415,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                     ],
                     'consumer_status' => null,
                     'collection' => [],
+                    'pos_reference' => [],
                 ],
                 [
                     'code' => 'PC-LIST-002',
@@ -1488,6 +1490,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                     ],
                     'consumer_status' => null,
                     'collection' => [],
+                    'pos_reference' => [],
                 ],
             ],
             'redactions' => [

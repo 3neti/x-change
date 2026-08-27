@@ -12,6 +12,7 @@ class CockpitPayCodeListRecordData extends Data
      * @param  array<int, CockpitPayCodeRowActionData>  $actions
      * @param  array<int, CockpitPayCodeInstructionBadgeData>  $instruction_badges
      * @param  array<string, mixed>  $collection
+     * @param  array<string, mixed>  $pos_reference
      */
     public function __construct(
         public readonly string $code,
@@ -32,5 +33,6 @@ class CockpitPayCodeListRecordData extends Data
         public readonly array $actions = [],
         public readonly ?string $consumer_status = null,
         public readonly array $collection = [],
+        public readonly array $pos_reference = [],
     ) {}
 }

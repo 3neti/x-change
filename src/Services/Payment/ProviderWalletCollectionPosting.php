@@ -13,6 +13,7 @@ use LBHurtado\XChange\Contracts\VoucherCollectionPostingContract;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Data\Payment\VoucherCollectionPostingData;
+use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
@@ -25,6 +26,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
         private TreasuryInventoryOperationContract $treasury,
         private TreasuryInventoryRegistrationService $inventoryRegistration,
         private VerifiedTreasuryFundingAllocationContract $allocations,
+        private CockpitPosSaleReferenceService $posSaleReferences,
     ) {}
 
     public function driver(): string
@@ -80,6 +82,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             (string) $collection->amountMinor,
         ]));
         $inventoryOperationReference = 'voucher-collection-recognition:'.$scope;
+        $saleReference = $this->posSaleReferences->saleReferenceForVoucherId($voucher->getKey());
 
         $this->inventoryRegistration->ensure(new TreasuryInventoryData(
             inventoryReference: $connection->inventoryReference,
@@ -108,6 +111,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                     'voucher_code' => (string) $voucher->code,
                     'provider' => $provider,
                     'provider_transaction_id' => $providerTransactionId,
+                    'sale_reference' => $saleReference,
                 ],
             ),
         );
@@ -123,6 +127,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 'provider' => $provider,
                 'provider_transaction_id' => $providerTransactionId,
                 'inventory_operation_reference' => $recognition->operationReference,
+                'sale_reference' => $saleReference,
             ],
         );
 
@@ -139,6 +144,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 'treasury_position_transaction_id' => $allocation->destinationTransactionId,
                 'treasury_position_transaction_uuid' => $allocation->destinationTransactionUuid,
                 'treasury_position_transfer_uuid' => $allocation->transferUuid,
+                'sale_reference' => $saleReference,
             ],
         );
     }

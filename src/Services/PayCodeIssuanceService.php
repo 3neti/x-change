@@ -17,6 +17,7 @@ use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
 
 class PayCodeIssuanceService implements PayCodeIssuanceContract
@@ -26,6 +27,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         protected RiderStampArtifactStoreContract $stampArtifacts,
         protected PayCodePaymentLinkResolver $paymentLinks,
         protected WalletAccessContract $wallets,
+        protected CockpitPosSaleReferenceService $posSaleReferences,
     ) {}
 
     public function issue(mixed $issuer, array $input): array
@@ -47,7 +49,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         try {
             Auth::setUser($issuer);
 
-            return DB::transaction(function () use ($input, $instructions): array {
+            return DB::transaction(function () use ($input, $instructions, $issuer): array {
                 $issued = app(GeneratesVouchers::class)->handle($instructions)->first();
 
                 if (! $issued) {
@@ -56,6 +58,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
                 $this->splashArtwork->assertStored($issued);
                 $this->persistNamedSliceMetadata($issued, $input);
+                $this->posSaleReferences->record($issued, $issuer, $input);
 
                 $code = (string) $issued->code;
                 $redeemPath = $this->redeemPath($code);

@@ -69,6 +69,14 @@ const readModel = {
         status: "settled",
       },
     },
+    pos_reference: {
+      schema: "x-change.cockpit.pos-sale-reference.v1",
+      sale_reference: "POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ",
+      order_reference: "ORDER-42",
+      purpose: "Snacks",
+      legacy_reference: null,
+      reference_kind: "canonical",
+    },
     evidence_summary: [],
     distribution_links: {
       status: "available",
@@ -144,6 +152,11 @@ describe("Cockpit Voucher Detail hydration", () => {
     expect(wrapper.text()).not.toContain("must-not-render");
     expect(wrapper.text()).not.toContain("provider_payload");
     expect(wrapper.text()).not.toContain("raw_payload");
+    expect(
+      wrapper.get('[data-testid="pay-code-overview-pos-reference"]').text(),
+    ).toContain("POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ");
+    expect(wrapper.get('[data-testid="pay-code-overview-pos-reference"]').text()).toContain("ORDER-42");
+    expect(wrapper.get('[data-testid="pay-code-overview-pos-reference"]').text()).toContain("Snacks");
   });
 
   it("prefers canonical consumer status on collectible detail", () => {
@@ -176,6 +189,36 @@ describe("Cockpit Voucher Detail hydration", () => {
     expect(
       wrapper.get('[data-testid="pay-code-overview-collection-progress"]').text(),
     ).toContain("₱1,000.75");
+  });
+
+  it("labels a historical POS reference without fabricating a canonical sale reference", () => {
+    const wrapper = mount(VoucherDetail, {
+      props: {
+        context: { code: "PC-HYDRATED-001" },
+        read_model: {
+          ...readModel,
+          voucher: {
+            ...readModel.voucher,
+            pos_reference: {
+              schema: "x-change.cockpit.pos-sale-reference.v1",
+              sale_reference: null,
+              order_reference: null,
+              purpose: null,
+              legacy_reference: "OLD-POS-SNACKS",
+              reference_kind: "legacy",
+            },
+          },
+        },
+      },
+    });
+
+    const reference = wrapper.get(
+      '[data-testid="pay-code-overview-pos-reference"]',
+    );
+
+    expect(reference.text()).toContain("Legacy POS reference");
+    expect(reference.text()).toContain("OLD-POS-SNACKS");
+    expect(reference.text()).not.toContain("POS-20260828");
   });
 
   it("leads Overview with plain-language claim readiness", () => {

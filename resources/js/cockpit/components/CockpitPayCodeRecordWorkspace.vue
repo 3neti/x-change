@@ -4,6 +4,7 @@ import CockpitPayCodeEngineeringPreviewController from "@/actions/LBHurtado/XCha
 import BankEMISelect from "@/components/financial/BankEMISelect.vue";
 import CockpitPayCodeShareCard from "./CockpitPayCodeShareCard.vue";
 import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue";
+import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
 import { Form } from "@inertiajs/vue3";
 import {
   Activity,
@@ -89,6 +90,10 @@ const hasSlices = computed(() => text(slices.value.schema) !== "");
 const settlement = computed(() => record(props.voucher?.settlement));
 const treasury = computed(() => record(props.voucher?.treasury));
 const collection = computed(() => record(props.voucher?.collection));
+const posReference = computed(() => record(props.voucher?.pos_reference));
+const hasPosReference = computed(
+  () => text(posReference.value.reference_kind) !== "none" && text(posReference.value.schema) !== "",
+);
 const hasCollection = computed(() => text(collection.value.schema) !== "");
 const consumerStatus = computed(() => text(collection.value.consumer_status));
 const backing = computed(() => record(treasury.value.backing));
@@ -997,6 +1002,40 @@ function number(value: unknown): number {
           </div>
 
           <div class="grid gap-3 sm:grid-cols-2">
+            <article
+              v-if="hasPosReference"
+              class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:col-span-2 dark:border-emerald-900 dark:bg-emerald-950/30"
+              data-testid="pay-code-overview-pos-reference"
+            >
+              <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                <Fingerprint class="h-4 w-4" />
+                <span class="text-xs font-semibold">Sale reference</span>
+              </div>
+              <dl class="mt-3 grid gap-3 sm:grid-cols-3">
+                <div v-if="posReference.sale_reference">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Canonical</dt>
+                  <dd class="mt-1 flex items-center gap-2 font-mono text-sm font-semibold text-slate-950 dark:text-white">
+                    <span class="min-w-0 truncate">{{ text(posReference.sale_reference) }}</span>
+                    <CockpitManualCopyButton :value="text(posReference.sale_reference)" label="Copy sale reference" />
+                  </dd>
+                </div>
+                <div v-if="posReference.order_reference">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Order number</dt>
+                  <dd class="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-950 dark:text-white">
+                    <span class="min-w-0 truncate">{{ text(posReference.order_reference) }}</span>
+                    <CockpitManualCopyButton :value="text(posReference.order_reference)" label="Copy order number" />
+                  </dd>
+                </div>
+                <div v-if="posReference.purpose">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Purpose</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">{{ text(posReference.purpose) }}</dd>
+                </div>
+                <div v-if="posReference.legacy_reference">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Legacy POS reference</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">{{ text(posReference.legacy_reference) }}</dd>
+                </div>
+              </dl>
+            </article>
             <article
               class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
             >
