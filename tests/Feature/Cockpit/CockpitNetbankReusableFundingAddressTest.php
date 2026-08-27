@@ -209,11 +209,6 @@ it('returns a migration-required conflict before calling NetBank for a receipt-b
         'observed_at' => now(),
     ]);
 
-    enableNetbankTreasuryForTests();
-    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
-        $operator,
-        ['netbank-primary'],
-    );
     $providerCallsBefore = count(Http::recorded());
 
     $this->postJson(
@@ -230,15 +225,10 @@ it('returns a migration-required conflict before calling NetBank for a receipt-b
 });
 
 it('returns a safe conflict when a mobile-derived funding address belongs to another Account', function () {
-    enableNetbankTreasuryForTests();
     $this->withoutMiddleware(
         ShareXChangeBranding::class,
     );
     $operator = actingAsVerifiedFundingOperator();
-    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
-        $operator,
-        ['netbank-primary'],
-    );
 
     Http::fake([
         'https://auth.netbank.test/oauth2/token' => Http::response([
@@ -435,6 +425,10 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
         'mobile' => '639181234567',
         'mobile_verified_at' => now(),
     ])->save();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $otherOperator,
+        ['netbank-primary'],
+    );
 
     Http::fake([
         'https://auth.netbank.test/oauth2/token' => Http::response([
@@ -542,7 +536,7 @@ it('requires a verified mobile before creating a mobile-derived address', functi
 });
 
 it('keeps a persisted HMAC address stable across key rotation', function () {
-    actingAsTestUser();
+    actingAsVerifiedFundingOperator();
     config([
         'payment-gateway.netbank.funding.standing_address.scheme' => 'netbank-account-hmac-v2',
         'payment-gateway.netbank.funding.standing_address.hmac_key_id' => 'v2-2026-01',
@@ -594,6 +588,12 @@ function actingAsVerifiedFundingOperator(): object
         'mobile' => '639173011987',
         'mobile_verified_at' => now(),
     ])->save();
+
+    enableNetbankTreasuryForTests();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $operator,
+        ['netbank-primary'],
+    );
 
     return $operator;
 }

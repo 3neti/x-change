@@ -8,6 +8,15 @@ use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+
+beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:runtime-compiler-test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'runtime-compiler-test-v1');
+
+    app(ProvisionCommercialBaselines::class)
+        ->provision('commissioning-manifest:runtime-compiler-test');
+});
 
 it('uses the quick generate draft factory validator and compiler before existing issuance handoff', function () {
     $fakeGeneratePayCode = new class extends GeneratePayCode

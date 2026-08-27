@@ -279,6 +279,7 @@ class GeneratePayCodeRequest extends FormRequest
             'metadata.slice_policy.selection' => ['nullable', 'string'],
             'metadata.slice_policy.enforced' => ['nullable', 'boolean'],
             'metadata.custom' => ['nullable', 'array'],
+            'metadata.custom.external_reference' => ['nullable', 'string', 'max:190'],
             'metadata.custom.cockpit' => ['nullable', 'array'],
             'metadata.custom.cockpit.template_key' => ['nullable', 'string', 'max:80'],
             'metadata.custom.cockpit.source' => ['nullable', 'string', 'max:80'],

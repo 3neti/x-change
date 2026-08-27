@@ -147,7 +147,7 @@ it('lets only the draft owner save one encrypted Pay Code experience for every b
                     'show_tagline' => true,
                     'claim_marker' => 'qr',
                     'claim_marker_position' => 'bottom_right',
-                    'version' => 2,
+                    'version' => 1,
                 ],
             ],
             'validation' => [

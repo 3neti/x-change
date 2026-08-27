@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -27,6 +28,8 @@ beforeEach(function () {
         'x-change.settlement.default_driver' => 'philhealth-bst',
         'x-change.settlement.drivers_path' => settlementEnvelopeDriversPath(),
         'x-change.execution_result_handoffs.journal' => 'x-journal',
+        'x-change.commercial.legal_trace.legal_entity_reference' => 'legal-entity:x-change:execution-activity-test',
+        'x-change.commercial.legal_trace.profile_version' => 'execution-activity-test-v1',
         'queue.default' => 'sync',
     ]);
 
@@ -35,6 +38,9 @@ beforeEach(function () {
     Artisan::call('xchange:lifecycle:prepare', [
         '--seed' => true,
     ]);
+
+    app(ProvisionCommercialBaselines::class)
+        ->provision('commissioning-manifest:execution-activity-test');
 });
 
 it('projects x-journal execution result records into cockpit dashboard activity', function () {
@@ -44,7 +50,9 @@ it('projects x-journal execution result records into cockpit dashboard activity'
     ]);
 
     $scenario = json_decode(Artisan::output(), true);
-    $entry = ExecutionJournalEntry::query()->sole();
+    $entry = ExecutionJournalEntry::query()
+        ->where('event_type', 'execution.result.recorded')
+        ->sole();
 
     actingAsTestUser();
 

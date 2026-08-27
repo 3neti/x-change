@@ -9,7 +9,9 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
+use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Cockpit\RiderLibraryReadModel;
@@ -26,6 +28,8 @@ class CockpitQuickGeneratePageController extends Controller
         private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private readonly SettlementRailCapabilityRegistryContract $settlementRails,
         private readonly WalletAccessContract $wallets,
+        private readonly VoucherAccessContract $vouchers,
+        private readonly CockpitPayCodeDetailAccess $payCodeAccess,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -58,7 +62,37 @@ class CockpitQuickGeneratePageController extends Controller
             'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
             'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
             'current_user_wallet_id' => $this->currentUserWalletId($request),
+            'pos_voucher' => $this->posVoucher($request),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function posVoucher(Request $request): ?array
+    {
+        $code = $this->optionalString($request->query('pos_code'));
+
+        if ($code === null) {
+            return null;
+        }
+
+        $voucher = $this->vouchers->findByCode($code);
+
+        if ($voucher === null) {
+            return null;
+        }
+
+        abort_unless(
+            $request->user() !== null
+            && $this->payCodeAccess->canView($request->user(), $voucher),
+            404,
+        );
+
+        $props = $this->props->toVoucherDetailArray((string) $voucher->code);
+        $projection = data_get($props, 'read_model.voucher');
+
+        return is_array($projection) ? $projection : null;
     }
 
     private function currentUserWalletId(Request $request): string|int|null

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
 import { Link } from '@inertiajs/vue3';
-import { Landmark } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Landmark, QrCode, WandSparkles } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
@@ -15,6 +15,7 @@ import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../component
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
+import CockpitQuickGeneratePosPanel from '../components/CockpitQuickGeneratePosPanel.vue';
 import CockpitQuickGenerateSubmitPanel from '../components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
@@ -50,6 +51,7 @@ import type {
 } from '../types';
 
 const props = defineProps<CockpitQuickGeneratePageProps>();
+const issuanceSurface = ref<'composer' | 'pos'>('composer');
 
 const clientFundsMinor = computed<number | null>(() => {
     const amount = props.cockpit_header_read_model?.balances?.find(
@@ -1118,12 +1120,20 @@ function stringValue(value: unknown): string | null {
                     <h2
                         class="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
                     >
-                        Pay Code Issuance
+                        {{
+                            issuanceSurface === 'pos'
+                                ? 'Point of Sale'
+                                : 'Pay Code Issuance'
+                        }}
                     </h2>
                     <p
                         class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"
                     >
-                        Create a Pay Code for someone to claim.
+                        {{
+                            issuanceSurface === 'pos'
+                                ? 'Create a payment QR and watch the sale complete.'
+                                : 'Create a Pay Code for someone to claim.'
+                        }}
                     </p>
                 </div>
                 <Link
@@ -1138,10 +1148,53 @@ function stringValue(value: unknown): string | null {
             </header>
 
             <div
+                class="flex justify-center px-1 md:justify-start"
+                data-testid="cockpit-quick-generate-surface-toggle"
+            >
+                <div
+                    class="inline-grid w-full max-w-md grid-cols-2 rounded-2xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-800 dark:bg-slate-900"
+                    role="group"
+                    aria-label="Issuance workspace"
+                >
+                    <button
+                        type="button"
+                        :aria-pressed="issuanceSurface === 'composer'"
+                        :class="[
+                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition',
+                            issuanceSurface === 'composer'
+                                ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-slate-50'
+                                : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white',
+                        ]"
+                        data-testid="cockpit-quick-generate-surface-composer"
+                        @click="issuanceSurface = 'composer'"
+                    >
+                        <WandSparkles class="size-4" aria-hidden="true" />
+                        Composer
+                    </button>
+                    <button
+                        type="button"
+                        :aria-pressed="issuanceSurface === 'pos'"
+                        :class="[
+                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition',
+                            issuanceSurface === 'pos'
+                                ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white',
+                        ]"
+                        data-testid="cockpit-quick-generate-surface-pos"
+                        @click="issuanceSurface = 'pos'"
+                    >
+                        <QrCode class="size-4" aria-hidden="true" />
+                        POS
+                    </button>
+                </div>
+            </div>
+
+            <div
                 class="space-y-3"
                 data-testid="cockpit-quick-generate-primary-workflow-stack"
             >
                 <CockpitQuickGenerateSubmitPanel
+                    v-if="issuanceSurface === 'composer'"
                     :client-funds-minor="clientFundsMinor"
                     :current-user-wallet-id="props.current_user_wallet_id"
                     :mutation-contract="mutationContract"
@@ -1165,6 +1218,12 @@ function stringValue(value: unknown): string | null {
                         props.settlement_rail_capabilities
                     "
                     :templates="templates"
+                />
+                <CockpitQuickGeneratePosPanel
+                    v-else
+                    :mutation-contract="mutationContract"
+                    :pos-voucher="props.pos_voucher"
+                    :current-user-wallet-id="props.current_user_wallet_id"
                 />
             </div>
         </section>

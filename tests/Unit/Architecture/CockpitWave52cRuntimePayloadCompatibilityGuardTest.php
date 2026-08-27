@@ -25,6 +25,5 @@ it('documents the campaign quick generate runtime payload compatibility guard', 
         ->toContain('fields: selectedInputFields.value')
         ->and($frontendTest)
         ->toContain('validation: {')
-        ->toContain("mobile: '09173011987'")
-        ->toContain("fields: ['mobile']");
+        ->toContain("inputs: { fields: ['mobile'] }");
 });

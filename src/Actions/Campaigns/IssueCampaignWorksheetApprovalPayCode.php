@@ -12,12 +12,14 @@ use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use RuntimeException;
 
 final class IssueCampaignWorksheetApprovalPayCode
 {
     public function __construct(
         private readonly GeneratesVouchers $vouchers,
+        private readonly WalletAccessContract $wallets,
     ) {}
 
     public function handle(string $worksheetReference, Model $owner): CampaignWorksheetAuthorization
@@ -57,6 +59,7 @@ final class IssueCampaignWorksheetApprovalPayCode
             ]);
 
             $requiresOtp = (bool) data_get($worksheet->metadata, 'officer_authorization.require_otp', false);
+            $collectionWallet = $this->wallets->resolveForUser($owner);
 
             $voucher = $this->vouchers->handle(VoucherInstructionsData::from([
                 'cash' => ['amount' => 0, 'currency' => $worksheet->currency, 'validation' => ['country' => 'PH']],
@@ -72,6 +75,7 @@ final class IssueCampaignWorksheetApprovalPayCode
                     'flow_type' => 'settlement',
                     'campaign_execution' => 'campaign_worksheet_authorization',
                     'issuer_id' => (string) $owner->getKey(),
+                    'collection_wallet_id' => (string) $collectionWallet->getKey(),
                 ],
             ]))->first();
 
