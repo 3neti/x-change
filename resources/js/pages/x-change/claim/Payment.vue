@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { Head, router, usePoll } from '@inertiajs/vue3';
+import {
+    CheckCircle2,
+    CreditCard,
+    Loader2,
+    Printer,
+    ReceiptText,
+    RefreshCw,
+    ScanLine,
+} from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,15 +21,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
-import {
-    CheckCircle2,
-    CreditCard,
-    Loader2,
-    Printer,
-    ReceiptText,
-    RefreshCw,
-    ScanLine,
-} from 'lucide-vue-next';
 import { store as createPaymentAttempt } from '@/routes/x-change/pay/attempts';
 import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/checks';
 
@@ -115,13 +115,16 @@ const { start: startPaymentPoll, stop: stopPaymentPoll } = usePoll(
 watch(shouldPoll, (poll) => {
     if (poll) {
         startPaymentPoll();
+
         return;
     }
+
     stopPaymentPoll();
 });
 
 const qrSource = computed(() => {
     const qr = props.payment.attempt?.qr_code;
+
     if (
         qr?.mime_type !== 'image/png' ||
         typeof qr.base64_payload !== 'string' ||
@@ -129,6 +132,7 @@ const qrSource = computed(() => {
     ) {
         return null;
     }
+
     return `data:image/png;base64,${qr.base64_payload}`;
 });
 
@@ -136,6 +140,7 @@ const expiresAt = computed(() => {
     if (!props.payment.attempt?.expires_at) {
         return null;
     }
+
     return new Intl.DateTimeFormat('en-PH', {
         dateStyle: 'medium',
         timeStyle: 'short',
@@ -146,6 +151,7 @@ function dateTime(value: string | null): string {
     if (!value) {
         return 'Not recorded';
     }
+
     return new Intl.DateTimeFormat('en-PH', {
         dateStyle: 'medium',
         timeStyle: 'short',
@@ -166,6 +172,7 @@ function startPayment(): void {
     ) {
         return;
     }
+
     creating.value = true;
     router.post(
         createPaymentAttempt.url(props.payment.pay_code),
@@ -181,9 +188,11 @@ function startPayment(): void {
 
 function checkPaymentStatus(): void {
     const attempt = props.payment.attempt;
+
     if (!attempt?.can_check || checking.value) {
         return;
     }
+
     checking.value = true;
     router.post(
         checkPaymentAttempt.url({

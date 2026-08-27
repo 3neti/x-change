@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
 import { Link } from '@inertiajs/vue3';
 import { Landmark, QrCode, WandSparkles } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
@@ -14,8 +14,8 @@ import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuick
 import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue';
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
-import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGeneratePosPanel from '../components/CockpitQuickGeneratePosPanel.vue';
+import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateSubmitPanel from '../components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
