@@ -413,7 +413,7 @@ function responseMessage(
                             step="0.01"
                             inputmode="decimal"
                             autocomplete="off"
-                            class="h-20 w-full rounded-2xl border border-slate-300 bg-white pl-12 pr-4 text-4xl font-semibold tracking-tight text-slate-950 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus:ring-emerald-950"
+                            class="h-20 w-full rounded-2xl border border-slate-300 bg-white pr-4 pl-12 text-4xl font-semibold tracking-tight text-slate-950 shadow-sm transition outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus:ring-emerald-950"
                             placeholder="0.00"
                             data-testid="cockpit-pos-amount"
                         />
@@ -429,7 +429,7 @@ function responseMessage(
                         type="text"
                         maxlength="190"
                         autocomplete="off"
-                        class="h-14 w-full rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-950 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus:ring-emerald-950"
+                        class="h-14 w-full rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-950 shadow-sm transition outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus:ring-emerald-950"
                         placeholder="Order 1042 · Snacks"
                         data-testid="cockpit-pos-reference"
                     />
@@ -467,7 +467,7 @@ function responseMessage(
         >
             <header class="space-y-1">
                 <p
-                    class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300"
+                    class="text-xs font-bold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
                 >
                     Scan to pay
                 </p>
@@ -544,7 +544,7 @@ function responseMessage(
             </div>
             <div class="space-y-2">
                 <p
-                    class="text-sm font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300"
+                    class="text-sm font-bold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
                 >
                     Paid
                 </p>
