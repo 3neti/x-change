@@ -127,16 +127,16 @@
         },
         {
             "name": "3neti/emi-core",
-            "version": "v2.0.0-beta.4",
+            "version": "v2.0.0-beta.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-core.git",
-                "reference": "a24155ccc372725e8b33003c3df6b96d33bdfd86"
+                "reference": "2fdae249f8cc44ea6622658052bb3595cde857d4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-core/zipball/a24155ccc372725e8b33003c3df6b96d33bdfd86",
-                "reference": "a24155ccc372725e8b33003c3df6b96d33bdfd86",
+                "url": "https://api.github.com/repos/3neti/emi-core/zipball/2fdae249f8cc44ea6622658052bb3595cde857d4",
+                "reference": "2fdae249f8cc44ea6622658052bb3595cde857d4",
                 "shasum": ""
             },
             "require": {
@@ -176,9 +176,9 @@
             "description": "Provider-agnostic EMI domain: contracts, enums, models, DTOs, events",
             "support": {
                 "issues": "https://github.com/3neti/emi-core/issues",
-                "source": "https://github.com/3neti/emi-core/tree/v2.0.0-beta.4"
+                "source": "https://github.com/3neti/emi-core/tree/v2.0.0-beta.6"
             },
-            "time": "2026-07-31T14:00:22+00:00"
+            "time": "2026-08-28T05:13:11+00:00"
         },
         {
             "name": "3neti/emi-netbank",
@@ -964,16 +964,16 @@
         },
         {
             "name": "3neti/merchant",
-            "version": "v1.2.0",
+            "version": "v1.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/merchant.git",
-                "reference": "a8edb34dfbdef5514f7da3c1debdfd4619e897ef"
+                "reference": "a12f2176db64482df92660dcb4f41d5f45e27798"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/merchant/zipball/a8edb34dfbdef5514f7da3c1debdfd4619e897ef",
-                "reference": "a8edb34dfbdef5514f7da3c1debdfd4619e897ef",
+                "url": "https://api.github.com/repos/3neti/merchant/zipball/a12f2176db64482df92660dcb4f41d5f45e27798",
+                "reference": "a12f2176db64482df92660dcb4f41d5f45e27798",
                 "shasum": ""
             },
             "require": {
@@ -1016,9 +1016,9 @@
             "description": "Merchant and vendor-alias helper utilities for x-change",
             "support": {
                 "issues": "https://github.com/3neti/merchant/issues",
-                "source": "https://github.com/3neti/merchant/tree/v1.2.0"
+                "source": "https://github.com/3neti/merchant/tree/v1.2.2"
             },
-            "time": "2026-07-31T03:29:20+00:00"
+            "time": "2026-08-28T05:14:17+00:00"
         },
         {
             "name": "3neti/money-issuer",
