@@ -6,7 +6,6 @@ use LBHurtado\XChange\Contracts\WalletAccessContract;
 
 it('hydrates quick generate with operator-safe feedback defaults', function (): void {
     $user = actingAsTestUser();
-    $platformWallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
 
     $this
         ->withHeader('X-Inertia', 'true')
@@ -18,7 +17,13 @@ it('hydrates quick generate with operator-safe feedback defaults', function (): 
         ->assertJsonPath('props.feedback_defaults.mobile', null)
         ->assertJsonPath('props.feedback_defaults.source', 'authenticated-user')
         ->assertJsonPath('props.feedback_defaults.read_only', true)
-        ->assertJsonPath('props.current_user_wallet_id', $platformWallet->getKey())
+        ->assertJsonPath('props.collection_destination.schema', 'x-change.cockpit.collection-destination.v1')
+        ->assertJsonPath('props.collection_destination.label', 'Your Client Funds')
+        ->assertJsonPath('props.collection_destination.authority', 'authenticated_operator')
+        ->assertJsonPath('props.collection_destination.status', 'ready')
+        ->assertJsonPath('props.collection_destination.editable', false)
+        ->assertJsonPath('props.collection_destination.managed_automatically', true)
+        ->assertJsonMissingPath('props.current_user_wallet_id')
         ->assertJsonMissingPath('props.feedback_defaults.raw_payload')
         ->assertJsonMissingPath('props.feedback_defaults.provider_payload')
         ->assertJsonMissingPath('props.feedback_defaults.wallet')
@@ -65,7 +70,9 @@ it('hydrates the platform wallet when the host default wallet is different', fun
         ->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.quick-generate'))
         ->assertOk()
-        ->assertJsonPath('props.current_user_wallet_id', $platformWallet->getKey());
+        ->assertJsonPath('props.collection_destination.label', 'Your Client Funds')
+        ->assertJsonPath('props.collection_destination.authority', 'authenticated_operator')
+        ->assertJsonMissingPath('props.current_user_wallet_id');
 
     expect($user->wallet()->getRelated()->newQuery()
         ->where('holder_type', $user->getMorphClass())

@@ -1043,7 +1043,16 @@ describe('Cockpit Quick Generate foundation', () => {
     it('keeps the selected Pay Code kind visible in the Order', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
-                currentUserWalletId: 42,
+                collectionDestination: {
+                    schema: 'x-change.cockpit.collection-destination.v1',
+                    label: 'Your Client Funds',
+                    description:
+                        'Payments are credited to the collection account authorized for the signed-in operator.',
+                    authority: 'authenticated_operator',
+                    status: 'ready',
+                    editable: false,
+                    managed_automatically: true,
+                },
                 templates: cockpitQuickGenerateTemplates,
                 mutationContract: {
                     runtime_enabled: true,
@@ -1074,7 +1083,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(kind.text()).toBe('Disburseable');
         expect(
             wrapper.find(
-                '[data-testid="cockpit-quick-generate-collection-wallet"]',
+                '[data-testid="cockpit-quick-generate-collection-destination"]',
             ).exists(),
         ).toBe(false);
         expect(kind.classes()).toContain('font-semibold');
@@ -1101,10 +1110,12 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(
             'Amount to be collected from the payer. Not funded upfront.',
         );
-        const collectionWallet = wrapper.get<HTMLInputElement>(
-            '[data-testid="cockpit-quick-generate-collection-wallet"]',
+        const collectionDestination = wrapper.get(
+            '[data-testid="cockpit-quick-generate-collection-destination"]',
         );
-        expect(collectionWallet.element.value).toBe('42');
+        expect(collectionDestination.text()).toContain('Your Client Funds');
+        expect(collectionDestination.text()).toContain('Automatic');
+        expect(collectionDestination.find('input').exists()).toBe(false);
 
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-amount"]')
@@ -1128,22 +1139,21 @@ describe('Cockpit Quick Generate foundation', () => {
             ).exists(),
         ).toBe(false);
 
-        expect(quickGenerateEngineeringPreview(wrapper)).toMatchObject({
+        const payablePreview = quickGenerateEngineeringPreview(wrapper);
+        expect(payablePreview).toMatchObject({
             voucher_type: 'payable',
             target_amount: 125.5,
             cash: {
                 amount: 125.5,
             },
-            metadata: {
-                collection_wallet_id: '42',
-            },
         });
-
-        await collectionWallet.setValue('shared-wallet-17');
+        expect(payablePreview.metadata).not.toHaveProperty(
+            'collection_wallet_id',
+        );
 
         await type.setValue('settlement');
         expect(kind.text()).toBe('Settlement');
-        expect(collectionWallet.element.value).toBe('shared-wallet-17');
+        expect(collectionDestination.text()).toContain('Your Client Funds');
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-amount-field"]')
@@ -1153,13 +1163,17 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-target-amount"]',
         );
         await settlementTarget.setValue('250');
-        expect(quickGenerateEngineeringPreview(wrapper)).toMatchObject({
+        const settlementPreview = quickGenerateEngineeringPreview(wrapper);
+        expect(settlementPreview).toMatchObject({
             voucher_type: 'settlement',
             target_amount: 250,
             cash: {
                 amount: 125.5,
             },
         });
+        expect(settlementPreview.metadata).not.toHaveProperty(
+            'collection_wallet_id',
+        );
     });
 
     it('shows the authoritative estimated cost beneath the Pay Code amount', async () => {

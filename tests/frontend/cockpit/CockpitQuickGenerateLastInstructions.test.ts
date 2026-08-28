@@ -13,8 +13,19 @@ vi.mock('@inertiajs/vue3', () => ({
     },
 }));
 
+const collectionDestination = {
+    schema: 'x-change.cockpit.collection-destination.v1',
+    label: 'Your Client Funds',
+    description:
+        'Payments are credited to the collection account authorized for the signed-in operator.',
+    authority: 'authenticated_operator',
+    status: 'ready',
+    editable: false,
+    managed_automatically: true,
+} as const;
+
 describe('Quick Generate last instructions', () => {
-    it('restores a payable collection wallet and defaults a missing one', () => {
+    it('ignores legacy wallet ids and presents the authoritative collection destination', () => {
         const instructions = (collectionWalletId?: string) => ({
             schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
             saved_at: '2026-08-25T09:00:00Z',
@@ -30,28 +41,63 @@ describe('Quick Generate last instructions', () => {
         const remembered = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
-                currentUserWalletId: 77,
+                collectionDestination,
                 lastInstructions: instructions('shared-wallet-9'),
             },
         });
         const defaulted = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
-                currentUserWalletId: 77,
+                collectionDestination,
                 lastInstructions: instructions(),
             },
         });
 
         expect(
-            remembered.get<HTMLInputElement>(
-                '[data-testid="cockpit-quick-generate-collection-wallet"]',
-            ).element.value,
-        ).toBe('shared-wallet-9');
+            remembered
+                .get(
+                    '[data-testid="cockpit-quick-generate-collection-destination-label"]',
+                )
+                .text(),
+        ).toBe('Your Client Funds');
         expect(
-            defaulted.get<HTMLInputElement>(
+            defaulted
+                .get(
+                    '[data-testid="cockpit-quick-generate-collection-destination-label"]',
+                )
+                .text(),
+        ).toBe('Your Client Funds');
+        expect(
+            remembered.find(
                 '[data-testid="cockpit-quick-generate-collection-wallet"]',
-            ).element.value,
-        ).toBe('77');
+            ).exists(),
+        ).toBe(false);
+    });
+
+    it('shows the destination for an explicit collectible flow', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                collectionDestination,
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-28T09:00:00Z',
+                    instructions: {
+                        voucher_type: 'redeemable',
+                        cash: { amount: 100, currency: 'PHP' },
+                        metadata: { flow_type: 'collectible' },
+                    },
+                },
+            },
+        });
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-collection-destination-label"]',
+                )
+                .text(),
+        ).toBe('Your Client Funds');
     });
 
     it('hydrates the payable amount from the canonical target with a legacy cash fallback', () => {
@@ -71,7 +117,6 @@ describe('Quick Generate last instructions', () => {
             mount(CockpitQuickGenerateSubmitPanel, {
                 props: {
                     templates: cockpitQuickGenerateTemplates,
-                    currentUserWalletId: 77,
                     lastInstructions: instructions(targetAmount),
                 },
             });
@@ -92,7 +137,6 @@ describe('Quick Generate last instructions', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
-                currentUserWalletId: 77,
                 lastInstructions: {
                     schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
                     saved_at: '2026-08-26T09:00:00Z',

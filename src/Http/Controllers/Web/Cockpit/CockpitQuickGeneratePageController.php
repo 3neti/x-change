@@ -61,7 +61,7 @@ class CockpitQuickGeneratePageController extends Controller
             'rider_library' => $this->riderLibrary->for($request->user()),
             'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
             'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
-            'current_user_wallet_id' => $this->currentUserWalletId($request),
+            'collection_destination' => $this->collectionDestination($request),
             'pos_voucher' => $this->posVoucher($request),
         ]);
     }
@@ -95,7 +95,10 @@ class CockpitQuickGeneratePageController extends Controller
         return is_array($projection) ? $projection : null;
     }
 
-    private function currentUserWalletId(Request $request): string|int|null
+    /**
+     * @return array{schema: string, label: string, description: string, authority: string, status: string, editable: false, managed_automatically: true}|null
+     */
+    private function collectionDestination(Request $request): ?array
     {
         $user = $request->user();
 
@@ -103,7 +106,17 @@ class CockpitQuickGeneratePageController extends Controller
             return null;
         }
 
-        return $this->wallets->resolveForUser($user)->getKey();
+        $this->wallets->resolveForUser($user);
+
+        return [
+            'schema' => 'x-change.cockpit.collection-destination.v1',
+            'label' => 'Your Client Funds',
+            'description' => 'Payments are credited to the collection account authorized for the signed-in operator.',
+            'authority' => 'authenticated_operator',
+            'status' => 'ready',
+            'editable' => false,
+            'managed_automatically' => true,
+        ];
     }
 
     /**

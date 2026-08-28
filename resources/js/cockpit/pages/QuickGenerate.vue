@@ -1196,7 +1196,7 @@ function stringValue(value: unknown): string | null {
                 <CockpitQuickGenerateSubmitPanel
                     v-if="issuanceSurface === 'composer'"
                     :client-funds-minor="clientFundsMinor"
-                    :current-user-wallet-id="props.current_user_wallet_id"
+                    :collection-destination="props.collection_destination"
                     :mutation-contract="mutationContract"
                     :claim-preview-contract="claimPreviewContract"
                     :draft-contract="draftContract"

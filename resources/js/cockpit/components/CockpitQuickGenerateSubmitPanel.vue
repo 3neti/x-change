@@ -25,6 +25,7 @@ import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
     CockpitClaimExperiencePreviewManifest,
+    CockpitCollectionDestination,
     CockpitInstructionCapabilityReadiness,
     CockpitInstructionCapabilityReadinessMap,
     CockpitQuickGenerateClaimPreviewContract,
@@ -101,7 +102,7 @@ import type { CockpitValueUseMode } from './CockpitValueUseControl.vue';
 const props = withDefaults(
     defineProps<{
         clientFundsMinor?: number | null;
-        currentUserWalletId?: string | number | null;
+        collectionDestination?: CockpitCollectionDestination | null;
         mutationContract?: CockpitQuickGenerateMutationContract;
         claimPreviewContract?: CockpitQuickGenerateClaimPreviewContract;
         draftContract?: CockpitQuickGenerateDraftContract;
@@ -762,7 +763,6 @@ const executionVisibility = ref('');
 const executionMetadata = ref('');
 const metadataFlowType = ref('');
 const metadataIssuerId = ref('');
-const metadataCollectionWalletId = ref('');
 const processing = ref(false);
 const lastStatus = ref('ready');
 const lastMessage = ref('Ready to issue when the design is complete.');
@@ -804,7 +804,7 @@ const applyingStartingPoint = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 const submissionErrorHeading = ref('Fix these fields before issuing');
 
-const collectionWalletError = computed<string | null>(() => {
+const collectionDestinationError = computed<string | null>(() => {
     return (
         submissionErrors.value.find(
             (error) => error.field === 'metadata.collection_wallet_id',
@@ -813,23 +813,6 @@ const collectionWalletError = computed<string | null>(() => {
 });
 
 hydrateLastInstructions();
-
-watch(
-    voucherType,
-    (type): void => {
-        if (
-            (type === 'payable' || type === 'settlement') &&
-            metadataCollectionWalletId.value.trim() === '' &&
-            props.currentUserWalletId !== null &&
-            props.currentUserWalletId !== undefined
-        ) {
-            metadataCollectionWalletId.value = String(
-                props.currentUserWalletId,
-            );
-        }
-    },
-    { immediate: true },
-);
 
 onMounted((): void => {
     riderDesignTeleportReady.value = true;
@@ -1762,20 +1745,6 @@ function applyInstructionBlueprint(
         'flow_type',
     ]);
     metadataIssuerId.value = '';
-    metadataCollectionWalletId.value = instructionString(instructions, [
-        'metadata',
-        'collection_wallet_id',
-    ]);
-
-    if (
-        metadataCollectionWalletId.value === '' &&
-        (voucherType.value === 'payable' || voucherType.value === 'settlement') &&
-        props.currentUserWalletId !== null &&
-        props.currentUserWalletId !== undefined
-    ) {
-        metadataCollectionWalletId.value = String(props.currentUserWalletId);
-    }
-
     if (clearRecipient) {
         recipientReference.value = '';
         validationSecret.value = '';
@@ -2660,6 +2629,12 @@ const isPayableVoucher = computed<boolean>(
 );
 const isSettlementVoucher = computed<boolean>(
     () => voucherType.value === 'settlement',
+);
+const requiresCollectionDestination = computed<boolean>(
+    () =>
+        isPayableVoucher.value ||
+        isSettlementVoucher.value ||
+        metadataFlowType.value.trim() === 'collectible',
 );
 const amountFieldLabel = computed<string>(() =>
     isPayableVoucher.value ? 'Amount to Collect' : 'Amount',
@@ -4877,7 +4852,6 @@ function buildPayloadShape(
 
     const flowType = metadataFlowType.value.trim();
     const issuerId = metadataIssuerId.value.trim();
-    const collectionWalletId = metadataCollectionWalletId.value.trim();
 
     if (flowType !== '') {
         (payload.metadata as Record<string, unknown>).flow_type = flowType;
@@ -4885,11 +4859,6 @@ function buildPayloadShape(
 
     if (issuerId !== '') {
         (payload.metadata as Record<string, unknown>).issuer_id = issuerId;
-    }
-
-    if (collectionWalletId !== '') {
-        (payload.metadata as Record<string, unknown>).collection_wallet_id =
-            collectionWalletId;
     }
 
     return payload;
@@ -6356,38 +6325,45 @@ function instructionRecord(
                             :disabled="processing"
                         />
                     </label>
-                    <label
-                        v-if="voucherType === 'payable' || voucherType === 'settlement'"
-                        class="grid gap-1 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
+                    <section
+                        v-if="requiresCollectionDestination"
+                        class="grid min-w-0 gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 sm:col-span-2 dark:border-emerald-900 dark:bg-emerald-950/30"
+                        data-testid="cockpit-quick-generate-collection-destination"
+                        aria-label="Collection destination"
                     >
-                        <span class="flex items-center gap-1">
-                            Collection Wallet
-                            <CockpitFieldHelp
-                                label="About Collection Wallet"
-                                tooltip="Where payments collected against this Pay Code will be deposited. Defaults to your own wallet; change only if collecting into a shared or different wallet."
-                            />
-                        </span>
-                        <input
-                            v-model="metadataCollectionWalletId"
-                            type="text"
-                            class="w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
-                            :class="
-                                collectionWalletError
-                                    ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-950'
-                                    : 'border-slate-200 dark:border-slate-800'
-                            "
-                            data-testid="cockpit-quick-generate-collection-wallet"
-                            :disabled="processing"
-                            :aria-invalid="collectionWalletError ? 'true' : undefined"
-                        />
-                        <span
-                            v-if="collectionWalletError"
-                            class="text-[11px] font-medium text-rose-600 dark:text-rose-300"
-                            data-testid="cockpit-quick-generate-collection-wallet-error"
+                        <div class="flex min-w-0 items-center justify-between gap-3">
+                            <span class="flex min-w-0 items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <span class="truncate">Collection destination</span>
+                                <CockpitFieldHelp
+                                    label="About Collection destination"
+                                    tooltip="Payments are credited automatically to the collection account authorized for the signed-in operator."
+                                />
+                            </span>
+                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[0.68rem] font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100">
+                                <Check class="size-3" aria-hidden="true" />
+                                Automatic
+                            </span>
+                        </div>
+                        <p
+                            class="truncate text-sm font-semibold text-slate-950 dark:text-slate-50"
+                            data-testid="cockpit-quick-generate-collection-destination-label"
                         >
-                            {{ collectionWalletError }}
+                            {{ collectionDestination?.label ?? 'Your Client Funds' }}
+                        </p>
+                        <p class="text-xs leading-5 text-slate-600 dark:text-slate-400">
+                            {{
+                                collectionDestination?.description ??
+                                'Payments are credited to the collection account authorized for the signed-in operator.'
+                            }}
+                        </p>
+                        <span
+                            v-if="collectionDestinationError"
+                            class="text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                            data-testid="cockpit-quick-generate-collection-destination-error"
+                        >
+                            {{ collectionDestinationError }}
                         </span>
-                    </label>
+                    </section>
                 </div>
 
                 <section

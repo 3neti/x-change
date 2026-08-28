@@ -41,7 +41,16 @@ describe('Cockpit Quick Generate POS mode', () => {
     it('switches the existing Issuance surface between Composer and POS', async () => {
         const wrapper = shallowMount(QuickGenerate, {
             props: {
-                current_user_wallet_id: 42,
+                collection_destination: {
+                    schema: 'x-change.cockpit.collection-destination.v1',
+                    label: 'Your Client Funds',
+                    description:
+                        'Payments are credited to the collection account authorized for the signed-in operator.',
+                    authority: 'authenticated_operator',
+                    status: 'ready',
+                    editable: false,
+                    managed_automatically: true,
+                },
                 quick_generate_read_model: {
                     status: 'available',
                     authorized: true,

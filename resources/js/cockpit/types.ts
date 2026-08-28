@@ -1598,8 +1598,18 @@ export type CockpitQuickGenerateReadModel = {
     [key: string]: unknown;
 };
 
+export type CockpitCollectionDestination = {
+    schema: 'x-change.cockpit.collection-destination.v1';
+    label: string;
+    description: string;
+    authority: 'authenticated_operator';
+    status: 'ready';
+    editable: false;
+    managed_automatically: true;
+};
+
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
-    current_user_wallet_id?: string | number | null;
+    collection_destination?: CockpitCollectionDestination | null;
     quick_generate_read_model?: CockpitQuickGenerateReadModel;
     feedback_defaults?: CockpitQuickGenerateFeedbackDefaults;
     onboarding_policy?: CockpitQuickGenerateOnboardingPolicy;
