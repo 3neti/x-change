@@ -180,9 +180,9 @@ const fundingQrMerchantProfile = computed(
                 },
             ],
             category_options: [],
-            presentation_only: true as const,
+            presentation_only: false as const,
             controls_routing: false as const,
-            controls_settlement: false as const,
+            controls_settlement: true as const,
         },
 );
 const primaryFundingWorkspaceModes = computed(() => [

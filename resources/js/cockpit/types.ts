@@ -426,9 +426,9 @@ export type CockpitFundingQrMerchantProfile = {
         code: string;
         label: string;
     }>;
-    presentation_only: true;
+    presentation_only: false;
     controls_routing: false;
-    controls_settlement: false;
+    controls_settlement: true;
 };
 
 export type CockpitDepositorAccountOverview = {

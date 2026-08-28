@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Payment;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
@@ -17,8 +18,10 @@ use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
 use LBHurtado\XChange\Services\Payment\ProvisionalNetbankPayerInstructionIssuer;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
+use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LogicException;
 use RuntimeException;
 use Throwable;
@@ -29,6 +32,7 @@ class IssuePaymentInstructions
         private readonly FundingProviderAdapterRegistry $providers,
         private readonly FundingDestinationResolverContract $destinations,
         private readonly ProvisionalNetbankPayerInstructionIssuer $provisionalNetbankIssuer,
+        private readonly FundingQrMerchantProfileResolver $merchantProfiles,
     ) {}
 
     public function handle(PaymentAttempt $attempt): PaymentAttempt
@@ -44,7 +48,7 @@ class IssuePaymentInstructions
 
     private function issue(PaymentAttempt $attempt): PaymentAttempt
     {
-        $current = PaymentAttempt::query()->with('voucher')->findOrFail($attempt->getKey());
+        $current = PaymentAttempt::query()->with(['voucher.owner'])->findOrFail($attempt->getKey());
 
         if ($current->status === PaymentAttemptStatus::AwaitingPayment) {
             return $current->load('events');
@@ -55,6 +59,7 @@ class IssuePaymentInstructions
         }
 
         try {
+            $merchant = $this->merchantProfiles->resolve($current->voucher->owner);
             $destination = $this->destinations->shared(
                 $current->provider_code,
                 'voucher:'.$current->voucher_id,
@@ -75,6 +80,7 @@ class IssuePaymentInstructions
                     'voucher_code' => (string) $current->voucher->code,
                 ],
                 destination: $destination,
+                merchant: $merchant,
             );
             $provider = $this->providers->for($current->provider_code);
 
@@ -101,7 +107,7 @@ class IssuePaymentInstructions
             );
         }
 
-        return DB::transaction(function () use ($current, $instructions, $destination): PaymentAttempt {
+        return DB::transaction(function () use ($current, $instructions, $destination, $merchant): PaymentAttempt {
             $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($current->getKey());
 
             if ($locked->status === PaymentAttemptStatus::AwaitingPayment) {
@@ -124,6 +130,8 @@ class IssuePaymentInstructions
                 'instructions_ciphertext' => $this->instructionPayload($instructions),
                 'destination_snapshot_ciphertext' => FundingDestinationSnapshot::fromData($destination),
                 'destination_fingerprint' => $destination->fingerprint,
+                'merchant_snapshot_ciphertext' => FundingMerchantSnapshot::fromData($merchant),
+                'merchant_profile_fingerprint' => $merchant->profileFingerprint,
                 'instructions_created_at' => now(),
                 'expires_at' => $instructions->expiresAt ?? $locked->expires_at,
             ])->saveQuietly();
@@ -200,6 +208,7 @@ class IssuePaymentInstructions
         return match (true) {
             $exception instanceof NetbankFundingRequestFailed => $exception->operation,
             $exception instanceof NetbankFundingConfigurationException => 'configuration',
+            $exception instanceof ValidationException => 'merchant_profile',
             default => 'unknown',
         };
     }

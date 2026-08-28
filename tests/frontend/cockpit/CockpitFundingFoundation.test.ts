@@ -359,9 +359,9 @@ const fundingQrMerchantProfile = {
         { value: '{app_name} - {name}', label: 'x-change + Name' },
     ],
     category_options: [],
-    presentation_only: true as const,
+    presentation_only: false as const,
     controls_routing: false as const,
-    controls_settlement: false as const,
+    controls_settlement: true as const,
 };
 
 const fundingRealtime = {
