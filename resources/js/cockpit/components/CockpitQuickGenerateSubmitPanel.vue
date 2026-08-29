@@ -6065,7 +6065,7 @@ function instructionRecord(
         </div>
 
         <div
-            class="grid min-w-0 gap-5 2xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]"
+            class="grid min-w-0 gap-5 2xl:grid-cols-[minmax(19rem,40rem)_minmax(28rem,40rem)] 2xl:justify-center"
             data-testid="cockpit-quick-generate-essentials-canvas"
         >
             <div
@@ -6096,7 +6096,7 @@ function instructionRecord(
                     />
                 </div>
                 <div
-                    class="mt-4 grid min-w-0 items-start gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]"
+                    class="mt-4 grid min-w-0 items-start gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]"
                     data-testid="cockpit-quick-generate-order-fields"
                 >
                     <div
@@ -6114,7 +6114,7 @@ function instructionRecord(
                             />
                         </label>
                         <div
-                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start justify-start gap-x-2 gap-y-1.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]"
+                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start justify-start gap-x-2 gap-y-1.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]"
                             data-testid="cockpit-quick-generate-amount-action-row"
                         >
                             <CockpitAmountPicker
@@ -6416,7 +6416,7 @@ function instructionRecord(
                         </span>
                     </label>
                     <label
-                        class="grid min-w-0 max-w-72 gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        class="grid w-full min-w-0 max-w-72 gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-recipient-field"
                     >
                         <span class="flex items-center gap-1">
@@ -6460,7 +6460,7 @@ function instructionRecord(
                         </span>
                     </label>
                     <label
-                        class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        class="grid w-full min-w-0 max-w-72 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-purpose-field"
                     >
                         <span class="flex items-center gap-1">

@@ -159,8 +159,9 @@ describe('Cockpit Quick Generate foundation', () => {
                 .classes(),
         ).toContain('gap-1.5');
         expect(essentialsCanvas.classes()).toContain(
-            '2xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]',
+            '2xl:grid-cols-[minmax(19rem,40rem)_minmax(28rem,40rem)]',
         );
+        expect(essentialsCanvas.classes()).toContain('2xl:justify-center');
 
         wrapper.unmount();
         host.remove();
@@ -288,11 +289,11 @@ describe('Cockpit Quick Generate foundation', () => {
             'grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]',
         );
         expect(amountActionRow.classes()).toContain(
-            'sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]',
+            'sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]',
         );
         expect(amountActionRow.classes()).toContain('justify-start');
         expect(orderFields.classes()).toContain(
-            'sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]',
+            'sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]',
         );
         expect(amountPicker?.classList.contains('max-w-72')).toBe(true);
         expect(amountPicker?.classList.contains('col-start-1')).toBe(true);
@@ -349,7 +350,10 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(submitButton.classes()).not.toContain('sm:w-44');
         expect(submitButton.text()).toContain('Issue');
         expect(recipientField.classes()).toContain('max-w-72');
+        expect(recipientField.classes()).toContain('w-full');
         expect(recipientField.classes()).not.toContain('sm:col-span-2');
+        expect(purposeField.classes()).toContain('max-w-72');
+        expect(purposeField.classes()).toContain('w-full');
         expect(purposeField.classes()).not.toContain('sm:col-span-2');
         expect(
             recipientField.element.parentElement === purposeField.element.parentElement,

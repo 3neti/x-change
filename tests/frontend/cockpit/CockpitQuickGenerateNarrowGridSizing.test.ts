@@ -39,11 +39,12 @@ describe('Cockpit Quick Generate narrow essentials grid sizing', () => {
         expect(canvasWrapper.classList.contains('xl:top-4')).toBe(false);
         expect(canvasWrapper.classList.contains('xl:self-start')).toBe(false);
 
-        // The 2xl two-column tracks keep both existing floors while giving
-        // Order and the read-only preview equal desktop weight.
+        // The 2xl two-column tracks keep both existing floors and share an
+        // equal compact cap so neither card overwhelms the desktop canvas.
         expect(grid.classes()).toContain(
-            '2xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]',
+            '2xl:grid-cols-[minmax(19rem,40rem)_minmax(28rem,40rem)]',
         );
+        expect(grid.classes()).toContain('2xl:justify-center');
         expect(grid.classes()).not.toContain(
             'xl:grid-cols-[minmax(19rem,1fr)_minmax(28rem,1fr)]',
         );

@@ -140,7 +140,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             'grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]',
         );
         expect(amountActionRow.classes()).toContain(
-            'sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]',
+            'sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]',
         );
 
         const workspaceRow = orderCard.get(
