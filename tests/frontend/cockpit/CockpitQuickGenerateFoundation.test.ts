@@ -222,7 +222,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.text()).toContain('0');
     });
 
-    it('keeps Amount compact and Value Flow beside the longer issue action on mobile', () => {
+    it('keeps Amount beside the longer issue action and aligns cost with Value Flow', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -277,13 +277,15 @@ describe('Cockpit Quick Generate foundation', () => {
             'grid-cols-[minmax(0,1fr)_auto]',
         );
         expect(amountPicker?.classList.contains('max-w-72')).toBe(true);
-        expect(valueFlow.classes()).toContain('col-start-1');
-        expect(valueFlow.classes()).toContain('row-start-3');
+        expect(amountPicker?.classList.contains('col-start-1')).toBe(true);
+        expect(amountPicker?.classList.contains('row-start-1')).toBe(true);
+        expect(valueFlow.classes()).toContain('col-start-2');
+        expect(valueFlow.classes()).toContain('row-start-2');
         expect(estimatedCost.classes()).toContain('col-start-1');
         expect(estimatedCost.classes()).toContain('row-start-2');
         expect(estimatedCost.classes()).toContain('max-w-72');
         expect(issuanceMode.classes()).toContain('col-start-2');
-        expect(issuanceMode.classes()).toContain('row-start-3');
+        expect(issuanceMode.classes()).toContain('row-start-1');
         expect(submitButton.classes()).toContain('w-28');
         expect(submitButton.classes()).toContain('sm:w-44');
         expect(submitButton.text()).toContain('Issue');

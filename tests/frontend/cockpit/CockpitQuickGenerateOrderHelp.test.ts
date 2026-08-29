@@ -106,7 +106,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBeTruthy();
     });
 
-    it('keeps the workspace controls together and Value Flow beside the Issue CTA', () => {
+    it('keeps the workspace controls together and the Issue CTA beside Amount', () => {
         const wrapper = mountPanel({
             templates: cockpitQuickGenerateTemplates,
             onboardingPreset: true,
@@ -160,8 +160,8 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         );
         expect(amountActionRow.element.contains(valueFlow.element)).toBe(true);
         expect(valueFlow.element.contains(modeControl.element)).toBe(false);
-        expect(valueFlow.classes()).toContain('row-start-3');
-        expect(modeControl.classes()).toContain('row-start-3');
+        expect(valueFlow.classes()).toContain('row-start-2');
+        expect(modeControl.classes()).toContain('row-start-1');
     });
 
     it('gives the Issue CTA a shrink-resistant, non-clippable structure independent of the badge', () => {
@@ -179,14 +179,18 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         expect(submitButton.classes()).toContain('shrink-0');
         expect(submitButton.classes()).not.toContain('absolute');
         expect(badge.classes()).not.toContain('absolute');
-        // The grid gives Value Flow flexible room while the primary action
-        // keeps its full, shrink-resistant width on the same row.
+        // Amount and the primary action share row one; Estimated Cost and
+        // Value Flow align directly beneath them on row two.
         expect(submitButton.element.parentElement).not.toBe(
             badge.element.parentElement,
         );
-        expect(badge.classes()).toContain('col-start-1');
+        expect(badge.classes()).toContain('col-start-2');
+        expect(badge.classes()).toContain('row-start-2');
         expect(submitButton.element.parentElement?.classList).toContain(
             'col-start-2',
+        );
+        expect(submitButton.element.parentElement?.classList).toContain(
+            'row-start-1',
         );
     });
 

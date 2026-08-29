@@ -6120,7 +6120,7 @@ function instructionRecord(
                             <CockpitAmountPicker
                                 ref="amountInputElement"
                                 v-model="amount"
-                                class="col-span-2 row-start-1 min-w-0 w-full max-w-72"
+                                class="col-start-1 row-start-1 min-w-0 w-full max-w-72"
                                 :disabled="processing"
                                 :estimated-cost="amountCalculatorEstimatedCost"
                                 :estimate-pending="amountCalculatorEstimatePending"
@@ -6130,7 +6130,7 @@ function instructionRecord(
                                 @preview="previewAmountInCalculator"
                             />
                             <div
-                                class="col-start-2 row-start-3 inline-flex min-w-0 shrink-0 self-end rounded-xl shadow-sm"
+                                class="col-start-2 row-start-1 inline-flex min-w-0 shrink-0 self-start rounded-xl shadow-sm"
                                 data-testid="cockpit-quick-generate-mode-control"
                                 role="group"
                                 aria-label="Issue action"
@@ -6250,7 +6250,7 @@ function instructionRecord(
                                 </details>
                             </div>
                             <div
-                                class="col-span-2 col-start-1 row-start-2 flex min-h-5 w-full max-w-72 min-w-0 items-baseline justify-between gap-2 px-0.5 text-[0.7rem] leading-5"
+                                class="col-start-1 row-start-2 flex min-h-5 w-full max-w-72 min-w-0 items-baseline justify-between gap-2 px-0.5 text-[0.7rem] leading-5"
                                 data-testid="cockpit-quick-generate-account-debit"
                                 :data-affordability="
                                     liveAccountDebitAffordability
@@ -6307,7 +6307,7 @@ function instructionRecord(
                                 </span>
                             </div>
                             <fieldset
-                                class="col-start-1 row-start-3 min-w-0 self-end"
+                                class="col-start-2 row-start-2 min-w-0"
                                 data-testid="cockpit-quick-generate-voucher-kind"
                             >
                                 <legend
@@ -6349,7 +6349,7 @@ function instructionRecord(
                             </fieldset>
                             <span
                                 v-if="amountFieldError"
-                                class="col-span-2 col-start-1 row-start-4 text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                                class="col-start-1 row-start-3 text-[11px] font-medium text-rose-600 dark:text-rose-300"
                                 data-testid="cockpit-quick-generate-amount-error"
                             >
                                 {{ amountFieldError }}
