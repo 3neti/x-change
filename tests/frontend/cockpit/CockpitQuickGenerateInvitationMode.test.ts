@@ -17,6 +17,50 @@ function quickGenerateEngineeringPreview(
 }
 
 describe('Cockpit Quick Generate Invitation mode', () => {
+    it('selects the visible issue action from an accessible split-button menu', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates },
+            attachTo: document.body,
+        });
+        const menu = wrapper.get(
+            '[data-testid="cockpit-quick-generate-issue-action-menu"]',
+        );
+        const toggle = wrapper.get(
+            '[data-testid="cockpit-quick-generate-issue-action-toggle"]',
+        );
+        const invitation = wrapper.get(
+            '[data-testid="cockpit-quick-generate-mode-invitation"]',
+        );
+
+        expect(toggle.attributes('aria-label')).toBe('Choose issue action');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-issue-action-options"]',
+                )
+                .attributes('role'),
+        ).toBe('menu');
+        expect(invitation.attributes('role')).toBe('menuitemradio');
+
+        await toggle.trigger('click');
+        expect((menu.element as HTMLDetailsElement).open).toBe(true);
+
+        await invitation.trigger('click');
+        expect((menu.element as HTMLDetailsElement).open).toBe(false);
+        expect(invitation.attributes('aria-checked')).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-submit-button"]')
+                .attributes('aria-label'),
+        ).toBe('Issue Invitation');
+
+        await toggle.trigger('click');
+        await menu.trigger('keydown', { key: 'Escape' });
+        expect((menu.element as HTMLDetailsElement).open).toBe(false);
+
+        wrapper.unmount();
+    });
+
     it('is visible near the Order header without expanding any collapsed section', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: { templates: cockpitQuickGenerateTemplates },

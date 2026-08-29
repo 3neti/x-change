@@ -20,7 +20,15 @@ import {
     Type,
     X,
 } from 'lucide-vue-next';
-import { computed, nextTick, onBeforeMount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeMount,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
@@ -794,6 +802,7 @@ const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
 const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
     null,
 );
+const issueActionMenuElement = ref<HTMLDetailsElement | null>(null);
 const amountCalculatorPreview = ref<number | null>(null);
 const amountCalculatorEstimatePending = ref(false);
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
@@ -829,7 +838,15 @@ onBeforeMount((): void => {
 
 onMounted((): void => {
     riderDesignTeleportReady.value = true;
+    document.addEventListener('pointerdown', closeIssueActionMenuFromOutside);
     void focusAmountEditor();
+});
+
+onBeforeUnmount((): void => {
+    document.removeEventListener(
+        'pointerdown',
+        closeIssueActionMenuFromOutside,
+    );
 });
 
 async function focusAmountEditor(): Promise<void> {
@@ -1422,7 +1439,7 @@ function applyInstructionBlueprint(
         'fields',
     ]);
     // Invitation mode is durable: a template or saved/last design may turn
-    // it on, but never turns it off. Only the explicit mode control (see
+    // it on, but never turns it off. Only the explicit issue-action menu (see
     // setOnboardingMode) may disable it.
     if (
         dataGet(instructions, ['onboarding']) === true ||
@@ -2703,8 +2720,8 @@ const effectiveValidationSecret = computed<string>(() =>
 
 // The only place allowed to disable Invitation mode explicitly. Templates,
 // saved templates, and Repeat Last only ever durably turn it on (see
-// applyTemplateDefaults/applyInstructionBlueprint) so switching Pay Code mode
-// off requires this deliberate operator action.
+// applyTemplateDefaults/applyInstructionBlueprint), so choosing the Pay Code
+// issue action requires this deliberate operator action.
 function setOnboardingMode(enabled: boolean): void {
     if (!enabled && onboardingEnabled.value) {
         // While Invitation mode is on, selectedInputFields projects Name,
@@ -2719,6 +2736,45 @@ function setOnboardingMode(enabled: boolean): void {
     }
 
     onboardingEnabled.value = enabled;
+}
+
+function closeIssueActionMenu(restoreFocus = false): void {
+    const menu = issueActionMenuElement.value;
+
+    if (menu === null) {
+        return;
+    }
+
+    menu.open = false;
+
+    if (restoreFocus) {
+        menu.querySelector<HTMLElement>('summary')?.focus();
+    }
+}
+
+function toggleIssueActionMenu(): void {
+    const menu = issueActionMenuElement.value;
+
+    if (menu !== null && !processing.value) {
+        menu.open = !menu.open;
+    }
+}
+
+function closeIssueActionMenuFromOutside(event: PointerEvent): void {
+    const menu = issueActionMenuElement.value;
+
+    if (
+        menu !== null &&
+        event.target instanceof Node &&
+        !menu.contains(event.target)
+    ) {
+        closeIssueActionMenu();
+    }
+}
+
+function selectIssueAction(enabled: boolean): void {
+    setOnboardingMode(enabled);
+    closeIssueActionMenu(true);
 }
 
 function applyOnboardingDependencies(): void {
@@ -6030,94 +6086,67 @@ function instructionRecord(
                 >
                     Set the value, payee, and purpose.
                 </p>
-                <div class="mt-3 grid min-w-0 grid-cols-2 gap-2">
-                    <CockpitQuickGenerateSurfaceSwitch
-                        class="w-full"
-                        :model-value="issuanceSurface"
-                        :disabled="processing"
-                        @update:model-value="
-                            emit('update:issuanceSurface', $event)
-                        "
-                    />
-                    <div
-                        class="inline-grid min-w-0 grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
-                        data-testid="cockpit-quick-generate-mode-control"
-                        role="group"
-                        aria-label="Issuance mode"
-                    >
-                        <button
-                            type="button"
-                            :aria-pressed="!onboardingEnabled"
-                            :class="[
-                                'min-h-8 min-w-0 rounded-full px-2 text-xs font-semibold transition sm:px-3',
-                                !onboardingEnabled
-                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                    : 'text-slate-600 dark:text-slate-300',
-                            ]"
-                            :disabled="processing"
-                            data-testid="cockpit-quick-generate-mode-paycode"
-                            @click="setOnboardingMode(false)"
-                        >
-                            <span class="block truncate">Pay Code</span>
-                        </button>
-                        <button
-                            type="button"
-                            :aria-pressed="onboardingEnabled"
-                            :class="[
-                                'min-h-8 min-w-0 rounded-full px-2 text-xs font-semibold transition sm:px-3',
-                                onboardingEnabled
-                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                    : 'text-slate-600 dark:text-slate-300',
-                            ]"
-                            :disabled="processing"
-                            data-testid="cockpit-quick-generate-mode-invitation"
-                            @click="setOnboardingMode(true)"
-                        >
-                            <span class="block truncate">Invitation</span>
-                        </button>
-                    </div>
-                </div>
-                <fieldset
-                    class="mt-3 min-w-0"
-                    data-testid="cockpit-quick-generate-voucher-kind"
+                <div
+                    class="mt-3 grid min-w-0 items-end gap-2 sm:grid-cols-[minmax(10rem,0.8fr)_minmax(14rem,1.2fr)]"
+                    data-testid="cockpit-quick-generate-order-mode-row"
                 >
-                    <legend
-                        class="mb-1.5 flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                    >
-                        Value flow
-                        <CockpitFieldHelp
-                            label="About Value Flow"
-                            tooltip="Disburse sends claimable value, Collect receives a payment, and Settle combines redeemable value with a collection target."
-                        />
-                    </legend>
-                    <div
-                        class="grid min-w-0 grid-cols-3 rounded-xl bg-slate-100 p-1 dark:bg-slate-900"
-                        role="radiogroup"
-                        aria-label="Pay Code value flow"
-                        data-testid="cockpit-quick-generate-voucher-type"
-                    >
-                        <label
-                            v-for="option in voucherTypeOptions"
-                            :key="option.value"
-                            class="relative min-w-0"
-                            :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`"
+                    <div class="min-w-0">
+                        <span
+                            class="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
-                            <input
-                                v-model="voucherType"
-                                class="peer sr-only"
-                                type="radio"
-                                name="cockpit-quick-generate-voucher-type"
-                                :value="option.value"
-                                :disabled="processing"
-                            />
-                            <span
-                                class="flex min-h-9 min-w-0 cursor-pointer items-center justify-center rounded-lg px-2 text-xs font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
-                            >
-                                {{ option.label }}
-                            </span>
-                        </label>
+                            Workspace
+                        </span>
+                        <CockpitQuickGenerateSurfaceSwitch
+                            class="w-full"
+                            :model-value="issuanceSurface"
+                            :disabled="processing"
+                            @update:model-value="
+                                emit('update:issuanceSurface', $event)
+                            "
+                        />
                     </div>
-                </fieldset>
+                    <fieldset
+                        class="min-w-0"
+                        data-testid="cockpit-quick-generate-voucher-kind"
+                    >
+                        <legend
+                            class="mb-1.5 flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >
+                            Value flow
+                            <CockpitFieldHelp
+                                label="About Value Flow"
+                                tooltip="Disburse sends claimable value, Collect receives a payment, and Settle combines redeemable value with a collection target."
+                            />
+                        </legend>
+                        <div
+                            class="grid min-w-0 grid-cols-3 rounded-xl bg-slate-100 p-1 dark:bg-slate-900"
+                            role="radiogroup"
+                            aria-label="Pay Code value flow"
+                            data-testid="cockpit-quick-generate-voucher-type"
+                        >
+                            <label
+                                v-for="option in voucherTypeOptions"
+                                :key="option.value"
+                                class="relative min-w-0"
+                                :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`"
+                            >
+                                <input
+                                    v-model="voucherType"
+                                    class="peer sr-only"
+                                    type="radio"
+                                    name="cockpit-quick-generate-voucher-type"
+                                    :value="option.value"
+                                    :disabled="processing"
+                                />
+                                <span
+                                    class="flex min-h-9 min-w-0 cursor-pointer items-center justify-center rounded-lg px-2 text-xs font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
+                                >
+                                    {{ option.label }}
+                                </span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </div>
                 <div
                     class="mt-4 grid items-start gap-3 sm:grid-cols-2"
                     data-testid="cockpit-quick-generate-order-fields"
@@ -6152,41 +6181,126 @@ function instructionRecord(
                                 "
                                 @preview="previewAmountInCalculator"
                             />
-                            <button
-                                type="submit"
-                                class="inline-flex min-h-12 w-24 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-36 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-                                data-testid="cockpit-quick-generate-submit-button"
-                                :aria-label="
-                                    onboardingEnabled
-                                        ? 'Issue Invitation'
-                                        : 'Issue Pay Code'
-                                "
-                                :disabled="!canSubmit || processing"
+                            <div
+                                class="inline-flex min-w-0 shrink-0 rounded-xl shadow-sm"
+                                data-testid="cockpit-quick-generate-mode-control"
+                                role="group"
+                                aria-label="Issue action"
                             >
-                                <LoaderCircle
-                                    v-if="processing"
-                                    class="size-4 animate-spin"
-                                    aria-hidden="true"
-                                    data-testid="cockpit-quick-generate-issue-spinner"
-                                />
-                                <TicketCheck
-                                    v-else
-                                    class="size-4"
-                                    aria-hidden="true"
-                                    data-testid="cockpit-quick-generate-issue-icon"
-                                />
-                                <span v-if="processing">Issuing…</span>
-                                <template v-else>
-                                    <span class="sm:hidden">Issue</span>
-                                    <span class="hidden sm:inline">
-                                        {{
-                                            onboardingEnabled
-                                                ? 'Issue Invitation'
-                                                : 'Issue Pay Code'
-                                        }}
-                                    </span>
-                                </template>
-                            </button>
+                                <button
+                                    type="submit"
+                                    class="inline-flex min-h-12 w-24 min-w-0 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-xl bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-36 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                                    data-testid="cockpit-quick-generate-submit-button"
+                                    :aria-label="
+                                        onboardingEnabled
+                                            ? 'Issue Invitation'
+                                            : 'Issue Pay Code'
+                                    "
+                                    :disabled="!canSubmit || processing"
+                                >
+                                    <LoaderCircle
+                                        v-if="processing"
+                                        class="size-4 animate-spin"
+                                        aria-hidden="true"
+                                        data-testid="cockpit-quick-generate-issue-spinner"
+                                    />
+                                    <TicketCheck
+                                        v-else
+                                        class="size-4 shrink-0"
+                                        aria-hidden="true"
+                                        data-testid="cockpit-quick-generate-issue-icon"
+                                    />
+                                    <span v-if="processing">Issuing…</span>
+                                    <template v-else>
+                                        <span class="sm:hidden">
+                                            {{
+                                                onboardingEnabled
+                                                    ? 'Invite'
+                                                    : 'Pay Code'
+                                            }}
+                                        </span>
+                                        <span class="hidden sm:inline">
+                                            {{
+                                                onboardingEnabled
+                                                    ? 'Issue Invitation'
+                                                    : 'Issue Pay Code'
+                                            }}
+                                        </span>
+                                    </template>
+                                </button>
+                                <details
+                                    ref="issueActionMenuElement"
+                                    class="relative"
+                                    data-testid="cockpit-quick-generate-issue-action-menu"
+                                    @keydown.esc.prevent.stop="
+                                        closeIssueActionMenu(true)
+                                    "
+                                >
+                                    <summary
+                                        class="flex min-h-12 w-10 cursor-pointer list-none items-center justify-center rounded-r-xl border-l border-emerald-500 bg-emerald-600 text-white transition marker:hidden hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 [&::-webkit-details-marker]:hidden"
+                                        aria-label="Choose issue action"
+                                        :aria-disabled="processing"
+                                        data-testid="cockpit-quick-generate-issue-action-toggle"
+                                        @click.prevent="toggleIssueActionMenu"
+                                    >
+                                        <ChevronDown
+                                            class="size-4"
+                                            aria-hidden="true"
+                                        />
+                                    </summary>
+                                    <div
+                                        class="absolute right-0 z-50 mt-2 grid min-w-48 gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+                                        role="menu"
+                                        aria-label="Issue as"
+                                        data-testid="cockpit-quick-generate-issue-action-options"
+                                    >
+                                        <button
+                                            type="button"
+                                            :aria-pressed="!onboardingEnabled"
+                                            :class="[
+                                                'flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm font-semibold transition',
+                                                !onboardingEnabled
+                                                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                                                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800',
+                                            ]"
+                                            :disabled="processing"
+                                            role="menuitemradio"
+                                            :aria-checked="!onboardingEnabled"
+                                            data-testid="cockpit-quick-generate-mode-paycode"
+                                            @click="selectIssueAction(false)"
+                                        >
+                                            Issue Pay Code
+                                            <Check
+                                                v-if="!onboardingEnabled"
+                                                class="size-4"
+                                                aria-hidden="true"
+                                            />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            :aria-pressed="onboardingEnabled"
+                                            :class="[
+                                                'flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm font-semibold transition',
+                                                onboardingEnabled
+                                                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                                                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800',
+                                            ]"
+                                            :disabled="processing"
+                                            role="menuitemradio"
+                                            :aria-checked="onboardingEnabled"
+                                            data-testid="cockpit-quick-generate-mode-invitation"
+                                            @click="selectIssueAction(true)"
+                                        >
+                                            Issue Invitation
+                                            <Check
+                                                v-if="onboardingEnabled"
+                                                class="size-4"
+                                                aria-hidden="true"
+                                            />
+                                        </button>
+                                    </div>
+                                </details>
+                            </div>
                         </div>
                         <span
                             v-if="amountFieldError"

@@ -147,10 +147,22 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         );
         expect(titleRow?.contains(description.element)).toBe(false);
 
-        const workspaceRow = surfaceControl.element.parentElement;
-        expect(workspaceRow?.contains(modeControl.element)).toBe(true);
-        expect(workspaceRow?.classList.contains('grid-cols-2')).toBe(true);
-        expect(workspaceRow?.contains(submitButton.element)).toBe(false);
+        const workspaceRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-order-mode-row"]',
+        );
+        expect(workspaceRow.element.contains(surfaceControl.element)).toBe(
+            true,
+        );
+        expect(workspaceRow.element.contains(valueFlow.element)).toBe(true);
+        expect(workspaceRow.classes()).toContain(
+            'sm:grid-cols-[minmax(10rem,0.8fr)_minmax(14rem,1.2fr)]',
+        );
+        expect(workspaceRow.element.contains(submitButton.element)).toBe(
+            false,
+        );
+        expect(amountActionRow.element.contains(modeControl.element)).toBe(
+            true,
+        );
         expect(valueFlow.element.contains(modeControl.element)).toBe(false);
     });
 
@@ -392,12 +404,21 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
 
-        const oversizedMinWidths = orderCard
+        const issueActionOptions = orderCard.get(
+            '[data-testid="cockpit-quick-generate-issue-action-options"]',
+        );
+        const inFlowOrderHtml = orderCard
             .html()
+            .replace(issueActionOptions.html(), '');
+        const oversizedMinWidths = inFlowOrderHtml
             .match(/min-w-(\d|\[)/g)
-            ?.filter((match) => match !== 'min-w-0');
+            ?.filter(
+                (match) => match !== 'min-w-0' && match !== 'min-w-4',
+            );
 
         expect(oversizedMinWidths ?? []).toHaveLength(0);
+        expect(issueActionOptions.classes()).toContain('absolute');
+        expect(issueActionOptions.classes()).toContain('min-w-48');
 
         const submitButton = orderCard.get(
             '[data-testid="cockpit-quick-generate-submit-button"]',

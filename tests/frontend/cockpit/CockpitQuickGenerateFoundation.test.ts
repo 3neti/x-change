@@ -244,12 +244,22 @@ describe('Cockpit Quick Generate foundation', () => {
         const issuanceMode = orderCard.get(
             '[data-testid="cockpit-quick-generate-mode-control"]',
         );
-
-        expect(surfaceToggle.element.parentElement).toBe(
-            issuanceMode.element.parentElement,
+        const valueFlow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-voucher-kind"]',
         );
-        expect(surfaceToggle.element.parentElement?.className).toContain(
-            'grid-cols-2',
+        const orderModeRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-order-mode-row"]',
+        );
+
+        expect(orderModeRow.element.contains(surfaceToggle.element)).toBe(
+            true,
+        );
+        expect(orderModeRow.element.contains(valueFlow.element)).toBe(true);
+        expect(orderModeRow.classes()).toContain(
+            'sm:grid-cols-[minmax(10rem,0.8fr)_minmax(14rem,1.2fr)]',
+        );
+        expect(amountActionRow.element.contains(issuanceMode.element)).toBe(
+            true,
         );
         expect(amountActionRow.classes()).toContain(
             'grid-cols-[minmax(0,1fr)_auto]',
@@ -4872,7 +4882,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .exists(),
         ).toBe(false);
         expect(orderSubmitButton.classes()).toContain('min-h-12');
-        expect(orderSubmitButton.classes()).toContain('rounded-xl');
+        expect(orderSubmitButton.classes()).toContain('rounded-l-xl');
         expect(orderSubmitButton.classes()).toContain('bg-emerald-600');
         expect(
             templateControls
