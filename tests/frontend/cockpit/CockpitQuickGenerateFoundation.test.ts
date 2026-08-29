@@ -166,7 +166,7 @@ describe('Cockpit Quick Generate foundation', () => {
         host.remove();
     });
 
-    it('keeps secondary Order options collapsed while exposing active configuration', async () => {
+    it('keeps secondary Options collapsed while exposing active configuration', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: [cockpitQuickGenerateTemplates[1]],
@@ -185,7 +185,8 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(toggle.element.tagName).toBe('BUTTON');
         expect(toggle.attributes('aria-expanded')).toBe('false');
-        expect(toggle.text()).toContain('Order options');
+        expect(toggle.text()).toContain('Options');
+        expect(toggle.text()).not.toContain('Order options');
         expect(toggle.text()).toContain('0');
         expect(panel.attributes('style')).toContain('display: none');
         expect(
@@ -198,6 +199,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(toggle.attributes('aria-expanded')).toBe('true');
         expect(panel.attributes('style') ?? '').not.toContain('display: none');
+        expect(panel.attributes('aria-label')).toBe('Options');
         expect(
             panel
                 .find('[data-testid="cockpit-claim-requirements-control"]')
@@ -256,6 +258,15 @@ describe('Cockpit Quick Generate foundation', () => {
         const orderModeRow = orderCard.get(
             '[data-testid="cockpit-quick-generate-order-mode-row"]',
         );
+        const orderFields = orderCard.get(
+            '[data-testid="cockpit-quick-generate-order-fields"]',
+        );
+        const recipientField = orderCard.get(
+            '[data-testid="cockpit-quick-generate-recipient-field"]',
+        );
+        const purposeField = orderCard.get(
+            '[data-testid="cockpit-quick-generate-purpose-field"]',
+        );
 
         expect(orderModeRow.element.contains(surfaceToggle.element)).toBe(
             true,
@@ -280,6 +291,9 @@ describe('Cockpit Quick Generate foundation', () => {
             'sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]',
         );
         expect(amountActionRow.classes()).toContain('justify-start');
+        expect(orderFields.classes()).toContain(
+            'sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]',
+        );
         expect(amountPicker?.classList.contains('max-w-72')).toBe(true);
         expect(amountPicker?.classList.contains('col-start-1')).toBe(true);
         expect(amountPicker?.classList.contains('row-start-1')).toBe(true);
@@ -334,6 +348,12 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(submitButton.classes()).not.toContain('w-28');
         expect(submitButton.classes()).not.toContain('sm:w-44');
         expect(submitButton.text()).toContain('Issue');
+        expect(recipientField.classes()).toContain('max-w-72');
+        expect(recipientField.classes()).not.toContain('sm:col-span-2');
+        expect(purposeField.classes()).not.toContain('sm:col-span-2');
+        expect(
+            recipientField.element.parentElement === purposeField.element.parentElement,
+        ).toBe(true);
 
         [
             '#quick-generate-contract-money',
@@ -1280,6 +1300,13 @@ describe('Cockpit Quick Generate foundation', () => {
         const settlementTarget = wrapper.get<HTMLInputElement>(
             '[data-testid="cockpit-quick-generate-target-amount"]',
         );
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-target-amount-field"]',
+                )
+                .classes(),
+        ).toEqual(expect.arrayContaining(['max-w-72', 'sm:col-span-2']));
         await settlementTarget.setValue('250');
         const settlementPreview = quickGenerateEngineeringPreview(wrapper);
         expect(settlementPreview).toMatchObject({
