@@ -165,6 +165,11 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         expect(valueFlow.element.contains(modeControl.element)).toBe(false);
         expect(valueFlow.classes()).toContain('row-start-2');
         expect(modeControl.classes()).toContain('row-start-1');
+        const valueFlowRow = valueFlow.get(
+            '[data-testid="cockpit-quick-generate-value-flow-row"]',
+        );
+        expect(valueFlowRow.classes()).toContain('flex-nowrap');
+        expect(valueFlowRow.text()).toContain('Value flow');
     });
 
     it('gives the Issue CTA a full-track, non-clippable structure independent of Value Flow', () => {
@@ -189,8 +194,13 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         );
         expect(badge.classes()).toContain('col-start-2');
         expect(badge.classes()).toContain('row-start-2');
-        expect(badge.classes()).toContain('flex');
-        expect(badge.classes()).toContain('items-center');
+        const valueFlowRow = badge.get(
+            '[data-testid="cockpit-quick-generate-value-flow-row"]',
+        );
+        expect(badge.get('legend').classes()).toContain('sr-only');
+        expect(valueFlowRow.classes()).toContain('flex');
+        expect(valueFlowRow.classes()).toContain('items-center');
+        expect(valueFlowRow.classes()).toContain('flex-nowrap');
         expect(submitButton.element.parentElement?.classList).toContain(
             'col-start-2',
         );

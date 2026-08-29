@@ -285,9 +285,35 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(amountPicker?.classList.contains('row-start-1')).toBe(true);
         expect(valueFlow.classes()).toContain('col-start-2');
         expect(valueFlow.classes()).toContain('row-start-2');
-        expect(valueFlow.classes()).toContain('flex');
-        expect(valueFlow.classes()).toContain('items-center');
-        expect(valueFlow.classes()).toContain('gap-1');
+        const valueFlowRow = valueFlow.get(
+            '[data-testid="cockpit-quick-generate-value-flow-row"]',
+        );
+        expect(valueFlow.get('legend').classes()).toContain('sr-only');
+        expect(valueFlowRow.classes()).toContain('flex');
+        expect(valueFlowRow.classes()).toContain('flex-nowrap');
+        expect(valueFlowRow.classes()).toContain('items-center');
+        expect(valueFlowRow.classes()).toContain('gap-1');
+        expect(
+            valueFlow
+                .get(
+                    '[data-testid="cockpit-quick-generate-voucher-type-redeemable"] span',
+                )
+                .classes(),
+        ).toContain('overflow-hidden');
+        expect(
+            valueFlowRow.element.contains(
+                valueFlow.get(
+                    '[data-testid="cockpit-quick-generate-value-flow-label"]',
+                ).element,
+            ),
+        ).toBe(true);
+        expect(
+            valueFlowRow.element.contains(
+                valueFlow.get(
+                    '[data-testid="cockpit-quick-generate-voucher-type"]',
+                ).element,
+            ),
+        ).toBe(true);
         expect(estimatedCost.classes()).toContain('col-start-1');
         expect(estimatedCost.classes()).toContain('row-start-2');
         expect(estimatedCost.classes()).toContain('max-w-72');

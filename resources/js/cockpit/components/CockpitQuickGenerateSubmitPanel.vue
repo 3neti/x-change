@@ -199,7 +199,7 @@ type CashTypeOption = {
 };
 
 const voucherTypeOptions = [
-    { value: 'redeemable', label: 'Disburse' },
+    { value: 'redeemable', label: 'Disburse', compactLabel: 'Send' },
     { value: 'payable', label: 'Collect' },
     { value: 'settlement', label: 'Settle' },
 ] as const;
@@ -6307,44 +6307,68 @@ function instructionRecord(
                                 </span>
                             </div>
                             <fieldset
-                                class="col-start-2 row-start-2 flex min-w-0 items-center gap-1"
+                                class="col-start-2 row-start-2 min-w-0"
                                 data-testid="cockpit-quick-generate-voucher-kind"
                             >
-                                <legend
-                                    class="flex shrink-0 items-center gap-0.5 text-[0.625rem] font-medium text-slate-600 sm:gap-1 sm:text-xs dark:text-slate-400"
-                                >
-                                    Value flow
-                                    <CockpitFieldHelp
-                                        label="About Value Flow"
-                                        tooltip="Disburse sends claimable value, Collect receives a payment, and Settle combines redeemable value with a collection target."
-                                    />
-                                </legend>
+                                <legend class="sr-only">Value flow</legend>
                                 <div
-                                    class="grid min-w-0 flex-1 grid-cols-3 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900"
-                                    role="radiogroup"
-                                    aria-label="Pay Code value flow"
-                                    data-testid="cockpit-quick-generate-voucher-type"
+                                    class="flex min-w-0 flex-nowrap items-center gap-1"
+                                    data-testid="cockpit-quick-generate-value-flow-row"
                                 >
-                                    <label
-                                        v-for="option in voucherTypeOptions"
-                                        :key="option.value"
-                                        class="relative min-w-0"
-                                        :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`"
+                                    <span
+                                        class="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.625rem] font-medium text-slate-600 sm:gap-1 sm:text-xs dark:text-slate-400"
+                                        data-testid="cockpit-quick-generate-value-flow-label"
                                     >
-                                        <input
-                                            v-model="voucherType"
-                                            class="peer sr-only"
-                                            type="radio"
-                                            name="cockpit-quick-generate-voucher-type"
-                                            :value="option.value"
-                                            :disabled="processing"
-                                        />
-                                        <span
-                                            class="flex min-h-7 min-w-0 cursor-pointer items-center justify-center rounded-md px-0.5 text-[0.625rem] font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 sm:px-1.5 sm:text-[0.7rem] dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
+                                        <span class="sm:hidden">Flow</span>
+                                        <span class="hidden sm:inline"
+                                            >Value flow</span
                                         >
-                                            {{ option.label }}
-                                        </span>
-                                    </label>
+                                        <CockpitFieldHelp
+                                            label="About Value Flow"
+                                            tooltip="Disburse sends claimable value, Collect receives a payment, and Settle combines redeemable value with a collection target."
+                                        />
+                                    </span>
+                                    <div
+                                        class="grid min-w-0 flex-1 grid-cols-3 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900"
+                                        role="radiogroup"
+                                        aria-label="Pay Code value flow"
+                                        data-testid="cockpit-quick-generate-voucher-type"
+                                    >
+                                        <label
+                                            v-for="option in voucherTypeOptions"
+                                            :key="option.value"
+                                            class="relative min-w-0"
+                                            :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`"
+                                        >
+                                            <input
+                                                v-model="voucherType"
+                                                class="peer sr-only"
+                                                type="radio"
+                                                name="cockpit-quick-generate-voucher-type"
+                                                :value="option.value"
+                                                :aria-label="option.label"
+                                                :disabled="processing"
+                                            />
+                                            <span
+                                                class="flex min-h-7 min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-md px-0 text-[0.5625rem] font-semibold whitespace-nowrap text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 sm:px-1.5 sm:text-[0.7rem] dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
+                                                :title="option.label"
+                                            >
+                                                <span
+                                                    v-if="'compactLabel' in option"
+                                                    class="sm:hidden"
+                                                    >{{ option.compactLabel }}</span
+                                                >
+                                                <span
+                                                    :class="
+                                                        'compactLabel' in option
+                                                            ? 'hidden sm:inline'
+                                                            : ''
+                                                    "
+                                                    >{{ option.label }}</span
+                                                >
+                                            </span>
+                                        </label>
+                                    </div>
                                 </div>
                             </fieldset>
                             <span
