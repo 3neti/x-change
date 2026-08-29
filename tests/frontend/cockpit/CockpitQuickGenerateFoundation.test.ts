@@ -247,6 +247,9 @@ describe('Cockpit Quick Generate foundation', () => {
         const valueFlow = orderCard.get(
             '[data-testid="cockpit-quick-generate-voucher-kind"]',
         );
+        const estimatedCost = orderCard.get(
+            '[data-testid="cockpit-quick-generate-account-debit"]',
+        );
         const orderModeRow = orderCard.get(
             '[data-testid="cockpit-quick-generate-order-mode-row"]',
         );
@@ -254,16 +257,26 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(orderModeRow.element.contains(surfaceToggle.element)).toBe(
             true,
         );
-        expect(orderModeRow.element.contains(valueFlow.element)).toBe(true);
-        expect(orderModeRow.classes()).toContain(
-            'sm:grid-cols-[minmax(10rem,0.8fr)_minmax(14rem,1.2fr)]',
+        expect(orderModeRow.element.contains(valueFlow.element)).toBe(false);
+        expect(orderModeRow.classes()).toContain('flex');
+        expect(orderModeRow.classes()).toContain('text-sm');
+        expect(orderCard.text()).not.toContain(
+            'Set the value, payee, and purpose.',
         );
         expect(amountActionRow.element.contains(issuanceMode.element)).toBe(
+            true,
+        );
+        expect(amountActionRow.element.contains(valueFlow.element)).toBe(true);
+        expect(amountActionRow.element.contains(estimatedCost.element)).toBe(
             true,
         );
         expect(amountActionRow.classes()).toContain(
             'grid-cols-[minmax(0,1fr)_auto]',
         );
+        expect(valueFlow.classes()).toContain('col-start-2');
+        expect(valueFlow.classes()).toContain('row-start-2');
+        expect(estimatedCost.classes()).toContain('col-start-1');
+        expect(estimatedCost.classes()).toContain('row-start-2');
         expect(submitButton.classes()).toContain('w-24');
         expect(submitButton.classes()).toContain('sm:w-36');
         expect(submitButton.text()).toContain('Issue');

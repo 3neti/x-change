@@ -140,22 +140,17 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             'grid-cols-[minmax(0,1fr)_auto]',
         );
 
-        // The description gets its own full-width row.
-        const description = orderCard.get('p');
-        expect(description.text()).toBe(
-            'Set the value, payee, and purpose.',
-        );
-        expect(titleRow?.contains(description.element)).toBe(false);
-
         const workspaceRow = orderCard.get(
             '[data-testid="cockpit-quick-generate-order-mode-row"]',
         );
         expect(workspaceRow.element.contains(surfaceControl.element)).toBe(
             true,
         );
-        expect(workspaceRow.element.contains(valueFlow.element)).toBe(true);
-        expect(workspaceRow.classes()).toContain(
-            'sm:grid-cols-[minmax(10rem,0.8fr)_minmax(14rem,1.2fr)]',
+        expect(workspaceRow.text()).toContain('Workspace');
+        expect(workspaceRow.element.contains(valueFlow.element)).toBe(false);
+        expect(workspaceRow.classes()).toContain('text-sm');
+        expect(orderCard.text()).not.toContain(
+            'Set the value, payee, and purpose.',
         );
         expect(workspaceRow.element.contains(submitButton.element)).toBe(
             false,
@@ -163,6 +158,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         expect(amountActionRow.element.contains(modeControl.element)).toBe(
             true,
         );
+        expect(amountActionRow.element.contains(valueFlow.element)).toBe(true);
         expect(valueFlow.element.contains(modeControl.element)).toBe(false);
     });
 

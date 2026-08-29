@@ -6081,71 +6081,19 @@ function instructionRecord(
                         </h4>
                     </div>
                 </div>
-                <p
-                    class="mt-1 min-w-0 text-sm text-slate-600 dark:text-slate-300"
-                >
-                    Set the value, payee, and purpose.
-                </p>
                 <div
-                    class="mt-3 grid min-w-0 items-end gap-2 sm:grid-cols-[minmax(10rem,0.8fr)_minmax(14rem,1.2fr)]"
+                    class="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
                     data-testid="cockpit-quick-generate-order-mode-row"
                 >
-                    <div class="min-w-0">
-                        <span
-                            class="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300"
-                        >
-                            Workspace
-                        </span>
-                        <CockpitQuickGenerateSurfaceSwitch
-                            class="w-full"
-                            :model-value="issuanceSurface"
-                            :disabled="processing"
-                            @update:model-value="
-                                emit('update:issuanceSurface', $event)
-                            "
-                        />
-                    </div>
-                    <fieldset
-                        class="min-w-0"
-                        data-testid="cockpit-quick-generate-voucher-kind"
-                    >
-                        <legend
-                            class="mb-1.5 flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                        >
-                            Value flow
-                            <CockpitFieldHelp
-                                label="About Value Flow"
-                                tooltip="Disburse sends claimable value, Collect receives a payment, and Settle combines redeemable value with a collection target."
-                            />
-                        </legend>
-                        <div
-                            class="grid min-w-0 grid-cols-3 rounded-xl bg-slate-100 p-1 dark:bg-slate-900"
-                            role="radiogroup"
-                            aria-label="Pay Code value flow"
-                            data-testid="cockpit-quick-generate-voucher-type"
-                        >
-                            <label
-                                v-for="option in voucherTypeOptions"
-                                :key="option.value"
-                                class="relative min-w-0"
-                                :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`"
-                            >
-                                <input
-                                    v-model="voucherType"
-                                    class="peer sr-only"
-                                    type="radio"
-                                    name="cockpit-quick-generate-voucher-type"
-                                    :value="option.value"
-                                    :disabled="processing"
-                                />
-                                <span
-                                    class="flex min-h-9 min-w-0 cursor-pointer items-center justify-center rounded-lg px-2 text-xs font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
-                                >
-                                    {{ option.label }}
-                                </span>
-                            </label>
-                        </div>
-                    </fieldset>
+                    <span class="shrink-0">Workspace</span>
+                    <CockpitQuickGenerateSurfaceSwitch
+                        class="w-auto p-0.5 [&>button]:min-h-7 [&>button]:px-2"
+                        :model-value="issuanceSurface"
+                        :disabled="processing"
+                        @update:model-value="
+                            emit('update:issuanceSurface', $event)
+                        "
+                    />
                 </div>
                 <div
                     class="mt-4 grid items-start gap-3 sm:grid-cols-2"
@@ -6166,7 +6114,7 @@ function instructionRecord(
                             />
                         </label>
                         <div
-                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2"
+                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1.5"
                             data-testid="cockpit-quick-generate-amount-action-row"
                         >
                             <CockpitAmountPicker
@@ -6182,7 +6130,7 @@ function instructionRecord(
                                 @preview="previewAmountInCalculator"
                             />
                             <div
-                                class="inline-flex min-w-0 shrink-0 rounded-xl shadow-sm"
+                                class="inline-flex min-w-0 shrink-0 self-start rounded-xl shadow-sm"
                                 data-testid="cockpit-quick-generate-mode-control"
                                 role="group"
                                 aria-label="Issue action"
@@ -6301,63 +6249,110 @@ function instructionRecord(
                                     </div>
                                 </details>
                             </div>
-                        </div>
-                        <span
-                            v-if="amountFieldError"
-                            class="text-[11px] font-medium text-rose-600 dark:text-rose-300"
-                            data-testid="cockpit-quick-generate-amount-error"
-                        >
-                            {{ amountFieldError }}
-                        </span>
-                        <div
-                            class="mt-1 flex min-h-5 items-baseline justify-between gap-3 px-0.5 text-[0.7rem] leading-5"
-                            data-testid="cockpit-quick-generate-account-debit"
-                            :data-affordability="liveAccountDebitAffordability"
-                            :title="
-                                liveAccountDebitExceedsClientFunds
-                                    ? 'Estimated Cost exceeds Client Funds.'
-                                    : undefined
-                            "
-                            aria-live="polite"
-                        >
-                            <button
-                                type="button"
-                                class="underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
-                                :class="
-                                    liveAccountDebitExceedsClientFunds
-                                        ? 'font-semibold text-rose-600 hover:text-rose-700 focus-visible:outline-rose-600 dark:text-rose-300 dark:hover:text-rose-200'
-                                        : 'font-medium text-slate-500 hover:text-emerald-700 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300'
+                            <div
+                                class="col-start-1 row-start-2 flex min-h-5 min-w-0 items-baseline justify-between gap-2 px-0.5 text-[0.7rem] leading-5"
+                                data-testid="cockpit-quick-generate-account-debit"
+                                :data-affordability="
+                                    liveAccountDebitAffordability
                                 "
-                                data-testid="cockpit-quick-generate-account-debit-view-cost"
-                                @click="canvasView = 'cost'"
-                            >
-                                Estimated Cost
-                            </button>
-                            <span
-                                v-if="liveAccountDebit !== null"
-                                class="shrink-0 font-semibold tabular-nums"
-                                :class="
+                                :title="
                                     liveAccountDebitExceedsClientFunds
-                                        ? 'text-rose-600 dark:text-rose-300'
-                                        : 'text-slate-700 dark:text-slate-200'
+                                        ? 'Estimated Cost exceeds Client Funds.'
+                                        : undefined
                                 "
-                                data-testid="cockpit-quick-generate-account-debit-amount"
+                                aria-live="polite"
                             >
-                                {{ formatAccountMoney(liveAccountDebit) }}
-                            </span>
+                                <button
+                                    type="button"
+                                    class="min-w-0 truncate text-left underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
+                                    :class="
+                                        liveAccountDebitExceedsClientFunds
+                                            ? 'font-semibold text-rose-600 hover:text-rose-700 focus-visible:outline-rose-600 dark:text-rose-300 dark:hover:text-rose-200'
+                                            : 'font-medium text-slate-500 hover:text-emerald-700 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300'
+                                    "
+                                    aria-label="View estimated cost"
+                                    data-testid="cockpit-quick-generate-account-debit-view-cost"
+                                    @click="canvasView = 'cost'"
+                                >
+                                    <span class="sm:hidden">Est. cost</span>
+                                    <span class="hidden sm:inline"
+                                        >Estimated Cost</span
+                                    >
+                                </button>
+                                <span
+                                    v-if="liveAccountDebit !== null"
+                                    class="shrink-0 text-right font-semibold tabular-nums"
+                                    :class="
+                                        liveAccountDebitExceedsClientFunds
+                                            ? 'text-rose-600 dark:text-rose-300'
+                                            : 'text-slate-700 dark:text-slate-200'
+                                    "
+                                    data-testid="cockpit-quick-generate-account-debit-amount"
+                                >
+                                    {{ formatAccountMoney(liveAccountDebit) }}
+                                </span>
+                                <span
+                                    v-else-if="liveAccountDebitPending"
+                                    class="shrink-0 text-right text-slate-400 dark:text-slate-500"
+                                    data-testid="cockpit-quick-generate-account-debit-loading"
+                                >
+                                    Calculating…
+                                </span>
+                                <span
+                                    v-else
+                                    class="shrink-0 text-right text-slate-400 dark:text-slate-500"
+                                    data-testid="cockpit-quick-generate-account-debit-unavailable"
+                                >
+                                    —
+                                </span>
+                            </div>
+                            <fieldset
+                                class="col-start-2 row-start-2 min-w-0"
+                                data-testid="cockpit-quick-generate-voucher-kind"
+                            >
+                                <legend
+                                    class="mb-1 flex items-center gap-1 text-[0.65rem] font-medium text-slate-600 sm:text-xs dark:text-slate-400"
+                                >
+                                    Value flow
+                                    <CockpitFieldHelp
+                                        label="About Value Flow"
+                                        tooltip="Disburse sends claimable value, Collect receives a payment, and Settle combines redeemable value with a collection target."
+                                    />
+                                </legend>
+                                <div
+                                    class="grid min-w-0 grid-cols-3 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900"
+                                    role="radiogroup"
+                                    aria-label="Pay Code value flow"
+                                    data-testid="cockpit-quick-generate-voucher-type"
+                                >
+                                    <label
+                                        v-for="option in voucherTypeOptions"
+                                        :key="option.value"
+                                        class="relative min-w-0"
+                                        :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`"
+                                    >
+                                        <input
+                                            v-model="voucherType"
+                                            class="peer sr-only"
+                                            type="radio"
+                                            name="cockpit-quick-generate-voucher-type"
+                                            :value="option.value"
+                                            :disabled="processing"
+                                        />
+                                        <span
+                                            class="flex min-h-7 min-w-0 cursor-pointer items-center justify-center rounded-md px-0.5 text-[0.625rem] font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 sm:px-1.5 sm:text-[0.7rem] dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
+                                        >
+                                            {{ option.label }}
+                                        </span>
+                                    </label>
+                                </div>
+                            </fieldset>
                             <span
-                                v-else-if="liveAccountDebitPending"
-                                class="shrink-0 text-slate-400 dark:text-slate-500"
-                                data-testid="cockpit-quick-generate-account-debit-loading"
+                                v-if="amountFieldError"
+                                class="col-start-1 row-start-3 text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                                data-testid="cockpit-quick-generate-amount-error"
                             >
-                                Calculating…
-                            </span>
-                            <span
-                                v-else
-                                class="shrink-0 text-slate-400 dark:text-slate-500"
-                                data-testid="cockpit-quick-generate-account-debit-unavailable"
-                            >
-                                —
+                                {{ amountFieldError }}
                             </span>
                         </div>
                     </div>
