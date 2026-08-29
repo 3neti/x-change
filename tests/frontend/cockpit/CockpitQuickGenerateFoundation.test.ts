@@ -159,7 +159,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .classes(),
         ).toContain('gap-1.5');
         expect(essentialsCanvas.classes()).toContain(
-            '2xl:grid-cols-[minmax(19rem,40rem)_minmax(28rem,40rem)]',
+            '2xl:grid-cols-[repeat(2,minmax(28rem,40rem))]',
         );
         expect(essentialsCanvas.classes()).toContain('2xl:justify-center');
 

@@ -6065,7 +6065,7 @@ function instructionRecord(
         </div>
 
         <div
-            class="grid min-w-0 gap-5 2xl:grid-cols-[minmax(19rem,40rem)_minmax(28rem,40rem)] 2xl:justify-center"
+            class="grid min-w-0 gap-5 2xl:grid-cols-[repeat(2,minmax(28rem,40rem))] 2xl:justify-center"
             data-testid="cockpit-quick-generate-essentials-canvas"
         >
             <div
