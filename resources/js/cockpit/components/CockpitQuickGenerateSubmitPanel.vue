@@ -6316,7 +6316,7 @@ function instructionRecord(
                                     data-testid="cockpit-quick-generate-value-flow-row"
                                 >
                                     <span
-                                        class="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.625rem] font-medium text-slate-600 sm:gap-1 sm:text-xs dark:text-slate-400"
+                                        class="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.625rem] font-medium text-slate-600 dark:text-slate-400"
                                         data-testid="cockpit-quick-generate-value-flow-label"
                                     >
                                         <span class="sm:hidden">Flow</span>
@@ -6329,7 +6329,7 @@ function instructionRecord(
                                         />
                                     </span>
                                     <div
-                                        class="grid min-w-0 flex-1 grid-cols-3 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900"
+                                        class="grid min-w-0 flex-1 grid-cols-3 rounded-md bg-slate-100 p-px dark:bg-slate-900"
                                         role="radiogroup"
                                         aria-label="Pay Code value flow"
                                         data-testid="cockpit-quick-generate-voucher-type"
@@ -6350,7 +6350,7 @@ function instructionRecord(
                                                 :disabled="processing"
                                             />
                                             <span
-                                                class="flex min-h-7 min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-md px-0 text-[0.5625rem] font-semibold whitespace-nowrap text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 sm:px-1.5 sm:text-[0.7rem] dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
+                                                class="flex min-h-6 min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm px-0 text-[0.5625rem] font-semibold whitespace-nowrap text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 sm:px-1 sm:text-[0.625rem] dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
                                                 :title="option.label"
                                             >
                                                 <span

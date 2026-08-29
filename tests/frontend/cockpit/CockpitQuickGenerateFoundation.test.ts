@@ -294,12 +294,22 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(valueFlowRow.classes()).toContain('items-center');
         expect(valueFlowRow.classes()).toContain('gap-1');
         expect(
-            valueFlow
-                .get(
-                    '[data-testid="cockpit-quick-generate-voucher-type-redeemable"] span',
-                )
-                .classes(),
-        ).toContain('overflow-hidden');
+            valueFlow.get(
+                '[data-testid="cockpit-quick-generate-voucher-type"]',
+            ).classes(),
+        ).toEqual(expect.arrayContaining(['rounded-md', 'p-px']));
+        const redeemableOption = valueFlow.get(
+            '[data-testid="cockpit-quick-generate-voucher-type-redeemable"] span',
+        );
+        expect(redeemableOption.classes()).toEqual(
+            expect.arrayContaining([
+                'min-h-6',
+                'overflow-hidden',
+                'text-[0.5625rem]',
+                'sm:text-[0.625rem]',
+            ]),
+        );
+        expect(redeemableOption.classes()).not.toContain('min-h-7');
         expect(
             valueFlowRow.element.contains(
                 valueFlow.get(
