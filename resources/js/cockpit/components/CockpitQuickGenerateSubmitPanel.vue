@@ -6114,7 +6114,7 @@ function instructionRecord(
                             />
                         </label>
                         <div
-                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1.5"
+                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start justify-start gap-x-2 gap-y-1.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]"
                             data-testid="cockpit-quick-generate-amount-action-row"
                         >
                             <CockpitAmountPicker
@@ -6130,14 +6130,14 @@ function instructionRecord(
                                 @preview="previewAmountInCalculator"
                             />
                             <div
-                                class="col-start-2 row-start-1 inline-flex min-w-0 shrink-0 self-start rounded-xl shadow-sm"
+                                class="col-start-2 row-start-1 inline-flex w-full min-w-0 self-start rounded-xl shadow-sm"
                                 data-testid="cockpit-quick-generate-mode-control"
                                 role="group"
                                 aria-label="Issue action"
                             >
                                 <button
                                     type="submit"
-                                    class="inline-flex min-h-12 w-28 min-w-0 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-xl bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-44 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                                    class="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-xl bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                                     data-testid="cockpit-quick-generate-submit-button"
                                     :aria-label="
                                         onboardingEnabled
@@ -6307,11 +6307,11 @@ function instructionRecord(
                                 </span>
                             </div>
                             <fieldset
-                                class="col-start-2 row-start-2 min-w-0"
+                                class="col-start-2 row-start-2 flex min-w-0 items-center gap-1"
                                 data-testid="cockpit-quick-generate-voucher-kind"
                             >
                                 <legend
-                                    class="mb-1 flex items-center gap-1 text-[0.65rem] font-medium text-slate-600 sm:text-xs dark:text-slate-400"
+                                    class="flex shrink-0 items-center gap-0.5 text-[0.625rem] font-medium text-slate-600 sm:gap-1 sm:text-xs dark:text-slate-400"
                                 >
                                     Value flow
                                     <CockpitFieldHelp
@@ -6320,7 +6320,7 @@ function instructionRecord(
                                     />
                                 </legend>
                                 <div
-                                    class="grid min-w-0 grid-cols-3 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900"
+                                    class="grid min-w-0 flex-1 grid-cols-3 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900"
                                     role="radiogroup"
                                     aria-label="Pay Code value flow"
                                     data-testid="cockpit-quick-generate-voucher-type"

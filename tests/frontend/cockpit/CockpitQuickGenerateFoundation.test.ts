@@ -274,20 +274,29 @@ describe('Cockpit Quick Generate foundation', () => {
             true,
         );
         expect(amountActionRow.classes()).toContain(
-            'grid-cols-[minmax(0,1fr)_auto]',
+            'grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]',
         );
+        expect(amountActionRow.classes()).toContain(
+            'sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]',
+        );
+        expect(amountActionRow.classes()).toContain('justify-start');
         expect(amountPicker?.classList.contains('max-w-72')).toBe(true);
         expect(amountPicker?.classList.contains('col-start-1')).toBe(true);
         expect(amountPicker?.classList.contains('row-start-1')).toBe(true);
         expect(valueFlow.classes()).toContain('col-start-2');
         expect(valueFlow.classes()).toContain('row-start-2');
+        expect(valueFlow.classes()).toContain('flex');
+        expect(valueFlow.classes()).toContain('items-center');
+        expect(valueFlow.classes()).toContain('gap-1');
         expect(estimatedCost.classes()).toContain('col-start-1');
         expect(estimatedCost.classes()).toContain('row-start-2');
         expect(estimatedCost.classes()).toContain('max-w-72');
         expect(issuanceMode.classes()).toContain('col-start-2');
         expect(issuanceMode.classes()).toContain('row-start-1');
-        expect(submitButton.classes()).toContain('w-28');
-        expect(submitButton.classes()).toContain('sm:w-44');
+        expect(issuanceMode.classes()).toContain('w-full');
+        expect(submitButton.classes()).toContain('flex-1');
+        expect(submitButton.classes()).not.toContain('w-28');
+        expect(submitButton.classes()).not.toContain('sm:w-44');
         expect(submitButton.text()).toContain('Issue');
 
         [

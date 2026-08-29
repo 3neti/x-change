@@ -137,7 +137,10 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             true,
         );
         expect(amountActionRow.classes()).toContain(
-            'grid-cols-[minmax(0,1fr)_auto]',
+            'grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]',
+        );
+        expect(amountActionRow.classes()).toContain(
+            'sm:grid-cols-[minmax(0,18rem)_minmax(0,22rem)]',
         );
 
         const workspaceRow = orderCard.get(
@@ -164,7 +167,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         expect(modeControl.classes()).toContain('row-start-1');
     });
 
-    it('gives the Issue CTA a shrink-resistant, non-clippable structure independent of the badge', () => {
+    it('gives the Issue CTA a full-track, non-clippable structure independent of Value Flow', () => {
         const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
@@ -176,16 +179,18 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             '[data-testid="cockpit-quick-generate-voucher-kind"]',
         );
 
-        expect(submitButton.classes()).toContain('shrink-0');
+        expect(submitButton.classes()).toContain('flex-1');
         expect(submitButton.classes()).not.toContain('absolute');
         expect(badge.classes()).not.toContain('absolute');
-        // Amount and the primary action share row one; Estimated Cost and
-        // Value Flow align directly beneath them on row two.
+        // Amount and the wider primary action share row one; Estimated Cost
+        // and the single-line Value Flow control align beneath them.
         expect(submitButton.element.parentElement).not.toBe(
             badge.element.parentElement,
         );
         expect(badge.classes()).toContain('col-start-2');
         expect(badge.classes()).toContain('row-start-2');
+        expect(badge.classes()).toContain('flex');
+        expect(badge.classes()).toContain('items-center');
         expect(submitButton.element.parentElement?.classList).toContain(
             'col-start-2',
         );
