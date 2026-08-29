@@ -106,7 +106,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBeTruthy();
     });
 
-    it('keeps the workspace controls together and the Issue CTA beside Amount', () => {
+    it('keeps the workspace controls together and Value Flow beside the Issue CTA', () => {
         const wrapper = mountPanel({
             templates: cockpitQuickGenerateTemplates,
             onboardingPreset: true,
@@ -160,6 +160,8 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         );
         expect(amountActionRow.element.contains(valueFlow.element)).toBe(true);
         expect(valueFlow.element.contains(modeControl.element)).toBe(false);
+        expect(valueFlow.classes()).toContain('row-start-3');
+        expect(modeControl.classes()).toContain('row-start-3');
     });
 
     it('gives the Issue CTA a shrink-resistant, non-clippable structure independent of the badge', () => {
@@ -177,10 +179,14 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         expect(submitButton.classes()).toContain('shrink-0');
         expect(submitButton.classes()).not.toContain('absolute');
         expect(badge.classes()).not.toContain('absolute');
-        // No shared flex row forces the CTA to compete with the badge for
-        // space; they are siblings of different rows.
+        // The grid gives Value Flow flexible room while the primary action
+        // keeps its full, shrink-resistant width on the same row.
         expect(submitButton.element.parentElement).not.toBe(
             badge.element.parentElement,
+        );
+        expect(badge.classes()).toContain('col-start-1');
+        expect(submitButton.element.parentElement?.classList).toContain(
+            'col-start-2',
         );
     });
 

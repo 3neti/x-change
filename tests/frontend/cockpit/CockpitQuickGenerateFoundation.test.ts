@@ -222,7 +222,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.text()).toContain('0');
     });
 
-    it('keeps the Amount action inline on mobile and every Claim Experience step shrinkable', () => {
+    it('keeps Amount compact and Value Flow beside the longer issue action on mobile', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -250,6 +250,9 @@ describe('Cockpit Quick Generate foundation', () => {
         const estimatedCost = orderCard.get(
             '[data-testid="cockpit-quick-generate-account-debit"]',
         );
+        const amountPicker = orderCard.get(
+            '[data-testid="cockpit-quick-generate-primary-amount"]',
+        ).element.parentElement;
         const orderModeRow = orderCard.get(
             '[data-testid="cockpit-quick-generate-order-mode-row"]',
         );
@@ -273,12 +276,16 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(amountActionRow.classes()).toContain(
             'grid-cols-[minmax(0,1fr)_auto]',
         );
-        expect(valueFlow.classes()).toContain('col-start-2');
-        expect(valueFlow.classes()).toContain('row-start-2');
+        expect(amountPicker?.classList.contains('max-w-72')).toBe(true);
+        expect(valueFlow.classes()).toContain('col-start-1');
+        expect(valueFlow.classes()).toContain('row-start-3');
         expect(estimatedCost.classes()).toContain('col-start-1');
         expect(estimatedCost.classes()).toContain('row-start-2');
-        expect(submitButton.classes()).toContain('w-24');
-        expect(submitButton.classes()).toContain('sm:w-36');
+        expect(estimatedCost.classes()).toContain('max-w-72');
+        expect(issuanceMode.classes()).toContain('col-start-2');
+        expect(issuanceMode.classes()).toContain('row-start-3');
+        expect(submitButton.classes()).toContain('w-28');
+        expect(submitButton.classes()).toContain('sm:w-44');
         expect(submitButton.text()).toContain('Issue');
 
         [

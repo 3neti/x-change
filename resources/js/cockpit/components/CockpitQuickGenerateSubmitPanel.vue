@@ -6120,7 +6120,7 @@ function instructionRecord(
                             <CockpitAmountPicker
                                 ref="amountInputElement"
                                 v-model="amount"
-                                class="min-w-0"
+                                class="col-span-2 row-start-1 min-w-0 w-full max-w-72"
                                 :disabled="processing"
                                 :estimated-cost="amountCalculatorEstimatedCost"
                                 :estimate-pending="amountCalculatorEstimatePending"
@@ -6130,14 +6130,14 @@ function instructionRecord(
                                 @preview="previewAmountInCalculator"
                             />
                             <div
-                                class="inline-flex min-w-0 shrink-0 self-start rounded-xl shadow-sm"
+                                class="col-start-2 row-start-3 inline-flex min-w-0 shrink-0 self-end rounded-xl shadow-sm"
                                 data-testid="cockpit-quick-generate-mode-control"
                                 role="group"
                                 aria-label="Issue action"
                             >
                                 <button
                                     type="submit"
-                                    class="inline-flex min-h-12 w-24 min-w-0 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-xl bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-36 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                                    class="inline-flex min-h-12 w-28 min-w-0 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-xl bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-44 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                                     data-testid="cockpit-quick-generate-submit-button"
                                     :aria-label="
                                         onboardingEnabled
@@ -6250,7 +6250,7 @@ function instructionRecord(
                                 </details>
                             </div>
                             <div
-                                class="col-start-1 row-start-2 flex min-h-5 min-w-0 items-baseline justify-between gap-2 px-0.5 text-[0.7rem] leading-5"
+                                class="col-span-2 col-start-1 row-start-2 flex min-h-5 w-full max-w-72 min-w-0 items-baseline justify-between gap-2 px-0.5 text-[0.7rem] leading-5"
                                 data-testid="cockpit-quick-generate-account-debit"
                                 :data-affordability="
                                     liveAccountDebitAffordability
@@ -6307,7 +6307,7 @@ function instructionRecord(
                                 </span>
                             </div>
                             <fieldset
-                                class="col-start-2 row-start-2 min-w-0"
+                                class="col-start-1 row-start-3 min-w-0 self-end"
                                 data-testid="cockpit-quick-generate-voucher-kind"
                             >
                                 <legend
@@ -6349,7 +6349,7 @@ function instructionRecord(
                             </fieldset>
                             <span
                                 v-if="amountFieldError"
-                                class="col-start-1 row-start-3 text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                                class="col-span-2 col-start-1 row-start-4 text-[11px] font-medium text-rose-600 dark:text-rose-300"
                                 data-testid="cockpit-quick-generate-amount-error"
                             >
                                 {{ amountFieldError }}
