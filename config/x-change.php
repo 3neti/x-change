@@ -458,6 +458,10 @@ return [
         ],
 
         'quick_generate' => [
+            'startup_mode' => env(
+                'XCHANGE_COCKPIT_QUICK_GENERATE_STARTUP_MODE',
+                'blank',
+            ),
             'rider_library' => [
                 'recent_limit_per_kind' => 20,
             ],

@@ -146,18 +146,16 @@ describe('Cockpit Quick Generate hydration', () => {
 
         const restrictedWrapper = mount(QuickGenerate, {
             props: {
-                quick_generate_read_model: {
-                    ...quickGenerateReadModel,
-                    draft_contract: {
-                        recipient_reference: '09173011987',
-                    },
-                },
+                quick_generate_read_model: quickGenerateReadModel,
                 onboarding_policy: {
                     otp_required: false,
                 },
             },
         });
 
+        await restrictedWrapper
+            .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
+            .setValue('09173011987');
         await restrictedWrapper
             .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
             .trigger('click');
@@ -241,7 +239,9 @@ describe('Cockpit Quick Generate hydration', () => {
                 .find('[data-testid="cockpit-quick-generate-submit-template"]')
                 .text(),
         ).toContain('Money Changer');
-        expect(wrapper.text()).toContain('Ready to issue');
+        expect(wrapper.text()).toContain(
+            'Blank Pay Code ready. Add only what this claim needs.',
+        );
     });
 
     it('forwards route adapter props into the cockpit quick generate page', () => {

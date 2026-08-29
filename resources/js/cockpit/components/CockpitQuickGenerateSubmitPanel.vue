@@ -20,7 +20,7 @@ import {
     Type,
     X,
 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeMount, onMounted, ref, watch } from 'vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
@@ -110,6 +110,7 @@ const props = withDefaults(
         feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
         onboardingOtpRequired?: boolean;
         onboardingPreset?: boolean;
+        startupMode?: 'blank' | 'repeat_last';
         lastInstructions?: CockpitQuickGenerateLastInstructions | null;
         savedTemplates?: CockpitSavedPayCodeTemplate[];
         riderLibrary?: CockpitRiderLibraryEntry[];
@@ -120,6 +121,7 @@ const props = withDefaults(
     {
         onboardingOtpRequired: true,
         onboardingPreset: false,
+        startupMode: 'blank',
         instructionCapabilities: () => ({}),
         riderLibrary: () => [],
     },
@@ -786,9 +788,7 @@ const amountCalculatorEstimatePending = ref(false);
 const riderDesignEditor = ref<RiderDesignEditor>('appearance');
 const riderDesignTeleportReady = ref(false);
 const riderDesignTeleportTarget = ref<HTMLElement | null>(null);
-const startingPoint = ref<'blank' | 'last' | 'template'>(
-    props.lastInstructions ? 'last' : 'template',
-);
+const startingPoint = ref<'blank' | 'last' | 'template'>('blank');
 const templatePickerOpen = ref(false);
 const saveTemplateOpen = ref(false);
 const orderOptionsOpen = ref(false);
@@ -812,7 +812,9 @@ const collectionDestinationError = computed<string | null>(() => {
     );
 });
 
-hydrateLastInstructions();
+onBeforeMount((): void => {
+    initializeStartingPoint();
+});
 
 onMounted((): void => {
     riderDesignTeleportReady.value = true;
@@ -1027,6 +1029,21 @@ function startBlank(): void {
     void focusAmountEditor();
 }
 
+function initializeStartingPoint(): void {
+    if (props.campaignContext?.status === 'available') {
+        startingPoint.value =
+            selectedTemplate.value === 'blank-pay-code' ? 'blank' : 'template';
+
+        return;
+    }
+
+    if (props.startupMode === 'repeat_last' && hydrateLastInstructions()) {
+        return;
+    }
+
+    startBlank();
+}
+
 function markRiderStampArtworkSourceSelection(): void {
     riderStampArtworkSourceWasExplicitlySelected.value = true;
 }
@@ -1046,11 +1063,11 @@ async function openDesignEditor(): Promise<void> {
     });
 }
 
-function hydrateLastInstructions(): void {
+function hydrateLastInstructions(): boolean {
     const instructions = props.lastInstructions?.instructions;
 
     if (!instructions || props.campaignContext?.status === 'available') {
-        return;
+        return false;
     }
 
     applyInstructionBlueprint(instructions, true);
@@ -1060,6 +1077,8 @@ function hydrateLastInstructions(): void {
     lastStatus.value = 'ready';
     lastMessage.value =
         'Your last successful Pay Code is ready to review or change.';
+
+    return true;
 }
 
 function repeatLastDesign(): void {

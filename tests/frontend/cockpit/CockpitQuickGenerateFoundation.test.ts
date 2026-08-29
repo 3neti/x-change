@@ -140,6 +140,12 @@ describe('Cockpit Quick Generate foundation', () => {
         );
 
         expect(amountInput.element).toBe(document.activeElement);
+        expect(amountInput.element.value).toBe('');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-start-blank"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
         expect(amountInput.classes()).toContain('h-12');
         expect(recipientInput.classes()).toContain('h-12');
         expect(
@@ -180,7 +186,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.element.tagName).toBe('BUTTON');
         expect(toggle.attributes('aria-expanded')).toBe('false');
         expect(toggle.text()).toContain('Order options');
-        expect(toggle.text()).toContain('1');
+        expect(toggle.text()).toContain('0');
         expect(panel.attributes('style')).toContain('display: none');
         expect(
             orderFields
@@ -213,7 +219,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .exists(),
         ).toBe(true);
 
-        expect(toggle.text()).toContain('1');
+        expect(toggle.text()).toContain('0');
     });
 
     it('stacks the Order header on mobile and keeps every Claim Experience step shrinkable', () => {
@@ -506,6 +512,7 @@ describe('Cockpit Quick Generate foundation', () => {
         const saved = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 ...baseProps,
+                startupMode: 'repeat_last',
                 lastInstructions: {
                     schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
                     saved_at: '2026-08-04T00:00:00Z',
@@ -1869,6 +1876,19 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
+                startupMode: 'repeat_last',
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-29T00:00:00Z',
+                    instructions: {
+                        cash: { amount: 0, currency: 'PHP' },
+                        metadata: {
+                            custom: {
+                                cockpit: { template_key: 'money-changer' },
+                            },
+                        },
+                    },
+                },
                 mutationContract: {
                     runtime_enabled: true,
                     route: 'x-change.cockpit.quick-generate.store',
@@ -2681,7 +2701,7 @@ describe('Cockpit Quick Generate foundation', () => {
             profile: 'voucher.claim.v1',
         });
         expect(payload.metadata.custom.cockpit).toMatchObject({
-            template_key: 'money-changer',
+            template_key: 'blank-pay-code',
             source: 'cockpit.quick-generate',
             slice_plan: {
                 schema: 'x-change.cockpit.slice-plan.v1',
@@ -4768,7 +4788,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .exists(),
         ).toBe(true);
         expect(reuseDesign.text()).toContain('Templates');
-        expect(reuseDesign.text()).toContain('Money Changer');
+        expect(reuseDesign.text()).toContain('Blank Pay Code');
         expect(reuseDesign.classes()).toContain('border-t');
         expect(reuseDesign.classes()).not.toContain('rounded-2xl');
         expect(wrapper.text()).toContain('Repeat Last');
@@ -4894,7 +4914,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper.get('#quick-generate-contract-rider').element.tagName,
         ).toBe('SECTION');
-        expect(wrapper.text()).toContain('Ready to issue');
+        expect(wrapper.text()).toContain(
+            'Blank Pay Code ready. Add only what this claim needs.',
+        );
     });
 
     it('walks through the protected claim experience inside the canvas', async () => {

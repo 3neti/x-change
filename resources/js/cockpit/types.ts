@@ -1610,6 +1610,7 @@ export type CockpitCollectionDestination = {
 
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     collection_destination?: CockpitCollectionDestination | null;
+    startup_mode?: 'blank' | 'repeat_last';
     quick_generate_read_model?: CockpitQuickGenerateReadModel;
     feedback_defaults?: CockpitQuickGenerateFeedbackDefaults;
     onboarding_policy?: CockpitQuickGenerateOnboardingPolicy;

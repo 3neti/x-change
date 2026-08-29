@@ -23,6 +23,7 @@ it('hydrates quick generate with operator-safe feedback defaults', function (): 
         ->assertJsonPath('props.collection_destination.status', 'ready')
         ->assertJsonPath('props.collection_destination.editable', false)
         ->assertJsonPath('props.collection_destination.managed_automatically', true)
+        ->assertJsonPath('props.startup_mode', 'blank')
         ->assertJsonMissingPath('props.current_user_wallet_id')
         ->assertJsonMissingPath('props.feedback_defaults.raw_payload')
         ->assertJsonMissingPath('props.feedback_defaults.provider_payload')
@@ -36,6 +37,23 @@ it('hydrates quick generate with operator-safe feedback defaults', function (): 
     expect($response->json('props.feedback_defaults.webhook'))
         ->toStartWith(url('/x/webhooks/operator/'));
 });
+
+it('exposes only the supported quick generate startup modes', function (mixed $configured, string $expected): void {
+    config()->set('x-change.cockpit.quick_generate.startup_mode', $configured);
+
+    actingAsTestUser();
+
+    $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('props.startup_mode', $expected);
+})->with([
+    'repeat last' => ['repeat_last', 'repeat_last'],
+    'blank' => ['blank', 'blank'],
+    'unsupported value' => ['money-changer', 'blank'],
+    'missing value' => [null, 'blank'],
+]);
 
 it('hydrates the platform wallet when the host default wallet is different', function (): void {
     $user = actingAsTestUser();

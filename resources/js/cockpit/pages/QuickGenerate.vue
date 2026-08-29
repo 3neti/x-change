@@ -1208,6 +1208,7 @@ function stringValue(value: unknown): string | null {
                     :onboarding-preset="
                         props.invitation_preset?.enabled ?? false
                     "
+                    :startup-mode="props.startup_mode ?? 'blank'"
                     :last-instructions="props.last_instructions"
                     :saved-templates="props.saved_templates ?? []"
                     :rider-library="props.rider_library ?? []"

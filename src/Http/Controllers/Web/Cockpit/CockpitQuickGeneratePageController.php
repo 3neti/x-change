@@ -56,6 +56,7 @@ class CockpitQuickGeneratePageController extends Controller
                 'enabled' => $request->query('intent') === 'invite',
                 'source' => 'cockpit',
             ],
+            'startup_mode' => $this->startupMode(),
             'last_instructions' => $this->lastInstructions->for($request->user()),
             'saved_templates' => $this->templates->for($request->user()),
             'rider_library' => $this->riderLibrary->for($request->user()),
@@ -64,6 +65,13 @@ class CockpitQuickGeneratePageController extends Controller
             'collection_destination' => $this->collectionDestination($request),
             'pos_voucher' => $this->posVoucher($request),
         ]);
+    }
+
+    private function startupMode(): string
+    {
+        return config('x-change.cockpit.quick_generate.startup_mode') === 'repeat_last'
+            ? 'repeat_last'
+            : 'blank';
     }
 
     /**
