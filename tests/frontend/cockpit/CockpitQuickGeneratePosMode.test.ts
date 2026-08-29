@@ -72,20 +72,46 @@ describe('Cockpit Quick Generate POS mode', () => {
                 .exists(),
         ).toBe(true);
 
-        await wrapper
-            .get('[data-testid="cockpit-quick-generate-surface-pos"]')
-            .trigger('click');
+        wrapper
+            .findComponent({ name: 'CockpitQuickGenerateSubmitPanel' })
+            .vm.$emit('update:issuanceSurface', 'pos');
+        await wrapper.vm.$nextTick();
 
         expect(
             wrapper
                 .findComponent({ name: 'CockpitQuickGeneratePosPanel' })
                 .exists(),
         ).toBe(true);
+        wrapper
+            .findComponent({ name: 'CockpitQuickGeneratePosPanel' })
+            .vm.$emit('update:issuanceSurface', 'composer');
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper
+                .findComponent({ name: 'CockpitQuickGenerateSubmitPanel' })
+                .exists(),
+        ).toBe(true);
+    });
+
+    it('keeps the compact surface switch available inside the POS workspace', async () => {
+        const wrapper = mount(CockpitQuickGeneratePosPanel, {
+            props: { mutationContract },
+        });
+
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-surface-pos"]')
                 .attributes('aria-pressed'),
         ).toBe('true');
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-surface-composer"]')
+            .trigger('click');
+
+        expect(wrapper.emitted('update:issuanceSurface')).toEqual([
+            ['composer'],
+        ]);
     });
 
     it('issues from amount and reference, renders QR, polls, confirms payment, and resets', async () => {

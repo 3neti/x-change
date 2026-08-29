@@ -95,6 +95,8 @@ import CockpitRiderEditorDisclosure from './CockpitRiderEditorDisclosure.vue';
 import CockpitRiderMessageEditor from './CockpitRiderMessageEditor.vue';
 import CockpitRiderLibrary from './CockpitRiderLibrary.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
+import CockpitQuickGenerateSurfaceSwitch from './CockpitQuickGenerateSurfaceSwitch.vue';
+import type { CockpitQuickGenerateSurface } from './CockpitQuickGenerateSurfaceSwitch.vue';
 import type { CockpitScheduledPortion } from './CockpitScheduledPortionsEditor.vue';
 import CockpitValueUseControl from './CockpitValueUseControl.vue';
 import type { CockpitValueUseMode } from './CockpitValueUseControl.vue';
@@ -110,6 +112,7 @@ const props = withDefaults(
         feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
         onboardingOtpRequired?: boolean;
         onboardingPreset?: boolean;
+        issuanceSurface?: CockpitQuickGenerateSurface;
         startupMode?: 'blank' | 'repeat_last';
         lastInstructions?: CockpitQuickGenerateLastInstructions | null;
         savedTemplates?: CockpitSavedPayCodeTemplate[];
@@ -121,6 +124,7 @@ const props = withDefaults(
     {
         onboardingOtpRequired: true,
         onboardingPreset: false,
+        issuanceSurface: 'composer',
         startupMode: 'blank',
         instructionCapabilities: () => ({}),
         riderLibrary: () => [],
@@ -168,6 +172,7 @@ function claimRequirementCategory(
 }
 
 const emit = defineEmits<{
+    'update:issuanceSurface': [value: CockpitQuickGenerateSurface];
     submitStart: [payload: Record<string, unknown>];
     submitSuccess: [response: Record<string, unknown>];
     submitError: [error: Record<string, unknown>];
@@ -184,6 +189,12 @@ type CashTypeOption = {
     label: string;
     helper: string;
 };
+
+const voucherTypeOptions = [
+    { value: 'redeemable', label: 'Disburse' },
+    { value: 'payable', label: 'Collect' },
+    { value: 'settlement', label: 'Settle' },
+] as const;
 
 type MandateOption = {
     value: string;
@@ -2603,44 +2614,6 @@ const canvasExpiryLabel = computed<string>(() => {
     };
 
     return labels[expiryPreset.value] ?? expiryPreset.value;
-});
-
-const voucherKindLabel = computed<string>(() => {
-    if (onboardingEnabled.value) {
-        return 'Account Invitation';
-    }
-
-    if (reusableBalance.value) {
-        return 'Stored Value';
-    }
-
-    const labels: Record<typeof voucherType.value, string> = {
-        redeemable: 'Disburseable',
-        payable: 'Payable',
-        settlement: 'Settlement',
-    };
-
-    return labels[voucherType.value];
-});
-
-const voucherKindTone = computed<string>(() => {
-    if (onboardingEnabled.value) {
-        return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-200';
-    }
-
-    if (reusableBalance.value) {
-        return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-200';
-    }
-
-    if (voucherType.value === 'payable') {
-        return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-200';
-    }
-
-    if (voucherType.value === 'settlement') {
-        return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200';
-    }
-
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200';
 });
 
 const isPayableVoucher = computed<boolean>(
@@ -6043,9 +6016,7 @@ function instructionRecord(
                 class="min-w-0 rounded-2xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/70 dark:bg-slate-950/70"
                 data-testid="cockpit-quick-generate-order-card"
             >
-                <div
-                    class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between"
-                >
+                <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                         <h4
                             class="text-lg font-semibold text-slate-950 dark:text-slate-50"
@@ -6053,118 +6024,106 @@ function instructionRecord(
                             Order
                         </h4>
                     </div>
-                    <button
-                        type="submit"
-                        class="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-auto dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-                        data-testid="cockpit-quick-generate-submit-button"
-                        :disabled="!canSubmit || processing"
-                    >
-                        <LoaderCircle
-                            v-if="processing"
-                            class="size-4 animate-spin"
-                            aria-hidden="true"
-                            data-testid="cockpit-quick-generate-issue-spinner"
-                        />
-                        <TicketCheck
-                            v-else
-                            class="size-4"
-                            aria-hidden="true"
-                            data-testid="cockpit-quick-generate-issue-icon"
-                        />
-                        {{
-                            processing
-                                ? 'Issuing…'
-                                : onboardingEnabled
-                                  ? 'Issue Invitation'
-                                  : 'Issue Pay Code'
-                        }}
-                    </button>
                 </div>
                 <p
                     class="mt-1 min-w-0 text-sm text-slate-600 dark:text-slate-300"
                 >
                     Set the value, payee, and purpose.
                 </p>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                    <span
-                        class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold normal-case"
-                        :class="voucherKindTone"
-                        data-testid="cockpit-quick-generate-voucher-kind"
-                    >
-                        {{ voucherKindLabel }}
-                    </span>
+                <div class="mt-3 grid min-w-0 grid-cols-2 gap-2">
+                    <CockpitQuickGenerateSurfaceSwitch
+                        class="w-full"
+                        :model-value="issuanceSurface"
+                        :disabled="processing"
+                        @update:model-value="
+                            emit('update:issuanceSurface', $event)
+                        "
+                    />
                     <div
-                        class="flex flex-wrap items-center gap-2"
+                        class="inline-grid min-w-0 grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
                         data-testid="cockpit-quick-generate-mode-control"
+                        role="group"
+                        aria-label="Issuance mode"
                     >
-                        <span
-                            class="flex shrink-0 items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        <button
+                            type="button"
+                            :aria-pressed="!onboardingEnabled"
+                            :class="[
+                                'min-h-8 min-w-0 rounded-full px-2 text-xs font-semibold transition sm:px-3',
+                                !onboardingEnabled
+                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                    : 'text-slate-600 dark:text-slate-300',
+                            ]"
+                            :disabled="processing"
+                            data-testid="cockpit-quick-generate-mode-paycode"
+                            @click="setOnboardingMode(false)"
                         >
-                            Mode
-                            <CockpitFieldHelp
-                                label="About Mode"
-                                tooltip="Pay Code issues a claimable value. Invitation also collects the identity details needed to open or link the recipient’s Account."
-                            />
-                        </span>
-                        <div
-                            class="inline-grid shrink-0 grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
-                            role="group"
-                            aria-label="Issuance mode"
+                            <span class="block truncate">Pay Code</span>
+                        </button>
+                        <button
+                            type="button"
+                            :aria-pressed="onboardingEnabled"
+                            :class="[
+                                'min-h-8 min-w-0 rounded-full px-2 text-xs font-semibold transition sm:px-3',
+                                onboardingEnabled
+                                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
+                                    : 'text-slate-600 dark:text-slate-300',
+                            ]"
+                            :disabled="processing"
+                            data-testid="cockpit-quick-generate-mode-invitation"
+                            @click="setOnboardingMode(true)"
                         >
-                            <button
-                                type="button"
-                                :aria-pressed="!onboardingEnabled"
-                                :class="[
-                                    'min-h-8 rounded-full px-3 text-xs font-semibold transition',
-                                    !onboardingEnabled
-                                        ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                        : 'text-slate-600 dark:text-slate-300',
-                                ]"
-                                :disabled="processing"
-                                data-testid="cockpit-quick-generate-mode-paycode"
-                                @click="setOnboardingMode(false)"
-                            >
-                                Pay Code
-                            </button>
-                            <button
-                                type="button"
-                                :aria-pressed="onboardingEnabled"
-                                :class="[
-                                    'min-h-8 rounded-full px-3 text-xs font-semibold transition',
-                                    onboardingEnabled
-                                        ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                        : 'text-slate-600 dark:text-slate-300',
-                                ]"
-                                :disabled="processing"
-                                data-testid="cockpit-quick-generate-mode-invitation"
-                                @click="setOnboardingMode(true)"
-                            >
-                                Invitation
-                            </button>
-                        </div>
+                            <span class="block truncate">Invitation</span>
+                        </button>
                     </div>
                 </div>
+                <fieldset
+                    class="mt-3 min-w-0"
+                    data-testid="cockpit-quick-generate-voucher-kind"
+                >
+                    <legend
+                        class="mb-1.5 flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
+                        Value flow
+                        <CockpitFieldHelp
+                            label="About Value Flow"
+                            tooltip="Disburse sends claimable value, Collect receives a payment, and Settle combines redeemable value with a collection target."
+                        />
+                    </legend>
+                    <div
+                        class="grid min-w-0 grid-cols-3 rounded-xl bg-slate-100 p-1 dark:bg-slate-900"
+                        role="radiogroup"
+                        aria-label="Pay Code value flow"
+                        data-testid="cockpit-quick-generate-voucher-type"
+                    >
+                        <label
+                            v-for="option in voucherTypeOptions"
+                            :key="option.value"
+                            class="relative min-w-0"
+                            :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`"
+                        >
+                            <input
+                                v-model="voucherType"
+                                class="peer sr-only"
+                                type="radio"
+                                name="cockpit-quick-generate-voucher-type"
+                                :value="option.value"
+                                :disabled="processing"
+                            />
+                            <span
+                                class="flex min-h-9 min-w-0 cursor-pointer items-center justify-center rounded-lg px-2 text-xs font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
+                            >
+                                {{ option.label }}
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
                 <div
                     class="mt-4 grid items-start gap-3 sm:grid-cols-2"
                     data-testid="cockpit-quick-generate-order-fields"
                 >
-                    <label
-                        class="grid min-w-0 gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
-                    >
-                        Pay Code Type
-                        <select
-                            v-model="voucherType"
-                            class="h-12 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                            data-testid="cockpit-quick-generate-voucher-type"
-                            :disabled="processing"
-                        >
-                            <option value="redeemable">Redeemable</option>
-                            <option value="payable">Payable</option>
-                            <option value="settlement">Settlement</option>
-                        </select>
-                    </label>
                     <div
-                        class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        class="grid min-w-0 gap-1.5 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
                         data-testid="cockpit-quick-generate-amount-field"
                     >
                         <label
@@ -6177,17 +6136,58 @@ function instructionRecord(
                                 :tooltip="amountFieldHelp"
                             />
                         </label>
-                        <CockpitAmountPicker
-                            ref="amountInputElement"
-                            v-model="amount"
-                            :disabled="processing"
-                            :estimated-cost="amountCalculatorEstimatedCost"
-                            :estimate-pending="amountCalculatorEstimatePending"
-                            :estimate-affordability="
-                                liveAccountDebitAffordability
-                            "
-                            @preview="previewAmountInCalculator"
-                        />
+                        <div
+                            class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2"
+                            data-testid="cockpit-quick-generate-amount-action-row"
+                        >
+                            <CockpitAmountPicker
+                                ref="amountInputElement"
+                                v-model="amount"
+                                class="min-w-0"
+                                :disabled="processing"
+                                :estimated-cost="amountCalculatorEstimatedCost"
+                                :estimate-pending="amountCalculatorEstimatePending"
+                                :estimate-affordability="
+                                    liveAccountDebitAffordability
+                                "
+                                @preview="previewAmountInCalculator"
+                            />
+                            <button
+                                type="submit"
+                                class="inline-flex min-h-12 w-24 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:w-36 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                                data-testid="cockpit-quick-generate-submit-button"
+                                :aria-label="
+                                    onboardingEnabled
+                                        ? 'Issue Invitation'
+                                        : 'Issue Pay Code'
+                                "
+                                :disabled="!canSubmit || processing"
+                            >
+                                <LoaderCircle
+                                    v-if="processing"
+                                    class="size-4 animate-spin"
+                                    aria-hidden="true"
+                                    data-testid="cockpit-quick-generate-issue-spinner"
+                                />
+                                <TicketCheck
+                                    v-else
+                                    class="size-4"
+                                    aria-hidden="true"
+                                    data-testid="cockpit-quick-generate-issue-icon"
+                                />
+                                <span v-if="processing">Issuing…</span>
+                                <template v-else>
+                                    <span class="sm:hidden">Issue</span>
+                                    <span class="hidden sm:inline">
+                                        {{
+                                            onboardingEnabled
+                                                ? 'Issue Invitation'
+                                                : 'Issue Pay Code'
+                                        }}
+                                    </span>
+                                </template>
+                            </button>
+                        </div>
                         <span
                             v-if="amountFieldError"
                             class="text-[11px] font-medium text-rose-600 dark:text-rose-300"

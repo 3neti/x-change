@@ -54,9 +54,11 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         ).toBe('false');
         expect(
             ordinary
-                .get('[data-testid="cockpit-quick-generate-voucher-kind"]')
-                .text(),
-        ).toBe('Disburseable');
+                .get<HTMLInputElement>(
+                    '[data-testid="cockpit-quick-generate-voucher-type-redeemable"] input',
+                )
+                .element.checked,
+        ).toBe(true);
         expect(
             ordinary
                 .get('[data-testid="cockpit-quick-generate-submit-button"]')
@@ -77,9 +79,9 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         ).toBe('true');
         expect(
             invitation
-                .get('[data-testid="cockpit-quick-generate-voucher-kind"]')
-                .text(),
-        ).toBe('Account Invitation');
+                .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
         expect(
             invitation
                 .get('[data-testid="cockpit-quick-generate-submit-button"]')

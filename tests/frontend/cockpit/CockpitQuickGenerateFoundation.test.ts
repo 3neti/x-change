@@ -222,7 +222,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.text()).toContain('0');
     });
 
-    it('stacks the Order header on mobile and keeps every Claim Experience step shrinkable', () => {
+    it('keeps the Amount action inline on mobile and every Claim Experience step shrinkable', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -235,11 +235,28 @@ describe('Cockpit Quick Generate foundation', () => {
             '[data-testid="cockpit-quick-generate-submit-button"]',
         );
 
-        expect(
-            orderCard.get('h4').element.parentElement?.parentElement?.className,
-        ).toContain('flex-col');
-        expect(submitButton.classes()).toContain('w-full');
-        expect(submitButton.classes()).toContain('sm:w-auto');
+        const amountActionRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-amount-action-row"]',
+        );
+        const surfaceToggle = orderCard.get(
+            '[data-testid="cockpit-quick-generate-surface-toggle"]',
+        );
+        const issuanceMode = orderCard.get(
+            '[data-testid="cockpit-quick-generate-mode-control"]',
+        );
+
+        expect(surfaceToggle.element.parentElement).toBe(
+            issuanceMode.element.parentElement,
+        );
+        expect(surfaceToggle.element.parentElement?.className).toContain(
+            'grid-cols-2',
+        );
+        expect(amountActionRow.classes()).toContain(
+            'grid-cols-[minmax(0,1fr)_auto]',
+        );
+        expect(submitButton.classes()).toContain('w-24');
+        expect(submitButton.classes()).toContain('sm:w-36');
+        expect(submitButton.text()).toContain('Issue');
 
         [
             '#quick-generate-contract-money',
@@ -1078,7 +1095,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(
             wrapper
-                .get('[data-testid="cockpit-quick-generate-order-fields"]')
+                .get('[data-testid="cockpit-quick-generate-order-card"]')
                 .find('[data-testid="cockpit-quick-generate-voucher-type"]')
                 .exists(),
         ).toBe(true);
@@ -1087,18 +1104,32 @@ describe('Cockpit Quick Generate foundation', () => {
                 '[data-testid="cockpit-quick-generate-target-amount"]',
             ).exists(),
         ).toBe(false);
-        expect(kind.text()).toBe('Disburseable');
+        expect(kind.text()).toContain('Value flow');
+        expect(type.attributes('role')).toBe('radiogroup');
+        expect(
+            wrapper
+                .get<HTMLInputElement>(
+                    '[data-testid="cockpit-quick-generate-voucher-type-redeemable"] input',
+                )
+                .element.checked,
+        ).toBe(true);
         expect(
             wrapper.find(
                 '[data-testid="cockpit-quick-generate-collection-destination"]',
             ).exists(),
         ).toBe(false);
-        expect(kind.classes()).toContain('font-semibold');
-        expect(kind.classes()).toContain('normal-case');
-        expect(kind.classes()).not.toContain('uppercase');
-
-        await type.setValue('payable');
-        expect(kind.text()).toBe('Payable');
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-voucher-type-payable"] input',
+            )
+            .setValue(true);
+        expect(
+            wrapper
+                .get<HTMLInputElement>(
+                    '[data-testid="cockpit-quick-generate-voucher-type-payable"] input',
+                )
+                .element.checked,
+        ).toBe(true);
         expect(
             wrapper.find(
                 '[data-testid="cockpit-quick-generate-target-amount"]',
@@ -1158,8 +1189,11 @@ describe('Cockpit Quick Generate foundation', () => {
             'collection_wallet_id',
         );
 
-        await type.setValue('settlement');
-        expect(kind.text()).toBe('Settlement');
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-voucher-type-settlement"] input',
+            )
+            .setValue(true);
         expect(collectionDestination.text()).toContain('Your Client Funds');
         expect(
             wrapper
@@ -4781,7 +4815,7 @@ describe('Cockpit Quick Generate foundation', () => {
             essentialsCanvas
                 .get('[data-testid="cockpit-quick-generate-voucher-kind"]')
                 .text(),
-        ).toBe('Disburseable');
+        ).toContain('Disburse');
         expect(
             essentialsCanvas
                 .find('[data-testid="cockpit-quick-generate-starting-point"]')
@@ -4837,7 +4871,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-pay-code-canvas-action-rail"]')
                 .exists(),
         ).toBe(false);
-        expect(orderSubmitButton.classes()).toContain('min-h-10');
+        expect(orderSubmitButton.classes()).toContain('min-h-12');
         expect(orderSubmitButton.classes()).toContain('rounded-xl');
         expect(orderSubmitButton.classes()).toContain('bg-emerald-600');
         expect(

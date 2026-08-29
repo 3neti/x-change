@@ -14,17 +14,25 @@ import type {
     CockpitVoucherReadModel,
 } from '../types';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
+import CockpitQuickGenerateSurfaceSwitch from './CockpitQuickGenerateSurfaceSwitch.vue';
+import type { CockpitQuickGenerateSurface } from './CockpitQuickGenerateSurfaceSwitch.vue';
 
 const props = withDefaults(
     defineProps<{
         mutationContract?: CockpitQuickGenerateMutationContract;
         posVoucher?: CockpitVoucherReadModel | null;
+        issuanceSurface?: CockpitQuickGenerateSurface;
     }>(),
     {
         mutationContract: undefined,
         posVoucher: null,
+        issuanceSurface: 'pos',
     },
 );
+
+const emit = defineEmits<{
+    'update:issuanceSurface': [value: CockpitQuickGenerateSurface];
+}>();
 
 type PosStage =
     | 'entry'
@@ -408,9 +416,17 @@ function responseMessage(
         class="mx-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950"
         data-testid="cockpit-quick-generate-pos-panel"
     >
+        <div class="flex justify-end px-5 pt-5 sm:px-8 sm:pt-8">
+            <CockpitQuickGenerateSurfaceSwitch
+                class="w-full max-w-xs"
+                :model-value="issuanceSurface"
+                :disabled="stage === 'issuing'"
+                @update:model-value="emit('update:issuanceSurface', $event)"
+            />
+        </div>
         <div
             v-if="stage === 'entry' || stage === 'issuing'"
-            class="space-y-6 p-5 sm:p-8"
+            class="space-y-6 px-5 pt-4 pb-5 sm:px-8 sm:pt-4 sm:pb-8"
         >
             <header class="space-y-2 text-center">
                 <div

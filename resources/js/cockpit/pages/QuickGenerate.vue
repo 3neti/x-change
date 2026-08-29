@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Landmark, QrCode, WandSparkles } from 'lucide-vue-next';
+import { Landmark } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
@@ -1148,53 +1148,12 @@ function stringValue(value: unknown): string | null {
             </header>
 
             <div
-                class="flex justify-center px-1 md:justify-start"
-                data-testid="cockpit-quick-generate-surface-toggle"
-            >
-                <div
-                    class="inline-grid w-full max-w-md grid-cols-2 rounded-2xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-800 dark:bg-slate-900"
-                    role="group"
-                    aria-label="Issuance workspace"
-                >
-                    <button
-                        type="button"
-                        :aria-pressed="issuanceSurface === 'composer'"
-                        :class="[
-                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition',
-                            issuanceSurface === 'composer'
-                                ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-slate-50'
-                                : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white',
-                        ]"
-                        data-testid="cockpit-quick-generate-surface-composer"
-                        @click="issuanceSurface = 'composer'"
-                    >
-                        <WandSparkles class="size-4" aria-hidden="true" />
-                        Composer
-                    </button>
-                    <button
-                        type="button"
-                        :aria-pressed="issuanceSurface === 'pos'"
-                        :class="[
-                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition',
-                            issuanceSurface === 'pos'
-                                ? 'bg-white text-emerald-800 shadow-sm dark:bg-slate-800 dark:text-emerald-200'
-                                : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white',
-                        ]"
-                        data-testid="cockpit-quick-generate-surface-pos"
-                        @click="issuanceSurface = 'pos'"
-                    >
-                        <QrCode class="size-4" aria-hidden="true" />
-                        POS
-                    </button>
-                </div>
-            </div>
-
-            <div
                 class="space-y-3"
                 data-testid="cockpit-quick-generate-primary-workflow-stack"
             >
                 <CockpitQuickGenerateSubmitPanel
                     v-if="issuanceSurface === 'composer'"
+                    v-model:issuance-surface="issuanceSurface"
                     :client-funds-minor="clientFundsMinor"
                     :collection-destination="props.collection_destination"
                     :mutation-contract="mutationContract"
@@ -1222,6 +1181,7 @@ function stringValue(value: unknown): string | null {
                 />
                 <CockpitQuickGeneratePosPanel
                     v-else
+                    v-model:issuance-surface="issuanceSurface"
                     :mutation-contract="mutationContract"
                     :pos-voucher="props.pos_voucher"
                 />
