@@ -495,36 +495,62 @@ watch(bankTransferInstructionsOpen, async (isOpen) => {
     bankTransferDialogReturnFocus = null;
 });
 
-const summaryCards = computed(() => [
-    {
-        key: 'awaiting',
-        label: 'Awaiting Funds',
-        value: String(props.funding_read_model.summary.awaiting_funds),
-        helper: 'Open Funding Intents waiting for authoritative settlement.',
-        tone: 'text-sky-700 dark:text-sky-300',
-    },
-    {
-        key: 'settled',
-        label: 'Settled Funding',
-        value: props.funding_read_model.summary.settled_funding,
-        helper: 'Verified net funding posted to this Account.',
-        tone: 'text-emerald-700 dark:text-emerald-300',
-    },
-    {
-        key: 'suspense',
-        label: 'Open Suspense',
-        value: String(props.funding_read_model.summary.open_suspense),
-        helper: 'Mismatched or ambiguous evidence requiring review.',
-        tone: 'text-amber-700 dark:text-amber-300',
-    },
-    {
-        key: 'recovery',
-        label: 'Recovery',
-        value: props.funding_read_model.summary.recovery_outstanding,
-        helper: 'Reversed funding still held against future Issuance Capacity.',
-        tone: 'text-rose-700 dark:text-rose-300',
-    },
-]);
+const summaryCards = computed(() => {
+    const headerBalances = props.cockpit_header_read_model?.balances ?? [];
+    const balanceValue = (key: string): string =>
+        headerBalances.find((balance) => balance.key === key)?.value ?? '—';
+
+    return [
+        {
+            key: 'client-funds',
+            label: 'Client Funds',
+            value: balanceValue('internal'),
+            helper: 'Recognized funds available to this Account.',
+            tone: 'text-emerald-700 dark:text-emerald-300',
+            primary: true,
+        },
+        {
+            key: 'outstanding-pay-codes',
+            label: 'Outstanding Pay Codes',
+            value: balanceValue('outstanding'),
+            helper: 'Active Pay Code obligations backed by Client Funds.',
+            tone: 'text-amber-700 dark:text-amber-300',
+            primary: false,
+        },
+        {
+            key: 'awaiting',
+            label: 'Awaiting Funds',
+            value: String(props.funding_read_model.summary.awaiting_funds),
+            helper: 'Open Funding Intents waiting for authoritative settlement.',
+            tone: 'text-sky-700 dark:text-sky-300',
+            primary: false,
+        },
+        {
+            key: 'settled',
+            label: 'Settled Funding',
+            value: props.funding_read_model.summary.settled_funding,
+            helper: 'Verified net funding posted to this Account.',
+            tone: 'text-emerald-700 dark:text-emerald-300',
+            primary: false,
+        },
+        {
+            key: 'suspense',
+            label: 'Open Suspense',
+            value: String(props.funding_read_model.summary.open_suspense),
+            helper: 'Mismatched or ambiguous evidence requiring review.',
+            tone: 'text-amber-700 dark:text-amber-300',
+            primary: false,
+        },
+        {
+            key: 'recovery',
+            label: 'Recovery',
+            value: props.funding_read_model.summary.recovery_outstanding,
+            helper: 'Reversed funding still held against future Issuance Capacity.',
+            tone: 'text-rose-700 dark:text-rose-300',
+            primary: false,
+        },
+    ];
+});
 
 const treasuryPositionControl = computed(() => {
     const activeConnections = (
@@ -1311,14 +1337,21 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 </div>
 
                 <section
-                    class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:mt-3"
+                    class="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 md:mt-3 lg:mx-0 lg:grid lg:grid-cols-6 lg:overflow-visible lg:px-0 lg:pb-0 lg:snap-none"
                     aria-label="Funding summary"
                     data-testid="cockpit-funding-summary-strip"
+                    tabindex="0"
                 >
                     <article
                         v-for="card in summaryCards"
                         :key="card.key"
-                        class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-950/50"
+                        :class="[
+                            'min-w-[9.5rem] snap-start snap-always rounded-xl border px-3 py-2 text-center lg:min-w-0',
+                            card.primary
+                                ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/40'
+                                : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50',
+                        ]"
+                        :data-testid="`cockpit-funding-summary-${card.key}`"
                     >
                         <p
                             class="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400"
@@ -1387,49 +1420,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </button>
                     </div>
 
-                    <details
-                        class="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800"
-                        data-testid="funding-advanced-paths"
-                        :open="
-                            activeFundingMode === 'reviewed_value' ||
-                            activeFundingMode === 'simulation'
-                        "
-                    >
-                        <summary
-                            class="cursor-pointer text-xs font-semibold text-slate-500 marker:text-slate-400 dark:text-slate-400"
-                        >
-                            Other funding options
-                        </summary>
-                        <div class="flex flex-wrap gap-2 pt-2">
-                            <button
-                                id="funding-mode-reviewed_value"
-                                type="button"
-                                class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-                                :class="
-                                    activeFundingMode === 'reviewed_value'
-                                        ? 'border-slate-950 bg-slate-950 text-white dark:border-sky-300 dark:bg-sky-300 dark:text-slate-950'
-                                        : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-white'
-                                "
-                                :aria-pressed="
-                                    activeFundingMode === 'reviewed_value'
-                                "
-                                aria-controls="funding-panel-reviewed_value"
-                                data-testid="funding-mode-reviewed_value"
-                                @click="activeFundingMode = 'reviewed_value'"
-                            >
-                                Reviewed Value
-                            </button>
-                            <button
-                                v-if="funding_simulation"
-                                type="button"
-                                class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-white"
-                                data-testid="funding-mode-simulation"
-                                @click="activeFundingMode = 'simulation'"
-                            >
-                                Lifecycle simulation
-                            </button>
-                        </div>
-                    </details>
                 </div>
 
                 <p
