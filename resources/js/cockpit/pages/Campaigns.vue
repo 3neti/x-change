@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import {
+    BadgePhilippinePeso,
+    BriefcaseBusiness,
     ClipboardList,
     FileSpreadsheet,
     LockKeyhole,
@@ -10,7 +12,7 @@ import {
     Upload,
     Users,
 } from 'lucide-vue-next';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
@@ -39,6 +41,77 @@ type CampaignsPageProps = CockpitHeaderPageProps & {
 
 const props = defineProps<CampaignsPageProps>();
 
+type CampaignFlavor = CampaignWorksheet['profile'];
+
+const campaignFlavors: CampaignFlavor[] = ['payroll', 'assistance'];
+const activeFlavor = ref<CampaignFlavor>('payroll');
+const flavorCopy: Record<
+    CampaignFlavor,
+    {
+        eyebrow: string;
+        title: string;
+        description: string;
+        listTitle: string;
+        people: string;
+        person: string;
+        total: string;
+        emptyTitle: string;
+        emptyDescription: string;
+        importTitle: string;
+        importDescription: string;
+        emptyBatchTitle: string;
+        namePlaceholder: string;
+    }
+> = {
+    payroll: {
+        eyebrow: 'Payroll',
+        title: 'Payroll Payouts',
+        description: 'Prepare and approve net-pay payouts for your team.',
+        listTitle: 'Payroll Runs',
+        people: 'Employees',
+        person: 'employee',
+        total: 'Net Payroll',
+        emptyTitle: 'No payroll runs yet',
+        emptyDescription:
+            'Upload an employee list or start an empty payroll run.',
+        importTitle: 'Upload Payroll List',
+        importDescription:
+            'Add CSV or XLSX employee data, or paste copied rows. Review everything before creating the run.',
+        emptyBatchTitle: 'Start Empty Payroll',
+        namePlaceholder: 'August payroll',
+    },
+    assistance: {
+        eyebrow: 'Ayuda',
+        title: 'Ayuda Distribution',
+        description:
+            'Prepare and approve assistance for eligible beneficiaries.',
+        listTitle: 'Distribution Batches',
+        people: 'Beneficiaries',
+        person: 'beneficiary',
+        total: 'Assistance',
+        emptyTitle: 'No ayuda batches yet',
+        emptyDescription:
+            'Upload a beneficiary list or start an empty distribution batch.',
+        importTitle: 'Upload Beneficiary List',
+        importDescription:
+            'Add CSV or XLSX beneficiary data, or paste copied rows. Review everything before creating the batch.',
+        emptyBatchTitle: 'Start Empty Distribution',
+        namePlaceholder: 'August assistance',
+    },
+};
+const activeCopy = computed(() => flavorCopy[activeFlavor.value]);
+const visibleWorksheets = computed(() =>
+    props.worksheets.filter(
+        (worksheet) => worksheet.profile === activeFlavor.value,
+    ),
+);
+const visiblePeopleCount = computed(() =>
+    visibleWorksheets.value.reduce(
+        (total, worksheet) => total + worksheet.beneficiary_count,
+        0,
+    ),
+);
+
 const form = useForm({
     name: '',
     profile: 'payroll',
@@ -53,6 +126,10 @@ const intakeFileInput = ref<HTMLInputElement | null>(null);
 const intakeDragDepth = ref(0);
 const isDraggingIntake = ref(false);
 const intakeFileError = ref<string | null>(null);
+
+watch(activeFlavor, (profile) => {
+    form.profile = profile;
+});
 
 function uploadIntake(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -258,16 +335,16 @@ function peso(minor: number): string {
 }
 
 function activityLabel(): string {
-    if (props.worksheets.length === 0) {
+    if (visibleWorksheets.value.length === 0) {
         return 'No batches';
     }
 
-    const authorized = props.worksheets.filter(
+    const authorized = visibleWorksheets.value.filter(
         (worksheet) => worksheet.status === 'authorized',
     ).length;
 
     if (authorized > 0) {
-        return authorized === props.worksheets.length
+        return authorized === visibleWorksheets.value.length
             ? 'Authorized'
             : `${authorized} authorized`;
     }
@@ -322,7 +399,7 @@ const updatedRelativeTime = (value: string | null): string =>
             data-testid="cockpit-campaigns-page"
         >
             <section
-                class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:block dark:border-slate-800 dark:bg-slate-900"
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-campaigns-orientation"
             >
                 <div
@@ -336,18 +413,17 @@ const updatedRelativeTime = (value: string | null): string =>
                                 class="size-3.5"
                                 aria-hidden="true"
                             />
-                            Campaigns
+                            {{ activeCopy.eyebrow }}
                         </div>
                         <h1
                             class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50"
                         >
-                            Batch Payments
+                            {{ activeCopy.title }}
                         </h1>
                         <p
                             class="mt-1 max-w-2xl text-sm leading-5 text-slate-600 dark:text-slate-300"
                         >
-                            Prepare one approved payment batch for multiple
-                            recipients.
+                            {{ activeCopy.description }}
                         </p>
                     </div>
                     <dl class="grid grid-cols-2 gap-2 text-xs sm:w-72">
@@ -355,33 +431,64 @@ const updatedRelativeTime = (value: string | null): string =>
                             class="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-950"
                         >
                             <dt class="text-slate-500 dark:text-slate-400">
-                                Batches
+                                {{
+                                    activeFlavor === 'payroll'
+                                        ? 'Runs'
+                                        : 'Batches'
+                                }}
                             </dt>
                             <dd
                                 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                {{ props.worksheets.length }}
+                                {{ visibleWorksheets.length }}
                             </dd>
                         </div>
                         <div
                             class="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-950"
                         >
                             <dt class="text-slate-500 dark:text-slate-400">
-                                Recipients
+                                {{ activeCopy.people }}
                             </dt>
                             <dd
                                 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                {{
-                                    props.worksheets.reduce(
-                                        (total, worksheet) =>
-                                            total + worksheet.beneficiary_count,
-                                        0,
-                                    )
-                                }}
+                                {{ visiblePeopleCount }}
                             </dd>
                         </div>
                     </dl>
+                </div>
+                <div
+                    class="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-950"
+                    role="group"
+                    aria-label="Campaign flavor"
+                    data-testid="campaign-flavor-switch"
+                >
+                    <button
+                        v-for="flavor in campaignFlavors"
+                        :key="flavor"
+                        type="button"
+                        :aria-pressed="activeFlavor === flavor"
+                        :data-testid="`campaign-flavor-${flavor === 'assistance' ? 'ayuda' : flavor}`"
+                        :class="
+                            activeFlavor === flavor
+                                ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white'
+                                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                        "
+                        class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+                        @click="activeFlavor = flavor"
+                    >
+                        <BriefcaseBusiness
+                            v-if="flavor === 'payroll'"
+                            class="size-4"
+                            aria-hidden="true"
+                        />
+                        <BadgePhilippinePeso
+                            v-else
+                            class="size-4"
+                            aria-hidden="true"
+                        />
+                        {{ flavor === 'payroll' ? 'Payroll' : 'Ayuda' }}
+                    </button>
                 </div>
             </section>
 
@@ -401,7 +508,7 @@ const updatedRelativeTime = (value: string | null): string =>
                             <h2
                                 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Payment Batches
+                                {{ activeCopy.listTitle }}
                             </h2>
                         </div>
                         <span
@@ -411,7 +518,7 @@ const updatedRelativeTime = (value: string | null): string =>
                     </div>
 
                     <div
-                        v-if="props.worksheets.length === 0"
+                        v-if="visibleWorksheets.length === 0"
                         class="flex min-h-64 flex-col items-center justify-center px-6 text-center"
                     >
                         <Users
@@ -421,12 +528,12 @@ const updatedRelativeTime = (value: string | null): string =>
                         <p
                             class="mt-3 font-semibold text-slate-950 dark:text-slate-50"
                         >
-                            No payment batches yet
+                            {{ activeCopy.emptyTitle }}
                         </p>
                         <p
                             class="mt-1 max-w-sm text-sm leading-5 text-slate-500 dark:text-slate-400"
                         >
-                            Add a recipient list or start with an empty batch.
+                            {{ activeCopy.emptyDescription }}
                         </p>
                     </div>
 
@@ -435,7 +542,7 @@ const updatedRelativeTime = (value: string | null): string =>
                         class="divide-y divide-slate-200 dark:divide-slate-800"
                     >
                         <article
-                            v-for="worksheet in props.worksheets"
+                            v-for="worksheet in visibleWorksheets"
                             :key="worksheet.reference"
                             class="@container @3xl:grid-cols-[minmax(0,1fr)_auto] @3xl:items-center grid gap-3 px-4 py-3"
                             :title="worksheet.reference"
@@ -489,7 +596,7 @@ const updatedRelativeTime = (value: string | null): string =>
                                         <dt
                                             class="text-slate-500 dark:text-slate-400"
                                         >
-                                            Recipients
+                                            {{ activeCopy.people }}
                                         </dt>
                                         <dd
                                             class="font-semibold text-slate-950 dark:text-slate-50"
@@ -501,7 +608,7 @@ const updatedRelativeTime = (value: string | null): string =>
                                         <dt
                                             class="text-slate-500 dark:text-slate-400"
                                         >
-                                            Total
+                                            {{ activeCopy.total }}
                                         </dt>
                                         <dd
                                             class="font-semibold text-slate-950 dark:text-slate-50"
@@ -584,22 +691,21 @@ const updatedRelativeTime = (value: string | null): string =>
                                 <h2
                                     class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
                                 >
-                                    Add Recipient List
+                                    {{ activeCopy.importTitle }}
                                 </h2>
                             </div>
                         </div>
                         <p
                             class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300"
                         >
-                            Add CSV or XLSX recipient data, or paste copied
-                            rows. Review everything before creating the batch.
+                            {{ activeCopy.importDescription }}
                         </p>
                         <div
                             data-testid="campaign-import-drop-zone"
                             role="group"
                             :tabindex="intakeForm.processing ? -1 : 0"
                             :aria-disabled="intakeForm.processing"
-                            aria-label="Add a recipient list from CSV, Excel, or pasted rows"
+                            :aria-label="`Add a ${activeCopy.person} list from CSV, Excel, or pasted rows`"
                             class="mt-3 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-5 text-center transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
                             :class="
                                 isDraggingIntake
@@ -625,7 +731,7 @@ const updatedRelativeTime = (value: string | null): string =>
                             >
                                 {{
                                     intakeForm.processing
-                                        ? 'Reading Recipients…'
+                                        ? `Reading ${activeCopy.people}…`
                                         : isDraggingIntake
                                           ? 'Drop To Inspect'
                                           : 'Choose A File Or Paste Rows'
@@ -682,7 +788,7 @@ const updatedRelativeTime = (value: string | null): string =>
                                     <h2
                                         class="mt-0.5 text-sm font-semibold text-slate-950 dark:text-slate-50"
                                     >
-                                        Start Empty Batch
+                                        {{ activeCopy.emptyBatchTitle }}
                                     </h2>
                                 </div>
                             </div>
@@ -705,7 +811,11 @@ const updatedRelativeTime = (value: string | null): string =>
                                     <h2
                                         class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
                                     >
-                                        Batch Details
+                                        {{
+                                            activeFlavor === 'payroll'
+                                                ? 'Payroll Details'
+                                                : 'Distribution Details'
+                                        }}
                                     </h2>
                                 </div>
                             </div>
@@ -714,12 +824,18 @@ const updatedRelativeTime = (value: string | null): string =>
                                 <label
                                     class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
                                 >
-                                    Batch Name
+                                    {{
+                                        activeFlavor === 'payroll'
+                                            ? 'Payroll Name'
+                                            : 'Distribution Name'
+                                    }}
                                     <input
                                         v-model="form.name"
                                         type="text"
                                         maxlength="160"
-                                        placeholder="July payroll"
+                                        :placeholder="
+                                            activeCopy.namePlaceholder
+                                        "
                                         class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
                                     />
                                     <span
@@ -727,21 +843,6 @@ const updatedRelativeTime = (value: string | null): string =>
                                         class="text-xs font-normal text-rose-600 dark:text-rose-300"
                                         >{{ form.errors.name }}</span
                                     >
-                                </label>
-
-                                <label
-                                    class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
-                                >
-                                    Type
-                                    <select
-                                        v-model="form.profile"
-                                        class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
-                                    >
-                                        <option value="payroll">Payroll</option>
-                                        <option value="assistance">
-                                            Assistance
-                                        </option>
-                                    </select>
                                 </label>
 
                                 <label
@@ -771,7 +872,9 @@ const updatedRelativeTime = (value: string | null): string =>
                                 {{
                                     form.processing
                                         ? 'Creating…'
-                                        : 'Create Batch'
+                                        : activeFlavor === 'payroll'
+                                          ? 'Create Payroll Run'
+                                          : 'Create Distribution Batch'
                                 }}
                             </button>
                             <p

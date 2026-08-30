@@ -28,25 +28,20 @@ describe('Cockpit campaign worksheets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Batch Payments');
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-campaigns-orientation"]')
-                .classes(),
-        ).toEqual(expect.arrayContaining(['hidden', 'md:block']));
+        expect(wrapper.text()).toContain('Payroll Payouts');
         expect(wrapper.text()).toContain(
-            'Prepare one approved payment batch for multiple recipients.',
+            'Prepare and approve net-pay payouts for your team.',
         );
-        expect(wrapper.text()).toContain('Batches');
-        expect(wrapper.text()).toContain('Recipients');
+        expect(wrapper.text()).toContain('Runs');
+        expect(wrapper.text()).toContain('Employees');
         expect(wrapper.text()).toContain('July Payroll');
         expect(wrapper.text()).toContain('0');
         expect(wrapper.text()).toContain('₱0.00');
         expect(wrapper.text()).toContain('Draft only');
         expect(wrapper.text()).not.toContain('Maria Santos');
-        expect(wrapper.text()).toContain('Payment Batches');
+        expect(wrapper.text()).toContain('Payroll Runs');
         expect(wrapper.text()).toContain('Continue');
-        expect(wrapper.text()).toContain('Add Recipient List');
+        expect(wrapper.text()).toContain('Upload Payroll List');
         expect(wrapper.text()).toContain('Choose A File Or Paste Rows');
         expect(wrapper.text()).toContain('Choose File');
         expect(
@@ -62,6 +57,63 @@ describe('Cockpit campaign worksheets', () => {
                 .exists(),
         ).toBe(false);
         expect(wrapper.text()).toContain('Start Empty');
+    });
+
+    it('switches between Payroll and Ayuda using existing worksheet profiles', async () => {
+        const assistanceWorksheet = {
+            ...worksheet,
+            reference: '01KYCAMPAIGNASSISTANCE00000',
+            profile: 'assistance' as const,
+            name: 'August Ayuda',
+            beneficiary_count: 3,
+            principal_minor: 30000,
+        };
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [worksheet, assistanceWorksheet],
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="campaign-flavor-payroll"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+        expect(wrapper.text()).toContain('July Payroll');
+        expect(wrapper.text()).not.toContain('August Ayuda');
+
+        await wrapper
+            .get('[data-testid="campaign-flavor-ayuda"]')
+            .trigger('click');
+
+        expect(wrapper.text()).toContain('Ayuda Distribution');
+        expect(wrapper.text()).toContain('Distribution Batches');
+        expect(wrapper.text()).toContain('Beneficiaries');
+        expect(wrapper.text()).toContain('Assistance');
+        expect(wrapper.text()).toContain('August Ayuda');
+        expect(wrapper.text()).not.toContain('July Payroll');
+        expect(
+            (wrapper.vm as unknown as { form: { profile: string } }).form
+                .profile,
+        ).toBe('assistance');
+    });
+
+    it('keeps empty-state creation vocabulary aligned with the selected flavor', async () => {
+        const wrapper = mount(Campaigns, {
+            props: { worksheets: [] },
+        });
+
+        expect(wrapper.text()).toContain('No payroll runs yet');
+        expect(wrapper.text()).toContain('Start Empty Payroll');
+
+        await wrapper
+            .get('[data-testid="campaign-flavor-ayuda"]')
+            .trigger('click');
+
+        expect(wrapper.text()).toContain('No ayuda batches yet');
+        expect(wrapper.text()).toContain('Upload Beneficiary List');
+        expect(wrapper.text()).toContain('Start Empty Distribution');
+        expect(wrapper.text()).toContain('Create Distribution Batch');
     });
 
     it('shows batch updates as relative time with the exact instant available', () => {
@@ -83,7 +135,7 @@ describe('Cockpit campaign worksheets', () => {
         vi.useRealTimers();
     });
 
-    it('requests approval from Payment Batches through the existing authorization route', async () => {
+    it('requests approval from Payroll Runs through the existing authorization route', async () => {
         const readyWorksheet = {
             ...worksheet,
             beneficiary_count: 2,
@@ -640,7 +692,7 @@ describe('Cockpit campaign worksheets', () => {
         expect(
             wrapper.find('[data-testid="cockpit-campaigns-page"]').exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Add Recipient List');
+        expect(wrapper.text()).toContain('Upload Payroll List');
     });
 
     it('makes the planned post-approval state explicit before beneficiary issuance', () => {
@@ -654,7 +706,13 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(page).toContain('data-testid="campaign-fulfillment-readiness"');
         expect(page).toContain('<CockpitCampaignPayCodeExperience');
-        expect(page).toContain('Recipients');
+        expect(page).toContain('const peopleLabel = computed');
+        expect(page).toContain(
+            "isPayroll.value ? 'Employees' : 'Beneficiaries'",
+        );
+        expect(page).toContain(
+            "isPayroll.value ? 'Net Payroll' : 'Assistance Total'",
+        );
         expect(page).toContain('<CockpitCampaignWorksheetBeneficiaries');
         expect(page).toContain('const worksheetDisplayStatus = computed');
         expect(page).toContain("? 'Completed'");
@@ -674,10 +732,10 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('Pay Codes Issued');
         expect(page).toContain('Campaign Complete');
         expect(page).toContain('completed_count');
-        expect(page).toContain('recipient payments are');
+        expect(page).toContain('personLabel.value} payments are');
         expect(page).toContain('Bank Transfers Unavailable');
         expect(page).toContain('props.direct_bank_transfer_enabled');
-        expect(page).toContain('Recipients Ready');
+        expect(page).toContain('`${peopleLabel} Ready`');
         expect(page).toContain('ready for Pay Code issuance.');
         expect(page).toContain('v-if="plannedCount() > 0"');
         expect(page).toContain('data-testid="campaign-delivery-controls"');
