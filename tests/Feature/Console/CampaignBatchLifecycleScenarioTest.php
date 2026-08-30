@@ -47,6 +47,15 @@ function campaignBatchLifecycleIssuer(): User
     return $issuer;
 }
 
+function campaignBatchLifecycleChecker(): User
+{
+    $checker = actingAsTestUser();
+    $checker->setMobileChannel('09170000002');
+    $checker->save();
+
+    return $checker;
+}
+
 function campaignBatchCsv(string $contents): string
 {
     $path = tempnam(sys_get_temp_dir(), 'campaign-batch-');
@@ -93,6 +102,7 @@ function fundCampaignBatchClientFunds(User $owner, int $amountMinor): void
 
 it('ingests a payroll CSV into encrypted campaign rows and stops for an independent checker', function () {
     $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
     $input = campaignBatchCsv(implode("\n", [
         'name,mobile,amount',
         'Payroll Recipient One,09170000011,25.00',
@@ -103,7 +113,8 @@ it('ingests a payroll CSV into encrypted campaign rows and stops for an independ
         command: campaignBatchLifecycleCommand(),
         scenarioKey: 'campaign_payroll_pay_code_sms',
         options: new LifecycleScenarioRunOptions(
-            issuer: (string) $issuer->getKey(),
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
             runReference: 'PAYROLL-TEST-001',
             input: $input,
             json: true,
@@ -126,6 +137,9 @@ it('ingests a payroll CSV into encrypted campaign rows and stops for an independ
     $worksheet = CampaignWorksheet::query()->with(['rows', 'authorizations'])->sole();
     expect($worksheet->owner_id)->toBe((string) $issuer->getKey())
         ->and(data_get($worksheet->metadata, 'lifecycle.run_reference'))->toBe('PAYROLL-TEST-001')
+        ->and(data_get($worksheet->metadata, 'lifecycle.maker_id'))->toBe((string) $issuer->getKey())
+        ->and(data_get($worksheet->metadata, 'lifecycle.checker_id'))->toBe((string) $checker->getKey())
+        ->and(data_get($worksheet->metadata, 'lifecycle.provider'))->toBe('netbank')
         ->and(data_get($worksheet->metadata, 'lifecycle.content_hash'))->toBe(hash_file('sha256', $input))
         ->and($worksheet->rows)->toHaveCount(2)
         ->and($worksheet->rows[0]->beneficiary_ciphertext['mobile'])->toBe('09170000011')
@@ -140,9 +154,11 @@ it('ingests a payroll CSV into encrypted campaign rows and stops for an independ
 
 it('replays the same lifecycle run without duplicating its worksheet or approval Pay Code', function () {
     $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
     $input = campaignBatchCsv("name,mobile,amount\nPayroll Recipient,09170000011,25.00\n");
     $options = new LifecycleScenarioRunOptions(
-        issuer: (string) $issuer->getKey(),
+        maker: (string) $issuer->getKey(),
+        checker: (string) $checker->getKey(),
         runReference: 'PAYROLL-REPLAY-001',
         input: $input,
         json: true,
@@ -168,6 +184,7 @@ it('replays the same lifecycle run without duplicating its worksheet or approval
 
 it('rejects a changed input file under the same lifecycle run reference', function () {
     $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
     $firstInput = campaignBatchCsv("name,mobile,amount\nFirst Recipient,09170000011,25.00\n");
     $changedInput = campaignBatchCsv("name,mobile,amount\nChanged Recipient,09170000022,30.00\n");
 
@@ -175,7 +192,8 @@ it('rejects a changed input file under the same lifecycle run reference', functi
         campaignBatchLifecycleCommand(),
         'campaign_payroll_pay_code_sms',
         new LifecycleScenarioRunOptions(
-            issuer: (string) $issuer->getKey(),
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
             runReference: 'PAYROLL-CONFLICT-001',
             input: $firstInput,
             json: true,
@@ -185,7 +203,8 @@ it('rejects a changed input file under the same lifecycle run reference', functi
         campaignBatchLifecycleCommand(),
         'campaign_payroll_pay_code_sms',
         new LifecycleScenarioRunOptions(
-            issuer: (string) $issuer->getKey(),
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
             runReference: 'PAYROLL-CONFLICT-001',
             input: $changedInput,
             json: true,
@@ -204,10 +223,12 @@ it('requires an explicit feedback gate after checker approval before issuing Pay
     config()->set('x-change.campaigns.delivery.sms.enabled', true);
     config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
     $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
     fundCampaignBatchClientFunds($issuer, 10_000);
     $input = campaignBatchCsv("name,mobile,amount\nPayroll Recipient,09170000011,25.00\n");
     $baseOptions = [
-        'issuer' => (string) $issuer->getKey(),
+        'maker' => (string) $issuer->getKey(),
+        'checker' => (string) $checker->getKey(),
         'runReference' => 'PAYROLL-SMS-APPROVAL-001',
         'input' => $input,
         'json' => true,
@@ -218,7 +239,6 @@ it('requires an explicit feedback gate after checker approval before issuing Pay
         'campaign_payroll_pay_code_sms',
         new LifecycleScenarioRunOptions(...$baseOptions),
     );
-    $checker = actingAsTestUser();
     app(ApproveCampaignWorksheetAuthorization::class)->handle(
         $prepared->payload['approval_pay_code'],
         $checker,
@@ -255,13 +275,15 @@ it('queues an authorized SMS batch through the durable fulfillment outbox', func
     config()->set('x-change.campaigns.delivery.sms.enabled', true);
     config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
     $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
     fundCampaignBatchClientFunds($issuer, 10_000);
     $input = campaignBatchCsv("name,mobile,amount\nPayroll Recipient,09170000011,25.00\n");
     $prepared = app(LifecycleScenarioEngine::class)->run(
         campaignBatchLifecycleCommand(),
         'campaign_payroll_pay_code_sms',
         new LifecycleScenarioRunOptions(
-            issuer: (string) $issuer->getKey(),
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
             runReference: 'PAYROLL-SMS-OUTBOX-001',
             input: $input,
             liveFeedback: true,
@@ -269,7 +291,6 @@ it('queues an authorized SMS batch through the durable fulfillment outbox', func
         ),
     );
 
-    $checker = actingAsTestUser();
     app(ApproveCampaignWorksheetAuthorization::class)->handle(
         $prepared->payload['approval_pay_code'],
         $checker,
@@ -288,6 +309,7 @@ it('queues an authorized SMS batch through the durable fulfillment outbox', func
 
 it('rejects invalid direct-transfer input before creating a campaign or calling a provider', function () {
     $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
     $input = campaignBatchCsv("name,mobile,amount\nMissing Destination,,25.00\n");
 
     config()->set('x-change.provider_runtime.lifecycle.allow_live_provider_scenarios', true);
@@ -296,7 +318,8 @@ it('rejects invalid direct-transfer input before creating a campaign or calling 
         command: campaignBatchLifecycleCommand(),
         scenarioKey: 'campaign_payroll_direct_transfer',
         options: new LifecycleScenarioRunOptions(
-            issuer: (string) $issuer->getKey(),
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
             runReference: 'PAYROLL-DIRECT-INVALID',
             input: $input,
             liveProvider: true,
@@ -312,13 +335,15 @@ it('rejects invalid direct-transfer input before creating a campaign or calling 
 
 it('refuses a direct-transfer batch unless both live money gates are explicit', function () {
     $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
     $input = campaignBatchCsv("name,mobile,bank,account number,amount\nRecipient,09170000011,GCash,09170000011,25.00\n");
 
     $result = app(LifecycleScenarioEngine::class)->run(
         command: campaignBatchLifecycleCommand(),
         scenarioKey: 'campaign_payroll_direct_transfer',
         options: new LifecycleScenarioRunOptions(
-            issuer: (string) $issuer->getKey(),
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
             runReference: 'PAYROLL-DIRECT-GATED',
             input: $input,
             json: true,
@@ -338,10 +363,12 @@ it('executes an approved direct-transfer batch once through Treasury-backed Pay 
         provider: 'netbank',
     );
     $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
     fundCampaignBatchClientFunds($issuer, 10_000);
     $input = campaignBatchCsv("name,mobile,bank,account number,amount\nPayroll Recipient,09170000011,GCash,09170000011,25.00\n");
     $options = new LifecycleScenarioRunOptions(
-        issuer: (string) $issuer->getKey(),
+        maker: (string) $issuer->getKey(),
+        checker: (string) $checker->getKey(),
         runReference: 'PAYROLL-DIRECT-LIVE-001',
         input: $input,
         liveProvider: true,
@@ -356,18 +383,19 @@ it('executes an approved direct-transfer batch once through Treasury-backed Pay 
     );
     expect($prepared->payload['phase'])->toBe('awaiting_checker');
 
-    $checker = actingAsTestUser();
-    app(ApproveCampaignWorksheetAuthorization::class)->handle(
-        $prepared->payload['approval_pay_code'],
-        $checker,
-    );
-    expect(CampaignBatchFulfillmentOutbox::query()->sole()->status)->toBe('pending');
-    expect(Artisan::call('x-change:campaigns:process-batches', ['--limit' => 10]))
-        ->toBe(Command::SUCCESS);
     $fulfilled = app(LifecycleScenarioEngine::class)->run(
         campaignBatchLifecycleCommand(),
         'campaign_payroll_direct_transfer',
-        $options,
+        new LifecycleScenarioRunOptions(
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
+            runReference: 'PAYROLL-DIRECT-LIVE-001',
+            phase: 'approve',
+            confirmCheckerApproval: true,
+            liveProvider: true,
+            confirmLiveTransfer: true,
+            json: true,
+        ),
     );
 
     $fulfillment = CampaignWorksheet::query()
@@ -399,8 +427,56 @@ it('executes an approved direct-transfer batch once through Treasury-backed Pay 
     $replay = app(LifecycleScenarioEngine::class)->run(
         campaignBatchLifecycleCommand(),
         'campaign_payroll_direct_transfer',
-        $options,
+        new LifecycleScenarioRunOptions(
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
+            runReference: 'PAYROLL-DIRECT-LIVE-001',
+            phase: 'approve',
+            confirmCheckerApproval: true,
+            liveProvider: true,
+            confirmLiveTransfer: true,
+            json: true,
+        ),
     );
     expect($replay->payload['phase'])->toBe('fulfilled');
     $provider->assertDisburseCalledTimes(1);
+});
+
+it('rejects maker self approval and any officer other than the designated checker', function () {
+    $maker = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
+    $otherOfficer = actingAsTestUser();
+    $input = campaignBatchCsv("name,mobile,amount\nPayroll Recipient,09170000011,25.00\n");
+
+    $selfApproval = app(LifecycleScenarioEngine::class)->run(
+        campaignBatchLifecycleCommand(),
+        'campaign_payroll_pay_code_sms',
+        new LifecycleScenarioRunOptions(
+            maker: (string) $maker->getKey(),
+            checker: (string) $maker->getKey(),
+            runReference: 'PAYROLL-SELF-CHECK-001',
+            input: $input,
+            json: true,
+        ),
+    );
+    expect($selfApproval->exitCode)->toBe(Command::FAILURE)
+        ->and($selfApproval->payload['message'])->toContain('must be different')
+        ->and(CampaignWorksheet::query()->count())->toBe(0);
+
+    $prepared = app(LifecycleScenarioEngine::class)->run(
+        campaignBatchLifecycleCommand(),
+        'campaign_payroll_pay_code_sms',
+        new LifecycleScenarioRunOptions(
+            maker: (string) $maker->getKey(),
+            checker: (string) $checker->getKey(),
+            runReference: 'PAYROLL-DESIGNATED-CHECKER-001',
+            input: $input,
+            json: true,
+        ),
+    );
+
+    expect(fn () => app(ApproveCampaignWorksheetAuthorization::class)->handle(
+        $prepared->payload['approval_pay_code'],
+        $otherOfficer,
+    ))->toThrow(RuntimeException::class, 'designated campaign checker');
 });

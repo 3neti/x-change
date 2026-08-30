@@ -12,10 +12,14 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
+use LBHurtado\XChange\Actions\Campaigns\ApproveCampaignWorksheetAuthorization;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignPayCodeDeliveries;
 use LBHurtado\XChange\Actions\Campaigns\ExecuteCampaignWorksheetDirectTransfers;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetPayCodes;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
+use LBHurtado\XChange\Models\CampaignBatchFulfillmentOutbox;
+use LBHurtado\XChange\Services\Campaigns\CampaignBatchFulfillmentOutboxProcessor;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetImportNormalizer;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetTabularReader;
 use RuntimeException;
@@ -30,23 +34,54 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
         private IssueCampaignWorksheetPayCodes $payCodes,
         private DispatchCampaignPayCodeDeliveries $deliveries,
         private ExecuteCampaignWorksheetDirectTransfers $directTransfers,
+        private ApproveCampaignWorksheetAuthorization $approveAuthorization,
+        private LifecycleScenarioBootstrapper $bootstrapper,
+        private CampaignBatchFulfillmentOutboxProcessor $outboxProcessor,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
         try {
             $runReference = $this->requiredRuntimeString($context, 'run_reference');
+            $phase = $this->phase($context);
+            $checker = $this->checker($context);
             $worksheet = $this->existingWorksheet($context->issuer, $runReference);
 
-            if (! $worksheet instanceof CampaignWorksheet) {
-                $worksheet = $this->prepareWorksheet($context, $runReference);
+            if ($phase === 'prepare') {
+                if (! $worksheet instanceof CampaignWorksheet) {
+                    $worksheet = $this->prepareWorksheet($context, $runReference, $checker);
+                } else {
+                    $this->assertReplayMatches($context, $worksheet, $checker, requireInput: true);
+                }
             } else {
-                $this->assertReplayMatches($context, $worksheet);
+                if (! $worksheet instanceof CampaignWorksheet) {
+                    throw new RuntimeException('The campaign batch must be prepared by its maker before this phase can run.');
+                }
+
+                $this->assertReplayMatches($context, $worksheet, $checker, requireInput: false);
             }
 
             $authorization = $worksheet->authorizations()->latest('id')->first();
 
-            if ($authorization?->status === 'authorized') {
+            if ($phase === 'approve' && $authorization?->status !== 'authorized') {
+                if (data_get($context->scenario, '_runtime.confirm_checker_approval') !== true) {
+                    throw new RuntimeException('Checker approval requires --confirm-checker-approval.');
+                }
+
+                $authorization = $this->approveAuthorization->handle(
+                    (string) $authorization?->approval_pay_code,
+                    $checker,
+                );
+
+                $outbox = CampaignBatchFulfillmentOutbox::query()
+                    ->where('campaign_worksheet_authorization_id', $authorization->getKey())
+                    ->first();
+                if ($outbox instanceof CampaignBatchFulfillmentOutbox) {
+                    $this->outboxProcessor->process($outbox);
+                }
+            }
+
+            if ($phase !== 'status' && $authorization?->status === 'authorized') {
                 $this->resumeAuthorizedFulfillment($context, $authorization);
                 $worksheet->refresh()->load(['rows', 'authorizations.fulfillments']);
                 $authorization = $worksheet->authorizations->sortByDesc('id')->first();
@@ -69,8 +104,11 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
         }
     }
 
-    private function prepareWorksheet(ScenarioRunContext $context, string $runReference): CampaignWorksheet
-    {
+    private function prepareWorksheet(
+        ScenarioRunContext $context,
+        string $runReference,
+        Model $checker,
+    ): CampaignWorksheet {
         $path = $this->requiredRuntimeString($context, 'input');
         $realPath = realpath($path);
 
@@ -142,6 +180,11 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
                     'live_provider_authorized' => data_get($context->scenario, '_runtime.live_provider') === true,
                     'live_transfer_confirmed' => data_get($context->scenario, '_runtime.confirm_live_transfer') === true,
                     'live_feedback_authorized' => data_get($context->scenario, '_runtime.live_feedback') === true,
+                    'maker_type' => $context->issuer->getMorphClass(),
+                    'maker_id' => (string) $context->issuer->getKey(),
+                    'checker_type' => $checker->getMorphClass(),
+                    'checker_id' => (string) $checker->getKey(),
+                    'provider' => (string) data_get($context->scenario, 'provider', 'netbank'),
                 ],
             ],
         ));
@@ -192,23 +235,62 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
             ->first();
     }
 
-    private function assertReplayMatches(ScenarioRunContext $context, CampaignWorksheet $worksheet): void
-    {
-        $path = $this->requiredRuntimeString($context, 'input');
-        $realPath = realpath($path);
-        if ($realPath === false || ! is_file($realPath) || ! is_readable($realPath)) {
-            throw new RuntimeException('The campaign input file is unavailable or unreadable.');
-        }
+    private function assertReplayMatches(
+        ScenarioRunContext $context,
+        CampaignWorksheet $worksheet,
+        Model $checker,
+        bool $requireInput,
+    ): void {
+        $input = data_get($context->scenario, '_runtime.input');
+        if ($requireInput || (is_string($input) && trim($input) !== '')) {
+            $path = $this->requiredRuntimeString($context, 'input');
+            $realPath = realpath($path);
+            if ($realPath === false || ! is_file($realPath) || ! is_readable($realPath)) {
+                throw new RuntimeException('The campaign input file is unavailable or unreadable.');
+            }
 
-        $expected = data_get($worksheet->metadata, 'lifecycle.content_hash');
-        $actual = hash_file('sha256', $realPath);
-        if (! is_string($expected) || ! hash_equals($expected, $actual)) {
-            throw new RuntimeException('The lifecycle run reference is already bound to a different campaign input file.');
+            $expected = data_get($worksheet->metadata, 'lifecycle.content_hash');
+            $actual = hash_file('sha256', $realPath);
+            if (! is_string($expected) || ! hash_equals($expected, $actual)) {
+                throw new RuntimeException('The lifecycle run reference is already bound to a different campaign input file.');
+            }
         }
 
         if (data_get($worksheet->metadata, 'lifecycle.scenario') !== $context->scenarioKey) {
             throw new RuntimeException('The lifecycle run reference is already bound to a different campaign scenario.');
         }
+
+        if (data_get($worksheet->metadata, 'lifecycle.checker_type') !== $checker->getMorphClass()
+            || (string) data_get($worksheet->metadata, 'lifecycle.checker_id') !== (string) $checker->getKey()) {
+            throw new RuntimeException('The lifecycle run reference is already bound to a different designated checker.');
+        }
+    }
+
+    private function phase(ScenarioRunContext $context): string
+    {
+        $phase = data_get($context->scenario, '_runtime.phase', 'prepare');
+        $phase = is_string($phase) && trim($phase) !== '' ? trim($phase) : 'prepare';
+        if (! in_array($phase, ['prepare', 'approve', 'status'], true)) {
+            throw new RuntimeException('Campaign batch lifecycle --phase must be prepare, approve, or status.');
+        }
+
+        return $phase;
+    }
+
+    private function checker(ScenarioRunContext $context): Model
+    {
+        $checkerId = $this->requiredRuntimeString($context, 'checker');
+        if (! ctype_digit($checkerId) || (int) $checkerId < 1) {
+            throw new RuntimeException('Campaign batch lifecycle --checker must be a persisted user id.');
+        }
+
+        $checker = $this->bootstrapper->resolveIssuerModel((int) $checkerId);
+        if ($checker->getMorphClass() === $context->issuer->getMorphClass()
+            && (string) $checker->getKey() === (string) $context->issuer->getKey()) {
+            throw new RuntimeException('Campaign maker and checker must be different persisted users.');
+        }
+
+        return $checker;
     }
 
     /** @return array<string, mixed> */

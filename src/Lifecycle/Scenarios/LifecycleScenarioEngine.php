@@ -396,7 +396,20 @@ final class LifecycleScenarioEngine
             $output->info("Running scenario: {$scenarioKey}");
         }
 
-        $issuerId = (int) ($options->issuer ?: data_get($scenario, 'issuer_id', 1));
+        if ($mode === 'campaign_batch' && $options->maker === null) {
+            return $this->result(
+                exitCode: Command::FAILURE,
+                payload: [
+                    'success' => false,
+                    'scenario' => $scenarioKey,
+                    'mode' => $mode,
+                    'message' => 'Campaign batch lifecycle scenarios require --maker.',
+                ],
+            );
+        }
+
+        $issuerOption = $mode === 'campaign_batch' ? $options->maker : $options->issuer;
+        $issuerId = (int) ($issuerOption ?: data_get($scenario, 'issuer_id', 1));
         $issuer = $this->bootstrapper->resolveIssuerModel($issuerId);
         $baseClaimMobile = $this->bootstrapper->resolveScenarioMobile($scenario, $issuer);
 
@@ -415,6 +428,8 @@ final class LifecycleScenarioEngine
             'amount' => $options->amount,
             'no_claim' => $options->noClaim,
             'input' => $options->input,
+            'phase' => $options->phase,
+            'confirm_checker_approval' => $options->confirmCheckerApproval,
         ];
 
         $result = $runner->run(

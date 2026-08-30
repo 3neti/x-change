@@ -36,6 +36,14 @@ final class ApproveCampaignWorksheetAuthorization
                 throw new RuntimeException('The worksheet issuer cannot authorize their own campaign.');
             }
 
+            $designatedCheckerType = data_get($authorization->worksheet->metadata, 'lifecycle.checker_type');
+            $designatedCheckerId = data_get($authorization->worksheet->metadata, 'lifecycle.checker_id');
+            if (($designatedCheckerType !== null || $designatedCheckerId !== null)
+                && ($designatedCheckerType !== $officer->getMorphClass()
+                    || (string) $designatedCheckerId !== (string) $officer->getKey())) {
+                throw new RuntimeException('Only the designated campaign checker may authorize this batch.');
+            }
+
             if ($authorization->status === 'authorized') {
                 $this->fulfillmentPlanner->handle((string) $authorization->reference);
                 $this->queueAutomaticFulfillment($authorization);
