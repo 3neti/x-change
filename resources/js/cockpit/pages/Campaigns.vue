@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import {
-    BadgePhilippinePeso,
     BriefcaseBusiness,
     ClipboardList,
     FileSpreadsheet,
+    HandCoins,
     LockKeyhole,
     Plus,
     Send,
@@ -482,7 +482,7 @@ const updatedRelativeTime = (value: string | null): string =>
                             class="size-4"
                             aria-hidden="true"
                         />
-                        <BadgePhilippinePeso
+                        <HandCoins
                             v-else
                             class="size-4"
                             aria-hidden="true"
