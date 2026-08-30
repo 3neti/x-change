@@ -1108,10 +1108,14 @@ function stringValue(value: unknown): string | null {
 <template>
     <CockpitLayout
         active-navigation="quick-generate"
+        mobile-presentation="edge"
         :cockpit-header-read-model="props.cockpit_header_read_model"
         :cockpit-entry-notice="props.cockpit_entry_notice"
     >
-        <section class="space-y-4" data-testid="cockpit-quick-generate-shell">
+        <section
+            class="space-y-4 px-4 md:px-0"
+            data-testid="cockpit-quick-generate-shell"
+        >
             <header
                 class="hidden items-start justify-between gap-4 px-1 md:flex"
                 data-testid="cockpit-quick-generate-header"

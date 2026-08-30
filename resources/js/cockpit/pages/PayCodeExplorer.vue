@@ -739,14 +739,15 @@ function integrationBadge(
 <template>
     <CockpitLayout
         active-navigation="pay-codes"
+        mobile-presentation="edge"
         :cockpit-header-read-model="props.cockpit_header_read_model"
     >
         <section
-            class="mx-auto max-w-7xl space-y-5"
+            class="mx-auto max-w-7xl space-y-5 px-4 md:px-0"
             data-testid="cockpit-pay-code-explorer-shell"
         >
             <section
-                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                class="-mx-4 border-y border-slate-200 bg-white p-4 shadow-none md:mx-0 md:rounded-2xl md:border md:shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-explorer-command-card"
             >
                 <div

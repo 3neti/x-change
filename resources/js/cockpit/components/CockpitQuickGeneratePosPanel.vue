@@ -413,7 +413,7 @@ function responseMessage(
 
 <template>
     <section
-        class="mx-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950"
+        class="-mx-4 w-auto max-w-none overflow-hidden border-y border-slate-200 bg-white shadow-none md:mx-auto md:w-full md:max-w-3xl md:rounded-3xl md:border md:shadow-sm dark:border-slate-800 dark:bg-slate-950"
         data-testid="cockpit-quick-generate-pos-panel"
     >
         <div class="flex justify-end px-5 pt-5 sm:px-8 sm:pt-8">

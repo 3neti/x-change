@@ -5769,7 +5769,7 @@ function instructionRecord(
 
 <template>
     <form
-        class="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-4 shadow-sm dark:border-emerald-900/70 dark:from-emerald-950/40 dark:via-slate-950 dark:to-sky-950/30"
+        class="-mx-4 border-y border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-4 shadow-none md:mx-0 md:rounded-3xl md:border md:shadow-sm dark:border-emerald-900/70 dark:from-emerald-950/40 dark:via-slate-950 dark:to-sky-950/30"
         data-testid="cockpit-quick-generate-submit-panel"
         @submit.prevent="submit"
     >

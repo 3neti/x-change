@@ -805,9 +805,13 @@ function areIntegrationDetailsExpanded(key: string): boolean {
 <template>
     <CockpitLayout
         active-navigation="dashboard"
+        mobile-presentation="edge"
         :cockpit-header-read-model="props.cockpit_header_read_model"
     >
-        <section class="space-y-4" data-testid="cockpit-dashboard-shell">
+        <section
+            class="space-y-4 px-4 md:px-0"
+            data-testid="cockpit-dashboard-shell"
+        >
             <header
                 class="hidden flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm md:flex md:flex-row md:items-center md:justify-between dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-page-heading"
@@ -854,7 +858,7 @@ function areIntegrationDetailsExpanded(key: string): boolean {
             </header>
 
             <section
-                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                class="-mx-4 border-y border-slate-200 bg-white p-4 shadow-none md:mx-0 md:rounded-2xl md:border md:shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-controls-panel"
             >
                 <div class="flex items-center justify-between gap-3">

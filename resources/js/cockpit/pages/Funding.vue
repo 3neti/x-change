@@ -1295,11 +1295,12 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
 <template>
     <CockpitLayout
         active-navigation="funding"
+        mobile-presentation="edge"
         :cockpit-header-read-model="cockpit_header_read_model"
         :cockpit-entry-notice="cockpit_entry_notice"
     >
         <div
-            class="mx-auto max-w-7xl space-y-5"
+            class="mx-auto max-w-7xl space-y-5 px-4 md:px-0"
             data-testid="cockpit-funding-page"
         >
             <div
@@ -1310,7 +1311,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 {{ funding_notice }}
             </div>
             <section
-                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                class="-mx-4 border-y border-slate-200 bg-white px-4 py-3 shadow-none md:mx-0 md:rounded-2xl md:border md:shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-funding-header"
             >
                 <div
