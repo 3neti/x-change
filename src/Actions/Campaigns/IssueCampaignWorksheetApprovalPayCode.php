@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Campaigns;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
@@ -61,7 +63,7 @@ final class IssueCampaignWorksheetApprovalPayCode
             $requiresOtp = (bool) data_get($worksheet->metadata, 'officer_authorization.require_otp', false);
             $collectionWallet = $this->wallets->resolveForUser($owner);
 
-            $voucher = $this->vouchers->handle(VoucherInstructionsData::from([
+            $voucher = $this->issueAsOwner($owner, VoucherInstructionsData::from([
                 'cash' => ['amount' => 0, 'currency' => $worksheet->currency, 'validation' => ['country' => 'PH']],
                 'inputs' => ['fields' => $requiresOtp ? ['otp'] : []],
                 'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
@@ -77,7 +79,7 @@ final class IssueCampaignWorksheetApprovalPayCode
                     'issuer_id' => (string) $owner->getKey(),
                     'collection_wallet_id' => (string) $collectionWallet->getKey(),
                 ],
-            ]))->first();
+            ]));
 
             if (! $voucher instanceof Voucher) {
                 throw new RuntimeException('The campaign approval Pay Code could not be issued.');
@@ -87,6 +89,27 @@ final class IssueCampaignWorksheetApprovalPayCode
 
             return $authorization->refresh();
         });
+    }
+
+    private function issueAsOwner(Model $owner, VoucherInstructionsData $instructions): ?Voucher
+    {
+        if (! $owner instanceof Authenticatable) {
+            throw new RuntimeException('The campaign worksheet owner cannot issue an approval Pay Code.');
+        }
+
+        $previousUser = Auth::user();
+
+        try {
+            Auth::setUser($owner);
+
+            return $this->vouchers->handle($instructions)->first();
+        } finally {
+            if ($previousUser instanceof Authenticatable) {
+                Auth::setUser($previousUser);
+            } else {
+                Auth::forgetGuards();
+            }
+        }
     }
 
     /**

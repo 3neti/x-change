@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use LBHurtado\Voucher\Models\Voucher;
@@ -108,6 +109,7 @@ it('ingests a payroll CSV into encrypted campaign rows and stops for an independ
         'Payroll Recipient One,09170000011,25.00',
         'Payroll Recipient Two,09170000022,30.00',
     ]));
+    Auth::forgetGuards();
 
     $result = app(LifecycleScenarioEngine::class)->run(
         command: campaignBatchLifecycleCommand(),
