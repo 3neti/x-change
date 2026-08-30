@@ -705,7 +705,7 @@ const updatedRelativeTime = (value: string | null): string =>
                             role="group"
                             :tabindex="intakeForm.processing ? -1 : 0"
                             :aria-disabled="intakeForm.processing"
-                            :aria-label="`Add a ${activeCopy.person} list from CSV, Excel, or pasted rows`"
+                            :aria-label="`Add ${activeCopy.person} list from CSV, Excel, or pasted rows`"
                             class="mt-3 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-5 text-center transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
                             :class="
                                 isDraggingIntake
