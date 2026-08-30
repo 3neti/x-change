@@ -62,6 +62,9 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
             }
 
             $authorization = $worksheet->authorizations()->latest('id')->first();
+            if ($phase === 'prepare' && ! $authorization instanceof CampaignWorksheetAuthorization) {
+                $authorization = $this->approvalPayCodes->handle((string) $worksheet->reference, $context->issuer);
+            }
 
             if ($phase === 'approve' && $authorization?->status !== 'authorized') {
                 if (data_get($context->scenario, '_runtime.confirm_checker_approval') !== true) {
