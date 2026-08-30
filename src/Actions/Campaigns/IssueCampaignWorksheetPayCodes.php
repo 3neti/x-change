@@ -30,10 +30,6 @@ final readonly class IssueCampaignWorksheetPayCodes
 
     public function handle(string $authorizationReference, Model $owner, int $limit = 100): int
     {
-        if ((string) auth()->id() !== (string) $owner->getKey()) {
-            throw new RuntimeException('Campaign Pay Codes must be issued by the worksheet owner.');
-        }
-
         if (! $owner instanceof Authenticatable) {
             throw new RuntimeException('Campaign Pay Code issuance requires an authenticatable worksheet owner.');
         }
@@ -45,10 +41,20 @@ final readonly class IssueCampaignWorksheetPayCodes
         if (! $authorization instanceof CampaignWorksheetAuthorization || $authorization->status !== 'authorized' || $authorization->worksheet === null) {
             throw new RuntimeException('Campaign worksheet authorization is not ready for Pay Code issuance.');
         }
+        if ($authorization->worksheet->owner_type !== $owner->getMorphClass()
+            || (string) $authorization->worksheet->owner_id !== (string) $owner->getKey()) {
+            throw new RuntimeException('Campaign Pay Codes must be issued by the worksheet owner.');
+        }
 
         $issued = 0;
+        $allowsLifecycleDirectTransfer = $authorization->worksheet->fulfillment_mode === 'direct_bank_transfer'
+            && data_get($authorization->worksheet->metadata, 'lifecycle.automatic_fulfillment') === true;
+
         foreach ($authorization->fulfillments->filter(fn (CampaignWorksheetFulfillment $fulfillment): bool => (
-            $fulfillment->mode === 'pay_code_distribution' && $fulfillment->status === 'planned'
+            in_array($fulfillment->mode, [
+                'pay_code_distribution',
+                ...($allowsLifecycleDirectTransfer ? ['direct_bank_transfer'] : []),
+            ], true) && $fulfillment->status === 'planned'
         ) || $fulfillment->status === 'fallback_planned')->take(max(1, min($limit, 500))) as $fulfillment) {
             DB::transaction(function () use ($fulfillment, $authorization, $owner, &$issued): void {
                 $locked = CampaignWorksheetFulfillment::query()->with('row')->lockForUpdate()->findOrFail($fulfillment->getKey());

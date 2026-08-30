@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Campaigns;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
+use LBHurtado\XChange\Models\CampaignBatchFulfillmentOutbox;
 use RuntimeException;
 
 final class ApproveCampaignWorksheetAuthorization
@@ -37,6 +38,7 @@ final class ApproveCampaignWorksheetAuthorization
 
             if ($authorization->status === 'authorized') {
                 $this->fulfillmentPlanner->handle((string) $authorization->reference);
+                $this->queueAutomaticFulfillment($authorization);
 
                 return $authorization;
             }
@@ -62,8 +64,31 @@ final class ApproveCampaignWorksheetAuthorization
             ])->save();
             $authorization->worksheet->forceFill(['status' => 'authorized'])->save();
             $this->fulfillmentPlanner->handle((string) $authorization->reference);
+            $this->queueAutomaticFulfillment($authorization);
 
             return $authorization->refresh();
         });
+    }
+
+    private function queueAutomaticFulfillment(CampaignWorksheetAuthorization $authorization): void
+    {
+        $worksheet = $authorization->worksheet;
+        if ($worksheet === null
+            || data_get($worksheet->metadata, 'lifecycle.automatic_fulfillment') !== true) {
+            return;
+        }
+
+        $authorized = $worksheet->fulfillment_mode === 'direct_bank_transfer'
+            ? data_get($worksheet->metadata, 'lifecycle.live_provider_authorized') === true
+                && data_get($worksheet->metadata, 'lifecycle.live_transfer_confirmed') === true
+            : data_get($worksheet->metadata, 'lifecycle.live_feedback_authorized') === true;
+        if (! $authorized) {
+            return;
+        }
+
+        CampaignBatchFulfillmentOutbox::query()->firstOrCreate(
+            ['campaign_worksheet_authorization_id' => $authorization->getKey()],
+            ['status' => 'pending', 'attempts' => 0, 'available_at' => now()],
+        );
     }
 }

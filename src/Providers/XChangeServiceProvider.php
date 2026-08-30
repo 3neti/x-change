@@ -60,6 +60,7 @@ use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
 use LBHurtado\XChange\Console\Commands\AdoptXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Campaigns\ProcessCampaignBatchFulfillmentOutboxCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
@@ -1474,6 +1475,7 @@ class XChangeServiceProvider extends ServiceProvider
                 AuthorizeProvisioningOperatorCommand::class,
                 ExpireProvisioningOffersCommand::class,
                 DeliverVoucherSliceExecutionJournalCommand::class,
+                ProcessCampaignBatchFulfillmentOutboxCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
                 RunLifecycleScenarioCommand::class,
@@ -1644,6 +1646,15 @@ class XChangeServiceProvider extends ServiceProvider
                 ->everyMinute()
                 ->onOneServer()
                 ->withoutOverlapping(5);
+        });
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule
+                ->command('x-change:campaigns:process-batches --limit=10')
+                ->name('x-change:campaigns:process-batches')
+                ->everyMinute()
+                ->onOneServer()
+                ->withoutOverlapping(10);
         });
 
         if ((bool) config(

@@ -93,6 +93,19 @@ final readonly class CampaignVoucherInstructionCompiler
                 'claimant' => ['mode' => 'unbound'],
                 'profile' => 'voucher.claim.v1',
             ],
+            'execution' => $fulfillment->mode === 'direct_bank_transfer'
+                ? [
+                    'schema' => 'voucher.execution.v1',
+                    'driver' => 'x_change_live_cash',
+                    'metadata' => [
+                        'x_change_live_cash' => [
+                            'claim_owner' => 'x-change',
+                            'provider' => 'netbank',
+                            'settlement_rail' => (string) ($beneficiary['settlement_rail'] ?? 'INSTAPAY'),
+                        ],
+                    ],
+                ]
+                : null,
             'metadata' => [
                 'flow_type' => 'disbursable',
                 'issuer_id' => (string) $owner->getKey(),

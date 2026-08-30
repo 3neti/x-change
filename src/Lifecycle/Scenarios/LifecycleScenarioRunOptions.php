@@ -30,6 +30,7 @@ final readonly class LifecycleScenarioRunOptions
         public ?string $feedbackMobile = null,
         public bool $confirmLiveTransfer = false,
         public ?string $runReference = null,
+        public ?string $input = null,
     ) {}
 
     public static function fromConsoleOptions(array $options): self
@@ -58,6 +59,7 @@ final readonly class LifecycleScenarioRunOptions
             feedbackMobile: self::stringOrNull($options['feedback-mobile'] ?? null),
             confirmLiveTransfer: (bool) ($options['confirm-live-transfer'] ?? false),
             runReference: self::stringOrNull($options['run-reference'] ?? null),
+            input: self::stringOrNull($options['input'] ?? null),
         );
     }
 
