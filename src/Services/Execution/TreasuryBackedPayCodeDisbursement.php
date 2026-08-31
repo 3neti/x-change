@@ -10,6 +10,7 @@ use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
+use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
@@ -127,6 +128,10 @@ final readonly class TreasuryBackedPayCodeDisbursement
 
             if ($execution->status === 'succeeded') {
                 DisbursementConfirmed::dispatch($reconciliation);
+            }
+
+            if ($execution->status === 'failed') {
+                DisbursementRejected::dispatch($reconciliation);
             }
 
             return $voucher->refresh();

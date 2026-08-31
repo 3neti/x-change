@@ -14,6 +14,7 @@ use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use Propaganistas\LaravelPhone\PhoneNumber;
 use RuntimeException;
 
@@ -23,6 +24,7 @@ final readonly class ExecuteCampaignWorksheetDirectTransfers
         private ExecutionEngine $engine,
         private ExecutionResultHandoffPipelineContract $handoffs,
         private RecordCampaignDirectTransferClaim $claims,
+        private CampaignLifecycleJournal $journal,
     ) {}
 
     /** @return array{completed: int, indeterminate: int, skipped: int} */
@@ -96,6 +98,38 @@ final readonly class ExecuteCampaignWorksheetDirectTransfers
             DB::transaction(function () use ($locked, $result, &$summary): void {
                 $current = CampaignWorksheetFulfillment::query()->lockForUpdate()->findOrFail($locked->getKey());
                 if ($current->status !== 'executing') {
+                    if ($current->status === 'completed') {
+                        $this->journal->recordFulfillment(
+                            'campaign.provider_payout.succeeded',
+                            $current,
+                            null,
+                            [
+                                'execution_status' => $result['result']->status,
+                                'successful' => true,
+                                'recorded_after_listener_transition' => true,
+                            ],
+                        );
+                        $summary['completed']++;
+
+                        return;
+                    }
+
+                    if (in_array($current->status, ['recovery_required', 'provider_indeterminate'], true)) {
+                        $this->journal->recordFulfillment(
+                            'campaign.provider_payout.failed',
+                            $current,
+                            null,
+                            [
+                                'execution_status' => $result['result']->status,
+                                'successful' => false,
+                                'recorded_after_listener_transition' => true,
+                            ],
+                        );
+                        $summary['indeterminate']++;
+
+                        return;
+                    }
+
                     $summary['skipped']++;
 
                     return;
@@ -112,6 +146,15 @@ final readonly class ExecuteCampaignWorksheetDirectTransfers
                         'execution_finished_at' => now()->toIso8601String(),
                     ]),
                 ])->save();
+                $this->journal->recordFulfillment(
+                    $successful ? 'campaign.provider_payout.succeeded' : 'campaign.provider_payout.failed',
+                    $current,
+                    null,
+                    [
+                        'execution_status' => $result['result']->status,
+                        'successful' => $successful,
+                    ],
+                );
                 $summary[$successful ? 'completed' : 'indeterminate']++;
             }, attempts: 5);
         }

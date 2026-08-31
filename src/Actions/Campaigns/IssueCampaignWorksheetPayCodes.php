@@ -14,6 +14,7 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use LBHurtado\XChange\Services\Campaigns\CampaignVoucherInstructionCompiler;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -26,6 +27,7 @@ final readonly class IssueCampaignWorksheetPayCodes
         private TreasuryPayCodeAccountingService $accounting,
         private TreasuryProviderConnectionCatalog $connections,
         private CampaignVoucherInstructionCompiler $instructionCompiler,
+        private CampaignLifecycleJournal $journal,
     ) {}
 
     public function handle(string $authorizationReference, Model $owner, int $limit = 100): int
@@ -97,6 +99,7 @@ final readonly class IssueCampaignWorksheetPayCodes
                         ],
                     ),
                 ])->save();
+                $this->journal->recordFulfillment('campaign.pay_code.issued', $locked, $owner);
                 $issued++;
             }, attempts: 5);
         }

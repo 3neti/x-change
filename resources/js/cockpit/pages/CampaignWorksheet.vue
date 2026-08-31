@@ -59,8 +59,15 @@ type Fulfillment = {
     amount_minor: number;
     mode: string;
     status: string;
+    monitor_label: string;
     provider_transfer_reference: string | null;
     pay_code: string | null;
+    claim_status: string | null;
+    claim_completed_at: string | null;
+    delivery_status: string | null;
+    delivery_channel: string | null;
+    delivery_requested_at: string | null;
+    delivery_safe_error_code: string | null;
 };
 type DeliveryAttempt = {
     reference: string;
@@ -106,7 +113,9 @@ const form = useForm({
 });
 const authorizationForm = useForm({});
 const fulfillmentForm = useForm({});
-const transferForm = useForm({});
+const transferForm = useForm({
+    confirm_live_transfer: '',
+});
 const reconciliationForm = useForm({});
 const fallbackForm = useForm({});
 const deliveryForm = useForm({});
@@ -630,6 +639,7 @@ const sendApproval = (): void => {
                     props.worksheet.status === 'authorized' &&
                     props.worksheet.fulfillment_mode === 'direct_bank_transfer'
                 "
+                data-testid="campaign-browser-scenario-runner"
                 class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
             >
                 <div
@@ -646,7 +656,7 @@ const sendApproval = (): void => {
                         >
                             {{
                                 props.direct_bank_transfer_enabled
-                                    ? 'Transfers Ready'
+                                    ? 'Live Payroll Runner'
                                     : 'Bank Transfers Unavailable'
                             }}
                         </h2>
@@ -655,70 +665,98 @@ const sendApproval = (): void => {
                         >
                             {{
                                 props.direct_bank_transfer_enabled
-                                    ? 'Send or check the next authorized transfer batch.'
+                                    ? 'Issue each beneficiary Pay Code, execute direct transfer through the voucher engine, then recover trusted failures through the normal claim flow.'
                                     : 'This batch remains authorized. Transfers can begin when NetBank is enabled.'
                             }}
                         </p>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button
-                            v-if="
-                                (props.fulfillment_summary.fallback_count ??
-                                    0) > 0
-                            "
-                            type="button"
-                            :disabled="fulfillmentForm.processing"
-                            class="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold dark:border-slate-700"
-                            @click="issue"
+                    <div class="grid w-full gap-2 sm:w-auto sm:min-w-[24rem]">
+                        <label
+                            v-if="props.direct_bank_transfer_enabled"
+                            class="grid gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300"
                         >
-                            {{
-                                fulfillmentForm.processing
-                                    ? 'Issuing…'
-                                    : 'Issue Planned Fallbacks'
-                            }}</button
-                        ><button
-                            type="button"
-                            :disabled="fallbackForm.processing"
-                            class="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold dark:border-slate-700"
-                            @click="planFallbacks"
+                            Live transfer confirmation
+                            <input
+                                v-model="transferForm.confirm_live_transfer"
+                                placeholder="I APPROVE LIVE BANK TRANSFERS"
+                                data-testid="campaign-browser-runner-live-confirmation"
+                                class="w-full rounded-xl border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            />
+                        </label>
+                        <p
+                            v-if="transferForm.errors.confirm_live_transfer"
+                            class="text-xs text-rose-600 dark:text-rose-300"
                         >
-                            {{
-                                fallbackForm.processing
-                                    ? 'Planning…'
-                                    : 'Plan Pay Code Fallbacks'
-                            }}</button
-                        ><template v-if="props.direct_bank_transfer_enabled"
-                            ><button
+                            {{ transferForm.errors.confirm_live_transfer }}
+                        </p>
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <button
+                                v-if="
+                                    (props.fulfillment_summary
+                                        .fallback_count ?? 0) > 0
+                                "
                                 type="button"
-                                :disabled="reconciliationForm.processing"
+                                :disabled="fulfillmentForm.processing"
                                 class="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold dark:border-slate-700"
-                                @click="reconcileTransfers"
+                                @click="issue"
                             >
                                 {{
-                                    reconciliationForm.processing
-                                        ? 'Checking…'
-                                        : 'Check NetBank'
-                                }}</button
-                            ><button
-                                type="button"
-                                :disabled="transferForm.processing"
-                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950"
-                                @click="dispatchTransfers"
-                            >
-                                <Send class="size-4" />
-                                {{
-                                    transferForm.processing
-                                        ? 'Dispatching…'
-                                        : 'Dispatch Next 100'
+                                    fulfillmentForm.processing
+                                        ? 'Issuing…'
+                                        : 'Issue Planned Fallbacks'
                                 }}
-                            </button></template
-                        >
+                            </button>
+                            <button
+                                type="button"
+                                :disabled="fallbackForm.processing"
+                                class="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold dark:border-slate-700"
+                                @click="planFallbacks"
+                            >
+                                {{
+                                    fallbackForm.processing
+                                        ? 'Planning…'
+                                        : 'Plan Pay Code Fallbacks'
+                                }}
+                            </button>
+                            <template v-if="props.direct_bank_transfer_enabled">
+                                <button
+                                    type="button"
+                                    :disabled="reconciliationForm.processing"
+                                    class="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold dark:border-slate-700"
+                                    @click="reconcileTransfers"
+                                >
+                                    {{
+                                        reconciliationForm.processing
+                                            ? 'Checking…'
+                                            : 'Check NetBank'
+                                    }}
+                                </button>
+                                <button
+                                    type="button"
+                                    :disabled="
+                                        transferForm.processing ||
+                                        transferForm.confirm_live_transfer !==
+                                            'I APPROVE LIVE BANK TRANSFERS'
+                                    "
+                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950"
+                                    data-testid="campaign-browser-runner-execute"
+                                    @click="dispatchTransfers"
+                                >
+                                    <Send class="size-4" />
+                                    {{
+                                        transferForm.processing
+                                            ? 'Dispatching…'
+                                            : 'Run Next 100'
+                                    }}
+                                </button>
+                            </template>
+                        </div>
                     </div>
                 </div>
             </section>
             <section
                 v-if="props.worksheet.status === 'authorized'"
-                class="grid grid-cols-2 gap-3 sm:grid-cols-5"
+                class="grid grid-cols-2 gap-3 sm:grid-cols-6"
             >
                 <div
                     v-for="[label, value] in [
@@ -730,6 +768,13 @@ const sendApproval = (): void => {
                         [
                             'Completed',
                             props.fulfillment_summary.completed_count ?? 0,
+                        ],
+                        [
+                            'Recovery Ready',
+                            (props.fulfillment_summary
+                                .recovery_required_count ?? 0) +
+                                (props.fulfillment_summary
+                                    .recovery_ready_count ?? 0),
                         ],
                         [
                             'Provider Ready',
@@ -1121,6 +1166,27 @@ const sendApproval = (): void => {
                                     · {{ item.pay_code }}</template
                                 >
                             </p>
+                            <p
+                                v-if="
+                                    item.claim_status ||
+                                    item.delivery_status ||
+                                    item.delivery_safe_error_code
+                                "
+                                class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                                data-testid="campaign-row-monitor-detail"
+                            >
+                                <template v-if="item.claim_status">
+                                    Claim: {{ item.claim_status }}
+                                </template>
+                                <template v-if="item.delivery_status">
+                                    <span v-if="item.claim_status"> · </span>
+                                    {{ item.delivery_channel?.toUpperCase() }}
+                                    delivery: {{ item.delivery_status }}
+                                </template>
+                                <template v-if="item.delivery_safe_error_code">
+                                    · {{ item.delivery_safe_error_code }}
+                                </template>
+                            </p>
                         </div>
                         <p
                             class="text-sm font-semibold text-slate-950 dark:text-slate-50"
@@ -1129,7 +1195,8 @@ const sendApproval = (): void => {
                         </p>
                         <span
                             class="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                            >{{ item.status }}</span
+                            data-testid="campaign-row-monitor-label"
+                            >{{ item.monitor_label }}</span
                         >
                     </article>
                 </div>

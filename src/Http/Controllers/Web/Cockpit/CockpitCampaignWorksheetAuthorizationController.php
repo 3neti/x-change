@@ -11,6 +11,7 @@ use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\AuthorizeCampaignWorksheetRequest;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
 use RuntimeException;
 
@@ -21,6 +22,7 @@ class CockpitCampaignWorksheetAuthorizationController extends Controller
         private readonly CampaignWorksheetImportRepository $imports,
         private readonly IssueCampaignWorksheetApprovalPayCode $approvalPayCodes,
         private readonly InstructionCapabilityIssuanceGuard $instructionCapabilities,
+        private readonly CampaignLifecycleJournal $journal,
     ) {}
 
     public function store(AuthorizeCampaignWorksheetRequest $request, string $worksheet): RedirectResponse
@@ -56,6 +58,7 @@ class CockpitCampaignWorksheetAuthorizationController extends Controller
 
             $this->worksheets->freeze($worksheet, $owner->getMorphClass(), (string) $owner->getAuthIdentifier());
             $authorization = $this->approvalPayCodes->handle($worksheet, $owner);
+            $this->journal->recordAuthorization('campaign.approval.requested', $authorization, $owner);
         } catch (InvalidArgumentException|RuntimeException $exception) {
             return to_route('x-change.cockpit.campaigns.show', $worksheet)->with('campaign_notice', $exception->getMessage());
         }

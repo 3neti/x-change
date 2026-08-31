@@ -13,6 +13,7 @@ use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\DisbursementRejectionTrustService;
 use LBHurtado\XChange\Services\Treasury\PayCodeDisbursementRejectionJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use Throwable;
@@ -22,6 +23,7 @@ final readonly class HandleRejectedDisbursement
     public function __construct(
         private TreasuryPayCodeAccountingService $accounting,
         private PayCodeDisbursementRejectionJournal $journal,
+        private DisbursementRejectionTrustService $rejectionTrust,
     ) {}
 
     public function handle(DisbursementRejected $event): void
@@ -29,9 +31,7 @@ final readonly class HandleRejectedDisbursement
         $reconciliation = $event->reconciliation->fresh();
 
         if (
-            $reconciliation->status !== 'failed'
-            || ! filled($reconciliation->provider_transaction_id)
-            || $reconciliation->needs_review
+            ! $this->rejectionTrust->isTrusted($reconciliation)
         ) {
             return;
         }

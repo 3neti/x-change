@@ -8,17 +8,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XChange\Models\CampaignBatchFulfillmentOutbox;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use RuntimeException;
 
 final class ApproveCampaignWorksheetAuthorization
 {
     public function __construct(
         private readonly PlanCampaignWorksheetFulfillment $fulfillmentPlanner,
+        private readonly CampaignLifecycleJournal $journal,
     ) {}
 
     public function handle(string $approvalPayCode, Model $officer): CampaignWorksheetAuthorization
     {
-        return DB::transaction(function () use ($approvalPayCode, $officer): CampaignWorksheetAuthorization {
+        $authorization = DB::transaction(function () use ($approvalPayCode, $officer): CampaignWorksheetAuthorization {
             $authorization = CampaignWorksheetAuthorization::query()
                 ->with('worksheet')
                 ->where('approval_pay_code', trim($approvalPayCode))
@@ -76,6 +78,10 @@ final class ApproveCampaignWorksheetAuthorization
 
             return $authorization->refresh();
         });
+
+        $this->journal->recordAuthorization('campaign.checker.approved', $authorization, $officer);
+
+        return $authorization;
     }
 
     private function queueAutomaticFulfillment(CampaignWorksheetAuthorization $authorization): void

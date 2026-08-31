@@ -750,6 +750,17 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('Send To Officer');
         expect(page).toContain('must sign in to approve this batch.');
         expect(page).toContain('data-testid="campaign-worksheet-stats"');
+        expect(page).toContain('data-testid="campaign-browser-scenario-runner"');
+        expect(page).toContain('Live Payroll Runner');
+        expect(page).toContain('I APPROVE LIVE BANK TRANSFERS');
+        expect(page).toContain('data-testid="campaign-browser-runner-execute"');
+        expect(page).toContain('data-testid="campaign-browser-runner-live-confirmation"');
+        expect(page).toContain('data-testid="campaign-row-monitor-label"');
+        expect(page).toContain('data-testid="campaign-row-monitor-detail"');
+        expect(page).toContain('item.monitor_label');
+        expect(page).toContain('Recovery Ready');
+        expect(page).toContain('claim_status');
+        expect(page).toContain('delivery_status');
         expect(page).toContain('min-[360px]:grid-cols-3');
         expect(page).toContain('2xl:min-w-[21rem]');
         expect(page).not.toContain(

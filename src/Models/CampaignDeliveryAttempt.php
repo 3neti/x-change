@@ -14,6 +14,9 @@ use LogicException;
 
 class CampaignDeliveryAttempt extends Model
 {
+    /** @var list<string> */
+    public const TerminalEventTypes = ['completed', 'failed', 'superseded'];
+
     protected $table = 'x_change_campaign_delivery_attempts';
 
     protected $fillable = [

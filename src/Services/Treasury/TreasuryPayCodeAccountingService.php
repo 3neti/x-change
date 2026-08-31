@@ -24,6 +24,7 @@ use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\DisbursementRejectionTrustService;
 
 final readonly class TreasuryPayCodeAccountingService
 {
@@ -34,6 +35,7 @@ final readonly class TreasuryPayCodeAccountingService
         private TreasuryPositionReadModelContract $positions,
         private TreasuryPositionOperationContract $positionOperations,
         private TreasuryInventoryOperationContract $inventoryOperations,
+        private DisbursementRejectionTrustService $rejectionTrust,
     ) {}
 
     public function reserve(
@@ -208,11 +210,13 @@ final readonly class TreasuryPayCodeAccountingService
             (string) data_get($reservation, 'connection_reference'),
             $currency,
         );
+        $providerEvidenceReference = filled($reconciliation->provider_transaction_id)
+            ? (string) $reconciliation->provider_transaction_id
+            : 'reconciliation:'.$reconciliation->getKey();
 
         if (
             data_get($reservation, 'status') !== 'reserved'
-            || $reconciliation->status !== 'failed'
-            || ! filled($reconciliation->provider_transaction_id)
+            || ! $this->rejectionTrust->isTrusted($reconciliation)
             || (int) round(((float) $reconciliation->amount) * 100) !== $amountMinor
             || $amountMinor <= 0
         ) {
@@ -238,7 +242,7 @@ final readonly class TreasuryPayCodeAccountingService
             $connection->reference,
             (string) $voucher->getKey(),
             (string) $reconciliation->getKey(),
-            (string) $reconciliation->provider_transaction_id,
+            $providerEvidenceReference,
             (string) $amountMinor,
         ]));
 
@@ -250,7 +254,7 @@ final readonly class TreasuryPayCodeAccountingService
                 amountMinor: $amountMinor,
                 currency: $connection->currency,
                 idempotencyKey: 'pay-code-payout-recovery-hold-key:'.$scope,
-                externalReference: $connection->provider.':'.$reconciliation->provider_transaction_id,
+                externalReference: $connection->provider.':'.$providerEvidenceReference,
                 metadata: [
                     'source' => 'x_change_provider_disbursement_rejection',
                     'pay_code_id' => (int) $voucher->getKey(),

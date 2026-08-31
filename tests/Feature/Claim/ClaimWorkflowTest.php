@@ -311,6 +311,57 @@ it('keeps destination collection for an ordinary disbursement workflow', functio
         ->and($pnb)->not->toHaveKey('code');
 });
 
+it('keeps the campaign payout recovery otp action visible inline', function (): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'treasury' => [
+            'pay_code_reservation' => ['status' => 'recovery_pending'],
+        ],
+        'instructions' => [
+            'metadata' => [
+                'custom' => [
+                    'campaign' => [
+                        'claim_activation' => 'provider_rejection',
+                        'beneficiary_mobile' => '09175180722',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
+    $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
+        FormFlowInstructionsData::from([
+            'reference_id' => 'claim-workflow-campaign-recovery-01',
+            'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-campaign-recovery-01'],
+            'steps' => [[
+                'handler' => 'form',
+                'config' => [
+                    'step_name' => 'wallet_info',
+                    'fields' => [
+                        ['name' => 'mobile'],
+                        ['name' => 'bank_code'],
+                        ['name' => 'account_number'],
+                    ],
+                ],
+            ], [
+                'handler' => 'otp',
+                'config' => [
+                    'step_name' => 'otp_verification',
+                    'fields' => [],
+                ],
+            ]],
+        ]),
+        $workflow,
+    );
+
+    $payload = $instructions->toArray();
+
+    expect($workflow->key)->toBe('campaign.payout-recovery.v1')
+        ->and($payload['steps'][0]['config']['action_placement'])->toBe('viewport_bottom')
+        ->and($payload['steps'][1]['config']['action_placement'])->toBe('inline');
+});
+
 it('requires authenticated mobile and otp activation for reusable balance', function (): void {
     $voucher = Mockery::mock(Voucher::class);
     $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([

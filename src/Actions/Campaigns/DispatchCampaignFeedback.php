@@ -9,6 +9,7 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Services\Campaigns\CampaignPayoutRecoveryNotificationEligibility;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Data\FeedbackChannelData;
@@ -25,6 +26,7 @@ final readonly class DispatchCampaignFeedback
         private DeliverAndJournalFeedback $feedback,
         private RecordCampaignDeliveryAttempt $deliveryAttempts,
         private FeedbackChannelRegistryContract $feedbackChannels,
+        private CampaignPayoutRecoveryNotificationEligibility $payoutRecoveryEligibility,
     ) {}
 
     public function handle(int $attemptId, string $recipient): ?string
@@ -34,8 +36,19 @@ final readonly class DispatchCampaignFeedback
             ->findOrFail($attemptId);
 
         if ($attempt->events->contains(
-            fn ($event): bool => in_array($event->event_type, ['completed', 'failed'], true),
+            fn ($event): bool => in_array($event->event_type, CampaignDeliveryAttempt::TerminalEventTypes, true),
         )) {
+            return null;
+        }
+
+        if ($this->payoutRecoveryEligibility->isSuperseded($attempt)) {
+            $this->deliveryAttempts->appendTerminalIfOpen(
+                $attempt,
+                'superseded',
+                safeErrorCode: 'campaign_payout_recovery_no_longer_claimable',
+                metadata: ['provider_contacted' => false],
+            );
+
             return null;
         }
 

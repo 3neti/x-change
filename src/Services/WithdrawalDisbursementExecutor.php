@@ -6,7 +6,6 @@ namespace LBHurtado\XChange\Services;
 
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
-use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
@@ -55,12 +54,20 @@ class WithdrawalDisbursementExecutor
 
         try {
             $response = $this->gateway->disburse($input);
-
-            if ($response->status === PayoutStatus::FAILED) {
-                throw new RuntimeException('Gateway returned failed status - disbursement failed');
-            }
-
             $status = $this->statusResolver->resolveFromGatewayResponse($response);
+            $rawResponse = method_exists($response, 'toArray') ? $response->toArray() : [
+                'status' => $response->status?->value ?? null,
+                'transaction_id' => $response->transaction_id ?? null,
+                'uuid' => $response->uuid ?? null,
+                'provider' => $response->provider ?? null,
+            ];
+            $responseMetadata = array_replace($intentAttributes['meta'], [
+                'provider_response' => [
+                    'received' => true,
+                    'status' => $status,
+                    'transaction_identifier_present' => filled($response->transaction_id),
+                ],
+            ]);
 
             // Update intent with provider response
             $this->reconciliations->record(array_merge($intentAttributes, [
@@ -69,20 +76,25 @@ class WithdrawalDisbursementExecutor
                 'transaction_uuid' => $response->uuid ?? null,
                 'status' => $status,
                 'internal_status' => 'recorded',
-                'completed_at' => $status === 'succeeded' ? now() : null,
-                'raw_response' => method_exists($response, 'toArray') ? $response->toArray() : [
-                    'status' => $response->status?->value ?? null,
-                    'transaction_id' => $response->transaction_id ?? null,
-                    'uuid' => $response->uuid ?? null,
-                    'provider' => $response->provider ?? null,
-                ],
+                'completed_at' => in_array($status, ['succeeded', 'failed'], true) ? now() : null,
+                'raw_response' => $rawResponse,
+                'needs_review' => $status === 'unknown',
+                'review_reason' => $status === 'unknown'
+                    ? 'Gateway returned an unknown status'
+                    : null,
+                'error_message' => $status === 'failed'
+                    ? 'Gateway returned failed status - disbursement failed'
+                    : null,
+                'meta' => $responseMetadata,
             ]));
 
             return new WithdrawalDisbursementExecutionData(
                 input: $input,
                 response: $response,
                 status: $status,
-                message: null,
+                message: $status === 'failed'
+                    ? 'Gateway returned failed status - disbursement failed'
+                    : null,
             );
         } catch (Throwable $e) {
             $status = $this->statusResolver->resolveFromGatewayException($e);

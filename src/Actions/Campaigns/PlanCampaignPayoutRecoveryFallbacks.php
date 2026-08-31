@@ -14,12 +14,16 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\DisbursementRejectionTrustService;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
 
 final readonly class PlanCampaignPayoutRecoveryFallbacks
 {
-    public function __construct(private QueueCampaignFeedbackDelivery $delivery) {}
+    public function __construct(
+        private QueueCampaignFeedbackDelivery $delivery,
+        private DisbursementRejectionTrustService $rejectionTrust,
+    ) {}
 
     /** @return array{planned: int, queued: int, skipped: int} */
     public function handle(
@@ -70,7 +74,6 @@ final readonly class PlanCampaignPayoutRecoveryFallbacks
                     ->where('status', 'failed')
                     ->where('internal_status', 'recovery_opened')
                     ->where('needs_review', false)
-                    ->whereNotNull('provider_transaction_id')
                     ->whereNotNull('completed_at')
                     ->latest('id')
                     ->firstOrFail();
@@ -79,7 +82,8 @@ final readonly class PlanCampaignPayoutRecoveryFallbacks
                     ->latest('id')
                     ->firstOrFail();
 
-                if ($claim->status !== 'payout_rejected'
+                if (! $this->rejectionTrust->isTrusted($rejection)
+                    || $claim->status !== 'payout_rejected'
                     || data_get($voucher->metadata, 'treasury.pay_code_reservation.status') !== 'recovery_pending'
                     || data_get($voucher->metadata, 'instructions.metadata.custom.campaign.claim_activation') !== 'provider_rejection'
                     || data_get($voucher->metadata, 'instructions.validation.otp.required') !== true) {

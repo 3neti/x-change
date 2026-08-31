@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
@@ -132,6 +134,31 @@ it('queues one same-pay-code claim notification only after trusted rejection evi
         ->and(CampaignDeliveryAttempt::query()->count())->toBe(1);
 });
 
+it('accepts a trusted immediate rejection without a provider transaction identifier', function (): void {
+    $fixture = campaignRejectedPayoutFixture();
+    $fixture['reconciliation']->forceFill([
+        'provider_transaction_id' => null,
+        'meta' => [
+            'provider_response' => [
+                'received' => true,
+                'status' => 'failed',
+                'transaction_identifier_present' => false,
+            ],
+        ],
+    ])->save();
+    $fixture['fulfillment']->forceFill(['provider_transfer_reference' => null])->save();
+
+    $result = app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
+        $fixture['authorization'],
+        $fixture['owner'],
+    );
+
+    expect($result)->toBe(['planned' => 1, 'queued' => 1, 'skipped' => 0])
+        ->and($fixture['fulfillment']->refresh()->status)->toBe('recovery_ready')
+        ->and(CampaignDeliveryAttempt::query()->count())->toBe(1);
+    Bus::assertDispatchedTimes(DispatchCampaignFeedbackJob::class, 1);
+});
+
 it('requires the canonical execution claim before recovery notification', function (): void {
     $fixture = campaignRejectedPayoutFixture();
     VoucherClaim::query()->where('voucher_id', $fixture['voucher']->getKey())->delete();
@@ -177,6 +204,42 @@ it('delivers only the canonical claim URL without exposing the recovery grant', 
 
         return true;
     });
+});
+
+it('supersedes a queued recovery sms when the pay code was claimed before dispatch', function (): void {
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
+    config()->set('x-feedback.transports.sms.sender', 'cashless');
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    $fixture = campaignRejectedPayoutFixture();
+    app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
+        $fixture['authorization'],
+        $fixture['owner'],
+    );
+    $queued = null;
+    Bus::assertDispatched(DispatchCampaignFeedbackJob::class, function (
+        DispatchCampaignFeedbackJob $job,
+    ) use (&$queued): bool {
+        $queued = $job;
+
+        return true;
+    });
+    VoucherClaim::query()
+        ->where('voucher_id', $fixture['voucher']->getKey())
+        ->update(['status' => 'payout_retry_pending']);
+
+    expect($queued)->toBeInstanceOf(DispatchCampaignFeedbackJob::class);
+    app(DispatchCampaignFeedback::class)->handle($queued->attemptId, $queued->recipient);
+
+    Bus::assertNotDispatched(DeliverQueuedFeedbackSmsJob::class);
+    $lastEvent = CampaignDeliveryAttempt::query()
+        ->sole()
+        ->events()
+        ->reorder()
+        ->latest('sequence')
+        ->firstOrFail();
+    expect($lastEvent->event_type)->toBe('superseded')
+        ->and($lastEvent->safe_error_code)->toBe('campaign_payout_recovery_no_longer_claimable')
+        ->and(data_get($lastEvent->metadata, 'provider_contacted'))->toBeFalse();
 });
 
 it('refuses fallback while provider failure still needs operator review', function (): void {
@@ -296,4 +359,95 @@ it('does not alter the ordinary claim experience for unrelated Pay Codes', funct
     ]))->assertOk();
 
     expect($response->json('component'))->toBe('x-change/claim/Entry');
+});
+
+it('reports campaign payout recovery delivery attempts without exposing recipients', function (): void {
+    $fixture = campaignRejectedPayoutFixture();
+    app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
+        $fixture['authorization'],
+        $fixture['owner'],
+    );
+
+    $exitCode = Artisan::call('x-change:campaigns:payout-recovery-deliveries', [
+        '--authorization' => $fixture['authorization']->reference,
+        '--json' => true,
+    ]);
+
+    expect($exitCode)->toBe(0);
+    $payload = json_decode((string) Artisan::output(), true);
+    expect($payload['attempts'])->toHaveCount(1)
+        ->and($payload['attempts'][0]['authorization_reference'])->toBe($fixture['authorization']->reference)
+        ->and($payload['attempts'][0]['pay_code'])->toBe($fixture['voucher']->code)
+        ->and($payload['attempts'][0]['status'])->toBe('queued')
+        ->and(json_encode($payload, JSON_THROW_ON_ERROR))->not->toContain('09175180722');
+});
+
+it('refuses to process an exact recovery delivery job without explicit send confirmation', function (): void {
+    Bus::fake([
+        DeliverQueuedFeedbackSmsJob::class,
+    ]);
+    config()->set('queue.default', 'database');
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
+    config()->set('x-feedback.transports.sms.sender', 'cashless');
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    $fixture = campaignRejectedPayoutFixture();
+    app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
+        $fixture['authorization'],
+        $fixture['owner'],
+    );
+    $jobId = DB::table('jobs')->where('queue', 'x-change-feedback')->value('id');
+
+    $exitCode = Artisan::call('x-change:campaigns:payout-recovery-deliveries', [
+        '--authorization' => $fixture['authorization']->reference,
+        '--process-job' => (string) $jobId,
+        '--json' => true,
+    ]);
+
+    expect($exitCode)->toBe(1);
+    $payload = json_decode((string) Artisan::output(), true);
+    expect($payload['message'])->toBe('Processing a recovery delivery job requires --confirm-send.')
+        ->and(DB::table('jobs')->where('id', $jobId)->exists())->toBeTrue();
+});
+
+it('processes one exact campaign recovery delivery job and leaves unrelated feedback jobs queued', function (): void {
+    Bus::fake([
+        DeliverQueuedFeedbackSmsJob::class,
+    ]);
+    config()->set('queue.default', 'database');
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
+    config()->set('x-feedback.transports.sms.sender', 'cashless');
+    config()->set('x-change.redemption.feedback.queue', 'x-change-feedback');
+    $fixture = campaignRejectedPayoutFixture();
+    app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
+        $fixture['authorization'],
+        $fixture['owner'],
+    );
+    dispatch(new DispatchCampaignFeedbackJob(attemptId: 999_999, recipient: '+639170000000'))
+        ->onQueue('x-change-feedback');
+    $jobId = DB::table('jobs')->where('queue', 'x-change-feedback')->min('id');
+
+    $exitCode = Artisan::call('x-change:campaigns:payout-recovery-deliveries', [
+        '--authorization' => $fixture['authorization']->reference,
+        '--pay-code' => $fixture['voucher']->code,
+        '--process-job' => (string) $jobId,
+        '--confirm-send' => true,
+        '--json' => true,
+    ]);
+
+    $payload = json_decode((string) Artisan::output(), true);
+    expect($exitCode)->toBe(0, (string) Artisan::output());
+    expect($payload['processed_job']['id'])->toBe((int) $jobId)
+        ->and(DB::table('jobs')->where('id', $jobId)->exists())->toBeFalse()
+        ->and(DB::table('jobs')->where('queue', 'x-change-feedback')->count())->toBe(2);
+    $remainingJobs = DB::table('jobs')
+        ->where('queue', 'x-change-feedback')
+        ->orderBy('id')
+        ->get()
+        ->map(fn ($job): ?string => data_get(json_decode($job->payload, true), 'displayName'))
+        ->all();
+    expect($remainingJobs)->toContain(
+        DispatchCampaignFeedbackJob::class,
+        'LBHurtado\\XChange\\Jobs\\Campaigns\\ConvergeCampaignFeedbackDeliveryJob',
+    );
+    Bus::assertDispatched(DeliverQueuedFeedbackSmsJob::class);
 });

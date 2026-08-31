@@ -452,6 +452,87 @@ it('executes an approved direct-transfer batch once through Treasury-backed Pay 
     $provider->assertDisburseCalledTimes(1);
 });
 
+it('opens same-code recovery when the provider immediately rejects without a transaction identifier', function () {
+    config()->set('x-change.provider_runtime.lifecycle.allow_live_provider_scenarios', true);
+    config()->set('x-change.campaigns.payout_recovery.enabled', true);
+    $provider = fakePayoutProvider()
+        ->willReturnFailedResult(
+            provider: 'netbank',
+            metadata: [
+                'provider_submission_accepted' => false,
+                'failure_code' => 'invalid_destination',
+            ],
+        )
+        ->withoutFailedTransactionIdentifier();
+    $issuer = campaignBatchLifecycleIssuer();
+    $checker = campaignBatchLifecycleChecker();
+    fundCampaignBatchClientFunds($issuer, 10_000);
+    $input = campaignBatchCsv("name,mobile,bank,account number,amount\nPayroll Recipient,09170000011,BDO,00066159231,25.00\n");
+
+    $prepared = app(LifecycleScenarioEngine::class)->run(
+        campaignBatchLifecycleCommand(),
+        'campaign_payroll_direct_transfer',
+        new LifecycleScenarioRunOptions(
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
+            runReference: 'PAYROLL-DIRECT-IMMEDIATE-REJECTION-001',
+            input: $input,
+            liveProvider: true,
+            confirmLiveTransfer: true,
+            json: true,
+        ),
+    );
+    $result = app(LifecycleScenarioEngine::class)->run(
+        campaignBatchLifecycleCommand(),
+        'campaign_payroll_direct_transfer',
+        new LifecycleScenarioRunOptions(
+            maker: (string) $issuer->getKey(),
+            checker: (string) $checker->getKey(),
+            runReference: 'PAYROLL-DIRECT-IMMEDIATE-REJECTION-001',
+            phase: 'approve',
+            confirmCheckerApproval: true,
+            liveProvider: true,
+            confirmLiveTransfer: true,
+            json: true,
+        ),
+    );
+
+    expect($prepared->payload['phase'])->toBe('awaiting_checker')
+        ->and($result->payload)->toMatchArray([
+            'success' => true,
+            'phase' => 'recovery_waiting_feedback_gate',
+            'money_moved' => false,
+        ]);
+    $provider->assertDisburseCalledTimes(1);
+
+    $fulfillment = CampaignWorksheet::query()
+        ->sole()
+        ->authorizations()
+        ->sole()
+        ->fulfillments()
+        ->sole();
+    expect(data_get($fulfillment->metadata, 'execution_exception'))->toBeNull()
+        ->and(data_get($fulfillment->metadata, 'execution_failure'))->toBeNull();
+    $voucher = Voucher::query()->where('code', $fulfillment->pay_code)->sole();
+    $claim = VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole();
+    $reconciliation = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+
+    expect($result->exitCode)->toBe(Command::SUCCESS)
+        ->and($fulfillment->status)->toBe('recovery_required')
+        ->and($fulfillment->provider_transfer_reference)->toBeEmpty()
+        ->and($claim->status)->toBe('payout_rejected')
+        ->and($reconciliation->status)->toBe('failed')
+        ->and($reconciliation->internal_status)->toBe('recovery_opened')
+        ->and($reconciliation->provider_transaction_id)->toBeEmpty()
+        ->and($reconciliation->needs_review)->toBeFalse()
+        ->and(data_get($reconciliation->meta, 'provider_response.received'))->toBeTrue()
+        ->and(data_get($voucher->refresh()->metadata, 'treasury.pay_code_reservation.status'))
+        ->toBe('recovery_pending');
+    expect($provider->checkStatusCallCount)->toBe(0);
+});
+
 it('rejects maker self approval and any officer other than the designated checker', function () {
     $maker = campaignBatchLifecycleIssuer();
     $checker = campaignBatchLifecycleChecker();

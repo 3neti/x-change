@@ -7,8 +7,10 @@ namespace LBHurtado\XChange\Actions\Campaigns;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Actions\Disbursement\RefurbishRejectedPayCodePayout;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
@@ -18,6 +20,7 @@ final readonly class SubmitCampaignPayoutRecoveryClaim
     public function __construct(
         private RefurbishRejectedPayCodePayout $payouts,
         private ClaimEvidenceRequirements $evidence,
+        private CampaignLifecycleJournal $journal,
     ) {}
 
     /** @param array<string, mixed> $payload */
@@ -44,6 +47,24 @@ final readonly class SubmitCampaignPayoutRecoveryClaim
         $succeeded = $status === 'succeeded';
         $amount = (float) data_get($voucher->metadata, 'instructions.cash.amount', 0);
         $currency = (string) data_get($voucher->metadata, 'instructions.cash.currency', 'PHP');
+        $fulfillment = CampaignWorksheetFulfillment::query()
+            ->where('pay_code', (string) $voucher->code)
+            ->latest('id')
+            ->first();
+
+        if ($succeeded && $fulfillment instanceof CampaignWorksheetFulfillment) {
+            $this->journal->recordFulfillment(
+                'campaign.recovery_claim.completed',
+                $fulfillment,
+                $owner,
+                [
+                    'pay_code' => (string) $voucher->code,
+                    'claim_type' => 'payout_recovery',
+                    'provider_reference' => data_get($result, 'provider_reference'),
+                    'provider_transaction_id' => data_get($result, 'provider_transaction_id'),
+                ],
+            );
+        }
 
         return new SubmitPayCodeClaimResultData(
             voucher_code: (string) $voucher->code,

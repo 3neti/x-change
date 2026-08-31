@@ -79,7 +79,7 @@ final class DispatchCampaignFeedbackJob implements ShouldBeEncrypted, ShouldBeUn
 
         if (! $attempt instanceof CampaignDeliveryAttempt
             || $attempt->events->contains(
-                fn ($event): bool => in_array($event->event_type, ['completed', 'failed'], true),
+                fn ($event): bool => in_array($event->event_type, CampaignDeliveryAttempt::TerminalEventTypes, true),
             )) {
             return;
         }
