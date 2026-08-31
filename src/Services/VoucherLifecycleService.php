@@ -292,6 +292,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 $externalReference ?? data_get($instructions, 'rider.message'),
             ),
             'party' => $this->partySummary($voucher),
+            'claim_summary' => $this->claimSummary($voucher, $status->key),
             'timing' => [
                 'created_at' => $voucher->created_at?->toIso8601String(),
                 'starts_at' => $voucher->starts_at?->toIso8601String(),
@@ -459,6 +460,77 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         return '•••• '.substr($digits, -4);
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function claimSummary(Voucher $voucher, string $status): ?array
+    {
+        $claim = VoucherClaim::query()
+            ->withCount('evidence')
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('claim_number')
+            ->latest('id')
+            ->first();
+
+        $claimedAt = $claim?->completed_at
+            ?? $voucher->redeemed_at
+            ?? $claim?->attempted_at
+            ?? $claim?->created_at;
+
+        if (! $claim instanceof VoucherClaim && $claimedAt === null) {
+            return null;
+        }
+
+        $party = $this->partySummary($voucher);
+        $mobile = $this->maskedMobile($claim?->claimer_mobile);
+        $claimedBy = $party['state'] === 'claimed'
+            ? $party['primary']
+            : $mobile;
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-claim-summary.v1',
+            'status' => $this->claimSummaryStatus($voucher, $status, $claim),
+            'claimed_at' => $claimedAt?->toIso8601String(),
+            'claimed_by_label' => $claimedBy,
+            'claimed_mobile_masked' => $mobile ?? ($party['masked'] ? $party['secondary'] ?? $party['primary'] : null),
+            'amount_minor' => $claim?->disbursed_amount_minor ?? $claim?->requested_amount_minor,
+            'currency' => $claim?->currency ?? $this->currency($voucher),
+            'location_label' => $this->claimLocationSummary($voucher),
+            'evidence_count' => $claim instanceof VoucherClaim ? (int) $claim->evidence_count : 0,
+            'latest_claim_reference' => $claim?->reference,
+        ];
+    }
+
+    protected function claimSummaryStatus(Voucher $voucher, string $status, ?VoucherClaim $claim): string
+    {
+        if ($claim instanceof VoucherClaim && in_array($claim->status, ['paid', 'succeeded', 'withdrawn'], true)) {
+            return 'paid';
+        }
+
+        if ($claim instanceof VoucherClaim && $claim->status === 'failed') {
+            return 'failed';
+        }
+
+        if (in_array($status, ['paid', 'completed'], true)) {
+            return $status;
+        }
+
+        return $this->isFullyClaimed($voucher) ? 'claimed' : 'partially_claimed';
+    }
+
+    protected function claimLocationSummary(Voucher $voucher): ?string
+    {
+        $evidence = VoucherClaimEvidence::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->where('requirement_key', 'location')
+            ->latest('id')
+            ->first();
+
+        return $evidence instanceof VoucherClaimEvidence
+            ? $this->nullableDisplayValue($evidence->summary)
+            : null;
+    }
+
     protected function nullableDisplayValue(mixed $value): ?string
     {
         if (! is_scalar($value)) {
@@ -501,6 +573,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 'voucher_type_label' => $operational->voucher_type_label,
             ],
             'party' => $this->partySummary($voucher),
+            'claim_summary' => $this->claimSummary($voucher, $status->key),
             'amounts' => $this->amountFacts($voucher),
             'instructions' => $instructions,
             'claims' => $this->claimsArray($voucher),

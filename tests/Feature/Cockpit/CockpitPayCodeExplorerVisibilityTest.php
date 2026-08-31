@@ -8,6 +8,7 @@ use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Models\PosSaleReference;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTerminalControlReadModel;
 
 it('shows an account holder only their own Pay Codes', function () {
@@ -72,6 +73,35 @@ it('projects a claimed contact without exposing the full mobile number', functio
             'masked' => true,
         ])
         ->and(json_encode($record))->not->toContain('09171234567');
+});
+
+it('surfaces claimed facts on the cockpit pay code list without exposing raw contact data', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher();
+    $voucher->forceFill(['redeemed_at' => now()])->save();
+
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'claim',
+        'status' => 'paid',
+        'requested_amount_minor' => 3000,
+        'disbursed_amount_minor' => 3000,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'claimer_mobile' => '09173011987',
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index'))
+        ->assertOk()
+        ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.schema', 'x-change.cockpit.pay-code-claim-summary.v1')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.claimed_mobile_masked', '•••• 1987')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.amount_minor', 3000)
+        ->assertJsonMissing(['09173011987']);
 });
 
 it('projects a rejected payout as the primary outcome with destination attention', function () {

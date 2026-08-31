@@ -1760,6 +1760,7 @@ export type CockpitPayCodeExplorerRecord = {
     status: string;
     consumerStatus: string | null;
     collection: Record<string, unknown>;
+    claimSummary: CockpitPayCodeClaimSummaryReadModel;
     posReference?: CockpitPosSaleReferenceReadModel;
     voucherStatus: string | null;
     operationalStatus: {
@@ -1875,6 +1876,20 @@ export type CockpitReadModelRedactions = {
     [key: string]: unknown;
 };
 
+export type CockpitPayCodeClaimSummaryReadModel = {
+    schema?: string;
+    status?: string | null;
+    claimed_at?: string | null;
+    claimed_by_label?: string | null;
+    claimed_mobile_masked?: string | null;
+    amount_minor?: number | null;
+    currency?: string | null;
+    location_label?: string | null;
+    evidence_count?: number | null;
+    latest_claim_reference?: string | null;
+    [key: string]: unknown;
+};
+
 export type CockpitVoucherReadModel = {
     code?: string | null;
     status: string;
@@ -1885,6 +1900,7 @@ export type CockpitVoucherReadModel = {
     slices?: Record<string, unknown>;
     settlement?: Record<string, unknown>;
     treasury?: Record<string, unknown>;
+    claim_summary?: CockpitPayCodeClaimSummaryReadModel;
     collection?: CockpitVoucherCollectionReadModel;
     pos_reference?: CockpitPosSaleReferenceReadModel;
     evidence_summary?: CockpitVoucherEvidenceSummary[];
@@ -2017,6 +2033,7 @@ export type CockpitPayCodeExplorerReadModelRecord = {
     voucher_status?: string | null;
     consumer_status?: string | null;
     collection?: Record<string, unknown>;
+    claim_summary?: CockpitPayCodeClaimSummaryReadModel;
     pos_reference?: CockpitPosSaleReferenceReadModel;
     operational_status?: {
         key?: string | null;

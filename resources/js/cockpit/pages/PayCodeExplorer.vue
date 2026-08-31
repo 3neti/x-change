@@ -462,6 +462,7 @@ function sanitizeRecord(
         status: consumerStatus ?? operationalStatus.key,
         consumerStatus,
         collection: objectValue(record.collection),
+        claimSummary: sanitizeClaimSummary(record.claim_summary),
         posReference,
         voucherStatus: stringValue(record.voucher_status),
         operationalStatus,
@@ -484,6 +485,29 @@ function sanitizeRecord(
                       > => action !== null,
                   )
             : [],
+    };
+}
+
+function sanitizeClaimSummary(
+    summary: CockpitPayCodeExplorerReadModelRecord['claim_summary'],
+): CockpitPayCodeExplorerRecord['claimSummary'] {
+    const value = objectValue(summary);
+
+    return {
+        schema: stringValue(value.schema) ?? undefined,
+        status: stringValue(value.status),
+        claimed_at: stringValue(value.claimed_at),
+        claimed_by_label: stringValue(value.claimed_by_label),
+        claimed_mobile_masked: stringValue(value.claimed_mobile_masked),
+        amount_minor:
+            typeof value.amount_minor === 'number' ? value.amount_minor : null,
+        currency: stringValue(value.currency),
+        location_label: stringValue(value.location_label),
+        evidence_count:
+            typeof value.evidence_count === 'number'
+                ? value.evidence_count
+                : null,
+        latest_claim_reference: stringValue(value.latest_claim_reference),
     };
 }
 

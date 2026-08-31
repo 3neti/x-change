@@ -167,6 +167,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 slices: $detailProjection->slices($sliceProjection),
                 settlement: $detailProjection->settlement($detail),
                 treasury: $detailProjection->treasury($detail),
+                claim_summary: $detailProjection->claimSummary($detail),
                 collection: $detailProjection->collection($detail),
                 pos_reference: $detailProjection->posReference($detail),
                 evidence_summary: $this->voucherEvidenceSummary(
@@ -1581,6 +1582,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'expires_at' => $detail['expires_at'] ?? null,
             'redeemed_at' => $detail['redeemed_at'] ?? null,
             'redemption' => $detail['redemption'] ?? null,
+            'claim_summary' => $detail['claim_summary'] ?? null,
             'voucher_status' => $detail['voucher_status'] ?? null,
             'operational_status' => $detail['operational_status'] ?? null,
             'attention' => $detail['attention'] ?? null,
@@ -1638,6 +1640,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             attention: $this->payCodeAttention($row),
             actions: $this->payCodeRowActions($code, $this->canDistributePayCode($row, $status)),
             consumer_status: $this->nullableString($row['consumer_status'] ?? null),
+            claim_summary: is_array($row['claim_summary'] ?? null) ? $row['claim_summary'] : [],
             collection: is_array($row['collection'] ?? null) ? $row['collection'] : [],
             pos_reference: is_array($row['pos_reference'] ?? null) ? $row['pos_reference'] : [],
         );

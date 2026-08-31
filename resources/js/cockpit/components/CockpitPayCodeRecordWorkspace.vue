@@ -82,6 +82,9 @@ const engineeringError = ref<string | null>(null);
 const engineeringCopied = ref(false);
 
 const overview = computed(() => record(props.voucher?.overview));
+const claimSummary = computed(() =>
+  record(props.voucher?.claim_summary ?? overview.value.claim_summary),
+);
 const instructions = computed(() => record(props.voucher?.instructions));
 const claims = computed(() => record(props.voucher?.claims));
 const slices = computed(() => record(props.voucher?.slices));
@@ -105,6 +108,29 @@ const primaryAmount = computed(
     amounts.value.find((amount) => amount.primary === true) ??
     amounts.value[0] ??
     null,
+);
+const hasClaimSummary = computed(
+  () => text(claimSummary.value.claimed_at) !== "",
+);
+const lifecycleItems = computed(() =>
+  [
+    { label: "Issued", value: record(overview.value.timing).issued_at },
+    {
+      label: "Available From",
+      value: record(overview.value.timing).starts_at,
+    },
+    {
+      label: "Expires",
+      value: hasClaimSummary.value
+        ? null
+        : record(overview.value.timing).expires_at,
+    },
+    {
+      label: hasClaimSummary.value ? "Claimed" : "Voucher Closed",
+      value:
+        record(overview.value.timing).redeemed_at ?? claimSummary.value.claimed_at,
+    },
+  ].filter((item) => text(item.value) !== ""),
 );
 const instructionGroups = computed(() => list(instructions.value.groups));
 const claimRecords = computed(() => list(claims.value.records));
@@ -999,6 +1025,51 @@ function number(value: unknown): number {
                 Overpaid by {{ formatMoney(collection.overpaid_amount_minor, collection.currency) }}
               </p>
             </div>
+            <article
+              v-if="hasClaimSummary"
+              class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30"
+              data-testid="pay-code-overview-claim-summary"
+            >
+              <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                <BadgeCheck class="h-4 w-4" />
+                <span class="text-xs font-semibold">Claimed</span>
+              </div>
+              <dl class="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">When</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ formatDate(claimSummary.claimed_at) }}
+                  </dd>
+                </div>
+                <div v-if="claimSummary.claimed_by_label || claimSummary.claimed_mobile_masked">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">By whom</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{
+                      text(claimSummary.claimed_by_label) ||
+                      text(claimSummary.claimed_mobile_masked)
+                    }}
+                  </dd>
+                </div>
+                <div v-if="claimSummary.amount_minor">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Amount</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ formatMoney(claimSummary.amount_minor, claimSummary.currency) }}
+                  </dd>
+                </div>
+                <div v-if="claimSummary.location_label">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Place</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ text(claimSummary.location_label) }}
+                  </dd>
+                </div>
+                <div v-if="claimSummary.evidence_count">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Evidence</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ number(claimSummary.evidence_count) }} item{{ number(claimSummary.evidence_count) === 1 ? "" : "s" }}
+                  </dd>
+                </div>
+              </dl>
+            </article>
           </div>
 
           <div class="grid gap-3 sm:grid-cols-2">
@@ -1144,18 +1215,7 @@ function number(value: unknown): number {
           </div>
           <ol class="mt-4 space-y-4">
             <li
-              v-for="item in [
-                { label: 'Issued', value: record(overview.timing).issued_at },
-                {
-                  label: 'Available From',
-                  value: record(overview.timing).starts_at,
-                },
-                { label: 'Expires', value: record(overview.timing).expires_at },
-                {
-                  label: 'Voucher Closed',
-                  value: record(overview.timing).redeemed_at,
-                },
-              ]"
+              v-for="item in lifecycleItems"
               :key="item.label"
               class="relative pl-6"
             >
@@ -1177,8 +1237,11 @@ function number(value: unknown): number {
           <p
             class="mt-4 text-[0.7rem] leading-5 text-slate-500 dark:text-slate-400"
           >
-            Voucher Closed marks the lifecycle transition. Payout completion is
-            recorded separately under Claim &amp; Evidence.
+            {{
+              hasClaimSummary
+                ? "Claimed marks the recipient-facing completion moment. Payout and evidence details remain available under Claim & Evidence."
+                : "Voucher Closed marks the lifecycle transition. Payout completion is recorded separately under Claim & Evidence."
+            }}
           </p>
         </aside>
         <div

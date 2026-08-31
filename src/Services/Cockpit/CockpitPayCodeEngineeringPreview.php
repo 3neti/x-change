@@ -33,6 +33,7 @@ final readonly class CockpitPayCodeEngineeringPreview
         'claimant_mobile',
         'destination_account',
         'email',
+        'location_label',
         'mobile',
         'password',
         'phone',
@@ -57,7 +58,7 @@ final readonly class CockpitPayCodeEngineeringPreview
             'pay_code' => [
                 'code' => $voucher['code'] ?? $code,
                 'status' => $voucher['status'] ?? null,
-                'overview' => $this->array($voucher['overview'] ?? null),
+                'overview' => $this->redact($this->array($voucher['overview'] ?? null)),
             ],
             'instructions' => $this->redact($this->array($voucher['instructions'] ?? null)),
             'claims' => $this->redact($this->array($voucher['claims'] ?? null)),
