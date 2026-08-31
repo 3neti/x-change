@@ -26,8 +26,10 @@ class VoucherXRayProjectionBuilder
     public function build(mixed $voucher, ?Voucher $sliceSource = null): array
     {
         $instructions = (array) data_get($voucher, 'instructions', []);
-        $status = $this->xrayStatus((string) data_get($voucher, 'status', 'unknown'), $voucher);
         $sliceVoucher = $voucher instanceof Voucher ? $voucher : $sliceSource;
+        $status = $sliceVoucher instanceof Voucher && $this->isCampaignPayoutRecovery($sliceVoucher)
+            ? 'claimable'
+            : $this->xrayStatus((string) data_get($voucher, 'status', 'unknown'), $voucher);
         $slicePlan = $sliceVoucher instanceof Voucher
             ? $this->slicePlans->forVoucher($sliceVoucher)
             : [];
@@ -93,6 +95,14 @@ class VoucherXRayProjectionBuilder
         }
 
         return 'claimable';
+    }
+
+    private function isCampaignPayoutRecovery(Voucher $voucher): bool
+    {
+        $metadata = $voucher->getAttribute('metadata');
+
+        return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
+            && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
     }
 
     protected function formatAmount(mixed $amount, string $currency): ?string

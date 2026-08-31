@@ -256,7 +256,9 @@ class ClaimStartController extends Controller
             }
         }
 
-        if ($voucher->redeemed_at !== null && $slicePlan === null) {
+        if ($voucher->redeemed_at !== null
+            && $slicePlan === null
+            && ! $this->isCampaignPayoutRecovery($voucher)) {
             return $this->redirectToCanonicalClaimSurface($code);
         }
 
@@ -497,6 +499,14 @@ class ClaimStartController extends Controller
     protected function voucherRequiresSecret(Voucher $voucher): bool
     {
         return filled(data_get($voucher->metadata ?? [], 'instructions.cash.validation.secret'));
+    }
+
+    private function isCampaignPayoutRecovery(Voucher $voucher): bool
+    {
+        $metadata = $voucher->getAttribute('metadata');
+
+        return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
+            && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
     }
 
     protected function claimSecretMatches(Voucher $voucher, mixed $secret): bool

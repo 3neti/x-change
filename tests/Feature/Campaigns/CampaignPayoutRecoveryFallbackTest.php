@@ -236,6 +236,12 @@ it('uses the ordinary claim entry and instruction-driven otp workflow for recove
     expect($components->pluck('type'))->toContain('xray_preview')
         ->and($requirements->pluck('key')->all())->toContain('mobile', 'otp', 'assigned_mobile');
 
+    $this->postJson('/api/x/v1/pay-codes/x-ray', [
+        'code' => $fixture['voucher']->code,
+        'channel' => 'claim',
+    ])->assertOk()
+        ->assertJsonPath('data.xray.status', 'claimable');
+
     $workflow = app(ClaimWorkflowResolverContract::class)->resolve($fixture['voucher']->refresh());
     expect($workflow->key)->toBe('campaign.payout-recovery.v1')
         ->and($workflow->required_claim_fields)->toBe(['mobile', 'otp'])
