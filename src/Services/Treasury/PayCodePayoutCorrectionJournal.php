@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Treasury;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Models\CampaignPayoutRecoveryGrant;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XJournal\Data\ExecutionActorData;
@@ -73,7 +74,9 @@ final readonly class PayCodePayoutCorrectionJournal
             metadata: [
                 'schema' => 'x-change.pay-code-payout-destination-revised-journal.v1',
                 'domain' => 'pay_code',
-                'source' => 'cockpit_payout_recovery',
+                'source' => $requestedBy instanceof CampaignPayoutRecoveryGrant
+                    ? 'campaign_beneficiary_recovery'
+                    : 'cockpit_payout_recovery',
                 'sensitive_destination_exposed' => false,
             ],
         ));

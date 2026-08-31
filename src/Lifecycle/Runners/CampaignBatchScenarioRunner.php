@@ -17,6 +17,7 @@ use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignPayCodeDeliveries;
 use LBHurtado\XChange\Actions\Campaigns\ExecuteCampaignWorksheetDirectTransfers;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetPayCodes;
+use LBHurtado\XChange\Actions\Campaigns\PlanCampaignPayoutRecoveryFallbacks;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
 use LBHurtado\XChange\Models\CampaignBatchFulfillmentOutbox;
 use LBHurtado\XChange\Services\Campaigns\CampaignBatchFulfillmentOutboxProcessor;
@@ -34,6 +35,7 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
         private IssueCampaignWorksheetPayCodes $payCodes,
         private DispatchCampaignPayCodeDeliveries $deliveries,
         private ExecuteCampaignWorksheetDirectTransfers $directTransfers,
+        private PlanCampaignPayoutRecoveryFallbacks $payoutRecoveries,
         private ApproveCampaignWorksheetAuthorization $approveAuthorization,
         private LifecycleScenarioBootstrapper $bootstrapper,
         private CampaignBatchFulfillmentOutboxProcessor $outboxProcessor,
@@ -85,7 +87,7 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
             }
 
             if ($phase !== 'status' && $authorization?->status === 'authorized') {
-                $this->resumeAuthorizedFulfillment($context, $authorization);
+                $this->resumeAuthorizedFulfillment($context, $authorization, $phase);
                 $worksheet->refresh()->load(['rows', 'authorizations.fulfillments']);
                 $authorization = $worksheet->authorizations->sortByDesc('id')->first();
             }
@@ -188,6 +190,11 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
                     'checker_type' => $checker->getMorphClass(),
                     'checker_id' => (string) $checker->getKey(),
                     'provider' => (string) data_get($context->scenario, 'provider', 'netbank'),
+                    'failure_disposition' => (string) data_get(
+                        $context->scenario,
+                        'campaign.failure_disposition',
+                        'operator_reconciliation',
+                    ),
                 ],
             ],
         ));
@@ -273,8 +280,8 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
     {
         $phase = data_get($context->scenario, '_runtime.phase', 'prepare');
         $phase = is_string($phase) && trim($phase) !== '' ? trim($phase) : 'prepare';
-        if (! in_array($phase, ['prepare', 'approve', 'status'], true)) {
-            throw new RuntimeException('Campaign batch lifecycle --phase must be prepare, approve, or status.');
+        if (! in_array($phase, ['prepare', 'approve', 'fallback', 'status'], true)) {
+            throw new RuntimeException('Campaign batch lifecycle --phase must be prepare, approve, fallback, or status.');
         }
 
         return $phase;
@@ -327,11 +334,15 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
         $fulfillments = $authorization?->fulfillments ?? collect();
         $completed = $fulfillments->where('status', 'completed')->count();
         $indeterminate = $fulfillments->where('status', 'provider_indeterminate')->count();
+        $recoveryRequired = $fulfillments->where('status', 'recovery_required')->count();
+        $recoveryReady = $fulfillments->where('status', 'recovery_ready')->count();
         $phase = match (true) {
             ! $authorized => 'awaiting_checker',
             $payCodeDistribution && ! $liveFeedback => 'authorized_waiting_feedback_gate',
             $payCodeDistribution => 'fulfillment_queued',
             $indeterminate > 0 => 'provider_indeterminate',
+            $recoveryRequired > 0 && ! $liveFeedback => 'recovery_waiting_feedback_gate',
+            $recoveryReady > 0 => 'recovery_queued',
             $completed === $worksheet->rows->count() => 'fulfilled',
             default => 'authorized_waiting_transfer_gate',
         };
@@ -348,7 +359,9 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
             'principal_minor' => $worksheet->rows->sum('amount_minor'),
             'currency' => (string) $worksheet->currency,
             'fulfillment_mode' => (string) $worksheet->fulfillment_mode,
-            'provider_calls' => $payCodeDistribution ? 0 : $completed + $indeterminate,
+            'provider_calls' => $payCodeDistribution
+                ? 0
+                : $completed + $indeterminate + $recoveryRequired + $recoveryReady,
             'money_moved' => $completed > 0,
             'next_action' => match ($phase) {
                 'awaiting_checker' => 'An independent checker must claim the approval Pay Code before fulfillment can begin.',
@@ -356,6 +369,8 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
                 'fulfillment_queued' => 'Beneficiary Pay Codes were issued and their SMS deliveries were queued.',
                 'fulfilled' => 'Every approved beneficiary transfer completed through the voucher execution engine.',
                 'provider_indeterminate' => 'At least one provider outcome is indeterminate. Reconcile it before any retry.',
+                'recovery_waiting_feedback_gate' => 'A trusted provider rejection is ready for --phase=fallback with --live-feedback.',
+                'recovery_queued' => 'The rejected payout remains protected and its same Pay Code claim notification was queued by SMS.',
                 default => 'The approved direct-transfer batch is waiting for its accounting-safe execution gate.',
             },
         ];
@@ -374,8 +389,24 @@ final readonly class CampaignBatchScenarioRunner implements ScenarioRunnerContra
     private function resumeAuthorizedFulfillment(
         ScenarioRunContext $context,
         CampaignWorksheetAuthorization $authorization,
+        string $phase,
     ): void {
         if ($authorization->worksheet?->fulfillment_mode !== 'pay_code_distribution') {
+            if ($phase === 'fallback') {
+                if (data_get($context->scenario, 'campaign.failure_disposition')
+                    !== 'same_pay_code_sms_recovery') {
+                    throw new RuntimeException('This campaign scenario does not allow automated payout recovery.');
+                }
+
+                if (data_get($context->scenario, '_runtime.live_feedback') !== true) {
+                    return;
+                }
+
+                $this->payoutRecoveries->handle($authorization, $context->issuer, 500);
+
+                return;
+            }
+
             $this->payCodes->handle((string) $authorization->reference, $context->issuer, 500);
             $authorization->refresh()->load('fulfillments.row');
             $this->directTransfers->handle($authorization, $context->issuer, 500);

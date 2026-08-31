@@ -9,6 +9,7 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Models\CampaignPayoutRecoveryGrant;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Data\FeedbackChannelData;
@@ -126,6 +127,11 @@ final readonly class DispatchCampaignFeedback
                 $attempt,
                 $recipient,
             ),
+            'beneficiary_payout_recovery' => $this->beneficiaryPayoutRecoveryIntent(
+                $authorization,
+                $attempt,
+                $recipient,
+            ),
             default => throw new RuntimeException('Campaign feedback purpose is unsupported.'),
         };
     }
@@ -207,6 +213,64 @@ final readonly class DispatchCampaignFeedback
             subjectType: 'campaign_worksheet_fulfillment',
             subjectId: (string) $fulfillment->reference,
             meta: ['explicit_operator_action' => true],
+        );
+    }
+
+    private function beneficiaryPayoutRecoveryIntent(
+        CampaignWorksheetAuthorization $authorization,
+        CampaignDeliveryAttempt $attempt,
+        string $recipient,
+    ): FeedbackIntentData {
+        $fulfillment = $attempt->fulfillment;
+        $hasRecoveryGrant = $fulfillment instanceof CampaignWorksheetFulfillment
+            ? CampaignPayoutRecoveryGrant::query()
+                ->where('campaign_worksheet_fulfillment_id', $fulfillment->getKey())
+                ->whereIn('status', ['available', 'otp_pending', 'verified', 'submitting'])
+                ->exists()
+            : false;
+
+        if (! $fulfillment instanceof CampaignWorksheetFulfillment
+            || $fulfillment->pay_code === null
+            || ! $hasRecoveryGrant) {
+            throw new RuntimeException('Campaign payout recovery delivery is incomplete.');
+        }
+
+        $beneficiary = (array) ($fulfillment->row?->beneficiary_ciphertext ?? []);
+        $claimUrl = route('x-change.claim.show', ['code' => $fulfillment->pay_code]);
+
+        return FeedbackIntentData::forEvent(
+            key: 'campaign.payout_recovery.delivery',
+            eventType: 'campaign.payout_recovery.delivery.requested',
+            message: new FeedbackMessageData(
+                title: 'Claim your protected Pay Code',
+                body: sprintf(
+                    'The bank could not complete your payout. Your value remains protected. Claim Pay Code %s at %s',
+                    $fulfillment->pay_code,
+                    $claimUrl,
+                ),
+                summary: sprintf('Recover Pay Code %s', $fulfillment->pay_code),
+                actions: [['label' => 'Claim Pay Code', 'href' => $claimUrl, 'type' => 'link']],
+                meta: ['provider_delivery' => true, 'payout_recovery' => true],
+            ),
+            recipients: [
+                $this->recipient(
+                    $attempt,
+                    $recipient,
+                    'campaign_beneficiary',
+                    $this->stringValue($beneficiary['name'] ?? null),
+                ),
+            ],
+            channels: [new FeedbackChannelData(key: $attempt->channel)],
+            source: 'x-change.campaigns',
+            correlationId: (string) $authorization->reference,
+            causationId: (string) $attempt->reference,
+            subjectType: 'campaign_worksheet_fulfillment',
+            subjectId: (string) $fulfillment->reference,
+            meta: [
+                'explicit_operator_action' => true,
+                'payout_recovery' => true,
+                'delivery_contract' => 'campaign.payout-recovery.claim.v2',
+            ],
         );
     }
 

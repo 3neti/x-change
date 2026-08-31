@@ -42,7 +42,7 @@ class RunLifecycleScenarioCommand extends Command
         {--confirm-live-transfer : Confirm that this run may initiate an irreversible provider transfer}
         {--run-reference= : Stable operator reference used to prevent duplicate live-transfer runs}
         {--input= : CSV or XLSX input file for batch lifecycle scenarios}
-        {--phase= : Batch lifecycle phase: prepare, approve, or status}
+        {--phase= : Batch lifecycle phase: prepare, approve, fallback, or status}
         {--confirm-checker-approval : Confirm that the designated checker authorizes this frozen batch}
         {--only-attempt= : Run only one named attempt from the scenario}
         {--json : Output JSON}';

@@ -2083,6 +2083,7 @@ return [
                 'purpose' => 'Payroll',
                 'fulfillment_mode' => 'direct_bank_transfer',
                 'delivery_preference' => 'manual',
+                'failure_disposition' => 'same_pay_code_sms_recovery',
                 'default_wallet' => 'GCash',
                 'expiry_days' => 7,
             ],
