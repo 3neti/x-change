@@ -54,6 +54,16 @@ final class DefaultClaimSurfaceResolver implements ClaimSurfaceResolverContract
         $code = (string) $voucher->code;
         $viewer = $this->viewers->resolve($user, $voucher);
         $voucherSummary = (array) $this->vouchers->showByCode($code);
+        if ($this->isCampaignPayoutRecovery($voucher)) {
+            data_set($voucherSummary, 'status', 'active');
+            data_set($voucherSummary, 'claimed', false);
+            data_set($voucherSummary, 'fully_claimed', false);
+            data_set($voucherSummary, 'operational_status.key', 'active');
+            data_set($voucherSummary, 'operational_status.label', 'Ready to claim');
+            data_set($voucherSummary, 'operational_status.can_claim', true);
+            data_set($voucherSummary, 'operational_status.is_terminal', false);
+            data_set($voucherSummary, 'operational_status.availability_label', 'Claimable');
+        }
         $state = $this->state($voucherSummary);
         $claims = VoucherClaim::query()
             ->where('voucher_id', $voucher->getKey())
@@ -94,5 +104,13 @@ final class DefaultClaimSurfaceResolver implements ClaimSurfaceResolverContract
             can_claim: (bool) ($operational['can_claim'] ?? false),
             terminal: (bool) ($operational['is_terminal'] ?? false),
         );
+    }
+
+    private function isCampaignPayoutRecovery(Voucher $voucher): bool
+    {
+        $metadata = $voucher->getAttribute('metadata');
+
+        return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
+            && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
     }
 }

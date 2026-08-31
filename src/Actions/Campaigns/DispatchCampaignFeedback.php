@@ -9,7 +9,6 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
-use LBHurtado\XChange\Models\CampaignPayoutRecoveryGrant;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Data\FeedbackChannelData;
@@ -222,16 +221,9 @@ final readonly class DispatchCampaignFeedback
         string $recipient,
     ): FeedbackIntentData {
         $fulfillment = $attempt->fulfillment;
-        $hasRecoveryGrant = $fulfillment instanceof CampaignWorksheetFulfillment
-            ? CampaignPayoutRecoveryGrant::query()
-                ->where('campaign_worksheet_fulfillment_id', $fulfillment->getKey())
-                ->whereIn('status', ['available', 'otp_pending', 'verified', 'submitting'])
-                ->exists()
-            : false;
-
         if (! $fulfillment instanceof CampaignWorksheetFulfillment
             || $fulfillment->pay_code === null
-            || ! $hasRecoveryGrant) {
+            || data_get($fulfillment->metadata, 'fallback.mode') !== 'canonical_claim') {
             throw new RuntimeException('Campaign payout recovery delivery is incomplete.');
         }
 

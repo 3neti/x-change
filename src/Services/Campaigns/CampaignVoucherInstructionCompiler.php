@@ -43,6 +43,8 @@ final readonly class CampaignVoucherInstructionCompiler
             ? $row->beneficiary_ciphertext
             : [];
         $feedbackChannels = data_get($blueprint, 'feedback.channels', []);
+        $usesRejectedPayoutClaimRecovery = $fulfillment->mode === 'direct_bank_transfer'
+            && data_get($worksheet->metadata, 'lifecycle.failure_disposition') === 'same_pay_code_sms_recovery';
 
         $onboarding = array_key_exists('onboarding', $blueprint)
             ? $blueprint['onboarding'] === true
@@ -61,7 +63,9 @@ final readonly class CampaignVoucherInstructionCompiler
                 ]),
             ],
             'inputs' => [
-                'fields' => data_get($blueprint, 'inputs.fields', []),
+                'fields' => $usesRejectedPayoutClaimRecovery
+                    ? ['mobile', 'otp']
+                    : data_get($blueprint, 'inputs.fields', []),
             ],
             'feedback' => [
                 'email' => in_array('email', $feedbackChannels, true)
@@ -80,7 +84,12 @@ final readonly class CampaignVoucherInstructionCompiler
             'prefix' => 'CAMP',
             'mask' => '****',
             'voucher_type' => VoucherType::REDEEMABLE->value,
-            'validation' => data_get($blueprint, 'validation', []),
+            'validation' => array_replace_recursive(
+                data_get($blueprint, 'validation', []),
+                $usesRejectedPayoutClaimRecovery
+                    ? ['otp' => ['required' => true, 'on_failure' => 'block']]
+                    : [],
+            ),
             'claim' => [
                 'outcomes' => [['key' => 'provider_disbursement']],
                 'selection' => 'server',
@@ -118,6 +127,9 @@ final readonly class CampaignVoucherInstructionCompiler
                         'fulfillment_reference' => $fulfillment->reference,
                         'manifest_hash' => $authorization->manifest_hash,
                         'instruction_blueprint_hash' => $authorization->instruction_blueprint_hash,
+                        'claim_activation' => $usesRejectedPayoutClaimRecovery
+                            ? 'provider_rejection'
+                            : 'immediate',
                     ],
                 ],
             ],

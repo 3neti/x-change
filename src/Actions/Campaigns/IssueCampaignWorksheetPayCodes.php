@@ -65,11 +65,19 @@ final readonly class IssueCampaignWorksheetPayCodes
                 $connection = $this->connection(
                     (string) $locked->row->currency,
                 );
+                $compiledInstructions = $this->instructionCompiler->compile($authorization, $locked, $owner);
                 $voucher = $this->payCodes->handle(
                     $owner,
-                    $this->instructionCompiler->compile($authorization, $locked, $owner),
+                    $compiledInstructions,
                     now()->addDays($this->ttlDays($authorization)),
                 );
+                $metadata = (array) $voucher->metadata;
+                data_set(
+                    $metadata,
+                    'instructions.metadata.custom',
+                    (array) data_get($compiledInstructions, 'metadata.custom', []),
+                );
+                $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
                 $this->reservePrincipal(
                     owner: $owner,
                     voucher: $voucher,

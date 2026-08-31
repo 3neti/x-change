@@ -22,6 +22,7 @@ final readonly class ExecuteCampaignWorksheetDirectTransfers
     public function __construct(
         private ExecutionEngine $engine,
         private ExecutionResultHandoffPipelineContract $handoffs,
+        private RecordCampaignDirectTransferClaim $claims,
     ) {}
 
     /** @return array{completed: int, indeterminate: int, skipped: int} */
@@ -86,8 +87,11 @@ final readonly class ExecuteCampaignWorksheetDirectTransfers
                 continue;
             }
 
-            $result = $this->execute($authorization, $locked);
+            $voucher = Voucher::query()->where('code', $locked->pay_code)->firstOrFail();
+            $claim = $this->claims->start($voucher, $locked);
+            $result = $this->execute($authorization, $locked, $voucher);
             $this->handoffs->process($result['result'], $result['context']);
+            $this->claims->finish($claim, $result['result']);
 
             DB::transaction(function () use ($locked, $result, &$summary): void {
                 $current = CampaignWorksheetFulfillment::query()->lockForUpdate()->findOrFail($locked->getKey());
@@ -119,11 +123,11 @@ final readonly class ExecuteCampaignWorksheetDirectTransfers
     private function execute(
         CampaignWorksheetAuthorization $authorization,
         CampaignWorksheetFulfillment $fulfillment,
+        Voucher $voucher,
     ): array {
         $row = $fulfillment->row;
         $beneficiary = (array) ($row?->beneficiary_ciphertext ?? []);
         $mobile = $this->requiredString($beneficiary, 'mobile');
-        $voucher = Voucher::query()->where('code', $fulfillment->pay_code)->firstOrFail();
         $context = ExecutionContextData::fromRedemption(
             voucher: $voucher,
             contact: Contact::fromPhoneNumber(new PhoneNumber($mobile, 'PH')),

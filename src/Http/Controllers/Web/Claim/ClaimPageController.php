@@ -18,13 +18,10 @@ use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimSurfaceData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
-use LBHurtado\XChange\Http\Responses\CampaignPayoutRecoveryResponseFactory;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
-use LBHurtado\XChange\Services\Campaigns\CampaignPayoutRecoveryService;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
-use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class ClaimPageController extends Controller
 {
@@ -41,9 +38,7 @@ class ClaimPageController extends Controller
         ClaimEntryResponseFactory $responses,
         ClaimSurfaceResolverContract $claimSurfaces,
         PaymentReceiptReadModel $receipts,
-        CampaignPayoutRecoveryService $payoutRecoveries,
-        CampaignPayoutRecoveryResponseFactory $payoutRecoveryResponses,
-    ): Response|RedirectResponse|HttpResponse {
+    ): Response|RedirectResponse {
         $code = strtoupper(trim($code));
         $voucher = Voucher::query()->where('code', $code)->first();
 
@@ -52,11 +47,6 @@ class ClaimPageController extends Controller
                 message: 'Invalid Pay Code.',
                 code: $code,
             );
-        }
-
-        $payoutRecovery = $payoutRecoveries->findForVoucher($voucher);
-        if ($payoutRecovery !== null) {
-            return $payoutRecoveryResponses->render($request, $payoutRecovery);
         }
 
         $flowCapabilities = $capabilities->resolve($voucher);

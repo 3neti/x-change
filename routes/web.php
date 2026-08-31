@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\Web\BalancePageController;
-use LBHurtado\XChange\Http\Controllers\Web\Claim\CampaignPayoutRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimAuthorizationRequiredController;
@@ -686,21 +685,6 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(func
     Route::get('claim/{code}', ClaimPageController::class)
         ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.show');
-    Route::post(
-        'claim/{code}/payout-recovery/challenge',
-        [CampaignPayoutRecoveryController::class, 'start'],
-    )->middleware('throttle:3,1')
-        ->name('x-change.claim.payout-recovery.challenge');
-    Route::post(
-        'claim/{code}/payout-recovery/verification',
-        [CampaignPayoutRecoveryController::class, 'verify'],
-    )->middleware('throttle:6,1')
-        ->name('x-change.claim.payout-recovery.verification');
-    Route::post(
-        'claim/{code}/payout-recovery/destination',
-        [CampaignPayoutRecoveryController::class, 'submit'],
-    )->middleware('throttle:3,1')
-        ->name('x-change.claim.payout-recovery.destination');
     Route::get('claim/{code}/authorization-required', ClaimAuthorizationRequiredController::class)
         ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.authorization-required');

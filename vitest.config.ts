@@ -127,11 +127,6 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/pay-code-template-update-route.ts",
         ),
-      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Claim/CampaignPayoutRecoveryController":
-        path.resolve(
-          import.meta.dirname,
-          "tests/frontend/stubs/campaign-payout-recovery-route.ts",
-        ),
       "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitRiderLibraryStoreController":
         path.resolve(
           import.meta.dirname,

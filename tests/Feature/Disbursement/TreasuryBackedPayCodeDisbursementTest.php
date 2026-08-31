@@ -14,7 +14,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
-use LBHurtado\XCampaign\Models\CampaignWorksheet;
+use LBHurtado\XChange\Actions\Campaigns\SubmitCampaignPayoutRecoveryClaim;
 use LBHurtado\XChange\Actions\Disbursement\RefurbishRejectedPayCodePayout;
 use LBHurtado\XChange\Actions\Disbursement\RestoreUnsubmittedPayoutCorrection;
 use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
@@ -24,7 +24,6 @@ use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
-use LBHurtado\XChange\Models\CampaignPayoutRecoveryGrant;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -471,7 +470,7 @@ it('refurbishes the same pay code with an immutable corrected destination and se
     $provider->assertDisburseCalledTimes(2);
 });
 
-it('lets one verified campaign recovery grant correct the same rejected pay code', function (): void {
+it('lets the canonical otp claim flow correct the same rejected campaign pay code', function (): void {
     Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
     ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();
     $provider = fakePayoutProvider()->willReturnPendingResult(
@@ -496,71 +495,35 @@ it('lets one verified campaign recovery grant correct the same rejected pay code
         'completed_at' => now(),
     ])->save();
     DisbursementRejected::dispatch($rejection->fresh());
-
-    $worksheet = CampaignWorksheet::query()->create([
-        'owner_type' => $issuer->getMorphClass(),
-        'owner_id' => (string) $issuer->getKey(),
-        'profile' => 'payroll',
-        'name' => 'Same Pay Code recovery',
-        'currency' => 'PHP',
-        'status' => 'frozen',
-        'fulfillment_mode' => 'direct_bank_transfer',
-        'frozen_at' => now(),
-    ]);
-    $row = $worksheet->rows()->create([
-        'ordinal' => 1,
-        'beneficiary_ciphertext' => [
-            'name' => 'Sample beneficiary',
-            'mobile' => '09175180722',
-        ],
-        'amount_minor' => 2_000,
-        'currency' => 'PHP',
-        'status' => 'authorized',
-    ]);
-    $authorization = $worksheet->authorizations()->create([
-        'manifest_hash' => hash('sha256', 'same-pay-code-recovery'),
-        'beneficiary_count' => 1,
-        'principal_minor' => 2_000,
-        'currency' => 'PHP',
-        'status' => 'authorized',
-    ]);
-    $fulfillment = $authorization->fulfillments()->create([
-        'campaign_worksheet_row_id' => $row->getKey(),
-        'mode' => 'direct_bank_transfer',
-        'status' => 'recovery_ready',
-        'pay_code' => $voucher->code,
-        'provider_transfer_reference' => 'campaign-recovery-transfer-1',
-    ]);
-    $grant = CampaignPayoutRecoveryGrant::query()->create([
-        'voucher_id' => $voucher->getKey(),
-        'campaign_worksheet_fulfillment_id' => $fulfillment->getKey(),
-        'rejected_reconciliation_id' => $rejection->getKey(),
-        'mobile_hash' => hash('sha256', 'masked-for-action-test'),
-        'provider' => 'fake',
-        'purpose' => 'campaign.payout-recovery',
-        'status' => 'submitting',
-        'attempts' => 0,
-        'expires_at' => now()->addHour(),
-        'verified_at' => now(),
-        'submitting_at' => now(),
-    ]);
+    $metadata = (array) $voucher->refresh()->metadata;
+    data_set($metadata, 'instructions.cash.validation.mobile', '09175180722');
+    data_set($metadata, 'instructions.validation.otp', ['required' => true, 'on_failure' => 'block']);
+    data_set($metadata, 'instructions.inputs.fields', ['mobile', 'otp']);
+    data_set($metadata, 'instructions.metadata.custom.claim_evidence.requirements', ['mobile', 'otp']);
+    data_set($metadata, 'instructions.metadata.custom.campaign.claim_activation', 'provider_rejection');
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
     $provider->willReturnSuccessfulResult(
         transactionId: 'NETBANK-CAMPAIGN-RECOVERY-SUCCEEDED-1',
         provider: 'netbank',
     );
 
-    $result = app(RefurbishRejectedPayCodePayout::class)->handle(
-        voucher: $voucher,
-        requestedBy: $grant,
-        bankCode: 'GXCHPHM2XXX',
-        accountNumber: '09175180722',
-        mobile: '639175180722',
-        recoveryGrant: $grant,
-    );
+    $result = app(SubmitCampaignPayoutRecoveryClaim::class)->handle($voucher, [
+        'mobile' => '09175180722',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number' => '09175180722',
+        'inputs' => [
+            'mobile' => '09175180722',
+            'otp_verified' => true,
+            'otp' => [
+                'verified' => true,
+                'mobile' => '09175180722',
+            ],
+        ],
+    ]);
 
-    expect($result['success'])->toBeTrue()
-        ->and($result['pay_code'])->toBe($voucher->code)
-        ->and($result['status'])->toBe('succeeded')
+    expect($result->claimed)->toBeTrue()
+        ->and($result->voucher_code)->toBe($voucher->code)
+        ->and($result->status)->toBe('succeeded')
         ->and(DisbursementReconciliation::query()
             ->where('voucher_id', $voucher->getKey())->count())->toBe(2)
         ->and(data_get($voucher->refresh()->metadata, 'treasury.pay_code_reservation.status'))
@@ -569,18 +532,7 @@ it('lets one verified campaign recovery grant correct the same rejected pay code
             ->where('event_type', 'pay_code.payout_destination.revised')
             ->where('subject_id', (string) $voucher->getKey())
             ->sole()->metadata['source'])
-        ->toBe('campaign_beneficiary_recovery');
-    $provider->assertDisburseCalledTimes(2);
-
-    $grant->forceFill(['status' => 'consumed'])->save();
-
-    expect(fn () => app(RefurbishRejectedPayCodePayout::class)->handle(
-        voucher: $voucher,
-        requestedBy: $grant,
-        bankCode: 'GXCHPHM2XXX',
-        accountNumber: '09175180722',
-        recoveryGrant: $grant,
-    ))->toThrow(RuntimeException::class);
+        ->toBe('cockpit_payout_recovery');
     $provider->assertDisburseCalledTimes(2);
 });
 

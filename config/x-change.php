@@ -669,20 +669,6 @@ return [
         ],
         'payout_recovery' => [
             'enabled' => (bool) env('XCHANGE_CAMPAIGNS_PAYOUT_RECOVERY_ENABLED', false),
-            'ttl_minutes' => (int) env('XCHANGE_CAMPAIGNS_PAYOUT_RECOVERY_TTL_MINUTES', 1440),
-            'max_attempts' => (int) env('XCHANGE_CAMPAIGNS_PAYOUT_RECOVERY_MAX_ATTEMPTS', 5),
-            'otp_purpose' => env(
-                'XCHANGE_CAMPAIGNS_PAYOUT_RECOVERY_OTP_PURPOSE',
-                'campaign.payout-recovery',
-            ),
-            'proof_ttl_minutes' => (int) env(
-                'XCHANGE_CAMPAIGNS_PAYOUT_RECOVERY_PROOF_TTL_MINUTES',
-                15,
-            ),
-            'clock_skew_seconds' => (int) env(
-                'XCHANGE_CAMPAIGNS_PAYOUT_RECOVERY_CLOCK_SKEW_SECONDS',
-                30,
-            ),
         ],
     ],
 

@@ -19,7 +19,6 @@ use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
-use LBHurtado\XChange\Models\CampaignPayoutRecoveryGrant;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -47,7 +46,6 @@ final readonly class RefurbishRejectedPayCodePayout
         string $bankCode,
         string $accountNumber,
         ?string $mobile = null,
-        ?CampaignPayoutRecoveryGrant $recoveryGrant = null,
     ): array {
         $lock = Cache::lock(
             'x-change:payout-refurbishment:'.$voucher->getKey(),
@@ -60,12 +58,8 @@ final readonly class RefurbishRejectedPayCodePayout
 
         try {
             $voucher = $voucher->fresh();
-            $this->assertAuthorized($voucher, $requestedBy, $recoveryGrant);
+            $this->assertAuthorized($voucher, $requestedBy);
             [$claim, $rejection] = $this->recoveryContext($voucher);
-            if ($recoveryGrant instanceof CampaignPayoutRecoveryGrant
-                && (int) $recoveryGrant->rejected_reconciliation_id !== (int) $rejection->getKey()) {
-                throw new RuntimeException('The payout recovery grant does not match the rejected transfer.');
-            }
             $rail = (string) $rejection->settlement_rail;
             $settlementRail = SettlementRail::tryFrom(strtoupper($rail));
             $institution = $settlementRail !== null
@@ -282,21 +276,10 @@ final readonly class RefurbishRejectedPayCodePayout
             ->max('version')) + 1;
     }
 
-    private function assertAuthorized(
-        Voucher $voucher,
-        Model $requestedBy,
-        ?CampaignPayoutRecoveryGrant $recoveryGrant,
-    ): void {
-        $ownerAuthorized = $voucher->owner_type === $requestedBy->getMorphClass()
-            && (string) $voucher->owner_id === (string) $requestedBy->getKey();
-        $grantAuthorized = $recoveryGrant instanceof CampaignPayoutRecoveryGrant
-            && $requestedBy->is($recoveryGrant)
-            && (int) $recoveryGrant->voucher_id === (int) $voucher->getKey()
-            && $recoveryGrant->status === 'submitting'
-            && $recoveryGrant->verified_at !== null
-            && $recoveryGrant->expires_at?->isFuture();
-
-        if (! $ownerAuthorized && ! $grantAuthorized) {
+    private function assertAuthorized(Voucher $voucher, Model $requestedBy): void
+    {
+        if ($voucher->owner_type !== $requestedBy->getMorphClass()
+            || (string) $voucher->owner_id !== (string) $requestedBy->getKey()) {
             throw new RuntimeException('Only the Pay Code owner may correct this payout destination.');
         }
 

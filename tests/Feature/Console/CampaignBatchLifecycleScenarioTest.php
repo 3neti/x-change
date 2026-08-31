@@ -20,6 +20,7 @@ use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioEngine;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 use LBHurtado\XChange\Models\CampaignBatchFulfillmentOutbox;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 function campaignBatchLifecycleCommand(): Command
@@ -419,11 +420,18 @@ it('executes an approved direct-transfer batch once through Treasury-backed Pay 
         ->sole();
 
     expect(data_get($voucher->instructions?->toArray(), 'execution.driver'))->toBe('x_change_live_cash')
+        ->and(collect(data_get($voucher->instructions?->toArray(), 'inputs.fields'))
+            ->map(fn ($field): string => $field->value)->all())->toBe(['mobile', 'otp'])
+        ->and(data_get($voucher->instructions?->toArray(), 'validation.otp.required'))->toBeTrue()
+        ->and(data_get($voucher->metadata, 'instructions.metadata.custom.campaign.claim_activation'))->toBe('provider_rejection')
         ->and(data_get($voucher->metadata, 'treasury.pay_code_reservation.status'))->toBe('settled')
         ->and($voucher->isRedeemed())->toBeTrue()
         ->and($reconciliation->provider_transaction_id)->toBe('TXN-CAMPAIGN-DIRECT-001')
         ->and($reconciliation->account_number_masked)->toBe('*******0011')
-        ->and(CampaignBatchFulfillmentOutbox::query()->sole()->status)->toBe('completed');
+        ->and(CampaignBatchFulfillmentOutbox::query()->sole()->status)->toBe('completed')
+        ->and(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole()->status)->toBe('succeeded')
+        ->and(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole()->disbursed_amount_minor)->toBe(2500)
+        ->and(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole()->remaining_balance_minor)->toBe(0);
     $provider->assertDisburseCalledTimes(1);
 
     $replay = app(LifecycleScenarioEngine::class)->run(

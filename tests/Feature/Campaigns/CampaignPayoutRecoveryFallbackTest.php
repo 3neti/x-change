@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Bus;
-use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
 use LBHurtado\XChange\Actions\Campaigns\PlanCampaignPayoutRecoveryFallbacks;
+use LBHurtado\XChange\Actions\Campaigns\SubmitCampaignPayoutRecoveryClaim;
+use LBHurtado\XChange\Actions\Claim\ValidateCompiledClaimVoucher;
+use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
-use LBHurtado\XChange\Models\CampaignPayoutRecoveryGrant;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
-use LBHurtado\XChange\Tests\Fakes\FakeOtpChallengeGateway;
 
 beforeEach(function (): void {
     config()->set('x-change.campaigns.payout_recovery.enabled', true);
-    config()->set('x-change.onboarding.identity_otp.driver', 'fake');
     Bus::fake([
         DispatchCampaignFeedbackJob::class,
         DeliverQueuedFeedbackSmsJob::class,
@@ -31,7 +31,12 @@ function campaignRejectedPayoutFixture(): array
     $voucher = issueVoucher();
     $metadata = (array) $voucher->metadata;
     data_set($metadata, 'treasury.pay_code_reservation.status', 'recovery_pending');
-    $voucher->forceFill(['metadata' => $metadata])->save();
+    data_set($metadata, 'instructions.cash.validation.mobile', '09175180722');
+    data_set($metadata, 'instructions.validation.otp', ['required' => true, 'on_failure' => 'block']);
+    data_set($metadata, 'instructions.inputs.fields', ['mobile', 'otp']);
+    data_set($metadata, 'instructions.metadata.custom.claim_evidence.requirements', ['mobile', 'otp']);
+    data_set($metadata, 'instructions.metadata.custom.campaign.claim_activation', 'provider_rejection');
+    $voucher->forceFill(['metadata' => $metadata, 'redeemed_at' => now()])->save();
 
     $worksheet = CampaignWorksheet::query()->create([
         'owner_type' => $owner->getMorphClass(),
@@ -112,16 +117,10 @@ it('queues one same-pay-code claim notification only after trusted rejection evi
     );
 
     expect($result)->toBe(['planned' => 1, 'queued' => 1, 'skipped' => 0])
-        ->and(CampaignPayoutRecoveryGrant::query()->count())->toBe(1)
         ->and(CampaignDeliveryAttempt::query()->count())->toBe(1)
         ->and($fixture['fulfillment']->refresh()->status)->toBe('recovery_ready')
         ->and(data_get($fixture['fulfillment']->metadata, 'fallback.mode'))
-        ->toBe('same_pay_code_recipient_correction');
-
-    $grant = CampaignPayoutRecoveryGrant::query()->sole();
-    expect($grant->voucher_id)->toBe($fixture['voucher']->getKey())
-        ->and($grant->rejected_reconciliation_id)->toBe($fixture['reconciliation']->getKey())
-        ->and($grant->status)->toBe('available');
+        ->toBe('canonical_claim');
     Bus::assertDispatchedTimes(DispatchCampaignFeedbackJob::class, 1);
 
     $replay = app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
@@ -130,23 +129,20 @@ it('queues one same-pay-code claim notification only after trusted rejection evi
     );
 
     expect($replay)->toBe(['planned' => 0, 'queued' => 0, 'skipped' => 1])
-        ->and(CampaignPayoutRecoveryGrant::query()->count())->toBe(1)
         ->and(CampaignDeliveryAttempt::query()->count())->toBe(1);
 });
 
-it('accepts the execution-engine recovery state without an optional claim projection', function (): void {
+it('requires the canonical execution claim before recovery notification', function (): void {
     $fixture = campaignRejectedPayoutFixture();
     VoucherClaim::query()->where('voucher_id', $fixture['voucher']->getKey())->delete();
 
-    $result = app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
+    expect(fn () => app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
         $fixture['authorization'],
         $fixture['owner'],
-    );
+    ))->toThrow(ModelNotFoundException::class);
 
-    expect($result)->toBe(['planned' => 1, 'queued' => 1, 'skipped' => 0])
-        ->and($fixture['fulfillment']->refresh()->status)->toBe('recovery_ready')
-        ->and(CampaignPayoutRecoveryGrant::query()->sole()->voucher_id)
-        ->toBe($fixture['voucher']->getKey());
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(0)
+        ->and($fixture['fulfillment']->refresh()->status)->toBe('recovery_required');
 });
 
 it('delivers only the canonical claim URL without exposing the recovery grant', function (): void {
@@ -158,7 +154,6 @@ it('delivers only the canonical claim URL without exposing the recovery grant', 
         $fixture['authorization'],
         $fixture['owner'],
     );
-    $grant = CampaignPayoutRecoveryGrant::query()->sole();
     $queued = null;
     Bus::assertDispatched(DispatchCampaignFeedbackJob::class, function (
         DispatchCampaignFeedbackJob $job,
@@ -173,12 +168,12 @@ it('delivers only the canonical claim URL without exposing the recovery grant', 
 
     Bus::assertDispatched(DeliverQueuedFeedbackSmsJob::class, function (
         DeliverQueuedFeedbackSmsJob $job,
-    ) use ($fixture, $grant): bool {
+    ) use ($fixture): bool {
         $claimUrl = route('x-change.claim.show', ['code' => $fixture['voucher']->code]);
 
         expect($job->message)->toContain($claimUrl)
             ->not->toContain('/payout-recovery/')
-            ->not->toContain((string) $grant->reference);
+            ->not->toContain('recovery_reference');
 
         return true;
     });
@@ -193,8 +188,7 @@ it('refuses fallback while provider failure still needs operator review', functi
         $fixture['owner'],
     ))->toThrow(ModelNotFoundException::class);
 
-    expect(CampaignPayoutRecoveryGrant::query()->count())->toBe(0)
-        ->and(CampaignDeliveryAttempt::query()->count())->toBe(0)
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(0)
         ->and($fixture['fulfillment']->refresh()->status)->toBe('recovery_required');
 });
 
@@ -214,86 +208,81 @@ it('never sends recovery for a nonterminal or indeterminate provider outcome', f
         $fixture['owner'],
     ))->toThrow(ModelNotFoundException::class);
 
-    expect(CampaignPayoutRecoveryGrant::query()->count())->toBe(0)
-        ->and(CampaignDeliveryAttempt::query()->count())->toBe(0);
+    expect(CampaignDeliveryAttempt::query()->count())->toBe(0);
 })->with([
     'pending' => ['pending', 'recorded'],
     'unknown' => ['unknown', 'recorded'],
 ]);
 
-it('requires beneficiary OTP before exposing a corrected payout destination', function (): void {
+it('uses the ordinary claim entry and instruction-driven otp workflow for recovery', function (): void {
     $fixture = campaignRejectedPayoutFixture();
     app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
         $fixture['authorization'],
         $fixture['owner'],
     );
-    $grant = CampaignPayoutRecoveryGrant::query()->sole();
-    $otp = new FakeOtpChallengeGateway;
-    $otp->expectedCode = '123456';
-    app()->instance(OtpChallengeGateway::class, $otp);
+    auth()->logout();
 
-    $this->get('/x/claim/WRONG/payout-recovery/'.$grant->reference)->assertNotFound();
-
-    $this->withHeader('X-Inertia', 'true')->get(route('x-change.claim.show', [
+    $response = $this->withHeader('X-Inertia', 'true')->get(route('x-change.claim.show', [
         'code' => $fixture['voucher']->code,
     ]))->assertOk()
-        ->assertHeader('Cache-Control', 'no-store, private')
-        ->assertHeader('Pragma', 'no-cache')
-        ->assertJsonPath('component', 'x-change/claim/PayoutRecovery')
-        ->assertJsonPath('props.status', 'available')
-        ->assertJsonMissingPath('props.mobile')
-        ->assertJsonMissingPath('props.recovery_reference');
+        ->assertHeader('Cache-Control', 'no-cache, private')
+        ->assertJsonPath('component', 'x-change/claim/Entry')
+        ->assertJsonPath('props.claim_surface.state.key', 'active')
+        ->assertJsonPath('props.claim_surface.state.can_claim', true)
+        ->assertJsonPath('props.claim_surface.state.terminal', false);
 
-    $this->post(route('x-change.claim.payout-recovery.challenge', [
-        'code' => $fixture['voucher']->code,
-    ]))->assertRedirect();
+    $components = collect($response->json('props.claim_surface.components'));
+    $requirements = collect($components->firstWhere('type', 'xray_preview')['props']['requirements']);
+    expect($components->pluck('type'))->toContain('xray_preview')
+        ->and($requirements->pluck('key')->all())->toContain('mobile', 'otp', 'assigned_mobile');
 
-    expect($grant->refresh()->status)->toBe('otp_pending')
-        ->and($otp->request?->mobile)->toBe('+639175180722')
-        ->and($otp->request?->client_reference)->toBe($grant->reference);
-
-    $this->post(route('x-change.claim.payout-recovery.verification', [
-        'code' => $fixture['voucher']->code,
-    ]), ['code' => '000000'])->assertSessionHasErrors('code');
-
-    expect($grant->refresh()->status)->toBe('otp_pending')
-        ->and($grant->attempts)->toBe(1);
-
-    $this->post(route('x-change.claim.payout-recovery.verification', [
-        'code' => $fixture['voucher']->code,
-    ]), ['code' => '123456'])->assertRedirect();
-
-    expect($grant->refresh()->status)->toBe('verified')
-        ->and($grant->verified_at)->not->toBeNull();
+    $workflow = app(ClaimWorkflowResolverContract::class)->resolve($fixture['voucher']->refresh());
+    expect($workflow->key)->toBe('campaign.payout-recovery.v1')
+        ->and($workflow->required_claim_fields)->toBe(['mobile', 'otp'])
+        ->and($workflow->requires_destination)->toBeTrue()
+        ->and($workflow->requires_amount)->toBeFalse();
 });
 
-it('fails closed when more than one active recovery grant exists for a Pay Code', function (): void {
+it('keeps the same campaign Pay Code dormant until provider rejection activates recovery', function (): void {
     $fixture = campaignRejectedPayoutFixture();
-    app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
-        $fixture['authorization'],
-        $fixture['owner'],
-    );
-    $secondRejection = $fixture['reconciliation']->replicate();
-    $secondRejection->provider_reference = $fixture['voucher']->code.'-2';
-    $secondRejection->provider_transaction_id = 'NETBANK-REJECTED-2';
-    $secondRejection->save();
-    CampaignPayoutRecoveryGrant::query()->create([
-        'voucher_id' => $fixture['voucher']->getKey(),
-        'campaign_worksheet_fulfillment_id' => $fixture['fulfillment']->getKey(),
-        'rejected_reconciliation_id' => $secondRejection->getKey(),
-        'mobile_hash' => hash('sha256', 'second-grant'),
-        'provider' => 'fake',
-        'purpose' => 'campaign.payout-recovery',
-        'status' => 'available',
-        'expires_at' => now()->addHour(),
-    ]);
+    $metadata = (array) $fixture['voucher']->metadata;
+    data_set($metadata, 'treasury.pay_code_reservation.status', 'reserved');
+    $fixture['voucher']->forceFill(['metadata' => $metadata, 'redeemed_at' => null])->save();
 
-    $this->post(route('x-change.claim.payout-recovery.challenge', [
-        'code' => $fixture['voucher']->code,
-    ]))->assertNotFound();
+    expect(app(ValidateCompiledClaimVoucher::class)->handle($fixture['voucher']->refresh()))
+        ->toBe('This Pay Code is being processed by the approved campaign transfer.');
+
+    data_set($metadata, 'treasury.pay_code_reservation.status', 'recovery_pending');
+    $fixture['voucher']->forceFill(['metadata' => $metadata, 'redeemed_at' => now()])->save();
+
+    expect(app(ValidateCompiledClaimVoucher::class)->handle($fixture['voucher']->refresh()))->toBeNull();
 });
 
-it('does not replace the ordinary claim experience without authoritative recovery state', function (): void {
+it('rejects a recovery claim whose verified otp mobile is not the frozen beneficiary', function (): void {
+    $fixture = campaignRejectedPayoutFixture();
+
+    expect(fn () => app(SubmitCampaignPayoutRecoveryClaim::class)->handle(
+        $fixture['voucher'],
+        [
+            'mobile' => '09173011987',
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+            'inputs' => [
+                'mobile' => '09173011987',
+                'otp_verified' => true,
+                'otp' => [
+                    'verified' => true,
+                    'mobile' => '09173011987',
+                ],
+            ],
+        ],
+    ))->toThrow(ValidationException::class);
+
+    expect($fixture['voucher']->refresh()->redeemed_at)->not->toBeNull()
+        ->and(DisbursementReconciliation::query()->count())->toBe(1);
+});
+
+it('does not alter the ordinary claim experience for unrelated Pay Codes', function (): void {
     $voucher = issueVoucher();
 
     $response = $this->withHeader('X-Inertia', 'true')->get(route('x-change.claim.show', [
@@ -301,19 +290,4 @@ it('does not replace the ordinary claim experience without authoritative recover
     ]))->assertOk();
 
     expect($response->json('component'))->toBe('x-change/claim/Entry');
-
-    $fixture = campaignRejectedPayoutFixture();
-    app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
-        $fixture['authorization'],
-        $fixture['owner'],
-    );
-    $fixture['reconciliation']->forceFill([
-        'status' => 'pending',
-        'internal_status' => 'recorded',
-        'completed_at' => null,
-    ])->save();
-
-    $this->post(route('x-change.claim.payout-recovery.challenge', [
-        'code' => $fixture['voucher']->code,
-    ]))->assertNotFound();
 });

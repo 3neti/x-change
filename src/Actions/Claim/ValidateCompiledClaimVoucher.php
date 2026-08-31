@@ -19,6 +19,14 @@ final class ValidateCompiledClaimVoucher
             return 'Invalid Pay Code.';
         }
 
+        if ($this->isCampaignPayoutRecovery($voucher)) {
+            return null;
+        }
+
+        if ($this->isDormantCampaignDirectTransfer($voucher)) {
+            return 'This Pay Code is being processed by the approved campaign transfer.';
+        }
+
         if ($this->namedSlices->hasNamedSlices($voucher)) {
             if ($this->namedSlices->allSlicesClaimed($voucher)) {
                 return 'This Pay Code has already been redeemed.';
@@ -82,5 +90,21 @@ final class ValidateCompiledClaimVoucher
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function isCampaignPayoutRecovery(Voucher $voucher): bool
+    {
+        $metadata = $voucher->getAttribute('metadata');
+
+        return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
+            && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
+    }
+
+    private function isDormantCampaignDirectTransfer(Voucher $voucher): bool
+    {
+        return data_get(
+            $voucher->getAttribute('metadata'),
+            'instructions.metadata.custom.campaign.claim_activation',
+        ) === 'provider_rejection';
     }
 }

@@ -12,7 +12,6 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
-use LBHurtado\XChange\Models\CampaignPayoutRecoveryGrant;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
@@ -20,9 +19,7 @@ use RuntimeException;
 
 final readonly class PlanCampaignPayoutRecoveryFallbacks
 {
-    public function __construct(
-        private QueueCampaignFeedbackDelivery $delivery,
-    ) {}
+    public function __construct(private QueueCampaignFeedbackDelivery $delivery) {}
 
     /** @return array{planned: int, queued: int, skipped: int} */
     public function handle(
@@ -56,7 +53,7 @@ final readonly class PlanCampaignPayoutRecoveryFallbacks
             ->get();
 
         foreach ($fulfillments as $fulfillment) {
-            $grant = DB::transaction(function () use ($fulfillment, &$summary): ?CampaignPayoutRecoveryGrant {
+            $planned = DB::transaction(function () use ($fulfillment): bool {
                 $locked = CampaignWorksheetFulfillment::query()
                     ->with('row')
                     ->lockForUpdate()
@@ -64,9 +61,7 @@ final readonly class PlanCampaignPayoutRecoveryFallbacks
 
                 if (! in_array($locked->status, ['recovery_required', 'recovery_ready'], true)
                     || $locked->pay_code === null) {
-                    $summary['skipped']++;
-
-                    return null;
+                    return false;
                 }
 
                 $voucher = Voucher::query()->where('code', $locked->pay_code)->firstOrFail();
@@ -82,58 +77,37 @@ final readonly class PlanCampaignPayoutRecoveryFallbacks
                 $claim = VoucherClaim::query()
                     ->where('voucher_id', $voucher->getKey())
                     ->latest('id')
-                    ->first();
+                    ->firstOrFail();
 
-                if (($claim instanceof VoucherClaim && $claim->status !== 'payout_rejected')
-                    || data_get($voucher->metadata, 'treasury.pay_code_reservation.status') !== 'recovery_pending') {
-                    throw new RuntimeException('Trusted rejected-payout recovery evidence is required.');
+                if ($claim->status !== 'payout_rejected'
+                    || data_get($voucher->metadata, 'treasury.pay_code_reservation.status') !== 'recovery_pending'
+                    || data_get($voucher->metadata, 'instructions.metadata.custom.campaign.claim_activation') !== 'provider_rejection'
+                    || data_get($voucher->metadata, 'instructions.validation.otp.required') !== true) {
+                    throw new RuntimeException('Trusted instruction-driven rejected-payout recovery evidence is required.');
                 }
 
-                $mobile = MobileNumber::normalize(
-                    data_get($locked->row?->beneficiary_ciphertext, 'mobile'),
-                );
-                if ($mobile === null) {
+                if (MobileNumber::normalize(data_get($locked->row?->beneficiary_ciphertext, 'mobile')) === null) {
                     throw new RuntimeException('Campaign payout recovery requires a valid beneficiary mobile.');
                 }
 
-                $grant = CampaignPayoutRecoveryGrant::query()->firstOrCreate(
-                    ['rejected_reconciliation_id' => $rejection->getKey()],
-                    [
-                        'voucher_id' => $voucher->getKey(),
-                        'campaign_worksheet_fulfillment_id' => $locked->getKey(),
-                        'mobile_hash' => $this->mobileHash($mobile),
-                        'provider' => $this->otpDriver(),
-                        'purpose' => $this->otpPurpose(),
-                        'status' => 'available',
-                        'attempts' => 0,
-                        'expires_at' => now()->addMinutes(max(1, (int) config(
-                            'x-change.campaigns.payout_recovery.ttl_minutes',
-                            1440,
-                        ))),
-                    ],
-                );
-
                 $metadata = (array) $locked->metadata;
+                $wasPlanned = data_get($metadata, 'fallback.schema') !== 'x-change.campaign-claim-recovery.v1';
                 $metadata['fallback'] = [
-                    'schema' => 'x-change.campaign-payout-recovery.v1',
-                    'mode' => 'same_pay_code_recipient_correction',
-                    'grant_reference' => (string) $grant->reference,
+                    'schema' => 'x-change.campaign-claim-recovery.v1',
+                    'mode' => 'canonical_claim',
                     'rejected_reconciliation_id' => (int) $rejection->getKey(),
                     'planned_at' => data_get($metadata, 'fallback.planned_at') ?? now()->toIso8601String(),
                 ];
                 $locked->forceFill(['metadata' => $metadata])->save();
-                if ($grant->wasRecentlyCreated) {
-                    $summary['planned']++;
-                }
 
-                return $grant;
+                return $wasPlanned;
             }, attempts: 5);
 
-            if (! $grant instanceof CampaignPayoutRecoveryGrant) {
-                continue;
+            if ($planned) {
+                $summary['planned']++;
             }
 
-            $idempotencyKey = 'campaign-payout-recovery:'.$grant->reference.':claim-sms:v2';
+            $idempotencyKey = 'campaign-payout-recovery:'.$fulfillment->reference.':canonical-claim-sms:v1';
             if (CampaignDeliveryAttempt::query()
                 ->where('idempotency_key_hash', hash('sha256', $idempotencyKey))
                 ->exists()) {
@@ -143,9 +117,7 @@ final readonly class PlanCampaignPayoutRecoveryFallbacks
                 continue;
             }
 
-            $mobile = MobileNumber::normalize(
-                data_get($fulfillment->row?->beneficiary_ciphertext, 'mobile'),
-            );
+            $mobile = MobileNumber::normalize(data_get($fulfillment->row?->beneficiary_ciphertext, 'mobile'));
             if ($mobile === null) {
                 throw new RuntimeException('Campaign payout recovery requires a valid beneficiary mobile.');
             }
@@ -176,41 +148,12 @@ final readonly class PlanCampaignPayoutRecoveryFallbacks
 
                 continue;
             }
+
             $this->markRecoveryReady($fulfillment);
             $summary['queued']++;
         }
 
         return $summary;
-    }
-
-    private function otpDriver(): string
-    {
-        $driver = trim((string) config('x-change.onboarding.identity_otp.driver', 'unavailable'));
-        if (in_array($driver, ['', 'unavailable', 'null'], true)) {
-            throw new RuntimeException('Campaign payout recovery OTP delivery is unavailable.');
-        }
-
-        return $driver;
-    }
-
-    private function otpPurpose(): string
-    {
-        $purpose = trim((string) config(
-            'x-change.campaigns.payout_recovery.otp_purpose',
-            'campaign.payout-recovery',
-        ));
-        if ($purpose === '') {
-            throw new RuntimeException('Campaign payout recovery OTP purpose is unavailable.');
-        }
-
-        return $purpose;
-    }
-
-    private function mobileHash(string $mobile): string
-    {
-        $key = (string) (config('x-change.onboarding.mobile_verification.hash_key') ?: config('app.key'));
-
-        return hash_hmac('sha256', $mobile, $key);
     }
 
     private function markRecoveryReady(CampaignWorksheetFulfillment $fulfillment): void
