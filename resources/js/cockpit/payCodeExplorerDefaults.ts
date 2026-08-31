@@ -41,6 +41,9 @@ export const cockpitPayCodeExplorerRecords: CockpitPayCodeExplorerRecord[] = [
         ],
         amount: '₱5,000.00',
         status: 'Issued',
+        consumerStatus: null,
+        collection: {},
+        claimSummary: {},
         voucherStatus: 'issued',
         operationalStatus: {
             key: 'active',
@@ -83,6 +86,9 @@ export const cockpitPayCodeExplorerRecords: CockpitPayCodeExplorerRecord[] = [
         instructionBadges: [{ key: 'vendor_bound', label: 'Vendor-bound' }],
         amount: '₱12,500.00',
         status: 'Awaiting Claim',
+        consumerStatus: null,
+        collection: {},
+        claimSummary: {},
         voucherStatus: 'issued',
         operationalStatus: {
             key: 'active',
@@ -128,6 +134,9 @@ export const cockpitPayCodeExplorerRecords: CockpitPayCodeExplorerRecord[] = [
         ],
         amount: 'Pending',
         status: 'Readiness Pending',
+        consumerStatus: null,
+        collection: {},
+        claimSummary: {},
         voucherStatus: 'pending',
         operationalStatus: {
             key: 'payout_pending',

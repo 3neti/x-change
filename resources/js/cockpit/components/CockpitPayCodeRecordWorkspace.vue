@@ -54,6 +54,10 @@ type WorkspaceTab =
   | "audit"
   | "engineering";
 type DetailRecord = Record<string, unknown>;
+type LifecycleItem = {
+  label: string;
+  value: unknown;
+};
 
 const props = defineProps<{
   code: string;
@@ -112,7 +116,7 @@ const primaryAmount = computed(
 const hasClaimSummary = computed(
   () => text(claimSummary.value.claimed_at) !== "",
 );
-const lifecycleItems = computed(() =>
+const lifecycleItems = computed<LifecycleItem[]>(() =>
   [
     { label: "Issued", value: record(overview.value.timing).issued_at },
     {
