@@ -78,6 +78,7 @@ class CockpitCampaignWorksheetBankTransferDispatchController extends Controller
         data_set($metadata, 'lifecycle.automatic_fulfillment', true);
         data_set($metadata, 'lifecycle.live_provider_authorized', true);
         data_set($metadata, 'lifecycle.live_transfer_confirmed', true);
+        data_set($metadata, 'lifecycle.failure_disposition', 'same_pay_code_sms_recovery');
         data_set($metadata, 'lifecycle.browser_runner_enabled_at', now()->toIso8601String());
 
         $worksheet->forceFill(['metadata' => $metadata])->save();

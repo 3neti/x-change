@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Bus;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -10,8 +11,12 @@ use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
+use LBHurtado\XChange\Actions\Campaigns\PlanCampaignPayoutRecoveryFallbacks;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
+use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
+use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
+use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
@@ -159,4 +164,89 @@ it('runs an approved direct-transfer worksheet from Cockpit through the voucher 
         ->assertOk()
         ->assertJsonPath('props.fulfillments.0.monitor_label', 'Paid')
         ->assertJsonPath('props.fulfillments.0.claim_status', 'succeeded');
+});
+
+it('opens same-code recovery for a failed browser direct-transfer worksheet', function (): void {
+    config()->set('x-change.provider_runtime.lifecycle.allow_live_provider_scenarios', true);
+    config()->set('x-change.campaigns.netbank_dispatch.enabled', true);
+    config()->set('x-change.campaigns.payout_recovery.enabled', true);
+    Bus::fake([
+        DispatchCampaignFeedbackJob::class,
+        DeliverQueuedFeedbackSmsJob::class,
+    ]);
+    $provider = fakePayoutProvider()
+        ->willReturnFailedResult(
+            provider: 'netbank',
+            metadata: [
+                'provider_submission_accepted' => false,
+                'failure_code' => 'invalid_destination',
+            ],
+        )
+        ->withoutFailedTransactionIdentifier();
+    $owner = actingAsTestUser();
+    fundDirectTransferCampaignOwner($owner, 10_000);
+    $officer = actingAsTestUser();
+    $officer->forceFill(['mobile' => '09173011987'])->save();
+    $repository = app(CampaignWorksheetRepository::class);
+
+    $worksheet = $repository->put(new CampaignWorksheetData(
+        reference: 'campaign-browser-runner-recovery-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Browser Runner Recovery Payroll',
+        fulfillmentMode: 'direct_bank_transfer',
+        rows: [
+            new CampaignWorksheetRowData(
+                null,
+                1,
+                ['name' => 'Payroll Recipient', 'mobile' => '09175180722', 'bank_account' => '00066159231', 'bank_code' => 'BDO'],
+                2_500,
+            ),
+        ],
+    ));
+    $repository->freeze((string) $worksheet->reference, $owner->getMorphClass(), (string) $owner->getKey());
+
+    $this->actingAs($owner);
+    $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $owner);
+    $this->actingAs($officer);
+    app(CampaignWorksheetAuthorizationExecutionService::class)->execute(
+        Voucher::query()->where('code', $authorization->approval_pay_code)->sole(),
+        ['mobile' => '09173011987'],
+    );
+
+    $this->actingAs($owner)
+        ->post(route('x-change.cockpit.campaigns.fulfillments.bank-transfers.store', $worksheet->reference), [
+            'confirm_live_transfer' => 'I APPROVE LIVE BANK TRANSFERS',
+        ])
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', 'Live payroll runner: 1 Pay Codes issued, 0 paid, 1 require review, 0 skipped.');
+
+    $fulfillment = $authorization->refresh()->fulfillments()->sole();
+    $voucher = Voucher::query()->where('code', $fulfillment->pay_code)->sole();
+    $claim = VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole();
+    $reconciliation = DisbursementReconciliation::query()->where('voucher_id', $voucher->getKey())->sole();
+
+    expect($fulfillment->status)->toBe('recovery_required')
+        ->and($fulfillment->provider_transfer_reference)->toBeEmpty()
+        ->and($claim->status)->toBe('payout_rejected')
+        ->and($reconciliation->status)->toBe('failed')
+        ->and($reconciliation->internal_status)->toBe('recovery_opened')
+        ->and($reconciliation->provider_transaction_id)->toBeEmpty()
+        ->and(data_get($voucher->metadata, 'treasury.pay_code_reservation.status'))->toBe('recovery_pending')
+        ->and(data_get($voucher->metadata, 'instructions.inputs.fields'))->toBe(['mobile', 'otp'])
+        ->and(data_get($voucher->metadata, 'instructions.validation.otp'))->toBe(['required' => true, 'on_failure' => 'block'])
+        ->and(data_get($voucher->metadata, 'instructions.metadata.custom.campaign.claim_activation'))->toBe('provider_rejection');
+    $provider->assertDisburseCalledTimes(1);
+
+    $recovery = app(PlanCampaignPayoutRecoveryFallbacks::class)->handle(
+        $authorization->refresh(),
+        $owner,
+    );
+
+    expect($recovery)->toBe(['planned' => 1, 'queued' => 1, 'skipped' => 0])
+        ->and(CampaignDeliveryAttempt::query()->count())->toBe(1)
+        ->and($fulfillment->refresh()->status)->toBe('recovery_ready')
+        ->and(data_get($fulfillment->metadata, 'fallback.mode'))->toBe('canonical_claim');
+    Bus::assertDispatchedTimes(DispatchCampaignFeedbackJob::class, 1);
 });

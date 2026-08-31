@@ -44,7 +44,10 @@ final readonly class CampaignVoucherInstructionCompiler
             : [];
         $feedbackChannels = data_get($blueprint, 'feedback.channels', []);
         $usesRejectedPayoutClaimRecovery = $fulfillment->mode === 'direct_bank_transfer'
-            && data_get($worksheet->metadata, 'lifecycle.failure_disposition') === 'same_pay_code_sms_recovery';
+            && (
+                data_get($worksheet->metadata, 'lifecycle.failure_disposition') === 'same_pay_code_sms_recovery'
+                || data_get($worksheet->metadata, 'lifecycle.schema') === 'x-change.campaign-browser-runner.v1'
+            );
 
         $onboarding = array_key_exists('onboarding', $blueprint)
             ? $blueprint['onboarding'] === true
