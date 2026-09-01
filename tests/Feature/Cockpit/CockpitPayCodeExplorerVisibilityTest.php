@@ -193,6 +193,67 @@ it('projects capability instructions target and timing without raw instruction p
         ->assertJsonPath('props.read_model.voucher.collection.target_amount_minor', 25000);
 });
 
+it('projects amount presentation by Pay Code flow type', function () {
+    $issuer = actingAsTestUser();
+
+    $disbursable = issueVoucher(validVoucherInstructions(500));
+    $payable = issueVoucher(validVoucherInstructions(75, overrides: [
+        'voucher_type' => 'payable',
+        'target_amount' => 100,
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+        ],
+    ]));
+    $settlement = issueVoucher(validVoucherInstructions(100.50, overrides: [
+        'voucher_type' => 'settlement',
+        'target_amount' => 100,
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+            'flow_type' => 'settlement',
+        ],
+    ]));
+
+    $assertAmountPresentation = function (Voucher $voucher, array $expected) use ($issuer): void {
+        $this->actingAs($issuer)
+            ->withHeader('X-Inertia', 'true')
+            ->get(route('x-change.cockpit.pay-codes.index', ['search' => $voucher->code]))
+            ->assertOk()
+            ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.schema', 'x-change.cockpit.pay-code-amount-presentation.v1')
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.flow_type', $expected['flow_type'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.label', $expected['label'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.amount_minor', $expected['amount_minor'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.target_amount_minor', $expected['target_amount_minor'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.amount', $expected['amount'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.target_amount', $expected['target_amount']);
+    };
+
+    $assertAmountPresentation($disbursable, [
+        'flow_type' => 'disbursable',
+        'label' => 'Disbursable',
+        'amount_minor' => 50000,
+        'target_amount_minor' => null,
+        'amount' => 'PHP 500.00',
+        'target_amount' => null,
+    ]);
+    $assertAmountPresentation($payable, [
+        'flow_type' => 'payable',
+        'label' => 'Payable',
+        'amount_minor' => 7500,
+        'target_amount_minor' => 10000,
+        'amount' => 'PHP 75.00',
+        'target_amount' => 'PHP 100.00',
+    ]);
+    $assertAmountPresentation($settlement, [
+        'flow_type' => 'settlement',
+        'label' => 'Settlement',
+        'amount_minor' => 10050,
+        'target_amount_minor' => 10000,
+        'amount' => 'PHP 100.50',
+        'target_amount' => 'PHP 100.00',
+    ]);
+});
+
 it('falls back to the rider message when no external reference is present', function (): void {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(overrides: [

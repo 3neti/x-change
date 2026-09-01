@@ -11,6 +11,7 @@ class CockpitPayCodeListRecordData extends Data
     /**
      * @param  array<int, CockpitPayCodeRowActionData>  $actions
      * @param  array<int, CockpitPayCodeInstructionBadgeData>  $instruction_badges
+     * @param  array<string, mixed>  $amount_presentation
      * @param  array<string, mixed>  $collection
      * @param  array<string, mixed>  $pos_reference
      */
@@ -20,6 +21,7 @@ class CockpitPayCodeListRecordData extends Data
         public readonly CockpitPayCodeCapabilityData $capability,
         public readonly array $instruction_badges,
         public readonly string|int|float|null $amount,
+        public readonly array $amount_presentation,
         public readonly ?string $currency,
         public readonly string $status,
         public readonly string $display_status,

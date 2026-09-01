@@ -206,19 +206,33 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('ClaimWidget compiled form flow rendering', () => {
-    it('brands the claim entry with the Pay Code logo', () => {
+    it('does not duplicate the claim shell Pay Code logo', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
                 initialCode: 'TEST123',
             },
         });
 
-        expect(
-            wrapper
-                .get('[data-testid="claim-pay-code-logo"]')
-                .attributes('src'),
-        ).toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg');
+        expect(wrapper.find('[data-testid="claim-pay-code-logo"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="app-logo"]').exists()).toBe(false);
+    });
+
+    it('keeps the submit button aligned to the claim card outside the mobile floating layout', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+            },
+        });
+
+        const submitButton = wrapper.get('[data-testid="claim-widget-submit-button"]');
+
+        expect(submitButton.classes()).toContain('fixed');
+        expect(submitButton.classes()).toContain('w-[calc(100%-2.5rem)]');
+        expect(submitButton.classes()).toContain('sm:static');
+        expect(submitButton.classes()).toContain('sm:w-full');
+        expect(submitButton.classes()).toContain('sm:max-w-none');
+        expect(submitButton.classes()).toContain('sm:shadow-none');
+        expect(wrapper.find('form > .h-24.shrink-0').classes()).toContain('sm:hidden');
     });
 
     it('ignores inactive compiled form_flow phase', () => {

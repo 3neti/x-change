@@ -104,6 +104,69 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         }
     });
 
+    it('renders flow-aware Pay Code amount presentation', () => {
+        const wrapper = mount(CockpitPayCodeResultsTable, {
+            props: {
+                records: [
+                    {
+                        ...cockpitPayCodeExplorerRecords[0],
+                        amount: '₱500.00',
+                        amountPresentation: {
+                            flowType: 'disbursable',
+                            label: 'Disbursable',
+                            amountMinor: 50000,
+                            targetAmountMinor: null,
+                            amount: '₱500.00',
+                            targetAmount: null,
+                        },
+                    },
+                    {
+                        ...cockpitPayCodeExplorerRecords[1],
+                        amount: '₱75.00',
+                        amountPresentation: {
+                            flowType: 'payable',
+                            label: 'Payable',
+                            amountMinor: 7500,
+                            targetAmountMinor: 10000,
+                            amount: '₱75.00',
+                            targetAmount: '₱100.00',
+                        },
+                    },
+                    {
+                        ...cockpitPayCodeExplorerRecords[2],
+                        amount: '₱100.50',
+                        amountPresentation: {
+                            flowType: 'settlement',
+                            label: 'Settlement',
+                            amountMinor: 10050,
+                            targetAmountMinor: 10000,
+                            amount: '₱100.50',
+                            targetAmount: '₱100.00',
+                        },
+                    },
+                ],
+                actions: cockpitPayCodeRowActions,
+            },
+        });
+
+        const amountCells = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-amount"]',
+        );
+        const mobileAmountCells = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-mobile-amount"]',
+        );
+
+        expect(amountCells[0].text()).toContain('Disbursable');
+        expect(amountCells[0].text()).toContain('₱500.00');
+        expect(amountCells[1].text()).toContain('Payable');
+        expect(amountCells[1].text()).toContain('₱100.00');
+        expect(amountCells[1].text()).toContain('target');
+        expect(amountCells[2].text()).toContain('Settlement');
+        expect(amountCells[2].text()).toContain('₱100.50 → ₱100.00');
+        expect(mobileAmountCells[1].text()).toContain('₱100.00');
+        expect(mobileAmountCells[2].text()).toContain('₱100.50 → ₱100.00');
+    });
+
     it('renders the full explorer page with active navigation and side-effect boundaries', () => {
         const wrapper = mount(PayCodeExplorer);
 

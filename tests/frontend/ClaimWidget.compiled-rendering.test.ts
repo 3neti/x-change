@@ -237,7 +237,7 @@ describe('ClaimWidget compiled rendering', () => {
         };
     });
 
-    it('keeps the public claim logo bounded inside the first viewport', () => {
+    it('leaves public claim branding to the outer claim shell', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
                 initialCode: 'TEST123',
@@ -245,18 +245,7 @@ describe('ClaimWidget compiled rendering', () => {
             },
         });
 
-        const logo = wrapper.find('[data-testid="claim-pay-code-logo"]');
-
-        expect(logo.exists()).toBe(true);
-        expect(logo.attributes('src')).toBe('/vendor/x-change/images/pay-code/pay-code-logo.svg');
-        expect(logo.attributes('alt')).toBe('Pay Code');
-        expect(logo.classes()).toContain('w-auto');
-        expect(logo.classes()).toContain('h-24');
-        expect(logo.classes()).toContain('max-h-24');
-        expect(logo.classes()).toContain('max-w-24');
-        expect(logo.classes()).toContain('max-w-52');
-        expect(logo.classes()).toContain('sm:max-w-60');
-        expect(logo.classes()).toContain('object-contain');
+        expect(wrapper.find('[data-testid="claim-pay-code-logo"]').exists()).toBe(false);
     });
 
     it('prefers compiled rider intro stages over legacy rider splash stages', () => {

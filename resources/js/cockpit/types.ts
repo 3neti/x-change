@@ -1746,6 +1746,7 @@ export type CockpitPayCodeExplorerRecord = {
         label: string;
     }>;
     amount: string;
+    amountPresentation: CockpitPayCodeAmountPresentation | null;
     status: string;
     consumerStatus: string | null;
     collection: Record<string, unknown>;
@@ -1791,6 +1792,16 @@ export type CockpitPayCodeExplorerRecord = {
         tone: 'warning' | 'critical';
     } | null;
     actions?: CockpitPayCodeRowAction[];
+};
+
+export type CockpitPayCodeAmountPresentation = {
+    schema?: string;
+    flowType: 'disbursable' | 'payable' | 'settlement';
+    label: string;
+    amountMinor: number | null;
+    targetAmountMinor: number | null;
+    amount: string | null;
+    targetAmount: string | null;
 };
 
 export type CockpitPayCodeRowAction = {
@@ -2000,6 +2011,16 @@ export type CockpitPayCodeExplorerReadModelRecord = {
     template?: string | null;
     purpose?: string | null;
     amount?: string | number | null;
+    amount_presentation?: {
+        schema?: string | null;
+        flow_type?: string | null;
+        label?: string | null;
+        amount_minor?: number | null;
+        target_amount_minor?: number | null;
+        amount?: string | null;
+        target_amount?: string | null;
+        [key: string]: unknown;
+    } | null;
     currency?: string | null;
     status?: string | null;
     display_status?: string | null;

@@ -1418,11 +1418,16 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->get()
             ->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
         $posReferences = $this->posSaleReferenceService()->forVouchers($sourceVouchers);
-        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences): array {
+        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences, $sourceVouchers): array {
             $voucherId = (string) ($row['voucher_id'] ?? $row['id'] ?? '');
+            $voucher = $sourceVouchers->get($voucherId);
             $row['pos_reference'] = is_array($posReferences[$voucherId] ?? null)
                 ? $posReferences[$voucherId]
                 : [];
+            $row['amount_presentation'] = $this->payCodeAmountPresentation(
+                $row,
+                $voucher instanceof Voucher ? $voucher : null,
+            );
 
             return $row;
         });
@@ -1613,6 +1618,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             capability: $this->payCodeCapability($row),
             instruction_badges: $this->payCodeInstructionBadges($row),
             amount: $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null),
+            amount_presentation: is_array($row['amount_presentation'] ?? null)
+                ? $row['amount_presentation']
+                : $this->payCodeAmountPresentation($row),
             currency: $this->nullableString($row['currency'] ?? null),
             status: $status,
             display_status: $this->stringValue($row['display_status'] ?? null, $status),
@@ -1674,6 +1682,184 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 'Redeemable',
             ),
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function payCodeAmountPresentation(array $row, ?Voucher $voucher = null): array
+    {
+        $flowType = $this->payCodeAmountFlowType($row, $voucher);
+
+        if ($flowType === null) {
+            return [];
+        }
+
+        $currency = $this->nullableString($row['currency'] ?? null)
+            ?? $this->amountFactCurrency($row, 'face_value')
+            ?? $this->amountFactCurrency($row, 'target_value')
+            ?? $this->nullableString(data_get($row, 'collection.currency'))
+            ?? ($voucher instanceof Voucher
+                ? $this->nullableString(data_get($voucher->metadata, 'instructions.cash.currency'))
+                : null)
+            ?? 'PHP';
+        $amountMinor = $this->amountFactMinor($row, 'face_value')
+            ?? $this->voucherAmountMinor($voucher)
+            ?? $this->rowAmountMinor($row);
+        $targetAmountMinor = $this->collectionAmountMinor($row, 'target_amount_minor')
+            ?? $this->amountFactMinor($row, 'target_value')
+            ?? $this->voucherTargetAmountMinor($voucher);
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-amount-presentation.v1',
+            'flow_type' => $flowType,
+            'label' => match ($flowType) {
+                'payable' => 'Payable',
+                'settlement' => 'Settlement',
+                default => 'Disbursable',
+            },
+            'amount_minor' => $amountMinor,
+            'target_amount_minor' => $targetAmountMinor,
+            'amount' => $amountMinor !== null
+                ? $this->formatMinorMoney($amountMinor, $currency)
+                : null,
+            'target_amount' => $targetAmountMinor !== null
+                ? $this->formatMinorMoney($targetAmountMinor, $currency)
+                : null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function payCodeAmountFlowType(array $row, ?Voucher $voucher = null): ?string
+    {
+        $capabilityKey = strtolower($this->stringValue(data_get($row, 'capability.key'), ''));
+        $voucherTypeLabel = strtolower($this->stringValue(data_get($row, 'capability.voucher_type_label'), ''));
+        $consumerStatus = strtolower($this->stringValue($row['consumer_status'] ?? null, ''));
+        $flowType = strtolower($this->stringValue(data_get($row, 'instructions.metadata.flow_type'), ''));
+        $voucherType = strtolower($this->stringValue(data_get($row, 'instructions.voucher_type'), ''));
+        $voucherFlowType = $voucher instanceof Voucher
+            ? strtolower($this->stringValue(data_get($voucher->metadata, 'instructions.metadata.flow_type'), ''))
+            : '';
+        $voucherInstructionType = $voucher instanceof Voucher
+            ? strtolower($this->stringValue(data_get($voucher->metadata, 'instructions.voucher_type'), ''))
+            : '';
+        $voucherTypeValue = $voucher instanceof Voucher
+            ? strtolower($this->stringValue($voucher->voucher_type ?? null, ''))
+            : '';
+
+        if (
+            $capabilityKey === 'settlement'
+            || $flowType === 'settlement'
+            || $voucherType === 'settlement'
+            || $voucherFlowType === 'settlement'
+            || $voucherInstructionType === 'settlement'
+            || $voucherTypeValue === 'settlement'
+            || str_contains($voucherTypeLabel, 'settlement')
+        ) {
+            return 'settlement';
+        }
+
+        if (
+            $capabilityKey === 'collection'
+            || $flowType === 'collectible'
+            || $flowType === 'payable'
+            || $voucherType === 'payable'
+            || $voucherFlowType === 'collectible'
+            || $voucherFlowType === 'payable'
+            || $voucherInstructionType === 'payable'
+            || $voucherTypeValue === 'payable'
+            || str_contains($voucherTypeLabel, 'payable')
+            || in_array($consumerStatus, ['payable', 'processing', 'paid', 'collected'], true)
+        ) {
+            return 'payable';
+        }
+
+        if ($capabilityKey === 'disbursement' || $capabilityKey === 'disburseable') {
+            return 'disbursable';
+        }
+
+        return null;
+    }
+
+    private function voucherAmountMinor(?Voucher $voucher): ?int
+    {
+        if (! $voucher instanceof Voucher) {
+            return null;
+        }
+
+        $amount = data_get($voucher, 'cash.amount')
+            ?? data_get($voucher->metadata, 'instructions.cash.amount');
+
+        return is_numeric($amount) ? (int) round((float) $amount * 100) : null;
+    }
+
+    private function voucherTargetAmountMinor(?Voucher $voucher): ?int
+    {
+        if (! $voucher instanceof Voucher) {
+            return null;
+        }
+
+        $targetAmount = data_get($voucher->metadata, 'instructions.target_amount')
+            ?? data_get($voucher->metadata, 'target_amount');
+
+        return is_numeric($targetAmount) ? (int) round((float) $targetAmount * 100) : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function rowAmountMinor(array $row): ?int
+    {
+        $amount = $row['amount'] ?? null;
+
+        return is_numeric($amount) ? (int) round((float) $amount * 100) : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function amountFactMinor(array $row, string $key): ?int
+    {
+        foreach ((array) ($row['amounts'] ?? []) as $fact) {
+            if (! is_array($fact) || ($fact['key'] ?? null) !== $key) {
+                continue;
+            }
+
+            $amountMinor = $fact['amount_minor'] ?? null;
+
+            return is_numeric($amountMinor) ? (int) $amountMinor : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function amountFactCurrency(array $row, string $key): ?string
+    {
+        foreach ((array) ($row['amounts'] ?? []) as $fact) {
+            if (! is_array($fact) || ($fact['key'] ?? null) !== $key) {
+                continue;
+            }
+
+            return $this->nullableString($fact['currency'] ?? null);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function collectionAmountMinor(array $row, string $key): ?int
+    {
+        $amountMinor = data_get($row, "collection.{$key}");
+
+        return is_numeric($amountMinor) ? (int) $amountMinor : null;
     }
 
     /**
