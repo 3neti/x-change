@@ -46,11 +46,19 @@ it('renders the cockpit documentation hub without exposing operational secrets',
         ->get(route('x-change.cockpit.documentation'))
         ->assertOk()
         ->assertJsonPath('component', 'x-change/cockpit/Documentation')
-        ->assertJsonPath('props.documentation.schema', 'x-change.cockpit.documentation.v1')
-        ->assertJsonCount(3, 'props.documentation.sections')
-        ->assertJsonPath('props.documentation.sections.0.title', 'Use x-change')
-        ->assertJsonPath('props.documentation.sections.1.title', 'Operate x-change')
-        ->assertJsonPath('props.documentation.sections.2.title', 'Build with x-change')
+        ->assertJsonPath('props.documentation.schema', 'x-change.cockpit.documentation.v2')
+        ->assertJsonPath('props.documentation.hero.title', 'Run X-Change with confidence')
+        ->assertJsonPath('props.documentation.hero.primary_action.href', route('x-change.cockpit.quick-generate'))
+        ->assertJsonPath('props.documentation.hero.secondary_action.href', route('x-change.cockpit.pay-codes.index', ['status' => 'redeemed']))
+        ->assertJsonCount(3, 'props.documentation.start_here')
+        ->assertJsonPath('props.documentation.start_here.0.title', 'Pay Codes carry intent')
+        ->assertJsonCount(3, 'props.documentation.playbooks')
+        ->assertJsonFragment(['title' => 'Daily Operator Workflows'])
+        ->assertJsonFragment(['title' => 'Campaigns, Payroll, and Ayuda'])
+        ->assertJsonFragment(['title' => 'Evidence and Safety'])
+        ->assertJsonFragment(['label' => 'Claimed / Paid / Redeemed'])
+        ->assertJsonFragment(['title' => 'Journal every material event'])
+        ->assertJsonFragment(['label' => 'Getting Started'])
         ->assertJsonPath('props.xchange.navigation.system_readiness_visible', false)
         ->assertJsonMissing(['label' => 'System Readiness'])
         ->assertJsonMissingPath('props.documentation.credentials')
@@ -65,7 +73,7 @@ it('includes system readiness navigation when the authenticated workspace is ena
         ->get(route('x-change.cockpit.documentation'))
         ->assertOk()
         ->assertJsonPath('props.xchange.navigation.system_readiness_visible', true)
-        ->assertJsonPath('props.documentation.sections.1.links.1.label', 'System Readiness');
+        ->assertJsonFragment(['label' => 'System Readiness']);
 });
 
 it('renders cockpit pages as read-only inertia endpoints', function (string $route, array $parameters, string $component) {
