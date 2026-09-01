@@ -59,6 +59,8 @@ it('renders the cockpit documentation hub without exposing operational secrets',
         ->assertJsonFragment(['label' => 'Claimed / Paid / Redeemed'])
         ->assertJsonFragment(['title' => 'Journal every material event'])
         ->assertJsonFragment(['label' => 'Getting Started'])
+        ->assertJsonFragment(['label' => 'BPLS QR Ph Developer Guide'])
+        ->assertJsonFragment(['href' => 'https://github.com/3neti/x-change/blob/main/docs/partner-api/bpls-qrph-integration-guide.md'])
         ->assertJsonPath('props.xchange.navigation.system_readiness_visible', false)
         ->assertJsonMissing(['label' => 'System Readiness'])
         ->assertJsonMissingPath('props.documentation.credentials')
