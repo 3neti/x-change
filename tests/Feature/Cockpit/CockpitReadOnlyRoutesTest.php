@@ -51,6 +51,8 @@ it('renders the cockpit documentation hub without exposing operational secrets',
         ->assertJsonPath('props.documentation.sections.0.title', 'Use x-change')
         ->assertJsonPath('props.documentation.sections.1.title', 'Operate x-change')
         ->assertJsonPath('props.documentation.sections.2.title', 'Build with x-change')
+        ->assertJsonPath('props.documentation.sections.2.links.1.label', 'BPLS QR Ph Developer Guide')
+        ->assertJsonPath('props.documentation.sections.2.links.1.href', 'https://github.com/3neti/x-change/blob/main/docs/partner-api/bpls-qrph-integration-guide.md')
         ->assertJsonPath('props.xchange.navigation.system_readiness_visible', false)
         ->assertJsonMissing(['label' => 'System Readiness'])
         ->assertJsonMissingPath('props.documentation.credentials')

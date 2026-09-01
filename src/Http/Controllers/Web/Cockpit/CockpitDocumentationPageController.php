@@ -50,6 +50,7 @@ final class CockpitDocumentationPageController extends Controller
                         'description' => 'Package documentation for developers and implementation partners.',
                         'links' => [
                             ['label' => 'Getting Started', 'description' => 'Adopt x-change in a fresh Laravel application.', 'href' => 'https://github.com/3neti/x-change/blob/main/GETTING_STARTED.md', 'external' => true],
+                            ['label' => 'BPLS QR Ph Developer Guide', 'description' => 'Issue payable Pay Codes and render QR Ph payment instructions through the Partner API.', 'href' => 'https://github.com/3neti/x-change/blob/main/docs/partner-api/bpls-qrph-integration-guide.md', 'external' => true],
                             ['label' => 'Package Reference', 'description' => 'Architecture, commands, and package boundaries.', 'href' => 'https://github.com/3neti/x-change', 'external' => true],
                         ],
                     ],
