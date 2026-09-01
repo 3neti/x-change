@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\XRay;
 
+use BackedEnum;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
-use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 
 class VoucherXRayProjectionBuilder
 {
@@ -112,7 +113,8 @@ class VoucherXRayProjectionBuilder
     {
         $fields = Arr::wrap(data_get($instructions, 'inputs.fields', []));
         $requirements = collect($fields)
-            ->filter(fn (mixed $field): bool => is_string($field) && $field !== '')
+            ->map(fn (mixed $field): ?string => $this->fieldKey($field))
+            ->filter(fn (?string $field): bool => is_string($field) && $field !== '')
             ->map(fn (string $field): array => [
                 'key' => $field,
                 'label' => $this->label($field),
@@ -220,6 +222,19 @@ class VoucherXRayProjectionBuilder
             'label' => 'Start claim',
             'url' => '/x/claim?code='.rawurlencode($code),
         ]];
+    }
+
+    protected function fieldKey(mixed $field): ?string
+    {
+        if ($field instanceof BackedEnum) {
+            return is_string($field->value) ? $field->value : null;
+        }
+
+        if (is_string($field)) {
+            return trim($field);
+        }
+
+        return null;
     }
 
     protected function label(string $field): string

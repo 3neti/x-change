@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 
 it('projects voucher details into an x-ray disclosure payload', function (): void {
@@ -46,6 +47,29 @@ it('projects voucher details into an x-ray disclosure payload', function (): voi
         ->and($projection['redirect_url'])->toBe('https://example.com/rider')
         ->and($projection['allow']['amount'])->toBeFalse()
         ->and($projection['allow']['rider_preclaim'])->toBeTrue();
+});
+
+it('projects enum-backed input fields as visible x-ray requirements', function (): void {
+    $projection = app(VoucherXRayProjectionBuilder::class)->build((object) [
+        'code' => 'XRAY-ONBD',
+        'amount' => 0,
+        'currency' => 'PHP',
+        'status' => 'issued',
+        'claimed' => false,
+        'fully_claimed' => false,
+        'instructions' => [
+            'inputs' => [
+                'fields' => [
+                    VoucherInputField::NAME,
+                    VoucherInputField::EMAIL,
+                    VoucherInputField::MOBILE,
+                ],
+            ],
+        ],
+    ]);
+
+    expect(collect($projection['requirements'])->pluck('key')->all())
+        ->toBe(['name', 'email', 'mobile']);
 });
 
 it('projects partially claimed vouchers as partially claimable', function (): void {
