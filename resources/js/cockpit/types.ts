@@ -59,6 +59,12 @@ export type CockpitActivityItem = {
     projection_badge?: string;
     projection_status?: string;
     projection_detail?: string;
+    code?: string;
+    amount?: string;
+    status?: string;
+    target_label?: string;
+    detail_href?: string;
+    claim_summary?: CockpitPayCodeClaimSummaryReadModel;
     projection_targets?: string[];
     metadata?: Record<string, unknown>;
 };

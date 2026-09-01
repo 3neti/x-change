@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Carbon;
+use LBHurtado\XChange\Models\VoucherClaim;
+
 it('hydrates dashboard connected services from installed read-only integration packages', function () {
     actingAsTestUser();
 
@@ -30,6 +33,51 @@ it('hydrates dashboard connected services from installed read-only integration p
         ->assertJsonMissingPath('props.read_model.provider_payload')
         ->assertJsonMissingPath('props.read_model.raw_payload')
         ->assertJsonMissingPath('props.read_model.wallet');
+});
+
+it('promotes claimed Pay Code facts into dashboard activity without exposing raw contact data', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher();
+    $voucher->forceFill([
+        'redeemed_at' => Carbon::parse('2026-09-01 10:15:00', 'Asia/Manila'),
+    ])->save();
+
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'claim',
+        'status' => 'paid',
+        'requested_amount_minor' => 5500,
+        'disbursed_amount_minor' => 5500,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'claimer_mobile' => '09173011987',
+        'completed_at' => Carbon::parse('2026-09-01 10:16:00', 'Asia/Manila'),
+    ]);
+
+    $response = $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard')
+        ->assertJsonMissing(['09173011987']);
+
+    $activity = collect($response->json('props.dashboard_read_model.activity'))
+        ->firstWhere('code', $voucher->code);
+
+    expect($activity)->toMatchArray([
+        'label' => $voucher->code.' claimed',
+        'projection_badge' => 'Claimed',
+        'projection_status' => 'redeemed',
+        'projection_detail' => 'Recipient-facing completion',
+        'code' => $voucher->code,
+        'amount' => 'PHP 55.00',
+        'target_label' => '•••• 1987',
+        'detail_href' => route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code], false),
+    ])
+        ->and($activity['claim_summary']['schema'])->toBe('x-change.cockpit.pay-code-claim-summary.v1')
+        ->and($activity['claim_summary']['claimed_mobile_masked'])->toBe('•••• 1987')
+        ->and($activity['claim_summary']['amount_minor'])->toBe(5500);
 });
 
 it('hydrates dashboard campaign package presence from installed x-campaign without selected campaign context', function () {

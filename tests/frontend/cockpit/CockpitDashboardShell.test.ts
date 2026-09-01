@@ -25,6 +25,11 @@ describe('Cockpit dashboard shell baseline', () => {
             wrapper.find('[data-testid="cockpit-attention-panel"]').exists(),
         ).toBe(true);
         expect(
+            wrapper
+                .find('[data-testid="cockpit-recently-claimed-spotlight"]')
+                .exists(),
+        ).toBe(true);
+        expect(
             wrapper.find('[data-testid="cockpit-recent-log"]').exists(),
         ).toBe(true);
         expect(
@@ -88,5 +93,6 @@ describe('Cockpit dashboard shell baseline', () => {
         expect(wrapper.text()).toContain(
             'Audit facts require authorization and redaction before display.',
         );
+        expect(wrapper.text()).toContain('No claims yet today');
     });
 });

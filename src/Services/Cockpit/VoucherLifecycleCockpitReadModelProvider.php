@@ -2167,26 +2167,75 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     private function dashboardActivity($rows, CockpitReadModelQueryData $query): array
     {
         $voucherActivity = $rows
-            ->map(fn (array $row): array => [
-                'code' => $this->summaryCode($row, ''),
-                'display_status' => $this->stringValue($row['display_status'] ?? null, $this->summaryStatus($row)),
-                'timestamp' => $this->nullableString(
-                    $row['updated_at']
-                        ?? $row['redeemed_at']
-                        ?? $row['expires_at']
-                        ?? $row['created_at']
+            ->map(function (array $row): array {
+                $code = $this->summaryCode($row, '');
+                $status = $this->summaryStatus($row);
+                $displayStatus = $this->stringValue($row['display_status'] ?? null, $status);
+                $claimSummary = is_array($row['claim_summary'] ?? null) ? $row['claim_summary'] : [];
+                $claimedAt = $this->nullableString($claimSummary['claimed_at'] ?? null);
+                $claimedBy = $this->nullableString(
+                    $claimSummary['claimed_by_label']
+                        ?? $claimSummary['claimed_mobile_masked']
                         ?? null
-                ),
-            ])
+                );
+                $amountMinor = is_numeric($claimSummary['amount_minor'] ?? null)
+                    ? (int) $claimSummary['amount_minor']
+                    : null;
+                $amount = $amountMinor !== null
+                    ? $this->formatMinorMoney(
+                        $amountMinor,
+                        $this->stringValue($claimSummary['currency'] ?? null, $this->stringValue($row['currency'] ?? null, 'PHP')),
+                    )
+                    : $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null);
+                $isClaimed = $claimedAt !== null
+                    || $this->nullableString($row['redeemed_at'] ?? null) !== null
+                    || in_array(strtolower($status), ['paid', 'redeemed', 'claimed'], true);
+                $party = $this->payCodeParty($row, $status);
+                $partyArray = $this->toArray($party);
+
+                return [
+                    'code' => $code,
+                    'display_status' => $displayStatus,
+                    'timestamp' => $claimedAt ?? $this->nullableString(
+                        $row['updated_at']
+                            ?? $row['redeemed_at']
+                            ?? $row['expires_at']
+                            ?? $row['created_at']
+                            ?? null
+                    ),
+                    'amount' => $amount,
+                    'claimed_by' => $claimedBy,
+                    'target_label' => $this->nullableString(
+                        $partyArray['primary']
+                            ?? $partyArray['secondary']
+                            ?? null
+                    ),
+                    'detail_href' => Route::has('x-change.cockpit.pay-codes.show')
+                        ? route('x-change.cockpit.pay-codes.show', ['code' => $code], false)
+                        : null,
+                    'claim_summary' => $claimSummary,
+                    'is_claimed' => $isClaimed,
+                ];
+            })
             ->filter(fn (array $row): bool => $row['code'] !== '' && $row['timestamp'] !== null)
             ->sortByDesc('timestamp')
-            ->take(3)
             ->map(fn (array $row): CockpitDashboardActivityData => new CockpitDashboardActivityData(
                 id: $row['code'],
-                label: $row['code'],
-                description: 'Status: '.$row['display_status'],
+                label: $row['is_claimed'] ? $row['code'].' claimed' : $row['code'],
+                description: $row['is_claimed']
+                    ? trim($row['amount'].' claimed'.($row['claimed_by'] !== null ? ' by '.$row['claimed_by'] : ''))
+                    : 'Status: '.$row['display_status'],
                 timestamp: $row['timestamp'],
                 source: 'system',
+                projection_badge: $row['is_claimed'] ? 'Claimed' : 'Pay Code',
+                projection_status: $row['display_status'],
+                projection_detail: $row['is_claimed'] ? 'Recipient-facing completion' : 'Lifecycle update',
+                code: $row['code'],
+                amount: $row['amount'],
+                status: $row['display_status'],
+                target_label: $row['claimed_by'] ?? $row['target_label'],
+                detail_href: $row['detail_href'],
+                claim_summary: $row['claim_summary'],
             ))
             ->values()
             ->all();

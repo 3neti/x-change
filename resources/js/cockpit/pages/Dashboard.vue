@@ -31,6 +31,7 @@ import {
     cockpitRiskSignals,
 } from '../dashboardDefaults';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
+import { formatAbsoluteTime } from '../utils/dateTime';
 import type {
     CockpitActivityItem,
     CockpitDashboardMetric,
@@ -64,6 +65,22 @@ type CockpitLogItem = {
     label: string;
     detail: string;
     meta: string;
+    code?: string;
+    amount?: string;
+    target?: string;
+    time?: string;
+    tone?: 'neutral' | 'healthy' | 'warning' | 'critical';
+    href?: string;
+};
+
+type CockpitClaimSpotlightItem = {
+    key: string;
+    code: string;
+    amount: string;
+    claimedBy: string;
+    claimedAt: string;
+    place: string;
+    status: string;
     href?: string;
 };
 
@@ -363,6 +380,39 @@ const horizonItems = computed<CockpitHorizonItem[]>(() => [
     },
 ]);
 
+const claimedSpotlightItems = computed<CockpitClaimSpotlightItem[]>(() =>
+    activity.value
+        .filter((item) => isClaimedActivity(item))
+        .map((item) => {
+            const summary = item.claim_summary ?? {};
+            const code = stringValue(item.code) ?? item.label;
+            const claimedAt =
+                stringValue(summary.claimed_at) ?? item.timestamp;
+
+            return {
+                key: item.id,
+                code,
+                amount:
+                    stringValue(item.amount) ??
+                    formatClaimAmount(summary.amount_minor, summary.currency),
+                claimedBy:
+                    stringValue(summary.claimed_by_label) ??
+                    stringValue(summary.claimed_mobile_masked) ??
+                    stringValue(item.target_label) ??
+                    'Claimed recipient',
+                claimedAt: formatAbsoluteTime(claimedAt),
+                place: stringValue(summary.location_label) ?? 'Place not captured',
+                status: displayStatus(
+                    stringValue(item.status) ??
+                        stringValue(item.projection_status) ??
+                        'claimed',
+                ),
+                href: stringValue(item.detail_href),
+            };
+        })
+        .slice(0, 4),
+);
+
 const logItems = computed<CockpitLogItem[]>(() => {
     const issuance = (
         Array.isArray(
@@ -380,15 +430,33 @@ const logItems = computed<CockpitLogItem[]>(() => {
             stringValue(presentation.subtitle) ??
             'Issuance activity is available.',
         meta: displayStatus(stringValue(presentation.status) ?? 'available'),
+        code: stringValue(presentation.code),
+        status: displayStatus(stringValue(presentation.status) ?? 'available'),
+        tone: 'neutral' as const,
         href: stringValue(presentation.detail_href),
     }));
 
-    const system = activity.value.map((item) => ({
-        key: `activity-${item.id}`,
-        label: item.label,
-        detail: item.description,
-        meta: displayStatus(item.source),
-    }));
+    const system = activity.value
+        .filter((item) => !isClaimedActivity(item))
+        .map((item) => ({
+            key: `activity-${item.id}`,
+            label: item.label,
+            detail: item.description,
+            meta: displayStatus(
+                stringValue(item.projection_status) ?? item.source,
+            ),
+            code: stringValue(item.code) ?? item.label,
+            amount: stringValue(item.amount),
+            target: stringValue(item.target_label),
+            time: formatAbsoluteTime(item.timestamp),
+            status: displayStatus(
+                stringValue(item.status) ??
+                    stringValue(item.projection_status) ??
+                    item.source,
+            ),
+            tone: logTone(item),
+            href: stringValue(item.detail_href),
+        }));
 
     return [...issuance, ...system].slice(0, 5);
 });
@@ -538,6 +606,66 @@ function hasClientFunds(): boolean {
     return numericValue(clientFunds.value) > 0;
 }
 
+function isClaimedActivity(item: CockpitActivityItem): boolean {
+    const summary = item.claim_summary ?? {};
+    const claimedAt = stringValue(summary.claimed_at);
+    const status = (
+        stringValue(item.status) ??
+        stringValue(item.projection_status) ??
+        item.label
+    ).toLowerCase();
+
+    return (
+        claimedAt !== undefined ||
+        status === 'claimed' ||
+        status.includes('paid') ||
+        status.includes('redeemed') ||
+        status.includes('completed')
+    );
+}
+
+function formatClaimAmount(amount: unknown, currency: unknown): string {
+    const numericAmount =
+        typeof amount === 'number' && Number.isFinite(amount)
+            ? amount
+            : typeof amount === 'string' && amount.trim() !== ''
+              ? Number.parseInt(amount, 10)
+              : null;
+
+    if (numericAmount === null || !Number.isFinite(numericAmount)) {
+        return 'Amount captured';
+    }
+
+    return `${stringValue(currency) ?? 'PHP'} ${(
+        numericAmount / 100
+    ).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
+
+function logTone(item: CockpitActivityItem): CockpitLogItem['tone'] {
+    const status = (
+        stringValue(item.status) ??
+        stringValue(item.projection_status) ??
+        item.source
+    ).toLowerCase();
+
+    if (status.includes('fail') || status.includes('reject')) {
+        return 'critical';
+    }
+
+    if (status.includes('pending') || status.includes('approval')) {
+        return 'warning';
+    }
+
+    if (status.includes('paid') || status.includes('redeem')) {
+        return 'healthy';
+    }
+
+    return 'neutral';
+}
+
 function numericValue(value: unknown): number {
     if (typeof value === 'number' && Number.isFinite(value)) {
         return value;
@@ -650,6 +778,16 @@ function sanitizeActivityItem(
         projection_badge: stringValue(item.projection_badge),
         projection_status: stringValue(item.projection_status),
         projection_detail: stringValue(item.projection_detail),
+        code: stringValue(item.code),
+        amount: stringValue(item.amount),
+        status: stringValue(item.status),
+        target_label: stringValue(item.target_label),
+        detail_href: stringValue(item.detail_href),
+        claim_summary:
+            typeof item.claim_summary === 'object' &&
+            item.claim_summary !== null
+                ? item.claim_summary
+                : undefined,
         projection_targets: Array.isArray(item.projection_targets)
             ? item.projection_targets
                   .map((target) => stringValue(target))
@@ -979,6 +1117,142 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                 </div>
             </section>
 
+            <section
+                class="-mx-4 border-y border-emerald-200 bg-emerald-50/70 p-4 shadow-none md:mx-0 md:rounded-2xl md:border md:bg-white md:shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/20 md:dark:bg-slate-900"
+                data-testid="cockpit-recently-claimed-spotlight"
+            >
+                <div
+                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div>
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300"
+                        >
+                            Center Stage
+                        </p>
+                        <h2
+                            class="mt-1 text-lg font-semibold text-slate-950 dark:text-white"
+                        >
+                            Recently Claimed
+                        </h2>
+                        <p
+                            class="mt-1 text-sm text-slate-600 dark:text-slate-300"
+                        >
+                            Completed recipient outcomes, not expiring vouchers.
+                        </p>
+                    </div>
+                    <Link
+                        href="/x/cockpit/pay-codes?status=redeemed"
+                        prefetch
+                        class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
+                        data-testid="cockpit-recently-claimed-view-all"
+                    >
+                        View claimed
+                        <ArrowRight class="size-4" aria-hidden="true" />
+                    </Link>
+                </div>
+
+                <div
+                    v-if="claimedSpotlightItems.length > 0"
+                    class="mt-4 grid gap-3 xl:grid-cols-2"
+                    data-testid="cockpit-recently-claimed-list"
+                >
+                    <Link
+                        v-for="claim in claimedSpotlightItems"
+                        :key="claim.key"
+                        :href="claim.href ?? '/x/cockpit/pay-codes'"
+                        prefetch
+                        class="group rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-emerald-900/70 dark:bg-slate-950/60 dark:hover:border-emerald-700"
+                        data-testid="cockpit-recently-claimed-item"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span
+                                        class="rounded-full bg-emerald-100 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/70 dark:text-emerald-200"
+                                    >
+                                        Claimed
+                                    </span>
+                                    <span
+                                        class="truncate font-mono text-sm font-semibold text-slate-950 dark:text-white"
+                                    >
+                                        {{ claim.code }}
+                                    </span>
+                                </div>
+                                <p
+                                    class="mt-3 text-2xl font-semibold tabular-nums text-slate-950 dark:text-white"
+                                >
+                                    {{ claim.amount }}
+                                </p>
+                            </div>
+                            <ArrowRight
+                                class="size-4 shrink-0 text-emerald-500 transition group-hover:translate-x-0.5"
+                                aria-hidden="true"
+                            />
+                        </div>
+
+                        <dl class="mt-4 grid gap-3 sm:grid-cols-3">
+                            <div class="min-w-0">
+                                <dt
+                                    class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                >
+                                    Claimed by
+                                </dt>
+                                <dd
+                                    class="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                    {{ claim.claimedBy }}
+                                </dd>
+                            </div>
+                            <div class="min-w-0">
+                                <dt
+                                    class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                >
+                                    Claimed at
+                                </dt>
+                                <dd
+                                    class="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                    {{ claim.claimedAt }}
+                                </dd>
+                            </div>
+                            <div class="min-w-0">
+                                <dt
+                                    class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                >
+                                    Place
+                                </dt>
+                                <dd
+                                    class="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                    {{ claim.place }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </Link>
+                </div>
+
+                <div
+                    v-else
+                    class="mt-4 rounded-2xl border border-dashed border-emerald-200 bg-white/80 p-6 text-center dark:border-emerald-900/70 dark:bg-slate-950/40"
+                    data-testid="cockpit-recently-claimed-empty"
+                >
+                    <ShieldCheck
+                        class="mx-auto size-8 text-emerald-500"
+                        aria-hidden="true"
+                    />
+                    <p
+                        class="mt-3 text-sm font-semibold text-slate-950 dark:text-white"
+                    >
+                        No claims yet today
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Redeemed Pay Codes will appear here before the general
+                        activity log.
+                    </p>
+                </div>
+            </section>
+
             <div class="grid gap-4 xl:grid-cols-5">
                 <section
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-2 dark:border-slate-800 dark:bg-slate-900"
@@ -1075,7 +1349,7 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                             <p
                                 class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Issuance and settlement signals.
+                                Supporting issuance and settlement signals.
                             </p>
                         </div>
                         <Radio
@@ -1092,17 +1366,14 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                                 v-if="item.href"
                                 :href="item.href"
                                 prefetch
-                                class="group flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                                class="group grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(8rem,1.2fr)_minmax(5rem,0.8fr)_minmax(6rem,0.8fr)_auto] sm:items-center"
                                 data-testid="cockpit-log-item"
                             >
-                                <span
-                                    class="size-2 shrink-0 rounded-full bg-slate-400"
-                                />
-                                <span class="min-w-0 flex-1">
+                                <span class="min-w-0">
                                     <span
-                                        class="block truncate text-sm font-semibold text-slate-900 dark:text-white"
+                                        class="block truncate font-mono text-sm font-semibold text-slate-900 dark:text-white"
                                     >
-                                        {{ item.label }}
+                                        {{ item.code ?? item.label }}
                                     </span>
                                     <span
                                         class="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400"
@@ -1111,24 +1382,41 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                                     </span>
                                 </span>
                                 <span
-                                    class="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                                    class="truncate text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100"
                                 >
-                                    {{ item.meta }}
+                                    {{ item.amount ?? '—' }}
+                                </span>
+                                <span
+                                    class="truncate text-xs font-medium text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ item.target ?? item.time ?? item.meta }}
+                                </span>
+                                <span
+                                    class="inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[0.65rem] font-semibold ring-1"
+                                    :class="{
+                                        'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700':
+                                            item.tone === 'neutral' || !item.tone,
+                                        'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800':
+                                            item.tone === 'healthy',
+                                        'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800':
+                                            item.tone === 'warning',
+                                        'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:ring-rose-800':
+                                            item.tone === 'critical',
+                                    }"
+                                >
+                                    {{ item.status ?? item.meta }}
                                 </span>
                             </Link>
                             <div
                                 v-else
-                                class="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                                class="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(8rem,1.2fr)_minmax(5rem,0.8fr)_minmax(6rem,0.8fr)_auto] sm:items-center"
                                 data-testid="cockpit-log-item"
                             >
-                                <span
-                                    class="size-2 shrink-0 rounded-full bg-slate-400"
-                                />
-                                <span class="min-w-0 flex-1">
+                                <span class="min-w-0">
                                     <span
-                                        class="block truncate text-sm font-semibold text-slate-900 dark:text-white"
+                                        class="block truncate font-mono text-sm font-semibold text-slate-900 dark:text-white"
                                     >
-                                        {{ item.label }}
+                                        {{ item.code ?? item.label }}
                                     </span>
                                     <span
                                         class="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400"
@@ -1137,9 +1425,29 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                                     </span>
                                 </span>
                                 <span
-                                    class="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                                    class="truncate text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100"
                                 >
-                                    {{ item.meta }}
+                                    {{ item.amount ?? '—' }}
+                                </span>
+                                <span
+                                    class="truncate text-xs font-medium text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ item.target ?? item.time ?? item.meta }}
+                                </span>
+                                <span
+                                    class="inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[0.65rem] font-semibold ring-1"
+                                    :class="{
+                                        'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700':
+                                            item.tone === 'neutral' || !item.tone,
+                                        'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800':
+                                            item.tone === 'healthy',
+                                        'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800':
+                                            item.tone === 'warning',
+                                        'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:ring-rose-800':
+                                            item.tone === 'critical',
+                                    }"
+                                >
+                                    {{ item.status ?? item.meta }}
                                 </span>
                             </div>
                         </template>
