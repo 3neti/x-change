@@ -1612,15 +1612,17 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
         $status = $this->legacyIndexStatus($row);
 
+        $amountPresentation = is_array($row['amount_presentation'] ?? null)
+            ? $row['amount_presentation']
+            : $this->payCodeAmountPresentation($row);
+
         return new CockpitPayCodeListRecordData(
             code: $code,
             template: $this->stringValue($row['template'] ?? null, 'Pay Code'),
             capability: $this->payCodeCapability($row),
             instruction_badges: $this->payCodeInstructionBadges($row),
-            amount: $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null),
-            amount_presentation: is_array($row['amount_presentation'] ?? null)
-                ? $row['amount_presentation']
-                : $this->payCodeAmountPresentation($row),
+            amount: $this->payCodeListDisplayAmount($row, $amountPresentation),
+            amount_presentation: $amountPresentation,
             currency: $this->nullableString($row['currency'] ?? null),
             status: $status,
             display_status: $this->stringValue($row['display_status'] ?? null, $status),
@@ -1668,6 +1670,41 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             message: $message,
             tone: $this->stringValue($attention['tone'] ?? null, 'critical'),
         );
+    }
+
+    /**
+     * Keep the legacy list `amount` field aligned with the canonical flow-aware
+     * amount presentation so stale/fallback table renderers do not show payable
+     * Pay Codes as PHP 0.00.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  array<string, mixed>  $amountPresentation
+     */
+    private function payCodeListDisplayAmount(array $row, array $amountPresentation): string|int|float|null
+    {
+        $flowType = $this->nullableString($amountPresentation['flow_type'] ?? null);
+
+        if ($flowType === 'payable') {
+            return $this->amountValue($amountPresentation['target_amount'] ?? null)
+                ?? $this->amountValue($amountPresentation['amount'] ?? null)
+                ?? $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null);
+        }
+
+        if ($flowType === 'settlement') {
+            $amount = $this->amountValue($amountPresentation['amount'] ?? null);
+            $targetAmount = $this->amountValue($amountPresentation['target_amount'] ?? null);
+
+            if ($amount !== null && $targetAmount !== null) {
+                return "{$amount} → {$targetAmount}";
+            }
+
+            return $amount
+                ?? $targetAmount
+                ?? $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null);
+        }
+
+        return $this->amountValue($amountPresentation['amount'] ?? null)
+            ?? $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null);
     }
 
     private function payCodeCapability(array $row): CockpitPayCodeCapabilityData

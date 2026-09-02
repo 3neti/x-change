@@ -225,7 +225,8 @@ it('projects amount presentation by Pay Code flow type', function () {
             ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.amount_minor', $expected['amount_minor'])
             ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.target_amount_minor', $expected['target_amount_minor'])
             ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.amount', $expected['amount'])
-            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.target_amount', $expected['target_amount']);
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.target_amount', $expected['target_amount'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount', $expected['display_amount']);
     };
 
     $assertAmountPresentation($disbursable, [
@@ -235,6 +236,7 @@ it('projects amount presentation by Pay Code flow type', function () {
         'target_amount_minor' => null,
         'amount' => 'PHP 500.00',
         'target_amount' => null,
+        'display_amount' => 'PHP 500.00',
     ]);
     $assertAmountPresentation($payable, [
         'flow_type' => 'payable',
@@ -243,6 +245,7 @@ it('projects amount presentation by Pay Code flow type', function () {
         'target_amount_minor' => 10000,
         'amount' => 'PHP 75.00',
         'target_amount' => 'PHP 100.00',
+        'display_amount' => 'PHP 100.00',
     ]);
     $assertAmountPresentation($settlement, [
         'flow_type' => 'settlement',
@@ -251,6 +254,7 @@ it('projects amount presentation by Pay Code flow type', function () {
         'target_amount_minor' => 10000,
         'amount' => 'PHP 100.50',
         'target_amount' => 'PHP 100.00',
+        'display_amount' => 'PHP 100.50 → PHP 100.00',
     ]);
 });
 
