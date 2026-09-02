@@ -91,6 +91,8 @@ it('projects onboarding vouchers with accept invitation claim presentation', fun
     expect($projection['presentation'])->toMatchArray([
         'title' => 'Accept Invitation',
         'primary_action_label' => 'Continue',
+        'eyebrow' => 'Invitation code',
+        'subject_label' => 'Invitation code',
         'intent' => 'commissioning_invitation',
         'source' => 'flow_default',
     ]);

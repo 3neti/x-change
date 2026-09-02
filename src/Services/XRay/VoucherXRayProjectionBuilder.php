@@ -99,7 +99,7 @@ class VoucherXRayProjectionBuilder
 
     /**
      * @param  array<string, mixed>  $instructions
-     * @return array{title: string, primary_action_label: string, subtitle?: string, intent: string, source: string}
+     * @return array{title: string, primary_action_label: string, subtitle?: string, eyebrow?: string, subject_label?: string, intent: string, source: string}
      */
     protected function presentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
     {
@@ -135,7 +135,7 @@ class VoucherXRayProjectionBuilder
         }
 
         return collect($presentation)
-            ->only(['title', 'primary_action_label', 'subtitle', 'intent'])
+            ->only(['title', 'primary_action_label', 'subtitle', 'eyebrow', 'subject_label', 'intent'])
             ->filter(static fn (mixed $value): bool => is_string($value) && trim($value) !== '')
             ->map(static fn (string $value): string => trim($value))
             ->all();
@@ -143,7 +143,7 @@ class VoucherXRayProjectionBuilder
 
     /**
      * @param  array<string, mixed>  $instructions
-     * @return array{title: string, primary_action_label: string, intent: string, source: string}
+     * @return array{title: string, primary_action_label: string, eyebrow: string, subject_label: string, intent: string, source: string}
      */
     protected function defaultPresentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
     {
@@ -151,6 +151,8 @@ class VoucherXRayProjectionBuilder
             return [
                 'title' => 'Accept Invitation',
                 'primary_action_label' => 'Continue',
+                'eyebrow' => 'Invitation code',
+                'subject_label' => 'Invitation code',
                 'intent' => 'commissioning_invitation',
                 'source' => 'flow_default',
             ];
@@ -160,6 +162,8 @@ class VoucherXRayProjectionBuilder
             return [
                 'title' => 'Pay with Pay Code',
                 'primary_action_label' => 'Pay now',
+                'eyebrow' => 'Payment code',
+                'subject_label' => 'Pay Code',
                 'intent' => 'payable_collection',
                 'source' => 'flow_default',
             ];
@@ -168,6 +172,8 @@ class VoucherXRayProjectionBuilder
         return [
             'title' => 'Claim Pay Code',
             'primary_action_label' => 'Start Claim',
+            'eyebrow' => 'Pay Code',
+            'subject_label' => 'Pay Code',
             'intent' => 'claim',
             'source' => 'fallback',
         ];

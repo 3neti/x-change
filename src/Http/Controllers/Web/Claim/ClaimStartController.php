@@ -28,6 +28,7 @@ use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
+use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
@@ -50,6 +51,7 @@ class ClaimStartController extends Controller
         protected VoucherSliceExecutionCoordinator $sliceExecutions,
         protected VoucherSlicePlanProjection $slicePlans,
         protected VoucherCollectionProgressService $collectionProgress,
+        protected VoucherXRayProjectionBuilder $xrayProjection,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -293,6 +295,10 @@ class ClaimStartController extends Controller
         }
 
         $instructionPayload = $this->applyClaimDestinationDefaults($instructionPayload);
+        $instructionPayload = $this->applyClaimPresentation(
+            voucher: $voucher,
+            instructionPayload: $instructionPayload,
+        );
         $instructionPayload = $this->applySliceDefaults(
             instructionPayload: $instructionPayload,
             amount: $payoutAmount,
@@ -356,6 +362,10 @@ class ClaimStartController extends Controller
             compiledInputs: $inputs,
         );
         $instructionPayload = $this->applyClaimDestinationDefaults($instructionPayload);
+        $instructionPayload = $this->applyClaimPresentation(
+            voucher: $voucher,
+            instructionPayload: $instructionPayload,
+        );
 
         $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructionPayload);
 
@@ -436,6 +446,26 @@ class ClaimStartController extends Controller
         if ($amount !== null) {
             data_set($instructionPayload, 'metadata.named_slices.amount', $amount);
         }
+
+        return $instructionPayload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructionPayload
+     * @return array<string, mixed>
+     */
+    protected function applyClaimPresentation(Voucher $voucher, array $instructionPayload): array
+    {
+        $presentation = data_get($this->xrayProjection->build($voucher), 'presentation');
+
+        if (! is_array($presentation)) {
+            return $instructionPayload;
+        }
+
+        data_set($instructionPayload, 'metadata.claim_presentation', [
+            'schema' => 'x-change.claim-presentation.v1',
+            ...$presentation,
+        ]);
 
         return $instructionPayload;
     }
