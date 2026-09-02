@@ -9,6 +9,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 
@@ -46,6 +47,7 @@ class VoucherXRayProjectionBuilder
             ),
             'issuer' => data_get($voucher, 'issuer_id'),
             'requirements' => $this->requirements($instructions),
+            'presentation' => $this->presentation($voucher, $instructions, $status, $sliceVoucher),
             'collection_progress' => $collectionProgress,
             'slice_plan' => $slicePlan,
             'remaining_slices' => $sliceVoucher instanceof Voucher
@@ -93,6 +95,97 @@ class VoucherXRayProjectionBuilder
         }
 
         return 'claimable';
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array{title: string, primary_action_label: string, subtitle?: string, intent: string, source: string}
+     */
+    protected function presentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
+    {
+        $default = $this->defaultPresentation($voucher, $instructions, $status, $sliceVoucher);
+        $override = $this->presentationOverride($instructions);
+
+        if ($override === []) {
+            return $default;
+        }
+
+        return array_filter([
+            ...$default,
+            ...$override,
+            'source' => 'instructions',
+        ], static fn (mixed $value): bool => is_string($value) && trim($value) !== '');
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array<string, string>
+     */
+    protected function presentationOverride(array $instructions): array
+    {
+        $metadata = (array) data_get($instructions, 'metadata', []);
+        $presentation = data_get($metadata, 'presentation.claim')
+            ?? data_get($metadata, 'claim_presentation')
+            ?? data_get($metadata, 'custom.claim_presentation')
+            ?? data_get($metadata, 'custom.presentation.claim')
+            ?? [];
+
+        if (! is_array($presentation)) {
+            return [];
+        }
+
+        return collect($presentation)
+            ->only(['title', 'primary_action_label', 'subtitle', 'intent'])
+            ->filter(static fn (mixed $value): bool => is_string($value) && trim($value) !== '')
+            ->map(static fn (string $value): string => trim($value))
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array{title: string, primary_action_label: string, intent: string, source: string}
+     */
+    protected function defaultPresentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
+    {
+        if ($this->isOnboardingVoucher($voucher, $instructions, $sliceVoucher)) {
+            return [
+                'title' => 'Accept Invitation',
+                'primary_action_label' => 'Continue',
+                'intent' => 'commissioning_invitation',
+                'source' => 'flow_default',
+            ];
+        }
+
+        if ($status === 'payable') {
+            return [
+                'title' => 'Pay with Pay Code',
+                'primary_action_label' => 'Pay now',
+                'intent' => 'payable_collection',
+                'source' => 'flow_default',
+            ];
+        }
+
+        return [
+            'title' => 'Claim Pay Code',
+            'primary_action_label' => 'Start Claim',
+            'intent' => 'claim',
+            'source' => 'fallback',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     */
+    protected function isOnboardingVoucher(mixed $voucher, array $instructions, ?Voucher $sliceVoucher = null): bool
+    {
+        $driver = data_get($instructions, 'execution.driver')
+            ?? data_get($voucher, 'metadata.instructions.execution.driver')
+            ?? ($sliceVoucher instanceof Voucher
+                ? data_get($sliceVoucher->getAttribute('metadata'), 'instructions.execution.driver')
+                : null);
+
+        return (bool) data_get($instructions, 'onboarding', false) === true
+            || $driver === OnboardingVoucherInstructionPolicy::ExecutionDriver;
     }
 
     protected function formatAmount(mixed $amount, string $currency): ?string

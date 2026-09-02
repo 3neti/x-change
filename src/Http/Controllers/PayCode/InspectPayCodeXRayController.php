@@ -55,10 +55,16 @@ class InspectPayCodeXRayController extends Controller
             $projected,
         );
 
+        $xray = (array) XRayResultResource::make($result)->resolve($request);
+
+        if (is_array($projected['presentation'] ?? null)) {
+            $xray['presentation'] = $projected['presentation'];
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
-                'xray' => XRayResultResource::make($result)->resolve($request),
+                'xray' => $xray,
             ],
         ]);
     }

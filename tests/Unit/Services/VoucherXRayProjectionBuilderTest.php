@@ -72,6 +72,78 @@ it('projects enum-backed input fields as visible x-ray requirements', function (
         ->toBe(['name', 'email', 'mobile']);
 });
 
+it('projects onboarding vouchers with accept invitation claim presentation', function (): void {
+    $projection = app(VoucherXRayProjectionBuilder::class)->build((object) [
+        'code' => 'XRAY-ONBD',
+        'amount' => 0,
+        'currency' => 'PHP',
+        'status' => 'issued',
+        'claimed' => false,
+        'fully_claimed' => false,
+        'instructions' => [
+            'onboarding' => true,
+            'execution' => [
+                'driver' => 'onboarding_account_provisioning',
+            ],
+        ],
+    ]);
+
+    expect($projection['presentation'])->toMatchArray([
+        'title' => 'Accept Invitation',
+        'primary_action_label' => 'Continue',
+        'intent' => 'commissioning_invitation',
+        'source' => 'flow_default',
+    ]);
+});
+
+it('lets voucher instruction presentation override x-ray claim copy', function (): void {
+    $projection = app(VoucherXRayProjectionBuilder::class)->build((object) [
+        'code' => 'XRAY-COPY',
+        'amount' => 25,
+        'currency' => 'PHP',
+        'status' => 'issued',
+        'claimed' => false,
+        'fully_claimed' => false,
+        'instructions' => [
+            'metadata' => [
+                'presentation' => [
+                    'claim' => [
+                        'title' => 'Join Payroll',
+                        'primary_action_label' => 'Accept Payroll Invite',
+                        'intent' => 'payroll_invitation',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    expect($projection['presentation'])->toMatchArray([
+        'title' => 'Join Payroll',
+        'primary_action_label' => 'Accept Payroll Invite',
+        'intent' => 'payroll_invitation',
+        'source' => 'instructions',
+    ]);
+});
+
+it('keeps ordinary x-ray claim presentation backward compatible', function (): void {
+    $projection = app(VoucherXRayProjectionBuilder::class)->build((object) [
+        'code' => 'XRAY-CASH',
+        'amount' => 200,
+        'currency' => 'PHP',
+        'status' => 'issued',
+        'claimed' => false,
+        'fully_claimed' => false,
+        'instructions' => [],
+    ]);
+
+    expect($projection['presentation'])->toMatchArray([
+        'title' => 'Claim Pay Code',
+        'primary_action_label' => 'Start Claim',
+        'intent' => 'claim',
+        'source' => 'fallback',
+    ]);
+});
+
 it('projects partially claimed vouchers as partially claimable', function (): void {
     $projection = app(VoucherXRayProjectionBuilder::class)->build((object) [
         'code' => 'XRAY-SLICE',

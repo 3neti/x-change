@@ -9,6 +9,7 @@ const { routerVisit, formPost } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
+    Head: { template: '<div><slot /></div>' },
     router: {
         visit: routerVisit,
     },
@@ -162,6 +163,10 @@ const claimableSliceSurface = {
             props: {
                 visible: true,
                 status: 'claimable',
+                presentation: {
+                    title: 'Accept Invitation',
+                    primary_action_label: 'Continue',
+                },
                 disclosures: [
                     {
                         key: 'remaining_slices',
@@ -248,6 +253,19 @@ describe('ClaimWidget claim surface gating', () => {
 
         expect(xray.text()).toContain('Slice 1,Slice 2');
         expect(wrapper.find('form').exists()).toBe(true);
+    });
+
+    it('renders the claim title and submit label from server-resolved X-Ray presentation', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: null,
+                claimSurface: claimableSliceSurface,
+            },
+        });
+
+        expect(wrapper.find('h1').text()).toBe('Accept Invitation');
+        expect(wrapper.get('[data-testid="claim-widget-submit-button"]').text()).toBe('Continue');
     });
 
     it('keeps one selectable slice set when X-Ray and the compiled selector resolve together', () => {
