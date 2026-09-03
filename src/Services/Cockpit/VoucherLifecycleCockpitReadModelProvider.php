@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use JsonSerializable;
+use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
@@ -69,8 +70,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
-use LBHurtado\XChange\Services\VoucherLifecycleService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\VoucherLifecycleService;
 
 class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProviderContract
 {
@@ -1418,7 +1419,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->values();
         $sourceVouchers = $this->payCodeListVoucherModels($sourceVoucherIds);
         $posReferences = $this->posSaleReferenceService()->forVouchers($sourceVouchers);
-        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences, $sourceVouchers): array {
+        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences): array {
             $voucherId = (string) ($row['voucher_id'] ?? $row['id'] ?? '');
             $row['pos_reference'] = is_array($posReferences[$voucherId] ?? null)
                 ? $posReferences[$voucherId]
@@ -1646,7 +1647,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     private function payCodeListOperationalSummary(Voucher $voucher, array $instructions): array
     {
         try {
-            $summary = \LBHurtado\Voucher\Data\VoucherOperationalSummaryData::fromInstructions(
+            $summary = VoucherOperationalSummaryData::fromInstructions(
                 $voucher->instructions,
                 $voucher->voucher_type,
             );
@@ -1920,6 +1921,21 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         $redeemer = $redemption->getRelation('redeemer');
 
         return $redeemer instanceof Model ? $redeemer : null;
+    }
+
+    private function maskedMobile(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', (string) $value);
+
+        if (! is_string($digits) || strlen($digits) < 4) {
+            return null;
+        }
+
+        return '•••• '.substr($digits, -4);
     }
 
     /**
