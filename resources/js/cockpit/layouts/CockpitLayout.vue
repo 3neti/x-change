@@ -54,6 +54,7 @@ type FundingProjectionChangedPayload = {
 
 const processedFundingEvents = new Set<string>();
 let balanceRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+let balanceRefreshInFlight = false;
 const fundingRealtime = props.cockpitHeaderReadModel?.funding_realtime;
 
 if (fundingRealtime?.enabled === true) {
@@ -79,7 +80,16 @@ if (fundingRealtime?.enabled === true) {
             }
 
             balanceRefreshTimer = setTimeout(() => {
-                router.reload({ only: ['cockpit_header_read_model'] });
+                if (! balanceRefreshInFlight) {
+                    balanceRefreshInFlight = true;
+                    router.reload({
+                        only: ['cockpit_header_read_model'],
+                        onFinish: () => {
+                            balanceRefreshInFlight = false;
+                        },
+                    });
+                }
+
                 balanceRefreshTimer = null;
             }, 150);
         },

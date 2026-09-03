@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Cockpit;
 
+use BackedEnum;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use JsonSerializable;
+use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
@@ -65,6 +69,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
+use LBHurtado\XChange\Services\VoucherLifecycleService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 
 class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProviderContract
@@ -1402,32 +1407,23 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         $queryCode = $this->normalizeCode($query->code);
         $search = $this->normalizeSearch($query->payCodeSearch ?? $query->code);
         $statusFilter = $this->normalizeStatusFilter($query->payCodeStatus);
-        $sourceRows = collect($this->vouchers->list($this->payCodeListFilters($query)))
-            ->map(fn (mixed $row): array => $this->toArray($row))
-            ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
-            ->values();
+        $sourceRows = $this->usesDatabasePayCodeListProjection()
+            ? $this->payCodeListRows($query)
+            : $this->legacyPayCodeListRows($query);
         $sourceVoucherIds = $sourceRows
             ->map(fn (array $row): mixed => $row['voucher_id'] ?? $row['id'] ?? null)
             ->filter(fn (mixed $id): bool => is_numeric($id))
             ->map(fn (mixed $id): int => (int) $id)
             ->unique()
             ->values();
-        $sourceVouchers = Voucher::query()
-            ->with('owner')
-            ->whereKey($sourceVoucherIds)
-            ->get()
-            ->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
+        $sourceVouchers = $this->payCodeListVoucherModels($sourceVoucherIds);
         $posReferences = $this->posSaleReferenceService()->forVouchers($sourceVouchers);
         $sourceRows = $sourceRows->map(function (array $row) use ($posReferences, $sourceVouchers): array {
             $voucherId = (string) ($row['voucher_id'] ?? $row['id'] ?? '');
-            $voucher = $sourceVouchers->get($voucherId);
             $row['pos_reference'] = is_array($posReferences[$voucherId] ?? null)
                 ? $posReferences[$voucherId]
                 : [];
-            $row['amount_presentation'] = $this->payCodeAmountPresentation(
-                $row,
-                $voucher instanceof Voucher ? $voucher : null,
-            );
+            $row['amount_presentation'] = $this->payCodeAmountPresentation($row);
 
             return $row;
         });
@@ -1446,8 +1442,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->unique()
             ->values();
         $vouchers = $sourceVouchers->only($voucherIds->map(fn (int $id): string => (string) $id)->all());
-        $terminalControls = ($this->terminalControls ?? new PayCodeTerminalControlReadModel)
-            ->forVouchers($vouchers, $query->actor);
+        $terminalControls = $this->payCodeListTerminalControls($vouchers, $query->actor);
         $rows = $filteredRows
             ->map(function (array $row) use ($terminalControls): ?CockpitPayCodeListRecordData {
                 $voucherId = (string) ($row['voucher_id'] ?? $row['id'] ?? '');
@@ -1478,6 +1473,597 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 'excluded' => $this->excludedPayloadKeys(),
             ],
         );
+    }
+
+    private function usesDatabasePayCodeListProjection(): bool
+    {
+        return $this->vouchers instanceof VoucherLifecycleService;
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function legacyPayCodeListRows(CockpitReadModelQueryData $query): Collection
+    {
+        return collect($this->vouchers->list($this->payCodeListFilters($query)))
+            ->map(fn (mixed $row): array => $this->toArray($row))
+            ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
+            ->values();
+    }
+
+    /**
+     * Build the Pay Codes table from a deliberately thin projection. The list
+     * must not call the rich voucher summary path because that path hydrates
+     * claim, cash, entity, approval, collection, and payout detail for every
+     * voucher row.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function payCodeListRows(CockpitReadModelQueryData $query): Collection
+    {
+        return Voucher::query()
+            ->select([
+                'id',
+                'code',
+                'owner_id',
+                'owner_type',
+                'voucher_type',
+                'metadata',
+                'starts_at',
+                'expires_at',
+                'redeemed_at',
+                'state',
+                'locked_at',
+                'closed_at',
+                'created_at',
+                'updated_at',
+            ])
+            ->when(
+                ! $query->canViewAllPayCodes
+                && $query->operatorId !== null
+                && $query->operatorType !== null,
+                function (Builder $builder) use ($query): void {
+                    $builder
+                        ->where('owner_id', (int) $query->operatorId)
+                        ->where('owner_type', $query->operatorType);
+                },
+            )
+            ->with(['redeemers.redeemer'])
+            ->latest('id')
+            ->get()
+            ->map(fn (Voucher $voucher): array => $this->payCodeListRow($voucher))
+            ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, int>  $voucherIds
+     * @return Collection<string, Voucher>
+     */
+    private function payCodeListVoucherModels(Collection $voucherIds): Collection
+    {
+        if ($voucherIds->isEmpty()) {
+            return collect();
+        }
+
+        return Voucher::query()
+            ->select([
+                'id',
+                'code',
+                'owner_id',
+                'owner_type',
+                'voucher_type',
+                'metadata',
+                'starts_at',
+                'expires_at',
+                'redeemed_at',
+                'state',
+                'locked_at',
+                'closed_at',
+                'created_at',
+                'updated_at',
+            ])
+            ->whereKey($voucherIds->all())
+            ->get()
+            ->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payCodeListRow(Voucher $voucher): array
+    {
+        $instructions = $this->payCodeListInstructions($voucher);
+        $status = $this->payCodeListOperationalStatus($voucher);
+        $operational = $this->payCodeListOperationalSummary($voucher, $instructions);
+        $externalReference = $this->nullableString(data_get($instructions, 'metadata.custom.external_reference'));
+
+        return [
+            'id' => $voucher->id,
+            'voucher_id' => $voucher->id,
+            'code' => $voucher->code,
+            'template' => 'Pay Code',
+            'amount' => $this->payCodeListAmount($voucher, $instructions),
+            'currency' => $this->nullableString(data_get($instructions, 'cash.currency')) ?? 'PHP',
+            'status' => $status['key'],
+            'display_status' => $status['key'],
+            'voucher_status' => $status['voucher_status'],
+            'operational_status' => $status,
+            'issuer_id' => $voucher->owner_id,
+            'capability' => [
+                'key' => $operational['capability_key'],
+                'label' => $operational['capability_label'],
+                'voucher_type_label' => $operational['voucher_type_label'],
+            ],
+            'instruction_badges' => $operational['instruction_badges'],
+            'purpose' => $this->nullableString($externalReference ?? data_get($instructions, 'rider.message')),
+            'party' => $this->payCodeListParty($voucher, $status),
+            'timing' => [
+                'created_at' => $voucher->created_at?->toIso8601String(),
+                'starts_at' => $voucher->starts_at?->toIso8601String(),
+                'expires_at' => $voucher->expires_at?->toIso8601String(),
+                'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
+            ],
+            'attention' => $this->payCodeListAttention($voucher),
+            'approval' => null,
+            'external_reference' => $externalReference,
+            'consumer_status' => $this->payCodeListConsumerStatus($instructions),
+            'collection' => $this->payCodeListCollection($instructions),
+            'instructions' => $instructions,
+            'created_at' => $voucher->created_at?->toIso8601String(),
+            'starts_at' => $voucher->starts_at?->toIso8601String(),
+            'expires_at' => $voucher->expires_at?->toIso8601String(),
+            'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
+            'updated_at' => $voucher->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payCodeListInstructions(Voucher $voucher): array
+    {
+        $metadata = is_array($voucher->metadata) ? $voucher->metadata : [];
+        $instructions = data_get($metadata, 'instructions', []);
+
+        return is_array($instructions) ? $instructions : [];
+    }
+
+    private function payCodeListAmount(Voucher $voucher, array $instructions): float
+    {
+        $amount = data_get($instructions, 'cash.amount');
+
+        if (is_numeric($amount)) {
+            return (float) $amount;
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payCodeListOperationalSummary(Voucher $voucher, array $instructions): array
+    {
+        try {
+            $summary = \LBHurtado\Voucher\Data\VoucherOperationalSummaryData::fromInstructions(
+                $voucher->instructions,
+                $voucher->voucher_type,
+            );
+
+            return [
+                'capability_key' => $summary->capability_key,
+                'capability_label' => $summary->capability_label,
+                'voucher_type_label' => $summary->voucher_type_label,
+                'instruction_badges' => $summary->instruction_badges,
+            ];
+        } catch (\Throwable) {
+            $flowType = strtolower($this->stringValue(data_get($instructions, 'metadata.flow_type'), ''));
+            $voucherType = strtolower($this->stringValue(
+                $voucher->voucher_type instanceof BackedEnum
+                    ? $voucher->voucher_type->value
+                    : $voucher->voucher_type,
+                '',
+            ));
+
+            if ($flowType === 'settlement' || $voucherType === 'settlement') {
+                return [
+                    'capability_key' => 'settlement',
+                    'capability_label' => 'Settlement',
+                    'voucher_type_label' => 'Settlement',
+                    'instruction_badges' => [
+                        ['key' => 'settlement', 'label' => 'Settlement'],
+                    ],
+                ];
+            }
+
+            if (in_array($flowType, ['collectible', 'payable'], true) || $voucherType === 'payable') {
+                return [
+                    'capability_key' => 'collection',
+                    'capability_label' => 'Collection',
+                    'voucher_type_label' => 'Payable',
+                    'instruction_badges' => [
+                        ['key' => 'payable', 'label' => 'Payable'],
+                    ],
+                ];
+            }
+
+            return [
+                'capability_key' => 'disbursement',
+                'capability_label' => 'Disbursement',
+                'voucher_type_label' => 'Redeemable',
+                'instruction_badges' => [],
+            ];
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payCodeListOperationalStatus(Voucher $voucher): array
+    {
+        $state = $this->voucherStateValue($voucher);
+        $expired = $voucher->isExpired();
+        $closed = $voucher->isClosed();
+        $redeemed = $voucher->redeemed_at !== null || $closed;
+        $requiresRecovery = data_get($voucher->metadata, 'disbursement.requires_recovery') === true;
+        $disbursementStatus = strtolower($this->stringValue(data_get($voucher->metadata, 'disbursement.status'), ''));
+
+        if (
+            $requiresRecovery
+            || in_array($disbursementStatus, ['failed', 'rejected', 'payout_rejected'], true)
+        ) {
+            return $this->payCodeListStatus(
+                key: 'payout_rejected',
+                label: 'Payout Rejected',
+                tone: 'critical',
+                availabilityKey: 'closed',
+                availabilityLabel: 'Closed',
+                settlementOutcome: 'rejected',
+                terminal: true,
+                canClaim: false,
+                voucherStatus: 'redeemed',
+                canRetryPayout: $requiresRecovery
+                    && data_get($voucher->metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending',
+            );
+        }
+
+        if (in_array($disbursementStatus, ['pending', 'processing', 'queued', 'accepted', 'submitted'], true)) {
+            return $this->payCodeListStatus(
+                key: 'payout_pending',
+                label: 'Payout Pending',
+                tone: 'warning',
+                availabilityKey: 'closed',
+                availabilityLabel: 'Claim Recorded',
+                settlementOutcome: 'pending',
+                terminal: false,
+                canClaim: false,
+                voucherStatus: 'redeemed',
+            );
+        }
+
+        if ($state === 'cancelled') {
+            return $this->payCodeListStatus(
+                key: 'cancelled',
+                label: 'Cancelled',
+                tone: 'neutral',
+                availabilityKey: 'cancelled',
+                availabilityLabel: 'Cancelled',
+                settlementOutcome: 'not_applicable',
+                terminal: true,
+                canClaim: false,
+                voucherStatus: 'cancelled',
+            );
+        }
+
+        if ($redeemed) {
+            return $this->payCodeListStatus(
+                key: 'redeemed',
+                label: 'Redeemed',
+                tone: 'positive',
+                availabilityKey: 'closed',
+                availabilityLabel: 'Closed',
+                settlementOutcome: 'not_applicable',
+                terminal: true,
+                canClaim: false,
+                voucherStatus: 'redeemed',
+            );
+        }
+
+        if ($state === 'expired' || $expired) {
+            return $this->payCodeListStatus(
+                key: 'expired',
+                label: 'Expired',
+                tone: 'neutral',
+                availabilityKey: 'expired',
+                availabilityLabel: 'Expired',
+                settlementOutcome: 'not_applicable',
+                terminal: true,
+                canClaim: false,
+                voucherStatus: 'expired',
+            );
+        }
+
+        if ($voucher->starts_at?->isFuture() === true) {
+            return $this->payCodeListStatus(
+                key: 'scheduled',
+                label: 'Scheduled',
+                tone: 'informative',
+                availabilityKey: 'scheduled',
+                availabilityLabel: 'Starts Later',
+                settlementOutcome: 'not_applicable',
+                terminal: false,
+                canClaim: false,
+                voucherStatus: $state,
+            );
+        }
+
+        if ($state === 'locked') {
+            return $this->payCodeListStatus(
+                key: 'locked',
+                label: 'Locked',
+                tone: 'warning',
+                availabilityKey: 'locked',
+                availabilityLabel: 'Locked',
+                settlementOutcome: 'not_applicable',
+                terminal: false,
+                canClaim: false,
+                voucherStatus: 'locked',
+            );
+        }
+
+        return $this->payCodeListStatus(
+            key: 'active',
+            label: 'Active',
+            tone: 'positive',
+            availabilityKey: 'claimable',
+            availabilityLabel: 'Claimable',
+            settlementOutcome: 'not_applicable',
+            terminal: false,
+            canClaim: true,
+            voucherStatus: $state,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payCodeListStatus(
+        string $key,
+        string $label,
+        string $tone,
+        string $availabilityKey,
+        string $availabilityLabel,
+        string $settlementOutcome,
+        bool $terminal,
+        bool $canClaim,
+        string $voucherStatus,
+        bool $canRetryPayout = false,
+    ): array {
+        return [
+            'key' => $key,
+            'label' => $label,
+            'tone' => $tone,
+            'availability_key' => $availabilityKey,
+            'availability_label' => $availabilityLabel,
+            'settlement_outcome' => $settlementOutcome,
+            'is_terminal' => $terminal,
+            'can_claim' => $canClaim,
+            'can_retry_payout' => $canRetryPayout,
+            'voucher_status' => $voucherStatus,
+        ];
+    }
+
+    private function voucherStateValue(Voucher $voucher): string
+    {
+        $state = $voucher->state;
+
+        if ($state instanceof VoucherState) {
+            return strtolower($state->value);
+        }
+
+        return strtolower($this->stringValue($state, 'active'));
+    }
+
+    /**
+     * @param  array<string, mixed>  $status
+     * @return array<string, mixed>
+     */
+    private function payCodeListParty(Voucher $voucher, array $status): array
+    {
+        $redeemer = $this->payCodeListRedeemer($voucher);
+
+        if ($redeemer instanceof Model) {
+            $name = $this->nullableString($redeemer->getAttribute('name'));
+            $mobile = $this->maskedMobile($redeemer->getAttribute('mobile'));
+
+            return [
+                'state' => 'claimed',
+                'label' => 'Claimed by',
+                'primary' => $name ?? $mobile ?? 'Contact unavailable',
+                'secondary' => $name !== null ? $mobile : null,
+                'masked' => $mobile !== null,
+            ];
+        }
+
+        $primary = match ($status['availability_key'] ?? null) {
+            'cancelled' => 'Cancelled',
+            'expired' => 'Expired',
+            'closed' => 'Closed',
+            default => 'Open claim',
+        };
+
+        return [
+            'state' => $this->stringValue($status['availability_key'] ?? null, 'open'),
+            'label' => 'Availability',
+            'primary' => $primary,
+            'secondary' => null,
+            'masked' => false,
+        ];
+    }
+
+    private function payCodeListRedeemer(Voucher $voucher): ?Model
+    {
+        if (! $voucher->relationLoaded('redeemers')) {
+            return null;
+        }
+
+        $redemption = $voucher->redeemers->first();
+
+        if (
+            ! $redemption instanceof Model
+            || ! $redemption->relationLoaded('redeemer')
+        ) {
+            return null;
+        }
+
+        $redeemer = $redemption->getRelation('redeemer');
+
+        return $redeemer instanceof Model ? $redeemer : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function payCodeListAttention(Voucher $voucher): ?array
+    {
+        if (data_get($voucher->metadata, 'disbursement.requires_recovery') !== true) {
+            return null;
+        }
+
+        return [
+            'key' => 'payout_rejected',
+            'label' => 'Payout rejected',
+            'message' => $this->nullableString(data_get($voucher->metadata, 'disbursement.rejection_reason'))
+                ?? 'The receiving institution rejected the payout destination.',
+            'tone' => 'critical',
+        ];
+    }
+
+    private function payCodeListConsumerStatus(array $instructions): ?string
+    {
+        $flowType = strtolower($this->stringValue(data_get($instructions, 'metadata.flow_type'), ''));
+        $voucherType = strtolower($this->stringValue(data_get($instructions, 'voucher_type'), ''));
+
+        return in_array($flowType, ['collectible', 'payable'], true) || $voucherType === 'payable'
+            ? 'payable'
+            : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payCodeListCollection(array $instructions): array
+    {
+        $targetAmount = data_get($instructions, 'target_amount');
+        $currency = $this->nullableString(data_get($instructions, 'cash.currency')) ?? 'PHP';
+
+        return [
+            'target_amount_minor' => is_numeric($targetAmount)
+                ? (int) round((float) $targetAmount * 100)
+                : null,
+            'currency' => $currency,
+        ];
+    }
+
+    /**
+     * @param  Collection<string, Voucher>  $vouchers
+     * @return array<string, array<string, mixed>>
+     */
+    private function payCodeListTerminalControls(Collection $vouchers, mixed $actor): array
+    {
+        if ($vouchers->isEmpty()) {
+            return [];
+        }
+
+        $ids = $vouchers
+            ->map(fn (Voucher $voucher): int => (int) $voucher->getKey())
+            ->values()
+            ->all();
+        $claimedVoucherIds = DB::table('voucher_claims')
+            ->whereIn('voucher_id', $ids)
+            ->distinct()
+            ->pluck('voucher_id')
+            ->mapWithKeys(fn (mixed $id): array => [(string) $id => true]);
+        $payoutVoucherIds = DB::table('disbursement_reconciliations')
+            ->whereIn('voucher_id', $ids)
+            ->distinct()
+            ->pluck('voucher_id')
+            ->mapWithKeys(fn (mixed $id): array => [(string) $id => true]);
+
+        return $vouchers
+            ->mapWithKeys(function (Voucher $voucher) use ($actor, $claimedVoucherIds, $payoutVoucherIds): array {
+                $voucherId = (string) $voucher->getKey();
+
+                return [$voucherId => $this->payCodeListTerminalControl(
+                    voucher: $voucher,
+                    actor: $actor,
+                    hasClaim: $voucher->redeemed_at !== null || $claimedVoucherIds->has($voucherId),
+                    hasPayout: $payoutVoucherIds->has($voucherId),
+                )];
+            })
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payCodeListTerminalControl(
+        Voucher $voucher,
+        mixed $actor,
+        bool $hasClaim,
+        bool $hasPayout,
+    ): array {
+        $reservation = data_get($voucher->metadata, 'treasury.pay_code_reservation');
+        $reservation = is_array($reservation) ? $reservation : [];
+        $sourcePurpose = (string) data_get($reservation, 'source_position_purpose', 'client_funds');
+        $reservationStatus = (string) data_get($reservation, 'status', '');
+        $hasProtectedRecovery = data_get($voucher->metadata, 'disbursement.requires_recovery') === true
+            || in_array(
+                data_get($voucher->metadata, 'disbursement.status'),
+                ['pending', 'processing', 'queued', 'accepted', 'submitted'],
+                true,
+            );
+        $isOwner = $actor instanceof Model
+            && (string) $voucher->owner_id === (string) $actor->getKey()
+            && $voucher->owner_type === $actor->getMorphClass();
+        $isOpen = in_array($this->voucherStateValue($voucher), ['active', 'locked'], true)
+            && ! $voucher->isExpired();
+        $isRegularReservation = $sourcePurpose === 'client_funds';
+        $canTerminate = $isOwner
+            && $isOpen
+            && $isRegularReservation
+            && $reservationStatus === 'reserved'
+            && ! $hasClaim
+            && ! $hasPayout
+            && ! $hasProtectedRecovery;
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-terminal-control.v1',
+            'authorized' => $isOwner,
+            'status' => $canTerminate ? 'available' : 'blocked',
+            'can_expire' => $canTerminate,
+            'can_cancel' => $canTerminate,
+            'blocked_reason' => $canTerminate ? null : 'Terminal controls are not available.',
+            'release' => [
+                'amount_minor' => (int) data_get($reservation, 'amount_minor', 0),
+                'currency' => (string) data_get($reservation, 'currency', 'PHP'),
+                'from' => 'Pay Code Reserve',
+                'to' => 'Client Funds',
+                'provider_inventory_changed' => false,
+                'provider_calls' => false,
+                'issuance_charges_refunded' => false,
+            ],
+            'history' => collect(data_get($voucher->metadata, 'lifecycle.terminal_actions', []))
+                ->filter(fn (mixed $event): bool => is_array($event))
+                ->map(fn (array $event): array => [
+                    'action' => (string) data_get($event, 'action', 'terminal'),
+                    'reason' => $this->nullableString(data_get($event, 'reason')),
+                    'occurred_at' => $this->nullableString(data_get($event, 'occurred_at')),
+                ])
+                ->values()
+                ->all(),
+        ];
     }
 
     private function posSaleReferenceService(): CockpitPosSaleReferenceService
