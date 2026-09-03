@@ -413,7 +413,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     helper: 'Expired or awaiting approval summaries only',
                     tone: 'warning',
                 ),
-                ...$this->liabilityMetrics($query),
+                ...$this->moneyMovementDecisionMetrics(),
             ],
             pipeline: [
                 new CockpitDashboardPipelineStageData(
