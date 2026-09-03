@@ -356,11 +356,11 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         $instructions = data_get($voucher->metadata, 'instructions');
 
         if (! is_array($instructions)) {
-            $instructions = $this->instructionsArray($voucher);
+            $instructions = [];
         }
 
         $status = $this->dashboardStatus($voucher, $claim, $reconciliation);
-        $currency = $this->currency($voucher);
+        $currency = $this->dashboardCurrency($voucher, $instructions);
         $claimedAt = $claim?->completed_at
             ?? $voucher->redeemed_at
             ?? $claim?->attempted_at
@@ -370,7 +370,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'id' => $voucher->id,
             'voucher_id' => $voucher->id,
             'code' => $voucher->code,
-            'amount' => $this->amount($voucher),
+            'amount' => $this->dashboardAmount($voucher, $instructions),
             'currency' => $currency,
             'status' => $status,
             'display_status' => $status,
@@ -389,6 +389,46 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'attention' => $this->dashboardAttention($voucher),
             'external_reference' => $this->externalReference($voucher, $instructions),
         ];
+    }
+
+    /** @param array<string, mixed> $instructions */
+    protected function dashboardAmount(Voucher $voucher, array $instructions): float
+    {
+        $amount = data_get($voucher, 'cash.amount');
+
+        if ($amount instanceof Money) {
+            return $amount->getAmount()->toFloat();
+        }
+
+        if (is_numeric($amount)) {
+            return (float) $amount;
+        }
+
+        $instructionAmount = data_get($instructions, 'cash.amount');
+
+        return is_numeric($instructionAmount) ? (float) $instructionAmount : 0.0;
+    }
+
+    /** @param array<string, mixed> $instructions */
+    protected function dashboardCurrency(Voucher $voucher, array $instructions): string
+    {
+        $currency = data_get($voucher, 'cash.currency');
+
+        if (is_string($currency) && $currency !== '') {
+            return $currency;
+        }
+
+        $amount = data_get($voucher, 'cash.amount');
+
+        if ($amount instanceof Money) {
+            return $amount->getCurrency()->getCurrencyCode();
+        }
+
+        $instructionCurrency = data_get($instructions, 'cash.currency');
+
+        return is_string($instructionCurrency) && $instructionCurrency !== ''
+            ? $instructionCurrency
+            : 'PHP';
     }
 
     protected function dashboardStatus(
