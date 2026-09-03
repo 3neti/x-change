@@ -103,9 +103,10 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
             requires_mobile: true,
             requires_destination: false,
             requires_amount: false,
-            title: 'Set Up Your Account',
-            description: 'Confirm your details to receive this Pay Code in your x-change Account.',
-            confirmation_label: 'Create My Account',
+            title: 'Accept Invitation',
+            description: 'Enter your details to create your account and continue to the workspace.',
+            confirmation_label: 'Create my account',
+            confirmation_title: 'Review your details',
             authentication_mode: ClaimAuthenticationMode::ClaimantHandoff,
             required_claim_fields: ['full_name', 'email', 'mobile'],
             review: [

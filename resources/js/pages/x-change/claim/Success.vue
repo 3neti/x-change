@@ -56,6 +56,31 @@ interface Props {
     } | null;
     compiled_claim_result?: CompiledClaimResultPayload;
     destination?: PayoutDestinationSnapshot | null;
+    success_presentation?: {
+        intent?: string | null;
+        eyebrow?: string | null;
+        title?: string | null;
+        account_message?: string | null;
+        body?: string | null;
+        message?: string | null;
+        receipt_label?: string | null;
+        receipt_code?: string | null;
+        funds?: {
+            label?: string | null;
+            amount?: string | null;
+            text?: string | null;
+        } | null;
+    } | null;
+    success_action?: {
+        key?: string | null;
+        label?: string | null;
+        enabled?: boolean | null;
+        target?: {
+            url?: string | null;
+            method?: string | null;
+            redirectable?: boolean | null;
+        } | null;
+    } | null;
 }
 
 const props = defineProps<Props>();
@@ -158,12 +183,56 @@ const pageTone = computed(() =>
         riderState: props.rider?.state,
     }),
 );
+
+const successPresentation = computed(() => {
+    const presentation = props.success_presentation;
+
+    if (!presentation?.title?.trim()) {
+        return null;
+    }
+
+    return {
+        eyebrow: presentation.eyebrow?.trim() || null,
+        title: presentation.title.trim(),
+        accountMessage: presentation.account_message?.trim() || null,
+        body: presentation.body?.trim() || presentation.message?.trim() || null,
+        receiptLabel: presentation.receipt_label?.trim() || null,
+        receiptCode: presentation.receipt_code?.trim() || props.voucher.code,
+        funds: presentation.funds?.text?.trim()
+            ? {
+                label: presentation.funds.label?.trim() || 'Client Funds',
+                text: presentation.funds.text.trim(),
+            }
+            : null,
+    };
+});
+
+const successAction = computed(() => {
+    const action = props.success_action;
+    const url = action?.target?.url?.trim();
+
+    if (!action?.label?.trim() || !url || action.enabled === false) {
+        return null;
+    }
+
+    return {
+        key: action.key?.trim() || 'success-action',
+        label: action.label.trim(),
+        url,
+    };
+});
 </script>
 
 <template>
-    <Head title="Claim Successful" />
+    <Head :title="successPresentation?.title ?? 'Claim Successful'" />
 
-    <ClaimStepShell :tone="pageTone.isPending ? 'warning' : 'success'">
+    <ClaimStepShell
+        :tone="pageTone.isPending ? 'warning' : 'success'"
+        :brand-placement="successPresentation ? 'center' : 'top_left'"
+        :brand-size="successPresentation ? 'brand' : 'header'"
+        :show-theme-picker="!successPresentation"
+        :width="successPresentation ? 'lg' : 'md'"
+    >
         <div class="space-y-8">
             <div class="space-y-4 pt-4 text-center">
                 <component
@@ -188,7 +257,78 @@ const pageTone = computed(() =>
                 </div>
 
                 <div
-                    v-if="hasSuccessVisualStages"
+                    v-if="successPresentation"
+                    data-testid="claim-success-presentation"
+                    class="space-y-3"
+                >
+                    <p
+                        v-if="successPresentation.eyebrow"
+                        class="text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase"
+                    >
+                        {{ successPresentation.eyebrow }}
+                    </p>
+
+                    <h1
+                        data-testid="claim-success-title"
+                        class="text-3xl font-semibold tracking-tight text-foreground"
+                    >
+                        {{ successPresentation.title }}
+                    </h1>
+
+                    <p
+                        v-if="successPresentation.accountMessage"
+                        data-testid="claim-success-account-message"
+                        class="text-lg font-medium text-foreground"
+                    >
+                        {{ successPresentation.accountMessage }}
+                    </p>
+
+                    <div
+                        v-if="successPresentation.funds"
+                        data-testid="claim-success-funds"
+                        class="mx-auto max-w-sm rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4"
+                    >
+                        <p class="text-xl font-semibold text-foreground">
+                            {{ successPresentation.funds.text }}
+                        </p>
+                        <p
+                            class="mt-1 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase"
+                        >
+                            {{ successPresentation.funds.label }}
+                        </p>
+                    </div>
+
+                    <p
+                        v-if="successPresentation.body"
+                        data-testid="claim-success-message"
+                        class="text-sm leading-6 text-muted-foreground"
+                    >
+                        {{ successPresentation.body }}
+                    </p>
+
+                    <a
+                        v-if="successAction"
+                        :href="successAction.url"
+                        data-testid="claim-success-primary-action"
+                        class="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        {{ successAction.label }}
+                    </a>
+
+                    <p
+                        v-if="successPresentation.receiptLabel"
+                        data-testid="claim-success-receipt"
+                        class="pt-2 font-mono text-[11px] tracking-wide text-muted-foreground"
+                    >
+                        {{ successPresentation.receiptLabel }}
+                        <span v-if="successPresentation.receiptCode">
+                            · {{ successPresentation.receiptCode }}
+                        </span>
+                    </p>
+                </div>
+
+                <div
+                    v-else-if="hasSuccessVisualStages"
                     data-testid="success-stage-region"
                     class="space-y-4"
                 >

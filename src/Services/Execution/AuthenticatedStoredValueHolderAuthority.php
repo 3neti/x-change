@@ -14,27 +14,33 @@ use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Execution\StoredValueHolderAuthorityData;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 
-final readonly class AuthenticatedStoredValueHolderAuthority implements StoredValueHolderAuthorityContract
+final class AuthenticatedStoredValueHolderAuthority implements StoredValueHolderAuthorityContract
 {
+    private ?bool $ready = null;
+
     public function __construct(
-        private TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private readonly TreasuryPrincipalReferenceResolverContract $principalReferences,
     ) {}
 
     public function isReady(): bool
     {
+        if ($this->ready !== null) {
+            return $this->ready;
+        }
+
         try {
             $modelClass = config('x-change.onboarding.issuer_model');
 
             if (! is_string($modelClass) || ! class_exists($modelClass)) {
-                return false;
+                return $this->ready = false;
             }
 
             $model = new $modelClass;
 
-            return $model instanceof Model
+            return $this->ready = $model instanceof Model
                 && Schema::hasColumns($model->getTable(), ['mobile', 'mobile_verified_at']);
         } catch (\Throwable) {
-            return false;
+            return $this->ready = false;
         }
     }
 

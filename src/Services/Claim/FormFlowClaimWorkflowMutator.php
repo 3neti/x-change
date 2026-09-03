@@ -68,6 +68,10 @@ final class FormFlowClaimWorkflowMutator
         $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
         $step['config'] = $this->applyClaimUiContract($step['config']);
 
+        if (($workflow->review['onboarding'] ?? false) === true) {
+            $step['config']['app_name'] = config('app.name', 'X-Change');
+        }
+
         if (($step['handler'] ?? null) === 'otp'
             && ($workflow->review['onboarding'] ?? false) === true) {
             $step['config']['purpose'] = config(
@@ -221,6 +225,13 @@ final class FormFlowClaimWorkflowMutator
         ?string $authenticatedMobile,
         string $rail,
     ): array {
+        if (
+            ($workflow->review['onboarding'] ?? false) === true
+            && ($field['group'] ?? null) === 'redeemer'
+        ) {
+            $field['group'] = 'account';
+        }
+
         if (in_array($field['name'] ?? null, $workflow->required_claim_fields, true)) {
             $field['required'] = true;
         }
@@ -280,6 +291,7 @@ final class FormFlowClaimWorkflowMutator
             'authentication_mode' => $workflow->authentication_mode->value,
             'required_claim_fields' => $workflow->required_claim_fields,
             'confirmation_label' => $workflow->confirmation_label,
+            'confirmation_title' => $workflow->confirmation_title,
             'skip_form_flow_splash' => $workflow->skip_form_flow_splash,
             'review' => $workflow->review,
         ];

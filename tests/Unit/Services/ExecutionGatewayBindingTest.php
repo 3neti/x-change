@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Contracts\PayableCollectionExecutionGateway;
 use LBHurtado\Voucher\Contracts\SettlementEnvelopeExecutionGateway;
@@ -52,6 +53,26 @@ it('binds stored value holder authority to verified authenticated Accounts', fun
             StoredValueSpendRejectedException::class,
             'requires an authenticated Account holder',
         );
+});
+
+it('memoizes stored value holder readiness schema checks within the scoped authority', function () {
+    $authority = app(StoredValueHolderAuthorityContract::class);
+    $queries = [];
+
+    DB::listen(function ($query) use (&$queries): void {
+        if (
+            str_contains($query->sql, 'pragma_table_xinfo')
+            || str_contains($query->sql, 'information_schema.columns')
+        ) {
+            $queries[] = $query->sql;
+        }
+    });
+
+    $first = $authority->isReady();
+    $second = $authority->isReady();
+
+    expect($second)->toBe($first)
+        ->and($queries)->toHaveCount(1);
 });
 
 it('binds stored value destination authority to the fail closed Partner API mandate', function () {

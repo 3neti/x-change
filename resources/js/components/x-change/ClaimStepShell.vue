@@ -15,6 +15,7 @@ const props = withDefaults(
         width?: ClaimStepWidth;
         centered?: boolean;
         showBrand?: boolean;
+        showThemePicker?: boolean;
         brandPlacement?: ClaimBrandPlacement;
         brandSize?: ClaimBrandSize;
         brandVariant?: ClaimBrandVariant;
@@ -24,6 +25,7 @@ const props = withDefaults(
         width: 'md',
         centered: true,
         showBrand: true,
+        showThemePicker: true,
         brandPlacement: 'top_left',
         brandSize: 'header',
         brandVariant: 'mark',
@@ -72,6 +74,7 @@ const widthClass = computed(() => {
         :class="toneClass"
     >
         <ExperienceThemePicker
+            v-if="showThemePicker"
             compact
             class="absolute right-4 top-4 sm:right-6 sm:top-6"
             data-testid="claim-theme-picker"

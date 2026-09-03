@@ -1262,7 +1262,7 @@ class XChangeServiceProvider extends ServiceProvider
             PartnerApiStoredValueDestinationAuthority::class,
         );
 
-        $this->app->singleton(
+        $this->app->scoped(
             StoredValueHolderAuthorityContract::class,
             AuthenticatedStoredValueHolderAuthority::class,
         );

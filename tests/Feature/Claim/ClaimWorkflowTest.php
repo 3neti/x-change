@@ -58,7 +58,6 @@ it('removes destination collection from a campaign officer authorization workflo
             ],
         ],
     ]);
-
     $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
     $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
         FormFlowInstructionsData::from([
@@ -126,6 +125,7 @@ it('compiles onboarding account provisioning without payout fields or route gues
             ],
         ],
     ]);
+    config()->set('app.name', 'x-PayOut');
 
     $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
     $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
@@ -140,7 +140,7 @@ it('compiles onboarding account provisioning without payout fields or route gues
                         'fields' => [
                             ['name' => 'amount'],
                             ['name' => 'settlement_rail'],
-                            ['name' => 'mobile', 'required' => false],
+                            ['name' => 'mobile', 'group' => 'redeemer', 'required' => false],
                             ['name' => 'bank_code'],
                             ['name' => 'account_number'],
                         ],
@@ -171,6 +171,8 @@ it('compiles onboarding account provisioning without payout fields or route gues
     $otpStep = $payload['steps'][2]['config'];
 
     expect($workflow->key)->toBe('onboarding.account-provisioning.v1')
+        ->and($workflow->title)->toBe('Accept Invitation')
+        ->and($workflow->description)->toBe('Enter your details to create your account and continue to the workspace.')
         ->and($workflow->requires_mobile)->toBeTrue()
         ->and($workflow->requires_destination)->toBeFalse()
         ->and($workflow->requires_amount)->toBeFalse()
@@ -180,13 +182,19 @@ it('compiles onboarding account provisioning without payout fields or route gues
         ->and($workflow->review['mobile_verification_required'])->toBeFalse()
         ->and(array_column($walletStep['fields'], 'name'))->toBe(['mobile'])
         ->and($walletStep['fields'][0]['required'])->toBeTrue()
+        ->and($walletStep['fields'][0]['group'])->toBe('account')
         ->and($walletStep['claim_workflow']['authentication_mode'])->toBe('claimant_handoff')
+        ->and($walletStep['app_name'])->toBe('x-PayOut')
         ->and($bioStep['fields'][0]['required'])->toBeTrue()
         ->and($bioStep['fields'][1]['required'])->toBeTrue()
         ->and($bioStep['claim_workflow']['key'])->toBe('onboarding.account-provisioning.v1')
+        ->and($bioStep['app_name'])->toBe('x-PayOut')
         ->and($otpStep['purpose'])->toBe('onboarding.account')
+        ->and($otpStep['app_name'])->toBe('x-PayOut')
         ->and($payload['metadata']['claim_workflow']['confirmation_label'])
-        ->toBe('Create My Account');
+        ->toBe('Create my account')
+        ->and($payload['metadata']['claim_workflow']['confirmation_title'])
+        ->toBe('Review your details');
 });
 
 it('compiles account funding without collecting a payout destination', function () {

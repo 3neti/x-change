@@ -93,9 +93,98 @@ it('projects onboarding vouchers with accept invitation claim presentation', fun
         'primary_action_label' => 'Continue',
         'eyebrow' => 'Invitation code',
         'subject_label' => 'Invitation code',
+        'confirmation_title' => 'Review your details',
+        'confirmation_label' => 'Create my account',
         'intent' => 'commissioning_invitation',
         'source' => 'flow_default',
+        'success' => [
+            'schema' => 'x-change.onboarding-success-presentation.v1',
+            'eyebrow' => 'Welcome',
+            'title_template' => 'Welcome to {app_name}',
+            'account_label' => 'account',
+            'account_message' => 'Your account is ready.',
+            'receipt_label' => 'Invitation accepted',
+            'receipt_code' => 'XRAY-ONBD',
+            'body' => 'You can now use your account workspace and manage account funding activity.',
+            'primary_action_intent' => 'enter_workspace',
+        ],
     ]);
+});
+
+it('projects maker onboarding success with client funds vocabulary when funded', function (): void {
+    $projection = app(VoucherXRayProjectionBuilder::class)->build((object) [
+        'code' => 'MAKE-1000',
+        'amount' => 1000,
+        'currency' => 'PHP',
+        'status' => 'issued',
+        'claimed' => false,
+        'fully_claimed' => false,
+        'instructions' => [
+            'onboarding' => true,
+            'cash' => [
+                'amount' => 1000,
+                'currency' => 'PHP',
+            ],
+            'execution' => [
+                'driver' => 'onboarding_account_provisioning',
+            ],
+            'metadata' => [
+                'custom' => [
+                    'x_payout_commissioning' => [
+                        'role' => 'maker',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    expect($projection['presentation']['success'])->toMatchArray([
+        'account_label' => 'Maker account',
+        'account_message' => 'Your Maker account is ready.',
+        'body' => 'You can now prepare Pay Codes and submit payout work for checker approval.',
+        'funds' => [
+            'label' => 'Client Funds',
+            'amount' => '₱1,000.00',
+            'text' => '₱1,000.00 available for instructions',
+        ],
+        'primary_action_role' => 'Maker',
+    ]);
+});
+
+it('projects checker onboarding success without funded copy when unfunded', function (): void {
+    $projection = app(VoucherXRayProjectionBuilder::class)->build((object) [
+        'code' => 'CHKR-0000',
+        'amount' => 0,
+        'currency' => 'PHP',
+        'status' => 'issued',
+        'claimed' => false,
+        'fully_claimed' => false,
+        'instructions' => [
+            'onboarding' => true,
+            'cash' => [
+                'amount' => 0,
+                'currency' => 'PHP',
+            ],
+            'execution' => [
+                'driver' => 'onboarding_account_provisioning',
+            ],
+            'metadata' => [
+                'custom' => [
+                    'x_payout_commissioning' => [
+                        'role' => 'checker',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    expect($projection['presentation']['success'])->toMatchArray([
+        'account_label' => 'Checker account',
+        'account_message' => 'Your Checker account is ready.',
+        'body' => 'You can now review payout work and monitor completed instructions.',
+        'primary_action_role' => 'Checker',
+    ]);
+    expect($projection['presentation']['success'])->not->toHaveKey('funds');
 });
 
 it('lets voucher instruction presentation override x-ray claim copy', function (): void {

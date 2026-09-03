@@ -99,7 +99,7 @@ class VoucherXRayProjectionBuilder
 
     /**
      * @param  array<string, mixed>  $instructions
-     * @return array{title: string, primary_action_label: string, subtitle?: string, eyebrow?: string, subject_label?: string, intent: string, source: string}
+     * @return array{title: string, primary_action_label: string, confirmation_title?: string, confirmation_label?: string, subtitle?: string, eyebrow?: string, subject_label?: string, intent: string, source: string, success?: array<string, mixed>}
      */
     protected function presentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
     {
@@ -114,7 +114,7 @@ class VoucherXRayProjectionBuilder
             ...$default,
             ...$override,
             'source' => 'instructions',
-        ], static fn (mixed $value): bool => is_string($value) && trim($value) !== '');
+        ], static fn (mixed $value): bool => $value !== null && (! is_string($value) || trim($value) !== ''));
     }
 
     /**
@@ -135,7 +135,7 @@ class VoucherXRayProjectionBuilder
         }
 
         return collect($presentation)
-            ->only(['title', 'primary_action_label', 'subtitle', 'eyebrow', 'subject_label', 'intent'])
+            ->only(['title', 'primary_action_label', 'confirmation_title', 'confirmation_label', 'subtitle', 'eyebrow', 'subject_label', 'intent'])
             ->filter(static fn (mixed $value): bool => is_string($value) && trim($value) !== '')
             ->map(static fn (string $value): string => trim($value))
             ->all();
@@ -143,7 +143,7 @@ class VoucherXRayProjectionBuilder
 
     /**
      * @param  array<string, mixed>  $instructions
-     * @return array{title: string, primary_action_label: string, eyebrow: string, subject_label: string, intent: string, source: string}
+     * @return array{title: string, primary_action_label: string, confirmation_title?: string, confirmation_label?: string, eyebrow: string, subject_label: string, intent: string, source: string, success?: array<string, mixed>}
      */
     protected function defaultPresentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
     {
@@ -151,10 +151,13 @@ class VoucherXRayProjectionBuilder
             return [
                 'title' => 'Accept Invitation',
                 'primary_action_label' => 'Continue',
+                'confirmation_title' => 'Review your details',
+                'confirmation_label' => 'Create my account',
                 'eyebrow' => 'Invitation code',
                 'subject_label' => 'Invitation code',
                 'intent' => 'commissioning_invitation',
                 'source' => 'flow_default',
+                'success' => $this->onboardingSuccessPresentation($voucher, $instructions),
             ];
         }
 
@@ -177,6 +180,76 @@ class VoucherXRayProjectionBuilder
             'intent' => 'claim',
             'source' => 'fallback',
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array<string, mixed>
+     */
+    protected function onboardingSuccessPresentation(mixed $voucher, array $instructions): array
+    {
+        $role = $this->onboardingRole($voucher, $instructions);
+        $accountLabel = $role === null ? 'account' : $role.' account';
+        $amount = $this->onboardingAmount($voucher, $instructions);
+        $currency = (string) (data_get($instructions, 'cash.currency')
+            ?? data_get($voucher, 'currency')
+            ?? 'PHP');
+        $formattedAmount = $this->formatAmount($amount, $currency);
+
+        return array_filter([
+            'schema' => 'x-change.onboarding-success-presentation.v1',
+            'eyebrow' => 'Welcome',
+            'title_template' => 'Welcome to {app_name}',
+            'account_label' => $accountLabel,
+            'account_message' => 'Your '.$accountLabel.' is ready.',
+            'body' => $this->onboardingSuccessBody($role),
+            'receipt_label' => 'Invitation accepted',
+            'receipt_code' => (string) data_get($voucher, 'code', ''),
+            'funds' => $formattedAmount === null ? null : [
+                'label' => 'Client Funds',
+                'amount' => $formattedAmount,
+                'text' => $formattedAmount.' available for instructions',
+            ],
+            'primary_action_intent' => 'enter_workspace',
+            'primary_action_role' => $role,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     */
+    protected function onboardingRole(mixed $voucher, array $instructions): ?string
+    {
+        $role = data_get($instructions, 'metadata.custom.x_payout_commissioning.role')
+            ?? data_get($voucher, 'metadata.instructions.metadata.custom.x_payout_commissioning.role');
+
+        return match (strtolower((string) $role)) {
+            'maker' => 'Maker',
+            'checker' => 'Checker',
+            default => null,
+        };
+    }
+
+    protected function onboardingAmount(mixed $voucher, array $instructions): ?float
+    {
+        $amount = data_get($instructions, 'cash.amount')
+            ?? data_get($voucher, 'cash.amount')
+            ?? data_get($voucher, 'amount');
+
+        if (! is_numeric($amount) || (float) $amount <= 0.0) {
+            return null;
+        }
+
+        return (float) $amount;
+    }
+
+    protected function onboardingSuccessBody(?string $role): string
+    {
+        return match ($role) {
+            'Maker' => 'You can now prepare Pay Codes and submit payout work for checker approval.',
+            'Checker' => 'You can now review payout work and monitor completed instructions.',
+            default => 'You can now use your account workspace and manage account funding activity.',
+        };
     }
 
     /**
