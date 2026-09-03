@@ -50,6 +50,8 @@ use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
+use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
+use LBHurtado\Wallet\Services\SystemUserResolverService;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
@@ -443,6 +445,7 @@ use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\Onboarding\DefaultAccountProvisioningService;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
 use LBHurtado\XChange\Services\Payment\AccountFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderFundingCollectionPosting;
@@ -470,10 +473,12 @@ use LBHurtado\XChange\Services\Treasury\BavixTreasuryPositionLedgerResolver;
 use LBHurtado\XChange\Services\Treasury\ConfigTreasuryOpeningCapitalizationAuthorization;
 use LBHurtado\XChange\Services\Treasury\FederatedTreasuryPrincipalReferenceResolver;
 use LBHurtado\XChange\Services\Treasury\LegacyAccountBalanceMigrationService;
+use LBHurtado\XChange\Services\Treasury\RequestScopedSystemUserResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
+use LBHurtado\XChange\Services\Treasury\TreasuryOperatorAuthority;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -523,6 +528,7 @@ class XChangeServiceProvider extends ServiceProvider
             XChangeProvisioningAuthorityProjector::class,
         );
         $this->app->scoped(PartnerApiRequestContext::class);
+        $this->app->scoped(PartnerApiOperatorAuthority::class);
         $this->configureIdentityOtpGateway();
         $this->configureFormFlowSplashDefaults();
         $this->app->singleton(OtpChallengeGateway::class, function ($app): OtpChallengeGateway {
@@ -570,6 +576,12 @@ class XChangeServiceProvider extends ServiceProvider
             CommercialPartnerResolverContract::class,
             ConfigCommercialPartnerResolver::class,
         );
+        $this->app->scoped(
+            SystemUserResolverContract::class,
+            fn ($app): RequestScopedSystemUserResolver => new RequestScopedSystemUserResolver(
+                $app->make(SystemUserResolverService::class),
+            ),
+        );
         $this->app->singleton(
             CommercialOfferingResolverContract::class,
             DatabaseCommercialOfferingResolver::class,
@@ -586,10 +598,11 @@ class XChangeServiceProvider extends ServiceProvider
             CommercialSettlementAccountResolverContract::class,
             WalletCommercialSettlementAccountResolver::class,
         );
-        $this->app->singleton(
+        $this->app->scoped(
             CommercialOperatorAuthorityContract::class,
             DatabaseCommercialOperatorAuthority::class,
         );
+        $this->app->scoped(TreasuryOperatorAuthority::class);
         $this->app->singleton(
             CommercialLegalTraceResolverContract::class,
             OptionalXLegalCommercialTraceResolver::class,
@@ -724,7 +737,7 @@ class XChangeServiceProvider extends ServiceProvider
             TreasuryPositionLedgerResolverContract::class,
             BavixTreasuryPositionLedgerResolver::class,
         );
-        $this->app->singleton(
+        $this->app->scoped(
             AccountBalanceReadModelContract::class,
             TreasuryAccountBalanceReadModel::class,
         );

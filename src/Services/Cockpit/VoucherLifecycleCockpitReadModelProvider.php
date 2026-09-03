@@ -372,10 +372,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
     public function forDashboard(CockpitReadModelQueryData $query): CockpitDashboardReadModelData
     {
-        $rows = collect($this->vouchers->list())
-            ->map(fn (mixed $row): array => $this->toArray($row))
-            ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
-            ->values();
+        $rows = $this->dashboardRows();
 
         $issued = $this->countStatus($rows, 'issued');
         $redeemed = $this->countStatus($rows, 'redeemed');
@@ -463,6 +460,21 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 'excluded' => $this->excludedPayloadKeys(),
             ],
         );
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function dashboardRows(): Collection
+    {
+        $rows = method_exists($this->vouchers, 'cockpitDashboardList')
+            ? $this->vouchers->cockpitDashboardList(['include' => ['redeemer']])
+            : $this->vouchers->list(['include' => ['redeemer']]);
+
+        return collect($rows)
+            ->map(fn (mixed $row): array => $this->toArray($row))
+            ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
+            ->values();
     }
 
     public function forQuickGenerate(CockpitReadModelQueryData $query): CockpitQuickGenerateReadModelData

@@ -18,15 +18,20 @@ use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use Throwable;
 
-final readonly class FundingTreasuryPortfolioReadModel
+final class FundingTreasuryPortfolioReadModel
 {
+    /**
+     * @var array<string, list<TreasuryPositionData>>
+     */
+    private array $connectionPositions = [];
+
     public function __construct(
-        private TreasuryProviderConnectionCatalog $connections,
-        private TreasuryPrincipalReferenceResolverContract $principalReferences,
-        private TreasuryInventoryPositionReadModelContract $inventories,
-        private TreasuryPositionReadModelContract $positions,
-        private BuildBalanceOverview $balances,
-        private TreasuryVocabularyReadModelContract $vocabulary,
+        private readonly TreasuryProviderConnectionCatalog $connections,
+        private readonly TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private readonly TreasuryInventoryPositionReadModelContract $inventories,
+        private readonly TreasuryPositionReadModelContract $positions,
+        private readonly BuildBalanceOverview $balances,
+        private readonly TreasuryVocabularyReadModelContract $vocabulary,
     ) {}
 
     /**
@@ -144,11 +149,7 @@ final readonly class FundingTreasuryPortfolioReadModel
         $allPositionBalanceMinor = array_sum(array_map(
             static fn (TreasuryPositionData $position): int => $position->balanceMinor,
             array_values(array_filter(
-                $this->positions->forConnection(
-                    $connection->provider,
-                    $connection->reference,
-                    $connection->currency,
-                ),
+                $this->connectionPositions($connection),
                 static fn (TreasuryPositionData $position): bool => $position->status === 'active',
             )),
         ));
@@ -292,6 +293,24 @@ final readonly class FundingTreasuryPortfolioReadModel
                     === $purpose,
             )),
         ));
+    }
+
+    /**
+     * @return list<TreasuryPositionData>
+     */
+    private function connectionPositions(TreasuryProviderConnectionData $connection): array
+    {
+        $key = implode(':', [
+            mb_strtolower(trim($connection->provider)),
+            trim($connection->reference),
+            mb_strtoupper(trim($connection->currency)),
+        ]);
+
+        return $this->connectionPositions[$key] ??= $this->positions->forConnection(
+            $connection->provider,
+            $connection->reference,
+            $connection->currency,
+        );
     }
 
     /**
