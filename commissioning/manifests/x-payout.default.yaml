@@ -36,6 +36,8 @@ bootstrap:
       X_CHANGE_PAYMENT_PROVIDER: netbank
       X_CHANGE_PAYMENT_ATTEMPT_PROVIDER: netbank
       PAYMENT_GATEWAY: netbank
+      NETBANK_FUNDING_QR_MERCHANT_NAME: x-PayOut
+      NETBANK_FUNDING_QR_MERCHANT_CITY: Manila
     required:
       - key: NETBANK_DISBURSEMENT_ENDPOINT
         label: NetBank disbursement endpoint
@@ -64,10 +66,6 @@ bootstrap:
         secret: true
       - key: NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
         label: NetBank corporate account name
-      - key: NETBANK_FUNDING_QR_MERCHANT_NAME
-        label: QR Ph merchant name
-      - key: NETBANK_FUNDING_QR_MERCHANT_CITY
-        label: QR Ph merchant city
   build:
     enabled: true
     npm_install: true

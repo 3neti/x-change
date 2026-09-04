@@ -15,6 +15,8 @@ it('requires the x payout manifest to commission against netbank readiness', fun
         ->and(data_get($manifest, 'deployment.runtime_tier'))->toBe('local')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.XCHANGE_DEPLOYMENT_PROFILE'))->toBe('netbank')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.XCHANGE_FUNDING_NETBANK_ENABLED'))->toBeTrue()
+        ->and(data_get($manifest, 'bootstrap.environment.defaults.NETBANK_FUNDING_QR_MERCHANT_NAME'))->toBe('x-PayOut')
+        ->and(data_get($manifest, 'bootstrap.environment.defaults.NETBANK_FUNDING_QR_MERCHANT_CITY'))->toBe('Manila')
         ->and(collect(data_get($manifest, 'bootstrap.environment.required', []))->pluck('key')->all())
         ->toContain(
             'NETBANK_DISBURSEMENT_ENDPOINT',
@@ -27,7 +29,9 @@ it('requires the x payout manifest to commission against netbank readiness', fun
             'NETBANK_CLIENT_ALIAS',
             'NETBANK_SOURCE_ACCOUNT_NUMBER',
             'NETBANK_SENDER_CUSTOMER_ID',
-        );
+        )
+        ->not->toContain('NETBANK_FUNDING_QR_MERCHANT_NAME')
+        ->not->toContain('NETBANK_FUNDING_QR_MERCHANT_CITY');
 });
 
 it('keeps bootstrap strict while allowing interactive credential capture', function (): void {
