@@ -80,6 +80,8 @@ use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommiss
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RequestPartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\SubmitPartnerCommissionPayoutBatchCommand;
+use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
+use LBHurtado\XChange\Console\Commands\CommissionFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
 use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
@@ -1529,6 +1531,8 @@ class XChangeServiceProvider extends ServiceProvider
                 SetupXChangeCommand::class,
                 ConfigureXChangeCommand::class,
                 CommissionXChangeCommand::class,
+                CommissionFromManifestCommand::class,
+                BootstrapXChangeFromManifestCommand::class,
                 CloudRecipeCommand::class,
                 DeployXChangeCommand::class,
                 GenerateDeploymentManifestCommand::class,

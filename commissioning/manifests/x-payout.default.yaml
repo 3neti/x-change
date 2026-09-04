@@ -1,0 +1,30 @@
+schema: x-change.commissioning.manifest.v1
+application:
+  key: x-payout
+  name: x-PayOut
+system_principal:
+  name: x-PayOut System
+invitations:
+  schema: x-payout.commissioning-invitations.v1
+  metadata_namespace: x_payout_commissioning
+  roles:
+    - role: maker
+      label: x-PayOut Maker
+      profile: x-payout-maker
+      prefix: MAKE
+    - role: checker
+      label: x-PayOut Checker
+      profile: x-payout-checker
+      prefix: CHKR
+bootstrap:
+  environment:
+    copy_env: true
+    sqlite_database: database/database.sqlite
+  build:
+    enabled: true
+    npm_install: true
+    npm_build: true
+  verify:
+    enabled: true
+    about: true
+    route_path: x
