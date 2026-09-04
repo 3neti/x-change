@@ -129,6 +129,14 @@ final class BootstrapXChangeFromManifestCommand extends Command
                 continue;
             }
 
+            $aliasValue = $this->aliasedEnvironmentValue($requirement);
+
+            if ($aliasValue !== null) {
+                $values[$key] = $aliasValue;
+
+                continue;
+            }
+
             if (! $this->input->isInteractive()) {
                 $missing[] = $key;
 
@@ -243,6 +251,24 @@ final class BootstrapXChangeFromManifestCommand extends Command
         $value = trim($matches[1], " \t\n\r\0\x0B\"");
 
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * @param  array<string, mixed>|string  $requirement
+     */
+    private function aliasedEnvironmentValue(array|string $requirement): ?string
+    {
+        if (! is_array($requirement)) {
+            return null;
+        }
+
+        $source = trim((string) ($requirement['same_as'] ?? ''));
+
+        if (preg_match('/^[A-Z][A-Z0-9_]*$/', $source) !== 1) {
+            return null;
+        }
+
+        return $this->existingEnvironmentValue($source);
     }
 
     /**

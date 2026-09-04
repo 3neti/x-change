@@ -29,9 +29,22 @@ it('requires the x payout manifest to commission against netbank readiness', fun
             'NETBANK_CLIENT_ALIAS',
             'NETBANK_SOURCE_ACCOUNT_NUMBER',
             'NETBANK_SENDER_CUSTOMER_ID',
+            'NETBANK_FUNDING_CLIENT_ID',
+            'NETBANK_FUNDING_CLIENT_SECRET',
+            'NETBANK_FUNDING_CORPORATE_ACCOUNT_NUMBER',
+            'NETBANK_FUNDING_BALANCE_ENDPOINT',
+            'NETBANK_FUNDING_VCA_ALIAS',
         )
         ->not->toContain('NETBANK_FUNDING_QR_MERCHANT_NAME')
         ->not->toContain('NETBANK_FUNDING_QR_MERCHANT_CITY');
+
+    expect(collect(data_get($manifest, 'bootstrap.environment.required', []))
+        ->where('key', 'NETBANK_FUNDING_CLIENT_ID')
+        ->first())
+        ->toMatchArray([
+            'same_as' => 'NETBANK_CLIENT_ID',
+            'secret' => true,
+        ]);
 });
 
 it('keeps bootstrap strict while allowing interactive credential capture', function (): void {
@@ -41,10 +54,33 @@ it('keeps bootstrap strict while allowing interactive credential capture', funct
         ->toContain('LocalEnvironmentFileWriter')
         ->toContain('$this->input->isInteractive()')
         ->toContain('$this->secret($prompt)')
+        ->toContain('aliasedEnvironmentValue')
+        ->toContain("\$requirement['same_as']")
         ->toContain("'config:clear'")
         ->toContain("'x-change:doctor', '--pre-install', '--strict'")
         ->toContain("'x-change:doctor', '--strict'")
         ->toContain("'--profile='.\$profile");
+});
+
+it('derives manifest environment aliases from existing source variables', function (): void {
+    $command = app(BootstrapXChangeFromManifestCommand::class);
+    $method = new ReflectionMethod($command, 'aliasedEnvironmentValue');
+
+    putenv('NETBANK_CLIENT_ID=source-client-id');
+
+    try {
+        expect($method->invoke($command, [
+            'key' => 'NETBANK_FUNDING_CLIENT_ID',
+            'same_as' => 'NETBANK_CLIENT_ID',
+            'secret' => true,
+        ]))->toBe('source-client-id')
+            ->and($method->invoke($command, [
+                'key' => 'NETBANK_FUNDING_CLIENT_ID',
+                'same_as' => 'netbank-client-id',
+            ]))->toBeNull();
+    } finally {
+        putenv('NETBANK_CLIENT_ID');
+    }
 });
 
 it('commissions maker and checker onboarding invitations from the package manifest idempotently', function (): void {

@@ -66,6 +66,25 @@ bootstrap:
         secret: true
       - key: NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
         label: NetBank corporate account name
+      - key: NETBANK_FUNDING_CLIENT_ID
+        label: NetBank funding client ID
+        same_as: NETBANK_CLIENT_ID
+        secret: true
+      - key: NETBANK_FUNDING_CLIENT_SECRET
+        label: NetBank funding client secret
+        same_as: NETBANK_CLIENT_SECRET
+        secret: true
+      - key: NETBANK_FUNDING_CORPORATE_ACCOUNT_NUMBER
+        label: NetBank funding corporate account number
+        same_as: NETBANK_SOURCE_ACCOUNT_NUMBER
+        secret: true
+      - key: NETBANK_FUNDING_BALANCE_ENDPOINT
+        label: NetBank funding balance endpoint
+        same_as: NETBANK_BALANCE_ENDPOINT
+      - key: NETBANK_FUNDING_VCA_ALIAS
+        label: NetBank funding VCA alias
+        same_as: NETBANK_CLIENT_ALIAS
+        secret: true
   build:
     enabled: true
     npm_install: true
