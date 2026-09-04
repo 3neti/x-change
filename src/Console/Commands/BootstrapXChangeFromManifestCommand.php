@@ -163,11 +163,16 @@ final class BootstrapXChangeFromManifestCommand extends Command
             return true;
         }
 
+        $preparedKeys = array_keys($values);
         $result = $environment->write(
             path: base_path('.env'),
             examplePath: base_path('.env.example'),
             values: $values,
         );
+        $this->applyPreparedEnvironment([
+            ...$preparedKeys,
+            'APP_KEY',
+        ]);
 
         if ($result['changed']) {
             $this->components->info('Commissioning environment was prepared.');
@@ -268,6 +273,22 @@ final class BootstrapXChangeFromManifestCommand extends Command
         }
 
         return $this->existingEnvironmentValue($source);
+    }
+
+    /** @param list<string> $keys */
+    private function applyPreparedEnvironment(array $keys): void
+    {
+        foreach (array_unique($keys) as $key) {
+            $value = $this->existingEnvironmentValue((string) $key);
+
+            if ($value === null) {
+                continue;
+            }
+
+            putenv($key.'='.$value);
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
     }
 
     /**

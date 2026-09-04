@@ -57,6 +57,8 @@ it('keeps bootstrap strict while allowing interactive credential capture', funct
         ->toContain('$this->secret($prompt)')
         ->toContain('aliasedEnvironmentValue')
         ->toContain("\$requirement['same_as']")
+        ->toContain('applyPreparedEnvironment')
+        ->toContain("putenv(\$key.'='.\$value)")
         ->toContain("'config:clear'")
         ->toContain("'x-change:doctor', '--pre-install', '--strict'")
         ->toContain("'x-change:doctor', '--strict'")
