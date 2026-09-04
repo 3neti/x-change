@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Services\Commissioning\CommissioningManifestRepository;
+use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 
 it('requires the x payout manifest to commission against netbank readiness', function (): void {
@@ -81,6 +82,31 @@ it('derives manifest environment aliases from existing source variables', functi
     } finally {
         putenv('NETBANK_CLIENT_ID');
     }
+});
+
+it('writes generated application keys without quotes so laravel key generation remains stable', function (): void {
+    $directory = storage_path('framework/testing/env-writer');
+    $environmentPath = $directory.'/.env';
+    $examplePath = $directory.'/.env.example';
+
+    if (! is_dir($directory)) {
+        mkdir($directory, 0755, true);
+    }
+
+    @unlink($environmentPath);
+    file_put_contents($examplePath, "APP_KEY=\nAPP_NAME=Laravel\n");
+
+    app(LocalEnvironmentFileWriter::class)->write(
+        path: $environmentPath,
+        examplePath: $examplePath,
+        values: ['XCHANGE_DEPLOYMENT_PROFILE' => 'netbank'],
+    );
+
+    $contents = file_get_contents($environmentPath);
+
+    expect($contents)
+        ->toContain('APP_KEY=base64:')
+        ->not->toContain('APP_KEY="base64:');
 });
 
 it('commissions maker and checker onboarding invitations from the package manifest idempotently', function (): void {

@@ -117,7 +117,7 @@ final readonly class LocalEnvironmentFileWriter
 
     private function encode(string $value): string
     {
-        if ($value === '' || preg_match('/^[A-Za-z0-9_.:\/\-]+$/', $value) === 1) {
+        if ($value === '' || preg_match('/^[A-Za-z0-9_.:\/+=\-]+$/', $value) === 1) {
             return $value;
         }
 
