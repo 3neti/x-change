@@ -58,7 +58,7 @@ it('keeps bootstrap strict while allowing interactive credential capture', funct
         ->toContain('aliasedEnvironmentValue')
         ->toContain("\$requirement['same_as']")
         ->toContain('applyPreparedEnvironment')
-        ->toContain("putenv(\$key.'='.\$value)")
+        ->toContain("'APP_KEY' => \$this->environmentFileValue('APP_KEY') ?? ''")
         ->toContain("'config:clear'")
         ->toContain("'x-change:doctor', '--pre-install', '--strict'")
         ->toContain("'x-change:doctor', '--strict'")
@@ -110,6 +110,28 @@ it('writes generated application keys without quotes so laravel key generation r
     expect($contents)
         ->toContain('APP_KEY=base64:')
         ->not->toContain('APP_KEY="base64:');
+});
+
+it('propagates prepared manifest values over stale process values', function (): void {
+    $command = app(BootstrapXChangeFromManifestCommand::class);
+    $method = new ReflectionMethod($command, 'applyPreparedEnvironment');
+
+    putenv('XCHANGE_DEPLOYMENT_PROFILE=development');
+    $_ENV['XCHANGE_DEPLOYMENT_PROFILE'] = 'development';
+    $_SERVER['XCHANGE_DEPLOYMENT_PROFILE'] = 'development';
+
+    try {
+        $method->invoke($command, [
+            'XCHANGE_DEPLOYMENT_PROFILE' => 'netbank',
+        ]);
+
+        expect(getenv('XCHANGE_DEPLOYMENT_PROFILE'))->toBe('netbank')
+            ->and($_ENV['XCHANGE_DEPLOYMENT_PROFILE'])->toBe('netbank')
+            ->and($_SERVER['XCHANGE_DEPLOYMENT_PROFILE'])->toBe('netbank');
+    } finally {
+        putenv('XCHANGE_DEPLOYMENT_PROFILE');
+        unset($_ENV['XCHANGE_DEPLOYMENT_PROFILE'], $_SERVER['XCHANGE_DEPLOYMENT_PROFILE']);
+    }
 });
 
 it('commissions maker and checker onboarding invitations from the package manifest idempotently', function (): void {

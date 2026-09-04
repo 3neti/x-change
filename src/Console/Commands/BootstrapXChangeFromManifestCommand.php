@@ -163,15 +163,14 @@ final class BootstrapXChangeFromManifestCommand extends Command
             return true;
         }
 
-        $preparedKeys = array_keys($values);
         $result = $environment->write(
             path: base_path('.env'),
             examplePath: base_path('.env.example'),
             values: $values,
         );
         $this->applyPreparedEnvironment([
-            ...$preparedKeys,
-            'APP_KEY',
+            ...$values,
+            'APP_KEY' => $this->environmentFileValue('APP_KEY') ?? '',
         ]);
 
         if ($result['changed']) {
@@ -240,6 +239,11 @@ final class BootstrapXChangeFromManifestCommand extends Command
             return $value;
         }
 
+        return $this->environmentFileValue($key);
+    }
+
+    private function environmentFileValue(string $key): ?string
+    {
         $path = base_path('.env');
 
         if (! is_file($path)) {
@@ -275,13 +279,11 @@ final class BootstrapXChangeFromManifestCommand extends Command
         return $this->existingEnvironmentValue($source);
     }
 
-    /** @param list<string> $keys */
-    private function applyPreparedEnvironment(array $keys): void
+    /** @param array<string, string> $values */
+    private function applyPreparedEnvironment(array $values): void
     {
-        foreach (array_unique($keys) as $key) {
-            $value = $this->existingEnvironmentValue((string) $key);
-
-            if ($value === null) {
+        foreach ($values as $key => $value) {
+            if (! is_string($key) || trim($value) === '') {
                 continue;
             }
 
