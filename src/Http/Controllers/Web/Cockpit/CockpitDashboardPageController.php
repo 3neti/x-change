@@ -19,6 +19,9 @@ class CockpitDashboardPageController extends Controller
     {
         $operator = $request->user();
         $operatorId = $operator?->getAuthIdentifier();
+        $operatorType = $operator === null
+            ? null
+            : (method_exists($operator, 'getMorphClass') ? $operator->getMorphClass() : get_class($operator));
 
         return Inertia::render('x-change/cockpit/Dashboard', $this->props->toDashboardArray(
             campaignPlanningKey: $this->optionalString($request->query('campaign_planning_key')),
@@ -33,6 +36,7 @@ class CockpitDashboardPageController extends Controller
             campaignRecipientReference: $this->optionalString($request->query('campaign_recipient_reference')),
             campaignPurpose: $this->optionalString($request->query('campaign_purpose')),
             operatorId: is_scalar($operatorId) ? (string) $operatorId : null,
+            operatorType: $operatorType,
             operatorActivityFilters: CockpitOperatorIssuanceActivitySearchFilterData::normalize(
                 search: $this->optionalString($request->query('activity_search')),
                 statuses: $this->queryStringList($request->query('activity_status')),

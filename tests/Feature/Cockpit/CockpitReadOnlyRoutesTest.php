@@ -545,6 +545,26 @@ it('hydrates the dashboard with a sanitized dashboard read model prop', function
         ->assertJsonMissingPath('props.dashboard_read_model.provider');
 });
 
+it('scopes dashboard Pay Code rows to the authenticated operator', function () {
+    $operator = actingAsTestUser();
+    $operatorVoucher = issueVoucher(validVoucherInstructions(amount: 25));
+
+    $otherOperator = actingAsTestUser();
+    $otherVoucher = issueVoucher(validVoucherInstructions(amount: 30));
+
+    $this->actingAs($operator)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard')
+        ->assertJsonPath('props.dashboard_read_model.metrics.0.key', 'pay-codes-visible')
+        ->assertJsonPath('props.dashboard_read_model.metrics.0.value', '1')
+        ->assertJsonPath('props.dashboard_read_model.activity.0.id', $operatorVoucher->code)
+        ->assertJsonMissing(['id' => $otherVoucher->code]);
+
+    expect($otherOperator->is($operator))->toBeFalse();
+});
+
 it('exposes a read-only campaign cockpit read model prop on the dashboard route', function () {
     actingAsTestUser();
 

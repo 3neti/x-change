@@ -177,12 +177,14 @@ class CockpitReadOnlyPageProps
         ?string $campaignRecipientReference = null,
         ?string $campaignPurpose = null,
         ?string $operatorId = null,
+        ?string $operatorType = null,
         ?CockpitOperatorIssuanceActivitySearchFilterData $operatorActivityFilters = null,
     ): array {
         return [
             ...$this->toArray(),
             'dashboard_read_model' => $this->readModels->forDashboard(new CockpitReadModelQueryData(
                 operatorId: $operatorId,
+                operatorType: $operatorType,
                 include: ['voucher'],
             ))->toArray(),
             'campaign_read_model' => $this->readModels->forCampaignAdoption(new CockpitReadModelQueryData(
