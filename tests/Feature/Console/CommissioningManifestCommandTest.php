@@ -60,7 +60,8 @@ it('keeps bootstrap strict while allowing interactive credential capture', funct
         ->toContain("'config:clear'")
         ->toContain("'x-change:doctor', '--pre-install', '--strict'")
         ->toContain("'x-change:doctor', '--strict'")
-        ->toContain("'--profile='.\$profile");
+        ->toContain("'--profile='.\$profile")
+        ->not->toContain("'key:generate'");
 });
 
 it('derives manifest environment aliases from existing source variables', function (): void {

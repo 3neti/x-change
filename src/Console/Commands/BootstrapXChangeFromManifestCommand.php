@@ -91,7 +91,6 @@ final class BootstrapXChangeFromManifestCommand extends Command
         return [
             ['php', 'artisan', 'config:clear'],
             ['php', 'artisan', 'x-change:doctor', '--pre-install', '--strict'],
-            ['php', 'artisan', 'key:generate', '--ansi', '--force'],
             ['php', 'artisan', 'migrate', '--graceful', '--ansi'],
             $install,
             [
