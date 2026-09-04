@@ -2,6 +2,9 @@ schema: x-change.commissioning.manifest.v1
 application:
   key: x-payout
   name: x-PayOut
+deployment:
+  profile: netbank
+  runtime_tier: local
 system_principal:
   name: x-PayOut System
 invitations:
@@ -20,6 +23,51 @@ bootstrap:
   environment:
     copy_env: true
     sqlite_database: database/database.sqlite
+    defaults:
+      XCHANGE_DEPLOYMENT_PROFILE: netbank
+      XCHANGE_RUNTIME_TIER: local
+      XCHANGE_SYSTEM_USER_ID: system@x-payout.test
+      XCHANGE_SYSTEM_USER_COLUMN: email
+      XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE: legal-entity:x-payout
+      XCHANGE_TREASURY_LEGAL_PROFILE_VERSION: 2026-01
+      XCHANGE_FUNDING_NETBANK_ENABLED: true
+      XCHANGE_PROVIDER_TOPOLOGY: netbank
+      XCHANGE_PROVIDER: netbank
+      X_CHANGE_PAYMENT_PROVIDER: netbank
+      X_CHANGE_PAYMENT_ATTEMPT_PROVIDER: netbank
+      PAYMENT_GATEWAY: netbank
+    required:
+      - key: NETBANK_DISBURSEMENT_ENDPOINT
+        label: NetBank disbursement endpoint
+      - key: NETBANK_TOKEN_ENDPOINT
+        label: NetBank token endpoint
+      - key: NETBANK_QR_ENDPOINT
+        label: NetBank QR Ph endpoint
+      - key: NETBANK_STATUS_ENDPOINT
+        label: NetBank status endpoint
+      - key: NETBANK_BALANCE_ENDPOINT
+        label: NetBank balance endpoint
+      - key: NETBANK_CLIENT_ID
+        label: NetBank client ID
+        secret: true
+      - key: NETBANK_CLIENT_SECRET
+        label: NetBank client secret
+        secret: true
+      - key: NETBANK_CLIENT_ALIAS
+        label: NetBank VCA alias
+        secret: true
+      - key: NETBANK_SOURCE_ACCOUNT_NUMBER
+        label: NetBank source account number
+        secret: true
+      - key: NETBANK_SENDER_CUSTOMER_ID
+        label: NetBank sender customer ID
+        secret: true
+      - key: NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
+        label: NetBank corporate account name
+      - key: NETBANK_FUNDING_QR_MERCHANT_NAME
+        label: QR Ph merchant name
+      - key: NETBANK_FUNDING_QR_MERCHANT_CITY
+        label: QR Ph merchant city
   build:
     enabled: true
     npm_install: true
