@@ -1,4 +1,30 @@
 # Remaining Activities Checklist
+
+## Urgent Corrective Slice — Pay Code issuance compatibility ledger false-negative
+
+### Problem
+
+Cockpit Quick Generate can fail voucher issuance with:
+
+```text
+Submission: The Pay Code compatibility ledger is below authoritative Client Funds after issuance.
+```
+
+Observed browser-side symptoms:
+
+- `quick-generate/artwork-previews` returned 503
+- `/api/x/v1/pay-codes/estimate` returned 503
+- `/x/cockpit/quick-generate` POST returned 500
+- Sentry ingest returned 403
+
+### Disposition
+
+Treat as urgent issuance-path hardening. The local reproduction showed the post-issuance reconciliation path can compare the compatibility wallet against a stale in-request authoritative Client Funds read-model value. The corrective slice must force a fresh authoritative balance read before the post-issuance guard evaluates, with focused regression coverage around `GeneratePayCode`.
+
+### Status
+
+Corrective slice implemented locally. Focused issuance regression passed on September 4, 2026.
+
 ## Lifecycle Scenario Runtime Plan
 ## Scenario Metadata Governance Plan
 

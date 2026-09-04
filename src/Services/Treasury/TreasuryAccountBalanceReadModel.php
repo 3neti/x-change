@@ -36,6 +36,14 @@ final class TreasuryAccountBalanceReadModel implements AccountBalanceReadModelCo
         return $this->sum($owner, $currency, mb_strtolower(trim($provider)));
     }
 
+    public function forget(Model $owner, string $currency, ?string $provider = null): void
+    {
+        $currency = mb_strtoupper(trim($currency));
+        $provider = $provider === null ? null : mb_strtolower(trim($provider));
+
+        unset($this->balanceCache[$this->cacheKey($owner, $currency, $provider)]);
+    }
+
     private function sum(
         mixed $owner,
         string $currency,
