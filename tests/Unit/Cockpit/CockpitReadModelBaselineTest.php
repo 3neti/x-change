@@ -1832,8 +1832,15 @@ it('adapts voucher lifecycle list rows into sanitized cockpit dashboard facts', 
 it('keeps cockpit dashboard first paint away from the heavy liability summary service', function () {
     $lifecycle = new class implements VoucherLifecycleServiceContract
     {
+        /**
+         * @var array<string, mixed>
+         */
+        public array $lastFilters = [];
+
         public function list(array $filters = []): array
         {
+            $this->lastFilters = $filters;
+
             return [
                 [
                     'code' => 'PC-READY-001',
@@ -1887,7 +1894,10 @@ it('keeps cockpit dashboard first paint away from the heavy liability summary se
     $readModel = (new VoucherLifecycleCockpitReadModelProvider(
         vouchers: $lifecycle,
         liabilities: $liabilities,
-    ))->forDashboard(new CockpitReadModelQueryData(operatorId: 'operator-1'));
+    ))->forDashboard(new CockpitReadModelQueryData(
+        operatorId: '10',
+        operatorType: 'App\\Models\\User',
+    ));
 
     $metricKeys = collect($readModel->metrics)
         ->map(fn (mixed $metric): string => $metric->key)
@@ -1895,6 +1905,11 @@ it('keeps cockpit dashboard first paint away from the heavy liability summary se
 
     expect($liabilities->called)->toBeFalse()
         ->and($metricKeys)->not->toContain('active-issued-liability')
+        ->and($lifecycle->lastFilters)->toMatchArray([
+            'include' => ['redeemer'],
+            'issuer_id' => '10',
+            'issuer_type' => 'App\\Models\\User',
+        ])
         ->and($metricKeys)->toContain('pay-codes-visible');
 });
 
