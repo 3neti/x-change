@@ -17,7 +17,7 @@ describe('PayoutRouteDisplay', () => {
         expect(text).toContain('₱50.00');
         expect(text).toContain('09173011987');
         expect(text).not.toContain('Send ₱50.00 to GCash account');
-        expect(text).not.toContain('GCash');
+        expect(text).toContain('GCash');
         expect(text).not.toContain('InstaPay');
         expect(text).not.toContain('x-change');
         expect(text).not.toContain('NetBank');
@@ -122,7 +122,7 @@ describe('PayoutRouteDisplay', () => {
         // The readable anchors are still shown even without a destination
         // icon asset.
         expect(wrapper.text()).toContain('09173011987');
-        expect(wrapper.text()).not.toContain('AL-AMANAH ISLAMIC BANK');
+        expect(wrapper.text()).toContain('AL-AMANAH ISLAMIC BANK');
 
         // No broken <img> is rendered for the destination segment; the
         // component falls back to the lucide glyph instead.

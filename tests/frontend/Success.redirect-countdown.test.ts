@@ -35,6 +35,10 @@ vi.mock('lucide-vue-next', () => ({
         name: 'CheckCircle2',
         template: '<span data-testid="check-icon" />',
     },
+    Clock3: {
+        name: 'Clock3',
+        template: '<span data-testid="clock-icon" />',
+    },
 }));
 
 const baseProps = {

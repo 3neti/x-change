@@ -366,13 +366,8 @@ describe('Quick Generate last instructions', () => {
             },
         });
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-order-options-toggle"]')
+            .get('[data-testid="cockpit-quick-generate-open-design-button"]')
             .trigger('click');
-        const designOption = wrapper.get(
-            '[data-testid="cockpit-quick-generate-order-option-design"]',
-        );
-        (designOption.element as HTMLDetailsElement).open = true;
-        await designOption.trigger('toggle');
         await wrapper.vm.$nextTick();
 
         expect(

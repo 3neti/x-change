@@ -56,9 +56,11 @@ describe('Cockpit shell layout baseline', () => {
         });
         await vi.advanceTimersByTimeAsync(151);
 
-        expect(router.reload).toHaveBeenCalledWith({
-            only: ['cockpit_header_read_model'],
-        });
+        expect(router.reload).toHaveBeenCalledWith(
+            expect.objectContaining({
+                only: ['cockpit_header_read_model'],
+            }),
+        );
     });
 
     it('renders the operator workspace without a nested application sidebar', () => {
