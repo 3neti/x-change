@@ -42,6 +42,10 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
             "case name.startsWith('form-flow/'):",
             'return null;',
         )
+        ->and($appBootstrap)->not->toContain(
+            '@/lib/flashToast',
+            'initializeFlashToast',
+        )
         ->and($appBootstrap)->toContain(
             "case name.startsWith('auth/'):",
             "case name.startsWith('settings/'):",
