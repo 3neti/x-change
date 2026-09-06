@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\Voucher\Models\Voucher;
@@ -19,6 +21,8 @@ use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
+use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -101,15 +105,24 @@ it('issues a provisional NetBank payer QR with one provider call and no VCA regi
     config()->set('payment-gateway.netbank.funding.pre_transaction_validation_enabled', true);
     config()->set('payment-gateway.netbank.funding.exact_limits_enabled', true);
     $qrPayload = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lDoLpwAAAABJRU5ErkJggg==';
+    $user = actingAsTestUser();
+    app(MerchantProfileRepositoryContract::class)->updateForUser($user, [
+        'name' => 'Lester Store',
+        'city' => 'Makati',
+        'merchant_category_code' => '5999',
+        'merchant_name_template' => '{name}',
+    ]);
+    $expectedMerchant = app(FundingQrMerchantProfileResolver::class)->resolve($user);
     $client = Mockery::mock(NetbankFundingApiClient::class);
     $client->shouldNotReceive('generateAliasToken');
     $client->shouldNotReceive('registerPreTransactionReference');
     $client->shouldNotReceive('createExactLimit');
     $client->shouldReceive('generateQrCode')
         ->once()
-        ->withArgs(fn (string $vcaNumber, int $amountMinor, string $currency): bool => preg_match('/\A91500\d{16}\z/', $vcaNumber) === 1
+        ->withArgs(fn (string $vcaNumber, int $amountMinor, string $currency, FundingQrMerchantData $merchant): bool => preg_match('/\A91500\d{16}\z/', $vcaNumber) === 1
             && $amountMinor === 10000
-            && $currency === 'PHP')
+            && $currency === 'PHP'
+            && FundingMerchantSnapshot::fromData($merchant) === FundingMerchantSnapshot::fromData($expectedMerchant))
         ->andReturn($qrPayload);
 
     $this->app->instance(NetbankFundingApiClient::class, $client);
@@ -120,7 +133,7 @@ it('issues a provisional NetBank payer QR with one provider call and no VCA regi
         ]),
     );
 
-    $voucher = paymentAttemptCollectibleVoucher();
+    $voucher = paymentAttemptCollectibleVoucherForUser($user);
     $attempt = app(CreatePaymentAttempt::class)->handle(
         $voucher,
         'netbank',
@@ -129,12 +142,19 @@ it('issues a provisional NetBank payer QR with one provider call and no VCA regi
     );
 
     $issued = app(IssuePaymentInstructions::class)->handle($attempt);
+    $replay = app(IssuePaymentInstructions::class)->handle($attempt);
+    $raw = DB::table('x_change_payment_attempts')->find($attempt->getKey());
 
     expect($issued->status)->toBe(PaymentAttemptStatus::AwaitingPayment)
         ->and($issued->expected_amount_minor)->toBe(10000)
         ->and($issued->currency)->toBe('PHP')
         ->and($issued->provider_request_id_ciphertext)->toMatch('/\A91500\d{16}\z/')
         ->and($issued->funding_address_ciphertext)->toBe($issued->provider_request_id_ciphertext)
+        ->and($issued->merchant_snapshot_ciphertext)->toBe(FundingMerchantSnapshot::fromData($expectedMerchant))
+        ->and($issued->merchant_profile_fingerprint)->toBe($expectedMerchant->profileFingerprint)
+        ->and($raw->merchant_snapshot_ciphertext)->not->toContain('Lester Store')
+        ->and($replay->merchant_snapshot_ciphertext)->toBe($issued->merchant_snapshot_ciphertext)
+        ->and($replay->events)->toHaveCount(2)
         ->and($issued->instructions_ciphertext['qr_code'])->toMatchArray([
             'mime_type' => 'image/png',
             'base64_payload' => $qrPayload,
@@ -143,6 +163,77 @@ it('issues a provisional NetBank payer QR with one provider call and no VCA regi
             'embedded_amount' => true,
             'provider_generated' => true,
         ]);
+});
+
+it('uses an updated merchant profile only for newly issued Payment Attempts', function (): void {
+    $user = actingAsTestUser();
+    $profiles = app(MerchantProfileRepositoryContract::class);
+    $profiles->updateForUser($user, [
+        'name' => 'First Store',
+        'city' => 'Makati',
+        'merchant_category_code' => '5999',
+        'merchant_name_template' => '{name}',
+    ]);
+    $firstVoucher = paymentAttemptCollectibleVoucherForUser($user);
+    $first = app(IssuePaymentInstructions::class)->handle(
+        app(CreatePaymentAttempt::class)->handle(
+            $firstVoucher,
+            'netbank',
+            'first-payer-session',
+            'first-request',
+        ),
+    );
+    $firstSnapshot = $first->merchant_snapshot_ciphertext;
+
+    $profiles->updateForUser($user, [
+        'name' => 'Second Store',
+        'city' => 'Pasig',
+        'merchant_category_code' => '5812',
+        'merchant_name_template' => '{name}',
+    ]);
+    $secondVoucher = paymentAttemptCollectibleVoucherForUser($user);
+    $second = app(IssuePaymentInstructions::class)->handle(
+        app(CreatePaymentAttempt::class)->handle(
+            $secondVoucher,
+            'netbank',
+            'second-payer-session',
+            'second-request',
+        ),
+    );
+
+    expect($first->fresh()->merchant_snapshot_ciphertext)->toBe($firstSnapshot)
+        ->and($firstSnapshot['displayName'])->toBe('First Store')
+        ->and($firstSnapshot['city'])->toBe('Makati')
+        ->and($second->merchant_snapshot_ciphertext['displayName'])->toBe('Second Store')
+        ->and($second->merchant_snapshot_ciphertext['city'])->toBe('Pasig')
+        ->and($second->merchant_profile_fingerprint)->not->toBe($first->merchant_profile_fingerprint)
+        ->and($this->paymentAdapter->instructionCalls)->toBe(2);
+});
+
+it('fails closed before provider instructions when the merchant profile is inactive', function (): void {
+    $user = actingAsTestUser();
+    $profile = app(MerchantProfileRepositoryContract::class)->findOrCreateForUser($user);
+    $profile->forceFill(['is_active' => false])->save();
+    $voucher = paymentAttemptCollectibleVoucherForUser($user);
+    $attempt = app(CreatePaymentAttempt::class)->handle(
+        $voucher,
+        'netbank',
+        'inactive-merchant-session',
+        'inactive-merchant-request',
+    );
+
+    expect(fn () => app(IssuePaymentInstructions::class)->handle($attempt))
+        ->toThrow(RuntimeException::class, 'Payment instructions are temporarily unavailable.');
+
+    $failure = $attempt->fresh()->events()->where('event_type', 'provider_instruction_failed')->sole();
+
+    expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::PendingInstructions)
+        ->and($failure->metadata)->toBe([
+            'provider' => 'netbank',
+            'retryable' => true,
+            'failure_stage' => 'merchant_profile',
+        ])
+        ->and($this->paymentAdapter->instructionCalls)->toBe(0);
 });
 
 it('settles one exact provider observation into one voucher collection', function (): void {

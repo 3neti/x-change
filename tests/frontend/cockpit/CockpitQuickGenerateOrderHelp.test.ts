@@ -106,7 +106,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBeTruthy();
     });
 
-    it('stacks the Order title and Issue CTA on mobile, separate from the Account Invitation badge and Mode control', () => {
+    it('keeps the workspace controls together and the Issue CTA beside Amount', () => {
         const wrapper = mountPanel({
             templates: cockpitQuickGenerateTemplates,
             onboardingPreset: true,
@@ -118,37 +118,61 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         const submitButton = orderCard.get(
             '[data-testid="cockpit-quick-generate-submit-button"]',
         );
-        const badge = orderCard.get(
+        const valueFlow = orderCard.get(
             '[data-testid="cockpit-quick-generate-voucher-kind"]',
+        );
+        const surfaceControl = orderCard.get(
+            '[data-testid="cockpit-quick-generate-surface-toggle"]',
         );
         const modeControl = orderCard.get(
             '[data-testid="cockpit-quick-generate-mode-control"]',
         );
         const titleRow = title.element.parentElement?.parentElement;
+        const amountActionRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-amount-action-row"]',
+        );
 
-        // Title and CTA stack at the narrowest widths and share a row from
-        // the small breakpoint onward. The badge does not compete with them.
-        expect(titleRow?.contains(submitButton.element)).toBe(true);
-        expect(titleRow?.contains(badge.element)).toBe(false);
-        expect(titleRow?.classList.contains('flex-col')).toBe(true);
-        expect(titleRow?.classList.contains('sm:flex-row')).toBe(true);
+        expect(titleRow?.contains(submitButton.element)).toBe(false);
+        expect(amountActionRow.element.contains(submitButton.element)).toBe(
+            true,
+        );
+        expect(amountActionRow.classes()).toContain(
+            'grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]',
+        );
+        expect(amountActionRow.classes()).toContain(
+            'sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]',
+        );
 
-        // The description gets its own full-width row.
-        const description = orderCard.get('p');
-        expect(description.text()).toBe(
+        const workspaceRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-order-mode-row"]',
+        );
+        expect(workspaceRow.element.contains(surfaceControl.element)).toBe(
+            true,
+        );
+        expect(workspaceRow.text()).toContain('Workspace');
+        expect(workspaceRow.element.contains(valueFlow.element)).toBe(false);
+        expect(workspaceRow.classes()).toContain('text-sm');
+        expect(orderCard.text()).not.toContain(
             'Set the value, payee, and purpose.',
         );
-        expect(titleRow?.contains(description.element)).toBe(false);
-
-        // The badge shares a wrapping row with the Mode control instead of
-        // the CTA, so neither clips the other at a narrow card width.
-        const badgeRow = badge.element.parentElement;
-        expect(badgeRow?.contains(modeControl.element)).toBe(true);
-        expect(badgeRow?.contains(submitButton.element)).toBe(false);
-        expect(badgeRow?.classList.contains('flex-wrap')).toBe(true);
+        expect(workspaceRow.element.contains(submitButton.element)).toBe(
+            false,
+        );
+        expect(amountActionRow.element.contains(modeControl.element)).toBe(
+            true,
+        );
+        expect(amountActionRow.element.contains(valueFlow.element)).toBe(true);
+        expect(valueFlow.element.contains(modeControl.element)).toBe(false);
+        expect(valueFlow.classes()).toContain('row-start-2');
+        expect(modeControl.classes()).toContain('row-start-1');
+        const valueFlowRow = valueFlow.get(
+            '[data-testid="cockpit-quick-generate-value-flow-row"]',
+        );
+        expect(valueFlowRow.classes()).toContain('flex-nowrap');
+        expect(valueFlowRow.text()).toContain('Value flow');
     });
 
-    it('gives the Issue CTA a shrink-resistant, non-clippable structure independent of the badge', () => {
+    it('gives the Issue CTA a full-track, non-clippable structure independent of Value Flow', () => {
         const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
@@ -160,13 +184,28 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             '[data-testid="cockpit-quick-generate-voucher-kind"]',
         );
 
-        expect(submitButton.classes()).toContain('shrink-0');
+        expect(submitButton.classes()).toContain('flex-1');
         expect(submitButton.classes()).not.toContain('absolute');
         expect(badge.classes()).not.toContain('absolute');
-        // No shared flex row forces the CTA to compete with the badge for
-        // space; they are siblings of different rows.
+        // Amount and the wider primary action share row one; Estimated Cost
+        // and the single-line Value Flow control align beneath them.
         expect(submitButton.element.parentElement).not.toBe(
             badge.element.parentElement,
+        );
+        expect(badge.classes()).toContain('col-start-2');
+        expect(badge.classes()).toContain('row-start-2');
+        const valueFlowRow = badge.get(
+            '[data-testid="cockpit-quick-generate-value-flow-row"]',
+        );
+        expect(badge.get('legend').classes()).toContain('sr-only');
+        expect(valueFlowRow.classes()).toContain('flex');
+        expect(valueFlowRow.classes()).toContain('items-center');
+        expect(valueFlowRow.classes()).toContain('flex-nowrap');
+        expect(submitButton.element.parentElement?.classList).toContain(
+            'col-start-2',
+        );
+        expect(submitButton.element.parentElement?.classList).toContain(
+            'row-start-1',
         );
     });
 
@@ -386,12 +425,21 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
 
-        const oversizedMinWidths = orderCard
+        const issueActionOptions = orderCard.get(
+            '[data-testid="cockpit-quick-generate-issue-action-options"]',
+        );
+        const inFlowOrderHtml = orderCard
             .html()
+            .replace(issueActionOptions.html(), '');
+        const oversizedMinWidths = inFlowOrderHtml
             .match(/min-w-(\d|\[)/g)
-            ?.filter((match) => match !== 'min-w-0');
+            ?.filter(
+                (match) => match !== 'min-w-0' && match !== 'min-w-4',
+            );
 
         expect(oversizedMinWidths ?? []).toHaveLength(0);
+        expect(issueActionOptions.classes()).toContain('absolute');
+        expect(issueActionOptions.classes()).toContain('min-w-48');
 
         const submitButton = orderCard.get(
             '[data-testid="cockpit-quick-generate-submit-button"]',

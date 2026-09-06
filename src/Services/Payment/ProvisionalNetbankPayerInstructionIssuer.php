@@ -42,6 +42,7 @@ final readonly class ProvisionalNetbankPayerInstructionIssuer
             vcaNumber: $vcaNumber,
             amountMinor: $request->amountMinor,
             currency: $currency,
+            merchant: $request->merchant,
         );
 
         return new FundingInstructionsData(

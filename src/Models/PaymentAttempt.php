@@ -33,6 +33,8 @@ class PaymentAttempt extends Model
         'instructions_ciphertext',
         'destination_snapshot_ciphertext',
         'destination_fingerprint',
+        'merchant_snapshot_ciphertext',
+        'merchant_profile_fingerprint',
         'matched_observation_id',
         'voucher_collection_id',
         'provider_transaction_id',
@@ -56,6 +58,8 @@ class PaymentAttempt extends Model
         'instructions_ciphertext',
         'destination_snapshot_ciphertext',
         'destination_fingerprint',
+        'merchant_snapshot_ciphertext',
+        'merchant_profile_fingerprint',
     ];
 
     protected static function booted(): void
@@ -83,6 +87,7 @@ class PaymentAttempt extends Model
             'funding_address_ciphertext' => 'encrypted',
             'instructions_ciphertext' => 'encrypted:array',
             'destination_snapshot_ciphertext' => 'encrypted:array',
+            'merchant_snapshot_ciphertext' => 'encrypted:array',
             'matched_observation_id' => 'integer',
             'voucher_collection_id' => 'integer',
             'instructions_created_at' => 'immutable_datetime',

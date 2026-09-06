@@ -25,6 +25,7 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
 
@@ -320,12 +321,26 @@ class CockpitCampaignWorksheetController extends Controller
                 'fulfillments as planned_count' => fn ($query) => $query->where('status', 'planned'),
                 'fulfillments as issued_count' => fn ($query) => $query->where('status', 'issued'),
                 'fulfillments as completed_count' => fn ($query) => $query->where('status', 'completed'),
+                'fulfillments as recovery_required_count' => fn ($query) => $query->where('status', 'recovery_required'),
+                'fulfillments as recovery_ready_count' => fn ($query) => $query->where('status', 'recovery_ready'),
+                'fulfillments as executing_count' => fn ($query) => $query->where('status', 'executing'),
+                'fulfillments as indeterminate_count' => fn ($query) => $query->where('status', 'provider_indeterminate'),
                 'fulfillments as provider_ready_count' => fn ($query) => $query->where('status', 'awaiting_provider_dispatch'),
                 'fulfillments as fallback_count' => fn ($query) => $query->where('status', 'fallback_planned'),
             ])
             ->latest('id')
             ->first()
-            ?->only(['planned_count', 'issued_count', 'completed_count', 'provider_ready_count', 'fallback_count']) ?? [];
+            ?->only([
+                'planned_count',
+                'issued_count',
+                'completed_count',
+                'recovery_required_count',
+                'recovery_ready_count',
+                'executing_count',
+                'indeterminate_count',
+                'provider_ready_count',
+                'fallback_count',
+            ]) ?? [];
     }
 
     /** @return array<string, int|string|null> */
@@ -381,13 +396,52 @@ class CockpitCampaignWorksheetController extends Controller
             return [];
         }
 
-        return $authorization->fulfillments()
+        $fulfillments = $authorization->fulfillments()
             ->with('row')
             ->orderBy('id')
             ->limit(100)
+            ->get();
+        $payCodes = $fulfillments
+            ->pluck('pay_code')
+            ->filter(fn (mixed $code): bool => is_string($code) && trim($code) !== '')
+            ->map(fn (string $code): string => trim($code))
+            ->values();
+        $claimStatusByCode = VoucherClaim::query()
+            ->join('vouchers', 'vouchers.id', '=', 'voucher_claims.voucher_id')
+            ->whereIn('vouchers.code', $payCodes)
+            ->select(['vouchers.code', 'voucher_claims.status', 'voucher_claims.completed_at'])
+            ->orderBy('voucher_claims.id')
             ->get()
-            ->map(function (CampaignWorksheetFulfillment $fulfillment): array {
+            ->groupBy('code')
+            ->map(fn ($claims) => [
+                'status' => (string) $claims->last()->status,
+                'completed_at' => $claims->last()->completed_at?->toIso8601String(),
+            ]);
+        $deliveryStatusByFulfillment = CampaignDeliveryAttempt::query()
+            ->with('events')
+            ->where('campaign_worksheet_authorization_id', $authorization->getKey())
+            ->whereNotNull('campaign_worksheet_fulfillment_id')
+            ->whereIn('campaign_worksheet_fulfillment_id', $fulfillments->pluck('id'))
+            ->latest('id')
+            ->get()
+            ->groupBy('campaign_worksheet_fulfillment_id')
+            ->map(function ($attempts): array {
+                $attempt = $attempts->first();
+                $lastEvent = $attempt?->events?->last();
+
+                return [
+                    'channel' => $attempt?->channel,
+                    'status' => $lastEvent?->event_type ?? 'requested',
+                    'safe_error_code' => $lastEvent?->safe_error_code,
+                    'requested_at' => $attempt?->requested_at?->toIso8601String(),
+                ];
+            });
+
+        return $fulfillments
+            ->map(function (CampaignWorksheetFulfillment $fulfillment) use ($claimStatusByCode, $deliveryStatusByFulfillment): array {
                 $beneficiary = $fulfillment->row?->beneficiary_ciphertext ?? [];
+                $claim = $fulfillment->pay_code === null ? null : $claimStatusByCode->get($fulfillment->pay_code);
+                $delivery = $deliveryStatusByFulfillment->get($fulfillment->getKey());
 
                 return [
                     'reference' => (string) $fulfillment->reference,
@@ -396,11 +450,64 @@ class CockpitCampaignWorksheetController extends Controller
                     'amount_minor' => (int) ($fulfillment->row?->amount_minor ?? 0),
                     'mode' => (string) $fulfillment->mode,
                     'status' => (string) $fulfillment->status,
+                    'monitor_label' => $this->fulfillmentMonitorLabel(
+                        (string) $fulfillment->status,
+                        is_array($claim) ? (string) ($claim['status'] ?? '') : null,
+                        is_array($delivery) ? (string) ($delivery['status'] ?? '') : null,
+                    ),
                     'provider_transfer_reference' => $fulfillment->provider_transfer_reference,
                     'pay_code' => $fulfillment->pay_code,
+                    'claim_status' => is_array($claim) ? $claim['status'] : null,
+                    'claim_completed_at' => is_array($claim) ? $claim['completed_at'] : null,
+                    'delivery_status' => is_array($delivery) ? $delivery['status'] : null,
+                    'delivery_channel' => is_array($delivery) ? $delivery['channel'] : null,
+                    'delivery_requested_at' => is_array($delivery) ? $delivery['requested_at'] : null,
+                    'delivery_safe_error_code' => is_array($delivery) ? $delivery['safe_error_code'] : null,
                 ];
             })
             ->all();
+    }
+
+    private function fulfillmentMonitorLabel(
+        string $status,
+        ?string $claimStatus,
+        ?string $deliveryStatus,
+    ): string {
+        if ($claimStatus === 'succeeded') {
+            return 'Paid';
+        }
+
+        if ($status === 'completed') {
+            return 'Paid';
+        }
+
+        if ($claimStatus === 'payout_retry_pending') {
+            return 'Recovery claimed';
+        }
+
+        if ($deliveryStatus === 'completed') {
+            return 'Recovery SMS sent';
+        }
+
+        if ($deliveryStatus === 'superseded') {
+            return 'Recovery SMS superseded';
+        }
+
+        if ($deliveryStatus === 'queued' || $deliveryStatus === 'provider_queued') {
+            return 'Recovery SMS queued';
+        }
+
+        return match ($status) {
+            'planned' => 'Pending',
+            'issued' => 'Pay Code issued',
+            'executing' => 'Executing transfer',
+            'provider_dispatched', 'awaiting_provider_dispatch' => 'Provider dispatched',
+            'provider_indeterminate' => 'Provider review',
+            'provider_dispatch_failed', 'recovery_required' => 'Recovery ready',
+            'recovery_ready' => 'Recovery SMS ready',
+            'fallback_planned' => 'Pay Code fallback planned',
+            default => str($status)->replace('_', ' ')->title()->toString(),
+        };
     }
 
     private function authorization(string $reference, mixed $owner): ?CampaignWorksheetAuthorization

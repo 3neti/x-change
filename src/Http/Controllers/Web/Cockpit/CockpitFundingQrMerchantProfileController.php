@@ -19,7 +19,7 @@ class CockpitFundingQrMerchantProfileController extends Controller
 
         return back()->with(
             'funding_account_notice',
-            'QR presentation updated. Funding is refreshing the reusable QR.',
+            'Merchant identity updated. New Pay Codes and Funding QR codes will use it.',
         );
     }
 }

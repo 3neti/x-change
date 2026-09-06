@@ -14,6 +14,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Actions\Campaigns\SubmitCampaignPayoutRecoveryClaim;
 use LBHurtado\XChange\Actions\Disbursement\RefurbishRejectedPayCodePayout;
 use LBHurtado\XChange\Actions\Disbursement\RestoreUnsubmittedPayoutCorrection;
 use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
@@ -466,6 +467,72 @@ it('refurbishes the same pay code with an immutable corrected destination and se
         bankCode: 'GXCHPHM2XXX',
         accountNumber: '09173011987',
     ))->toThrow(RuntimeException::class);
+    $provider->assertDisburseCalledTimes(2);
+});
+
+it('lets the canonical otp claim flow correct the same rejected campaign pay code', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['issuer' => $issuer, 'voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnPendingResult(
+        transactionId: 'NETBANK-CAMPAIGN-RECOVERY-ORIGINAL-1',
+        provider: 'netbank',
+    );
+    app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09175180722',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'BNORPHMMXXX',
+            'account_number' => '12345678901',
+        ],
+    ]);
+    $rejection = DisbursementReconciliation::query()
+        ->where('voucher_id', $voucher->getKey())
+        ->sole();
+    $rejection->forceFill([
+        'status' => 'failed',
+        'needs_review' => false,
+        'error_message' => 'AC01 (Incorrect account number)',
+        'completed_at' => now(),
+    ])->save();
+    DisbursementRejected::dispatch($rejection->fresh());
+    $metadata = (array) $voucher->refresh()->metadata;
+    data_set($metadata, 'instructions.cash.validation.mobile', '09175180722');
+    data_set($metadata, 'instructions.validation.otp', ['required' => true, 'on_failure' => 'block']);
+    data_set($metadata, 'instructions.inputs.fields', ['mobile', 'otp']);
+    data_set($metadata, 'instructions.metadata.custom.claim_evidence.requirements', ['mobile', 'otp']);
+    data_set($metadata, 'instructions.metadata.custom.campaign.claim_activation', 'provider_rejection');
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+    $provider->willReturnSuccessfulResult(
+        transactionId: 'NETBANK-CAMPAIGN-RECOVERY-SUCCEEDED-1',
+        provider: 'netbank',
+    );
+
+    $result = app(SubmitCampaignPayoutRecoveryClaim::class)->handle($voucher, [
+        'mobile' => '09175180722',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number' => '09175180722',
+        'inputs' => [
+            'mobile' => '09175180722',
+            'otp_verified' => true,
+            'otp' => [
+                'verified' => true,
+                'mobile' => '09175180722',
+            ],
+        ],
+    ]);
+
+    expect($result->claimed)->toBeTrue()
+        ->and($result->voucher_code)->toBe($voucher->code)
+        ->and($result->status)->toBe('succeeded')
+        ->and(DisbursementReconciliation::query()
+            ->where('voucher_id', $voucher->getKey())->count())->toBe(2)
+        ->and(data_get($voucher->refresh()->metadata, 'treasury.pay_code_reservation.status'))
+        ->toBe('settled')
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'pay_code.payout_destination.revised')
+            ->where('subject_id', (string) $voucher->getKey())
+            ->sole()->metadata['source'])
+        ->toBe('cockpit_payout_recovery');
     $provider->assertDisburseCalledTimes(2);
 });
 

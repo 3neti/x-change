@@ -41,7 +41,16 @@ describe('Cockpit Quick Generate POS mode', () => {
     it('switches the existing Issuance surface between Composer and POS', async () => {
         const wrapper = shallowMount(QuickGenerate, {
             props: {
-                current_user_wallet_id: 42,
+                collection_destination: {
+                    schema: 'x-change.cockpit.collection-destination.v1',
+                    label: 'Your Client Funds',
+                    description:
+                        'Payments are credited to the collection account authorized for the signed-in operator.',
+                    authority: 'authenticated_operator',
+                    status: 'ready',
+                    editable: false,
+                    managed_automatically: true,
+                },
                 quick_generate_read_model: {
                     status: 'available',
                     authorized: true,
@@ -63,20 +72,46 @@ describe('Cockpit Quick Generate POS mode', () => {
                 .exists(),
         ).toBe(true);
 
-        await wrapper
-            .get('[data-testid="cockpit-quick-generate-surface-pos"]')
-            .trigger('click');
+        wrapper
+            .findComponent({ name: 'CockpitQuickGenerateSubmitPanel' })
+            .vm.$emit('update:issuanceSurface', 'pos');
+        await wrapper.vm.$nextTick();
 
         expect(
             wrapper
                 .findComponent({ name: 'CockpitQuickGeneratePosPanel' })
                 .exists(),
         ).toBe(true);
+        wrapper
+            .findComponent({ name: 'CockpitQuickGeneratePosPanel' })
+            .vm.$emit('update:issuanceSurface', 'composer');
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper
+                .findComponent({ name: 'CockpitQuickGenerateSubmitPanel' })
+                .exists(),
+        ).toBe(true);
+    });
+
+    it('keeps the compact surface switch available inside the POS workspace', async () => {
+        const wrapper = mount(CockpitQuickGeneratePosPanel, {
+            props: { mutationContract },
+        });
+
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-surface-pos"]')
                 .attributes('aria-pressed'),
         ).toBe('true');
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-surface-composer"]')
+            .trigger('click');
+
+        expect(wrapper.emitted('update:issuanceSurface')).toEqual([
+            ['composer'],
+        ]);
     });
 
     it('issues from amount and reference, renders QR, polls, confirms payment, and resets', async () => {

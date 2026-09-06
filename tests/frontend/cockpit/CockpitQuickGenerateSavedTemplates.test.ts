@@ -158,7 +158,7 @@ describe('Quick Generate saved templates', () => {
         });
         expect(payload).toMatchObject({
             name: 'Branch Cash Out',
-            base_template_key: 'money-changer',
+            base_template_key: 'blank-pay-code',
             include_amount: true,
             include_purpose: true,
         });

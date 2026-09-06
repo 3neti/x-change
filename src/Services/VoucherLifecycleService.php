@@ -868,6 +868,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 'voucher_type_label' => $operational->voucher_type_label,
             ],
             'party' => $this->partySummary($voucher),
+            'claim_summary' => $this->claimSummary($voucher, $status->key),
             'amounts' => $this->amountFacts($voucher),
             'instructions' => $instructions,
             'claims' => $this->claimsArray($voucher),

@@ -140,6 +140,31 @@ it('attaches x-ray claim presentation before starting form flow', function () {
         ->assertRedirect('/form-flow/flow-claim-presentation-test');
 });
 
+it('starts the ordinary form flow for a provider-rejected campaign Pay Code', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'inputs' => ['fields' => ['mobile', 'otp']],
+        'cash' => ['validation' => ['mobile' => '09175180722']],
+    ]));
+    $metadata = (array) $voucher->metadata;
+    data_set($metadata, 'instructions.metadata.custom.campaign.claim_activation', 'provider_rejection');
+    data_set($metadata, 'treasury.pay_code_reservation.status', 'recovery_pending');
+    $voucher->forceFill([
+        'metadata' => $metadata,
+        'redeemed_at' => now(),
+    ])->save();
+
+    mockDriverForClaimVoucher($this, $voucher);
+    assertClaimExperienceStartFlow($this, function (array $experience, array $payload): void {
+        expect(data_get($experience, 'version'))->toBe(1)
+            ->and(data_get($payload, 'metadata.claim_workflow.key'))->toBe('campaign.payout-recovery.v1');
+    }, 'flow-campaign-recovery');
+
+    $this->post(route('x-change.claim.flows.store', ['code' => $voucher->code]))
+        ->assertRedirect('/form-flow/flow-campaign-recovery');
+});
+
 it('starts a canonical claim flow only through the explicit post route', function () {
     $this->withoutMiddleware();
 

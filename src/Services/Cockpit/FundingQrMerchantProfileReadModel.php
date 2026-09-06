@@ -68,9 +68,9 @@ final class FundingQrMerchantProfileReadModel
                 ])
                 ->values()
                 ->all(),
-            'presentation_only' => true,
+            'presentation_only' => false,
             'controls_routing' => false,
-            'controls_settlement' => false,
+            'controls_settlement' => true,
         ];
     }
 }

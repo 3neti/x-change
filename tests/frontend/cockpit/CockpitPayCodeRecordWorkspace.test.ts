@@ -11,6 +11,17 @@ const voucher = {
   overview: {
     capability: { label: "Disbursement" },
     party: { label: "Claimed By", primary: "•••• 1987" },
+    claim_summary: {
+      schema: "x-change.cockpit.pay-code-claim-summary.v1",
+      status: "paid",
+      claimed_at: "2026-08-03T08:15:00+08:00",
+      claimed_by_label: "•••• 1987",
+      claimed_mobile_masked: "•••• 1987",
+      amount_minor: 2_000,
+      currency: "PHP",
+      location_label: "Makati counter",
+      evidence_count: 1,
+    },
     amounts: [
       {
         key: "reserved_principal",
@@ -77,6 +88,17 @@ const voucher = {
         legacy: false,
       },
     ],
+  },
+  claim_summary: {
+    schema: "x-change.cockpit.pay-code-claim-summary.v1",
+    status: "paid",
+    claimed_at: "2026-08-03T08:15:00+08:00",
+    claimed_by_label: "•••• 1987",
+    claimed_mobile_masked: "•••• 1987",
+    amount_minor: 2_000,
+    currency: "PHP",
+    location_label: "Makati counter",
+    evidence_count: 1,
   },
   settlement: {
     envelope: {
@@ -667,9 +689,12 @@ describe("Cockpit Pay Code record workspace", () => {
     const overview = wrapper
       .get('[data-testid="pay-code-overview-tab"]')
       .text();
-    expect(overview).toContain("Voucher Closed");
+    expect(overview).toContain("Claimed");
+    expect(overview).toContain("By whom");
+    expect(overview).toContain("Makati counter");
+    expect(overview).not.toContain("Expires");
     expect(overview).toContain(
-      "Voucher Closed marks the lifecycle transition. Payout completion is recorded separately under Claim & Evidence.",
+      "Claimed marks the recipient-facing completion moment. Payout and evidence details remain available under Claim & Evidence.",
     );
 
     await wrapper

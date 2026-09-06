@@ -79,7 +79,36 @@ final class CockpitPayCodeDetailProjection
                 'expires_at' => $detail['expires_at'] ?? null,
                 'redeemed_at' => $detail['redeemed_at'] ?? null,
             ],
+            'claim_summary' => $this->claimSummary($detail),
             'claim_count' => count($this->list($detail['claims'] ?? [])),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $detail
+     * @return array<string, mixed>
+     */
+    public function claimSummary(array $detail): array
+    {
+        $summary = $this->array($detail['claim_summary'] ?? []);
+
+        if ($summary === []) {
+            return [];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-claim-summary.v1',
+            ...Arr::only($summary, [
+                'status',
+                'claimed_at',
+                'claimed_by_label',
+                'claimed_mobile_masked',
+                'amount_minor',
+                'currency',
+                'location_label',
+                'evidence_count',
+                'latest_claim_reference',
+            ]),
         ];
     }
 

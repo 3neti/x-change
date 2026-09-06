@@ -13,8 +13,19 @@ vi.mock('@inertiajs/vue3', () => ({
     },
 }));
 
+const collectionDestination = {
+    schema: 'x-change.cockpit.collection-destination.v1',
+    label: 'Your Client Funds',
+    description:
+        'Payments are credited to the collection account authorized for the signed-in operator.',
+    authority: 'authenticated_operator',
+    status: 'ready',
+    editable: false,
+    managed_automatically: true,
+} as const;
+
 describe('Quick Generate last instructions', () => {
-    it('restores a payable collection wallet and defaults a missing one', () => {
+    it('ignores legacy wallet ids and presents the authoritative collection destination', () => {
         const instructions = (collectionWalletId?: string) => ({
             schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
             saved_at: '2026-08-25T09:00:00Z',
@@ -30,28 +41,66 @@ describe('Quick Generate last instructions', () => {
         const remembered = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
-                currentUserWalletId: 77,
+                collectionDestination,
+                startupMode: 'repeat_last',
                 lastInstructions: instructions('shared-wallet-9'),
             },
         });
         const defaulted = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
-                currentUserWalletId: 77,
+                collectionDestination,
+                startupMode: 'repeat_last',
                 lastInstructions: instructions(),
             },
         });
 
         expect(
-            remembered.get<HTMLInputElement>(
-                '[data-testid="cockpit-quick-generate-collection-wallet"]',
-            ).element.value,
-        ).toBe('shared-wallet-9');
+            remembered
+                .get(
+                    '[data-testid="cockpit-quick-generate-collection-destination-label"]',
+                )
+                .text(),
+        ).toBe('Your Client Funds');
         expect(
-            defaulted.get<HTMLInputElement>(
+            defaulted
+                .get(
+                    '[data-testid="cockpit-quick-generate-collection-destination-label"]',
+                )
+                .text(),
+        ).toBe('Your Client Funds');
+        expect(
+            remembered.find(
                 '[data-testid="cockpit-quick-generate-collection-wallet"]',
-            ).element.value,
-        ).toBe('77');
+            ).exists(),
+        ).toBe(false);
+    });
+
+    it('shows the destination for an explicit collectible flow', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                collectionDestination,
+                startupMode: 'repeat_last',
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-28T09:00:00Z',
+                    instructions: {
+                        voucher_type: 'redeemable',
+                        cash: { amount: 100, currency: 'PHP' },
+                        metadata: { flow_type: 'collectible' },
+                    },
+                },
+            },
+        });
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-collection-destination-label"]',
+                )
+                .text(),
+        ).toBe('Your Client Funds');
     });
 
     it('hydrates the payable amount from the canonical target with a legacy cash fallback', () => {
@@ -71,7 +120,7 @@ describe('Quick Generate last instructions', () => {
             mount(CockpitQuickGenerateSubmitPanel, {
                 props: {
                     templates: cockpitQuickGenerateTemplates,
-                    currentUserWalletId: 77,
+                    startupMode: 'repeat_last',
                     lastInstructions: instructions(targetAmount),
                 },
             });
@@ -92,7 +141,7 @@ describe('Quick Generate last instructions', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {
                 templates: cockpitQuickGenerateTemplates,
-                currentUserWalletId: 77,
+                startupMode: 'repeat_last',
                 lastInstructions: {
                     schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
                     saved_at: '2026-08-26T09:00:00Z',
@@ -120,7 +169,7 @@ describe('Quick Generate last instructions', () => {
         ).toBe('900');
     });
 
-    it('preloads the last successful design without restoring its secret', async () => {
+    it('keeps the last successful design behind Repeat Last and restores it without its secret', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             attachTo: document.body,
             props: {
@@ -208,11 +257,24 @@ describe('Quick Generate last instructions', () => {
             },
         });
 
+        const amountInput = wrapper.get<HTMLInputElement>(
+            '[data-testid="cockpit-quick-generate-primary-amount"]',
+        );
+        const repeatLastButton = wrapper.get(
+            '[data-testid="cockpit-quick-generate-repeat-last"]',
+        );
+
+        expect(amountInput.element.value).toBe('');
         expect(
-            wrapper.get<HTMLInputElement>(
-                '[data-testid="cockpit-quick-generate-primary-amount"]',
-            ).element.value,
-        ).toBe('88.50');
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-start-blank"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+
+        await repeatLastButton.trigger('click');
+        await wrapper.vm.$nextTick();
+
+        expect(amountInput.element.value).toBe('88.50');
         expect(
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-primary-recipient"]',
@@ -238,9 +300,6 @@ describe('Quick Generate last instructions', () => {
                 .get('[data-testid="cockpit-quick-generate-current-template"]')
                 .text(),
         ).toContain('Current ·');
-        const repeatLastButton = wrapper.get(
-            '[data-testid="cockpit-quick-generate-repeat-last"]',
-        );
         expect(repeatLastButton.attributes('aria-pressed')).toBe('true');
         expect(repeatLastButton.classes()).toContain('bg-emerald-50');
         expect(repeatLastButton.classes()).not.toContain('bg-emerald-600');
@@ -393,6 +452,74 @@ describe('Quick Generate last instructions', () => {
             ).element.value,
         ).toBe('');
         wrapper.unmount();
+    });
+
+    it('automatically restores Repeat Last only when configured', async () => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: host,
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                startupMode: 'repeat_last',
+                lastInstructions: {
+                    schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                    saved_at: '2026-08-29T00:00:00Z',
+                    instructions: {
+                        cash: { amount: 42.5, currency: 'PHP' },
+                        inputs: { fields: [] },
+                    },
+                },
+            },
+        });
+
+        await wrapper.vm.$nextTick();
+
+        const amountInput = wrapper.get<HTMLInputElement>(
+            '[data-testid="cockpit-quick-generate-primary-amount"]',
+        );
+
+        expect(amountInput.element.value).toBe('42.50');
+        expect(amountInput.element).toBe(document.activeElement);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-repeat-last"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+
+        wrapper.unmount();
+        host.remove();
+    });
+
+    it('falls back to Blank when Repeat Last is configured without history', async () => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: host,
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                startupMode: 'repeat_last',
+            },
+        });
+
+        await wrapper.vm.$nextTick();
+
+        const amountInput = wrapper.get<HTMLInputElement>(
+            '[data-testid="cockpit-quick-generate-primary-amount"]',
+        );
+
+        expect(amountInput.element.value).toBe('');
+        expect(amountInput.element).toBe(document.activeElement);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-start-blank"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+
+        wrapper.unmount();
+        host.remove();
     });
 
     it('gives explicit campaign context precedence over remembered instructions', () => {

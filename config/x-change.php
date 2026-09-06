@@ -458,6 +458,10 @@ return [
         ],
 
         'quick_generate' => [
+            'startup_mode' => env(
+                'XCHANGE_COCKPIT_QUICK_GENERATE_STARTUP_MODE',
+                'blank',
+            ),
             'rider_library' => [
                 'recent_limit_per_kind' => 20,
             ],
@@ -662,6 +666,9 @@ return [
             'email' => [
                 'enabled' => (bool) env('XCHANGE_CAMPAIGNS_EMAIL_DELIVERY_ENABLED', false),
             ],
+        ],
+        'payout_recovery' => [
+            'enabled' => (bool) env('XCHANGE_CAMPAIGNS_PAYOUT_RECOVERY_ENABLED', false),
         ],
     ],
 

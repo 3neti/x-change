@@ -49,6 +49,9 @@ export const cockpitPayCodeExplorerRecords: CockpitPayCodeExplorerRecord[] = [
             targetAmount: null,
         },
         status: 'Issued',
+        consumerStatus: null,
+        collection: {},
+        claimSummary: {},
         voucherStatus: 'issued',
         operationalStatus: {
             key: 'active',
@@ -99,6 +102,9 @@ export const cockpitPayCodeExplorerRecords: CockpitPayCodeExplorerRecord[] = [
             targetAmount: '₱12,500.00',
         },
         status: 'Awaiting Claim',
+        consumerStatus: null,
+        collection: {},
+        claimSummary: {},
         voucherStatus: 'issued',
         operationalStatus: {
             key: 'active',
@@ -152,6 +158,9 @@ export const cockpitPayCodeExplorerRecords: CockpitPayCodeExplorerRecord[] = [
             targetAmount: null,
         },
         status: 'Readiness Pending',
+        consumerStatus: null,
+        collection: {},
+        claimSummary: {},
         voucherStatus: 'pending',
         operationalStatus: {
             key: 'payout_pending',

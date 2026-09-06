@@ -14,6 +14,7 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use LBHurtado\XChange\Services\Campaigns\CampaignVoucherInstructionCompiler;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -26,14 +27,11 @@ final readonly class IssueCampaignWorksheetPayCodes
         private TreasuryPayCodeAccountingService $accounting,
         private TreasuryProviderConnectionCatalog $connections,
         private CampaignVoucherInstructionCompiler $instructionCompiler,
+        private CampaignLifecycleJournal $journal,
     ) {}
 
     public function handle(string $authorizationReference, Model $owner, int $limit = 100): int
     {
-        if ((string) auth()->id() !== (string) $owner->getKey()) {
-            throw new RuntimeException('Campaign Pay Codes must be issued by the worksheet owner.');
-        }
-
         if (! $owner instanceof Authenticatable) {
             throw new RuntimeException('Campaign Pay Code issuance requires an authenticatable worksheet owner.');
         }
@@ -45,10 +43,20 @@ final readonly class IssueCampaignWorksheetPayCodes
         if (! $authorization instanceof CampaignWorksheetAuthorization || $authorization->status !== 'authorized' || $authorization->worksheet === null) {
             throw new RuntimeException('Campaign worksheet authorization is not ready for Pay Code issuance.');
         }
+        if ($authorization->worksheet->owner_type !== $owner->getMorphClass()
+            || (string) $authorization->worksheet->owner_id !== (string) $owner->getKey()) {
+            throw new RuntimeException('Campaign Pay Codes must be issued by the worksheet owner.');
+        }
 
         $issued = 0;
+        $allowsLifecycleDirectTransfer = $authorization->worksheet->fulfillment_mode === 'direct_bank_transfer'
+            && data_get($authorization->worksheet->metadata, 'lifecycle.automatic_fulfillment') === true;
+
         foreach ($authorization->fulfillments->filter(fn (CampaignWorksheetFulfillment $fulfillment): bool => (
-            $fulfillment->mode === 'pay_code_distribution' && $fulfillment->status === 'planned'
+            in_array($fulfillment->mode, [
+                'pay_code_distribution',
+                ...($allowsLifecycleDirectTransfer ? ['direct_bank_transfer'] : []),
+            ], true) && $fulfillment->status === 'planned'
         ) || $fulfillment->status === 'fallback_planned')->take(max(1, min($limit, 500))) as $fulfillment) {
             DB::transaction(function () use ($fulfillment, $authorization, $owner, &$issued): void {
                 $locked = CampaignWorksheetFulfillment::query()->with('row')->lockForUpdate()->findOrFail($fulfillment->getKey());
@@ -59,11 +67,19 @@ final readonly class IssueCampaignWorksheetPayCodes
                 $connection = $this->connection(
                     (string) $locked->row->currency,
                 );
+                $compiledInstructions = $this->instructionCompiler->compile($authorization, $locked, $owner);
                 $voucher = $this->payCodes->handle(
                     $owner,
-                    $this->instructionCompiler->compile($authorization, $locked, $owner),
+                    $compiledInstructions,
                     now()->addDays($this->ttlDays($authorization)),
                 );
+                $metadata = (array) $voucher->metadata;
+                data_set(
+                    $metadata,
+                    'instructions.metadata.custom',
+                    (array) data_get($compiledInstructions, 'metadata.custom', []),
+                );
+                $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
                 $this->reservePrincipal(
                     owner: $owner,
                     voucher: $voucher,
@@ -83,6 +99,7 @@ final readonly class IssueCampaignWorksheetPayCodes
                         ],
                     ),
                 ])->save();
+                $this->journal->recordFulfillment('campaign.pay_code.issued', $locked, $owner);
                 $issued++;
             }, attempts: 5);
         }

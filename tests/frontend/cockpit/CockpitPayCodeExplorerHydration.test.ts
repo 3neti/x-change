@@ -108,6 +108,17 @@ const payCodesReadModel = {
                 redeemed_at: '2026-07-03T10:00:00+08:00',
                 terminal_at: '2026-07-03T10:00:00+08:00',
             },
+            claim_summary: {
+                schema: 'x-change.cockpit.pay-code-claim-summary.v1',
+                status: 'paid',
+                claimed_at: '2026-07-03T10:00:00+08:00',
+                claimed_by_label: 'Leslie Chong',
+                claimed_mobile_masked: '•••• 4567',
+                amount_minor: 150075,
+                currency: 'PHP',
+                location_label: 'Makati counter',
+                evidence_count: 2,
+            },
             terminal_control: {
                 can_expire: true,
                 can_cancel: true,
@@ -230,6 +241,24 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         ).toBeDefined();
         expect(wrapper.text()).toContain('Created');
         expect(wrapper.text()).toContain('Claimed');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-claim-summary"]').text(),
+        ).toContain('Claimed');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-mobile-claim-summary"]')
+                .text(),
+        ).toContain('By Leslie Chong');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-mobile-claim-summary"]')
+                .text(),
+        ).toContain('₱1,500.75');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-mobile-claim-summary"]')
+                .text(),
+        ).toContain('Makati counter');
         expect(wrapper.text()).toContain('₱1,500.75');
         expect(wrapper.text()).toContain('ready');
         expect(
@@ -994,7 +1023,8 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             '[data-testid="cockpit-pay-code-row-secondary-facts"]',
         );
         expect(secondaryFacts.text()).toContain('Created');
-        expect(secondaryFacts.text()).toContain('Expires');
+        expect(secondaryFacts.text()).toContain('Claimed');
+        expect(secondaryFacts.text()).not.toContain('Expires');
     });
 
     it('summarizes pay code result density before the rows', () => {

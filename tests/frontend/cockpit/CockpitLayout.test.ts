@@ -120,7 +120,30 @@ describe('Cockpit shell layout baseline', () => {
         ).toBe('page');
         expect(
             wrapper.get('[data-testid="cockpit-workspace"]').classes(),
-        ).toEqual(expect.arrayContaining(['pb-24', 'md:pb-4']));
+        ).toEqual(expect.arrayContaining(['p-4', 'pb-24', 'md:pb-4']));
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-workspace"]')
+                .attributes('data-mobile-presentation'),
+        ).toBe('contained');
+    });
+
+    it('offers an edge-to-edge mobile canvas while restoring desktop padding', () => {
+        const wrapper = mount(CockpitLayout, {
+            props: {
+                mobilePresentation: 'edge',
+            },
+            slots: {
+                default: '<div>Edge workspace</div>',
+            },
+        });
+        const workspace = wrapper.get('[data-testid="cockpit-workspace"]');
+
+        expect(workspace.attributes('data-mobile-presentation')).toBe('edge');
+        expect(workspace.classes()).toEqual(
+            expect.arrayContaining(['p-0', 'pb-24', 'md:p-4', 'lg:p-6']),
+        );
+        expect(workspace.classes()).not.toContain('p-4');
     });
 
     it('uses concise task language without changing the established endpoints', () => {

@@ -73,6 +73,11 @@ final class FormFlowClaimWorkflowMutator
         }
 
         if (($step['handler'] ?? null) === 'otp'
+            && ($workflow->review['payout_recovery'] ?? false) === true) {
+            $step['config']['action_placement'] = 'inline';
+        }
+
+        if (($step['handler'] ?? null) === 'otp'
             && ($workflow->review['onboarding'] ?? false) === true) {
             $step['config']['purpose'] = config(
                 'x-change.onboarding.identity_otp.purpose',

@@ -33,6 +33,8 @@ class FakePayoutProvider implements PayoutProvider
 
     public ?array $nextMetadata = null;
 
+    public bool $generateFailedTransactionId = true;
+
     public ?\Throwable $nextException = null;
 
     public ?PayoutStatus $nextCheckStatus = null;
@@ -60,6 +62,7 @@ class FakePayoutProvider implements PayoutProvider
         $this->nextUuid = null;
         $this->nextProvider = 'fake';
         $this->nextMetadata = null;
+        $this->generateFailedTransactionId = true;
         $this->nextException = null;
         $this->shouldFail = false;
 
@@ -103,6 +106,13 @@ class FakePayoutProvider implements PayoutProvider
         return $this;
     }
 
+    public function withoutFailedTransactionIdentifier(): self
+    {
+        $this->generateFailedTransactionId = false;
+
+        return $this;
+    }
+
     public function willReturnPendingResult(
         ?string $transactionId = null,
         ?string $uuid = null,
@@ -136,13 +146,18 @@ class FakePayoutProvider implements PayoutProvider
         $this->requests[] = $request;
 
         $status = $this->shouldFail ? PayoutStatus::FAILED : $this->nextStatus;
-        $transactionId = $this->nextTransactionId
-            ?? ($status === PayoutStatus::FAILED ? $request->reference : 'TXN-FAKE-'.Str::random(6));
+        $transactionId = $this->nextTransactionId;
+        if ($transactionId === null && $status !== PayoutStatus::FAILED) {
+            $transactionId = 'TXN-FAKE-'.Str::random(6);
+        }
+        if ($transactionId === null && $this->generateFailedTransactionId) {
+            $transactionId = $request->reference;
+        }
         $uuid = $this->nextUuid ?? Str::uuid()->toString();
         $provider = $this->nextProvider ?? 'fake';
 
         return new PayoutResultData(
-            transaction_id: $transactionId,
+            transaction_id: $transactionId ?? '',
             uuid: $uuid,
             status: $status,
             provider: $provider,

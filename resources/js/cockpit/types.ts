@@ -59,6 +59,12 @@ export type CockpitActivityItem = {
     projection_badge?: string;
     projection_status?: string;
     projection_detail?: string;
+    code?: string;
+    amount?: string;
+    status?: string;
+    target_label?: string;
+    detail_href?: string;
+    claim_summary?: CockpitPayCodeClaimSummaryReadModel;
     projection_targets?: string[];
     metadata?: Record<string, unknown>;
 };
@@ -426,9 +432,9 @@ export type CockpitFundingQrMerchantProfile = {
         code: string;
         label: string;
     }>;
-    presentation_only: true;
+    presentation_only: false;
     controls_routing: false;
-    controls_settlement: false;
+    controls_settlement: true;
 };
 
 export type CockpitDepositorAccountOverview = {
@@ -1598,8 +1604,19 @@ export type CockpitQuickGenerateReadModel = {
     [key: string]: unknown;
 };
 
+export type CockpitCollectionDestination = {
+    schema: 'x-change.cockpit.collection-destination.v1';
+    label: string;
+    description: string;
+    authority: 'authenticated_operator';
+    status: 'ready';
+    editable: false;
+    managed_automatically: true;
+};
+
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
-    current_user_wallet_id?: string | number | null;
+    collection_destination?: CockpitCollectionDestination | null;
+    startup_mode?: 'blank' | 'repeat_last';
     quick_generate_read_model?: CockpitQuickGenerateReadModel;
     feedback_defaults?: CockpitQuickGenerateFeedbackDefaults;
     onboarding_policy?: CockpitQuickGenerateOnboardingPolicy;
@@ -1750,6 +1767,7 @@ export type CockpitPayCodeExplorerRecord = {
     status: string;
     consumerStatus: string | null;
     collection: Record<string, unknown>;
+    claimSummary: CockpitPayCodeClaimSummaryReadModel;
     posReference?: CockpitPosSaleReferenceReadModel;
     voucherStatus: string | null;
     operationalStatus: {
@@ -1875,6 +1893,20 @@ export type CockpitReadModelRedactions = {
     [key: string]: unknown;
 };
 
+export type CockpitPayCodeClaimSummaryReadModel = {
+    schema?: string;
+    status?: string | null;
+    claimed_at?: string | null;
+    claimed_by_label?: string | null;
+    claimed_mobile_masked?: string | null;
+    amount_minor?: number | null;
+    currency?: string | null;
+    location_label?: string | null;
+    evidence_count?: number | null;
+    latest_claim_reference?: string | null;
+    [key: string]: unknown;
+};
+
 export type CockpitVoucherReadModel = {
     code?: string | null;
     status: string;
@@ -1885,6 +1917,7 @@ export type CockpitVoucherReadModel = {
     slices?: Record<string, unknown>;
     settlement?: Record<string, unknown>;
     treasury?: Record<string, unknown>;
+    claim_summary?: CockpitPayCodeClaimSummaryReadModel;
     collection?: CockpitVoucherCollectionReadModel;
     pos_reference?: CockpitPosSaleReferenceReadModel;
     evidence_summary?: CockpitVoucherEvidenceSummary[];
@@ -2027,6 +2060,7 @@ export type CockpitPayCodeExplorerReadModelRecord = {
     voucher_status?: string | null;
     consumer_status?: string | null;
     collection?: Record<string, unknown>;
+    claim_summary?: CockpitPayCodeClaimSummaryReadModel;
     pos_reference?: CockpitPosSaleReferenceReadModel;
     operational_status?: {
         key?: string | null;

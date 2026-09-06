@@ -241,24 +241,57 @@ function showsPayableTargetSuffix(record: CockpitPayCodeExplorerRecord): boolean
     return record.amountPresentation?.flowType === 'payable';
 }
 
+function hasClaimSummary(record: CockpitPayCodeExplorerRecord): boolean {
+    return claimedAt(record) !== null;
+}
+
+function claimedAt(record: CockpitPayCodeExplorerRecord): string | null {
+    return record.claimSummary?.claimed_at ?? record.timing.redeemedAt;
+}
+
+function claimedBy(record: CockpitPayCodeExplorerRecord): string {
+    return (
+        record.claimSummary?.claimed_by_label ??
+        record.claimSummary?.claimed_mobile_masked ??
+        record.party.primary
+    );
+}
+
+function formatClaimAmount(record: CockpitPayCodeExplorerRecord): string | null {
+    if (typeof record.claimSummary?.amount_minor !== 'number') {
+        return null;
+    }
+
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: record.claimSummary?.currency ?? 'PHP',
+        minimumFractionDigits: 2,
+    }).format(record.claimSummary.amount_minor / 100);
+}
+
 function timingFacts(record: CockpitPayCodeExplorerRecord) {
+    const claimTime = claimedAt(record);
     const terminalLabel = record.status.toLowerCase().includes('cancel')
         ? 'Cancelled'
         : record.status.toLowerCase().includes('expir')
           ? 'Expired'
           : 'Closed';
-    const facts = [
+
+    const facts: Array<{ label: string; value: string | null }> = [
         { label: 'Created', value: record.timing.createdAt },
-        { label: 'Claimed', value: record.timing.redeemedAt },
-        {
+        { label: 'Claimed', value: claimTime },
+    ];
+
+    if (!claimTime) {
+        facts.push({
             label: record.operationalStatus.isTerminal
                 ? terminalLabel
                 : 'Expires',
             value: record.operationalStatus.isTerminal
                 ? record.timing.terminalAt
                 : record.timing.expiresAt,
-        },
-    ];
+        });
+    }
 
     return facts
         .filter((fact): fact is { label: string; value: string } => !!fact.value)
@@ -469,6 +502,25 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                     >{{ fact.label }} {{ fact.relative }}</span>
                 </div>
 
+                <div
+                    v-if="hasClaimSummary(record)"
+                    class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100"
+                    data-testid="cockpit-pay-code-mobile-claim-summary"
+                >
+                    <p class="font-semibold">
+                        Claimed {{ formatRelativeTime(claimedAt(record) ?? '', explorerNow) }}
+                    </p>
+                    <p class="mt-0.5 truncate">
+                        By {{ claimedBy(record) }}
+                        <span v-if="formatClaimAmount(record)">
+                            · {{ formatClaimAmount(record) }}
+                        </span>
+                        <span v-if="record.claimSummary.location_label">
+                            · {{ record.claimSummary.location_label }}
+                        </span>
+                    </p>
+                </div>
+
                 <dl
                     class="rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-950"
                     data-testid="cockpit-pay-code-mobile-party"
@@ -575,12 +627,16 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                                     <dt
                                         class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
                                     >
-                                        Expires
+                                        {{ hasClaimSummary(record) ? 'Claimed' : 'Expires' }}
                                     </dt>
                                     <dd
                                         class="mt-0.5 text-slate-700 dark:text-slate-200"
                                     >
-                                        {{ record.timing.expiresAt ?? '—' }}
+                                        {{
+                                            claimedAt(record) ??
+                                            record.timing.expiresAt ??
+                                            '—'
+                                        }}
                                     </dd>
                                 </div>
                             </dl>
@@ -767,6 +823,21 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                             >
                                 {{ record.party.secondary }}
                             </p>
+                            <div
+                                v-if="hasClaimSummary(record)"
+                                class="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[0.7rem] leading-4 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100"
+                                data-testid="cockpit-pay-code-claim-summary"
+                            >
+                                <p class="font-semibold">
+                                    Claimed {{ formatAbsoluteTime(claimedAt(record) ?? '') }}
+                                </p>
+                                <p class="truncate">
+                                    By {{ claimedBy(record) }}
+                                    <span v-if="formatClaimAmount(record)">
+                                        · {{ formatClaimAmount(record) }}
+                                    </span>
+                                </p>
+                            </div>
                         </td>
                         <td class="px-4 py-2.5">
                             <div class="flex justify-end gap-1.5">
@@ -893,14 +964,16 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                                                 <dt
                                                     class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
                                                 >
-                                                    Expires
+                                                    {{ hasClaimSummary(record) ? 'Claimed' : 'Expires' }}
                                                 </dt>
                                                 <dd
                                                     class="mt-0.5 text-slate-700 dark:text-slate-200"
                                                 >
                                                     {{
+                                                        claimedAt(record) ??
                                                         record.timing
-                                                            .expiresAt ?? '—'
+                                                            .expiresAt ??
+                                                        '—'
                                                     }}
                                                 </dd>
                                             </div>

@@ -30,6 +30,9 @@ final readonly class LifecycleScenarioRunOptions
         public ?string $feedbackMobile = null,
         public bool $confirmLiveTransfer = false,
         public ?string $runReference = null,
+        public ?string $input = null,
+        public ?string $phase = null,
+        public bool $confirmCheckerApproval = false,
     ) {}
 
     public static function fromConsoleOptions(array $options): self
@@ -58,6 +61,9 @@ final readonly class LifecycleScenarioRunOptions
             feedbackMobile: self::stringOrNull($options['feedback-mobile'] ?? null),
             confirmLiveTransfer: (bool) ($options['confirm-live-transfer'] ?? false),
             runReference: self::stringOrNull($options['run-reference'] ?? null),
+            input: self::stringOrNull($options['input'] ?? null),
+            phase: self::stringOrNull($options['phase'] ?? null),
+            confirmCheckerApproval: (bool) ($options['confirm-checker-approval'] ?? false),
         );
     }
 
@@ -135,6 +141,8 @@ final readonly class LifecycleScenarioRunOptions
             feedbackMobile: self::stringOrNull($payload['feedback_mobile'] ?? null),
             confirmLiveTransfer: (bool) ($payload['confirm_live_transfer'] ?? false),
             runReference: self::stringOrNull($payload['run_reference'] ?? null),
+            phase: self::stringOrNull($payload['phase'] ?? null),
+            confirmCheckerApproval: (bool) ($payload['confirm_checker_approval'] ?? false),
         );
     }
 }

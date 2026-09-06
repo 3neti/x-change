@@ -12,6 +12,7 @@ class CockpitPayCodeListRecordData extends Data
      * @param  array<int, CockpitPayCodeRowActionData>  $actions
      * @param  array<int, CockpitPayCodeInstructionBadgeData>  $instruction_badges
      * @param  array<string, mixed>  $amount_presentation
+     * @param  array<string, mixed>  $claim_summary
      * @param  array<string, mixed>  $collection
      * @param  array<string, mixed>  $pos_reference
      */
@@ -34,6 +35,7 @@ class CockpitPayCodeListRecordData extends Data
         public readonly ?CockpitPayCodeAttentionData $attention = null,
         public readonly array $actions = [],
         public readonly ?string $consumer_status = null,
+        public readonly array $claim_summary = [],
         public readonly array $collection = [],
         public readonly array $pos_reference = [],
     ) {}

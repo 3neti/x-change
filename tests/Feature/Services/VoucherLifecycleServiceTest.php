@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
@@ -9,10 +10,13 @@ use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
+use LBHurtado\XChange\Enums\ClaimEvidenceKind;
+use LBHurtado\XChange\Enums\ClaimEvidenceStatus;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
@@ -68,6 +72,51 @@ it('lists vouchers as lifecycle summaries', function () {
         ->and($result[0]['voucher_id'])->toBe($voucher->id)
         ->and($result[0]['code'])->toBe($voucher->code)
         ->and($result[0]['currency'])->toBe((string) data_get($voucher, 'cash.currency', 'PHP'));
+});
+
+it('projects a sanitized claim summary for redeemed cockpit surfaces', function () {
+    $voucher = issueVoucher();
+    $voucher->forceFill([
+        'redeemed_at' => Carbon::parse('2026-08-31 09:45:00', 'Asia/Manila'),
+    ])->save();
+    $claim = VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'claim',
+        'status' => 'paid',
+        'requested_amount_minor' => 2500,
+        'disbursed_amount_minor' => 2500,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'claimer_mobile' => '09173011987',
+        'reference' => 'CLAIM-REF-001',
+        'completed_at' => Carbon::parse('2026-08-31 09:46:00', 'Asia/Manila'),
+    ]);
+    VoucherClaimEvidence::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'voucher_claim_id' => $claim->getKey(),
+        'requirement_key' => 'location',
+        'kind' => ClaimEvidenceKind::Location,
+        'status' => ClaimEvidenceStatus::Captured,
+        'summary' => 'Makati counter',
+        'captured_at' => Carbon::parse('2026-08-31 09:46:00', 'Asia/Manila'),
+    ]);
+
+    $detail = app(VoucherLifecycleService::class)->show((string) $voucher->getKey());
+
+    expect($detail['claim_summary'])->toMatchArray([
+        'schema' => 'x-change.cockpit.pay-code-claim-summary.v1',
+        'status' => 'paid',
+        'claimed_at' => '2026-08-31T09:46:00+00:00',
+        'claimed_by_label' => '•••• 1987',
+        'claimed_mobile_masked' => '•••• 1987',
+        'amount_minor' => 2500,
+        'currency' => 'PHP',
+        'location_label' => 'Makati counter',
+        'evidence_count' => 1,
+        'latest_claim_reference' => 'CLAIM-REF-001',
+    ])
+        ->and(json_encode($detail['claim_summary']))->not->toContain('09173011987');
 });
 
 it('projects canonical collection facts in lifecycle summary and detail', function (string $consumerStatus): void {

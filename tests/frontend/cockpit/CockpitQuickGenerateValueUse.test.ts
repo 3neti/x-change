@@ -418,8 +418,11 @@ describe("Cockpit Quick Generate value use", () => {
         .exists(),
     ).toBe(false);
     expect(
-      wrapper.get('[data-testid="cockpit-quick-generate-voucher-kind"]').text(),
-    ).toBe("Stored Value");
+      (
+        wrapper.get('[data-testid="cockpit-value-use-reusable-balance"]')
+          .element as HTMLInputElement
+      ).checked,
+    ).toBe(true);
 
     await wrapper
       .get('[data-testid="cockpit-value-use-reusable-balance"]')
