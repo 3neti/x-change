@@ -67,6 +67,8 @@ it('keeps bootstrap strict while allowing interactive credential capture', funct
         ->toContain("'x-change:doctor', '--pre-install', '--strict'")
         ->toContain("'x-change:doctor', '--strict'")
         ->toContain("'--profile='.\$profile")
+        ->toContain("'npm', 'install', '--include=dev'")
+        ->toContain("'npm', 'run', 'build'")
         ->not->toContain("'key:generate'");
 });
 

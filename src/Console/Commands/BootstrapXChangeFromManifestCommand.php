@@ -339,7 +339,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
         $commands = [];
 
         if ((bool) data_get($manifest, 'bootstrap.build.npm_install', true)) {
-            $commands[] = ['npm', 'install'];
+            $commands[] = ['npm', 'install', '--include=dev'];
         }
 
         if ((bool) data_get($manifest, 'bootstrap.build.npm_build', true)) {
