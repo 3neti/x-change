@@ -26,6 +26,7 @@ bootstrap:
     defaults:
       XCHANGE_DEPLOYMENT_PROFILE: netbank
       XCHANGE_RUNTIME_TIER: local
+      SESSION_DRIVER: database
       XCHANGE_SYSTEM_USER_ID: system@x-payout.test
       XCHANGE_SYSTEM_USER_COLUMN: email
       XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE: legal-entity:x-payout

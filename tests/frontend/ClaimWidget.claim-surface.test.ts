@@ -166,6 +166,7 @@ const claimableSliceSurface = {
                 presentation: {
                     title: 'Accept Invitation',
                     primary_action_label: 'Continue',
+                    subject_label: 'Invitation code',
                 },
                 disclosures: [
                     {
@@ -255,7 +256,7 @@ describe('ClaimWidget claim surface gating', () => {
         expect(wrapper.find('form').exists()).toBe(true);
     });
 
-    it('renders the claim title and submit label from server-resolved X-Ray presentation', () => {
+    it('renders the claim title submit label and code label from server-resolved X-Ray presentation', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
                 initialCode: 'TEST123',
@@ -265,6 +266,7 @@ describe('ClaimWidget claim surface gating', () => {
         });
 
         expect(wrapper.find('h1').text()).toBe('Accept Invitation');
+        expect(wrapper.find('label[for="code"]').text()).toBe('Invitation code');
         expect(wrapper.get('[data-testid="claim-widget-submit-button"]').text()).toBe('Continue');
     });
 

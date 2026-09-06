@@ -43,6 +43,7 @@ interface Props {
 interface XRayClaimPresentation {
     title?: string | null;
     primary_action_label?: string | null;
+    subject_label?: string | null;
 }
 
 const props = defineProps<Props>();
@@ -156,6 +157,10 @@ const claimTitle = computed(() =>
 
 const claimPrimaryActionLabel = computed(() =>
     xrayPresentation.value.primary_action_label?.trim() || 'Start Claim',
+);
+
+const claimCodeLabel = computed(() =>
+    xrayPresentation.value.subject_label?.trim() || 'Pay Code',
 );
 
 const surfaceTakesOver = computed(
@@ -541,7 +546,7 @@ watch(
             class="space-y-6"
         >
             <div class="flex flex-col gap-2">
-                <Label for="code">Pay Code</Label>
+                <Label for="code">{{ claimCodeLabel }}</Label>
                 <Input
                     id="code"
                     v-model="code"

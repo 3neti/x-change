@@ -41,6 +41,7 @@ final readonly class PreInstallReadinessInspector
             $this->productionOnboardingOtpCheck(),
             $this->instructionCapabilityCheck(),
             $this->claimEvidenceStorageCheck(),
+            $this->sessionStateStorageCheck($liveProfile),
             $this->queueRuntimeCheck($liveProfile),
             $this->schedulerLockCacheCheck($liveProfile),
             $this->emailDeliveryCheck(),
@@ -407,6 +408,32 @@ final readonly class PreInstallReadinessInspector
                 'token_configured' => $tokenConfigured,
                 'secure_endpoint' => $secureEndpoint,
                 'missing_variables' => $missing,
+            ],
+        );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    private function sessionStateStorageCheck(bool $required): array
+    {
+        $driver = trim((string) config('session.driver'));
+        $durable = in_array($driver, ['database', 'dynamodb', 'memcached', 'redis'], true);
+        $passed = ! $required || $durable;
+
+        return $this->check(
+            'durable session state',
+            $passed,
+            $passed
+                ? ($required
+                    ? "session driver [{$driver}] can persist onboarding form-flow state"
+                    : 'durable session state is optional for the development profile')
+                : "session driver [{$driver}] is not approved for live onboarding form-flow state",
+            [
+                'required' => $required,
+                'driver' => $driver,
+                'approved_drivers' => ['database', 'dynamodb', 'memcached', 'redis'],
+                'missing_variables' => $passed ? [] : ['SESSION_DRIVER'],
             ],
         );
     }

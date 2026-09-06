@@ -9,6 +9,7 @@ use LBHurtado\XChange\Enums\PublicationInvocation;
 use LBHurtado\XChange\Enums\PublicationOverwritePolicy;
 use LBHurtado\XChange\Enums\PublicationScope;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
+use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 
 it('reports x-change doctor checks as json', function () {
@@ -223,15 +224,15 @@ it('blocks deployment in strict mode when any readiness check fails', function (
 });
 
 it('reports unsafe synchronous queues and local scheduler locks', function () {
-    config()->set('x-change.deployment.profile', 'netbank');
     config()->set('queue.default', 'sync');
     config()->set('cache.default', 'array');
 
-    Artisan::call('x-change:doctor', ['--json' => true]);
+    $inspector = app(PreInstallReadinessInspector::class);
+    $queueMethod = new ReflectionMethod($inspector, 'queueRuntimeCheck');
+    $cacheMethod = new ReflectionMethod($inspector, 'schedulerLockCacheCheck');
 
-    $checks = collect(json_decode(Artisan::output(), true)['checks']);
-    $queue = $checks->firstWhere('name', 'durable queue runtime');
-    $cache = $checks->firstWhere('name', 'shared scheduler lock cache');
+    $queue = $queueMethod->invoke($inspector, true);
+    $cache = $cacheMethod->invoke($inspector, true);
 
     expect($queue['passed'])->toBeFalse()
         ->and($queue['meta']['required_queues'])->toBe([
@@ -242,7 +243,20 @@ it('reports unsafe synchronous queues and local scheduler locks', function () {
         ->and($cache['passed'])->toBeFalse();
 });
 
+it('rejects cookie-backed session state for live onboarding form flows', function (): void {
+    config()->set('session.driver', 'cookie');
+
+    $method = new ReflectionMethod(app(PreInstallReadinessInspector::class), 'sessionStateStorageCheck');
+    $check = $method->invoke(app(PreInstallReadinessInspector::class), true);
+
+    expect($check['name'])->toBe('durable session state')
+        ->and($check['passed'])->toBeFalse()
+        ->and($check['message'])->toContain('cookie')
+        ->and($check['meta']['missing_variables'])->toBe(['SESSION_DRIVER']);
+});
+
 it('accepts durable queues and a shared scheduler lock cache', function () {
+    config()->set('session.driver', 'database');
     config()->set('queue.default', 'database');
     config()->set('cache.default', 'database');
 
@@ -250,7 +264,8 @@ it('accepts durable queues and a shared scheduler lock cache', function () {
 
     $checks = collect(json_decode(Artisan::output(), true)['checks']);
 
-    expect($checks->firstWhere('name', 'durable queue runtime')['passed'])->toBeTrue()
+    expect($checks->firstWhere('name', 'durable session state')['passed'])->toBeTrue()
+        ->and($checks->firstWhere('name', 'durable queue runtime')['passed'])->toBeTrue()
         ->and($checks->firstWhere('name', 'shared scheduler lock cache')['passed'])->toBeTrue();
 });
 

@@ -15,6 +15,7 @@ it('requires the x payout manifest to commission against netbank readiness', fun
     expect(data_get($manifest, 'deployment.profile'))->toBe('netbank')
         ->and(data_get($manifest, 'deployment.runtime_tier'))->toBe('local')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.XCHANGE_DEPLOYMENT_PROFILE'))->toBe('netbank')
+        ->and(data_get($manifest, 'bootstrap.environment.defaults.SESSION_DRIVER'))->toBe('database')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.XCHANGE_FUNDING_NETBANK_ENABLED'))->toBeTrue()
         ->and(data_get($manifest, 'bootstrap.environment.defaults.NETBANK_FUNDING_QR_MERCHANT_NAME'))->toBe('x-PayOut')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.NETBANK_FUNDING_QR_MERCHANT_CITY'))->toBe('Manila')
