@@ -13,6 +13,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
 {
     protected $signature = 'x-change:bootstrap
         {--manifest= : YAML manifest path, URL, or x-change:// URI}
+        {--force : Force database migrations when bootstrapping in production}
         {--skip-build : Skip npm install and npm run build}
         {--skip-verify : Skip final environment and route-list verification}';
 
@@ -91,7 +92,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
         return [
             ['php', 'artisan', 'config:clear'],
             ['php', 'artisan', 'x-change:doctor', '--pre-install', '--strict'],
-            ['php', 'artisan', 'migrate', '--graceful', '--ansi'],
+            $this->migrationCommand(),
             $install,
             [
                 'php',
@@ -101,6 +102,18 @@ final class BootstrapXChangeFromManifestCommand extends Command
             ],
             ['php', 'artisan', 'x-change:doctor', '--strict'],
         ];
+    }
+
+    /** @return list<string> */
+    private function migrationCommand(): array
+    {
+        $command = ['php', 'artisan', 'migrate', '--graceful', '--ansi'];
+
+        if ((bool) $this->option('force') || ! $this->input->isInteractive()) {
+            $command[] = '--force';
+        }
+
+        return $command;
     }
 
     /**
