@@ -254,6 +254,23 @@ it('accepts durable queues and a shared scheduler lock cache', function () {
         ->and($checks->firstWhere('name', 'shared scheduler lock cache')['passed'])->toBeTrue();
 });
 
+it('reports commercial tax profile readiness when governance storage is invalid', function (): void {
+    config()->set('x-change.commercial.offerings.governance_mode', 'unsupported-mode');
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--commercial-governance' => true,
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true);
+    $checks = collect($payload['checks']);
+
+    expect($exitCode)->toBe(0)
+        ->and($checks->firstWhere('name', 'commercial governance')['passed'])->toBeFalse()
+        ->and($checks->firstWhere('name', 'commercial tax profiles')['passed'])->toBeFalse()
+        ->and($checks->firstWhere('name', 'commercial tax profiles')['meta']['message'])
+        ->toBe('Commercial Tax Profile storage is not ready.');
+});
+
 it('accepts private local claim evidence storage for a local netbank runtime', function (): void {
     config()->set('x-change.deployment.profile', 'netbank');
     config()->set('x-change.deployment.runtime_tier', 'local');
